@@ -5596,6 +5596,7 @@ private:
       ScheduleCopyableDataMapByInstUser.clear();
       ScheduleCopyableDataMapByUsers.clear();
       ReadyInsts.clear();
+      RecalcCopyableOperandDeps.clear();
       ScheduleStart = nullptr;
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
@@ -6386,6 +6387,18 @@ private:
 
     /// The maximum size allowed for the scheduling region.
     int ScheduleRegionSizeLimit = ScheduleRegionSizeBudget;
+
+    /// Operands that are modeled as copyable elements in a previously built
+    /// vectorized node and that are used directly by a duplicate node with the
+    /// same schedulable instructions. Their direct dependencies must be
+    /// recomputed at the next bundle scheduling, when the duplicate node is
+    /// already registered in the tree, so that the direct use is accounted for.
+    /// If the duplicate node is the last scheduled bundle and no further
+    /// scheduling consumes this list, the leftover entries are dropped on the
+    /// next region reset and the dependencies are recomputed against the full
+    /// tree in scheduleBlock instead. A set is used to avoid recomputing the
+    /// same operand more than once.
+    SmallSetVector<ScheduleData *, 8> RecalcCopyableOperandDeps;
 
     /// The ID of the scheduling region. For a new vectorization iteration this
     /// is incremented which "removes" all ScheduleData from the region.
@@ -25269,7 +25282,68 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     // Clear deps or recalculate the region, if the memory instruction is a
     // copyable. It may have memory deps, which must be recalculated.
     SmallVector<ScheduleData *> ControlDependentMembers;
+    // Recompute the direct dependencies of copyable operands deferred by a
+    // previous duplicate-copyable bundle. The duplicate node that introduced
+    // the extra direct use is now part of the tree, so clearing and
+    // recalculating the dependencies here accounts for that use.
+    for (ScheduleData *SD : RecalcCopyableOperandDeps) {
+      if (!isInSchedulingRegion(*SD))
+        continue;
+      if (SD->hasValidDependencies())
+        SD->clearDirectDependencies();
+      ControlDependentMembers.push_back(SD);
+    }
+    RecalcCopyableOperandDeps.clear();
     auto CheckIfNeedToClearDeps = [&](ScheduleBundle &Bundle) {
+      // The current set of values may duplicate a previously vectorized node
+      // that has copyable elements (same schedulable instructions, just a
+      // different copyable lane), while the parent node also has copyable
+      // elements. Such a duplicate node is not part of the tree yet, so an
+      // operand that is modeled as a copyable element in that previous node is
+      // used directly by this node. Its direct dependencies recomputed now
+      // would miss this extra direct use (the duplicate node is not registered
+      // yet), making the scheduler decrement the operand more times than its
+      // dependency count and tripping the unscheduled-deps assertion. Detect
+      // this case to schedule a recalculation of those operand dependencies at
+      // the next bundle scheduling, when the duplicate node is in the tree.
+      // Lazily computed and cached: the detection scan is only needed when an
+      // operand actually reaches the deferral branch below, so avoid running it
+      // for every bundle whose user has copyable elements.
+      std::optional<bool> IsDuplicateCopyableNodeCache;
+      auto IsDuplicateCopyableNode = [&]() -> bool {
+        if (IsDuplicateCopyableNodeCache)
+          return *IsDuplicateCopyableNodeCache;
+        bool Result = false;
+        if (EI.UserTE && EI.UserTE->hasState() &&
+            EI.UserTE->hasCopyableElements()) {
+          SmallDenseSet<const Value *> BundleInsts;
+          for (const ScheduleEntity *SE : Bundle.getBundle())
+            if (isa<ScheduleData>(SE))
+              BundleInsts.insert(SE->getInst());
+          // Match a previously built entry E that contains every schedulable
+          // instruction of the bundle as a non-copyable scalar. E need not be a
+          // copyable node itself and may group additional values; a shared
+          // instruction may still carry an operand modeled as a copyable
+          // element through E's operand child.
+          Result = !BundleInsts.empty() &&
+                   any_of(SLP->getTreeEntries(S.getMainOp()),
+                          [&](const TreeEntry *E) {
+                            if (!E->hasState())
+                              return false;
+                            SmallDenseSet<const Value *> MatchedInsts;
+                            for (Value *V : E->Scalars) {
+                              auto *I = dyn_cast<Instruction>(V);
+                              if (!I || E->isCopyableElement(I))
+                                continue;
+                              if (BundleInsts.contains(I))
+                                MatchedInsts.insert(I);
+                            }
+                            return MatchedInsts.size() == BundleInsts.size();
+                          });
+        }
+        IsDuplicateCopyableNodeCache = Result;
+        return Result;
+      };
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (ScheduleEntity *SE : Bundle.getBundle()) {
         if (ScheduleCopyableData *SD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -25308,6 +25382,15 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
               if (RegionHasStackSave ||
                   !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
                 ControlDependentMembers.push_back(OpSD);
+              // The operand is modeled as a copyable element in the previously
+              // built node, but it is used directly by this duplicate node,
+              // which is not registered in the tree yet. Recomputing its
+              // dependencies here would miss that direct use. Remember it and
+              // recompute once the duplicate node is part of the tree (at the
+              // next bundle scheduling), otherwise the scheduler decrements it
+              // more times than its dependency count and crashes.
+              if (IsDuplicateCopyableNode())
+                RecalcCopyableOperandDeps.insert(OpSD);
               continue;
             }
           }
@@ -26055,11 +26138,14 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
         Bundle->setSchedulingPriority(Idx++);
         if (const TreeEntry *TE = Bundle->getTreeEntry();
             TE && Bundle->hasValidDependencies() && TE->UserTreeIndex &&
-            TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
-            TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
-            any_of(TE->UserTreeIndex.UserTE->Scalars, [&](Value *V) {
-              return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
-            })) {
+            ((TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+              TE->UserTreeIndex.UserTE->doesNotNeedToSchedule() &&
+              any_of(TE->UserTreeIndex.UserTE->Scalars,
+                     [&](Value *V) {
+                       return TE->UserTreeIndex.UserTE->isExpandedBinOp(V);
+                     })) ||
+             (TE->UserTreeIndex.EdgeIdx == UINT_MAX &&
+              TE->UserTreeIndex.UserTE->isGather()))) {
           for (ScheduleEntity *SE : Bundle->getBundle())
             if (auto *SD = dyn_cast<ScheduleData>(SE))
               SD->clearDirectDependencies();
