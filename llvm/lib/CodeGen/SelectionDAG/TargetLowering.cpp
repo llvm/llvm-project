@@ -8991,8 +8991,8 @@ SDValue TargetLowering::expandBEXT(SDNode *Node, SelectionDAG &DAG) const {
   // shift all such bits in parallel using a mask, and double the shift amount.
   for (unsigned I = 1; I < BW; I <<= 1) {
     // This expands the "parallel prefix" operation to clmul(Mk, ~0).
-    SDValue Mp = DAG.getNode(ISD::CLMUL, DL, VT, Mk,
-                             DAG.getAllOnesConstant(DL, VT));
+    SDValue Mp =
+        DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
     SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, M);
     SDValue ShiftI = DAG.getShiftAmountConstant(I, VT, DL);
     M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv),
@@ -9024,8 +9024,8 @@ SDValue TargetLowering::expandBDEP(SDNode *Node, SelectionDAG &DAG) const {
   for (unsigned S = 0; S < LogBW; ++S) {
     unsigned ShiftS = 1u << S;
     // This expands the "parallel prefix" operation to clmul(Mk, ~0).
-    SDValue Mp = DAG.getNode(ISD::CLMUL, DL, VT, Mk,
-                             DAG.getAllOnesConstant(DL, VT));
+    SDValue Mp =
+        DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
     MvArray[S] = DAG.getNode(ISD::AND, DL, VT, Mp, Mc);
     SDValue ShiftSv = DAG.getShiftAmountConstant(ShiftS, VT, DL);
     Mc = DAG.getNode(ISD::OR, DL, VT,

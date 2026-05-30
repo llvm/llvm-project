@@ -483,9 +483,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.hasBMI2()) {
     setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i8, Promote);
     setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i16, Promote);
-    setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i32, Custom);
+    setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i32, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i64, Custom);
+      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i64, Legal);
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
@@ -33816,16 +33816,6 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   return Result;
 }
 
-static SDValue LowerBEXT(SDValue Op, SelectionDAG &DAG) {
-  return DAG.getNode(X86ISD::PEXT, SDLoc(Op), Op.getValueType(),
-                     Op.getOperand(0), Op.getOperand(1));
-}
-
-static SDValue LowerBDEP(SDValue Op, SelectionDAG &DAG) {
-  return DAG.getNode(X86ISD::PDEP, SDLoc(Op), Op.getValueType(),
-                     Op.getOperand(0), Op.getOperand(1));
-}
-
 static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
                            SelectionDAG &DAG) {
   SDLoc DL(Op);
@@ -34558,8 +34548,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::BITREVERSE:         return LowerBITREVERSE(Op, Subtarget, DAG);
   case ISD::CLMUL:
   case ISD::CLMULH:             return LowerCLMUL(Op, Subtarget, DAG);
-  case ISD::BEXT:               return LowerBEXT(Op, DAG);
-  case ISD::BDEP:               return LowerBDEP(Op, DAG);
   case ISD::PARITY:             return LowerPARITY(Op, Subtarget, DAG);
   case ISD::BUILD_VECTOR:       return LowerBUILD_VECTOR(Op, DAG);
   case ISD::CONCAT_VECTORS:     return LowerCONCAT_VECTORS(Op, Subtarget, DAG);

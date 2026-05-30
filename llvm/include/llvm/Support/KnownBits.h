@@ -479,12 +479,6 @@ public:
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
 
-  /// Compute known bits for bext(LHS, RHS).
-  LLVM_ABI static KnownBits bext(const KnownBits &LHS, const KnownBits &RHS);
-
-  /// Compute known bits for bdep(LHS, RHS).
-  LLVM_ABI static KnownBits bdep(const KnownBits &LHS, const KnownBits &RHS);
-
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,
                                          const KnownBits &RHS);
