@@ -48,12 +48,9 @@ class ConstExprEmitter;
 static mlir::TypedAttr computePadding(CIRGenModule &cgm, CharUnits size) {
   mlir::Type eltTy = cgm.uCharTy;
   clang::CharUnits::QuantityType arSize = size.getQuantity();
-  CIRGenBuilderTy &bld = cgm.getBuilder();
-  if (size > CharUnits::One()) {
-    SmallVector<mlir::Attribute> elts(arSize, cir::ZeroAttr::get(eltTy));
-    return bld.getConstArray(mlir::ArrayAttr::get(bld.getContext(), elts),
-                             cir::ArrayType::get(eltTy, arSize));
-  }
+  if (size > CharUnits::One())
+    return mlir::cast<mlir::TypedAttr>(
+        cir::ZeroAttr::get(cir::ArrayType::get(eltTy, arSize)));
 
   return cir::ZeroAttr::get(eltTy);
 }
@@ -408,6 +405,37 @@ bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
     // Split into two zeros at the hinted offset.
     CharUnits elemSize = getSize(c);
     assert(hint > offset && hint < offset + elemSize && "nothing to split");
+
+    // If the ZeroAttr wraps a CIR array type and the split point aligns to
+    // element boundaries, produce typed ZeroAttr sub-arrays. This preserves
+    // array layout information so that buildFrom can later reconstruct a
+    // proper [N x T] array constant instead of falling back to a packed struct.
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(c.getType())) {
+      CharUnits eltSize = getSize(arrTy.getElementType());
+      CharUnits firstLen = hint - offset;
+      CharUnits secondLen = offset + elemSize - hint;
+      if (firstLen % eltSize == CharUnits::Zero() &&
+          secondLen % eltSize == CharUnits::Zero()) {
+        uint64_t firstCount = firstLen / eltSize;
+        uint64_t secondCount = secondLen / eltSize;
+        SmallVector<Element> newElems;
+        if (firstCount > 0) {
+          auto firstTy =
+              cir::ArrayType::get(arrTy.getElementType(), firstCount);
+          newElems.emplace_back(
+              mlir::cast<mlir::TypedAttr>(cir::ZeroAttr::get(firstTy)), offset);
+        }
+        if (secondCount > 0) {
+          auto secondTy =
+              cir::ArrayType::get(arrTy.getElementType(), secondCount);
+          newElems.emplace_back(
+              mlir::cast<mlir::TypedAttr>(cir::ZeroAttr::get(secondTy)), hint);
+        }
+        replace(elements, index, index + 1, newElems);
+        return true;
+      }
+    }
+
     // Create two byte-array padding elements to represent the two halves.
     mlir::TypedAttr firstZero = getPadding(hint - offset);
     mlir::TypedAttr secondZero = getPadding(offset + elemSize - hint);
@@ -499,12 +527,30 @@ ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
 
     for (const auto &[element, offset] : elems) {
       CharUnits relOffset = offset - startOffset;
-      if (relOffset % eltSize != CharUnits::Zero() ||
-          element.getType() != eltTy) {
+      if (relOffset % eltSize != CharUnits::Zero()) {
         canBuildArray = false;
         break;
       }
       uint64_t idx = relOffset / eltSize;
+
+      // A ZeroAttr whose size is an exact multiple of eltSize fills a run of
+      // array slots with zeros. These slots stay null and will be filled with
+      // the zero filler below.
+      if (mlir::isa<cir::ZeroAttr>(element)) {
+        CharUnits zeroSize = utils.getSize(element);
+        if (zeroSize % eltSize == CharUnits::Zero()) {
+          uint64_t count = zeroSize / eltSize;
+          if (idx + count <= numElements)
+            continue;
+        }
+        canBuildArray = false;
+        break;
+      }
+
+      if (element.getType() != eltTy) {
+        canBuildArray = false;
+        break;
+      }
       if (idx >= numElements) {
         canBuildArray = false;
         break;
