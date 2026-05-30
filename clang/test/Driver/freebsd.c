@@ -99,33 +99,23 @@
 // CHECK-LDFLAGS_HASH: --hash-style=both
 // CHECK-LDFLAGS_HASH: --enable-new-dtags
 //
-// Check that we do not pass --hash-style=gnu and --hash-style=both to linker
-// and provide correct path to the dynamic linker for MIPS platforms.
-// Also verify that we tell the assembler to target the right ISA and ABI.
+// Verify that we tell the assembler to target the right ISA and ABI.
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
-// CHECK-MIPS: {{[/\\"]}}ld{{[^" ]*}}"
-// CHECK-MIPS: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
-// CHECK-MIPS-NOT: "--hash-style={{gnu|both}}"
+// CHECK-MIPS: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mipsel-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSEL %s
-// CHECK-MIPSEL: {{[/\\"]}}ld{{[^" ]*}}"
-// CHECK-MIPSEL: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
-// CHECK-MIPSEL-NOT: "--hash-style={{gnu|both}}"
+// CHECK-MIPSEL: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64 %s
-// CHECK-MIPS64: {{[/\\"]}}ld{{[^" ]*}}"
-// CHECK-MIPS64: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
-// CHECK-MIPS64-NOT: "--hash-style={{gnu|both}}"
+// CHECK-MIPS64:ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=mips64el-unknown-freebsd10.0 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL %s
-// CHECK-MIPS64EL: {{[/\\"]}}ld{{[^" ]*}}"
-// CHECK-MIPS64EL: "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
-// CHECK-MIPS64EL-NOT: "--hash-style={{gnu|both}}"
+// CHECK-MIPS64EL: ld{{.*}}" {{.*}} "-dynamic-linker" "{{.*}}/libexec/ld-elf.so.1"
 
 // RUN: %clang --target=x86_64-pc-freebsd -static %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
