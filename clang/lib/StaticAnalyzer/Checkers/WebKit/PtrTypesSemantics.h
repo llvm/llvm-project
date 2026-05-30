@@ -109,6 +109,12 @@ std::optional<bool> isUncountedPtr(const clang::QualType T);
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncheckedPtr(const clang::QualType T);
 
+/// \returns true if \p T is a RefPtr or Ref or its variant, false if not.
+bool isRefPtrType(const clang::QualType T);
+
+/// \returns true if \p T is a RefPtr or Ref or its variant, false if not.
+bool isCheckedPtrType(const clang::QualType T);
+
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or its
 /// variant, false if not.
 bool isRefOrCheckedPtrType(const clang::QualType T);
@@ -161,6 +167,10 @@ bool isPtrConversion(const FunctionDecl *F);
 /// \returns true if \p F's return type is annotated with
 /// [[clang::annotate_type("webkit.nodelete")]].
 bool isNoDeleteFunction(const FunctionDecl *F);
+
+/// \returns true if \p T is annotated with
+/// [[clang::annotate_type("webkit.unsafeptr")]].
+bool isExplicitlyAllowedUnsafePtr(const Type *T);
 
 /// \returns true if \p F is a builtin function which is considered trivial.
 bool isTrivialBuiltinFunction(const FunctionDecl *F);

@@ -225,6 +225,14 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
   return false;
 }
 
+bool isRefPtrType(const clang::QualType T) {
+  return isPtrOfType(T, [](auto Name) { return isRefType(Name); });
+}
+
+bool isCheckedPtrType(const clang::QualType T) {
+  return isPtrOfType(T, [](auto Name) { return isCheckedPtr(Name); });
+}
+
 bool isRefOrCheckedPtrType(const clang::QualType T) {
   return isPtrOfType(
       T, [](auto Name) { return isRefType(Name) || isCheckedPtr(Name); });
@@ -427,14 +435,15 @@ enum class WebKitAnnotation : uint8_t {
   None,
   PointerConversion,
   NoDelete,
+  UnsafePtr,
 };
 
-static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
-  auto RetType = FD->getReturnType();
-  auto *Type = RetType.getTypePtrOrNull();
-  if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(Type))
-    Type = MacroQualified->desugar().getTypePtrOrNull();
-  auto *Attr = dyn_cast_or_null<AttributedType>(Type);
+static WebKitAnnotation typeAnnotation(const Type *T) {
+  if (!T)
+    return WebKitAnnotation::None;
+  if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(T))
+    T = MacroQualified->desugar().getTypePtrOrNull();
+  auto *Attr = dyn_cast_or_null<AttributedType>(T);
   if (!Attr)
     return WebKitAnnotation::None;
   auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
@@ -445,7 +454,14 @@ static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
     return WebKitAnnotation::PointerConversion;
   if (Annotation == "webkit.nodelete")
     return WebKitAnnotation::NoDelete;
+  if (Annotation == "webkit.unsafeptr")
+    return WebKitAnnotation::UnsafePtr;
   return WebKitAnnotation::None;
+}
+
+static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
+  auto RetType = FD->getReturnType();
+  return typeAnnotation(RetType.getTypePtrOrNull());
 }
 
 bool isPtrConversion(const FunctionDecl *F) {
@@ -492,6 +508,10 @@ bool isNoDeleteFunction(const FunctionDecl *F) {
   }
 
   return false;
+}
+
+bool isExplicitlyAllowedUnsafePtr(const Type *T) {
+  return typeAnnotation(T) == WebKitAnnotation::UnsafePtr;
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {

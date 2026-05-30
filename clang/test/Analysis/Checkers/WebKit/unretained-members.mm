@@ -33,6 +33,16 @@ namespace members {
     CFMutableArrayRef e = nullptr;
 // expected-warning@-1{{Member variable 'e' in 'members::Foo' is a retainable type 'CFMutableArrayRef'}}
 
+    SomeObj** f = nullptr;
+// expected-warning@-1{{Member variable 'f' in 'members::Foo' contains a raw pointer to retainable type}}
+
+    RetainPtr<SomeObj>* g = nullptr;
+// expected-warning@-1{{Member variable 'g' in 'members::Foo' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
+    RetainPtr<SomeObj>** h = nullptr;
+// expected-warning@-1{{Member variable 'h' in 'members::Foo' contains a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
+    RetainPtr<SomeObj>* [[clang::annotate_type("webkit.unsafeptr")]] i = nullptr;
+    RetainPtr<SomeObj>** [[clang::annotate_type("webkit.unsafeptr")]] j = nullptr;
+// expected-warning@-1{{Member variable 'j' in 'members::Foo' contains a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
   };
 
   template<class T, class S, class R>
@@ -43,6 +53,14 @@ namespace members {
 // expected-warning@-1{{Member variable 'b' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' is a raw pointer to retainable type}}
     R c;
 // expected-warning@-1{{Member variable 'c' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' is a raw pointer to retainable type}}
+    T** d;
+// expected-warning@-1{{Member variable 'd' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' contains a raw pointer to retainable type}}
+    RetainPtr<T>* e;
+// expected-warning@-1{{Member variable 'e' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
+    S* f;
+// expected-warning@-1{{Member variable 'f' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' contains a raw pointer to retainable type}}
+    RetainPtr<S>* g;
+// expected-warning@-1{{Member variable 'g' in 'members::FooTmpl<SomeObj, __CFArray *, NSObject<OS_dispatch_queue> *>' is a raw pointer to 'WTF::RetainPtr<__CFArray *>'}}
   };
 
   void forceTmplToInstantiate(FooTmpl<SomeObj, CFMutableArrayRef, dispatch_queue_t>) {}
@@ -64,6 +82,10 @@ namespace unions {
     // expected-warning@-1{{Member variable 'c' in 'unions::Foo' is a retainable type 'CFMutableArrayRef'}}
     dispatch_queue_t d;
     // expected-warning@-1{{Member variable 'd' in 'unions::Foo' is a retainable type 'dispatch_queue_t'}}
+    SomeObj** e;
+    // expected-warning@-1{{Member variable 'e' in 'unions::Foo' contains a raw pointer to retainable type 'SomeObj'}}
+    RetainPtr<SomeObj>* f;
+    // expected-warning@-1{{Member variable 'f' in 'unions::Foo' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
   };
 
   template<class T>
@@ -97,9 +119,18 @@ namespace ptr_to_ptr_to_retained {
   };
   TemplateList<SomeObj, CFMutableArrayRef, dispatch_queue_t> list;
 
-  struct SafeList {
+  struct FormerlySafeList {
     RetainPtr<SomeObj>* elements1;
+    // expected-warning@-1{{Member variable 'elements1' in 'ptr_to_ptr_to_retained::FormerlySafeList' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
     RetainPtr<CFMutableArrayRef>* elements2;
+    // expected-warning@-1{{Member variable 'elements2' in 'ptr_to_ptr_to_retained::FormerlySafeList' is a raw pointer to 'WTF::RetainPtr<__CFArray *>'}}
+  };
+
+  struct Container {
+    RetainPtr<SomeObj>* [[clang::annotate_type("webkit.unsafeptr")]] elements1;
+    RetainPtr<CFMutableArrayRef>** [[clang::annotate_type("webkit.unsafeptr")]] elements2;
+    // expected-warning@-1{{Member variable 'elements2' in 'ptr_to_ptr_to_retained::Container' contains a raw pointer to 'WTF::RetainPtr<__CFArray *>'}}
+    RetainPtr<SomeObj>* [[clang::annotate_type("webkit.unsafeptr")]]* [[clang::annotate_type("webkit.unsafeptr")]] elements3;
   };
 
 } // namespace ptr_to_ptr_to_retained
@@ -111,9 +142,19 @@ namespace ptr_to_ptr_to_retained {
   // expected-warning@-1{{Instance variable 'cf_string' in 'AnotherObject' is a retainable type 'CFStringRef'}}
   dispatch_queue_t dispatch;
   // expected-warning@-1{{Instance variable 'dispatch' in 'AnotherObject' is a retainable type 'dispatch_queue_t'}}
+  NSString **ns_string_ptr;
+  // expected-warning@-1{{Instance variable 'ns_string_ptr' in 'AnotherObject' contains a raw pointer to retainable type 'NSString'}}
+  RetainPtr<SomeObj>* retainptr_ptr;
+  // expected-warning@-1{{Instance variable 'retainptr_ptr' in 'AnotherObject' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
+  RetainPtr<SomeObj>** retainptr_ptr_ptr;
+  // expected-warning@-1{{Instance variable 'retainptr_ptr_ptr' in 'AnotherObject' contains a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
 }
 @property(nonatomic, readonly, strong) NSString *prop_string;
 @property(nonatomic, readonly) NSString *prop_safe;
+@property(nonatomic, readonly) NSString **prop_unsafe;
+// expected-warning@-1{{Property 'prop_unsafe' in 'AnotherObject' contains a raw pointer to retainable type 'NSString'}}
+@property(nonatomic, readonly) RetainPtr<NSString> *prop_retainptr_ptr;
+// expected-warning@-1{{Property 'prop_retainptr_ptr' in 'AnotherObject' is a raw pointer to 'WTF::RetainPtr<NSString>'}}
 @end
 
 @implementation AnotherObject
@@ -129,6 +170,12 @@ namespace ptr_to_ptr_to_retained {
   // expected-warning@-1{{Instance variable 'cg_image' in 'DerivedObject' is a retainable type 'CGImageRef'}}
   dispatch_queue_t os_dispatch;
   // expected-warning@-1{{Instance variable 'os_dispatch' in 'DerivedObject' is a retainable type 'dispatch_queue_t'}}
+  NSNumber **ns_number_ptr;
+  // expected-warning@-1{{Instance variable 'ns_number_ptr' in 'DerivedObject' contains a raw pointer to retainable type 'NSNumber'}}
+  RetainPtr<CGImageRef>* cg_image_retainptr_ptr;
+  // expected-warning@-1{{Instance variable 'cg_image_retainptr_ptr' in 'DerivedObject' is a raw pointer to 'WTF::RetainPtr<CGImage *>'}}
+  RetainPtr<CGImageRef>** cg_image_retainptr_ptr_ptr;
+  // expected-warning@-1{{Instance variable 'cg_image_retainptr_ptr_ptr' in 'DerivedObject' contains a raw pointer to 'WTF::RetainPtr<CGImage *>'}}
 }
 @property(nonatomic, strong) NSNumber *prop_number;
 @property(nonatomic, readonly) NSString *prop_string;
@@ -173,6 +220,12 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
   // expected-warning@-1{{Instance variable 'cf_string' in 'NoSynthObject' is a retainable type 'CFStringRef'}}
   dispatch_queue_t dispatch;
   // expected-warning@-1{{Instance variable 'dispatch' in 'NoSynthObject' is a retainable type 'dispatch_queue_t'}}
+  NSString **ns_string_ptr;
+  // expected-warning@-1{{Instance variable 'ns_string_ptr' in 'NoSynthObject' contains a raw pointer to retainable type 'NSString'}}
+  RetainPtr<NSString> *ns_string_retainptr_ptr;
+  // expected-warning@-1{{Instance variable 'ns_string_retainptr_ptr' in 'NoSynthObject' is a raw pointer to 'WTF::RetainPtr<NSString>'}}
+  RetainPtr<NSString> **ns_string_retainptr_ptr_ptr;
+  // expected-warning@-1{{Instance variable 'ns_string_retainptr_ptr_ptr' in 'NoSynthObject' contains a raw pointer to 'WTF::RetainPtr<NSString>'}}
 }
 @property(nonatomic, readonly, strong) NSString *prop_string1;
 @property(nonatomic, readonly, strong) NSString *prop_string2;
@@ -182,6 +235,9 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 // expected-warning@-1{{Property 'prop_string4' in 'NoSynthObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @property(nonatomic, copy) NSString *prop_string5;
 @property(nonatomic, readonly, strong) dispatch_queue_t dispatch;
+@property(nonatomic, readonly) NSString **ns_string_ptr;
+@property(nonatomic, readonly) RetainPtr<SomeObj> *prop_retainptr_ptr;
+// expected-warning@-1{{Property 'prop_retainptr_ptr' in 'NoSynthObject' is a raw pointer to 'WTF::RetainPtr<SomeObj>'}}
 @end
 
 @implementation NoSynthObject
@@ -195,4 +251,9 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 - (dispatch_queue_t)dispatch {
   return nil;
 }
+- (NSString **)ns_string_ptr {
+  return nullptr;
+}
+@synthesize prop_retainptr_ptr;
+
 @end
