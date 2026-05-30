@@ -1759,9 +1759,9 @@ struct CounterCoverageMappingBuilder
     };
 
     CFG::BuildOptions Options;
-    std::unique_ptr<CFG> CalleeCFG = CFG::buildCFG(
-        Definition, Definition->getBody(), &Definition->getASTContext(),
-        Options);
+    std::unique_ptr<CFG> CalleeCFG =
+        CFG::buildCFG(Definition, Definition->getBody(),
+                      &Definition->getASTContext(), Options);
 
     bool IsSinking = false;
     if (CalleeCFG) {
@@ -1797,8 +1797,8 @@ struct CounterCoverageMappingBuilder
       }
     }
 
-    State = IsSinking ? FunctionSinkState::Sinking
-                      : FunctionSinkState::NotSinking;
+    State =
+        IsSinking ? FunctionSinkState::Sinking : FunctionSinkState::NotSinking;
     return IsSinking;
   }
 
