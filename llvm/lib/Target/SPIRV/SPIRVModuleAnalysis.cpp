@@ -2627,7 +2627,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::LocalSizeHint, ST);
-    if (F.getMetadata("intel_reqd_sub_group_size"))
+    if (F.getMetadata("intel_reqd_sub_group_size") ||
+        F.getMetadata("reqd_sub_group_size"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);

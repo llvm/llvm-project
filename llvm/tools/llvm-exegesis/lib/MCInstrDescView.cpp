@@ -104,10 +104,9 @@ Instruction::Instruction(const MCInstrDesc *Description, StringRef Name,
       ImplUseRegs(*ImplUseRegs), AllDefRegs(*AllDefRegs),
       AllUseRegs(*AllUseRegs), NonMemoryRegs(*NonMemoryRegs) {}
 
-std::unique_ptr<Instruction>
-Instruction::create(const MCInstrInfo &InstrInfo,
-                    const RegisterAliasingTrackerCache &RATC,
-                    const BitVectorCache &BVC, unsigned Opcode) {
+std::unique_ptr<Instruction> Instruction::create(
+    const MCInstrInfo &InstrInfo, const RegisterAliasingTrackerCache &RATC,
+    const BitVectorCache &BVC, unsigned Opcode, const MCSubtargetInfo *STI) {
   const MCInstrDesc *const Description = &InstrInfo.get(Opcode);
   unsigned OpIndex = 0;
   SmallVector<Operand, 8> Operands;
@@ -119,9 +118,12 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand.IsDef = (OpIndex < Description->getNumDefs());
     Operand.IsEarlyClobber =
         (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
-    // TODO(gchatelet): Handle LookupRegClassByHwMode.
-    if (OpInfo.RegClass >= 0)
-      Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
+    int16_t RegClass = OpInfo.RegClass;
+    if (OpInfo.isLookupRegClassByHwMode() && STI)
+      RegClass = InstrInfo.getOpRegClassID(
+          OpInfo, STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass >= 0)
+      Operand.Tracker = &RATC.getRegisterClass(RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);
     assert((TiedToIndex == -1 ||
             (0 <= TiedToIndex &&
@@ -308,13 +310,14 @@ void Instruction::dump(const MCRegisterInfo &RegInfo,
 }
 
 InstructionsCache::InstructionsCache(const MCInstrInfo &InstrInfo,
-                                     const RegisterAliasingTrackerCache &RATC)
-    : InstrInfo(InstrInfo), RATC(RATC), BVC() {}
+                                     const RegisterAliasingTrackerCache &RATC,
+                                     const MCSubtargetInfo *STI)
+    : InstrInfo(InstrInfo), RATC(RATC), STI(STI), BVC() {}
 
 const Instruction &InstructionsCache::getInstr(unsigned Opcode) const {
   auto &Found = Instructions[Opcode];
   if (!Found)
-    Found = Instruction::create(InstrInfo, RATC, BVC, Opcode);
+    Found = Instruction::create(InstrInfo, RATC, BVC, Opcode, STI);
   return *Found;
 }
 
