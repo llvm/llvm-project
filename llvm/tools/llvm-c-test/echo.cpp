@@ -1002,6 +1002,20 @@ struct FunCloner {
         Dst = LLVMBuildFreeze(Builder, Arg, Name);
         break;
       }
+      case LLVMBitInsert: {
+        LLVMValueRef Base = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Val = CloneValue(LLVMGetOperand(Src, 1));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 2));
+        Dst = LLVMBuildBitInsert(Builder, Base, Val, Offset, Name);
+        break;
+      }
+      case LLVMBitExtract: {
+        LLVMTypeRef Type = CloneType(LLVMTypeOf(Src));
+        LLVMValueRef SrcV = CloneValue(LLVMGetOperand(Src, 0));
+        LLVMValueRef Offset = CloneValue(LLVMGetOperand(Src, 1));
+        Dst = LLVMBuildBitExtract(Builder, Type, SrcV, Offset, Name);
+        break;
+      }
       case LLVMFence: {
         LLVMAtomicOrdering Ordering = LLVMGetOrdering(Src);
         Dst = LLVMBuildFenceSyncScope(Builder, Ordering,

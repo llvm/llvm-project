@@ -2694,6 +2694,20 @@ public:
     return Insert(new FreezeInst(V), Name);
   }
 
+  Value *CreateBitInsert(Value *Base, Value *Val, Value *Offset,
+                         const Twine &Name = "") {
+    if (Value *V = Folder.FoldBitInsert(Base, Val, Offset))
+      return V;
+    return Insert(BitInsertInst::Create(Base, Val, Offset), Name);
+  }
+
+  Value *CreateBitExtract(Type *Ty, Value *Src, Value *Offset,
+                          const Twine &Name = "") {
+    if (Value *V = Folder.FoldBitExtract(Ty, Src, Offset))
+      return V;
+    return Insert(BitExtractInst::Create(Ty, Src, Offset), Name);
+  }
+
   //===--------------------------------------------------------------------===//
   // Utility creation methods
   //===--------------------------------------------------------------------===//

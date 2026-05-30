@@ -3289,6 +3289,18 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     pushValue(I.getOperand(1), InstID, Vals);
     pushValueAndType(I.getOperand(2), InstID, Vals);
     break;
+  case Instruction::BitExtract:
+    Code = bitc::FUNC_CODE_INST_BITEXTRACT;
+    Vals.push_back(VE.getTypeID(I.getType()));
+    pushValueAndType(I.getOperand(0), InstID, Vals);
+    pushValue(I.getOperand(1), InstID, Vals);
+    break;
+  case Instruction::BitInsert:
+    Code = bitc::FUNC_CODE_INST_BITINSERT;
+    pushValueAndType(I.getOperand(0), InstID, Vals);
+    pushValueAndType(I.getOperand(1), InstID, Vals);
+    pushValue(I.getOperand(2), InstID, Vals);
+    break;
   case Instruction::ShuffleVector:
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);

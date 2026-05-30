@@ -133,6 +133,8 @@ typedef enum {
   LLVMExtractValue   = 53,
   LLVMInsertValue    = 54,
   LLVMFreeze         = 68,
+  LLVMBitInsert      = 72,
+  LLVMBitExtract     = 73,
 
   /* Atomic operators */
   LLVMFence          = 55,
@@ -5142,6 +5144,16 @@ LLVM_C_ABI LLVMValueRef LLVMBuildInsertValue(LLVMBuilderRef,
                                              unsigned Index, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef,
+                                            LLVMTypeRef Type,
+                                            LLVMValueRef Src,
+                                            LLVMValueRef Offset,
+                                            const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef,
+                                           LLVMValueRef Base,
+                                           LLVMValueRef Val,
+                                           LLVMValueRef Offset,
+                                           const char *Name);
 
 LLVM_C_ABI LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef, LLVMValueRef Val,
                                         const char *Name);

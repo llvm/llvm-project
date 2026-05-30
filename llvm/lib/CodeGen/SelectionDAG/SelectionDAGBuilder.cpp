@@ -4151,6 +4151,73 @@ void SelectionDAGBuilder::visitInsertElement(const User &I) {
                            InVec, InVal, InIdx));
 }
 
+void SelectionDAGBuilder::visitBitInsert(const User &I) {
+  SDValue Base   = getValue(I.getOperand(0));
+  SDValue Val    = getValue(I.getOperand(1));
+  SDValue Offset = getValue(I.getOperand(2));
+  EVT BaseVT = Base.getValueType();
+  EVT ValVT  = Val.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc dl = getCurSDLoc();
+
+  SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, BaseVT);
+
+  unsigned ValBitWidth = ValVT.getScalarSizeInBits();
+  SDValue ValWidth = DAG.getConstant(ValBitWidth, dl, BaseVT);
+  SDValue RotateAmount = DAG.getNode(ISD::ADD, dl, BaseVT, LegalOffset, ValWidth);
+
+  // Legalize rotate amount to the target's shift amount type
+  EVT ShiftAmtTy = TLI.getShiftAmountTy(BaseVT, DAG.getDataLayout());
+  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
+
+  SDValue RotatedBase = DAG.getNode(ISD::ROTL, dl, BaseVT, Base, LegalRotateAmount);
+
+  unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
+  APInt ClearMask = APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
+  SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, RotatedBase,
+                                    DAG.getConstant(ClearMask, dl, BaseVT));
+
+  SDValue ExtVal  = DAG.getZExtOrTrunc(Val, dl, BaseVT);
+  SDValue Inserted = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ExtVal);
+
+  SDValue Result = DAG.getNode(ISD::ROTR, dl, BaseVT, Inserted, LegalRotateAmount);
+  setValue(&I, Result);
+}
+
+void SelectionDAGBuilder::visitBitExtract(const User &I) {
+  SDValue Src    = getValue(I.getOperand(0));
+  SDValue Offset = getValue(I.getOperand(1));
+  EVT SrcVT    = Src.getValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+  SDLoc dl = getCurSDLoc();
+
+  // The verifier guarantees the result type is not wider than the source
+  // type, so reject any widening case here. getZExtOrTrunc handles the
+  // equal-width and narrower cases.
+  if (ResultVT.getSizeInBits() > SrcVT.getSizeInBits())
+    llvm_unreachable(
+        "bitextract result wider than source should be rejected by verifier");
+
+  // Convert offset to SrcVT
+  SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, SrcVT);
+
+  // RotateAmount = Offset + width(Result), computed in SrcVT
+  unsigned ResultBitWidth = ResultVT.getScalarSizeInBits();
+  SDValue ResultWidth = DAG.getConstant(ResultBitWidth, dl, SrcVT);
+  SDValue RotateAmount = DAG.getNode(ISD::ADD, dl, SrcVT, LegalOffset, ResultWidth);
+
+  // Legalize rotate amount to the target's shift amount type
+  EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
+  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
+
+  // Rotate left by (Offset + ResultWidth) — brings target field to bit 0
+  SDValue Rotated = DAG.getNode(ISD::ROTL, dl, SrcVT, Src, LegalRotateAmount);
+
+  // Truncating to ResultVT discards the high bits for free
+  setValue(&I, DAG.getZExtOrTrunc(Rotated, dl, ResultVT));
+}
+
 void SelectionDAGBuilder::visitExtractElement(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue InVec = getValue(I.getOperand(0));
