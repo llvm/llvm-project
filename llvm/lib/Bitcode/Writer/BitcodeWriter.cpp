@@ -5363,9 +5363,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   struct CfiFunction {
     GlobalValue::GUID GUID = 0;
     StringRef Name;
-    bool operator<(const CfiFunction &RHS) const {
-      return Name < RHS.Name;
-    }
+    bool operator<(const CfiFunction &RHS) const { return Name < RHS.Name; }
   };
   std::vector<CfiFunction> Functions;
   auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
