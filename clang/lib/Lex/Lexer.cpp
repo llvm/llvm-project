@@ -2023,7 +2023,7 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr,
     if (C == '$') {
       // If we hit a $ and they are not supported in macros, we are done.
       if (!LangOpts.DollarMacros)
-          break;
+        break;
       // Otherwise, emit a diagnostic and continue.
       if (!isLexingRawMode())
         Diag(CurPtr, diag::ext_dollar_in_identifier);
