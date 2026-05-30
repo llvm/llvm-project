@@ -56435,8 +56435,6 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                                            SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  unsigned NumElts = VT.getVectorNumElements();
-
   SDValue X, Y, XorOp;
   APInt Imm, ConstUndef;
 
@@ -56448,6 +56446,8 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   // GF2P8AFFINEQB only operates on i8 vector types
   assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
          "Unsupported GFNI type");
+
+  unsigned NumElts = VT.getVectorNumElements();
 
   // Fold: GF2P8AFFINEQB(x, M) ^ x
   //   =>  GF2P8AFFINEQB(x, M ^ IDENTITY)
