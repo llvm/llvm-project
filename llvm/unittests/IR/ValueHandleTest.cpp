@@ -535,7 +535,6 @@ TEST_F(ValueHandle, PoisoningVH_DenseMap) {
   EXPECT_TRUE(Map.find_as(ConstantV) != Map.end());
 }
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
 // A poisoned PoisoningVH is detached from its use list but keeps its raw
 // pointer, so its use-list pointers are stale; relocating it must not relink
 // through them. Reproduce the way ScalarEvolution does: a callback mutates a
@@ -566,7 +565,6 @@ TEST_F(ValueHandle, PoisoningVH_RelocatePoisoned) {
   BB->deleteValue();
   BB2->deleteValue();
 }
-#endif
 
 #ifdef NDEBUG
 
