@@ -6067,9 +6067,16 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (!VT || I.use_empty())
     return false;
 
-  unsigned ElementSize = VT->getElementType()->getScalarSizeInBits();
-  unsigned NumElts = VT->getNumElements();
   Type *EltTy = VT->getElementType();
+  if (!DL->typeSizeEqualsStoreSize(EltTy))
+    return false;
+
+  uint64_t MaxInt64 =
+      static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
+  uint64_t ElementSizeBits = DL->getTypeStoreSizeInBits(EltTy);
+  assert((ElementSizeBits <= MaxInt64) && "element size far too large?");
+  int64_t ElementSize = static_cast<int64_t>(ElementSizeBits);
+  unsigned NumElts = VT->getNumElements();
   Value *CommonBase = nullptr;
   int64_t ExpectedBaseBitOffset = 0, FirstLoadOffset = 0;
   LoadInst *FirstLI = nullptr;
@@ -6114,7 +6121,14 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
       if (Base != CommonBase)
         return false;
 
-      if (AbsoluteBitOffset != ExpectedBaseBitOffset + (Lane * ElementSize))
+      uint64_t ResultLane = Lane;
+      assert(ResultLane <= MaxInt64 / static_cast<uint64_t>(ElementSize) &&
+             "result lane offset far too large?");
+
+      int64_t ExpectedBitOffset =
+          ExpectedBaseBitOffset +
+          static_cast<int64_t>(ResultLane) * ElementSize;
+      if (AbsoluteBitOffset != ExpectedBitOffset)
         return false;
     }
 
@@ -6129,20 +6143,25 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   int64_t OffsetFromFirstLoad = StartByteOffset - FirstLoadOffset;
   Align NewAlign = commonAlignment(FirstLI->getAlign(), OffsetFromFirstLoad);
   InstructionCost NewCost =
-      TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign, CostKind);
+      TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign,
+                          FirstLI->getPointerAddressSpace(), CostKind);
+
   LLVM_DEBUG(dbgs() << "Found contiguous loads to fold: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
 
-  if (OldCost < NewCost)
+  if (OldCost <= NewCost)
     return false;
 
-  Value *NewBasePtr =
-      Builder.CreatePtrAdd(CommonBase, Builder.getInt64(StartByteOffset));
+  Type *IndexTy = DL->getIndexType(CommonBase->getType());
+  Value *NewBasePtr = Builder.CreatePtrAdd(
+      CommonBase, ConstantInt::get(IndexTy, StartByteOffset,
+                                   /*isSigned=*/true));
   LoadInst *NewLoad = Builder.CreateAlignedLoad(VT, NewBasePtr, NewAlign);
-  NewLoad->copyMetadata(*FirstLI);
-  replaceValue(I, *NewLoad);
+  if (Loads.size() == 1)
+    copyMetadataForLoad(*NewLoad, *FirstLI);
 
+  replaceValue(I, *NewLoad);
   return true;
 }
 
