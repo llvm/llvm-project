@@ -1049,11 +1049,19 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     // previous build's UUID, falling through to slow dsymForUUID lookups.
     {
       StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
-      auto Pos = DWARFFile.find(".dSYM/");
-      if (Pos == StringRef::npos)
-        Pos = DWARFFile.find(".dSYM");
-      if (Pos != StringRef::npos) {
-        StringRef BundlePath = DWARFFile.substr(0, Pos + 5);
+      // Walk components from the right: the innermost match is the bundle
+      // itself, even when a parent directory is also named *.dSYM.
+      StringRef BundlePath;
+      for (auto I = sys::path::rbegin(DWARFFile),
+                E = sys::path::rend(DWARFFile);
+           I != E; ++I) {
+        StringRef Component = *I;
+        if (sys::path::extension(Component) == ".dSYM") {
+          BundlePath = DWARFFile.substr(0, Component.end() - DWARFFile.begin());
+          break;
+        }
+      }
+      if (!BundlePath.empty()) {
         auto Now = std::chrono::system_clock::now();
         if (auto EC =
                 sys::fs::setLastAccessAndModificationTime(BundlePath, Now))
