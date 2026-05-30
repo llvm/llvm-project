@@ -159,9 +159,49 @@ STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identi
 If no accelerator plugins are installed, the server does not advertise the
 `accelerator-plugins+` feature and this packet should not be sent.
 
+Each `accelerator_action` may include a `breakpoints` array requesting
+breakpoints to be set in the native process. See
+`jAcceleratorPluginBreakpointHit` for the callback when those breakpoints
+are hit.
+
 In future patches, each `accelerator_action` will include additional fields
-such as breakpoints to set in the native process, connection info for
-secondary debug sessions, and synchronization options.
+such as connection info for secondary debug sessions and synchronization
+options.
+
+**Priority To Implement:** Low. Only needed for hardware accelerator
+debugging support.
+
+## jAcceleratorPluginBreakpointHit
+
+Sent by the client when a breakpoint requested by an accelerator plugin
+(via `jAcceleratorPluginInitialize`) is hit in the native process. This
+packet requires the `accelerator-plugins+` feature from `qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `plugin_name`   | string | Name of the plugin that requested the breakpoint. |
+| `breakpoint`    | object | The `AcceleratorBreakpointInfo` that was hit, including its `identifier`. |
+| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}` for each symbol requested in the breakpoint's `symbol_names`. |
+
+The response JSON has the following fields:
+
+| Key                  | Type | Description |
+|----------------------|------|-------------|
+| `disable_bp`         | bool | If true, the client should disable this breakpoint. |
+| `auto_resume_native` | bool | If true, the native process should automatically resume after handling the hit. |
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
+STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false}
+```
 
 **Priority To Implement:** Low. Only needed for hardware accelerator
 debugging support.

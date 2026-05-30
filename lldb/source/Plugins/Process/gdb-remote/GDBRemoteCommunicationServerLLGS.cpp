@@ -226,6 +226,11 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::
+          eServerPacketType_jAcceleratorPluginBreakpointHit,
+      &GDBRemoteCommunicationServerLLGS::
+          Handle_jAcceleratorPluginBreakpointHit);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -4547,4 +4552,30 @@ GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
   StreamGDBRemote response;
   response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginBreakpointHit(
+    StringExtractorGDBRemote &packet) {
+  packet.ConsumeFront("jAcceleratorPluginBreakpointHit:");
+  llvm::Expected<AcceleratorBreakpointHitArgs> args =
+      llvm::json::parse<AcceleratorBreakpointHitArgs>(
+          packet.Peek(), "AcceleratorBreakpointHitArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
+
+  for (auto &plugin_up : m_accelerator_plugins) {
+    if (plugin_up->GetPluginName() == args->plugin_name) {
+      llvm::Expected<AcceleratorBreakpointHitResponse> bp_response =
+          plugin_up->BreakpointWasHit(*args);
+      if (!bp_response)
+        return SendErrorResponse(bp_response.takeError());
+
+      StreamGDBRemote response;
+      response.PutAsJSON(*bp_response, /*hex_ascii=*/false);
+      return SendPacketNoLock(response.GetString());
+    }
+  }
+  return SendErrorResponse(
+      Status::FromErrorString("unknown accelerator plugin name"));
 }
