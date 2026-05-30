@@ -252,7 +252,7 @@ struct atomic<shared_ptr<_Tp>> {
   bool compare_exchange_strong(
       shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__strong=*/true);
+    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__is_strong=*/true);
   }
 
   bool compare_exchange_strong(
@@ -263,7 +263,7 @@ struct atomic<shared_ptr<_Tp>> {
   bool compare_exchange_weak(
       shared_ptr<_Tp>& __expected, shared_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__strong=*/false);
+    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__is_strong=*/false);
   }
 
   bool compare_exchange_weak(
@@ -398,14 +398,14 @@ private:
     return shared_ptr<_Tp>::__create_with_control_block(__old_ptr, __old_cb);
   }
 
-  // __strong: when true, retry on benign DWCAS failures (e.g., local-count
+  // __is_strong: when true, retry on benign DWCAS failures (e.g., local-count
   //           changes by concurrent loads); only return false on a real
   //           ownership-equivalence mismatch.
   bool __cas_dwcas(shared_ptr<_Tp>& __expected,
                    shared_ptr<_Tp> __desired,
                    memory_order __success,
                    memory_order __failure,
-                   bool __strong) noexcept {
+                   bool __is_strong) noexcept {
     _Tp* __exp_ptr               = __expected.__ptr_;
     __shared_weak_count* __exp_c = __expected.__cntrl_;
 
@@ -444,7 +444,7 @@ private:
         return true;
       }
 
-      if (!__strong) {
+      if (!__is_strong) {
         // weak: a single underlying CAS attempt - if it failed for any
         // reason (real ownership change or concurrent local-count update),
         // report failure with the current pair as the new __expected.
@@ -516,7 +516,7 @@ struct atomic<weak_ptr<_Tp>> {
   bool compare_exchange_strong(
       weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__strong=*/true);
+    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__is_strong=*/true);
   }
 
   bool compare_exchange_strong(
@@ -527,7 +527,7 @@ struct atomic<weak_ptr<_Tp>> {
   bool compare_exchange_weak(
       weak_ptr<_Tp>& __expected, weak_ptr<_Tp> __desired, memory_order __success, memory_order __failure) noexcept
       _LIBCPP_CHECK_EXCHANGE_MEMORY_ORDER(__success, __failure) {
-    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__strong=*/false);
+    return __cas_dwcas(__expected, std::move(__desired), __success, __failure, /*__is_strong=*/false);
   }
 
   bool compare_exchange_weak(
@@ -650,7 +650,7 @@ private:
                    weak_ptr<_Tp> __desired,
                    memory_order __success,
                    memory_order __failure,
-                   bool __strong) noexcept {
+                   bool __is_strong) noexcept {
     _Tp* __exp_ptr               = __expected.__ptr_;
     __shared_weak_count* __exp_c = __expected.__cntrl_;
 
@@ -685,7 +685,7 @@ private:
         return true;
       }
 
-      if (!__strong) {
+      if (!__is_strong) {
         __expected = __load_dwcas(__failure);
         return false;
       }
