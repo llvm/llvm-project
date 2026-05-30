@@ -101,7 +101,8 @@ define float @test_powr_afn_f32__0(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__0(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret float 1.000000e+00
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
   %call = tail call afn float @_Z4powrff(float %x, float 0.0)
@@ -112,7 +113,8 @@ define float @test_powr_afn_f32__1(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__1(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret float [[X]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
   %call = tail call afn float @_Z4powrff(float %x, float 1.0)
@@ -123,7 +125,7 @@ define float @test_powr_afn_f32__2(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2:%.*]] = fmul afn float [[X]], [[X]]
+; CHECK-NEXT:    [[__POW2:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float 2.000000e+00)
 ; CHECK-NEXT:    ret float [[__POW2]]
 ;
 entry:
@@ -159,7 +161,7 @@ define float @test_powr_afn_f32__neg1(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__neg1(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn float 1.000000e+00, [[X]]
+; CHECK-NEXT:    [[__POWRECIP:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float -1.000000e+00)
 ; CHECK-NEXT:    ret float [[__POWRECIP]]
 ;
 entry:
@@ -171,7 +173,7 @@ define float @test_powr_afn_f32__half(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__half(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call afn float @_Z4sqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float 5.000000e-01)
 ; CHECK-NEXT:    ret float [[__POW2SQRT]]
 ;
 entry:
@@ -183,7 +185,7 @@ define float @test_powr_afn_f32__neghalf(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__neghalf(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn float @_Z5rsqrtf(float [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = tail call afn float @_Z11__powr_fastff(float [[X]], float -5.000000e-01)
 ; CHECK-NEXT:    ret float [[__POW2RSQRT]]
 ;
 entry:
@@ -195,7 +197,8 @@ define <2 x float> @test_powr_afn_v2f32__0(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__0(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> zeroinitializer)
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
   %call = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> zeroinitializer)
@@ -206,7 +209,8 @@ define <2 x float> @test_powr_afn_v2f32__1(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__1(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x float> [[X]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
 entry:
   %call = tail call afn <2 x float> @_Z4powrDv2_fS_(<2 x float> %x, <2 x float> splat (float 1.0))
@@ -217,7 +221,7 @@ define <2 x float> @test_powr_afn_v2f32__2(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__2(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2:%.*]] = fmul afn <2 x float> [[X]], [[X]]
+; CHECK-NEXT:    [[__POW2:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 2.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[__POW2]]
 ;
 entry:
@@ -253,7 +257,7 @@ define <2 x float> @test_powr_afn_v2f32__neg1(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__neg1(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POWRECIP:%.*]] = fdiv afn <2 x float> splat (float 1.000000e+00), [[X]]
+; CHECK-NEXT:    [[__POWRECIP:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -1.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[__POWRECIP]]
 ;
 entry:
@@ -265,7 +269,7 @@ define <2 x float> @test_powr_afn_v2f32__half(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__half(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2SQRT:%.*]] = call afn <2 x float> @_Z4sqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2SQRT:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float 5.000000e-01))
 ; CHECK-NEXT:    ret <2 x float> [[__POW2SQRT]]
 ;
 entry:
@@ -277,7 +281,7 @@ define <2 x float> @test_powr_afn_v2f32__neghalf(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_powr_afn_v2f32__neghalf(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = call afn <2 x float> @_Z5rsqrtDv2_f(<2 x float> [[X]])
+; CHECK-NEXT:    [[__POW2RSQRT:%.*]] = tail call afn <2 x float> @_Z11__powr_fastDv2_fS_(<2 x float> [[X]], <2 x float> splat (float -5.000000e-01))
 ; CHECK-NEXT:    ret <2 x float> [[__POW2RSQRT]]
 ;
 entry:
@@ -385,7 +389,8 @@ define float @test__powr_fast_f32_0(float %x) #0 {
 ; CHECK-LABEL: define float @test__powr_fast_f32_0(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret float 1.000000e+00
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @_Z11__powr_fastff(float [[X]], float 0.000000e+00)
+; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
   %call = tail call float @_Z11__powr_fastff(float %x, float 0.0)
@@ -396,7 +401,15 @@ define float @test__powr_fast_afn_f32_0(float %x) #0 {
 ; CHECK-LABEL: define float @test__powr_fast_afn_f32_0(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret float 1.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp afn olt float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select afn i1 [[TMP0]], float +qnan, float [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul afn float [[TMP3]], 0.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = call afn float @llvm.exp2.f32(float [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp afn ueq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP7:%.*]] = select afn i1 [[TMP6]], float +qnan, float [[TMP5]]
+; CHECK-NEXT:    ret float [[TMP7]]
 ;
 entry:
   %call = tail call afn float @_Z11__powr_fastff(float %x, float 0.0)
@@ -407,7 +420,7 @@ define float @test__powr_fast_f32_2(float %x) #0 {
 ; CHECK-LABEL: define float @test__powr_fast_f32_2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2:%.*]] = fmul float [[X]], [[X]]
+; CHECK-NEXT:    [[__POW2:%.*]] = tail call float @_Z11__powr_fastff(float [[X]], float 2.000000e+00)
 ; CHECK-NEXT:    ret float [[__POW2]]
 ;
 entry:
@@ -419,7 +432,18 @@ define float @test__powr_fast_afn_f32_2(float %x) #0 {
 ; CHECK-LABEL: define float @test__powr_fast_afn_f32_2(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[__POW2:%.*]] = fmul afn float [[X]], [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp afn olt float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select afn i1 [[TMP0]], float +qnan, float [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.fabs.f32(float [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.log2.f32(float [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul afn float [[TMP3]], 2.000000e+00
+; CHECK-NEXT:    [[TMP5:%.*]] = call afn float @llvm.exp2.f32(float [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp afn oeq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP7:%.*]] = select afn i1 [[TMP6]], float 0.000000e+00, float [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp afn oeq float [[TMP1]], +inf
+; CHECK-NEXT:    [[TMP9:%.*]] = select afn i1 [[TMP8]], float +inf, float [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp afn uno float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[__POW2:%.*]] = select afn i1 [[TMP10]], float +qnan, float [[TMP9]]
 ; CHECK-NEXT:    ret float [[__POW2]]
 ;
 entry:

@@ -898,6 +898,16 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
+  // OpenCL powr(x<0, y) = NaN, but the folds below would turn it into a
+  // finite number. Skip them unless NaNs are ignored or the base is known
+  // non-negative.
+  if ((CF || CINT) && !FPOp->hasNoNaNs() &&
+      (FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+       FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST) &&
+      !cannotBeOrderedLessThanZero(
+          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp))))
+    return false;
+
   if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
     //  pow/powr/pown(x, 0) == 1
     LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
