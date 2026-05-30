@@ -39,6 +39,11 @@ else:
 
 config.available_features.add(config.tool_name)
 
+# Tools whose operator new overrides use the shared framework in
+# sanitizer_common/sanitizer_new_operators.inc.
+if config.tool_name in ["asan"]:
+    config.available_features.add("operator-new-framework")
+
 if (
     config.target_os == "Linux"
     and config.tool_name == "lsan"
