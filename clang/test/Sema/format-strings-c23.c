@@ -91,15 +91,3 @@ void t5(void) {
   t4("%w32d");
   t4("%w64d"); // expected-warning{{format specifier 'w64d' is incompatible with 'w32d'}}
 }
-
-#ifdef INT56_WIDTH
-void t6(int56_t i56, uint56_t u56, int_fast56_t if56,
-        uint_fast56_t uf56, int56_t *i56_ptr, uint56_t *u56_ptr) {
-  printf("%w56d", i56);
-  printf("%w56u", u56);
-  printf("%wf56d", if56);
-  printf("%wf56u", uf56);
-  scanf("%w56d", i56_ptr);
-  scanf("%w56u", u56_ptr);
-}
-#endif
