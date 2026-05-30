@@ -8635,6 +8635,10 @@ value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
+Note that the metadata value in invariant.group carries no semantic value.
+Because it must have no entries, all invariant.group annotations in a module
+reference the same uniqued empty node.
+
 Examples:
 
 .. code-block:: llvm
