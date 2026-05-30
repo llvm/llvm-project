@@ -619,6 +619,8 @@ Bug Fixes to Compiler Builtins
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
 - ``__annotation`` is now diagnosed as unsupported on non-Windows/UEFI targets, fixing a
   crash when using it with ``-fms-extensions`` on other platforms. (#GH184318)
+- Fixed a compiler crash due to an unresolved overloaded function type when
+  calling ``__builtin_bit_cast``. (#GH200112)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
