@@ -148,7 +148,7 @@ static const char *ExternalMopDesc(bool first, bool write) {
       Printf(__VA_ARGS__);                                       \
     }
 
-static void PrintMop(const ReportMop* mop, bool first, char* out = NULL,
+static void PrintMop(const ReportMop* mop, bool first, char* out = nullptr,
                      size_t outlen = 0) {
   Decorator d;
   char thrbuf[kThreadBufSize];
@@ -176,7 +176,7 @@ static void PrintMop(const ReportMop* mop, bool first, char* out = NULL,
   }
 }
 
-static bool PrintLocation(const ReportLocation* loc, char* out = NULL,
+static bool PrintLocation(const ReportLocation* loc, char* out = nullptr,
                           size_t outlen = 0) {
   Decorator d;
   char thrbuf[kThreadBufSize];
@@ -247,7 +247,7 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
          reinterpret_cast<void *>(rm->addr), d.Default(), after);
 }
 
-static void PrintMutex(const ReportMutex* rm, char* out = NULL,
+static void PrintMutex(const ReportMutex* rm, char* out = nullptr,
                        size_t outlen = 0) {
   Decorator d;
   if (!out)
@@ -262,7 +262,7 @@ static void PrintMutex(const ReportMutex* rm, char* out = NULL,
 }
 
 // Returns whether the stack is important enough to be printed
-static bool PrintThread(const ReportThread* rt, char* out = NULL,
+static bool PrintThread(const ReportThread* rt, char* out = nullptr,
                         size_t outlen = 0) {
   Decorator d;
   if (rt->id == kMainTid)  // Little sense in describing the main thread.
