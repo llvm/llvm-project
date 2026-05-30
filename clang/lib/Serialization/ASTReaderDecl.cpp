@@ -996,8 +996,16 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       if (InsertPos)
         CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
       else {
-        assert(Reader.getContext().getLangOpts().Modules &&
-               "already deserialized this template specialization");
+        // A specialization with the same template arguments has already been
+        // deserialized. This is not specific to merging declarations from
+        // different modules: it can also happen within a single PCH/AST file
+        // when a friend declaration of the specialization inside a class
+        // template is deserialized re-entrantly (e.g. while loading the lexical
+        // declarations of an instantiation of that class template) at the same
+        // time as the canonical copy of the specialization, producing two
+        // redeclarations of the same specialization. Merge them together;
+        // mergeRedeclarable() below links them correctly regardless of whether
+        // modules are enabled.
         Existing = ExistingInfo->getFunction();
       }
     }
