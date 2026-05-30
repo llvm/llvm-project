@@ -2451,9 +2451,11 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_mul_pd_512:
   case Intrinsic::x86_avx512_sub_pd_512:
     // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
-    // IR operations.
+    // IR operations.  Don't do this under strictfp: the plain FP ops are
+    // evaluated in the default FP environment, dropping the dynamic rounding
+    // mode the intrinsic is required to honor.
     if (auto *R = dyn_cast<ConstantInt>(II.getArgOperand(2))) {
-      if (R->getValue() == 4) {
+      if (R->getValue() == 4 && !II.isStrictFP()) {
         Value *Arg0 = II.getArgOperand(0);
         Value *Arg1 = II.getArgOperand(1);
 
@@ -2493,9 +2495,11 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_avx512_mask_mul_sd_round:
   case Intrinsic::x86_avx512_mask_sub_sd_round:
     // If the rounding mode is CUR_DIRECTION(4) we can turn these into regular
-    // IR operations.
+    // IR operations.  Don't do this under strictfp: the plain FP ops are
+    // evaluated in the default FP environment, dropping the dynamic rounding
+    // mode the intrinsic is required to honor.
     if (auto *R = dyn_cast<ConstantInt>(II.getArgOperand(4))) {
-      if (R->getValue() == 4) {
+      if (R->getValue() == 4 && !II.isStrictFP()) {
         // Extract the element as scalars.
         Value *Arg0 = II.getArgOperand(0);
         Value *Arg1 = II.getArgOperand(1);

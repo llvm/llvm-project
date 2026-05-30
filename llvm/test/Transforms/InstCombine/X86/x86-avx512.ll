@@ -2253,3 +2253,34 @@ define i32 @test_comi_sd_0(double %a, double %b) {
   %5 = tail call i32 @llvm.x86.avx512.vcomi.sd(<2 x double> %2, <2 x double> %4, i32 0, i32 4)
   ret i32 %5
 }
+
+; The CUR_DIRECTION(4) rounding-mode fold rewrites these intrinsics to plain,
+; unconstrained IR FP ops.  That is only valid in the default FP environment;
+; under strictfp the intrinsic must be preserved so the dynamic rounding mode is
+; honored.
+define <16 x float> @add_ps_512_cur_direction_strictfp(<16 x float> %a, <16 x float> %b) strictfp {
+; CHECK-LABEL: @add_ps_512_cur_direction_strictfp(
+; CHECK-NEXT:    [[R:%.*]] = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> [[A:%.*]], <16 x float> [[B:%.*]], i32 4) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    ret <16 x float> [[R]]
+;
+  %r = call <16 x float> @llvm.x86.avx512.add.ps.512(<16 x float> %a, <16 x float> %b, i32 4) strictfp
+  ret <16 x float> %r
+}
+
+define <4 x float> @mask_add_ss_cur_direction_strictfp(<4 x float> %a, <4 x float> %b) strictfp {
+; CHECK-LABEL: @mask_add_ss_cur_direction_strictfp(
+; CHECK-NEXT:    [[R:%.*]] = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, i8 -1, i32 4) #[[ATTR2]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %r = call <4 x float> @llvm.x86.avx512.mask.add.ss.round(<4 x float> %a, <4 x float> %b, <4 x float> zeroinitializer, i8 -1, i32 4) strictfp
+  ret <4 x float> %r
+}
+
+define <2 x double> @mask_mul_sd_cur_direction_strictfp(<2 x double> %a, <2 x double> %b) strictfp {
+; CHECK-LABEL: @mask_mul_sd_cur_direction_strictfp(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @llvm.x86.avx512.mask.mul.sd.round(<2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x double> <double 0.000000e+00, double poison>, i8 -1, i32 4) #[[ATTR2]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = call <2 x double> @llvm.x86.avx512.mask.mul.sd.round(<2 x double> %a, <2 x double> %b, <2 x double> zeroinitializer, i8 -1, i32 4) strictfp
+  ret <2 x double> %r
+}
