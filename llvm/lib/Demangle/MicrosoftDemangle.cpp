@@ -2544,7 +2544,7 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
     OF = OutputFlags(OF | OF_NoVariableType);
 
   int InternalStatus = demangle_success;
-  char *Buf;
+  char *Buf = nullptr;
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
   else {
