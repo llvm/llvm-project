@@ -181,7 +181,7 @@ MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                          CallingConv::ID CC,
                                                          EVT VT) const {
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
+  if (VT.isVectorOf(MVT::i1)) {
     auto [RegisterVT, NumRegisters] =
         handleMaskRegisterForCallingConv(Subtarget, VT);
     if (RegisterVT != MVT::INVALID_SIMPLE_VALUE_TYPE)

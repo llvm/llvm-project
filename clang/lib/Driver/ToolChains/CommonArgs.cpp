@@ -3392,8 +3392,9 @@ void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
 }
 
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
-                                               ArgStringList &CmdArgs) {
-  bool use_fwrapv = false;
+                                               ArgStringList &CmdArgs,
+                                               bool IsMSVCCompat) {
+  bool use_fwrapv = IsMSVCCompat;
   bool use_fwrapv_pointer = false;
   for (const Arg *A : Args.filtered(
            options::OPT_fstrict_overflow, options::OPT_fno_strict_overflow,
@@ -3426,6 +3427,8 @@ void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
 
   if (use_fwrapv)
     CmdArgs.push_back("-fwrapv");
+  if (!use_fwrapv && IsMSVCCompat)
+    CmdArgs.push_back("-fno-wrapv");
   if (use_fwrapv_pointer)
     CmdArgs.push_back("-fwrapv-pointer");
 }
