@@ -51,10 +51,17 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
     Flags.setByVal();
   if (Attrs.hasAttribute(Attribute::ByRef))
     Flags.setByRef();
-  if (Attrs.hasAttribute(Attribute::Preallocated))
+  if (Attrs.hasAttribute(Attribute::Preallocated)) {
     Flags.setPreallocated();
-  if (Attrs.hasAttribute(Attribute::InAlloca))
+    // Set the byval flag so CC lowering callbacks that don't know about
+    // preallocated still see the correct allocated byte count.
+    Flags.setByVal();
+  }
+  if (Attrs.hasAttribute(Attribute::InAlloca)) {
     Flags.setInAlloca();
+    // Likewise set byval for inalloca; see the preallocated case above.
+    Flags.setByVal();
+  }
   if (Attrs.hasAttribute(Attribute::Returned))
     Flags.setReturned();
   if (Attrs.hasAttribute(Attribute::SwiftSelf))
