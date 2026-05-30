@@ -20,6 +20,6 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %off = ptrtoint ptr %alloc to i64 => i64 8
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %ptr1, i64 %off => ptr 0x8 [nullary]
-; CHECK-NEXT:   %cast = inttoptr i64 %off to ptr => ptr 0x8 [alloc]
+; CHECK-NEXT:   %cast = inttoptr i64 %off to ptr => ptr 0x8 [wildcard]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

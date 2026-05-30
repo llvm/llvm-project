@@ -120,22 +120,27 @@ static bool violatesNoUndefAttr(AnyValue &V) {
 /// Assumes V is either a poison or a pointer.
 static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
                                              bool OrNull, unsigned AS,
-                                             const DataLayout &DL) {
+                                             Context &Ctx) {
   if (V.isPoison())
     return true;
 
   auto &Ptr = V.asPointer();
-  if (Ptr.isNullPtr(AS, DL)) {
+  if (Ptr.isNullPtr(AS, Ctx.getDataLayout())) {
     if (OrNull)
       return false;
     return true;
   }
-  auto *MO = Ptr.getMemoryObject();
+
+  auto *MO = Ctx.checkProvenance(
+      Ptr,
+      [&](const Provenance &) {
+        // TODO: check read_provenance
+        // TODO: check nofree for attributes/metadata.
+        return true;
+      },
+      AS);
   if (!MO)
     return true;
-
-  // TODO: check read_provenance
-  // TODO: check nofree for attributes/metadata.
 
   const APInt &PtrAddr = Ptr.address();
   return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
@@ -710,7 +715,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset,
+                         unsigned AS) {
     if (Offset.isZero())
       return Ptr;
     APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
@@ -730,9 +736,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     APInt NewAddr = Ptr.address();
     NewAddr.insertBits(NewIndex.asInteger(), 0);
 
-    auto *MO = Ptr.getMemoryObject();
-    if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
-      return AnyValue::poison();
+    MemoryObject *MO = nullptr;
+    if (Flags.isInBounds()) {
+      MO = Ctx.checkProvenance(
+          Ptr, [](const Provenance &) { return true; }, AS,
+          /*HasSideEffect=*/false);
+      if (!MO || !MO->inBounds(NewAddr))
+        return AnyValue::poison();
+    }
 
     if (!AccumulatedOffset.isPoison()) {
       AccumulatedOffset =
@@ -744,31 +755,39 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
     // Should not expose provenance here even if the new address doesn't point
     // to the original object.
-    return Ptr.getWithNewAddr(NewAddr);
+    auto Res = Ptr.getWithNewAddr(NewAddr);
+    if (MO) {
+      auto &Prov = Res.provenance();
+      if (Prov.isWildcard() && !Prov.getMemoryObject())
+        Res = Res.getWithNewProvenance(Prov.getWithKnownMemoryObject(*MO));
+    }
+    return Res;
   }
 
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset,
+                         unsigned AS) {
     if (Ptr.isPoison())
       return AnyValue::poison();
-    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
+    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset, AS);
   }
 
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset) {
+                               AnyValue &AccumulatedOffset, unsigned AS) {
     if (Ptr.isPoison() || Index.isPoison())
       return AnyValue::poison();
     assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
     if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
+      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset,
+                           AS);
     auto ScaledOffset =
         mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
                   Flags.hasNoUnsignedWrap());
     if (ScaledOffset.isPoison())
       return AnyValue::poison();
     return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
-                         AccumulatedOffset);
+                         AccumulatedOffset, AS);
   }
 
   AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
@@ -983,7 +1002,7 @@ public:
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
-                    Kind == Attribute::DereferenceableOrNull, AS, DL))
+                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
               reportImmediateUB() << "The pointer " << WasOn << " violates "
                                   << (Kind == Attribute::DereferenceableOrNull
                                           ? "dereferenceable_or_null("
@@ -1008,7 +1027,9 @@ public:
       auto Ptr = Args[0];
       if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = Ptr.asPointer().getMemoryObject();
+      auto *MO = Ctx.checkProvenance(
+          Ptr.asPointer(), [](const Provenance &) { return true; },
+          CB.getOperand(0)->getType()->getPointerAddressSpace());
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
@@ -1691,7 +1712,7 @@ public:
               std::max(AttrsAtCallSite.getDereferenceableBytes(),
                        AttrsAtCallee.getDereferenceableBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableBytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates dereferenceable("
               << DereferenceableBytes << ") attribute.";
@@ -1699,7 +1720,7 @@ public:
                      std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
                               AttrsAtCallee.getDereferenceableOrNullBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB() << "The value " << V
                               << " violates "
                                  "dereferenceable_or_null("
@@ -1757,7 +1778,7 @@ public:
               I.getMetadata(LLVMContext::MD_dereferenceable)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable !{i64 "
               << Bytes << "} metadata.";
@@ -1765,7 +1786,7 @@ public:
                      I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable_or_null!{i64 "
               << Bytes << "} metadata.";
@@ -2347,6 +2368,7 @@ public:
   void visitGetElementPtrInst(GetElementPtrInst &GEP) {
     uint32_t IndexBitWidth =
         DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
+    unsigned AS = GEP.getType()->getPointerAddressSpace();
     GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
     AnyValue Res = getValue(GEP.getPointerOperand());
     AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
@@ -2365,7 +2387,7 @@ public:
                  AccumulatedOffset.asAggregate()))
           ResElem = computeScaledPtrAdd(
               ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
-              Scale, Flags, OffsetElem);
+              Scale, Flags, OffsetElem, AS);
       } else {
         AnyValue CanonicalIndex =
             canonicalizeIndex(Index, IndexBitWidth, Flags);
@@ -2373,10 +2395,10 @@ public:
           for (auto &&[ResElem, OffsetElem] :
                zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
             ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
-                                          OffsetElem);
+                                          OffsetElem, AS);
         } else {
           Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    AccumulatedOffset);
+                                    AccumulatedOffset, AS);
         }
       }
     };
@@ -2430,11 +2452,10 @@ public:
   // capability.
 
   void visitIntToPtr(IntToPtrInst &I) {
-    unsigned AS = I.getType()->getPointerAddressSpace();
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
-      auto Prov = Ctx.getWildcardProvenance(V.asInteger(), AS);
+      auto Prov = Ctx.getWildcardProvenance();
       // TODO: check metadata
       return Pointer(std::move(Prov),
                      V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
@@ -2444,7 +2465,8 @@ public:
 
   void visitLoadInst(LoadInst &LI) {
     auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign(),
-                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef));
+                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef),
+                       LI.getPointerAddressSpace());
     // TODO: track volatile loads
     handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
@@ -2455,7 +2477,8 @@ public:
     auto &Val = getValue(SI.getValueOperand());
     // TODO: track volatile stores
     // TODO: handle metadata
-    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
+    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType(),
+          SI.getPointerAddressSpace());
     if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
       setFailed();
   }

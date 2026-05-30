@@ -104,7 +104,7 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
-/// A set of previously exposed provenance. It is originally yielded by
+/// A set of previously exposed provenances. It is originally yielded by
 /// inttoptr, and shared by pointers derived from the result.
 class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
   // Each capability check may invalidate some provenances. If we cannot
@@ -114,24 +114,38 @@ class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
   // the exposed provenances in the snapshot, which is captured at the
   // point where inttoptr executes.
   APInt ActiveMask;
-  uint64_t BaseAddress;
+  union {
+    // Initially, we record a snapshot of exposed provenances. It is active when
+    // ActiveMask is zero.
+    uint64_t Generation;
+    // After a memory access is performed, the memory object can be determined.
+    // It is active when ActiveMask is non-zero.
+    uint64_t BaseAddress;
+  };
 
   friend class Context;
 
 public:
-  WildcardProvenance(uint64_t BaseAddress, uint32_t Generation)
-      : ActiveMask(APInt::getAllOnes(Generation)), BaseAddress(BaseAddress) {}
+  explicit WildcardProvenance(uint64_t Generation)
+      : ActiveMask(), Generation(Generation) {}
 };
 
 /// Components of a pointer excluding address. They are shared between pointer
 /// values, as most of operations don't change the provenance.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
+/// The provenance can be either concrete or wildcard, as determined by the
+/// cases below: Obj        Wildcard      State Null       Null          Invalid
+/// Null       NonNull       Wildcard
+/// NonNull    Null          Concrete
+/// NonNull    NonNull       Wildcard (limited to exposed provenances associated
+/// with a specific memory object)
 class Provenance : public RefCountedBase<Provenance> {
   // TODO: store reference to the provenance of the pointer it is derived from
 
   // The underlying memory object. It can be null for invalid or dangling
-  // pointers.
+  // pointers. Besides, for pointers with wildcard provenance, it can be null
+  // until the memory object is resolved by gep inbounds.
   IntrusiveRefCntPtr<MemoryObject> Obj;
 
   // A tag is a randomly generated unique identifier to recover the provenance
@@ -156,7 +170,9 @@ class Provenance : public RefCountedBase<Provenance> {
 public:
   Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
   static IntrusiveRefCntPtr<Provenance> nullary();
+  IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  bool isWildcard() const { return Wildcard != nullptr; }
 };
 
 class Pointer {
@@ -176,12 +192,14 @@ public:
   Pointer getWithNewAddr(const APInt &NewAddr) const {
     return Pointer(Prov, NewAddr);
   }
+  Pointer getWithNewProvenance(IntrusiveRefCntPtr<Provenance> NewProv) const {
+    return Pointer(NewProv, Address);
+  }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   Provenance &provenance() const { return *Prov; }
-  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
 };
 
 // Value representation for actual values of LLVM values.

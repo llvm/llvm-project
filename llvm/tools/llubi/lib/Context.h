@@ -251,11 +251,19 @@ class Context {
   //      will check whether there is an exposed provenance in the snapshot
   //      allowing the operation. The invalid provenance will be masked out
   //      after the operation. If we cannot pick one, it is UB.
+
+  /// Exposed provenances are grouped by associated memory objects for efficient
+  /// invalidation.
   struct ExposedProvenanceSet {
     SmallVector<IntrusiveRefCntPtr<Provenance>> List;
+    SmallVector<uint64_t> GenerationList;
+    // FIXME: Implement a partial order comparator for provenance instead of
+    // deduplicating by pointers.
     SmallPtrSet<Provenance *, 4> Set;
   };
   std::map<uint64_t, ExposedProvenanceSet> ExposedProvenances;
+  // Global version number for the set of exposed provenances.
+  uint64_t ExposedProvenanceSetGeneration = 0;
 
   /// Get the tag for the given pointer provenance.
   APInt getTag(uint32_t BitWidth, Provenance &Prov);
@@ -352,10 +360,16 @@ public:
   /// A helper to check both concrete and wildcard provenance. Please don't
   /// report UB inside the \p Check callback due to the existence of wildcard
   /// provenance.
-  bool checkProvenance(Provenance &Prov,
-                       function_ref<bool(Provenance &)> Check);
-  IntrusiveRefCntPtr<Provenance> getWildcardProvenance(const APInt &Address,
-                                                       unsigned AS);
+  /// Returns the resolved memory object if success. \p Ptr is guaranteed to be
+  /// within the bounds of the returned memory object. But the state is not
+  /// checked, for better diagnostic messages. If \p HasSideEffect is true, some
+  /// invalid provenances will be masked out. Note that in this case the caller
+  /// must report UB when the result is nullptr.
+  MemoryObject *checkProvenance(const Pointer &Ptr,
+                                function_ref<bool(const Provenance &)> Check,
+                                unsigned AS, bool HasSideEffect = true);
+  /// Returns the snapshot of currently exposed provenances.
+  IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there

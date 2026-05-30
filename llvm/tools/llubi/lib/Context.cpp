@@ -623,52 +623,85 @@ void Context::exposeProvenance(Provenance &Prov) {
     return;
   uint64_t Address = Obj->getAddress();
   ExposedProvenanceSet &Set = ExposedProvenances[Address];
-  if (Set.Set.insert(&Prov).second)
+  if (Set.Set.insert(&Prov).second) {
     Set.List.emplace_back(&Prov);
+    Set.GenerationList.push_back(++ExposedProvenanceSetGeneration);
+  }
 }
 
-bool Context::checkProvenance(Provenance &Prov,
-                              function_ref<bool(Provenance &)> Check) {
+MemoryObject *
+Context::checkProvenance(const Pointer &Ptr,
+                         function_ref<bool(const Provenance &)> Check,
+                         unsigned AS, bool HasSideEffect) {
+  auto &Prov = Ptr.provenance();
   if (!Check(Prov))
-    return false;
+    return nullptr;
   // Early return for concrete provenances.
   if (!Prov.Wildcard)
-    return true;
-  auto Iter = ExposedProvenances.find(Prov.Wildcard->BaseAddress);
-  // The memory object has been freed.
-  if (Iter == ExposedProvenances.end())
-    return false;
-  auto &List = Iter->second.List;
-  APInt &Mask = Prov.Wildcard->ActiveMask;
-  uint32_t Generation = Mask.getBitWidth();
-  bool Valid = false;
-  for (uint32_t I = 0; I != Generation; ++I) {
-    if (!Mask[I])
-      continue;
-    if (Check(*List[I]))
-      Valid = true;
-    else
-      Mask.clearBit(I);
+    return Prov.Obj.get();
+
+  MemoryObject *MO = nullptr;
+  APInt TempMask;
+  APInt *Mask = HasSideEffect ? &Prov.Wildcard->ActiveMask : &TempMask;
+  SmallVector<IntrusiveRefCntPtr<Provenance>> *List = nullptr;
+  if (Prov.Wildcard->ActiveMask.isZero()) {
+    // The memory object hasn't been determined.
+    uint64_t Addr = Ptr.address().getLimitedValue();
+    auto Iter = ExposedProvenances.upper_bound(Addr);
+    if (Iter == ExposedProvenances.begin())
+      return nullptr;
+    auto &[BaseAddress, Set] = *std::prev(Iter);
+    auto &Obj = MemoryObjects.at(BaseAddress);
+    if (Obj->getAddressSpace() != AS || !Obj->inBounds(Ptr.address()))
+      return nullptr;
+    MO = Obj.get();
+    uint32_t Generation = std::distance(
+        Set.GenerationList.begin(),
+        upper_bound(Set.GenerationList, Prov.Wildcard->Generation));
+    *Mask = APInt::getAllOnes(Generation);
+    List = &Set.List;
+  } else {
+    // We already determined the memory object in a previous memory access。
+    uint64_t BaseAddress = Prov.Wildcard->BaseAddress;
+    auto Iter = ExposedProvenances.find(BaseAddress);
+    // The memory object has been freed.
+    if (Iter == ExposedProvenances.end())
+      return nullptr;
+    MO = MemoryObjects.at(BaseAddress).get();
+    if (MO->getAddressSpace() != AS || !MO->inBounds(Ptr.address()))
+      return nullptr;
+    if (HasSideEffect)
+      TempMask = Prov.Wildcard->ActiveMask;
+    List = &Iter->second.List;
+  }
+  if (Prov.Obj) {
+    // We already determined the memory object via speculatable operations like
+    // gep inbounds.
+    if (Prov.Obj.get() != MO)
+      return nullptr;
   }
 
-  return Valid;
+  uint32_t Generation = Mask->getBitWidth();
+  bool Valid = false;
+  for (uint32_t I = 0; I != Generation; ++I) {
+    if (!(*Mask)[I])
+      continue;
+    if (Check(*(*List)[I]))
+      Valid = true;
+    else
+      Mask->clearBit(I);
+  }
+
+  return Valid ? MO : nullptr;
 }
 
-IntrusiveRefCntPtr<Provenance>
-Context::getWildcardProvenance(const APInt &Address, unsigned AS) {
-  uint64_t Addr = Address.getLimitedValue();
-  auto Iter = ExposedProvenances.upper_bound(Addr);
-  if (Iter == ExposedProvenances.begin())
+IntrusiveRefCntPtr<Provenance> Context::getWildcardProvenance() {
+  // No exposed provenances.
+  if (ExposedProvenanceSetGeneration == 0)
     return Provenance::nullary();
-  auto &[BaseAddress, Set] = *std::prev(Iter);
-  auto &Obj = MemoryObjects.at(BaseAddress);
-  if (!Obj->inBounds(Address) || Obj->getAddressSpace() != AS)
-    return Provenance::nullary();
-
-  auto Prov = makeIntrusiveRefCnt<Provenance>(Obj);
-  uint32_t Generation = static_cast<uint32_t>(Set.List.size());
+  auto Prov = makeIntrusiveRefCnt<Provenance>(nullptr);
   Prov->Wildcard =
-      makeIntrusiveRefCnt<WildcardProvenance>(BaseAddress, Generation);
+      makeIntrusiveRefCnt<WildcardProvenance>(ExposedProvenanceSetGeneration);
   return Prov;
 }
 

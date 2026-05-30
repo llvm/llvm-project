@@ -29,18 +29,18 @@ Library::Library(Context &Ctx, EventHandler &Handler, const DataLayout &DL,
     : Ctx(Ctx), Handler(Handler), DL(DL), Executor(Executor) {}
 
 std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
-  auto *MO = Ptr.getMemoryObject();
   std::string Result;
   const APInt &Address = Ptr.address();
   uint64_t Offset = 0;
 
   while (true) {
-    auto ValidOffset = Executor.verifyMemAccess(
-        Ptr.getWithNewAddr(Address + Offset), 1, Align(1), false);
-    if (!ValidOffset)
+    auto [MO, ValidOffset] =
+        Executor.verifyMemAccess(Ptr.getWithNewAddr(Address + Offset), 1,
+                                 Align(1), /*IsStore=*/false, /*AS=*/0);
+    if (!MO)
       return std::nullopt;
 
-    Byte B = (*MO)[*ValidOffset];
+    Byte B = (*MO)[ValidOffset];
     if (B.ConcreteMask != 0xFF) {
       Executor.reportImmediateUB()
           << "Read uninitialized or poison memory while "
@@ -122,7 +122,13 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.isNullPtr(/*AS=*/0, DL))
     return AnyValue();
 
-  MemoryObject *Obj = Ptr.getMemoryObject();
+  MemoryObject *Obj = Ctx.checkProvenance(
+      Ptr,
+      [](const Provenance &) {
+        // TODO: check nofree
+        return true;
+      },
+      /*AS=*/0);
   if (!Obj) {
     Executor.reportImmediateUB()
         << "freeing a pointer with nullary provenance.";
@@ -276,7 +282,7 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     case 'n': {
       OS.flush();
       Executor.store(Arg, Align(4), AnyValue(APInt(32, Output.size())),
-                     Type::getInt32Ty(Ctx.getContext()));
+                     Type::getInt32Ty(Ctx.getContext()), /*AS=*/0);
       break;
     }
     case 'p': {

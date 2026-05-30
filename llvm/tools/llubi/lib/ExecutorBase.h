@@ -99,16 +99,16 @@ public:
   DiagnosticReporter reportImmediateUB();
   DiagnosticReporter reportError();
 
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const Pointer &Ptr,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore);
+  /// Check if the upcoming memory access is valid. Returns the resolved memory
+  /// object and offset if it is valid.
+  std::pair<MemoryObject *, uint64_t>
+  verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize, Align Alignment,
+                  bool IsStore, unsigned AS);
 
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
-                bool NoUndef);
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy, bool NoUndef,
+                unsigned AS);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
-             Type *ValTy);
+             Type *ValTy, unsigned AS);
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
