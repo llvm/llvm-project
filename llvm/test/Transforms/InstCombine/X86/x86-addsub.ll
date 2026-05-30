@@ -192,3 +192,39 @@ define double @PR48476_fadd_fsub(<2 x double> %x) {
   %vecext = extractelement <2 x double> %t2, i32 0
   ret double %vecext
 }
+
+; The addsub -> plain FSub/FAdd demanded-elts fold rewrites the intrinsic into a
+; plain FP op evaluated in the default FP environment.  Under strictfp that drops
+; the dynamic rounding mode the intrinsic must honor, so the intrinsic must be
+; preserved.
+define double @elts_addsub_v2f64_sub_strictfp(<2 x double> %0, <2 x double> %1) strictfp {
+; CHECK-LABEL: @elts_addsub_v2f64_sub_strictfp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> [[TMP0:%.*]], <2 x double> [[TMP1:%.*]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    ret double [[TMP4]]
+;
+  %3 = shufflevector <2 x double> %0, <2 x double> poison, <2 x i32> <i32 0, i32 0>
+  %4 = shufflevector <2 x double> %1, <2 x double> poison, <2 x i32> <i32 0, i32 0>
+  %5 = tail call <2 x double> @llvm.x86.sse3.addsub.pd(<2 x double> %3, <2 x double> %4) strictfp
+  %6 = extractelement <2 x double> %5, i32 0
+  ret double %6
+}
+
+define float @elts_addsub_v4f32_add_strictfp(<4 x float> %0, <4 x float> %1) strictfp {
+; CHECK-LABEL: @elts_addsub_v4f32_add_strictfp(
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1:%.*]], <4 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> [[TMP3]], <4 x float> [[TMP4]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP5]], i64 3
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd float [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    ret float [[TMP8]]
+;
+  %3 = shufflevector <4 x float> %0, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %4 = shufflevector <4 x float> %1, <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %5 = tail call <4 x float> @llvm.x86.sse3.addsub.ps(<4 x float> %3, <4 x float> %4) strictfp
+  %6 = extractelement <4 x float> %5, i32 1
+  %7 = extractelement <4 x float> %5, i32 3
+  %8 = fadd float %6, %7
+  ret float %8
+}

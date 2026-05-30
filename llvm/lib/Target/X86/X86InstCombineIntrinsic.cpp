@@ -3387,12 +3387,14 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::x86_avx_addsub_pd_256:
   case Intrinsic::x86_avx_addsub_ps_256: {
     // If none of the even or none of the odd lanes are required, turn this
-    // into a generic FP math instruction.
+    // into a generic FP math instruction.  Don't do this under strictfp: the
+    // plain FP op is evaluated in the default FP environment, dropping the
+    // dynamic rounding mode the intrinsic is required to honor.
     APInt SubMask = APInt::getSplat(VWidth, APInt(2, 0x1));
     APInt AddMask = APInt::getSplat(VWidth, APInt(2, 0x2));
     bool IsSubOnly = DemandedElts.isSubsetOf(SubMask);
     bool IsAddOnly = DemandedElts.isSubsetOf(AddMask);
-    if (IsSubOnly || IsAddOnly) {
+    if ((IsSubOnly || IsAddOnly) && !II.isStrictFP()) {
       assert((IsSubOnly ^ IsAddOnly) && "Can't be both add-only and sub-only");
       IRBuilderBase::InsertPointGuard Guard(IC.Builder);
       IC.Builder.SetInsertPoint(&II);
