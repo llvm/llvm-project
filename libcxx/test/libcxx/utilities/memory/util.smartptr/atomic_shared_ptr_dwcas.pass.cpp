@@ -1,4 +1,5 @@
 // REQUIRES: std-at-least-c++20
+// REQUIRES: target=x86_64-{{.*}}
 // UNSUPPORTED: no-threads
 // ADDITIONAL_COMPILE_FLAGS: -march=x86-64-v2
 

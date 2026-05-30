@@ -434,8 +434,10 @@ private:
 
       if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
         uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
-        if (__cur_cb)
+        if (__cur_cb) {
           std::__atomic_smart_ptr_drain_shared(__cur_cb, __cur_local);
+          __cur_cb->__release_shared();
+        }
         __desired.__ptr_   = nullptr;
         __desired.__cntrl_ = nullptr;
         std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
@@ -673,8 +675,10 @@ private:
 
       if (__fields_.__dwcas_compare_exchange_weak(__cur, __desired_pair, __success, __failure)) {
         uint16_t __cur_local = __atomic_smart_ptr_storage::__decode_local(__cur_ctrl);
-        if (__cur_cb)
+        if (__cur_cb) {
           std::__atomic_smart_ptr_drain_weak(__cur_cb, __cur_local);
+          __cur_cb->__release_weak();
+        }
         __desired.__ptr_   = nullptr;
         __desired.__cntrl_ = nullptr;
         std::__atomic_smart_ptr_notify_all(__fields_.__wait_address());
