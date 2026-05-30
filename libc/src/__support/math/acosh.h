@@ -46,7 +46,6 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   int idx = static_cast<int>((xhi_frac + (1ULL << (FRACTION_LEN - 8))) >>
                              (FRACTION_LEN - 7));
   int x_e = xhi_bits.get_exponent() + (idx >> 7);
-  double e_x = static_cast<double>(x_e);
 
   int64_t s_u = static_cast<int64_t>(xdd_u & FPBits_t::EXP_MASK) -
                 (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
@@ -77,6 +76,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Fast path: polynomial only (no correct-rounding guarantee).
+  double e_x = static_cast<double>(x_e);
   double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
   double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
   fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd_red.hi);
