@@ -694,22 +694,26 @@ static void expandFPToI(Instruction *FPToI, bool IsSaturating, bool IsSigned) {
       ZeroResultCond = Builder.CreateOr(ZeroResultCond, IsNeg);
     }
   }
-  Value *CondBr = Builder.CreateCondBr(
+  Instruction *CondBr = Builder.CreateCondBr(
       ZeroResultCond, End, IsSaturating ? CheckSaturateBB : CheckExpSizeBB);
   // We do not have any information on the value of the exponent, so mark the
   // branch weights as unkown.
-  if (auto *CondBrInstruction = dyn_cast<Instruction>(CondBr))
-    setExplicitlyUnknownBranchWeightsIfProfiled(*CondBrInstruction, DEBUG_TYPE,
-                                                F);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE, F);
 
   Value *Saturated;
   if (IsSaturating) {
     // check.saturate:
     Builder.SetInsertPoint(CheckSaturateBB);
+    uint64_t SaturatingBiasedExp =
+        static_cast<uint64_t>(ExponentBias) + BitWidth - IsSigned;
+    // Clamp to the all-ones (inf/NaN) exponent. Without this, when the integer
+    // is wide enough to hold every finite float the threshold exceeds any
+    // possible biased exponent, so +/-inf would never saturate.
+    uint64_t MaxBiasedExp = (1ULL << ExponentWidth) - 1;
+    if (SaturatingBiasedExp > MaxBiasedExp)
+      SaturatingBiasedExp = MaxBiasedExp;
     Value *Cmp3 = Builder.CreateICmpUGE(
-        BiasedExp, ConstantInt::getSigned(
-                       FloatIntTy, static_cast<int64_t>(ExponentBias +
-                                                        BitWidth - IsSigned)));
+        BiasedExp, ConstantInt::get(FloatIntTy, SaturatingBiasedExp));
     Value *CondBrSat = Builder.CreateCondBr(Cmp3, SaturateBB, CheckExpSizeBB);
     // Saturation is considered an unlikely event.
     applyProfMetadataIfEnabled(CondBrSat, [&](Instruction *Inst) {
@@ -1166,6 +1170,30 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelect(IsNeg, NegInf, Inf);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+  }
   Builder.CreateBr(End);
 
   // return:
