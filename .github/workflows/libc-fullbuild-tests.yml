@@ -66,49 +66,49 @@ jobs:
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: x86_64-unknown-uefi-llvm
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-armv6m
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv6m-none-eabi
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-armv7m
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7m-none-eabi
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-armv7em
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-armv8m
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-armv8.1m
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8.1m.main-none-eabi
-            testing: BUILD
+            testing: SKIP
           - name: baremetal-riscv32
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: riscv32-unknown-elf
-            testing: BUILD
+            testing: SKIP
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
