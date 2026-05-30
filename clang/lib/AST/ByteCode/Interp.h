@@ -143,6 +143,7 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
+bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
 
 enum class ShiftDir { Left, Right };
 
@@ -519,6 +520,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     const T &RHSR = RHS.elem<T>(0);
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
+
+    // We only handle actual numbers here.
+    if (!LHSR.isNumber() || !LHSI.isNumber() || !RHSR.isNumber() ||
+        !RHSI.isNumber())
+      return false;
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
     T A;
@@ -1237,9 +1243,11 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  unsigned VL = LHS.computeOffsetForComparison(S.getASTContext());
-  unsigned VR = RHS.computeOffsetForComparison(S.getASTContext());
-  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+  std::optional<size_t> VL = LHS.computeOffsetForComparison(S.getASTContext());
+  std::optional<size_t> VR = RHS.computeOffsetForComparison(S.getASTContext());
+  if (!VL || !VR)
+    return Invalid(S, OpPC);
+  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*VL, *VR))));
   return true;
 }
 
@@ -1310,10 +1318,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    size_t A = LHS.computeOffsetForComparison(S.getASTContext());
-    size_t B = RHS.computeOffsetForComparison(S.getASTContext());
+    std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
+    std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
+    if (!A || !B)
+      return Invalid(S, OpPC);
 
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
   }
 
