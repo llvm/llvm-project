@@ -318,8 +318,14 @@ class CFGFullExprCleanup : public CFGElement {
 
 public:
   using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
-  explicit CFGFullExprCleanup(const MTEVecTy *MTEs)
-      : CFGElement(FullExprCleanup, MTEs, nullptr) {}
+  explicit CFGFullExprCleanup(const MTEVecTy *MTEs, const Stmt *CleanupStmt)
+      : CFGElement(FullExprCleanup, MTEs, CleanupStmt) {}
+
+  const Stmt *getCleanupStmt() const {
+    return static_cast<const Stmt *>(Data2.getPointer());
+  }
+
+  SourceLocation getCleanupLoc() const { return getCleanupStmt()->getEndLoc(); }
 
   ArrayRef<const MaterializeTemporaryExpr *> getExpiringMTEs() const {
     const MTEVecTy *ExpiringMTEs =
@@ -1211,8 +1217,8 @@ public:
   }
 
   void appendFullExprCleanup(BumpVector<const MaterializeTemporaryExpr *> *BV,
-                             BumpVectorContext &C) {
-    Elements.push_back(CFGFullExprCleanup(BV), C);
+                             const Stmt *CleanupStmt, BumpVectorContext &C) {
+    Elements.push_back(CFGFullExprCleanup(BV, CleanupStmt), C);
   }
 
   void appendLoopExit(const Stmt *LoopStmt, BumpVectorContext &C) {

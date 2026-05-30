@@ -725,9 +725,10 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
 
 void FactsGenerator::handleFullExprCleanup(
     const CFGFullExprCleanup &FullExprCleanup) {
-  for (const auto *MTE : FullExprCleanup.getExpiringMTEs())
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<ExpireFact>(AccessPath(MTE), MTE->getEndLoc()));
+  for (const auto *MTE : FullExprCleanup.getExpiringMTEs()) {
+    CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+        AccessPath(MTE), FullExprCleanup.getCleanupLoc()));
+  }
 }
 
 void FactsGenerator::handleExitBlock() {
