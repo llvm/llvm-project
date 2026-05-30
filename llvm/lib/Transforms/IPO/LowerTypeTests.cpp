@@ -1788,10 +1788,11 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     }
 
     if (IsExported) {
+      GlobalValue::GUID GUID = F->getGUIDOrFallbackDropEscape();
       if (IsJumpTableCanonical)
-        ExportSummary->cfiFunctionDefs().emplace(F->getName());
+        ExportSummary->cfiFunctionDefs().emplace(GUID, F->getName());
       else
-        ExportSummary->cfiFunctionDecls().emplace(F->getName());
+        ExportSummary->cfiFunctionDecls().emplace(GUID, F->getName());
     }
 
     if (!IsJumpTableCanonical) {
@@ -2123,9 +2124,10 @@ bool LowerTypeTestsModule::lower() {
       // have the same name, but it's not the one we are looking for.
       if (F.hasLocalLinkage())
         continue;
-      if (ImportSummary->cfiFunctionDefs().count(F.getName()))
+      auto GUID = F.getGUIDOrFallback();
+      if (ImportSummary->cfiFunctionDefs().count(GUID))
         Defs.push_back(&F);
-      else if (ImportSummary->cfiFunctionDecls().count(F.getName()))
+      else if (ImportSummary->cfiFunctionDecls().count(GUID))
         Decls.push_back(&F);
     }
 
@@ -2169,7 +2171,7 @@ bool LowerTypeTestsModule::lower() {
 
   struct ExportedFunctionInfo {
     CfiFunctionLinkage Linkage;
-    MDNode *FuncMD; // {name, linkage, type[, type...]}
+    MDNode *FuncMD; // {name, linkage, stable_GUID, type[, type...]}
   };
   MapVector<StringRef, ExportedFunctionInfo> ExportedFunctions;
   if (ExportSummary) {
@@ -2207,9 +2209,18 @@ bool LowerTypeTestsModule::lower() {
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
-        const GlobalValue::GUID GUID =
-            GlobalValue::getGUIDAssumingExternalLinkage(
-                GlobalValue::dropLLVMManglingEscape(FunctionName));
+        // Use the stable GUID stored in !cfi.functions (element 2) if
+        // present. Promoted internal functions have a stable GUID in their
+        // !guid metadata that differs from
+        // getGUIDAssumingExternalLinkage(promoted_name), and the combined
+        // index stores entries under the stable GUID.
+        assert(FuncMD->getNumOperands() >= 3 &&
+               isa<ConstantAsMetadata>(FuncMD->getOperand(2)) &&
+               "GUID metadata missing");
+        GlobalValue::GUID GUID = cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                                     ->getValue()
+                                     ->getUniqueInteger()
+                                     .getZExtValue();
         // Do not emit jumptable entries for functions that are not-live and
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
@@ -2248,11 +2259,15 @@ bool LowerTypeTestsModule::lower() {
           F = nullptr;
         }
 
-        if (!F)
+        if (!F) {
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
+          F->setMetadata(
+              LLVMContext::MD_unique_id,
+              MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+        }
 
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
@@ -2280,7 +2295,12 @@ bool LowerTypeTestsModule::lower() {
             F->setLinkage(GlobalValue::ExternalWeakLinkage);
 
           F->eraseMetadata(LLVMContext::MD_type);
-          for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
+          // Type metadata starts at operand 3 (operand 2 is the stable GUID).
+          assert(FuncMD->getNumOperands() >= 3 &&
+                 isa<ConstantAsMetadata>(FuncMD->getOperand(2)) &&
+                 "GUID metadata missing");
+          unsigned TypesStart = 3;
+          for (unsigned I = TypesStart; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
         }

@@ -438,6 +438,10 @@ void splitAndWriteThinLTOBitcode(
       Linkage = CFL_Declaration;
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    // Store the function's stable GUID so that LowerTypeTests can find the
+    // corresponding entry in the combined index even after promotion renaming.
+    Elts.push_back(ConstantAsMetadata::get(llvm::ConstantInt::get(
+        Type::getInt64Ty(Ctx), V->getGUIDOrFallbackDropEscape())));
     append_range(Elts, Types);
     CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
   }

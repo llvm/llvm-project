@@ -638,6 +638,10 @@ public:
   /// that might pre-date the storage of GUIDs in metadata.
   GUID getGUIDOrFallback() const;
 
+  /// same as getGUIDOrFallback, but for fallback we dropLLVMManglingEscape the
+  /// name first.
+  GUID getGUIDOrFallbackDropEscape() const;
+
   /// @name Materialization
   /// Materialization is used to construct functions only as they're needed.
   /// This
