@@ -287,8 +287,9 @@ public:
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
     libraries = (1u << 9),
+    accelerator_plugins = (1u << 10),
 
-    LLVM_MARK_AS_BITMASK_ENUM(libraries)
+    LLVM_MARK_AS_BITMASK_ENUM(accelerator_plugins)
   };
 
   class Manager {

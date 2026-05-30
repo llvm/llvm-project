@@ -16,6 +16,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -48,7 +49,10 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
-  EntryVPBB->insert(Expanded, EntryVPBB->getFirstNonPhi());
+  auto Iter = EntryVPBB->getFirstNonPhi();
+  while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
+    ++Iter;
+  EntryVPBB->insert(Expanded, Iter);
   return Expanded;
 }
 
@@ -893,7 +897,36 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
   return false;
 }
 
-VPValue *VPBuilder::VPSCEVExpander::tryToExpand(const SCEV *S) {
+/// Try to find a loop-invariant IR value for \p S in the plan's entry block
+/// that can be reused. Returns the corresponding live-in VPValue, or nullptr
+/// if no reusable IR value is found.
+VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
+  if (isa<SCEVConstant, SCEVUnknown>(S))
+    return nullptr;
+  VPlan &Plan = Builder.getPlan();
+  BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+  for (Value *V : SE.getSCEVValues(S)) {
+    // Only reuse instructions in the plan's entry block, as instructions in
+    // sibling branches may not dominate the entry block.
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return Plan.getOrAddLiveIn(V);
+    if (I->getParent() != PH)
+      continue;
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
+      continue;
+    for (Instruction *DropI : DropPoisonGeneratingInsts)
+      SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
+    return Plan.getOrAddLiveIn(V);
+  }
+  return nullptr;
+}
+
+VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
+  if (VPValue *V = tryToReuseIRValue(S))
+    return V;
+
   switch (S->getSCEVType()) {
   case scConstant:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());

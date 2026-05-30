@@ -1789,6 +1789,17 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return replaceInstUsesWith(Sel, FalseVal);
   }
 
+  Constant *CmpC;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
+  }
+
   return nullptr;
 }
 

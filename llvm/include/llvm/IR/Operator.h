@@ -88,10 +88,12 @@ private:
   friend class ConstantExpr;
 
   void setHasNoUnsignedWrap(bool B) {
+    assert(isa<Instruction>(this) && "cannot modify ConstantExpr");
     SubclassOptionalData =
       (SubclassOptionalData & ~NoUnsignedWrap) | (B * NoUnsignedWrap);
   }
   void setHasNoSignedWrap(bool B) {
+    assert(isa<Instruction>(this) && "cannot modify ConstantExpr");
     SubclassOptionalData =
       (SubclassOptionalData & ~NoSignedWrap) | (B * NoSignedWrap);
   }

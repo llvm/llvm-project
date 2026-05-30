@@ -74,9 +74,6 @@ Error YAMLOutputStyle::dump() {
   if (auto EC = dumpPublics())
     return EC;
 
-  if (auto EC = dumpDXContainer())
-    return EC;
-
   // Fake Coff header for dumping register enumerations.
   COFF::header Header;
   auto MachineType =
@@ -117,9 +114,6 @@ Error YAMLOutputStyle::dumpStringTable() {
                              !opts::pdb2yaml::DumpModuleSubsections.empty();
   bool RequestedStringTable = opts::pdb2yaml::StringTable;
   if (!RequiresStringTable && !RequestedStringTable)
-    return Error::success();
-
-  if (!File.hasPDBStringTable())
     return Error::success();
 
   auto ExpectedST = File.getStringTable();
@@ -316,9 +310,6 @@ Error YAMLOutputStyle::dumpTpiStream() {
   if (!opts::pdb2yaml::TpiStream)
     return Error::success();
 
-  if (!File.hasPDBTpiStream())
-    return Error::success();
-
   auto TpiS = File.getPDBTpiStream();
   if (!TpiS)
     return TpiS.takeError();
@@ -338,9 +329,6 @@ Error YAMLOutputStyle::dumpTpiStream() {
 
 Error YAMLOutputStyle::dumpIpiStream() {
   if (!opts::pdb2yaml::IpiStream)
-    return Error::success();
-
-  if (!File.hasPDBIpiStream())
     return Error::success();
 
   auto InfoS = File.getPDBInfoStream();
@@ -400,25 +388,6 @@ Error YAMLOutputStyle::dumpPublics() {
     Obj.PublicsStream->PubSyms.push_back(*ES);
   }
 
-  return Error::success();
-}
-
-Error YAMLOutputStyle::dumpDXContainer() {
-  if (!opts::pdb2yaml::DXContainerStream)
-    return Error::success();
-
-  auto DxcS = File.getDXContainerStream();
-  if (!DxcS) {
-    // Not finding a DXContainer is not an error.
-    consumeError(DxcS.takeError());
-    return Error::success();
-  }
-
-  auto DXCYaml = DXContainerYAML::fromDXContainer(*DxcS);
-  if (!DXCYaml)
-    return DXCYaml.takeError();
-  Obj.DXContainerStream.emplace();
-  Obj.DXContainerStream->DXC = *DXCYaml->get();
   return Error::success();
 }
 

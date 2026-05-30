@@ -77,11 +77,11 @@ class Value {
   unsigned char HasValueHandle : 1; // Has a ValueHandle pointing to this?
 
 protected:
-  /// Hold subclass data that can be dropped.
+  /// Hold arbitary subclass data.
   ///
-  /// This member is similar to SubclassData, however it is for holding
-  /// information which may be used to aid optimization, but which may be
-  /// cleared to zero without affecting conservative interpretation.
+  /// This member is similar to SubclassData, however it is often used for
+  /// holding information which may be used to aid optimization, but which may
+  /// be cleared to zero without affecting conservative interpretation.
   unsigned char SubclassOptionalData : 7;
 
 private:
@@ -549,16 +549,6 @@ public:
   /// This should only be used when testing two Values for equivalence.
   unsigned getRawSubclassOptionalData() const {
     return SubclassOptionalData;
-  }
-
-  /// Clear the optional flags contained in this value.
-  void clearSubclassOptionalData() {
-    SubclassOptionalData = 0;
-  }
-
-  /// Check the optional flags for equality.
-  bool hasSameSubclassOptionalData(const Value *V) const {
-    return SubclassOptionalData == V->SubclassOptionalData;
   }
 
   /// Return true if there is a value handle associated with this value.

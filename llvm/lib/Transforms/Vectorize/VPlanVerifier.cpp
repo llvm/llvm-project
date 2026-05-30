@@ -301,6 +301,10 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
     return CheckScalarType(computeScalarTypeForInstruction(
         cast<VPWidenRecipe>(&R)->getOpcode(), Ops));
   }
+  case VPRecipeBase::VPExpressionSC:
+    return CheckScalarType(cast<VPExpressionRecipe>(&R)
+                               ->getOperandOfResultType()
+                               ->getScalarType());
   default:
     return true;
   }

@@ -398,28 +398,6 @@ Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
   return *InjectedSources;
 }
 
-llvm::Expected<object::DXContainer &> PDBFile::getDXContainerStream() {
-  if (!Dxc) {
-    auto MBS = safelyCreateIndexedStream(StreamDXContainer);
-    if (!MBS)
-      return MBS.takeError();
-    auto StreamSize = getStreamByteSize(StreamDXContainer);
-    ArrayRef<uint8_t> StreamData;
-    auto Error = MBS->get()->readBytes(0, StreamSize, StreamData);
-    if (Error)
-      return Error;
-
-    StringRef Ref(reinterpret_cast<const char *>(StreamData.data()),
-                  StreamSize);
-    MemoryBufferRef MemBuf(Ref, "DXContainerStream");
-    auto DXC = object::DXContainer::create(MemBuf);
-    if (!DXC)
-      return DXC.takeError();
-    Dxc = std::make_unique<object::DXContainer>(std::move(*DXC));
-  }
-  return *Dxc;
-}
-
 uint32_t PDBFile::getPointerSize() {
   auto DbiS = getPDBDbiStream();
   if (!DbiS)
@@ -473,9 +451,7 @@ bool PDBFile::hasPDBSymbolStream() {
   return DbiS->getSymRecordStreamIndex() < getNumStreams();
 }
 
-bool PDBFile::hasPDBTpiStream() const {
-  return StreamTPI < getNumStreams() && getStreamByteSize(StreamTPI) != 0;
-}
+bool PDBFile::hasPDBTpiStream() const { return StreamTPI < getNumStreams(); }
 
 bool PDBFile::hasPDBStringTable() {
   auto IS = getPDBInfoStream();

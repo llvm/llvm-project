@@ -29,6 +29,9 @@ struct S {
 static_assert(((delete[] (new int[true])), true));
 static_assert(((delete[] (new S[true])), true));
 
+static_assert((new int[]{})[0] == 0); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of dereferenced one-past-the-end pointer}}
+
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
   return 1;
@@ -1215,6 +1218,21 @@ namespace ArrayDestSize {
   static_assert(dynarray<char>(5, 5) == 0); // both-error {{constant expression}} both-note {{in call}}
   static_assert(dynarray<char>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
   static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
+}
+
+namespace OpertorArrayDelete {
+  struct S {};
+  using State = S[2];
+  constexpr unsigned run(const State *s) {
+    void *p;
+    p = operator new[](128); // both-note {{cannot allocate untyped memory}}
+    operator delete[](p);
+    return 42;
+  }
+
+  constexpr State s[] = {};
+  static_assert(run(s) == 42, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
 }
 
 #else

@@ -15,6 +15,7 @@ cc_library(
     name = "config",
     defines = select({
         "@platforms//os:linux": [
+            "COMPILER_RT_BUILD_PROFILE_ROCM=1",
             "COMPILER_RT_HAS_ATOMICS=1",
             "COMPILER_RT_HAS_FCNTL_LCK=1",
             "COMPILER_RT_HAS_UNAME=1",
@@ -46,7 +47,6 @@ cc_library(
     srcs = glob(
         [
             "lib/sanitizer_common/*.cpp",
-            "lib/sanitizer_common/*.S",
         ],
     ),
     linkstatic = True,
@@ -60,7 +60,11 @@ cc_library(
     name = "interception",
     srcs = glob(["lib/interception/*.cpp"]),
     hdrs = glob(["lib/interception/*.h"]),
-    includes = [":lib"],
+    copts = [
+        "-fomit-frame-pointer",
+        "-fvisibility=hidden",
+    ],
+    includes = ["lib"],
     linkstatic = True,
     deps = [
         ":sanitizer_common_headers",

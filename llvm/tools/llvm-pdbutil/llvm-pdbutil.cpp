@@ -76,7 +76,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
-#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
@@ -701,10 +700,6 @@ cl::opt<bool> IpiStream("ipi-stream",
                         cl::desc("Dump the IPI Stream (Stream 5)"),
                         cl::sub(PdbToYamlSubcommand), cl::init(false));
 
-cl::opt<bool> DXContainerStream("dxcontainer",
-                                cl::desc("Dump the DXContainer Stream"),
-                                cl::sub(PdbToYamlSubcommand), cl::init(false));
-
 cl::opt<bool> PublicsStream("publics-stream",
                             cl::desc("Dump the Publics Stream"),
                             cl::sub(PdbToYamlSubcommand), cl::init(false));
@@ -818,13 +813,19 @@ static void yamlToPdb(StringRef Path) {
   for (uint32_t I = 0; I < kSpecialStreamCount; ++I)
     ExitOnErr(Builder.getMsfBuilder().addStream(0));
 
-  auto &Dxc = YamlObj.DXContainerStream;
-  if (Dxc) {
-    // If there is a DXContainer, add add it as a stream #5.
-    ExitOnErr(Builder.getMsfBuilder().addStream(0));
+  StringsAndChecksums Strings;
+  Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
+
+  if (YamlObj.StringTable) {
+    for (auto S : *YamlObj.StringTable)
+      Strings.strings()->insert(S);
   }
 
   pdb::yaml::PdbInfoStream DefaultInfoStream;
+  pdb::yaml::PdbDbiStream DefaultDbiStream;
+  pdb::yaml::PdbTpiStream DefaultTpiStream;
+  pdb::yaml::PdbTpiStream DefaultIpiStream;
+
   const auto &Info = YamlObj.PdbStream.value_or(DefaultInfoStream);
 
   auto &InfoBuilder = Builder.getInfoBuilder();
@@ -834,36 +835,6 @@ static void yamlToPdb(StringRef Path) {
   InfoBuilder.setVersion(Info.Version);
   for (auto F : Info.Features)
     InfoBuilder.addFeature(F);
-
-  if (Dxc) {
-    auto &Data = Builder.getDXContainerData();
-    llvm::raw_svector_ostream DataStream(*Data);
-    std::string ErrorMsg;
-    llvm::yaml::yaml2dxcontainer(
-        Dxc->DXC, DataStream, [&ErrorMsg](const Twine &Msg) {
-          ErrorMsg = (Twine("DXContainer error: ") + Msg).str();
-        });
-    if (!ErrorMsg.empty())
-      ExitOnErr(createStringError(ErrorMsg));
-
-    codeview::GUID IgnoredOutGuid;
-    ExitOnErr(
-        Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid));
-    // Leave all other streams empty if there is a DXContainer.
-    return;
-  }
-
-  StringsAndChecksums Strings;
-  Strings.setStrings(std::make_shared<DebugStringTableSubsection>());
-
-  if (YamlObj.StringTable) {
-    for (auto S : *YamlObj.StringTable)
-      Strings.strings()->insert(S);
-  }
-
-  pdb::yaml::PdbDbiStream DefaultDbiStream;
-  pdb::yaml::PdbTpiStream DefaultTpiStream;
-  pdb::yaml::PdbTpiStream DefaultIpiStream;
 
   const auto &Dbi = YamlObj.DbiStream.value_or(DefaultDbiStream);
   auto &DbiBuilder = Builder.getDbiBuilder();
@@ -1589,7 +1560,6 @@ int main(int Argc, const char **Argv) {
       opts::pdb2yaml::DbiStream = true;
       opts::pdb2yaml::TpiStream = true;
       opts::pdb2yaml::IpiStream = true;
-      opts::pdb2yaml::DXContainerStream = true;
       opts::pdb2yaml::PublicsStream = true;
       opts::pdb2yaml::DumpModules = true;
       opts::pdb2yaml::DumpModuleFiles = true;

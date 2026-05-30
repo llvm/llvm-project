@@ -80,10 +80,7 @@ enum SpecialStream : uint32_t {
   StreamDBI = 3,
   StreamIPI = 4,
 
-  kSpecialStreamCount = 5,
-  // Fixed index of DXContainer stream, but it's not one of the special
-  // streams and is produced only by DirectX tools.
-  StreamDXContainer = 5
+  kSpecialStreamCount
 };
 
 enum class DbgHeaderType : uint16_t {

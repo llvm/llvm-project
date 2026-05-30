@@ -135,6 +135,21 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
   return
 }
 
+// CHECK-LABEL: @float32_clamp_scalar
+func.func @float32_clamp_scalar(%value: f32, %min: f32, %max: f32) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : f32
+  %0 = math.clampf %value to [%min, %max] : f32
+  return
+}
+
+// CHECK-LABEL: @float32_clamp_vector
+func.func @float32_clamp_vector(%value: vector<4xf32>, %min: vector<4xf32>,
+                                %max: vector<4xf32>) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = math.clampf %value to [%min, %max] : vector<4xf32>
+  return
+}
+
 // CHECK-LABEL: @int_unary
 func.func @int_unary(%arg0: i32) {
   // CHECK: spirv.GL.SAbs %{{.*}}

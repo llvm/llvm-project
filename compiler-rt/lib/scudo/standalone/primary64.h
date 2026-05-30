@@ -802,21 +802,24 @@ void SizeClassAllocator64<Config>::pushBlocks(
 
   // TODO(chiahungduan): Consider not doing grouping if the group size is not
   // greater than the block size with a certain scale.
-
   bool SameGroup = true;
-  if (GroupSizeLog < RegionSizeLog) {
-    // Sort the blocks so that blocks belonging to the same group can be
-    // pushed together.
+  if (GroupSizeLog < RegionSizeLog && Size > 1) {
+    // Sort the blocks such that blocks belonging to the same group are
+    // ordered together.
+    uptr FirstPtrGroup = compactPtrGroup(Array[0]);
     for (u32 I = 1; I < Size; ++I) {
-      if (compactPtrGroup(Array[I - 1]) != compactPtrGroup(Array[I]))
-        SameGroup = false;
       CompactPtrT Cur = Array[I];
-      u32 J = I;
-      while (J > 0 && compactPtrGroup(Cur) < compactPtrGroup(Array[J - 1])) {
-        Array[J] = Array[J - 1];
-        --J;
+      uptr CurPtrGroup = compactPtrGroup(Cur);
+      SameGroup = SameGroup && CurPtrGroup == FirstPtrGroup;
+      if (!SameGroup) {
+        // Sorting only necessary if there are different groups.
+        u32 J = I;
+        while (J > 0 && CurPtrGroup < compactPtrGroup(Array[J - 1])) {
+          Array[J] = Array[J - 1];
+          --J;
+        }
+        Array[J] = Cur;
       }
-      Array[J] = Cur;
     }
   }
 

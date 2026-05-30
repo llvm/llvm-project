@@ -26,6 +26,7 @@ cc_library(
     textual_hdrs = glob(
         [
             "include/**/*.h",
+            "include/**/*.inl",
             "src/*.h",
         ],
     ),

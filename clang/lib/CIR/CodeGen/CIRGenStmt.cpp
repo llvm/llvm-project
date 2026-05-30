@@ -914,11 +914,6 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
       return mlir::failure();
 
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -934,6 +929,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
           // https://en.cppreference.com/w/cpp/language/for
           // In C++ the scope of the init-statement and the scope of
           // statement are one and the same.
+          RunCleanupsScope bodyScope(*this);
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
@@ -982,11 +978,6 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // In the classic codegen, if there are any cleanups between here and the
-    // loop-exit scope, a block is created to stage the loop exit. We probably
-    // already do the right thing because of ScopeOp, but we need more testing
-    // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1013,6 +1004,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the for loop body is nested within the scope of the
           // for loop's init-statement and condition.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1050,11 +1042,6 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1071,6 +1058,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the do-while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1101,11 +1089,6 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     whileOp = builder.createWhile(
         getLoc(s.getSourceRange()),
@@ -1127,6 +1110,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);

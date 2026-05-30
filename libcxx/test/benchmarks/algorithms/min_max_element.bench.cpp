@@ -13,7 +13,7 @@
 
 #include <benchmark/benchmark.h>
 
-void run_sizes(auto benchmark) {
+void run_sizes(benchmark::Benchmark* benchmark) {
   benchmark->Arg(1)
       ->Arg(2)
       ->Arg(3)

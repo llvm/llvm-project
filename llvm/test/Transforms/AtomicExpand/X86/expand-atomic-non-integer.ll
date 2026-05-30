@@ -394,3 +394,63 @@ define <16 x i8> @load_v16i8_cmpxchg(ptr %p) {
   %r = load atomic <16 x i8>, ptr %p seq_cst, align 16
   ret <16 x i8> %r
 }
+
+; The cmpxchg/atomicrmw synthesized when expanding an atomic load/store should
+; carry over the original instruction's volatile flag and syncscope.
+
+define i128 @load_i128_volatile_syncscope(ptr %p) {
+; CHECK64-LABEL: define i128 @load_i128_volatile_syncscope(
+; CHECK64-SAME: ptr [[P:%.*]]) {
+; CHECK64-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[P]], i32 5)
+; CHECK64-NEXT:    ret i128 [[TMP1]]
+;
+; CHECK32-LABEL: define i128 @load_i128_volatile_syncscope(
+; CHECK32-SAME: ptr [[P:%.*]]) {
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    call void @__atomic_load(i32 16, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK32-NEXT:    [[TMP2:%.*]] = load i128, ptr [[TMP1]], align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    ret i128 [[TMP2]]
+;
+; CX16-LABEL: define i128 @load_i128_volatile_syncscope(
+; CX16-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg volatile ptr [[P]], i128 0, i128 0 syncscope("singlethread") seq_cst seq_cst, align 16
+; CX16-NEXT:    [[LOADED:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
+; CX16-NEXT:    ret i128 [[LOADED]]
+;
+  %v = load atomic volatile i128, ptr %p syncscope("singlethread") seq_cst, align 16
+  ret i128 %v
+}
+
+define void @store_i128_volatile_syncscope(ptr %p, i128 %x) {
+; CHECK64-LABEL: define void @store_i128_volatile_syncscope(
+; CHECK64-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) {
+; CHECK64-NEXT:    call void @__atomic_store_16(ptr [[P]], i128 [[X]], i32 5)
+; CHECK64-NEXT:    ret void
+;
+; CHECK32-LABEL: define void @store_i128_volatile_syncscope(
+; CHECK32-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) {
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca i128, align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    store i128 [[X]], ptr [[TMP1]], align 16
+; CHECK32-NEXT:    call void @__atomic_store(i32 16, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    ret void
+;
+; CX16-LABEL: define void @store_i128_volatile_syncscope(
+; CX16-SAME: ptr [[P:%.*]], i128 [[X:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load volatile i128, ptr [[P]], align 16
+; CX16-NEXT:    br label %[[ATOMICRMW_START:.*]]
+; CX16:       [[ATOMICRMW_START]]:
+; CX16-NEXT:    [[LOADED:%.*]] = phi i128 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg volatile ptr [[P]], i128 [[LOADED]], i128 [[X]] syncscope("singlethread") seq_cst seq_cst, align 16
+; CX16-NEXT:    [[SUCCESS:%.*]] = extractvalue { i128, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[NEWLOADED]] = extractvalue { i128, i1 } [[TMP2]], 0
+; CX16-NEXT:    br i1 [[SUCCESS]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
+; CX16:       [[ATOMICRMW_END]]:
+; CX16-NEXT:    ret void
+;
+  store atomic volatile i128 %x, ptr %p syncscope("singlethread") seq_cst, align 16
+  ret void
+}

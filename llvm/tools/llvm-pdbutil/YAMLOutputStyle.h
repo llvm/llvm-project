@@ -33,7 +33,6 @@ private:
   Error dumpDbiStream();
   Error dumpTpiStream();
   Error dumpIpiStream();
-  Error dumpDXContainer();
   Error dumpPublics();
 
   void flush();

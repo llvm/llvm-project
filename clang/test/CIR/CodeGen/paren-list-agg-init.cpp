@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG
 
 template <typename T>
 struct IsChar {
@@ -881,4 +881,46 @@ namespace gh68198 {
   void foo27() {
     void* arr10 = new int[4][2]({5, 6}, {7, 8});
   }
+}
+
+
+namespace base_cleanup {
+
+struct Base {
+  ~Base() {}
+  int b;
+};
+
+struct Derived : Base {
+  int d;
+};
+
+void base_cleanup() {
+  Derived x{{1}, 2};
+}
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// CIR: cir.cleanup.scope {
+// CIR:   cir.yield
+// CIR: } cleanup normal {
+// CIR:   cir.call @_ZN12base_cleanup7DerivedD1Ev(
+// CIR:   cir.yield
+// CIR: }
+
+// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// OGCG-NOT: define
+// OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// OGCG: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
+
+// LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// LLVMCIR-NOT: define
+// LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// LLVMCIR: }
+
 }
