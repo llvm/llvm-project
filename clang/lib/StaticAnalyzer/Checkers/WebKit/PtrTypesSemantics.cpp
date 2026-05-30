@@ -892,7 +892,7 @@ public:
     return true;
   }
 
-  bool VisitIgnoringTempGivenToRValue(const Expr* Arg) {
+  bool VisitIgnoringTempGivenToRValue(const Expr *Arg) {
     Arg = Arg->IgnoreParenCasts();
     if (!Arg->isPRValue())
       return Visit(Arg);
