@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("compiler-rt.bzl", "make_filtered_builtins_srcs_groups")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -180,9 +181,15 @@ filegroup(
     srcs = BUILTINS_CRTEND_SRCS,
 )
 
+BUILTINS_EMUTLS_SRCS = ["lib/builtins/emutls.c"]
+
+filegroup(
+    name = "builtins_emutls_srcs",
+    srcs = BUILTINS_EMUTLS_SRCS,
+)
+
 BUILTINS_HOSTED_SRCS = [
     "lib/builtins/clear_cache.c",
-    "lib/builtins/emutls.c",
     "lib/builtins/enable_execute_stack.c",
     "lib/builtins/eprintf.c",
 ]
@@ -244,11 +251,11 @@ filegroup(
     ),
 )
 
-BUILTNS_ATOMICS_SRCS = ["lib/builtins/atomic.c"]
+BUILTINS_ATOMICS_SRCS = ["lib/builtins/atomic.c"]
 
 filegroup(
     name = "builtins_atomics_srcs",
-    srcs = BUILTNS_ATOMICS_SRCS + ["lib/builtins/assembly.h"],
+    srcs = BUILTINS_ATOMICS_SRCS + ["lib/builtins/assembly.h"],
 )
 
 BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS = [
@@ -259,6 +266,28 @@ BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS = [
 filegroup(
     name = "builtins_macos_atomic_srcs",
     srcs = glob(BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS),
+)
+
+# Source files for portable components of the compiler builtins library.
+filegroup(
+    name = "builtins_generic_srcs",
+    srcs = ["lib/builtins/cpu_model/cpu_model.h"] + glob(
+        [
+            "lib/builtins/*.c",
+            "lib/builtins/*.cpp",
+            "lib/builtins/*.h",
+            "lib/builtins/*.inc",
+        ],
+        allow_empty = True,
+        exclude = (
+            BUILTINS_CRTBEGIN_SRCS +
+            BUILTINS_CRTEND_SRCS +
+            BUILTINS_TF_EXCLUDES +
+            BUILTINS_TF_SRCS_PATTERNS +
+            BUILTINS_ATOMICS_SRCS +
+            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
+        ),
+    ),
 )
 
 # Apple-platform specific SME source file.
@@ -325,10 +354,13 @@ AARCH64_OUTLINE_ATOMICS_FMT = "lib/builtins/aarch64/outline_atomic_{0}{1}_{2}.S"
 
 # Source files for the AArch64 architecture-specific builtins.
 filegroup(
-    name = "builtins_aarch64_srcs",
+    name = "builtins_unfiltered_aarch64_srcs",
     srcs = [
         "lib/builtins/cpu_model/aarch64.c",
         "lib/builtins/cpu_model/aarch64.h",
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
     ] + [
         AARCH64_OUTLINE_ATOMICS_FMT.format(pat, size, model)
         for (pat, size, model) in AARCH64_OUTLINE_ATOMICS
@@ -348,8 +380,17 @@ filegroup(
             "lib/builtins/aarch64/lse.S",
             # These files are provided by SME-specific file groups above.
             "lib/builtins/aarch64/*sme*",
+            # This is only used with MinGW.
+            "lib/builtins/aarch64/chkstk.S",
+            # TODO: Remove this once we have a way of accessing `SipHash.h`.
+            "lib/builtins/aarch64/emupac.cpp",
         ],
     ),
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_aarch64_srcs",
+    srcs = [":builtins_unfiltered_aarch64_srcs"],
 )
 
 BUILTINS_ARM_VFP_SRCS_PATTERNS = [
@@ -368,9 +409,19 @@ filegroup(
     ),
 )
 
+BUILTINS_ARM_IMPLICIT_IT_SRCS = [
+    "lib/builtins/arm/mulsf3.S",
+    "lib/builtins/arm/divsf3.S",
+]
+
+filegroup(
+    name = "builtins_arm_implicit_it_srcs",
+    srcs = BUILTINS_ARM_IMPLICIT_IT_SRCS,
+)
+
 # Source files for the ARM architecture-specific builtins.
 filegroup(
-    name = "builtins_arm_srcs",
+    name = "builtins_arm_arch_srcs",
     srcs = glob(
         [
             "lib/builtins/arm/*.S",
@@ -379,14 +430,50 @@ filegroup(
             "lib/builtins/arm/*.h",
         ],
         allow_empty = True,
-        exclude = BUILTINS_ARM_VFP_SRCS_PATTERNS,
+        exclude = (BUILTINS_ARM_VFP_SRCS_PATTERNS +
+                   BUILTINS_ARM_IMPLICIT_IT_SRCS) + [
+            # This is only used with MinGW.
+            "lib/builtins/arm/chkstk.S",
+        ],
     ),
 )
 
-# Source files for the PPC architecture-specific builtins.
 filegroup(
-    name = "builtins_ppc_srcs",
-    srcs = glob(
+    name = "builtins_unfiltered_armv7_srcs",
+    srcs = [
+        ":builtins_arm_arch_srcs",
+        ":builtins_arm_vfp_srcs",
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+    ],
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_armv7_srcs",
+    srcs = [":builtins_unfiltered_armv7_srcs"],
+)
+
+filegroup(
+    name = "builtins_unfiltered_aarch32_srcs",
+    srcs = [
+        ":builtins_arm_arch_srcs",
+        ":builtins_arm_vfp_srcs",
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+    ],
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_aarch32_srcs",
+    srcs = [":builtins_unfiltered_aarch32_srcs"],
+)
+
+filegroup(
+    name = "builtins_unfiltered_ppc64_srcs",
+    srcs = [
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
+    ] + glob(
         [
             "lib/builtins/ppc/*.S",
             "lib/builtins/ppc/*.c",
@@ -397,17 +484,60 @@ filegroup(
     ),
 )
 
-# Source files for the RISC-V architecture-specific builtins.
+make_filtered_builtins_srcs_groups(
+    name = "builtins_ppc64_srcs",
+    srcs = [":builtins_unfiltered_ppc64_srcs"],
+)
+
 filegroup(
-    name = "builtins_riscv_srcs",
-    srcs = glob(
+    name = "builtins_unfiltered_ppc32_srcs",
+    srcs = [":builtins_generic_srcs"],
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_ppc32_srcs",
+    srcs = [":builtins_unfiltered_ppc32_srcs"],
+)
+
+filegroup(
+    name = "builtins_unfiltered_riscv64_srcs",
+    srcs = [
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
+    ] + glob(
         [
             "lib/builtins/riscv/*.S",
             "lib/builtins/riscv/*.c",
             "lib/builtins/riscv/*.cpp",
+            "lib/builtins/riscv/*.h",
         ],
         allow_empty = True,
     ),
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_riscv64_srcs",
+    srcs = [":builtins_unfiltered_riscv64_srcs"],
+)
+
+filegroup(
+    name = "builtins_unfiltered_riscv32_srcs",
+    srcs = [
+        ":builtins_generic_srcs",
+    ] + glob(
+        [
+            "lib/builtins/riscv/*.S",
+            "lib/builtins/riscv/*.c",
+            "lib/builtins/riscv/*.cpp",
+            "lib/builtins/riscv/*.h",
+        ],
+        allow_empty = True,
+    ),
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_riscv32_srcs",
+    srcs = [":builtins_unfiltered_riscv32_srcs"],
 )
 
 # Source files for the x86 architecture specific builtins (both 32-bit and
@@ -422,8 +552,14 @@ filegroup(
 
 # Source files for the x86-64 architecture specific builtins.
 filegroup(
-    name = "builtins_x86_64_srcs",
-    srcs = glob(
+    name = "builtins_unfiltered_x86_64_srcs",
+    srcs = [
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_tf_srcs",
+        ":builtins_x86_arch_srcs",
+        ":builtins_x86_fp80_srcs",
+    ] + glob(
         [
             "lib/builtins/x86_64/*.S",
             "lib/builtins/x86_64/*.c",
@@ -431,13 +567,28 @@ filegroup(
             "lib/builtins/x86_64/*.h",
         ],
         allow_empty = True,
+        exclude = [
+            # This is a Windows-specific routine.
+            # TODO: We should expose this as a Windows source at some point.
+            "lib/builtins/x86_64/chkstk.S",
+        ],
     ),
+)
+
+make_filtered_builtins_srcs_groups(
+    name = "builtins_x86_64_srcs",
+    srcs = [":builtins_unfiltered_x86_64_srcs"],
 )
 
 # Source files for the 32-bit-specific x86 architecture specific builtins.
 filegroup(
-    name = "builtins_i386_srcs",
-    srcs = glob(
+    name = "builtins_unfiltered_i386_srcs",
+    srcs = [
+        ":builtins_bf16_srcs",
+        ":builtins_generic_srcs",
+        ":builtins_x86_arch_srcs",
+        ":builtins_x86_fp80_srcs",
+    ] + glob(
         [
             "lib/builtins/i386/*.S",
             "lib/builtins/i386/*.c",
@@ -449,28 +600,15 @@ filegroup(
             # This file is used for both i386 and x86_64 and so included in the
             # broader x86 sources.
             "lib/builtins/i386/fp_mode.c",
+            # These are Windows-specific routines.
+            # TODO: We should expose these as Windows source at some point.
+            "lib/builtins/i386/chkstk.S",
+            "lib/builtins/i386/chkstk2.S",
         ],
     ),
 )
 
-# Source files for portable components of the compiler builtins library.
-filegroup(
-    name = "builtins_generic_srcs",
-    srcs = ["lib/builtins/cpu_model/cpu_model.h"] + glob(
-        [
-            "lib/builtins/*.c",
-            "lib/builtins/*.cpp",
-            "lib/builtins/*.h",
-            "lib/builtins/*.inc",
-        ],
-        allow_empty = True,
-        exclude = (
-            BUILTINS_CRTBEGIN_SRCS +
-            BUILTINS_CRTEND_SRCS +
-            BUILTINS_TF_EXCLUDES +
-            BUILTINS_TF_SRCS_PATTERNS +
-            BUILTNS_ATOMICS_SRCS +
-            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
-        ),
-    ),
+make_filtered_builtins_srcs_groups(
+    name = "builtins_i386_srcs",
+    srcs = [":builtins_unfiltered_i386_srcs"],
 )
