@@ -5905,8 +5905,7 @@ bool InstCombinerImpl::run() {
 
     // Now that we have an instruction, try combining it to simplify it.
     Builder.SetInsertPoint(I);
-    Builder.CollectMetadataToCopy(
-        I, {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
 
 #ifndef NDEBUG
     std::string OrigI;

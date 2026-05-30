@@ -112,35 +112,34 @@ public:
 
 /// Common base class shared among various IRBuilders.
 class IRBuilderBase {
-  /// Pairs of (metadata kind, MDNode *) that should be added to all newly
-  /// created instructions, excluding !dbg metadata, which is stored in the
-  /// StoredDL field.
-  SmallVector<std::pair<unsigned, MDNode *>, 2> MetadataToCopy;
+  struct MetadataEntry {
+    unsigned Kind;
+    mutable bool IsInstr;
+    union {
+      mutable MDNode *Node;
+      Instruction *Src;
+    };
+
+    MetadataEntry(unsigned Kind, Instruction *Src)
+        : Kind(Kind), IsInstr(true), Src(Src) {}
+    MetadataEntry(unsigned Kind, MDNode *Node)
+        : Kind(Kind), IsInstr(false), Node(Node) {}
+
+    MDNode *getNode() const {
+      if (IsInstr) {
+        Node = Src->getMetadata(Kind);
+        IsInstr = false;
+      }
+      return Node;
+    }
+  };
+  /// Metadata that should be added to all newly created instructions, excluding
+  /// !dbg metadata, which is stored in the StoredDL field. Metadata can be
+  /// collected lazily from an instruction.
+  SmallVector<MetadataEntry, 2> MetadataToCopy;
   /// The DebugLoc that will be applied to instructions inserted by this
   /// builder.
   DebugLoc StoredDL;
-
-  /// Add or update the an entry (Kind, MD) to MetadataToCopy, if \p MD is not
-  /// null. If \p MD is null, remove the entry with \p Kind.
-  void AddOrRemoveMetadataToCopy(unsigned Kind, MDNode *MD) {
-    assert(Kind != LLVMContext::MD_dbg &&
-           "MD_dbg metadata must be stored in StoredDL");
-
-    if (!MD) {
-      erase_if(MetadataToCopy, [Kind](const std::pair<unsigned, MDNode *> &KV) {
-        return KV.first == Kind;
-      });
-      return;
-    }
-
-    for (auto &KV : MetadataToCopy)
-      if (KV.first == Kind) {
-        KV.second = MD;
-        return;
-      }
-
-    MetadataToCopy.emplace_back(Kind, MD);
-  }
 
 protected:
   BasicBlock *BB;
@@ -257,10 +256,11 @@ public:
     StoredDL = std::move(L);
   }
 
-  /// Set nosanitize metadata.
+  /// Set nosanitize metadata. Clears MetadataToCopy.
   void SetNoSanitizeMetadata() {
-    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
-                              llvm::MDNode::get(getContext(), {}));
+    MetadataToCopy.clear();
+    MetadataToCopy.emplace_back(llvm::LLVMContext::MD_nosanitize,
+                                llvm::MDNode::get(getContext(), {}));
   }
 
   /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
@@ -268,11 +268,12 @@ public:
   /// not on \p Src will be dropped from MetadataToCopy.
   void CollectMetadataToCopy(Instruction *Src,
                              ArrayRef<unsigned> MetadataKinds) {
+    MetadataToCopy.clear();
     for (unsigned K : MetadataKinds) {
       if (K == LLVMContext::MD_dbg)
         SetCurrentDebugLocation(Src->getDebugLoc());
-      else
-        AddOrRemoveMetadataToCopy(K, Src->getMetadata(K));
+      else if (Src->hasMetadataOtherThanDebugLoc())
+        MetadataToCopy.emplace_back(K, Src);
     }
   }
 
@@ -285,8 +286,8 @@ public:
 
   /// Add all entries in MetadataToCopy to \p I.
   void AddMetadataToInst(Instruction *I) const {
-    for (const auto &KV : MetadataToCopy)
-      I->setMetadata(KV.first, KV.second);
+    for (const auto &Entry : MetadataToCopy)
+      I->setMetadata(Entry.Kind, Entry.getNode());
     SetInstDebugLocation(I);
   }
 
