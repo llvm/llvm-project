@@ -145,10 +145,14 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:           .byte	1                       # Call site Encoding = uleb128
 ; CHECK-NEXT:           .uleb128 .Laction_table_base0-.Lcst_begin0
 ; CHECK-NEXT:         .Lcst_begin0:
-; CHECK-NEXT:           .uleb128 .Ltmp0-.Lfunc_begin0   # >> Call Site 1 <<
-; CHECK-NEXT:           .uleb128 .Ltmp1-.Ltmp0          #   Call between .Ltmp0 and .Ltmp1
-; CHECK-NEXT:           .uleb128 .Ltmp2-main.__part.2   #     jumps to .Ltmp2
-; CHECK-NEXT:           .byte	3                       #   On action: 2
+; CHECK-NEXT:           .uleb128 .Ltmp0-.Lfunc_begin0      # >> Call Site 1 <<
+; CHECK-NEXT:           .uleb128 .Ltmp1-.Ltmp0             #   Call between .Ltmp0 and .Ltmp1
+; CHECK-NEXT:           .uleb128 .Ltmp2-main.__part.2      #     jumps to .Ltmp2
+; CHECK-NEXT:           .byte	3                          #   On action: 2
+; CHECK-NEXT:           .uleb128 .Lfunc_end0-.Lfunc_begin0 # >> Call Site 2 <<
+; CHECK-NEXT:           .uleb128 .Lfunc_end0-.Lfunc_end0   # Call between .Lfunc_end0 and .Lfunc_end0
+; CHECK-NEXT:           .byte 0                            # has no landing pad
+; CHECK-NEXT:           .byte 0                            # On action: cleanup
 ; CHECK-NEXT:           .p2align	2
 ; CHECK-NEXT:         .Lexception1:
 
@@ -174,6 +178,11 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:           .byte	1                       # Call site Encoding = uleb128
 ; CHECK-NEXT:           .uleb128 .Laction_table_base0-.Lcst_begin1
 ; CHECK-NEXT:         .Lcst_begin1:
+; CHECK-NEXT:           .uleb128 .LBB_END0_1-main.__part.1 # >> Call Site 3 <<
+; CHECK-NEXT:           .uleb128 .LBB_END0_1-.LBB_END0_1 # Call between .LBB_END0_1 and .LBB_END0_1
+; CHECK-NEXT:           .byte 0                            # has no landing pad
+; CHECK-NEXT:           .byte 0                            # On action: cleanup
+
 ; CHECK-NEXT:           .p2align 2
 ; CHECK-NEXT:         .Lexception2:
 
@@ -199,7 +208,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:           .byte	1                       # Call site Encoding = uleb128
 ; CHECK-NEXT:           .uleb128 .Laction_table_base0-.Lcst_begin2
 ; CHECK-NEXT:         .Lcst_begin2:
-; CHECK-NEXT:           .uleb128 main.__part.2-main.__part.2          # >> Call Site 2 <<
+; CHECK-NEXT:           .uleb128 main.__part.2-main.__part.2          # >> Call Site 4 <<
 ; CHECK-NEXT:           .uleb128 .LBB_END0_2-main.__part.2     #   Call between main.__part.2 and .LBB_END0_2
 ; CHECK-NEXT:           .byte	0                       #     has no landing pad
 ; CHECK-NEXT:           .byte	0                       #   On action: cleanup
