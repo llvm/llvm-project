@@ -100,7 +100,6 @@ LIBC_INLINE double acosh(double x) {
   using DoubleDouble = fputil::DoubleDouble;
 
   FPBits xbits(x);
-  uint64_t x_u = xbits.uintval();
 
   // x <= 1.0 is false for NaN, so NaN falls through to the inf/NaN check.
   if (LIBC_UNLIKELY(x <= 1.0)) {
@@ -111,20 +110,12 @@ LIBC_INLINE double acosh(double x) {
     return FPBits::quiet_nan().get_val();
   }
 
-  if (LIBC_UNLIKELY(x_u >= 0x41b0000000000000ULL)) { // x >= 2^28
-    if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
-      if (xbits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x;
+  if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
     }
-    // acosh(x) = log(2x) + O(1/x^2); correction < 0.5 ULP for x >= 2^28.
-    // 2*x is exact for x in [2^28, 2^52] (the test range); compute 2x-1
-    // as a double-double so acosh_log1p_dd gets the exact correction.
-    double two_x = 2.0 * x;
-    DoubleDouble u_dd = fputil::exact_add<false>(two_x, -1.0);
-    return acosh_log1p_dd(u_dd.hi, u_dd.lo);
+    return x;
   }
 
   // acosh(x) = log1p(u),  u = (x-1) + sqrt(x^2-1).
