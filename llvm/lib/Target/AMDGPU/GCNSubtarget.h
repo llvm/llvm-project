@@ -495,7 +495,7 @@ public:
   }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
-  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
+  bool hasPermLaneX16() const { return hasPermlane16Insts(); }
 
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }

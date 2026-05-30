@@ -435,6 +435,10 @@ defm GFX940Insts : AMDGPUSubtargetFeature<"gfx940-insts",
   /*GenPredicate=*/0
 >;
 
+defm Permlane16Insts : AMDGPUSubtargetFeature<"permlane16-insts",
+  "Has v_permlane16_b32/v_permlanex16_b32 instructions"
+>;
+
 defm Permlane16Swap : AMDGPUSubtargetFeature<"permlane16-swap",
   "Has v_permlane16_swap_b32 instructions"
 >;
@@ -1499,6 +1503,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1528,6 +1533,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1555,6 +1561,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
@@ -1581,6 +1588,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
    FeatureVOP3Literal, FeatureDPP8,
+   FeaturePermlane16Insts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess, FeatureImageInsts,

@@ -7895,7 +7895,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget *ST = TLI.getSubtarget();
 
-  if ((IsPermLane16 && ST->getGeneration() < AMDGPUSubtarget::GFX10) ||
+  if ((IsPermLane16 && !ST->hasPermLaneX16()) ||
       (IID == Intrinsic::amdgcn_mov_dpp8 && !ST->hasDPP8()))
     return emitRemovedIntrinsicError(DAG, SL, VT);
 

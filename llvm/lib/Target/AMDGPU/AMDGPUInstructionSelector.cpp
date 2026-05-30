@@ -1300,7 +1300,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectImpl(I, *CoverageInfo);
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16:
-    if (STI.getGeneration() < AMDGPUSubtarget::GFX10) {
+    if (!STI.hasPermLaneX16()) {
       diagnoseUnsupportedIntrinsic(I);
       return false;
     }
