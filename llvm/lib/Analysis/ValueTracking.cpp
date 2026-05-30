@@ -709,16 +709,11 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
       if (Idx > MaxInstrsToCheckForFree)
         return false;
 
-      if (I.maySynchronize())
-        return false;
-
-      auto *CB = dyn_cast<CallBase>(&I);
-      if (CB) {
-        // Non call site cases covered by the two checks above
-        if (!CB->hasFnAttr(Attribute::NoSync) ||
-            !CB->hasFnAttr(Attribute::NoFree))
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
-      }
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
