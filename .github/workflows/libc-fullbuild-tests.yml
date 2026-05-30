@@ -109,6 +109,13 @@ jobs:
             cpp_compiler: clang++-23
             target: riscv32-unknown-elf
             testing: SKIP
+          - name: amd-gpu
+            os: ubuntu-24.04
+            build_type: Release
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            target: amdgcn-amd-amdhsa
+            testing: BUILD
           # TODO: add back gcc build when it is fixed
           # - c_compiler: gcc
           #   cpp_compiler: g++
