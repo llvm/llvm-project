@@ -3282,114 +3282,61 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 define <16 x i1> @test_v16i1_select_chain(<16 x i1> %a0, <16 x i1> %a1, <16 x i1> %a2) {
 ; KNL-LABEL: test_v16i1_select_chain:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    vpmovsxbd %xmm1, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; KNL-NEXT:    vpmovsxbd %xmm2, %zmm0
-; KNL-NEXT:    vpslld $31, %zmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k2
-; KNL-NEXT:    kandw %k1, %k2, %k3
-; KNL-NEXT:    kandnw %k0, %k3, %k3
-; KNL-NEXT:    kandw %k0, %k1, %k4
-; KNL-NEXT:    kandw %k1, %k4, %k5
-; KNL-NEXT:    kandw %k5, %k3, %k3
-; KNL-NEXT:    kandw %k0, %k3, %k0
-; KNL-NEXT:    kxorw %k1, %k0, %k0
-; KNL-NEXT:    kandw %k2, %k4, %k1
-; KNL-NEXT:    kandw %k0, %k1, %k1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    vandps %xmm1, %xmm2, %xmm3
+; KNL-NEXT:    vandnps %xmm0, %xmm3, %xmm3
+; KNL-NEXT:    vandps %xmm0, %xmm1, %xmm4
+; KNL-NEXT:    vandps %xmm1, %xmm4, %xmm5
+; KNL-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; KNL-NEXT:    vandps %xmm0, %xmm3, %xmm0
+; KNL-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; KNL-NEXT:    vandps %xmm2, %xmm4, %xmm1
+; KNL-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_v16i1_select_chain:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpsllw $7, %xmm0, %xmm0
-; SKX-NEXT:    vpmovb2m %xmm0, %k0
-; SKX-NEXT:    vpsllw $7, %xmm1, %xmm0
-; SKX-NEXT:    vpmovb2m %xmm0, %k1
-; SKX-NEXT:    vpsllw $7, %xmm2, %xmm0
-; SKX-NEXT:    vpmovb2m %xmm0, %k2
-; SKX-NEXT:    kandw %k1, %k2, %k3
-; SKX-NEXT:    kandnw %k0, %k3, %k3
-; SKX-NEXT:    kandw %k0, %k1, %k4
-; SKX-NEXT:    kandw %k1, %k4, %k5
-; SKX-NEXT:    kandw %k5, %k3, %k3
-; SKX-NEXT:    kandw %k0, %k3, %k0
-; SKX-NEXT:    kxorw %k1, %k0, %k0
-; SKX-NEXT:    kandw %k2, %k4, %k1
-; SKX-NEXT:    kandw %k0, %k1, %k0
-; SKX-NEXT:    vpmovm2b %k0, %xmm0
+; SKX-NEXT:    vmovdqa %xmm0, %xmm3
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & ~(xmm2 & xmm1)
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm1 & (xmm3 ^ xmm1)
+; SKX-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm3
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v16i1_select_chain:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    vpsllw $7, %xmm0, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k0
-; AVX512BW-NEXT:    vpsllw $7, %xmm1, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k1
-; AVX512BW-NEXT:    vpsllw $7, %xmm2, %xmm0
-; AVX512BW-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512BW-NEXT:    kandw %k1, %k2, %k3
-; AVX512BW-NEXT:    kandnw %k0, %k3, %k3
-; AVX512BW-NEXT:    kandw %k0, %k1, %k4
-; AVX512BW-NEXT:    kandw %k1, %k4, %k5
-; AVX512BW-NEXT:    kandw %k5, %k3, %k3
-; AVX512BW-NEXT:    kandw %k0, %k3, %k0
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
-; AVX512BW-NEXT:    kandw %k2, %k4, %k1
-; AVX512BW-NEXT:    kandw %k0, %k1, %k0
-; AVX512BW-NEXT:    vpmovm2b %k0, %zmm0
-; AVX512BW-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $zmm0
-; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    vandps %xmm1, %xmm2, %xmm3
+; AVX512BW-NEXT:    vandnps %xmm0, %xmm3, %xmm3
+; AVX512BW-NEXT:    vandps %xmm0, %xmm1, %xmm4
+; AVX512BW-NEXT:    vandps %xmm1, %xmm4, %xmm5
+; AVX512BW-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX512BW-NEXT:    vandps %xmm0, %xmm3, %xmm0
+; AVX512BW-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vandps %xmm2, %xmm4, %xmm1
+; AVX512BW-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_v16i1_select_chain:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vpmovsxbd %xmm0, %zmm0
-; AVX512DQ-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k0
-; AVX512DQ-NEXT:    vpmovsxbd %xmm1, %zmm0
-; AVX512DQ-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
-; AVX512DQ-NEXT:    vpmovsxbd %xmm2, %zmm0
-; AVX512DQ-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k2
-; AVX512DQ-NEXT:    kandw %k1, %k2, %k3
-; AVX512DQ-NEXT:    kandnw %k0, %k3, %k3
-; AVX512DQ-NEXT:    kandw %k0, %k1, %k4
-; AVX512DQ-NEXT:    kandw %k1, %k4, %k5
-; AVX512DQ-NEXT:    kandw %k5, %k3, %k3
-; AVX512DQ-NEXT:    kandw %k0, %k3, %k0
-; AVX512DQ-NEXT:    kxorw %k1, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k2, %k4, %k1
-; AVX512DQ-NEXT:    kandw %k0, %k1, %k0
-; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
-; AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    vandps %xmm1, %xmm2, %xmm3
+; AVX512DQ-NEXT:    vandnps %xmm0, %xmm3, %xmm3
+; AVX512DQ-NEXT:    vandps %xmm0, %xmm1, %xmm4
+; AVX512DQ-NEXT:    vandps %xmm1, %xmm4, %xmm5
+; AVX512DQ-NEXT:    vandps %xmm5, %xmm3, %xmm3
+; AVX512DQ-NEXT:    vandps %xmm0, %xmm3, %xmm0
+; AVX512DQ-NEXT:    vxorps %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vandps %xmm2, %xmm4, %xmm1
+; AVX512DQ-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_v16i1_select_chain:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vpsllw $7, %xmm0, %xmm0
-; X86-NEXT:    vpmovb2m %xmm0, %k0
-; X86-NEXT:    vpsllw $7, %xmm1, %xmm0
-; X86-NEXT:    vpmovb2m %xmm0, %k1
-; X86-NEXT:    vpsllw $7, %xmm2, %xmm0
-; X86-NEXT:    vpmovb2m %xmm0, %k2
-; X86-NEXT:    kandw %k1, %k2, %k3
-; X86-NEXT:    kandnw %k0, %k3, %k3
-; X86-NEXT:    kandw %k0, %k1, %k4
-; X86-NEXT:    kandw %k1, %k4, %k5
-; X86-NEXT:    kandw %k5, %k3, %k3
-; X86-NEXT:    kandw %k0, %k3, %k0
-; X86-NEXT:    kxorw %k1, %k0, %k0
-; X86-NEXT:    kandw %k2, %k4, %k1
-; X86-NEXT:    kandw %k0, %k1, %k0
-; X86-NEXT:    vpmovm2b %k0, %xmm0
+; X86-NEXT:    vmovdqa %xmm0, %xmm3
+; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & ~(xmm2 & xmm1)
+; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
+; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm3 & xmm0 & xmm1
+; X86-NEXT:    vpternlogq {{.*#+}} xmm3 = xmm1 & (xmm3 ^ xmm1)
+; X86-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & xmm2 & xmm3
 ; X86-NEXT:    retl
   %i3 = select <16 x i1> %a2, <16 x i1> %a1, <16 x i1> zeroinitializer
   %i4  = xor <16 x i1> %i3, splat (i1 true)

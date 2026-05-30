@@ -208,7 +208,7 @@ activities as a maintainer in the future.
 
 *To resume activities as a maintainer*, you can post a PR moving your name from
 the "inactive maintainers" section of the ``Maintainers.md`` or
-``Maintainers.rst``file to the active maintainers list. Because the volunteer
+``Maintainers.rst`` file to the active maintainers list. Because the volunteer
 was already previously accepted, they will be re-accepted so long as at least
 one maintainer in the same project approves the PR and there are no explicit
 objections raised by the community.
