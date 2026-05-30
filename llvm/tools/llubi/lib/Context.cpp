@@ -21,37 +21,6 @@ Context::Context(Module &M, const AsmParserContext *ParserContext)
 
 Context::~Context() = default;
 
-bool Context::isSupportedGlobalInitializer(Constant *C) const {
-  if (isa<PoisonValue, ConstantAggregateZero, ConstantPointerNull, ConstantInt,
-          ConstantFP>(C))
-    return true;
-
-  if (auto const *CDS = dyn_cast<ConstantDataSequential>(C)) {
-    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      if (!isSupportedGlobalInitializer(CDS->getElementAsConstant(I)))
-        return false;
-    return true;
-  }
-
-  if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
-    for (Value *Op : CA->operands())
-      if (!isSupportedGlobalInitializer(cast<Constant>(Op)))
-        return false;
-    return true;
-  }
-
-  if (auto const *BA = dyn_cast<BlockAddress>(C))
-    return BlockAddrMap.contains(BA->getBasicBlock());
-
-  if (auto const *GV = dyn_cast<GlobalVariable>(C))
-    return GlobalAddrMap.contains(GV);
-
-  if (auto const *F = dyn_cast<Function>(C))
-    return FuncAddrMap.contains(F);
-
-  return false;
-}
-
 bool Context::initGlobalValues() {
   // Register all function and block targets that may be used by indirect calls
   // and branches.
@@ -60,7 +29,7 @@ bool Context::initGlobalValues() {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
-                              MemAllocKind::Global);
+                              MemAllocKind::Global, /*IsGlobalValue=*/true);
       if (!FuncObj)
         return false;
       ValidFuncTargets.try_emplace(FuncObj->getAddress(),
@@ -72,7 +41,7 @@ bool Context::initGlobalValues() {
       if (!BB.hasAddressTaken())
         continue;
       auto BlockObj = allocate(0, 1, BB.getName(), DL.getProgramAddressSpace(),
-                               MemInitKind::Zeroed, MemAllocKind::Global);
+                               MemInitKind::Zeroed, MemAllocKind::BlockAddress);
       if (!BlockObj)
         return false;
       ValidBlockTargets.try_emplace(BlockObj->getAddress(),
@@ -82,15 +51,14 @@ bool Context::initGlobalValues() {
   }
 
   for (GlobalVariable &GV : M.globals()) {
-    if (!GV.hasInitializer())
-      continue;
-
     Type *ValueTy = GV.getValueType();
     uint64_t const Size = getEffectiveTypeAllocSize(ValueTy);
     Align Alignment = GV.getPointerAlignment(DL);
+    auto InitKind =
+        GV.hasInitializer() ? MemInitKind::Zeroed : MemInitKind::Uninitialized;
     auto const Obj =
         allocate(Size, Alignment.value(), GV.getName(), GV.getAddressSpace(),
-                 MemInitKind::Zeroed, MemAllocKind::Global);
+                 InitKind, MemAllocKind::Global, /*IsGlobalValue=*/true);
 
     if (!Obj)
       return false;
@@ -108,17 +76,16 @@ bool Context::initGlobalValues() {
 
     Constant *Init = GV.getInitializer();
 
-    // TODO: Constant expression support
-    if (!isSupportedGlobalInitializer(Init))
+    const AnyValue *InitVal = getConstantValue(Init);
+    if (!InitVal)
       return false;
 
-    AnyValue InitVal = getConstantValue(Init);
-    store(*Obj, 0, InitVal, GV.getValueType());
+    store(*Obj, 0, *InitVal, GV.getValueType());
   }
   return true;
 }
 
-AnyValue Context::getConstantValueImpl(Constant *C) {
+std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
 
@@ -145,37 +112,61 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CDS->getNumElements());
-    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Elts.push_back(getConstantValue(CDS->getElementAsConstant(I)));
+    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      const AnyValue *Elt = getConstantValue(CDS->getElementAsConstant(I));
+      if (!Elt)
+        return std::nullopt;
+      Elts.push_back(*Elt);
+    }
     return std::move(Elts);
   }
 
   if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CA->getNumOperands());
-    for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I)
-      Elts.push_back(getConstantValue(CA->getOperand(I)));
+    for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I) {
+      const AnyValue *Elt = getConstantValue(CA->getOperand(I));
+      if (!Elt)
+        return std::nullopt;
+      Elts.push_back(*Elt);
+    }
     return std::move(Elts);
   }
 
-  if (auto *BA = dyn_cast<BlockAddress>(C))
-    return BlockAddrMap.at(BA->getBasicBlock());
+  if (auto *BA = dyn_cast<BlockAddress>(C)) {
+    auto It = BlockAddrMap.find(BA->getBasicBlock());
+    if (It == BlockAddrMap.end())
+      return std::nullopt;
+    return It->second;
+  }
 
-  if (auto *GV = dyn_cast<GlobalVariable>(C))
-    return GlobalAddrMap.at(GV);
+  if (auto *GV = dyn_cast<GlobalVariable>(C)) {
+    auto It = GlobalAddrMap.find(GV);
+    if (It == GlobalAddrMap.end())
+      return std::nullopt;
+    return It->second;
+  }
 
-  if (auto *F = dyn_cast<Function>(C))
-    return FuncAddrMap.at(F);
+  if (auto *F = dyn_cast<Function>(C)) {
+    auto It = FuncAddrMap.find(F);
+    if (It == FuncAddrMap.end())
+      return std::nullopt;
+    return It->second;
+  }
 
-  llvm_unreachable("Unrecognized constant");
+  return std::nullopt;
 }
 
-const AnyValue &Context::getConstantValue(Constant *C) {
+const AnyValue *Context::getConstantValue(Constant *C) {
   auto It = ConstCache.find(C);
   if (It != ConstCache.end())
-    return It->second;
+    return &It->second;
 
-  return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
+  std::optional<AnyValue> Val = getConstantValueImpl(C);
+  if (!Val)
+    return nullptr;
+
+  return &ConstCache.emplace(C, std::move(*Val)).first->second;
 }
 
 APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {
@@ -569,11 +560,11 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind,
-                           MemAllocKind AllocKind)
+                           MemAllocKind AllocKind, bool IsGlobalValue)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
       State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
                                               : MemoryObjectState::Dead),
-      AllocKind(AllocKind) {
+      AllocKind(AllocKind), IsGlobalValue(IsGlobalValue) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte::concrete(0));
@@ -589,15 +580,16 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
 
 IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
-                  MemInitKind InitKind, MemAllocKind AllocKind) {
+                  MemInitKind InitKind, MemAllocKind AllocKind,
+                  bool IsGlobalValue) {
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
   if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
-  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS,
-                                                  InitKind, AllocKind);
+  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
+      AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;
   AllocationBase = AlignedAddr + AllocateSize;
   UsedMem += AllocateSize;
@@ -713,6 +705,7 @@ bool MemoryObject::isStackAllocated() const {
 bool MemoryObject::isHeapAllocated() const {
   switch (AllocKind) {
   case MemAllocKind::Global:
+  case MemAllocKind::BlockAddress:
   case MemAllocKind::Stack:
     return false;
   case MemAllocKind::Malloc:

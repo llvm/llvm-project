@@ -10,5 +10,5 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   store i32 2, ptr @constant, align 4 at @main
-; CHECK-NEXT: Immediate UB detected: Try to write to a constant memory object at address 0x8.
+; CHECK-NEXT: Immediate UB detected: Try to write to a constant memory object: ptr 0x8 [@constant].
 ; CHECK-NEXT: error: Execution of function 'main' failed.

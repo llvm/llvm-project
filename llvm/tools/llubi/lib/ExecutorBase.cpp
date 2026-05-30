@@ -146,9 +146,8 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
     return;
   }
   if (MO->isConstant()) {
-    reportImmediateUB()
-        << "Try to write to a constant memory object at address 0x"
-        << Twine::utohexstr(PtrVal.address().getZExtValue()) << ".";
+    reportImmediateUB() << "Try to write to a constant memory object: "
+                        << PtrVal << ".";
     return;
   }
   // TODO: pointer capability check

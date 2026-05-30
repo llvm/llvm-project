@@ -150,11 +150,17 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
+  AnyValue UnsupportedConstantValue;
   Library Lib;
 
   const AnyValue &getValue(Value *V) {
-    if (auto *C = dyn_cast<Constant>(V))
-      return Ctx.getConstantValue(C);
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (const AnyValue *Val = Ctx.getConstantValue(C))
+        return *Val;
+      reportError() << "Unsupported constant: " << *C << ".";
+      UnsupportedConstantValue = AnyValue::getPoisonValue(Ctx, C->getType());
+      return UnsupportedConstantValue;
+    }
     return CurrentFrame->ValueMap.at(V);
   }
 

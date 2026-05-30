@@ -254,6 +254,11 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
   return OS;
 }
 
+inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
+  P.print(OS);
+  return OS;
+}
+
 } // namespace llvm::ubi
 
 #endif

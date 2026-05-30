@@ -18,7 +18,7 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %initial = load i32, ptr @value, align 4 => i32 41
 ; CHECK-NEXT:   store i32 42, ptr @value, align 4
-; CHECK-NEXT:   %ptr = load ptr, ptr @value_ptr, align 8 => ptr 0x8 [value]
+; CHECK-NEXT:   %ptr = load ptr, ptr @value_ptr, align 8 => ptr 0x8 [@value]
 ; CHECK-NEXT:   %updated = load i32, ptr %ptr, align 4 => i32 42
 ; CHECK-NEXT:   %aggregate_value = load { i32, [2 x i8] }, ptr @aggregate, align 4 => { i32 7, { i8 104, i8 105 } }
 ; CHECK-NEXT:   ret void

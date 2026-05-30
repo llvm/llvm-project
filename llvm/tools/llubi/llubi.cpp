@@ -267,8 +267,13 @@ int main(int argc, char **argv) {
   auto *MainFuncTy = FunctionType::get(IntTy, {IntTy, PtrTy}, false);
   SmallVector<ubi::AnyValue> Args;
   if (EntryFn->getFunctionType() == MainFuncTy) {
-    Args.push_back(
-        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size())));
+    const ubi::AnyValue *Argc =
+        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size()));
+    if (!Argc) {
+      WithColor::error() << "Failed to initialize argc.\n";
+      return 1;
+    }
+    Args.push_back(*Argc);
 
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
