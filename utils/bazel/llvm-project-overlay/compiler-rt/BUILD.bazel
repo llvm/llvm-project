@@ -60,10 +60,11 @@ cc_library(
     name = "interception",
     srcs = glob(["lib/interception/*.cpp"]),
     hdrs = glob(["lib/interception/*.h"]),
-    includes = ["lib"],
     copts = [
+        "-fomit-frame-pointer",
         "-fvisibility=hidden",
     ],
+    includes = ["lib"],
     linkstatic = True,
     deps = [
         ":sanitizer_common_headers",
