@@ -47,6 +47,13 @@ constexpr void test_others() {
   }
 }
 
+// Runtime test only as it would take unreasonably long to test in constexpr.
+void test_all_strings() {
+  for (auto& enc : all_encoding_data) {
+    test_ctor(enc.name, std::text_encoding::id(enc.mib));
+  }
+}
+
 constexpr bool test() {
   // happy paths
   {
@@ -86,13 +93,17 @@ constexpr bool test() {
 
 int main(int, char**) {
   {
-    static_assert(std::is_nothrow_constructible<std::text_encoding, std::string_view>::value,
+    static_assert(std::is_nothrow_constructible_v<std::text_encoding, std::string_view>,
                   "Must be nothrow constructible with string_view");
   }
 
   {
     test();
     static_assert(test());
+  }
+
+  {
+    test_all_strings();
   }
 
   return 0;
