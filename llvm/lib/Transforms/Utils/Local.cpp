@@ -4087,7 +4087,7 @@ void OverflowTracking::mergeFlags(Instruction &I) {
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
-  I.clearSubclassOptionalData();
+  I.dropPoisonGeneratingFlags();
   if (I.getOpcode() == Instruction::Add ||
       (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
     if (HasNUW)
