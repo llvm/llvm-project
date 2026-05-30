@@ -1212,7 +1212,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
 
   VPValue *I1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *I2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
+  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   SmallVector<VPValue *, 4> Args;
   Args.push_back(I1);
   Args.push_back(I2);
