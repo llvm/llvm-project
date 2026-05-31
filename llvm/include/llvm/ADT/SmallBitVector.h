@@ -735,11 +735,6 @@ operator^(const SmallBitVector &LHS, const SmallBitVector &RHS) {
 
 template <> struct DenseMapInfo<SmallBitVector> {
   static inline SmallBitVector getEmptyKey() { return SmallBitVector(); }
-  static inline SmallBitVector getTombstoneKey() {
-    SmallBitVector V;
-    V.invalid();
-    return V;
-  }
   static unsigned getHashValue(const SmallBitVector &V) {
     uintptr_t Store;
     return DenseMapInfo<

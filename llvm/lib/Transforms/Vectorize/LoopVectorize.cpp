@@ -2076,10 +2076,6 @@ struct CSEDenseMapInfo {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
-  static inline Instruction *getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(),
@@ -2087,8 +2083,7 @@ struct CSEDenseMapInfo {
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
-    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
-        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+    if (LHS == getEmptyKey() || RHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(RHS);
   }
