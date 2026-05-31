@@ -47,7 +47,7 @@ protected:
     IsNullValue = (1 << 6),
   };
 
-  /// Bits reserveed in SubclassOptionalData, not to be used for ConstantExpr
+  /// Bits reserved in SubclassOptionalData, not to be used for ConstantExpr
   /// flags.
   static constexpr unsigned ConstantSubclassBits = IsNullValue;
 
