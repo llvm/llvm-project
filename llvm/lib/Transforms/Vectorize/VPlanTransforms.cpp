@@ -2883,7 +2883,7 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                    {InLoopIncrement, TC, ALMMultiplier}, DL,
                                    "active.lane.mask.next");
-  LaneMaskPhi->addOperand(ALM);
+  LaneMaskPhi->addBackedgeValue(ALM);
 
   // Replace the original terminator with BranchOnCond. We have to invert the
   // mask here because a true condition means jumping to the exit block.
@@ -3348,12 +3348,12 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *NextIter = Builder.createAdd(
       OpVPEVL, CurrentIteration, CanonicalIVIncrement->getDebugLoc(),
       "current.iteration.next", CanonicalIVIncrement->getNoWrapFlags());
-  CurrentIteration->addOperand(NextIter);
+  CurrentIteration->addBackedgeValue(NextIter);
 
   VPValue *NextAVL =
       Builder.createSub(AVLPhi, OpVPEVL, DebugLoc::getCompilerGenerated(),
                         "avl.next", {/*NUW=*/true, /*NSW=*/false});
-  AVLPhi->addOperand(NextAVL);
+  AVLPhi->addIncoming(NextAVL);
 
   fixupVFUsersForEVL(Plan, *VPEVL);
   removeDeadRecipes(Plan);
@@ -3834,7 +3834,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR) {
   auto *Next = Builder.createNaryOp(AddOp, {Prev, Inc}, Flags,
                                     WidenIVR->getDebugLoc(), "vec.ind.next");
 
-  WidePHI->addOperand(Next);
+  WidePHI->addIncoming(Next);
 
   WidenIVR->replaceAllUsesWith(WidePHI);
 }
@@ -3897,7 +3897,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R) {
 
   VPValue *InductionGEP =
       Builder.createPtrAdd(ScalarPtrPhi, Inc, DL, "ptr.ind");
-  ScalarPtrPhi->addOperand(InductionGEP);
+  ScalarPtrPhi->addIncoming(InductionGEP);
 }
 
 /// Expand a VPDerivedIVRecipe into executable recipes.
@@ -4344,7 +4344,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
             DebugLoc::getUnknown(), "early.exit.value");
       }
       ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
-      ExitIRI->addOperand(NewIncoming);
+      ExitIRI->addIncoming(NewIncoming);
     }
 
     EarlyExitingVPBB->getTerminator()->eraseFromParent();
