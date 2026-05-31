@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=generic | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 | FileCheck %s -check-prefixes=CHECK,ZCM-FPR128-CPU --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 | FileCheck %s -check-prefixes=CHECK,NOZCM-FPR128-ATTR --match-full-lines
-; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 | FileCheck %s -check-prefixes=CHECK,ZCM-FPR128-ATTR --match-full-lines
+; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s --match-full-lines -check-prefixes=CHECK,NOZCM-FPR128-CPU
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=generic | FileCheck %s --match-full-lines -check-prefixes=CHECK,NOZCM-FPR128-CPU
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 | FileCheck %s --match-full-lines -check-prefixes=CHECK,ZCM-FPR128-CPU
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr128 | FileCheck %s --match-full-lines -check-prefixes=CHECK,NOZCM-FPR128-ATTR
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mattr=+zcm-fpr128 | FileCheck %s --match-full-lines -check-prefixes=CHECK,ZCM-FPR128-ATTR
 
 define void @zero_cycle_regmove_FPR64(double %a, double %b, double %c, double %d) {
 entry:
