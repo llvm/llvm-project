@@ -10,6 +10,7 @@ on:
     paths:
       - .github/workflows/build-ci-container-tooling.yml
       - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/github-automation.py
       - llvm/utils/git/requirements_formatting.txt
       - llvm/utils/git/requirements_linting.txt
       - '.github/actions/build-container/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - .github/workflows/build-ci-container-tooling.yml
       - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/github-automation.py
       - llvm/utils/git/requirements_formatting.txt
       - llvm/utils/git/requirements_linting.txt
       - '.github/actions/build-container/**'
@@ -39,6 +41,10 @@ jobs:
           - container-name: abi-tests
             test-command: 'cd $HOME && abi-compliance-checker --help'
             target: abi-tests
+          - container-name: github-automation
+            test-command: 'true'
+            target: github-automation
+
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

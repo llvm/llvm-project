@@ -113,3 +113,22 @@ RUN apt-get update && \
     universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+FROM base as ci-container-github-automation
+ARG LLVM_GIT_CHECKOUT=/home/gha/llvm-project
+ARG LLVM_GITHUB_AUTOMATION_DIR=llvm/utils/git
+ENV PATH=${LLVM_GIT_CHECKOUT}/${LLVM_GITHUB_AUTOMATION_DIR}:${PATH}
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-git \
+    python3-github && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gha
+RUN git clone https://github.com/llvm/llvm-project --depth=1 -b main --no-checkout ${LLVM_GIT_CHECKOUT} && \
+    git -C ${LLVM_GIT_CHECKOUT} sparse-checkout init --cone && \
+    git -C ${LLVM_GIT_CHECKOUT} sparse-checkout set ${LLVM_GITHUB_AUTOMATION_DIR} && \
+    git -C ${LLVM_GIT_CHECKOUT} checkout && \
+    rm -Rf ${LLVM_GIT_CHECKOUT}/.git
