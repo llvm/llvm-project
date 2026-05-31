@@ -1518,8 +1518,31 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       assert(!MFI.hasVarSizedObjects());
       FrameReg = SPReg;
     }
+  } else if (!RI->hasStackRealignment(MF)) {
+    // Note: Keeping the following as multiple 'if' statements rather than
+    // merging to a single expression for readability.
+    if (!hasFP(MF)) {
+      // No FP available, must use SP.
+      FrameReg = SPReg;
+    } else {
+      FrameReg = FPReg;
+      if (RVFI->getRVVStackSize() == 0 && !MFI.hasVarSizedObjects()) {
+        // Both FP and SP are candidates.
+        // Prefer SP when the SP-relative offset fits in the compressed
+        // instruction immediate range.
+        int64_t SPOff = Offset.getFixed() + MFI.getStackSize();
+        int64_t CLWSPMaxOffset = 252;
+        int64_t CLDSPMaxOffset = 504;
+        int64_t SPThreshold = STI.is64Bit() ? CLDSPMaxOffset : CLWSPMaxOffset;
+        if (SPOff >= 0 && SPOff <= SPThreshold)
+          FrameReg = SPReg;
+      }
+    }
   } else {
-    FrameReg = RI->getFrameRegister(MF);
+    assert(RI->hasStackRealignment(MF) && MFI.isFixedObjectIndex(FI) &&
+           "Expected fixed object with stack realignment");
+    assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
+    FrameReg = FPReg;
   }
 
   if (FrameReg == FPReg) {
@@ -1681,10 +1704,15 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Append GPRPair registers for pairs where both sub-registers are in CSR
     // list. Iterate through all GPRPairs and check if both sub-regs are CSRs.
     for (MCPhysReg Pair : RISCV::GPRPairRegClass) {
+      // Do not append a pair that's already in the CSR list.
+      if (CSRSet.contains(Pair))
+        continue;
       MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
       MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
-      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg))
+      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg)) {
         NewCSRs.push_back(Pair);
+        CSRSet.insert(Pair);
+      }
     }
 
     MRI.setCalleeSavedRegs(NewCSRs);

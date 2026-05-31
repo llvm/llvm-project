@@ -21,12 +21,6 @@ namespace llvm {
 
 class LLVMContext;
 class VPValue;
-class VPBlendRecipe;
-class VPInstruction;
-class VPWidenRecipe;
-class VPWidenCallRecipe;
-class VPWidenMemoryRecipe;
-class VPReplicateRecipe;
 class VPRecipeBase;
 class VPlan;
 class Value;
@@ -47,16 +41,11 @@ struct VPCostContext;
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
-
-  Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPInstruction *R);
-  Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
+  const DataLayout &DL;
 
 public:
-  VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {}
+  VPTypeAnalysis(const VPlan &Plan)
+      : Ctx(Plan.getContext()), DL(Plan.getDataLayout()) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

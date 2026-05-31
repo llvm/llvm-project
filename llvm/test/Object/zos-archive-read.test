@@ -63,7 +63,9 @@
 ## Test that a truncated archive with incomplete member header is rejected.
 ## The z/OS magic is 8 bytes and a member header requires 60 bytes.
 ## Writing only 3 bytes after the magic is not enough for a valid header.
-# RUN: printf '\x5A\x4C\x81\x99\x83\x88\x6E\x15' > %t.badhdr.a
-# RUN: printf '\x00\x00\x00' >> %t.badhdr.a
+## Test that a truncated archive with incomplete member header is rejected.
+# RUN: %python %p/Inputs/generate_zos_archive.py --output %t.full.a \
+# RUN:   --member foo.txt
+# RUN: head -c 28 %t.full.a > %t.badhdr.a
 # RUN: not llvm-ar t %t.badhdr.a 2>&1 | FileCheck %s --check-prefix=ERR-CHILD
 # ERR-CHILD: truncated or malformed archive

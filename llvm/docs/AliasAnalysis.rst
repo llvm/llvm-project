@@ -635,16 +635,16 @@ implementations.  You can use them with commands like:
 
   % opt -ds-aa -aa-eval foo.bc -disable-output -stats
 
-The ``-print-alias-sets`` pass
+The ``print<alias-sets>`` pass
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``-print-alias-sets`` pass is exposed as part of the ``opt`` tool to print
+The ``print<alias-sets>`` pass is exposed as part of the ``opt`` tool to print
 out the Alias Sets formed by the `AliasSetTracker`_ class.  This is useful if
 you're using the ``AliasSetTracker`` class.  To use it, use something like:
 
 .. code-block:: bash
 
-  % opt -ds-aa -print-alias-sets -disable-output
+  % opt -passes='print<alias-sets>' -disable-output
 
 The ``-aa-eval`` pass
 ^^^^^^^^^^^^^^^^^^^^^

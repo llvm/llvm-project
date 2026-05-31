@@ -15,14 +15,18 @@
 #ifndef LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 #define LLVM_CLANG_LIB_SEMA_SEMALIFETIMESAFETY_H
 
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
+#include <string>
 
 namespace clang::lifetimes {
 
-inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
+inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
+  if (S.getLangOpts().DebugRunLifetimeSafety)
+    return true;
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
       diag::warn_lifetime_safety_use_after_scope,
@@ -36,8 +40,15 @@ inline bool IsLifetimeSafetyDiagnosticEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_dangling_global,
       diag::warn_lifetime_safety_dangling_global_moved,
       diag::warn_lifetime_safety_noescape_escapes,
-      diag::warn_lifetime_safety_param_lifetimebound_violation,
-  };
+      diag::warn_lifetime_safety_lifetimebound_violation,
+      diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound,
+      diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound,
+      diag::warn_lifetime_safety_invalidated_field,
+      diag::warn_lifetime_safety_invalidated_global,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -52,10 +63,12 @@ public:
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                            const Expr *MovedExpr,
                            SourceLocation FreeLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
-                     : diag::warn_lifetime_safety_use_after_scope)
-        << IssueExpr->getSourceRange();
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_use_after_scope_moved
+                          : diag::warn_lifetime_safety_use_after_scope;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
@@ -65,12 +78,14 @@ public:
   }
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
-                     : diag::warn_lifetime_safety_return_stack_addr)
-        << IssueExpr->getSourceRange();
+                            const Expr *MovedExpr) override {
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_return_stack_addr_moved
+                          : diag::warn_lifetime_safety_return_stack_addr;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
@@ -82,9 +97,13 @@ public:
                            const FieldDecl *DanglingField,
                            const Expr *MovedExpr,
                            SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
-                     : diag::warn_lifetime_safety_dangling_field)
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_field_moved
+                          : diag::warn_lifetime_safety_dangling_field;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingField)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -98,9 +117,13 @@ public:
                             const VarDecl *DanglingGlobal,
                             const Expr *MovedExpr,
                             SourceLocation ExpiryLoc) override {
-    S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
-                     : diag::warn_lifetime_safety_dangling_global)
+    unsigned DiagID = MovedExpr
+                          ? diag::warn_lifetime_safety_dangling_global_moved
+                          : diag::warn_lifetime_safety_dangling_global;
+
+    S.Diag(IssueExpr->getExprLoc(), DiagID)
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingGlobal)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -180,22 +203,58 @@ public:
         << DanglingField->getEndLoc();
   }
 
-  void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+  void reportInvalidatedGlobal(const Expr *IssueExpr,
+                               const VarDecl *DanglingGlobal,
+                               const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(IssueExpr->getExprLoc(),
+           diag::warn_lifetime_safety_invalidated_global)
+        << false << IssueExpr->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
+  }
+
+  void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                               const VarDecl *DanglingGlobal,
+                               const Expr *InvalidationExpr) override {
+    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
+                                ? diag::note_lifetime_safety_freed_here
+                                : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidated_global)
+        << true << PVD->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
+        << InvalidationExpr->getSourceRange();
+    if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_static_here)
+          << DanglingGlobal->getEndLoc();
+    else
+      S.Diag(DanglingGlobal->getLocation(),
+             diag::note_lifetime_safety_dangling_global_here)
+          << DanglingGlobal->getEndLoc();
+  }
+
+  void suggestLifetimeboundToParmVar(WarningScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
     unsigned DiagID =
-        (Scope == SuggestionScope::CrossTU)
+        (Scope == WarningScope::CrossTU)
             ? diag::warn_lifetime_safety_cross_tu_param_suggestion
             : diag::warn_lifetime_safety_intra_tu_param_suggestion;
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    StringRef FixItText = " [[clang::lifetimebound]]";
-    if (!ParmToAnnotate->getIdentifier()) {
-      // For unnamed parameters, placing attributes after the type would be
-      // parsed as a type attribute, not a parameter attribute.
-      InsertionPoint = ParmToAnnotate->getBeginLoc();
-      FixItText = "[[clang::lifetimebound]] ";
-    }
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
+
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
@@ -216,38 +275,87 @@ public:
     StringRef ParamName = ParmWithLifetimebound->getName();
     bool HasName = ParamName.size() > 0;
     S.Diag(Attr->getLocation(),
-           diag::warn_lifetime_safety_param_lifetimebound_violation)
+           diag::warn_lifetime_safety_lifetimebound_violation)
         << HasName << ParamName << Attr->getRange();
   }
 
-  void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  void reportLifetimeboundViolation(
+      const CXXMethodDecl *MDWithLifetimebound) override {
+    const auto *Attr =
+        getImplicitObjectParamLifetimeBoundAttr(MDWithLifetimebound);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_lifetimebound_violation)
+        << 2 << "" << Attr->getRange();
+  }
+
+  void reportMisplacedLifetimebound(WarningScope Scope,
+                                    const CXXMethodDecl *FDef,
+                                    const CXXMethodDecl *FDecl) override {
+    const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(FDef);
+    assert(Attr && "Expected lifetimebound attribute");
+    unsigned DiagID =
+        Scope == WarningScope::CrossTU
+            ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
+            : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(FDecl);
+
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        FDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(FDecl->getLocation(), DiagID);
+    else
+      S.Diag(InsertionPoint, DiagID)
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+
+    S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
+        << Attr->getRange();
+  }
+
+  void reportMisplacedLifetimebound(WarningScope Scope,
+                                    const ParmVarDecl *PVDDef,
+                                    const ParmVarDecl *PVDDecl) override {
+
+    const auto *Attr = PVDDef->getAttr<LifetimeBoundAttr>();
+    assert(Attr && "Expected lifetimebound attribute");
+    unsigned DiagID =
+        Scope == WarningScope::CrossTU
+            ? diag::warn_lifetime_safety_cross_tu_misplaced_lifetimebound
+            : diag::warn_lifetime_safety_intra_tu_misplaced_lifetimebound;
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(PVDDecl);
+
+    // Do not emit fix-its in macros or at invalid locations.
+    bool IsMacro =
+        PVDDecl->getBeginLoc().isMacroID() || InsertionPoint.isMacroID();
+
+    if (IsMacro || InsertionPoint.isInvalid())
+      S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
+    else
+      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+          << PVDDecl->getSourceRange()
+          << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+
+    S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
+        << Attr->getRange();
+  }
+
+  void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                           const CXXMethodDecl *MD,
                                           const Expr *EscapeExpr) override {
-    unsigned DiagID = (Scope == SuggestionScope::CrossTU)
+    unsigned DiagID = (Scope == WarningScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
-    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
-    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
-        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
-    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
-        FPT && FPT->hasTrailingReturn()) {
-      // For trailing return types, 'getEndLoc()' includes the return type
-      // after '->', placing the attribute in an invalid position.
-      // Instead use 'getLocalRangeEnd()' which gives the '->' location
-      // for trailing returns, so find the last token before it.
-      const auto FTL = MDL.getAs<FunctionTypeLoc>();
-      assert(FTL);
-      InsertionPoint = Lexer::getLocForEndOfToken(
-          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
-                                   S.getLangOpts(),
-                                   /*IncludeComments=*/false)
-              ->getLocation(),
-          0, S.getSourceManager(), S.getLangOpts());
-    }
+
+    auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(MD);
+
     S.Diag(InsertionPoint, DiagID)
         << MD->getNameInfo().getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
+        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
+
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
@@ -295,6 +403,83 @@ public:
   }
 
 private:
+  std::pair<SourceLocation, StringRef>
+  getLifetimeBoundFixIt(const ParmVarDecl *Decl) {
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        Decl->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    StringRef FixItText = " [[clang::lifetimebound]]";
+
+    if (!Decl->getIdentifier()) {
+      // For unnamed parameters, placing attributes after the type would be
+      // parsed as a type attribute, not a parameter attribute.
+      InsertionPoint = Decl->getBeginLoc();
+      FixItText = "[[clang::lifetimebound]] ";
+    } else if (Decl->hasDefaultArg()) {
+      // If the parameter has a default argument, place the attribute after the
+      // named argument.
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Decl->getLocation(), 0, S.getSourceManager(), S.getLangOpts());
+    }
+    return {InsertionPoint, FixItText};
+  }
+
+  std::pair<SourceLocation, StringRef>
+  getLifetimeBoundFixIt(const CXXMethodDecl *MD) {
+    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+
+    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn()) {
+      // For trailing return types, 'getEndLoc()' includes the return type
+      // after '->', placing the attribute in an invalid position.
+      // Instead use 'getLocalRangeEnd()' which gives the '->' location
+      // for trailing returns, so find the last token before it.
+      const auto FTL = MDL.getAs<FunctionTypeLoc>();
+      assert(FTL);
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
+                                   S.getLangOpts(),
+                                   /*IncludeComments=*/false)
+              ->getLocation(),
+          0, S.getSourceManager(), S.getLangOpts());
+    }
+    return {InsertionPoint, " [[clang::lifetimebound]]"};
+  }
+
+  std::string getDiagSubjectDescription(const ValueDecl *VD) {
+    std::string Res;
+    llvm::raw_string_ostream OS(Res);
+    if (isa<FieldDecl>(VD)) {
+      OS << "field";
+    } else if (isa<ParmVarDecl>(VD)) {
+      OS << "parameter";
+    } else if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+      if (Var->isStaticLocal() || Var->isStaticDataMember())
+        OS << "static variable";
+      else if (Var->hasGlobalStorage())
+        OS << "global variable";
+      else
+        OS << "local variable";
+    } else {
+      OS << "variable";
+    }
+    OS << " '";
+    VD->getNameForDiagnostic(OS, S.getPrintingPolicy(), /*Qualified=*/false);
+    OS << "'";
+    return Res;
+  }
+
+  std::string getDiagSubjectDescription(const Expr *E) {
+    if (isa<MaterializeTemporaryExpr>(E))
+      return "local temporary object";
+
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+      return getDiagSubjectDescription(DRE->getDecl());
+    // TODO: Handle other expression types.
+    return "";
+  }
+
   Sema &S;
 };
 

@@ -278,6 +278,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds cooperative matrix types and instructions for matrix multiply-add operations across invocations in a subgroup.
    * - ``SPV_KHR_vulkan_memory_model``
      - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
+   * - ``SPV_KHR_poison_freeze``
+     - Adds instructions to represent a poison value and freeze. Also adds an execution mode to control poison behavior.
 
 
 SPIR-V representation in LLVM IR

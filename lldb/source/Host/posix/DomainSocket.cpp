@@ -95,6 +95,16 @@ llvm::Expected<DomainSocket::Pair> DomainSocket::CreatePair() {
   }
 #endif
 
+#if defined(SO_NOSIGPIPE)
+  Log *log = GetLog(LLDBLog::Host);
+  if (Socket::SetOption(sockets[0], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[0],
+             llvm::sys::StrError());
+  if (Socket::SetOption(sockets[1], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[1],
+             llvm::sys::StrError());
+#endif
+
   return Pair(std::unique_ptr<DomainSocket>(
                   new DomainSocket(ProtocolUnixDomain, sockets[0],
                                    /*should_close=*/true)),

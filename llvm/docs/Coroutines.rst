@@ -378,7 +378,7 @@ Outlined resume part of the coroutine will reside in function `f.resume`:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.resume(ptr %frame.ptr.resume) {
+  define internal void @f.resume(ptr %frame.ptr.resume) {
   entry:
     %inc.spill.addr = getelementptr %f.frame, ptr %frame.ptr.resume, i64 0, i32 2
     %inc.spill = load i32, ptr %inc.spill.addr, align 4
@@ -392,7 +392,7 @@ Whereas function `f.destroy` will contain the cleanup code for the coroutine:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.destroy(ptr %frame.ptr.destroy) {
+  define internal void @f.destroy(ptr %frame.ptr.destroy) {
   entry:
     tail call void @free(ptr %frame.ptr.destroy)
     ret void
@@ -502,7 +502,7 @@ as follows:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.Resume(ptr %FramePtr) {
+  define internal void @f.Resume(ptr %FramePtr) {
   entry.Resume:
     %index.addr = getelementptr inbounds %f.Frame, ptr %FramePtr, i64 0, i32 2
     %index = load i8, ptr %index.addr, align 1

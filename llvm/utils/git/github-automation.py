@@ -245,10 +245,41 @@ def get_user_values_str(values: list) -> str:
 class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
-    def __init__(self, token: str, repo: str, pr_number: int):
+    # NOTE: Please keep this in sync with .github/new-prs-labeler.yml
+    SPECIFIC_CONTRIBUTOR_GUIDE_LIST = {
+        "The [InstCombine Contributor Guide](https://llvm.org/docs/InstCombineContributorGuide.html) lays out a series of rules that contributions to InstCombine (and other middle-end components) should follow.": [
+            # llvm:instcombine + llvm:vectorcombine + ValueTracking/ConstantFold code
+            "llvm/include/llvm/Analysis/ConstantFolding.h",
+            "llvm/include/llvm/Analysis/InstructionSimplify.h",
+            "llvm/include/llvm/IR/ConstantFold.h",
+            "llvm/include/llvm/IR/ConstantFolder.h",
+            "llvm/include/llvm/Transforms/InstCombine/",
+            "llvm/include/llvm/Transforms/Vectorize/VectorCombine.h",
+            "llvm/lib/Analysis/ConstantFolding.cpp",
+            "llvm/lib/Analysis/InstructionSimplify.cpp",
+            "llvm/lib/Analysis/ValueTracking.cpp",
+            "llvm/lib/IR/ConstantFold.cpp",
+            "llvm/lib/Transforms/InstCombine/",
+            "llvm/lib/Transforms/Vectorize/VectorCombine.cpp",
+            "llvm/test/Analysis/ValueTracking/",
+            "llvm/test/Transforms/InstCombine/",
+            "llvm/test/Transforms/InstSimplify/",
+            "llvm/test/Transforms/VectorCombine/",
+        ]
+    }
+
+    def __init__(self, token: str, repo: str, pr_number: int, author: str):
         repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
-        self.author = self.pr.user
+        self.author = author
+        # Determine additional guidelines according to change set.
+        self.specific_contributor_guide = ""
+        filenames = [file.filename for file in self.pr.get_files()]
+        for desc, glob_list in PRGreeter.SPECIFIC_CONTRIBUTOR_GUIDE_LIST.items():
+            if any(
+                pattern in filename for pattern in glob_list for filename in filenames
+            ):
+                self.specific_contributor_guide += f"* {desc}\n"
 
     def run(self) -> bool:
         # We assume that this is only called for a PR that has just been opened
@@ -265,7 +296,7 @@ Thank you for submitting a Pull Request (PR) to the LLVM Project. Since this is 
 * All contributions to LLVM must follow our [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html). In particular, if you used AI while working on this PR, remember to add a note to the PR description.
 * The [LLVM Code-Review Policy and Practices](https://llvm.org/docs/CodeReview.html) document contains practical information about the PR process, including how patches are reviewed and accepted, and who can review a PR.
 * Our [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html) describes our expectations for code quality, commit summaries and contains notes on our CI system.
-
+{self.specific_contributor_guide}
 Please reply to this message to confirm that you have read these policies, especially the LLVM AI Tool Use Policy, and that any AI tool usage has been noted in the PR description.
 
 ---
@@ -891,6 +922,7 @@ pr_subscriber_parser.add_argument("--issue-number", type=int, required=True)
 
 pr_greeter_parser = subparsers.add_parser("pr-greeter")
 pr_greeter_parser.add_argument("--issue-number", type=int, required=True)
+pr_greeter_parser.add_argument("--author", type=str, required=True)
 
 commit_request_greeter = subparsers.add_parser("commit-request-greeter")
 commit_request_greeter.add_argument("--issue-number", type=int, required=True)
@@ -963,7 +995,7 @@ elif args.command == "pr-subscriber":
     )
     pr_subscriber.run()
 elif args.command == "pr-greeter":
-    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number)
+    pr_greeter = PRGreeter(args.token, args.repo, args.issue_number, args.author)
     pr_greeter.run()
 elif args.command == "commit-request-greeter":
     commit_greeter = CommitRequestGreeter(args.token, args.repo, args.issue_number)

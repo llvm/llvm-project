@@ -1,6 +1,7 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
+    libc.include.byteswap
     libc.include.complex
     libc.include.cpio
     libc.include.ctype
@@ -69,3 +70,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.wchar
     libc.include.wctype
 )
+
+if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+endif()

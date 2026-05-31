@@ -1763,16 +1763,39 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   LI->getParent()->insertDbgRecordAfter(DV, LI);
 }
 
-/// Determine whether this alloca is either a VLA or an array.
-static bool isArray(AllocaInst *AI) {
-  return AI->isArrayAllocation() ||
-         (AI->getAllocatedType() && AI->getAllocatedType()->isArrayTy());
+/// Determine whether this debug variable is a not a basic type.
+/// We strip through DIDerivedType modifiers (typedefs, const, etc.)
+/// to find the underlying type to decide if it seems perhaps worthwhile to
+/// do LowerDbgDeclare.
+static bool isCompositeType(DbgVariableRecord *DVR) {
+  DIType *Ty = DVR->getVariable()->getType();
+  if (Ty == nullptr)
+    return true;
+  // Strip through modifier types to find the underlying type.
+  while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
+    switch (DTy->getTag()) {
+    case dwarf::DW_TAG_pointer_type:
+    case dwarf::DW_TAG_reference_type:
+    case dwarf::DW_TAG_rvalue_reference_type:
+    case dwarf::DW_TAG_ptr_to_member_type:
+    case dwarf::DW_TAG_LLVM_ptrauth_type:
+      return false;
+    case dwarf::DW_TAG_typedef:
+    case dwarf::DW_TAG_const_type:
+    case dwarf::DW_TAG_volatile_type:
+    case dwarf::DW_TAG_restrict_type:
+    case dwarf::DW_TAG_atomic_type:
+    case dwarf::DW_TAG_immutable_type:
+      Ty = DTy->getBaseType();
+      continue;
+    default:
+      break;
+    }
+    break;
+  }
+  return !isa<DIBasicType>(Ty);
 }
 
-/// Determine whether this alloca is a structure.
-static bool isStructure(AllocaInst *AI) {
-  return AI->getAllocatedType() && AI->getAllocatedType()->isStructTy();
-}
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, PHINode *APN,
                                            DIBuilder &Builder) {
   auto *DIVar = DVR->getVariable();
@@ -1835,10 +1858,13 @@ bool llvm::LowerDbgDeclare(Function &F) {
     // stored on the stack, while the dbg.declare can only describe
     // the stack slot (and at a lexical-scope granularity). Later
     // passes will attempt to elide the stack slot.
-    if (!AI || isArray(AI) || isStructure(AI))
+    // Skip VLAs (dynamic allocas) and composite types (arrays/structs) since
+    // they can't be represented as a single dbg.value.
+    if (!AI || !isa<Constant>(AI->getArraySize()) || isCompositeType(DDI))
       return;
 
     // A volatile load/store means that the alloca can't be elided anyway.
+    // Just look at direct uses however, and ignore any other instructions.
     if (llvm::any_of(AI->users(), [](User *U) -> bool {
           if (LoadInst *LI = dyn_cast<LoadInst>(U))
             return LI->isVolatile();
@@ -2982,17 +3008,17 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
         break;
       case LLVMContext::MD_invariant_load:
-        // If K moves, only set the !invariant.load if it is present in both
-        // instructions.
+      case LLVMContext::MD_invariant_group:
+        // If K moves, only keep the invariant metadata if it is present on
+        // both instructions; otherwise the invariant would be asserted on a
+        // path (J's) that never promised it. If K does not move, K stays on
+        // its original path, so its existing metadata remains valid.
         if (DoesKMove)
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nonnull:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_invariant_group:
-        // Preserve !invariant.group in K.
         break;
       // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
       // from being removed as unknown metadata. The actual merging is handled
@@ -3032,6 +3058,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_mem_cache_hint:
+        // Preserve !mem.cache_hint only if it is present and equivalent on both
+        // instructions.
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, nullptr);
+        break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
           K->setMetadata(Kind,
@@ -3049,22 +3081,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_alloc_token:
         // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD == JMD)
-          K->setMetadata(Kind, JMD);
-        else
+        if (KMD != JMD)
           K->setMetadata(Kind, nullptr);
         break;
       }
   }
-  // Set !invariant.group from J if J has it. If both instructions have it
-  // then we will just pick it from J - even when they are different.
-  // Also make sure that K is load or store - f.e. combining bitcast with load
-  // could produce bitcast with invariant.group metadata, which is invalid.
-  // FIXME: we should try to preserve both invariant.group md if they are
-  // different, but right now instruction can only have one invariant.group.
-  if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
-    if (isa<LoadInst>(K) || isa<StoreInst>(K))
-      K->setMetadata(LLVMContext::MD_invariant_group, JMD);
 
   // Merge MMRAs.
   // This is handled separately because we also want to handle cases where K
@@ -3142,6 +3163,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
@@ -4061,7 +4083,7 @@ void OverflowTracking::mergeFlags(Instruction &I) {
 }
 
 void OverflowTracking::applyFlags(Instruction &I) {
-  I.clearSubclassOptionalData();
+  I.dropPoisonGeneratingFlags();
   if (I.getOpcode() == Instruction::Add ||
       (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
     if (HasNUW)

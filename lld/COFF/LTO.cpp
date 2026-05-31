@@ -241,7 +241,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (!ctx.config.ltoCache.empty())
-    pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
+    check(pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files));
 
   std::vector<InputFile *> ret;
   bool emitASM = ctx.config.emit == EmitKind::ASM;
