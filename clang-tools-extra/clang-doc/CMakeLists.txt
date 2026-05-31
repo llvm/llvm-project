@@ -9,6 +9,7 @@ add_clang_library(clangDoc STATIC
   BitcodeReader.cpp
   BitcodeWriter.cpp
   ClangDoc.cpp
+  ClangDocExecutor.cpp
   Generators.cpp
   HTMLGenerator.cpp
   Mapper.cpp
