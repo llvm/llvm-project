@@ -31,7 +31,6 @@ jobs:
           persist-credentials: false
 
       - name: Configure CMake
-        shell: bash
         run: |
           cmake \
             -B build \
@@ -47,7 +46,6 @@ jobs:
             -DCOMPILER_RT_INCLUDE_TESTS=ON
 
       - name: Test compiler-rt builtins
-        shell: bash
         run: |
           cmake \
             --build build \
