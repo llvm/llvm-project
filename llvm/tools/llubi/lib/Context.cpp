@@ -111,6 +111,14 @@ std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
     return CFP->getValue();
   }
 
+  if (auto *CB = dyn_cast<ConstantByte>(C)) {
+    if (auto *VecTy = dyn_cast<VectorType>(CB->getType()))
+      return std::vector<AnyValue>(
+          getEVL(VecTy->getElementCount()),
+          AnyValue(ByteValue(CB->getValue(), DL.isLittleEndian())));
+    return ByteValue(CB->getValue(), DL.isLittleEndian());
+  }
+
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CDS->getNumElements());
@@ -366,7 +374,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
   uint32_t NumWords = APInt::getNumWords(NumBitsToExtract);
   constexpr uint32_t WordBits = APInt::APINT_BITS_PER_WORD;
-  SmallVector<APInt::WordType> RawBits(NumWords);
+  SmallVector<APInt::WordType> RawBits;
+  bool IsByteType = Ty->isByteTy();
+  std::vector<Byte> LogicalBytes;
+  if (IsByteType)
+    LogicalBytes.resize(divideCeil(NumBitsToExtract, 8));
+  else
+    RawBits.resize(NumWords);
   bool IsTagValid = Ty->isPointerTy();
   SmallVector<APInt::WordType> RawTagBits;
   if (Ty->isPointerTy())
@@ -387,7 +401,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
 
     uint32_t Mask = (1U << NumBitsInByte) - 1;
     // If any of the bits in the byte is poison, the whole value is poison.
-    if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask) {
+    if (!IsByteType &&
+        (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask)) {
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
       OffsetInBits = NewOffsetInBits;
@@ -399,14 +414,20 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (getEffectiveUndefValueBehavior() ==
-          UndefValueBehavior::NonDeterministic) {
+      if (!IsByteType && getEffectiveUndefValueBehavior() ==
+                             UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
         RandomBits = static_cast<uint8_t>(Rng());
       }
     }
+
+    if (IsByteType) {
+      LogicalBytes[BitsStart / 8] = LogicalByte;
+      continue;
+    }
+
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
                          Mask;
@@ -422,6 +443,19 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       }
     }
   }
+
+  if (IsByteType) {
+    assert(!CheckPaddingBits &&
+           "Non-vector-element cases should be handled by the fast path.");
+    if (NumBits & 7) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
+      LogicalBytes.back().zeroBits(Mask);
+    }
+    if (DL.isBigEndian())
+      std::reverse(LogicalBytes.begin(), LogicalBytes.end());
+    return ByteValue(NumBits, std::move(LogicalBytes));
+  }
+
   OffsetInBits = NewOffsetInBits;
 
   APInt Bits(NumBitsToExtract, RawBits);
@@ -457,6 +491,25 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy())
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
                      /*CheckPaddingBits=*/true, ContainsUndefinedBits);
+  if (Ty->isByteTy()) {
+    if (ContainsUndefinedBits) {
+      for (const Byte &V : Bytes)
+        if (V.ConcreteMask != 255) {
+          *ContainsUndefinedBits = true;
+          break;
+        }
+    }
+    unsigned BitWidth = Ty->getByteBitWidth();
+    ByteValue Res(BitWidth, Bytes);
+    if (BitWidth & 7) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+      if (DL.isLittleEndian())
+        Res.mutableBytes().back().zeroBits(Mask);
+      else
+        Res.mutableBytes().front().zeroBits(Mask);
+    }
+    return AnyValue(std::move(Res));
+  }
 
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     Type *ElemTy = VecTy->getElementType();
@@ -585,6 +638,27 @@ void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
     WriteBits(NeedsPadding ? AddressBits.zext(NewOffsetInBits - OffsetInBits)
                            : AddressBits,
               &Tag);
+  } else if (Ty->isByteTy()) {
+    assert(!PaddingBits &&
+           "Non-vector-element cases should be handled by the fast path.");
+    auto &ByteVal = Val.asByte();
+    ConstBytesView SrcBytes(ByteVal.bytes(), DL);
+    for (uint32_t I = 0, E = static_cast<uint32_t>(SrcBytes.size()); I != E;
+         ++I) {
+      uint32_t NumBitsInByte = std::min(8U, NumBits - I * 8);
+      uint32_t BitsStart = OffsetInBits + I * 8;
+      uint32_t BitsEnd = BitsStart + NumBitsInByte - 1;
+
+      Bytes[BitsStart / 8].writeByte(
+          static_cast<uint8_t>(((1U << NumBitsInByte) - 1) << (BitsStart % 8)),
+          SrcBytes[I].shl(BitsStart % 8));
+      // If it is a cross-byte access, write the remaining bits to the next
+      // byte.
+      if (((BitsStart ^ BitsEnd) & ~7) != 0)
+        Bytes[BitsEnd / 8].writeByte(
+            static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
+            SrcBytes[I].lshr(8 - (BitsStart % 8)));
+    }
   } else {
     llvm_unreachable("Unsupported scalar type.");
   }
@@ -597,6 +671,13 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy()) {
     toBytes(Val, Ty, /*OffsetInBits=*/0, MutableBytesView(Bytes, DL),
             /*PaddingBits=*/true);
+    return;
+  }
+  if (Ty->isByteTy()) {
+    auto &ByteVal = Val.asByte();
+    ArrayRef<Byte> SrcBytes = ByteVal.bytes();
+    assert(Bytes.size() == SrcBytes.size() && "Mismatched byte array.");
+    copy(SrcBytes, Bytes.begin());
     return;
   }
 
@@ -705,6 +786,20 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       Val = AnyValue(Pointer(RandomVal));
     else
       llvm_unreachable("Unsupported scalar type for poison value");
+    return;
+  }
+  if (Val.isByte()) {
+    for (Byte &V : Val.asMutableByte().mutableBytes()) {
+      if (V.ConcreteMask == 255)
+        continue;
+      uint8_t OldMask = V.ConcreteMask;
+      V.ConcreteMask = 255;
+      V.Value &= OldMask;
+      if (mayUseNonDeterminism())
+        V.Value |= (Rng() & 255) & ~OldMask;
+      V.TagMask &= OldMask;
+      V.TagValue &= OldMask;
+    }
     return;
   }
   if (Val.isAggregate()) {

@@ -196,6 +196,8 @@ public:
   auto &operator[](uint32_t Index) {
     return Bytes[IsLittleEndian ? Index : Bytes.size() - 1 - Index];
   }
+
+  size_t size() const { return Bytes.size(); }
 };
 
 using ConstBytesView = BytesView<ArrayRef<Byte>>;

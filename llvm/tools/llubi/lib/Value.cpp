@@ -118,6 +118,9 @@ void AnyValue::print(raw_ostream &OS) const {
   case StorageKind::Pointer:
     PtrVal.print(OS);
     break;
+  case StorageKind::Byte:
+    ByteVal.print(OS);
+    break;
   case StorageKind::Poison:
     OS << "poison";
     break;
@@ -147,6 +150,9 @@ void AnyValue::destroy() {
   case StorageKind::Pointer:
     PtrVal.~Pointer();
     break;
+  case StorageKind::Byte:
+    ByteVal.~ByteValue();
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -167,6 +173,9 @@ AnyValue::AnyValue(const AnyValue &Other) : Kind(Other.Kind) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(Other.PtrVal);
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(Other.ByteVal);
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -185,6 +194,9 @@ AnyValue::AnyValue(AnyValue &&Other) : Kind(Other.Kind) {
     break;
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(std::move(Other.PtrVal));
+    break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(std::move(Other.ByteVal));
     break;
   case StorageKind::Poison:
   case StorageKind::None:
@@ -211,6 +223,9 @@ AnyValue &AnyValue::operator=(const AnyValue &Other) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(Other.PtrVal);
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(Other.ByteVal);
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -236,6 +251,9 @@ AnyValue &AnyValue::operator=(AnyValue &&Other) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(std::move(Other.PtrVal));
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(std::move(Other.ByteVal));
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -250,6 +268,9 @@ AnyValue &AnyValue::operator=(AnyValue &&Other) {
 AnyValue AnyValue::getPoisonValue(Context &Ctx, Type *Ty) {
   if (Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy())
     return AnyValue::poison();
+  if (Ty->isByteTy())
+    return ByteValue::poison(Ty->getByteBitWidth(),
+                             Ctx.getDataLayout().isLittleEndian());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(NumElements, AnyValue::poison()));
@@ -275,6 +296,8 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
     return AnyValue(APFloat::getZero(Ty->getFltSemantics()));
   if (Ty->isPointerTy())
     return Pointer::null(Ty->getPointerAddressSpace(), Ctx.getDataLayout());
+  if (Ty->isByteTy())
+    return ByteValue::zero(Ty->getByteBitWidth());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(
@@ -298,6 +321,60 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
 AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
   assert(!Scalar.isAggregate() && !Scalar.isNone() && "Expect a scalar value");
   return AnyValue(std::vector<AnyValue>(NumElements, Scalar));
+}
+
+ByteValue::ByteValue(const APInt &V, bool IsLittleEndian) {}
+ByteValue ByteValue::zero(uint32_t BitWidth) {
+  return ByteValue(
+      BitWidth, std::vector<Byte>(divideCeil(BitWidth, 8), Byte::concrete(0)));
+}
+
+ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
+  std::vector<Byte> Val(divideCeil(BitWidth, 8), Byte::poison());
+  // Zero high-bits if it is not a byte-sized value.
+  if (BitWidth & 7) {
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    if (IsLittleEndian)
+      Val.back().zeroBits(Mask);
+    else
+      Val.front().zeroBits(Mask);
+  }
+  return ByteValue(BitWidth, std::move(Val));
+}
+
+void ByteValue::print(raw_ostream &OS) const {
+  OS << 'b' << BitWidth << ' ';
+  for (const Byte &V : Val) {
+    // Try to print a byte in short form
+    if (V.ConcreteMask == 255 && V.TagMask == 0) {
+      // Concrete value without provenance.
+      OS << hexdigit(V.Value >> 4) << hexdigit(V.Value & 15);
+    } else if (V.ConcreteMask == 0 && (V.Value == 0 || V.Value == 255)) {
+      // Poison/undef bytes.
+      OS << (V.Value == 0 ? "!!" : "??");
+    } else {
+      for (uint32_t I = 0; I != 8; ++I) {
+        uint32_t Mask = 1U << (8 - I);
+        if (V.ConcreteMask & Mask)
+          OS << (V.Value & Mask ? '1' : '0');
+        else
+          OS << (V.Value & Mask ? '?' : '!');
+      }
+      if (uint32_t TagMask = V.ConcreteMask & V.TagMask) {
+        // Print tags if available.
+        OS << '(';
+        for (uint32_t I = 0; I != 8; ++I) {
+          uint32_t Mask = 1U << (8 - I);
+          if (TagMask & Mask)
+            OS << (V.TagValue & Mask ? '1' : '0');
+          else
+            OS << '!';
+        }
+        OS << ')';
+      }
+    }
+    OS << ' ';
+  }
 }
 
 } // namespace llvm::ubi
