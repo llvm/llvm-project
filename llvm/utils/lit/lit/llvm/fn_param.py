@@ -37,9 +37,9 @@ def install(config, lit_config):
         config, r"(\S*FileCheck)\b", r"\1 --filter-label=" + ",".join(names)
     )
     if lit_config.params.get("fn-pass"):
-        # from lit.llvm import fn_selection
-        # fn_selection.install(config, lit_config)
-        pass
+        from lit.llvm import fn_selection
+
+        fn_selection.install(config, lit_config)
     else:
         from lit.llvm import fn_extract
 

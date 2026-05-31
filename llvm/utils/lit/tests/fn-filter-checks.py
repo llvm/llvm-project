@@ -8,3 +8,7 @@
 
 # Without --param fn=foo: @bar fails, so the test fails.
 # RUN: not %{lit} %{inputs}/fn-filter-checks/sample.ll
+
+# With --param fn=foo --param fn-pass=1: select-function removes @bar,
+# so the test passes.
+# RUN: %{lit} --param fn=foo --param fn-pass=1 %{inputs}/fn-filter-checks/sample.ll
