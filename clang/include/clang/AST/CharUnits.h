@@ -178,7 +178,6 @@ namespace clang {
         return CharUnits(-Quantity);
       }
 
-
       // Conversions.
 
       /// getQuantity - Get the raw integer representation of this quantity.
@@ -218,7 +217,6 @@ namespace clang {
         return alignmentAtOffset(elementSize);
       }
 
-
   }; // class CharUnit
 } // namespace clang
 
@@ -233,13 +231,6 @@ template<> struct DenseMapInfo<clang::CharUnits> {
   static clang::CharUnits getEmptyKey() {
     clang::CharUnits::QuantityType Quantity =
       DenseMapInfo<clang::CharUnits::QuantityType>::getEmptyKey();
-
-    return clang::CharUnits::fromQuantity(Quantity);
-  }
-
-  static clang::CharUnits getTombstoneKey() {
-    clang::CharUnits::QuantityType Quantity =
-      DenseMapInfo<clang::CharUnits::QuantityType>::getTombstoneKey();
 
     return clang::CharUnits::fromQuantity(Quantity);
   }

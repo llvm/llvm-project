@@ -251,11 +251,6 @@ template <> struct DenseMapInfo<ObjCSummaryKey> {
                           DenseMapInfo<Selector>::getEmptyKey());
   }
 
-  static inline ObjCSummaryKey getTombstoneKey() {
-    return ObjCSummaryKey(DenseMapInfo<IdentifierInfo*>::getTombstoneKey(),
-                          DenseMapInfo<Selector>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const ObjCSummaryKey &V) {
     typedef std::pair<IdentifierInfo*, Selector> PairTy;
     return DenseMapInfo<PairTy>::getHashValue(PairTy(V.getIdentifier(),
@@ -270,7 +265,6 @@ template <> struct DenseMapInfo<ObjCSummaryKey> {
 };
 
 } // end llvm namespace
-
 
 namespace clang {
 namespace ento {
@@ -333,7 +327,6 @@ public:
 
   /// setRetEffect - Set the effect of the return value of the call.
   void setRetEffect(RetEffect E) { Ret = E; }
-
 
   /// Sets the effect on the receiver of the message.
   void setReceiverEffect(ArgEffect e) { Receiver = e; }
@@ -732,7 +725,6 @@ private:
 
   friend class RetainSummaryTemplate;
 };
-
 
 // Used to avoid allocating long-term (BPAlloc'd) memory for default retain
 // summaries. If a function or method looks like it has a default summary, but

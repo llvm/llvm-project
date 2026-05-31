@@ -2113,11 +2113,6 @@ template <> struct DenseMapInfo<clang::clangd::Range> {
     static Range R{Tomb, Tomb};
     return R;
   }
-  static inline Range getTombstoneKey() {
-    static clang::clangd::Position Tomb{-2, -2};
-    static Range R{Tomb, Tomb};
-    return R;
-  }
   static unsigned getHashValue(const Range &Val) {
     return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
                               Val.end.character);

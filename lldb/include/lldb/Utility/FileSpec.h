@@ -473,9 +473,6 @@ template <> struct DenseMapInfo<lldb_private::FileSpec> {
   static inline lldb_private::FileSpec getEmptyKey() {
     return lldb_private::FileSpec();
   }
-  static inline lldb_private::FileSpec getTombstoneKey() {
-    return lldb_private::FileSpec();
-  }
   static unsigned getHashValue(lldb_private::FileSpec file_spec) {
     return llvm::hash_combine(
         DenseMapInfo<lldb_private::ConstString>::getHashValue(
