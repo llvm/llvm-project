@@ -1532,7 +1532,6 @@ public:
 /// Here, the identifier \c size inside the attribute resolves to a
 /// \c MemberExpr with a \c CThisExpr of type \c "struct Buffer *" as
 /// its implicit base.
-
 class CThisExpr : public Expr {
   SourceLocation Loc;
 

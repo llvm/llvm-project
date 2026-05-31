@@ -308,14 +308,14 @@ struct FPOps {
 
 void test_fp_ops(struct FPOps *ops) {
   ops->lock();
-  ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}} expected-note {{found near match 'mu'}}
+  ops->a = 42; 
   ops->requires_mu();
   ops->unlock();
 }
 
 void test_fp_ops_fail(struct FPOps *ops) {
   ops->a = 42; // expected-warning {{writing variable 'a' requires holding mutex 'ops->mu' exclusively}}
-  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'mu' exclusively}}
+  ops->requires_mu(); // expected-warning {{calling function 'requires_mu' requires holding mutex 'ops->mu' exclusively}}
 }
 
 // Function pointer attributes referring to parameters.

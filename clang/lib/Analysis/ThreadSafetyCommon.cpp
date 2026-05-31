@@ -152,6 +152,11 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
       Ctx.NumArgs = CE->getNumArgs() - 1;
       Ctx.FunArgs = CE->getArgs() + 1;
     } else {
+      // Extract base object for standard C function pointers (e.g., ops->lock())
+      if (const auto *ME = dyn_cast<MemberExpr>(CE->getCallee()->IgnoreParenCasts())) {
+        Ctx.SelfArg = ME->getBase();
+        Ctx.SelfArrow = ME->isArrow();
+      }
       Ctx.NumArgs = CE->getNumArgs();
       Ctx.FunArgs = CE->getArgs();
     }
