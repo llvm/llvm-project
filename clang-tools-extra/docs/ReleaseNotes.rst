@@ -465,12 +465,12 @@ Changes in existing checks
 
   - Correctly handling forwarding in deeply nested lambdas.
 
-  - Fixing a false negative when multiple parameters are used in a lambda and
+  - Fixed false negative when multiple parameters are used in a lambda and
     only some of them are forwarded.
 
-  - Fixing a false positive for constrained template parameters.
+  - Fixed false positive for constrained template parameters
 
-  - Fixing a false positive with ``std::forward`` in brace-init and paren-init
+  - Fixed false positive with ``std::forward`` in brace-init and paren-init
     lambda captures such as ``[t{std::forward<T>(t)}]``.
 
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
