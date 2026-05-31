@@ -460,4 +460,19 @@ bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   return Name == "function" || Name == "move_only_function";
 }
 
+bool isStdReferenceCast(const FunctionDecl *FD) {
+  if (!FD)
+    return false;
+  switch (FD->getBuiltinID()) {
+  case Builtin::BImove:
+  case Builtin::BImove_if_noexcept:
+  case Builtin::BIforward:
+  case Builtin::BIforward_like:
+  case Builtin::BIas_const:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // namespace clang::lifetimes

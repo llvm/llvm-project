@@ -580,7 +580,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-void DataAggregator::parsePerfData(BinaryContext &BC) {
+void DataAggregator::parsePerfData() {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -593,7 +593,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+  if (std::optional<StringRef> FileBuildID = BC->getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
     processFileBuildID(*FileBuildID);
   } else {
@@ -601,7 +601,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
               "not read one from input binary\n";
   }
 
-  if (BC.IsLinuxKernel) {
+  if (BC->IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -706,6 +706,13 @@ void DataAggregator::imputeFallThroughs() {
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
+void DataAggregator::parseInput() {
+  if (opts::ReadPreAggregated)
+    parsePreAggregated();
+  else
+    parsePerfData();
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -715,11 +722,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(1);
     }
     exit(0);
-  } else if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-  } else {
-    parsePerfData(BC);
   }
+
+  parseInput();
 
   markFunctionsWithProfile();
 
