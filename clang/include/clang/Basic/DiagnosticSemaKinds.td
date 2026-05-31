@@ -59,6 +59,8 @@ defm constexpr_static_var : CXX23Compat<
   "in a constexpr %select{function|constructor}0 "
   "is">;
 
+defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
+
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
 
@@ -2702,9 +2704,6 @@ def err_auto_new_ctor_multiple_expressions : Error<
 def err_auto_expr_init_paren_braces : Error<
   "cannot deduce actual type for %1 from "
   "%select{parenthesized|nested}0 initializer list">;
-def warn_cxx20_compat_auto_expr : Warning<
-  "'auto' as a functional-style cast is incompatible with C++ standards "
-  "before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_auto_missing_trailing_return : Error<
   "'auto' return without trailing return type; deduced return types are a "
   "C++14 extension">;

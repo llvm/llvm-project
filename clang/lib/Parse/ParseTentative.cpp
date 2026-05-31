@@ -1143,8 +1143,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
                                      BracedCastResult, InvalidAsDeclSpec);
 
   case tok::kw_auto: {
-    if (!getLangOpts().CPlusPlus23)
-      return TPResult::True;
     if (NextToken().is(tok::l_brace))
       return TPResult::False;
     if (NextToken().is(tok::l_paren))

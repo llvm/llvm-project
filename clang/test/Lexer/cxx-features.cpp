@@ -60,7 +60,7 @@
 
 // --- C++23 features ---
 
-#if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
+#if check(auto_cast, 202110, 202110, 202110, 202110, 202110, 202110, 202110)
 #error "wrong value for __cpp_auto_cast"
 #endif
 

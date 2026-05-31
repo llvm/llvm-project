@@ -105,9 +105,8 @@ namespace BadSpecifiers {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c2]) = s; // cxx17-error {{structured binding declaration cannot be declared with parenthese}} \
-                     // post2b-error {{use of undeclared identifier 'c2'}} \
-                     // post2b-error {{expected body of lambda expression}} \
+    auto ([c2]) = s; // expected-error {{use of undeclared identifier 'c2'}} \
+                     // expected-error {{expected body of lambda expression}}
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
