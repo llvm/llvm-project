@@ -15,12 +15,8 @@ define void @fixed_location_sr() nounwind {
 ; SR-ZILSD-LABEL: fixed_location_sr:
 ; SR-ZILSD:       # %bb.0: # %entry
 ; SR-ZILSD-NEXT:    call t0, __riscv_save_5
-; SR-ZILSD-NEXT:    addi sp, sp, -16
-; SR-ZILSD-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
 ; SR-ZILSD-NEXT:    #APP
 ; SR-ZILSD-NEXT:    #NO_APP
-; SR-ZILSD-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
-; SR-ZILSD-NEXT:    addi sp, sp, 16
 ; SR-ZILSD-NEXT:    tail __riscv_restore_5
 entry:
   call void asm sideeffect "", "~{x9},~{x18},~{x19},~{x20}"()

@@ -5,7 +5,7 @@
 ; RUN:   | FileCheck %s --check-prefix=ZCMP-ZILSD
 ; RUN: llc -mtriple=riscv32 -mattr=+xqccmp -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=XQCCMP
-; RUN: llc -mtriple=riscv32 -mattr=+xqccmp,+zilsd < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqccmp,+zilsd -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=XQCCMP-ZILSD
 
 
@@ -30,10 +30,8 @@ define void @c_expand_asm_operands(ptr %p, i32 %a) optsize nounwind{
 ;
 ; ZCMP-ZILSD-LABEL: c_expand_asm_operands:
 ; ZCMP-ZILSD:       # %bb.0: # %entry
-; ZCMP-ZILSD-NEXT:    cm.push {ra}, -32
-; ZCMP-ZILSD-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; ZCMP-ZILSD-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; ZCMP-ZILSD-NEXT:    addi s0, sp, 32
+; ZCMP-ZILSD-NEXT:    cm.push {ra, s0-s2}, -16
+; ZCMP-ZILSD-NEXT:    addi s0, sp, 16
 ; ZCMP-ZILSD-NEXT:    cm.mvsa01 s2, s1
 ; ZCMP-ZILSD-NEXT:    call foo
 ; ZCMP-ZILSD-NEXT:    addi s1, s1, 15
@@ -41,10 +39,8 @@ define void @c_expand_asm_operands(ptr %p, i32 %a) optsize nounwind{
 ; ZCMP-ZILSD-NEXT:    sub a0, sp, s1
 ; ZCMP-ZILSD-NEXT:    mv sp, a0
 ; ZCMP-ZILSD-NEXT:    sw a0, 0(s2)
-; ZCMP-ZILSD-NEXT:    addi sp, s0, -32
-; ZCMP-ZILSD-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; ZCMP-ZILSD-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; ZCMP-ZILSD-NEXT:    cm.pop {ra}, 32
+; ZCMP-ZILSD-NEXT:    addi sp, s0, -16
+; ZCMP-ZILSD-NEXT:    cm.pop {ra, s0-s2}, 16
 ; ZCMP-ZILSD-NEXT:    tail bar
 ;
 ; XQCCMP-LABEL: c_expand_asm_operands:
@@ -63,9 +59,7 @@ define void @c_expand_asm_operands(ptr %p, i32 %a) optsize nounwind{
 ;
 ; XQCCMP-ZILSD-LABEL: c_expand_asm_operands:
 ; XQCCMP-ZILSD:       # %bb.0: # %entry
-; XQCCMP-ZILSD-NEXT:    qc.cm.pushfp {ra}, -32
-; XQCCMP-ZILSD-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; XQCCMP-ZILSD-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; XQCCMP-ZILSD-NEXT:    qc.cm.pushfp {ra, s0-s2}, -16
 ; XQCCMP-ZILSD-NEXT:    qc.cm.mvsa01 s2, s1
 ; XQCCMP-ZILSD-NEXT:    call foo
 ; XQCCMP-ZILSD-NEXT:    addi s1, s1, 15
@@ -73,10 +67,8 @@ define void @c_expand_asm_operands(ptr %p, i32 %a) optsize nounwind{
 ; XQCCMP-ZILSD-NEXT:    sub a0, sp, s1
 ; XQCCMP-ZILSD-NEXT:    mv sp, a0
 ; XQCCMP-ZILSD-NEXT:    sw a0, 0(s2)
-; XQCCMP-ZILSD-NEXT:    addi sp, s0, -32
-; XQCCMP-ZILSD-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; XQCCMP-ZILSD-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; XQCCMP-ZILSD-NEXT:    qc.cm.pop {ra}, 32
+; XQCCMP-ZILSD-NEXT:    addi sp, s0, -16
+; XQCCMP-ZILSD-NEXT:    qc.cm.pop {ra, s0-s2}, 16
 ; XQCCMP-ZILSD-NEXT:    tail bar
 entry:
   %call1 = call i32 @foo()
