@@ -3770,9 +3770,8 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
   // Statement functions have implicit interfaces and require the same checks
-  bool isStatementFunction{procSymbol &&
-      procSymbol->has<semantics::SubprogramDetails>() &&
-      procSymbol->get<semantics::SubprogramDetails>().stmtFunction()};
+  bool isStatementFunction{
+      procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
       procSymbol->owner().IsGlobal()) {
