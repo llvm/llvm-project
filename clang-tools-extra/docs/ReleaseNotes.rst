@@ -580,6 +580,13 @@ Changes in existing checks
   - Preserved used output iterator results when replacing output algorithms
     such as ``std::copy``.
 
+  - Preserved used callable results when replacing ``std::for_each`` and
+    structured binding results when replacing algorithms such as
+    ``std::equal_range``.
+
+  - Kept diagnostics but suppressed unsafe fix-its when no safe
+    result-preserving rewrite is available.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
