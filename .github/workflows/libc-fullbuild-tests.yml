@@ -176,11 +176,11 @@ jobs:
         fi
 
         case "${{ matrix.name }}" in
-          *baremetal)
+          baremetal-* )
             cmake $CMAKE_FLAGS \
               -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;
-          *-gpu|uefi)
+          *-gpu | uefi-* )
             cmake \
               -DLLVM_DEFAULT_TARGET_TRIPLE=${{ matrix.target }} \
               -DLIBC_TARGET_TRIPLE=${{ matrix.target }} \
@@ -188,7 +188,7 @@ jobs:
               -DLLVM_LIBC_FULL_BUILD=ON \
               $CMAKE_FLAGS
             ;;
-          *)
+          * )
             cmake \
               -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
               -DLLVM_LIBC_FULL_BUILD=ON \
