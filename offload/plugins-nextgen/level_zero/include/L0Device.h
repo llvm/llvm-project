@@ -18,10 +18,10 @@
 #include "PerThreadTable.h"
 
 #include "AsyncQueue.h"
+#include "L0CmdListManager.h"
 #include "L0Context.h"
 #include "L0Program.h"
 #include "PluginInterface.h"
-#include "TLS.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -75,49 +75,15 @@ struct L0DeviceIdTy {
 };
 
 class L0DeviceTLSTy {
-  /// Immediate command list for each device.
-  ze_command_list_handle_t ImmCmdList = nullptr;
-
-  /// Immediate copy command list for each device.
-  ze_command_list_handle_t ImmCopyCmdList = nullptr;
-
 public:
   L0DeviceTLSTy() = default;
-  ~L0DeviceTLSTy() {
-    assert(!ImmCmdList && !ImmCopyCmdList &&
-           "L0DeviceTLSTy destroyed without clearing resources");
-  }
-
+  ~L0DeviceTLSTy() {}
   L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy(L0DeviceTLSTy &&Other) {
-    ImmCmdList = std::exchange(Other.ImmCmdList, nullptr);
-    ImmCopyCmdList = std::exchange(Other.ImmCopyCmdList, nullptr);
-  }
-
-  Error deinit() {
-    if (ImmCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
-    if (ImmCopyCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCopyCmdList);
-
-    ImmCmdList = nullptr;
-    ImmCopyCmdList = nullptr;
-
-    return Plugin::success();
-  }
-
   L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
   L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
+  L0DeviceTLSTy(L0DeviceTLSTy &&Other) {}
 
-  ze_command_list_handle_t getImmCmdList() const { return ImmCmdList; }
-  void setImmCmdList(ze_command_list_handle_t ImmCmdListIn) {
-    ImmCmdList = ImmCmdListIn;
-  }
-
-  ze_command_list_handle_t getImmCopyCmdList() const { return ImmCopyCmdList; }
-  void setImmCopyCmdList(ze_command_list_handle_t ImmCopyCmdListIn) {
-    ImmCopyCmdList = ImmCopyCmdListIn;
-  }
+  Error deinit() { return Plugin::success(); }
 };
 
 struct L0DeviceTLSTableTy
@@ -161,13 +127,9 @@ class L0DeviceTy final : public GenericDeviceTy {
   static constexpr uint32_t MaxOrdinal =
       std::numeric_limits<decltype(MaxOrdinal)>::max();
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
-  /// Command queue group ordinals for copying.
-  std::pair<uint32_t, uint32_t> CopyOrdinal{MaxOrdinal, 0};
 
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
-
-  bool IsAsyncEnabled = false;
 
   /// Whether the device supports cooperative kernels.
   bool SupportsCooperativeKernels = false;
@@ -185,13 +147,13 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
+  /// Cache of queues for this device.
+  L0QueueCacheTy QueueCache;
+
   DeviceArchTy computeArch() const;
 
   /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findComputeOrdinal();
-
-  /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
-  std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
@@ -206,7 +168,7 @@ public:
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
         l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex) {
+        ComputeIndex(ComputeIndex), QueueCache(*this) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -400,11 +362,6 @@ public:
   uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
   uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
 
-  bool hasMainCopyEngine() const { return CopyOrdinal.first != MaxOrdinal; }
-  uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
-
-  bool asyncEnabled() const { return IsAsyncEnabled; }
-
   void reportDeviceInfo() const;
 
   /// Create an immediate command list.
@@ -416,23 +373,60 @@ public:
     return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
   }
 
-  /// Create an immediate command list for copying.
-  Expected<ze_command_list_handle_t> createImmCopyCmdList();
-  Expected<ze_command_list_handle_t> getImmCmdList();
-  Expected<ze_command_list_handle_t> getImmCopyCmdList();
+  /// Release an immediate command list.
+  Error releaseImmCmdList(ze_command_list_handle_t CmdList) {
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    return Plugin::success();
+  }
 
-  /// Enqueue copy command.
+  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    return new L0CmdListManagerTy(*CmdListOrErr);
+  }
+
+  Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
+    if (CmndListMngr) {
+      auto CmdList = CmndListMngr->getCmdList();
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+      delete CmndListMngr;
+    }
+    return Plugin::success();
+  }
+
+  /// Enqueue non-blocking memory copy.
   Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                       __tgt_async_info *AsyncInfo = nullptr,
-                       bool UseCopyEngine = true);
+                       __tgt_async_info *AsyncInfo) {
+    auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+    if (!QueueOrErr)
+      return QueueOrErr.takeError();
+    AsyncQueueTy *Queue = *QueueOrErr;
+    return Queue->memoryCopy(Dst, Src, Size);
+  }
 
-  /// Enqueue asynchronous copy command.
-  Error enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
-                            __tgt_async_info *AsyncInfo, bool CopyTo = true);
+  Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
+      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
 
   /// Enqueue fill command.
   Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                       size_t Size);
+                       size_t Size, __tgt_async_info *AsyncInfo);
+  Error enqueueMemFillAndSync(void *Ptr, const void *Pattern,
+                              size_t PatternSize, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err =
+            enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
+      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
 
   /// Driver related functions.
 
@@ -460,6 +454,11 @@ public:
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
 
   bool supportsLargeMem() const { return l0Context.supportsLargeMem(); }
+
+  /// Returns the Queue from an async info object, or creates a new one if
+  /// the async info does not have a queue yet.
+  Expected<AsyncQueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  void releaseQueue(AsyncQueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
   // Allocation related routines.
 
