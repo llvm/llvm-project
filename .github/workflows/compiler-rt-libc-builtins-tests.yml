@@ -4,7 +4,6 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: ["main"]
     paths:
       - "compiler-rt/lib/builtins/**"
       - "compiler-rt/test/builtins/**"
