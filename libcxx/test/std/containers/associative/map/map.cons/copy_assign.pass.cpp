@@ -24,6 +24,41 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 11
+struct NonTrivial {
+  int i;
+  // TEST_CONSTEXPR_CXX26 NonTrivial() = default;
+  TEST_CONSTEXPR_CXX26 NonTrivial(int i) : i(i) {}
+  TEST_CONSTEXPR_CXX26 NonTrivial(const NonTrivial& other) : i(other.i) {}
+  TEST_CONSTEXPR_CXX26 NonTrivial(NonTrivial&& other) : i(other.i) {
+    // i = 0, means the object got moved from
+    other.i = 0;
+  }
+  TEST_CONSTEXPR_CXX26 NonTrivial& operator=(const NonTrivial& other) {
+    if (this != &other) {
+      i = other.i;
+    }
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX26 NonTrivial& operator=(NonTrivial&& other) {
+    i = other.i;
+    // i = 0, means the object got moved from
+    other.i = 0;
+    return *this;
+  }
+
+  TEST_CONSTEXPR_CXX26 friend bool operator<(NonTrivial const& left, NonTrivial const& right) {
+    return left.i < right.i;
+  }
+  TEST_CONSTEXPR_CXX26 friend bool operator==(NonTrivial const& left, NonTrivial const& right) {
+    return left.i == right.i;
+  }
+};
+static_assert(not std::is_trivially_copy_assignable_v<NonTrivial>);
+static_assert(not std::is_trivially_default_constructible_v<NonTrivial>);
+
+#endif
+
 template <class T>
 class tracking_allocator {
   std::vector<void*>* allocs_;
@@ -275,6 +310,32 @@ TEST_CONSTEXPR_CXX26 bool test() {
     std::vector<void*> rhs_allocs;
     test_alloc<tracking_allocator<std::pair<const int, int> > >(
         lhs_allocs, rhs_allocs, AssertEmpty(lhs_allocs, rhs_allocs));
+  }
+  {
+    // Test that non-trivial copies don't get moved.
+    {
+      using V   = std::pair<const NonTrivial, NonTrivial>;
+      using Map = std::map<NonTrivial, NonTrivial, std::less<NonTrivial> >;
+
+      V arr[] = {V(1, 1), V(2, 3), V(3, 6)};
+
+      const Map orig(begin(arr), end(arr), std::less<NonTrivial>());
+      Map copy;
+      copy = orig;
+
+      assert(copy.size() == 3);
+      assert(*std::next(copy.begin(), 0) == V(1, 1));
+      assert(*std::next(copy.begin(), 1) == V(2, 3));
+      assert(*std::next(copy.begin(), 2) == V(3, 6));
+      assert(std::next(copy.begin(), 3) == copy.end());
+
+      // Check that orig is still what is expected
+      assert(orig.size() == 3);
+      assert(*std::next(orig.begin(), 0) == V(1, 1));
+      assert(*std::next(orig.begin(), 1) == V(2, 3));
+      assert(*std::next(orig.begin(), 2) == V(3, 6));
+      assert(std::next(orig.begin(), 3) == orig.end());
+    }
   }
 #endif
 
