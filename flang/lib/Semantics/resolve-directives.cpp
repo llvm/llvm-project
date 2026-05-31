@@ -171,7 +171,6 @@ protected:
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
-  Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
   UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
@@ -473,15 +472,17 @@ public:
   // "const T &". For a class D derived from B, and an explicit overload
   // of Pre(const B &), a call to Pre(D) will select the template instead
   // of the base clase overload.
-  // Force user-defined conversion from any const-reference, to make sure
-  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
-  // will be worse than derived-to-base conversions. This will, for example,
-  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
-  struct AbsorbAnyReference {
-    template <typename T> AbsorbAnyReference(const T &) {}
+  // Don't use the inherited Pre/Post functions. Instead, create a last-
+  // resort catch-all overload that is worse than any derived-to-base
+  // conversion. This will, for example,invoke Pre(const OmpBlockConstruct &)
+  // for directives derived from it.
+  struct Anything {
+    // User-defined conversion constructor will be worse than all more
+    // "natural" conversions.
+    template <typename T> Anything(const T &) {}
   };
-  bool Pre(AbsorbAnyReference) { return true; }
-  void Post(AbsorbAnyReference) {}
+  bool Pre(Anything) { return true; }
+  void Post(Anything) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
@@ -762,17 +763,6 @@ public:
         *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
     return false;
   }
-  bool Pre(const parser::OmpClause::Detach &x) {
-    // OpenMP 5.0: Variables in detach clause have predetermined shared
-    // data-sharing attribute
-    if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
-      if (auto *symbol{name->symbol})
-        SetSymbolDSA(*symbol,
-            Symbol::Flags{
-                Symbol::Flag::OmpShared, Symbol::Flag::OmpPreDetermined});
-    }
-    return false;
-  }
   bool Pre(const parser::OmpClause::Copyin &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
     return false;
@@ -1024,11 +1014,6 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
       Symbol::Flag::OmpUseDeviceAddr, Symbol::Flag::OmpIsDevicePtr,
       Symbol::Flag::OmpHasDeviceAddr, Symbol::Flag::OmpUniform};
-
-  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
-      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
-      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction,
-      Symbol::Flag::OmpGroupPrivate};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -3007,9 +2992,7 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
       // Set the OpenMP flag on the equivalenced symbol
       if (Symbol * resolvedSymbol{ResolveOmp(eqSymbol, ompFlag, currScope())}) {
         // Also add to the context if needed
-        if (ompFlagsRequireMark.test(ompFlag)) {
-          AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
-        }
+        AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
       }
     }
   }
@@ -3100,9 +3083,7 @@ Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     Symbol &object, Symbol::Flag ompFlag) {
-  if (ompFlagsRequireMark.test(ompFlag)) {
-    object.set(ompFlag);
-  }
+  object.set(ompFlag);
   return &object;
 }
 

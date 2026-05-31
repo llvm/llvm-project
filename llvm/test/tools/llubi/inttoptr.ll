@@ -10,8 +10,8 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT:   %ptr1 = inttoptr i64 0 to ptr => ptr 0x0 [dangling]
-; CHECK-NEXT:   %ptr2 = inttoptr i8 -1 to ptr => ptr 0xFF [dangling]
-; CHECK-NEXT:   %ptr3 = inttoptr i128 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [dangling]
+; CHECK-NEXT:   %ptr1 = inttoptr i64 0 to ptr => ptr 0x0 [nullary]
+; CHECK-NEXT:   %ptr2 = inttoptr i8 -1 to ptr => ptr 0xFF [nullary]
+; CHECK-NEXT:   %ptr3 = inttoptr i128 -1 to ptr => ptr 0xFFFFFFFFFFFFFFFF [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

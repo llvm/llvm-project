@@ -38,10 +38,7 @@ PseudoTerminal::PseudoTerminal() = default;
 // are valid and ownership has not been released using the
 // ReleasePrimaryFileDescriptor() or the ReleaseSaveFileDescriptor() member
 // functions.
-PseudoTerminal::~PseudoTerminal() {
-  ClosePrimaryFileDescriptor();
-  CloseSecondaryFileDescriptor();
-}
+PseudoTerminal::~PseudoTerminal() { Reset(); }
 
 // Close the primary file descriptor if it is valid.
 void PseudoTerminal::ClosePrimaryFileDescriptor() {
@@ -59,7 +56,13 @@ void PseudoTerminal::CloseSecondaryFileDescriptor() {
   }
 }
 
+void PseudoTerminal::Reset() {
+  ClosePrimaryFileDescriptor();
+  CloseSecondaryFileDescriptor();
+}
+
 llvm::Error PseudoTerminal::OpenFirstAvailablePrimary(int oflag) {
+  Reset();
 #if LLDB_ENABLE_POSIX
   // Open the primary side of a pseudo terminal
   m_primary_fd = ::posix_openpt(oflag);

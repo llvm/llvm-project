@@ -779,3 +779,48 @@ define void @constant_stride_reorder_geps(ptr %pl, ptr %ps) {
 
   ret void
 }
+
+define void @reversed_addr_data_reorder(ptr %pl, ptr %ps) {
+; CHECK-LABEL: define void @reversed_addr_data_reorder(
+; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[L0:%.*]] = getelementptr i8, ptr [[PL]], i64 0
+; CHECK-NEXT:    [[S3:%.*]] = getelementptr i8, ptr [[PS]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[L0]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> poison, <8 x i32> <i32 4, i32 5, i32 7, i32 2, i32 6, i32 1, i32 3, i32 0>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i8.p0.i64(<8 x i8> [[TMP2]], ptr align 1 [[S3]], i64 2, <8 x i1> splat (i1 true), i32 8)
+; CHECK-NEXT:    ret void
+;
+  %l0 = getelementptr i8, ptr %pl, i64 0
+  %l1 = getelementptr i8, ptr %pl, i64 1
+  %l2 = getelementptr i8, ptr %pl, i64 2
+  %l3 = getelementptr i8, ptr %pl, i64 3
+  %l4 = getelementptr i8, ptr %pl, i64 4
+  %l5 = getelementptr i8, ptr %pl, i64 5
+  %l6 = getelementptr i8, ptr %pl, i64 6
+  %l7 = getelementptr i8, ptr %pl, i64 7
+  %v0 = load i8, ptr %l0, align 1
+  %v1 = load i8, ptr %l1, align 1
+  %v2 = load i8, ptr %l2, align 1
+  %v3 = load i8, ptr %l3, align 1
+  %v4 = load i8, ptr %l4, align 1
+  %v5 = load i8, ptr %l5, align 1
+  %v6 = load i8, ptr %l6, align 1
+  %v7 = load i8, ptr %l7, align 1
+  %s0 = getelementptr i8, ptr %ps, i64 14
+  %s1 = getelementptr i8, ptr %ps, i64 12
+  %s2 = getelementptr i8, ptr %ps, i64 10
+  %s3 = getelementptr i8, ptr %ps, i64 8
+  %s4 = getelementptr i8, ptr %ps, i64 6
+  %s5 = getelementptr i8, ptr %ps, i64 4
+  %s6 = getelementptr i8, ptr %ps, i64 2
+  %s7 = getelementptr i8, ptr %ps, i64 0
+  store i8 %v0, ptr %s0, align 1
+  store i8 %v3, ptr %s1, align 1
+  store i8 %v1, ptr %s2, align 1
+  store i8 %v6, ptr %s3, align 1
+  store i8 %v2, ptr %s4, align 1
+  store i8 %v7, ptr %s5, align 1
+  store i8 %v5, ptr %s6, align 1
+  store i8 %v4, ptr %s7, align 1
+  ret void
+}

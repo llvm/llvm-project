@@ -2,13 +2,13 @@
 // REQUIRES: curl
 
 // Default instrumented build with no profile correlation.
-// RUN: %clang_profgen -o %t.default.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang_profgen -o %t.default.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.default.profraw %run %t.default.exe
 // RUN: llvm-profdata merge -o %t.default.profdata %t.default.profraw
 // RUN: llvm-profdata show --all-functions --counts %t.default.profdata > %t.default.profdata.show
 
 // Build with profile binary correlation.
-// RUN: %clang_profgen -o %t.correlate.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -fcoverage-mcdc -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
+// RUN: %clang_profgen -o %t.correlate.exe -Wl,--build-id=0x12345678 -fprofile-instr-generate -fcoverage-mapping -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // Strip above binary and run
 // RUN: llvm-strip %t.correlate.exe -o %t.stripped.exe
 // RUN: env LLVM_PROFILE_FILE=%t.correlate.profraw %run %t.stripped.exe

@@ -901,6 +901,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STORE:
     Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
+  case ISD::ATOMIC_STORE:
+    Res = ScalarizeVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::STRICT_FP_ROUND:
     Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
     break;
@@ -1161,6 +1164,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
   return DAG.getStore(N->getChain(), dl, GetScalarizedVector(N->getOperand(1)),
                       N->getBasePtr(), N->getPointerInfo(), N->getBaseAlign(),
                       N->getMemOperand()->getFlags(), N->getAAInfo());
+}
+
+/// If the value to store is a vector that needs to be scalarized, it must be
+/// <1 x ty>.  Just store the element.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N) {
+  SDValue ScalarVal = GetScalarizedVector(N->getVal());
+  return DAG.getAtomic(ISD::ATOMIC_STORE, SDLoc(N),
+                       N->getMemoryVT().getVectorElementType(), N->getChain(),
+                       ScalarVal, N->getBasePtr(), N->getMemOperand());
 }
 
 /// If the value to round is a vector that needs to be scalarized, it must be
@@ -6609,11 +6621,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
       TLI.getTypeToTransformTo(*DAG.getContext(), LD->getValueType(0));
   EVT LdVT = LD->getMemoryVT();
   SDLoc dl(LD);
-  assert(LdVT.isVector() && WidenVT.isVector() && "Expected vectors");
-  assert(LdVT.isScalableVector() == WidenVT.isScalableVector() &&
-         "Must be scalable");
-  assert(LdVT.getVectorElementType() == WidenVT.getVectorElementType() &&
-         "Expected equivalent element types");
 
   // Load information
   SDValue Chain = LD->getChain();

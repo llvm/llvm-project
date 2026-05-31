@@ -215,9 +215,11 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
+  bool isBindC = sym.attrs().test(Fortran::semantics::Attr::BIND_C);
   fir::GlobalOp global = builder.createGlobal(
       loc, converter.genType(var), globalName, linkage, mlir::Attribute{},
-      isConstant(ultimate), var.isTarget(), dataAttr);
+      isConstant(ultimate), var.isTarget(), dataAttr,
+      /*setDefaultAlignment=*/!isBindC);
   attachAccDeclareAttribute(builder, global, sym);
   return global;
 }
@@ -462,6 +464,16 @@ static mlir::Value genDefaultInitializerValue(
   return initialValue;
 }
 
+mlir::Value Fortran::lower::genScalarDefaultInitializerValue(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Type symTy) {
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value result =
+      genDefaultInitializerValue(converter, loc, sym, symTy, stmtCtx);
+  stmtCtx.finalizeAndPop();
+  return result;
+}
+
 /// Does this global already have an initializer ?
 static bool globalIsInitialized(fir::GlobalOp global) {
   return !global.getRegion().empty() || global.getInitVal();
@@ -503,6 +515,7 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = genLocation(converter, sym);
   bool isConst = isConstant(sym);
+  bool isBindC = sym.attrs().test(Fortran::semantics::Attr::BIND_C);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   mlir::Type symTy = converter.genType(var);
 
@@ -524,7 +537,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       if (oeDetails && oeDetails->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
-            oeDetails->init().value(), dataAttr);
+            oeDetails->init().value(), dataAttr,
+            /*setDefaultAlignment=*/!isBindC);
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;
@@ -535,7 +549,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
   if (!global)
     global =
         builder.createGlobal(loc, symTy, globalName, linkage, mlir::Attribute{},
-                             isConst, var.isTarget(), dataAttr);
+                             isConst, var.isTarget(), dataAttr,
+                             /*setDefaultAlignment=*/!isBindC);
   if (Fortran::semantics::IsAllocatableOrPointer(sym) &&
       !Fortran::semantics::IsProcedure(sym)) {
     if (oeDetails && oeDetails->init()) {
@@ -583,15 +598,14 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     if (details && details->init()) {
       auto sym{*details->init()};
       if (sym) // Has a procedure target.
-        createGlobalInitialization(
-            builder, global, [&](fir::FirOpBuilder &b) {
-              Fortran::lower::StatementContext stmtCtx(
-                  /*cleanupProhibited=*/true);
-              auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
-                  converter, loc, *sym)};
-              auto castTo{builder.createConvert(loc, symTy, box)};
-              fir::HasValueOp::create(b, loc, castTo);
-            });
+        createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+          Fortran::lower::StatementContext stmtCtx(
+              /*cleanupProhibited=*/true);
+          auto box{Fortran::lower::convertProcedureDesignatorInitialTarget(
+              converter, loc, *sym)};
+          auto castTo{builder.createConvert(loc, symTy, box)};
+          fir::HasValueOp::create(b, loc, castTo);
+        });
       else { // Has NULL() target.
         createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
           auto box{fir::factory::createNullBoxProc(b, loc, symTy)};
@@ -2501,15 +2515,15 @@ void Fortran::lower::mapSymbolAttributes(
   if (!addr) {
     if (arg) {
       mlir::Type argType = arg.getType();
+      mlir::Type symType = converter.genType(sym);
       const bool isCptrByVal = Fortran::semantics::IsBuiltinCPtr(sym) &&
                                Fortran::lower::isCPtrArgByValueType(argType);
       if (isCptrByVal || !fir::conformsWithPassByRef(argType)) {
         // Dummy argument passed in register. Place the value in memory at that
         // point since lowering expect symbols to be mapped to memory addresses.
-        mlir::Type symType = converter.genType(sym);
         addr = fir::AllocaOp::create(builder, loc, symType);
         if (isCptrByVal) {
-          // Place the void* address into the CPTR address component.
+          // Place the void* address into the pointer address component.
           mlir::Value addrComponent =
               fir::factory::genCPtrOrCFunptrAddr(builder, loc, addr, symType);
           builder.createStoreWithConvert(loc, arg, addrComponent);

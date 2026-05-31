@@ -2505,35 +2505,35 @@ def HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW : Pseudo<
 }
 
 // The virtual cycle counter register is CNTVCT_EL0.
-def : Pat<(readcyclecounter), (MRS 0xdf02)>;
+def : Pat<(readcyclecounter), (MRS 0x5f02)>;
 
 // FPCR and FPSR registers.
 let Uses = [FPCR] in
 def MRS_FPCR : Pseudo<(outs GPR64:$dst), (ins),
                       [(set GPR64:$dst, (int_aarch64_get_fpcr))]>,
-               PseudoInstExpansion<(MRS GPR64:$dst, 0xda20)>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0x5a20)>,
                Sched<[WriteSys]>;
 let Defs = [FPCR] in
 def MSR_FPCR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpcr i64:$val)]>,
-               PseudoInstExpansion<(MSR 0xda20, GPR64:$val)>,
+               PseudoInstExpansion<(MSR 0x5a20, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 let Uses = [FPSR] in
 def MRS_FPSR : Pseudo<(outs GPR64:$dst), (ins),
                       [(set GPR64:$dst, (int_aarch64_get_fpsr))]>,
-               PseudoInstExpansion<(MRS GPR64:$dst, 0xda21)>,
+               PseudoInstExpansion<(MRS GPR64:$dst, 0x5a21)>,
                Sched<[WriteSys]>;
 let Defs = [FPSR] in
 def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpsr i64:$val)]>,
-               PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
+               PseudoInstExpansion<(MSR 0x5a21, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 let Defs = [FPMR] in
 def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpmr i64:$val)]>,
-               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
+               PseudoInstExpansion<(MSR 0x5a22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
@@ -5553,6 +5553,13 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(bf16 (fabs (bf16 FPR16:$Rn))),
+            (bf16 (FABSHr (bf16 FPR16:$Rn)))>;
+  def : Pat<(bf16 (fneg (bf16 FPR16:$Rn))),
+            (bf16 (FNEGHr (bf16 FPR16:$Rn)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5980,6 +5987,17 @@ def : InstAlias<"mvn{ $Vd.8b, $Vn.8b|.8b $Vd, $Vn}",
                 (NOTv8i8 V64:$Vd, V64:$Vn)>;
 def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
+}
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v4bf16 (fabs (v4bf16 V64:$Rn))),
+            (v4bf16 (FABSv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fabs (v8bf16 V128:$Rn))),
+            (v8bf16 (FABSv8f16 (v8bf16 V128:$Rn)))>;
+  def : Pat<(v4bf16 (fneg (v4bf16 V64:$Rn))),
+            (v4bf16 (FNEGv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fneg (v8bf16 V128:$Rn))),
+            (v8bf16 (FNEGv8f16 (v8bf16 V128:$Rn)))>;
 }
 
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
@@ -11714,16 +11732,18 @@ def MRRS : RtSystemI128<1,
   (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
   "mrrs", "\t$Rt, $systemreg">
 {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20}= 0b1;
+  let Inst{19-5} = systemreg;
 }
 
 def MSRR : RtSystemI128<0,
   (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
   "msrr", "\t$systemreg, $Rt">
 {
-  bits<16> systemreg;
-  let Inst{20-5} = systemreg;
+  bits<15> systemreg;
+  let Inst{20} = 0b1;
+  let Inst{19-5} = systemreg;
 }
 
 //===----------------------------===//

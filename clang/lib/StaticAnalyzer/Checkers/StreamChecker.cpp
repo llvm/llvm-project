@@ -226,7 +226,7 @@ SVal getStreamArg(const FnDescription *Desc, const CallEvent &Call) {
 /// Create a conjured symbol return value for a call expression.
 DefinedSVal makeRetVal(CheckerContext &C, ConstCFGElementRef Elem) {
   return C.getSValBuilder()
-      .conjureSymbolVal(/*symbolTag=*/nullptr, Elem, C.getLocationContext(),
+      .conjureSymbolVal(/*symbolTag=*/nullptr, Elem, C.getStackFrame(),
                         C.blockCount())
       .castAs<DefinedSVal>();
 }
@@ -234,7 +234,7 @@ DefinedSVal makeRetVal(CheckerContext &C, ConstCFGElementRef Elem) {
 ProgramStateRef bindAndAssumeTrue(ProgramStateRef State, CheckerContext &C,
                                   const CallExpr *CE, ConstCFGElementRef Elem) {
   DefinedSVal RetVal = makeRetVal(C, Elem);
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+  State = State->BindExpr(CE, C.getStackFrame(), RetVal);
   State = State->assume(RetVal, true);
   assert(State && "Assumption on new value should not fail.");
   return State;
@@ -242,7 +242,7 @@ ProgramStateRef bindAndAssumeTrue(ProgramStateRef State, CheckerContext &C,
 
 ProgramStateRef bindInt(uint64_t Value, ProgramStateRef State,
                         CheckerContext &C, const CallExpr *CE) {
-  State = State->BindExpr(CE, C.getLocationContext(),
+  State = State->BindExpr(CE, C.getStackFrame(),
                           C.getSValBuilder().makeIntVal(Value, CE->getType()));
   return State;
 }
@@ -684,23 +684,23 @@ struct StreamOperationEvaluator {
 
   ProgramStateRef makeAndBindRetVal(ProgramStateRef State, CheckerContext &C) {
     NonLoc RetVal = makeRetVal(C, Elem.value()).castAs<NonLoc>();
-    return State->BindExpr(CE, C.getLocationContext(), RetVal);
+    return State->BindExpr(CE, C.getStackFrame(), RetVal);
   }
 
   ProgramStateRef bindReturnValue(ProgramStateRef State, CheckerContext &C,
                                   uint64_t Val) {
-    return State->BindExpr(CE, C.getLocationContext(),
+    return State->BindExpr(CE, C.getStackFrame(),
                            SVB.makeIntVal(Val, CE->getCallReturnType(ACtx)));
   }
 
   ProgramStateRef bindReturnValue(ProgramStateRef State, CheckerContext &C,
                                   SVal Val) {
-    return State->BindExpr(CE, C.getLocationContext(), Val);
+    return State->BindExpr(CE, C.getStackFrame(), Val);
   }
 
   ProgramStateRef bindNullReturnValue(ProgramStateRef State,
                                       CheckerContext &C) {
-    return State->BindExpr(CE, C.getLocationContext(),
+    return State->BindExpr(CE, C.getStackFrame(),
                            C.getSValBuilder().makeNullWithType(CE->getType()));
   }
 
@@ -717,7 +717,7 @@ struct StreamOperationEvaluator {
   ConstraintManager::ProgramStatePair
   makeRetValAndAssumeDual(ProgramStateRef State, CheckerContext &C) {
     DefinedSVal RetVal = makeRetVal(C, Elem.value());
-    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    State = State->BindExpr(CE, C.getStackFrame(), RetVal);
     return C.getConstraintManager().assumeDual(State, RetVal);
   }
 
@@ -841,7 +841,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
       RegionAndSymbolInvalidationTraits::InvalidationKinds::
           TK_DoNotInvalidateSuperRegion;
 
-  const LocationContext *LCtx = Call.getLocationContext();
+  const StackFrame *SF = Call.getStackFrame();
   const ASTContext &Ctx = State->getStateManager().getContext();
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   auto &RegionManager = Buffer->getMemRegionManager();
@@ -858,7 +858,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
     ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
   }
   return State->invalidateRegions(
-      EscapingVals, Call.getCFGElementRef(), BlockCount, LCtx,
+      EscapingVals, Call.getCFGElementRef(), BlockCount, SF,
       /*CausesPointerEscape=*/false,
       /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 }
@@ -869,7 +869,7 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
   auto GetArgSVal = [&Call](int Idx) { return Call.getArgSVal(Idx); };
   auto EscapingVals = to_vector(map_range(EscapingArgs, GetArgSVal));
   State = State->invalidateRegions(EscapingVals, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getLocationContext(),
+                                   C.blockCount(), C.getStackFrame(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
   return State;
@@ -906,10 +906,10 @@ ProgramStateRef StreamChecker::assumeNoAliasingWithStdStreams(
                                   const VarDecl *Var) -> ProgramStateRef {
     if (!Var)
       return State;
-    const auto *LCtx = C.getLocationContext();
+    const auto *SF = C.getStackFrame();
     auto &StoreMgr = C.getStoreManager();
     auto &SVB = C.getSValBuilder();
-    SVal VarValue = State->getSVal(StoreMgr.getLValueVar(Var, LCtx));
+    SVal VarValue = State->getSVal(StoreMgr.getLValueVar(Var, SF));
     auto NoAliasState =
         SVB.evalBinOp(State, BO_NE, RetVal, VarValue, SVB.getConditionType())
             .castAs<DefinedOrUnknownSVal>();
@@ -935,7 +935,7 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   SymbolRef RetSym = RetVal.getAsSymbol();
   assert(RetSym && "RetVal must be a symbol here.");
 
-  State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+  State = State->BindExpr(CE, C.getStackFrame(), RetVal);
 
   // Bifurcate the state into two: one with a valid FILE* pointer, the other
   // with a NULL.
@@ -996,11 +996,11 @@ void StreamChecker::evalFreopen(const FnDescription *Desc,
   // According to the documentations, the stream is closed first
   // but any close error is ignored. The state changes to (or remains) opened.
   ProgramStateRef StateRetNotNull =
-      State->BindExpr(CE, C.getLocationContext(), *StreamVal);
+      State->BindExpr(CE, C.getStackFrame(), *StreamVal);
   // Generate state for NULL return value.
   // Stream switches to OpenFailed state.
   ProgramStateRef StateRetNull =
-      State->BindExpr(CE, C.getLocationContext(),
+      State->BindExpr(CE, C.getStackFrame(),
                       C.getSValBuilder().makeNullWithType(CE->getType()));
 
   StateRetNotNull =
@@ -1189,7 +1189,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   // If we know the state to be FEOF at fread, do not add a success state.
   if (!IsFread || !E.isStreamEof()) {
     ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), *NMembVal);
+        State->BindExpr(E.CE, C.getStackFrame(), *NMembVal);
     StateNotFailed =
         E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
     C.addTransition(StateNotFailed);
@@ -1202,7 +1202,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
 
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   ProgramStateRef StateFailed =
-      State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+      State->BindExpr(E.CE, C.getStackFrame(), RetVal);
   StateFailed = E.assumeBinOpNN(StateFailed, BO_LT, RetVal, *NMembVal);
   if (!StateFailed)
     return;
@@ -1237,7 +1237,7 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
       // Generate a transition for the success state of `fgetc`.
       NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
       ProgramStateRef StateNotFailed =
-          State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+          State->BindExpr(E.CE, C.getStackFrame(), RetVal);
       // The returned 'unsigned char' of `fgetc` is converted to 'int',
       // so we need to check if it is in range [0, 255].
       StateNotFailed = StateNotFailed->assumeInclusiveRange(
@@ -1255,7 +1255,7 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
       if (!GetBuf)
         return;
       ProgramStateRef StateNotFailed =
-          State->BindExpr(E.CE, C.getLocationContext(), *GetBuf);
+          State->BindExpr(E.CE, C.getStackFrame(), *GetBuf);
       StateNotFailed =
           E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
       C.addTransition(StateNotFailed);
@@ -1294,7 +1294,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     if (!PutVal)
       return;
     ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), *PutVal);
+        State->BindExpr(E.CE, C.getStackFrame(), *PutVal);
     StateNotFailed =
         E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
     C.addTransition(StateNotFailed);
@@ -1302,7 +1302,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     // Generate a transition for the success state of `fputs`.
     NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+        State->BindExpr(E.CE, C.getStackFrame(), RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
@@ -1335,7 +1335,7 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
     return;
 
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
-  State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+  State = State->BindExpr(E.CE, C.getStackFrame(), RetVal);
   auto Cond =
       E.SVB
           .evalBinOp(State, BO_GE, RetVal, E.SVB.makeZeroVal(E.ACtx.IntTy),
@@ -1381,7 +1381,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   if (!E.isStreamEof()) {
     NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
-        State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+        State->BindExpr(E.CE, C.getStackFrame(), RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
@@ -1495,8 +1495,8 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
       StateFailed, StreamState::getOpened(Desc, NewES, !NewES.isFEof()));
   // On failure, the content of the buffer is undefined.
   if (auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State))
-    StateFailed = StateFailed->bindLoc(*NewLinePtr, UndefinedVal(),
-                                       C.getLocationContext());
+    StateFailed =
+        StateFailed->bindLoc(*NewLinePtr, UndefinedVal(), C.getStackFrame());
   C.addTransition(StateFailed, E.getFailureNoteTag(this, C));
 }
 
@@ -1603,7 +1603,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
 
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
-      State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+      State->BindExpr(E.CE, C.getStackFrame(), RetVal);
   StateNotFailed =
       E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
   if (!StateNotFailed)
@@ -1771,7 +1771,7 @@ void StreamChecker::evalFileno(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
-  State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
+  State = State->BindExpr(E.CE, C.getStackFrame(), RetVal);
   State = E.assumeBinOpNN(State, BO_GE, RetVal, E.getZeroVal(Call));
   if (!State)
     return;
@@ -1868,8 +1868,7 @@ public:
     if (!S)
       return nullptr;
     Satisfied = true;
-    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                               N->getLocationContext());
+    PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
     llvm::StringLiteral Msg = "Stream is closed here";
     return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg);
   }
@@ -2034,15 +2033,13 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     PathDiagnosticLocation LocUsedForUniqueing;
     if (const Stmt *StreamStmt = StreamOpenNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          StreamStmt, C.getSourceManager(),
-          StreamOpenNode->getLocationContext());
+          StreamStmt, C.getSourceManager(), StreamOpenNode->getStackFrame());
 
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
             BT_ResourceLeak,
             "Opened stream never closed. Potential resource leak.", Err,
-            LocUsedForUniqueing,
-            StreamOpenNode->getLocationContext()->getDecl());
+            LocUsedForUniqueing, StreamOpenNode->getStackFrame()->getDecl());
     R->markInteresting(LeakSym);
     R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);
     C.emitReport(std::move(R));

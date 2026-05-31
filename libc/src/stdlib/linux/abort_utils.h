@@ -43,7 +43,7 @@ namespace abort_utils {
   // Now unblock the signal. The pending abort signal is now unblocked and
   // should be delivered to its default handler.
   // If this fails, there is still no meaningful recovery path while aborting.
-  unblock_signal(SIGABRT);
+  (void)unblock_signal(SIGABRT);
 
   internal::exit(127);
 }

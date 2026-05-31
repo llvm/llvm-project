@@ -457,6 +457,7 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
+        "//libc:shared_math_headers_for_apfloat",
     ],
 )
 
@@ -1308,6 +1309,9 @@ cc_library(
         "include/llvm-c/Object.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = glob([
+        "include/llvm/Object/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":BitReader",
@@ -1742,6 +1746,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Demangle",
+        ":FrontendOffloading",
         ":MC",
         ":ProfileData",
         ":Scalar",
@@ -2099,6 +2104,13 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "instrumentor_variables_gen",
+    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
+    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
+    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
@@ -2110,6 +2122,9 @@ cc_library(
         "include/llvm/Transforms/IPO.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = [
+        "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    ],
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
@@ -3907,6 +3922,20 @@ gentbl_cc_library(
             allow_empty = True,
         ),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
+        # The TargetMachine files use this pattern:
+        #
+        # // In FooTargetMachine.cpp
+        # #define GET_PASS_REGISTRY "FooPassRegistry.def"
+        # #include "llvm/Passes/TargetPassRegistry.inc"
+        #
+        # // In TargetPassRegistry.inc
+        # #include GET_PASS_REGISTRY
+        #
+        # This breaks when using include scanning, so include them explicitly here.
+        additional_compiler_inputs = glob(
+            ["lib/Target/" + target["name"] + "/*.def"],
+            allow_empty = True,
+        ),
         copts = llvm_copts,
         features = [
             "-layering_check",
@@ -4902,6 +4931,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":Analysis",
+        ":AsmParser",
         ":Core",
         ":IRReader",
         ":Support",
@@ -6878,7 +6908,7 @@ cc_binary(
     srcs = glob(
         [
             "tools/llvm-ir2vec/**/*.cpp",
-            "tools/llvm-ir2vec/lib/*.h",
+            "tools/llvm-ir2vec/**/*.h",
         ],
         exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
     ),

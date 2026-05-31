@@ -825,6 +825,43 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
   let hasVerifier = 1;
 }
 
+def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
+    [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU variable-selector permlane op (GFX12+)";
+  let description = [{
+    High-level wrapper on `rocdl.permlane16.var` and `rocdl.permlanex16.var`
+    for per-lane variable-selector permutations within a wave32 subgroup.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32
+    and one or more ROCDL intrinsic calls during lowering.
+
+    - `cross = false`: intra-row permutation (each lane in a 16-lane row reads
+      from a lane in the same row, selected by `$selector`). Maps to
+      `rocdl.permlane16.var`.
+    - `cross = true`: cross-row permutation (each lane reads from the opposite
+      16-lane row, selected by `$selector`). Maps to `rocdl.permlanex16.var`.
+
+    `$selector` is an i32 VGPR providing the per-lane source-lane index.
+
+    Example:
+    ```mlir
+    %0 = amdgpu.permlane_var %src, %sel { cross = false } : f16
+    %1 = amdgpu.permlane_var %src, %sel { cross = true } : f32
+    ```
+
+    Note: Lowering is only supported on GFX12+.
+  }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       I32:$selector,
+                       DefaultValuedAttr<BoolAttr, "false">:$cross,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src `,` $selector attr-dict `:` type($result)
+  }];
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
@@ -1110,7 +1147,7 @@ def AMDGPU_DotOp :
   let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
   let description = [{
     The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
-    which compute `D = sum_i A[i] * B[i] + C`. 
+    which compute `D = sum_i A[i] * B[i] + C`.
 
     Variants (source, dest, signedness, chipset -> intrinsic).
 
@@ -1432,9 +1469,11 @@ def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
     Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
-  let summary = "MLIR wrapper for CDNA Transpose Load instructions";
+  let summary = "MLIR wrapper for CDNA transpose Load instructions";
   let description = [{
-    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions
+    on gfx9 and the `ds_load_tr` family of instructions on gfx1250.
+
     The transpose load op represents a subgroup load from LDS memory,
     where the subgroup of threads collectively reads a matrix from the source
     memref, with each thread reading a vector of the matrix, and gets a transposed matrix
@@ -1442,8 +1481,9 @@ def AMDGPU_TransposeLoadOp :
     indices, and the thread's read result is a vector of the corresponding row of the transposed
     matrix.
 
-    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics. Please refer
-    to the CDNA4 ISA documentation for more details about its exact semantics.
+    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics on
+    gfx950 and the `ds_load_tr` family of instructions on gfx1250. Please refer
+    to the respective ISA documentation for more details about its exact semantics.
 
     Format example:
     ```
@@ -1456,7 +1496,8 @@ def AMDGPU_TransposeLoadOp :
       `$src`, matching the constraints of `memref.load`.
     * `$result`: target register this transpose load instruction will write to.
 
-    Note: Lowering is only supported on gfx950 and up.
+    Note: Lowering is only supported on gfx950 and gfx1250, with different
+    permitted load types.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
