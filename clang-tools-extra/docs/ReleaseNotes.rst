@@ -577,6 +577,9 @@ Changes in existing checks
     ``std::remove_if``, ``std::partition``, ``std::stable_partition``, and
     ``std::rotate`` calls with their ``std::ranges`` counterparts.
 
+  - Preserved used output iterator results when replacing output algorithms
+    such as ``std::copy``.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
