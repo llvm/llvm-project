@@ -91,7 +91,7 @@ define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_select_nullp
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @scalar_alloca_ptr_with_vector_gep_offset_select_nullptr0.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> zeroinitializer, <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> splat (ptr addrspace(3) null), <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(3)> [[SELECT]], i64 1
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[EXTRACTELEMENT]], align 4
 ; CHECK-NEXT:    ret void
@@ -125,7 +125,7 @@ define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_select_nullp
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @scalar_alloca_ptr_with_vector_gep_offset_select_nullptr1.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> [[GETELEMENTPTR0]], <4 x ptr addrspace(3)> zeroinitializer
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> [[GETELEMENTPTR0]], <4 x ptr addrspace(3)> splat (ptr addrspace(3) null)
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(3)> [[SELECT]], i64 1
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[EXTRACTELEMENT]], align 4
 ; CHECK-NEXT:    ret void
@@ -159,8 +159,8 @@ define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_icmp_nullptr
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @scalar_alloca_ptr_with_vector_gep_offset_icmp_nullptr0.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> zeroinitializer, <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <4 x ptr addrspace(3)> [[SELECT]], zeroinitializer
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> splat (ptr addrspace(3) null), <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <4 x ptr addrspace(3)> [[SELECT]], splat (ptr addrspace(3) null)
 ; CHECK-NEXT:    store <4 x i1> [[ICMP]], ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -193,8 +193,8 @@ define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_icmp_nullptr
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [1024 x [4 x i32]], ptr addrspace(3) @scalar_alloca_ptr_with_vector_gep_offset_icmp_nullptr1.alloca, i32 0, i32 [[TMP13]]
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> zeroinitializer, <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <4 x ptr addrspace(3)> zeroinitializer, [[SELECT]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], <4 x ptr addrspace(3)> splat (ptr addrspace(3) null), <4 x ptr addrspace(3)> [[GETELEMENTPTR0]]
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq <4 x ptr addrspace(3)> splat (ptr addrspace(3) null), [[SELECT]]
 ; CHECK-NEXT:    store <4 x i1> [[ICMP]], ptr addrspace(1) [[OUT]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -231,7 +231,7 @@ define amdgpu_kernel void @scalar_alloca_ptr_with_vector_gep_offset_phi_nullptr(
 ; CHECK-NEXT:    [[GETELEMENTPTR0:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP14]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label %[[BB2]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x ptr addrspace(3)> [ [[GETELEMENTPTR0]], %[[BB1]] ], [ zeroinitializer, %[[BB0]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x ptr addrspace(3)> [ [[GETELEMENTPTR0]], %[[BB1]] ], [ splat (ptr addrspace(3) null), %[[BB0]] ]
 ; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(3)> [[PHI]], i64 2
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[EXTRACTELEMENT]], align 4
 ; CHECK-NEXT:    ret void

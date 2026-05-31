@@ -882,8 +882,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 
   Value *Op;
   // Find ctpop.
-  if (!match(I->getOperand(1 - ConstIdx),
-             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+  if (!match(I->getOperand(1 - ConstIdx), m_OneUse(m_Ctpop(m_Value(Op)))))
     return nullptr;
 
   Constant *C;
@@ -3978,9 +3977,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       Instruction *I = cast<Instruction>(&*User);
 
       if (ICmpInst *C = dyn_cast<ICmpInst>(I)) {
-        replaceInstUsesWith(*C,
-                            ConstantInt::get(Type::getInt1Ty(C->getContext()),
-                                             C->isFalseWhenEqual()));
+        replaceInstUsesWith(
+            *C, ConstantInt::get(C->getType(), C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
@@ -4891,7 +4889,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
-    return TypeInfo->isNullValue();
+    return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
 }
@@ -5148,7 +5146,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // LFilter iff LFilter contains a zero.
         assert(FElts > 0 && "Should have eliminated the empty filter earlier!");
         for (unsigned l = 0; l != LElts; ++l)
-          if (LArray->getOperand(l)->isNullValue()) {
+          if (isa<ConstantPointerNull>(LArray->getOperand(l))) {
             // LFilter contains a zero - discard it.
             NewClauses.erase(J);
             MakeNewInstruction = true;

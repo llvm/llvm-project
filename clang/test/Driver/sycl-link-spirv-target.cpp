@@ -9,3 +9,9 @@
 // RUN:   -Xlinker --device-libs=lib1.bc,lib2.bc %t.bc 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=XLINKEROPTS
 // XLINKEROPTS: "{{.*}}clang-sycl-linker{{.*}}" "-triple=spirv64" "--library-path=/tmp" "--device-libs=lib1.bc,lib2.bc" "{{.*}}.bc" "-o" "a.out"
+
+// Test that -v is forwarded to clang-sycl-linker when --sycl-link is used.
+// RUN: touch %t.bc
+// RUN: %clangxx -### --target=spirv64 --sycl-link -v %t.bc 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=VERBOSE
+// VERBOSE: "{{.*}}clang-sycl-linker{{.*}}" {{.*}}"-v"

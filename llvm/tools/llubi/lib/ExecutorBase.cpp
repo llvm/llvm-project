@@ -100,7 +100,8 @@ std::optional<uint64_t> ExecutorBase::verifyMemAccess(const MemoryObject &MO,
   return Offset.getZExtValue();
 }
 
-AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
+AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
+                            bool NoUndef) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -121,7 +122,12 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
     if (MO->getState() == MemoryObjectState::Dead)
       return AnyValue::getPoisonValue(Ctx, ValTy);
 
-    return Ctx.load(*MO, *Offset, ValTy);
+    bool ContainsUndefinedBits = false;
+    AnyValue Res = Ctx.load(*MO, *Offset, ValTy,
+                            NoUndef ? &ContainsUndefinedBits : nullptr);
+    if (NoUndef && ContainsUndefinedBits)
+      reportImmediateUB() << "The value loaded contains undefined bits.";
+    return Res;
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
 }
@@ -171,11 +177,17 @@ void ExecutorBase::dumpStackTrace() const {
   errs() << "Stacktrace:\n";
   const Frame *TheFrame = CurrentFrame;
   unsigned Index = 0;
+  const AsmParserContext *ParserContext = Ctx.getParserContext();
+  StringRef ModuleFileName = Ctx.getModule().getModuleIdentifier();
   while (TheFrame != nullptr) {
     if (TheFrame->BB) {
       Instruction &Inst = *TheFrame->PC;
       errs() << "#" << Index++ << " " << Inst << " at ";
       Inst.getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+      if (ParserContext) {
+        if (auto Loc = ParserContext->getInstructionOrArgumentLocation(&Inst))
+          errs() << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+      }
       errs() << "\n";
     }
     TheFrame = TheFrame->LastFrame;

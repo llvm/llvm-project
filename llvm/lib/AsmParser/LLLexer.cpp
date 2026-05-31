@@ -601,6 +601,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(unwind);
   KEYWORD(datalayout);
   KEYWORD(volatile);
+  KEYWORD(elementwise);
   KEYWORD(atomic);
   KEYWORD(unordered);
   KEYWORD(monotonic);
@@ -1009,6 +1010,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(TAG, DwarfTag);
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
+  DWKEYWORD(LLVM_LANG_DIALECT, DwarfLangDialect);
   DWKEYWORD(LANG, DwarfLang);
   DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);

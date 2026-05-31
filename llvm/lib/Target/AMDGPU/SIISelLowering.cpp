@@ -518,8 +518,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMadMacF32Insts())
     setOperationAction(ISD::FMAD, MVT::f32, Legal);
 
-  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
-  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i32, Custom);
+  setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_POISON}, MVT::i32, Custom);
   setOperationAction(ISD::CTLS, MVT::i32, Custom);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
@@ -592,7 +592,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::SIGN_EXTEND, ISD::SDIV, ISD::UDIV, ISD::SREM,
                         ISD::UREM, ISD::BITREVERSE, ISD::CTTZ,
-                        ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                        ISD::CTTZ_ZERO_POISON, ISD::CTLZ, ISD::CTLZ_ZERO_POISON,
                         ISD::CTPOP},
                        MVT::i16, Promote);
 
@@ -705,6 +705,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::LOAD, MVT::v2f16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v2f16, MVT::i32);
 
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2f16, MVT::i32);
+
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v2i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2i16, MVT::i32);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v2f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2f16, MVT::i32);
+
     setOperationAction(ISD::AND, MVT::v2i16, Promote);
     AddPromotedToType(ISD::AND, MVT::v2i16, MVT::i32);
     setOperationAction(ISD::OR, MVT::v2i16, Promote);
@@ -718,6 +728,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::LOAD, MVT::v4f16, MVT::v2i32);
     setOperationAction(ISD::LOAD, MVT::v4bf16, Promote);
     AddPromotedToType(ISD::LOAD, MVT::v4bf16, MVT::v2i32);
+
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v4i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v4i16, MVT::i64);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::v4f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v4f16, MVT::i64);
+
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v4i16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v4i16, MVT::i64);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::v4f16, Promote);
+    AddPromotedToType(ISD::ATOMIC_STORE, MVT::v4f16, MVT::i64);
 
     setOperationAction(ISD::STORE, MVT::v4i16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4i16, MVT::v2i32);
@@ -828,8 +848,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::UADDSAT, ISD::USUBSAT, ISD::SADDSAT, ISD::SSUBSAT},
                        MVT::v2i16, Legal);
 
-    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FMINNUM_IEEE,
-                        ISD::FMAXNUM_IEEE, ISD::FCANONICALIZE},
+    setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                        ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                        ISD::FCANONICALIZE},
                        MVT::v2f16, Legal);
 
     setOperationAction(ISD::EXTRACT_VECTOR_ELT,
@@ -851,7 +872,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     for (MVT VT : {MVT::v4f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
       // Split vector operations.
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FABS,
+                          ISD::FCANONICALIZE},
                          VT, Custom);
 
     setOperationAction(
@@ -863,16 +885,21 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
 
     if (Subtarget->hasBF16PackedInsts()) {
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMAXNUM, ISD::FMINNUM,
+                          ISD::FMA, ISD::FNEG, ISD::FABS, ISD::FCANONICALIZE},
+                         MVT::v2bf16, Legal);
+
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
         // Split vector operations.
-        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE},
+        setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE,
+                            ISD::FNEG, ISD::FABS},
                            VT, Custom);
     }
 
     if (Subtarget->hasPackedFP32Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
                          MVT::v2f32, Legal);
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
                          {MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32},
                          Custom);
     }
@@ -901,7 +928,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasVectorMulU64())
+  if (Subtarget->hasVMulU64Inst())
     setOperationAction(ISD::MUL, MVT::i64, Legal);
   else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
@@ -975,12 +1002,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16ConversionInsts()) {
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
-  }
-
-  if (Subtarget->hasBF16PackedInsts()) {
-    setOperationAction(
-        {ISD::FADD, ISD::FMUL, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMA},
-        MVT::v2bf16, Legal);
   }
 
   if (Subtarget->hasBF16TransInsts()) {
@@ -1721,6 +1742,28 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
+    bool IsStore = IntrID == Intrinsic::amdgcn_av_store_b128;
+    Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::v4i32;
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.align = Align(16);
+    Info.flags |=
+        IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
+    // flags appropriately.
+    Info.order = AtomicOrdering::Monotonic;
+
+    LLVMContext &Ctx = CI.getContext();
+    unsigned ScopeIdx = CI.arg_size() - 1;
+    MDNode *ScopeMD = cast<MDNode>(
+        cast<MetadataAsValue>(CI.getArgOperand(ScopeIdx))->getMetadata());
+    StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
+    Info.ssid = Ctx.getOrInsertSyncScopeID(Scope);
+    Infos.push_back(Info);
+    return;
+  }
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
@@ -1837,6 +1880,8 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
@@ -7839,6 +7884,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                       IID == Intrinsic::amdgcn_permlanex16;
   bool IsSetInactive = IID == Intrinsic::amdgcn_set_inactive ||
                        IID == Intrinsic::amdgcn_set_inactive_chain_arg;
+  bool IsPermlaneShuffle = IID == Intrinsic::amdgcn_permlane_bcast ||
+                           IID == Intrinsic::amdgcn_permlane_up ||
+                           IID == Intrinsic::amdgcn_permlane_down ||
+                           IID == Intrinsic::amdgcn_permlane_xor;
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
   const GCNSubtarget *ST = TLI.getSubtarget();
@@ -7860,6 +7909,10 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
       Operands.push_back(N->getOperand(4));
       [[fallthrough]];
     case Intrinsic::amdgcn_writelane:
+    case Intrinsic::amdgcn_permlane_bcast:
+    case Intrinsic::amdgcn_permlane_up:
+    case Intrinsic::amdgcn_permlane_down:
+    case Intrinsic::amdgcn_permlane_xor:
       Operands.push_back(Src2);
       [[fallthrough]];
     case Intrinsic::amdgcn_readlane:
@@ -7893,10 +7946,12 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDValue Src1, Src2;
   if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
       IID == Intrinsic::amdgcn_mov_dpp8 ||
-      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16) {
+      IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16 ||
+      IsPermlaneShuffle) {
     Src1 = N->getOperand(2);
     if (IID == Intrinsic::amdgcn_writelane ||
-        IID == Intrinsic::amdgcn_update_dpp || IsPermLane16)
+        IID == Intrinsic::amdgcn_update_dpp || IsPermLane16 ||
+        IsPermlaneShuffle)
       Src2 = N->getOperand(3);
   }
 
@@ -7991,18 +8046,21 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                                  DAG.getConstant(EltIdx, SL, MVT::i32));
 
         if (IID == Intrinsic::amdgcn_update_dpp || IsSetInactive ||
-            IsPermLane16)
+            IsPermLane16) {
           Src1SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src1,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
 
-        if (IID == Intrinsic::amdgcn_writelane)
+          Pieces.push_back(
+              createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT));
+        } else if (IID == Intrinsic::amdgcn_writelane) {
           Src2SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SubVecVT, Src2,
                                    DAG.getConstant(EltIdx, SL, MVT::i32));
+          Pieces.push_back(
+              createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
+        } else {
+          Pieces.push_back(createLaneOp(Src0SubVec, Src1, Src2, SubVecVT));
+        }
 
-        Pieces.push_back(
-            IID == Intrinsic::amdgcn_update_dpp || IsSetInactive || IsPermLane16
-                ? createLaneOp(Src0SubVec, Src1SubVec, Src2, SubVecVT)
-                : createLaneOp(Src0SubVec, Src1, Src2SubVec, SubVecVT));
         EltIdx += SubVecNumElt;
       }
       return DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, Pieces);
@@ -10098,6 +10156,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
+  bool IsGFX13 = AMDGPU::isGFX13(*Subtarget);
 
   SmallVector<EVT, 3> ResultTypes(Op->values());
   SmallVector<EVT, 3> OrigResultTypes(Op->values());
@@ -10425,7 +10484,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       UseNSA ? VAddrs.size() : VAddr.getValueType().getSizeInBits() / 32;
   int Opcode = -1;
 
-  if (IsGFX12Plus) {
+  if (IsGFX13) {
+    Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx13,
+                                   NumVDataDwords, NumVAddrDwords);
+  } else if (IsGFX12Plus) {
     Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx12,
                                    NumVDataDwords, NumVAddrDwords);
   } else if (IsGFX11Plus) {
@@ -10709,6 +10771,15 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return emitRemovedIntrinsicError(DAG, DL, VT);
     return DAG.getNode(AMDGPUISD::RCP_LEGACY, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_fma_legacy:
+    if (!Subtarget->hasFmaLegacy32Insts())
+      return emitRemovedIntrinsicError(DAG, DL, VT);
+    return SDValue();
+  case Intrinsic::amdgcn_sudot4:
+  case Intrinsic::amdgcn_sudot8:
+    if (!Subtarget->hasDot8Insts())
+      return emitRemovedIntrinsicError(DAG, DL, VT);
+    return SDValue();
   case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
@@ -11124,6 +11195,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_set_inactive_chain_arg:
   case Intrinsic::amdgcn_mov_dpp8:
   case Intrinsic::amdgcn_update_dpp:
+  case Intrinsic::amdgcn_permlane_bcast:
+  case Intrinsic::amdgcn_permlane_up:
+  case Intrinsic::amdgcn_permlane_down:
+  case Intrinsic::amdgcn_permlane_xor:
     return lowerLaneOp(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_dead: {
     SmallVector<SDValue, 8> Poisons;
@@ -11799,6 +11874,25 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT VT = Op->getValueType(0);
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_av_load_b128: {
+    if (!Subtarget->hasFlatGlobalInsts()) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "llvm.amdgcn.av.load.b128 not supported on subtarget",
+          DL.getDebugLoc()));
+      return DAG.getMergeValues(
+          {DAG.getPOISON(Op->getValueType(0)), Op->getOperand(0)}, DL);
+    }
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    EVT VT = Op->getValueType(0);
+    // Lower to a regular ISD::LOAD. The MachineMemOperand carries Monotonic
+    // ordering and syncscope so that SIMemoryLegalizer sets cache policy bits.
+    // Address space filtering in the load_global/load_flat PatFrags selects
+    // the correct GLOBAL vs FLAT instruction.
+    return DAG.getLoad(VT, DL, Chain, Ptr, MII->getMemOperand());
   }
   case Intrinsic::amdgcn_flat_load_monitor_b32:
   case Intrinsic::amdgcn_flat_load_monitor_b64:
@@ -12502,6 +12596,20 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue Val = Op->getOperand(3);
     return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MII->getMemoryVT(), Chain, Val,
                          Ptr, MII->getMemOperand());
+  }
+  case Intrinsic::amdgcn_av_store_b128: {
+    if (!Subtarget->hasFlatGlobalInsts()) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "llvm.amdgcn.av.store.b128 not supported on subtarget",
+          DL.getDebugLoc()));
+      return Op->getOperand(0); // return the input chain
+    }
+    MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);
+    SDValue Chain = Op->getOperand(0);
+    SDValue Ptr = Op->getOperand(2);
+    SDValue Val = Op->getOperand(3);
+    return DAG.getStore(Chain, DL, Val, Ptr, MII->getMemOperand());
   }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -14542,9 +14650,12 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
     if (BitShift % 8 != 0)
       return std::nullopt;
 
-    SrcIndex += BitShift / 8;
+    uint64_t NewSrcIndex = SrcIndex + BitShift / 8;
+    if (NewSrcIndex >= Op.getScalarValueSizeInBits() / 8)
+      return std::nullopt;
 
-    return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
+    return calculateSrcByte(Op->getOperand(0), DestByte, NewSrcIndex,
+                            Depth + 1);
   }
 
   default: {
@@ -14668,14 +14779,13 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
     uint64_t BytesProvided = BitsProvided / 8;
     uint64_t ByteShift = BitShift / 8;
-    // The dest of shift will have good [0 : (BytesProvided - ByteShift)] bytes.
-    // If the byte we are trying to provide (as tracked by index) falls in this
-    // range, then the SRL provides the byte. The byte of interest of the src of
-    // the SRL is Index + ByteShift
-    return BytesProvided - ByteShift > Index
-               ? calculateSrcByte(Op->getOperand(0), StartingIndex,
-                                  Index + ByteShift)
-               : ByteProvider<SDValue>::getConstantZero();
+    if (Index + ByteShift < BytesProvided)
+      return calculateSrcByte(Op->getOperand(0), StartingIndex,
+                              Index + ByteShift);
+    // SRA's out-of-range bytes are sign bits, not constant zero.
+    if (Op.getOpcode() == ISD::SRA)
+      return std::nullopt;
+    return ByteProvider<SDValue>::getConstantZero();
   }
 
   case ISD::SHL: {
@@ -15441,12 +15551,6 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
                                  SDLoc(N), VT);
   }
 
-  if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
-                         N0.getOpcode() == ISD::SINT_TO_FP)) {
-    return DCI.DAG.getNode(AMDGPUISD::RCP_IFLAG, SDLoc(N), VT, N0,
-                           N->getFlags());
-  }
-
   // TODO: Could handle f32 + amdgcn.sqrt but probably never reaches here.
   if ((VT == MVT::f16 && N0.getOpcode() == ISD::FSQRT) &&
       N->getFlags().hasAllowContract() && N0->getFlags().hasAllowContract()) {
@@ -16017,7 +16121,7 @@ SDValue SITargetLowering::performFPMed3ImmCombine(SelectionDAG &DAG,
     // If dx10_clamp is enabled, NaNs clamp to 0.0. This is the same as the
     // hardware fmed3 behavior converting to a min.
     // FIXME: Should this be allowing -0.0?
-    if (K1->isExactlyValue(1.0) && K0->isExactlyValue(0.0))
+    if (K1->isExactlyValue(1.0) && K0->isPosZero())
       return DAG.getNode(AMDGPUISD::CLAMP, SL, VT, Op0.getOperand(0));
   }
 
@@ -16215,8 +16319,8 @@ static bool isClampZeroToOne(SDValue A, SDValue B) {
   if (ConstantFPSDNode *CA = dyn_cast<ConstantFPSDNode>(A)) {
     if (ConstantFPSDNode *CB = dyn_cast<ConstantFPSDNode>(B)) {
       // FIXME: Should this be allowing -0.0?
-      return (CA->isExactlyValue(0.0) && CB->isExactlyValue(1.0)) ||
-             (CA->isExactlyValue(1.0) && CB->isExactlyValue(0.0));
+      return (CA->isPosZero() && CB->isExactlyValue(1.0)) ||
+             (CA->isExactlyValue(1.0) && CB->isPosZero());
     }
   }
 
@@ -17400,7 +17504,7 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
 }
 
 static bool isCtlzOpc(unsigned Opc) {
-  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON;
 }
 
 SDValue SITargetLowering::performSubCombine(SDNode *N,
@@ -19790,7 +19894,7 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
       return !TRI->isSGPRReg(MRI, Reg);
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
-      return UA->isDivergent(V);
+      return UA->isDivergentAtDef(V);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);

@@ -129,6 +129,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <queue>
 #include <string>
 #include <utility>
 
@@ -1113,59 +1114,72 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   }
 }
 
-void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
+void Verifier::visitMDNode(const MDNode &BaseMD,
+                           AreDebugLocsAllowed AllowLocs) {
   // Only visit each node once.  Metadata can be mutually recursive, so this
   // avoids infinite recursion here, as well as being an optimization.
-  if (!MDNodes.insert(&MD).second)
+  if (!MDNodes.insert(&BaseMD).second)
     return;
 
-  Check(&MD.getContext() == &Context,
-        "MDNode context does not match Module context!", &MD);
+  std::queue<const MDNode *> Worklist;
+  Worklist.push(&BaseMD);
 
-  switch (MD.getMetadataID()) {
-  default:
-    llvm_unreachable("Invalid MDNode subclass");
-  case Metadata::MDTupleKind:
-    break;
+  while (!Worklist.empty()) {
+    const MDNode *CurrentMD = Worklist.front();
+    Worklist.pop();
+    Check(&CurrentMD->getContext() == &Context,
+          "MDNode context does not match Module context!", CurrentMD);
+
+    switch (CurrentMD->getMetadataID()) {
+    default:
+      llvm_unreachable("Invalid MDNode subclass");
+    case Metadata::MDTupleKind:
+      break;
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS)                                  \
   case Metadata::CLASS##Kind:                                                  \
-    visit##CLASS(cast<CLASS>(MD));                                             \
+    visit##CLASS(cast<CLASS>(*CurrentMD));                                     \
     break;
 #include "llvm/IR/Metadata.def"
-  }
-
-  for (const Metadata *Op : MD.operands()) {
-    if (!Op)
-      continue;
-    Check(!isa<LocalAsMetadata>(Op), "Invalid operand for global metadata!",
-          &MD, Op);
-    CheckDI(!isa<DILocation>(Op) || AllowLocs == AreDebugLocsAllowed::Yes,
-            "DILocation not allowed within this metadata node", &MD, Op);
-    if (auto *N = dyn_cast<MDNode>(Op)) {
-      visitMDNode(*N, AllowLocs);
-      continue;
     }
-    if (auto *V = dyn_cast<ValueAsMetadata>(Op)) {
-      visitValueAsMetadata(*V, nullptr);
-      continue;
+
+    for (const Metadata *Op : CurrentMD->operands()) {
+      if (!Op)
+        continue;
+      Check(!isa<LocalAsMetadata>(Op), "Invalid operand for global metadata!",
+            CurrentMD, Op);
+      CheckDI(!isa<DILocation>(Op) || AllowLocs == AreDebugLocsAllowed::Yes,
+              "DILocation not allowed within this metadata node", CurrentMD,
+              Op);
+      if (auto *N = dyn_cast<MDNode>(Op)) {
+        if (MDNodes.insert(N).second)
+          Worklist.push(N);
+        continue;
+      }
+      if (auto *V = dyn_cast<ValueAsMetadata>(Op)) {
+        visitValueAsMetadata(*V, nullptr);
+        continue;
+      }
     }
-  }
 
-  // Check llvm.loop.estimated_trip_count.
-  if (MD.getNumOperands() > 0 &&
-      MD.getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
-    Check(MD.getNumOperands() == 2, "Expected two operands", &MD);
-    auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
-    Check(Count && Count->getType()->isIntegerTy() &&
-              cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
-          "Expected second operand to be an integer constant of type i32 or "
-          "smaller",
-          &MD);
-  }
+    // Check llvm.loop.estimated_trip_count.
+    if (CurrentMD->getNumOperands() > 0 &&
+        CurrentMD->getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
+      Check(CurrentMD->getNumOperands() == 2, "Expected two operands",
+            CurrentMD);
+      auto *Count =
+          dyn_cast_or_null<ConstantAsMetadata>(CurrentMD->getOperand(1));
+      Check(Count && Count->getType()->isIntegerTy() &&
+                cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
+            "Expected second operand to be an integer constant of type i32 or "
+            "smaller",
+            CurrentMD);
+    }
 
-  // Check these last, so we diagnose problems in operands first.
-  Check(!MD.isTemporary(), "Expected no forward declarations!", &MD);
-  Check(MD.isResolved(), "All nodes should be resolved!", &MD);
+    // Check these last, so we diagnose problems in operands first.
+    Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
+          CurrentMD);
+    Check(CurrentMD->isResolved(), "All nodes should be resolved!", CurrentMD);
+  }
 }
 
 void Verifier::visitValueAsMetadata(const ValueAsMetadata &MD, Function *F) {
@@ -1603,6 +1617,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
 
+  CheckDI(N.getSourceLanguage().getDialect() <= dwarf::DW_LLVM_LANG_DIALECT_max,
+          "invalid language dialect", &N);
+
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);
     for (Metadata *Op : N.getEnumTypes()->operands()) {
@@ -1657,8 +1674,9 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
   else
     CheckDI(N.getLine() == 0, "line specified with no file", &N, N.getLine());
-  if (auto *T = N.getRawType())
-    CheckDI(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
+  auto *T = N.getRawType();
+  CheckDI(T, "DISubprogram requires a non-null type", &N);
+  CheckDI(isa<DISubroutineType>(T), "invalid subroutine type", &N, T);
   CheckDI(isType(N.getRawContainingType()), "invalid containing type", &N,
           N.getRawContainingType());
   if (auto *Params = N.getRawTemplateParams())
@@ -2699,7 +2717,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 
@@ -2849,7 +2867,7 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
         "signed ptrauth constant deactivation symbol must be a pointer");
 
   Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
-            CPA->getDeactivationSymbol()->isNullValue(),
+            isa<ConstantPointerNull>(CPA->getDeactivationSymbol()),
         "signed ptrauth constant deactivation symbol must be a global value "
         "or null");
 }
@@ -4488,6 +4506,11 @@ void Verifier::visitShuffleVectorInst(ShuffleVectorInst &SV) {
 }
 
 void Verifier::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          GEP.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical getelementptr disallowed for this module.");
+
   Type *TargetTy = GEP.getPointerOperandType()->getScalarType();
 
   Check(isa<PointerType>(TargetTy),
@@ -4749,6 +4772,11 @@ void Verifier::verifySwiftErrorValue(const Value *SwiftErrorVal) {
 }
 
 void Verifier::visitAllocaInst(AllocaInst &AI) {
+  if (auto *MD = mdconst::extract_or_null<ConstantInt>(
+          AI.getModule()->getModuleFlag("require-logical-pointer")))
+    Check(!MD->getZExtValue(),
+          "Non-logical alloca disallowed for this module.");
+
   Type *Ty = AI.getAllocatedType();
   SmallPtrSet<Type*, 4> Visited;
   Check(Ty->isSized(&Visited), "Cannot allocate unsized type", &AI);
@@ -4791,20 +4819,30 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
+  Type *ScalarTy = ElTy;
+  if (RMWI.isElementwise()) {
+    auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+    Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
+          &RMWI, ElTy);
+    if (VecTy)
+      ScalarTy = VecTy->getElementType();
+  }
+
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ElTy->isIntegerTy() || ElTy->isFloatingPointTy() ||
-              ElTy->isPointerTy(),
+    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
+              ScalarTy->isPointerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or floating point type!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
     Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have floating-point or fixed vector of floating-point "
+              " operand must have floating-point or fixed vector of "
+              "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntegerTy(),
+    Check(ScalarTy->isIntegerTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer type!",
           &RMWI, ElTy);
@@ -5392,6 +5430,16 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
             "VP !prof indirect call or memop size expected to be applied to "
             "CallBase instructions only",
             MD);
+
+    DenseSet<uint64_t> ProfileValues;
+    for (unsigned I = 3; I < MD->getNumOperands(); I += 2) {
+      ConstantInt *ProfileValue =
+          mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      Check(ProfileValue, "VP !prof value operand is not a const int", MD);
+      uint64_t ProfileValueInt = ProfileValue->getZExtValue();
+      auto [ValueIt, Inserted] = ProfileValues.insert(ProfileValueInt);
+      Check(Inserted, "VP !prof should not have duplicate profile values", MD);
+    }
   } else {
     CheckFailed("expected either branch_weights or VP profile name", MD);
   }
@@ -7232,6 +7280,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     MDNode *MD = cast<MDNode>(Op->getMetadata());
     Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
           "cooperative atomic intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
+    break;
+  }
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    auto *MD = dyn_cast<MDNode>(Op->getMetadata());
+    Check(MD && (MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "the last argument to av load/store intrinsics must be a "
           "metadata string",
           &Call, Op);
     break;

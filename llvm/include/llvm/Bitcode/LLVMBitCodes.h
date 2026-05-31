@@ -120,6 +120,9 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
+
+  // GUIDLIST: [n x i64]
+  MODULE_CODE_GUIDLIST = 19,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -522,6 +525,10 @@ enum RMWOperations {
   RMW_FMINIMUM = 20,
   RMW_FMAXIMUMNUM = 21,
   RMW_FMINIMUMNUM = 22,
+};
+
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing

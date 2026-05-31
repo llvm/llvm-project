@@ -73,7 +73,7 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; COST-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; COST-NEXT:    [[TMP22:%.*]] = zext i32 [[IV]] to i64
 ; COST-NEXT:    [[TMP23:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP22]]
-; COST-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP23]], align 16
+; COST-NEXT:    store x86_fp80 0.000000e+00, ptr [[TMP23]], align 16
 ; COST-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; COST-NEXT:    [[EC:%.*]] = icmp ugt i32 [[IV]], [[N]]
 ; COST-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -103,8 +103,8 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; FORCED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i64 1
 ; FORCED-NEXT:    [[TMP6:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP5]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP7]]
-; FORCED-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP6]], align 16
-; FORCED-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP8]], align 16
+; FORCED-NEXT:    store x86_fp80 0.000000e+00, ptr [[TMP6]], align 16
+; FORCED-NEXT:    store x86_fp80 0.000000e+00, ptr [[TMP8]], align 16
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; FORCED-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; FORCED-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

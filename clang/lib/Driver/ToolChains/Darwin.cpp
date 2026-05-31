@@ -497,6 +497,30 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back(
           Args.MakeArgString(Twine("--codegen-data-generate-path=") +
                              CodeGenDataGenArg->getValue()));
+  } else {
+    if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {
+      SmallString<128> Path(CSPGOGenerateArg->getNumValues() == 0
+                                ? ""
+                                : CSPGOGenerateArg->getValue());
+      llvm::sys::path::append(Path, "default_%m.profraw");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-cs-profile-generate");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
+    } else if (auto *ProfileUseArg = getLastProfileUseArg(Args)) {
+      SmallString<128> Path(
+          ProfileUseArg->getNumValues() == 0 ? "" : ProfileUseArg->getValue());
+      if (Path.empty() || llvm::sys::fs::is_directory(Path))
+        llvm::sys::path::append(Path, "default.profdata");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
+    }
+  }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
   }
 }
 
@@ -1229,8 +1253,9 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
 }
 
 std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                llvm::StringRef BoundArch,
                                                 types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
 
   // If the target isn't initialized (e.g., an unknown Darwin platform, return
   // the default triple). Note: we intentionally do NOT call
@@ -1653,7 +1678,7 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
           << Value << "darwin";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
@@ -4021,10 +4046,13 @@ void Darwin::CheckObjCARC() const {
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
 
-SanitizerMask Darwin::getSupportedSanitizers() const {
+SanitizerMask
+Darwin::getSupportedSanitizers(StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

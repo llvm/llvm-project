@@ -145,13 +145,13 @@ define void @test_readwrite(ptr %p) {
 }
 
 define void @test_volatile(ptr %p) {
-; FNATTRS: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
+; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_volatile
 ; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; FNATTRS-NEXT:    store volatile i8 0, ptr [[P]], align 1
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_volatile
 ; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    store volatile i8 0, ptr [[P]], align 1
@@ -162,13 +162,13 @@ define void @test_volatile(ptr %p) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define {{[^@]+}}@test_atomicrmw
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_atomicrmw
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1

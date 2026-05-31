@@ -65,9 +65,18 @@ private:
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
+
+  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -99,7 +108,7 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
-  // Detect container methods that invalidate iterators/references.
+  // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);

@@ -403,6 +403,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_EXTEND, MVT::v2f32, Custom);
     // We want to legalize this to an f64 load rather than an i64 load.
     setOperationAction(ISD::LOAD, MVT::v2f32, Custom);
+    for (MVT VT : {MVT::v2i64, MVT::v4i32, MVT::v8i16})
+      setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Custom);
+    for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v16i32, MVT::v8i64,
+                   MVT::v16i64})
+      setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
   }
 
   // Set operations for 'LASX' feature.
@@ -652,6 +657,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
     return lowerFP_EXTEND(Op, DAG);
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+    return lowerSIGN_EXTEND_VECTOR_INREG(Op, DAG);
   }
   return SDValue();
 }
@@ -969,6 +976,36 @@ SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
     SetCCNode = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, SetCCNode);
 
   return SetCCNode;
+}
+
+// Lower sext_invec using vslti instructions.
+// For example:
+//  %b = sext <4 x i16> %a to <4 x i32>
+// can be lowered to:
+//  VSLTI_H vr2, vr1, 0
+//  VILVL.H vr1, vr2, vr1
+SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
+    SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT DstVT = Op.getSimpleValueType();
+
+  if (!SrcVT.is128BitVector())
+    return SDValue();
+
+  // lower to VSLTI + VILVL if extend could be done in single step.
+  if (DstVT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits() == 2) {
+    SDValue Zero = DAG.getConstant(0, DL, SrcVT);
+    SDValue Mask = DAG.getNode(ISD::SETCC, DL, SrcVT, Src, Zero,
+                               DAG.getCondCode(ISD::SETLT));
+    SDValue LoInterleaved =
+        DAG.getNode(LoongArchISD::VILVL, DL, SrcVT, Mask, Src);
+
+    return DAG.getBitcast(DstVT, LoInterleaved);
+  }
+
+  return SDValue();
 }
 
 // Lower vecreduce_add using vhaddw instructions.
@@ -5751,6 +5788,76 @@ void LoongArchTargetLowering::ReplaceNodeResults(
 
     break;
   }
+  case ISD::SIGN_EXTEND: {
+    // LASX has native VEXT2XV_* for sign extension.
+    if (!Subtarget.hasExtLSX() || Subtarget.hasExtLASX())
+      return;
+
+    EVT DstVT = N->getValueType(0);
+    SDValue Src = N->getOperand(0);
+    MVT SrcVT = Src.getSimpleValueType();
+
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = DstVT.getScalarSizeInBits();
+    unsigned NumElts = DstVT.getVectorNumElements();
+
+    if (SrcVT.getSizeInBits() > 128)
+      return;
+
+    if (!DstVT.isVector() || DstVT.getSizeInBits() <= 128)
+      return;
+
+    // Legalize and extend the src to 128-bit first.
+    if (SrcVT.getSizeInBits() < 128) {
+      unsigned WidenSrcElts = 128 / SrcEltBits;
+      MVT WidenSrcVT = MVT::getVectorVT(SrcVT.getScalarType(), WidenSrcElts);
+      Src = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WidenSrcVT,
+                        DAG.getUNDEF(WidenSrcVT), Src,
+                        DAG.getVectorIdxConstant(0, DL));
+      SrcVT = WidenSrcVT;
+
+      unsigned FirstStageEltBits = 128 / NumElts;
+      MVT FirstStageEltVT = MVT::getIntegerVT(FirstStageEltBits);
+      MVT FirstStageVT = MVT::getVectorVT(FirstStageEltVT, NumElts);
+      Src = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, FirstStageVT, Src);
+      SrcVT = FirstStageVT;
+      SrcEltBits = FirstStageEltBits;
+    }
+
+    SmallVector<SDValue, 8> Blocks;
+    Blocks.push_back(Src);
+
+    // Sign-extend the src by using SLTI + VILVL + VILVH recursively.
+    while (SrcEltBits < DstEltBits) {
+      unsigned NextEltBits = SrcEltBits * 2;
+      MVT NextEltVT = MVT::getIntegerVT(NextEltBits);
+      unsigned CurEltsPerBlock = SrcVT.getVectorNumElements();
+      unsigned NextEltsPerBlock = CurEltsPerBlock / 2;
+      MVT NextBlockVT = MVT::getVectorVT(NextEltVT, NextEltsPerBlock);
+
+      SmallVector<SDValue, 8> NextBlocks;
+      NextBlocks.reserve(Blocks.size() * 2);
+      for (SDValue Block : Blocks) {
+        SDValue Zero = DAG.getConstant(0, DL, SrcVT);
+        SDValue Mask = DAG.getNode(ISD::SETCC, DL, SrcVT, Block, Zero,
+                                   DAG.getCondCode(ISD::SETLT));
+        SDValue LoInterleaved =
+            DAG.getNode(LoongArchISD::VILVL, DL, SrcVT, Mask, Block);
+        SDValue HiInterleaved =
+            DAG.getNode(LoongArchISD::VILVH, DL, SrcVT, Mask, Block);
+
+        NextBlocks.push_back(DAG.getBitcast(NextBlockVT, LoInterleaved));
+        NextBlocks.push_back(DAG.getBitcast(NextBlockVT, HiInterleaved));
+      }
+
+      Blocks = std::move(NextBlocks);
+      SrcVT = NextBlockVT;
+      SrcEltBits = NextEltBits;
+    }
+
+    Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Blocks));
+    break;
+  }
   }
 }
 
@@ -9221,9 +9328,22 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
           "GHC calling convention requires the F and D extensions");
   }
 
+  const Function &Func = MF.getFunction();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   MVT GRLenVT = Subtarget.getGRLenVT();
   unsigned GRLenInBytes = Subtarget.getGRLen() / 8;
+
+  // Check if this function has any musttail calls. If so, incoming indirect
+  // arg pointers must be saved in virtual registers so they survive across
+  // basic blocks (the SelectionDAG is cleared between BBs). Only do this
+  // when needed to avoid adding register pressure to non-musttail functions.
+  bool HasMusttail = llvm::any_of(Func, [](const BasicBlock &BB) {
+    return llvm::any_of(BB, [](const Instruction &I) {
+      if (const auto *CI = dyn_cast<CallInst>(&I))
+        return CI->isMustTailCall();
+      return false;
+    });
+  });
   // Used with varargs to acumulate store chains.
   std::vector<SDValue> OutChains;
 
@@ -9254,6 +9374,14 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
       InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
                                    MachinePointerInfo()));
       unsigned ArgIndex = Ins[InsIdx].OrigArgIndex;
+      if (HasMusttail) {
+        LoongArchMachineFunctionInfo *LAFI =
+            MF.getInfo<LoongArchMachineFunctionInfo>();
+        Register VReg =
+            MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+        Chain = DAG.getCopyToReg(Chain, DL, VReg, ArgValue);
+        LAFI->setIncomingIndirectArg(ArgIndex, VReg);
+      }
       unsigned ArgPartOffset = Ins[InsIdx].PartOffset;
       assert(ArgPartOffset == 0);
       while (i + 1 != e && Ins[InsIdx + 1].OrigArgIndex == ArgIndex) {
@@ -9384,6 +9512,27 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   auto &Caller = MF.getFunction();
   auto CallerCC = Caller.getCallingConv();
 
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+
+  // Byval parameters hand the function a pointer directly into the stack area
+  // we want to reuse during a tail call. Working around this *is* possible
+  // but less efficient and uglier in LowerCall. For musttail, there is no
+  // workaround today: a byval arg requires a local copy that becomes invalid
+  // after the tail call deallocates the caller's frame, so rejecting here
+  // (and triggering reportFatalInternalError in LowerCall) is safer than
+  // miscompiling.
+  for (auto &Arg : Outs)
+    if (Arg.Flags.isByVal())
+      return false;
+
+  // musttail bypasses the remaining checks: the checks either reject cases
+  // we handle specially (indirect args are forwarded via incoming pointers,
+  // stack-passed args reuse the matching incoming layout, sret is forwarded
+  // like any other pointer arg) or are optimizations not applicable to
+  // mandatory tail calls.
+  if (IsMustTail)
+    return true;
+
   // Do not tail call opt if the stack is used to pass parameters.
   if (CCInfo.getStackSize() != 0)
     return false;
@@ -9399,11 +9548,6 @@ bool LoongArchTargetLowering::isEligibleForTailCallOptimization(
   auto IsCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   if (IsCallerStructRet || IsCalleeStructRet)
     return false;
-
-  // Do not tail call opt if either the callee or caller has a byval argument.
-  for (auto &Arg : Outs)
-    if (Arg.Flags.isByVal())
-      return false;
 
   // The callee has to preserve all registers the caller needs to preserve.
   const LoongArchRegisterInfo *TRI = Subtarget.getRegisterInfo();
@@ -9537,47 +9681,149 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // Promote the value if needed.
     // For now, only handle fully promoted and indirect arguments.
     if (VA.getLocInfo() == CCValAssign::Indirect) {
-      // Store the argument in a stack slot and pass its address.
-      Align StackAlign =
-          std::max(getPrefTypeAlign(Outs[OutIdx].ArgVT, DAG),
-                   getPrefTypeAlign(ArgValue.getValueType(), DAG));
-      TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
-      // If the original argument was split and passed by reference, we need to
-      // store the required parts of it here (and pass just one address).
-      unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
-      unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
-      assert(ArgPartOffset == 0);
-      // Calculate the total size to store. We don't have access to what we're
-      // actually storing other than performing the loop and collecting the
-      // info.
-      SmallVector<std::pair<SDValue, SDValue>> Parts;
-      while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
-        SDValue PartValue = OutVals[OutIdx + 1];
-        unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
-        SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
-        EVT PartVT = PartValue.getValueType();
+      // For musttail calls, reuse incoming indirect pointers instead of
+      // creating new stack temporaries. The incoming pointers point to the
+      // caller's caller's frame, which remains valid after a tail call.
+      if (IsTailCall && CLI.CB && CLI.CB->isMustTailCall()) {
+        LoongArchMachineFunctionInfo *LAFI =
+            MF.getInfo<LoongArchMachineFunctionInfo>();
+        unsigned CallArgIdx = Outs[OutIdx].OrigArgIndex;
 
-        StoredSize += PartVT.getStoreSize();
-        StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
-        Parts.push_back(std::make_pair(PartValue, Offset));
-        ++i;
-        ++OutIdx;
-      }
-      SDValue SpillSlot = DAG.CreateStackTemporary(StoredSize, StackAlign);
-      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
-      MemOpChains.push_back(
-          DAG.getStore(Chain, DL, ArgValue, SpillSlot,
-                       MachinePointerInfo::getFixedStack(MF, FI)));
-      for (const auto &Part : Parts) {
-        SDValue PartValue = Part.first;
-        SDValue PartOffset = Part.second;
-        SDValue Address =
-            DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot, PartOffset);
+        // Resolve which formal parameter is being passed at this call
+        // position.
+        //
+        // FIXME: Ins[].OrigArgIndex is Argument::getArgNo() (unfiltered),
+        // but Outs[].OrigArgIndex is an index into a filtered arg list
+        // (empty types removed, via CallLoweringInfo in the target-
+        // independent layer). IncomingIndirectArgs is keyed by the
+        // caller's unfiltered Argument::getArgNo(), so we have to walk
+        // the caller's formals (same filter) to translate the index.
+        // This target-independent asymmetry should be normalized so
+        // backends do not need to re-derive the mapping.
+        //
+        // Steps:
+        // 1. Find the call operand at filtered position CallArgIdx.
+        // 2. If it is an Argument, use getArgNo() directly (same filter
+        //    for caller formals and call operands).
+        // 3. Otherwise (computed value), walk the caller's formals and
+        //    skip empty types to map the filtered index to getArgNo().
+        const Argument *FormalArg = nullptr;
+        unsigned FilteredIdx = 0;
+        for (const auto &CallArg : CLI.CB->args()) {
+          if (CallArg->getType()->isEmptyTy())
+            continue;
+          if (FilteredIdx == CallArgIdx) {
+            FormalArg = dyn_cast<Argument>(CallArg);
+            break;
+          }
+          ++FilteredIdx;
+        }
+
+        // For forwarded args, getArgNo() gives the unfiltered index directly.
+        // For computed args, walk the caller's formals to resolve it.
+        unsigned FormalArgIdx = CallArgIdx;
+        if (FormalArg) {
+          FormalArgIdx = FormalArg->getArgNo();
+        } else {
+          FilteredIdx = 0;
+          for (const auto &Arg : MF.getFunction().args()) {
+            if (Arg.getType()->isEmptyTy())
+              continue;
+            if (FilteredIdx == CallArgIdx) {
+              FormalArgIdx = Arg.getArgNo();
+              break;
+            }
+            ++FilteredIdx;
+          }
+        }
+
+        Register VReg = LAFI->getIncomingIndirectArg(FormalArgIdx);
+        SDValue CopyOp = DAG.getCopyFromReg(Chain, DL, VReg, PtrVT);
+        // Thread the CopyFromReg output chain through MemOpChains so the
+        // TokenFactor below sequences the copy with any stores we emit
+        // for this argument.
+        MemOpChains.push_back(CopyOp.getValue(1));
+        SDValue IncomingPtr = CopyOp;
+
+        if (!FormalArg) {
+          // Computed value: store into the incoming indirect pointer for the
+          // same-position formal parameter (musttail guarantees matching
+          // prototypes, so types match). The pointer survives the tail call
+          // since it points to the caller's caller's frame.
+          //
+          // The data-flow edge through IncomingPtr already prevents the
+          // store from being scheduled before the CopyFromReg. Threading
+          // CopyOp.getValue(1) (the copy's output chain) into the store
+          // makes that ordering explicit on the chain edge as well, which
+          // is the convention for memory ops chaining off their producers.
+          MemOpChains.push_back(
+              DAG.getStore(CopyOp.getValue(1), DL, ArgValue, IncomingPtr,
+                           MachinePointerInfo::getUnknownStack(MF)));
+          // Store any split parts at their respective offsets.
+          unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
+          while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+            SDValue PartValue = OutVals[OutIdx + 1];
+            unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+            SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+            SDValue Addr =
+                DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr, Offset);
+            MemOpChains.push_back(
+                DAG.getStore(CopyOp.getValue(1), DL, PartValue, Addr,
+                             MachinePointerInfo::getUnknownStack(MF)));
+            ++i;
+            ++OutIdx;
+          }
+        }
+        ArgValue = IncomingPtr;
+
+        // Skip any remaining split parts (for forwarded args, they are
+        // covered by the forwarded pointer).
+        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
+          ++i;
+          ++OutIdx;
+        }
+      } else {
+        // Store the argument in a stack slot and pass its address.
+        Align StackAlign =
+            std::max(getPrefTypeAlign(Outs[OutIdx].ArgVT, DAG),
+                     getPrefTypeAlign(ArgValue.getValueType(), DAG));
+        TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
+        // If the original argument was split and passed by reference, we need
+        // to store the required parts of it here (and pass just one address).
+        unsigned ArgIndex = Outs[OutIdx].OrigArgIndex;
+        unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
+        assert(ArgPartOffset == 0);
+        // Calculate the total size to store. We don't have access to what we're
+        // actually storing other than performing the loop and collecting the
+        // info.
+        SmallVector<std::pair<SDValue, SDValue>> Parts;
+        while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == ArgIndex) {
+          SDValue PartValue = OutVals[OutIdx + 1];
+          unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
+          SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+          EVT PartVT = PartValue.getValueType();
+          StoredSize += PartVT.getStoreSize();
+          StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
+          Parts.push_back(std::make_pair(PartValue, Offset));
+          ++i;
+          ++OutIdx;
+        }
+        SDValue SpillSlot = DAG.CreateStackTemporary(StoredSize, StackAlign);
+        int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
         MemOpChains.push_back(
-            DAG.getStore(Chain, DL, PartValue, Address,
+            DAG.getStore(Chain, DL, ArgValue, SpillSlot,
                          MachinePointerInfo::getFixedStack(MF, FI)));
+        for (const auto &Part : Parts) {
+          SDValue PartValue = Part.first;
+          SDValue PartOffset = Part.second;
+          SDValue Address =
+              DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot, PartOffset);
+          MemOpChains.push_back(
+              DAG.getStore(Chain, DL, PartValue, Address,
+                           MachinePointerInfo::getFixedStack(MF, FI)));
+        }
+        ArgValue = SpillSlot;
       }
-      ArgValue = SpillSlot;
     } else {
       ArgValue = convertValVTToLocVT(DAG, ArgValue, VA, DL);
     }
@@ -9591,8 +9837,8 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");
-      assert(!IsTailCall && "Tail call not allowed if stack is used "
-                            "for passing parameters");
+      assert((!IsTailCall || (CLI.CB && CLI.CB->isMustTailCall())) &&
+             "Tail call not allowed if stack is used for passing parameters");
 
       // Work out the address of the stack slot.
       if (!StackPtr.getNode())

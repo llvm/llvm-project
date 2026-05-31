@@ -373,7 +373,8 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   }
 }
 
-void FactsGenerator::handleAssignment(const Expr *LHSExpr,
+void FactsGenerator::handleAssignment(const Expr *TargetExpr,
+                                      const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginList *LHSList = nullptr;
@@ -434,6 +435,7 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
+  killAndFlowOrigin(*TargetExpr, *LHSExpr);
 }
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
@@ -454,7 +456,7 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
   if (BO->isAssignmentOp())
-    handleAssignment(BO->getLHS(), BO->getRHS());
+    handleAssignment(BO, BO->getLHS(), BO->getRHS());
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
@@ -522,14 +524,14 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     QualType LHSTy = OCE->getArg(0)->getType();
     if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
         isGslOwnerType(LHSTy)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Standard library callable wrappers (e.g., std::function) can propagate
     // the stored lambda's origins.
     if (const auto *RD = LHSTy->getAsCXXRecordDecl();
         RD && isStdCallableWrapperType(RD)) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
     // Other tracked types: only defaulted operator= propagates origins.
@@ -537,7 +539,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     if (const auto *MD =
             dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
         MD && MD->isDefaulted()) {
-      handleAssignment(OCE->getArg(0), OCE->getArg(1));
+      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
       return;
     }
   }
@@ -629,38 +631,48 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
+void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
+                                        OriginList *NewList) {
+  // Model only the standard single-argument placement new form, where the
+  // placement argument corresponds to a void* allocation-function parameter.
+  // Other placement forms, such as std::nothrow, are not modeled as providing
+  // storage for the returned pointer.
+  if (NE->getNumPlacementArgs() != 1)
+    return;
+
+  const FunctionDecl *OperatorNew = NE->getOperatorNew();
+  if (OperatorNew->getNumParams() <= 1)
+    return;
+
+  const auto *Arg =
+      OperatorNew->getParamDecl(1)->getType()->getAs<PointerType>();
+  if (!Arg || !Arg->isVoidPointerType())
+    return;
+
+  // Use the placement argument before the implicit conversion to void*, so
+  // inner origins are still available.
+  const Expr *PlacementArg = NE->getPlacementArg(0);
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
+      ICE && ICE->getCastKind() == CK_BitCast &&
+      PlacementArg->getType()->isVoidPointerType())
+    PlacementArg = ICE->getSubExpr();
+  OriginList *PlacementList = getOriginsList(*PlacementArg);
+  // FIXME: General placement arguments need separate handling to overwrite
+  // the right origins.
+
+  // The pointer returned by placement new comes from the placement
+  // argument.
+  if (PlacementList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        NewList->getOuterOriginID(), PlacementList->getOuterOriginID(), true));
+}
+
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
   const Expr *Init = NE->getInitializer();
 
-  // Check if we have a placement new where the second argument is void*, to
-  // avoid flowing from non-pointer parameters, such as std::nothrow.
-  // And that the placement parameter num is 1,
-  // that is to mostly limit to standard library placement new.
   if (NE->getNumPlacementArgs() == 1) {
-    if (const auto *Arg = NE->getOperatorNew()
-                              ->getParamDecl(1)
-                              ->getType()
-                              ->getAs<PointerType>();
-        Arg && Arg->isVoidPointerType()) {
-      // Use the placement argument before the implicit conversion to void*, so
-      // inner origins are still available.
-      const Expr *PlacementArg = NE->getPlacementArg(0);
-      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(PlacementArg);
-          ICE && ICE->getCastKind() == CK_BitCast &&
-          PlacementArg->getType()->isVoidPointerType())
-        PlacementArg = ICE->getSubExpr();
-      OriginList *PlacementList = getOriginsList(*PlacementArg);
-      // FIXME: General placement arguments need separate handling to overwrite
-      // the right origins.
-
-      // The pointer returned by placement new comes from the placement
-      // argument.
-      if (PlacementList)
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            NewList->getOuterOriginID(), PlacementList->getOuterOriginID(),
-            true));
-    }
+    handlePlacementNew(NE, NewList);
   } else {
     const Loan *L = createLoan(FactMgr, NE);
     CurrentBlockFacts.push_back(
@@ -814,7 +826,7 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   // Heuristics to turn-down false positives. Skip member field expressions for
   // now. This is not a perfect filter and will still surface some false
   // positives (e.g. `auto& r = s.v`).
-  if (!isa<DeclRefExpr>(Args[0]->IgnoreParenImpCasts()))
+  if (!isa<DeclRefExpr>(Args[0]->IgnoreImpCasts()))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);
@@ -884,7 +896,15 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)
     return;
-  auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
+  if (isStdReferenceCast(FD)) {
+    assert(Args.size() == 1 &&
+           "std reference cast builtins take exactly one argument");
+    // std reference-cast functions like std::move return a result that refers
+    // to the same object as the argument, so propagate the full origins.
+    flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
+    return;
+  }
+  auto IsArgLifetimeBound = [FD, &Args](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
@@ -892,12 +912,14 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // For the 'this' argument, the attribute is on the method itself.
         return implicitObjectParamIsLifetimeBound(Method) ||
                shouldTrackImplicitObjectArg(
-                   Method, /*RunningUnderLifetimeSafety=*/true);
+                   *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
         PVD = Method->getParamDecl(I - 1);
     } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+      return true;
+    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
       return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.
@@ -905,13 +927,13 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     }
     return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
   };
-  auto shouldTrackPointerImplicitObjectArg = [FD](unsigned I) -> bool {
+  auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
     if (!Method || !Method->isInstance())
       return false;
     return I == 0 &&
            isGslPointerType(Method->getFunctionObjectParameterType()) &&
-           shouldTrackImplicitObjectArg(Method,
+           shouldTrackImplicitObjectArg(*Args[0], Method,
                                         /*RunningUnderLifetimeSafety=*/true);
   };
   if (Args.empty())
@@ -950,7 +972,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
       assert(ArgList->getLength() >= 2 &&
-             "Object arg of pointer type should have atleast two origins");
+             "Object arg of pointer type should have at least two origins");
       // See through the GSLPointer reference to see the pointer's value.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           CallList->getOuterOriginID(),
@@ -959,7 +981,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     } else if (IsArgLifetimeBound(I)) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
-      // only constraints the top-level origin.
+      // only constrains the top-level origin.
       CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
           CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc));
       KillSrc = false;

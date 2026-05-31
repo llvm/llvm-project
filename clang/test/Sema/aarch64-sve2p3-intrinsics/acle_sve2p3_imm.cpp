@@ -85,3 +85,12 @@ svuint8_t test_svqrshrun_n_u8_s16_x2(svint16x2_t zn, uint64_t imm)
 
   svqrshrun_n_u8_s16_x2(zn, imm); // expected-error-re {{argument to {{.+}} must be a constant integer}}}}
 }
+
+void test_svdot_lane_x2_imm_0_7(svint16_t s16, svuint16_t u16, svint8_t s8,
+                                svuint8_t u8) {
+  svdot_lane_s16_s8(s16, s8, s8, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  svdot_lane_u16_u8(u16, u8, u8, -1); // expected-error {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+
+  svdot_lane_s16_s8(s16, s8, s8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+  svdot_lane_u16_u8(u16, u8, u8, 8); // expected-error {{argument value 8 is outside the valid range [0, 7]}}
+}

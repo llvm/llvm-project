@@ -173,6 +173,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.append(typesGlobalValues.begin(), typesGlobalValues.end());
   binary.append(functions.begin(), functions.end());
   binary.append(graphs.begin(), graphs.end());
+  binary.append(graphsDebugInfo.begin(), graphsDebugInfo.end());
 }
 
 #ifndef NDEBUG
@@ -211,6 +212,48 @@ void Serializer::processCapability() {
   for (auto cap : module.getVceTriple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
                           {static_cast<uint32_t>(cap)});
+}
+
+void Serializer::addLongCompositesCapability() {
+  if (longCompositesEmitted)
+    return;
+  longCompositesEmitted = true;
+  auto vceTriple = module.getVceTriple();
+  if (!llvm::is_contained(vceTriple->getCapabilities(),
+                          spirv::Capability::LongCompositesINTEL))
+    encodeInstructionInto(
+        capabilities, spirv::Opcode::OpCapability,
+        {static_cast<uint32_t>(spirv::Capability::LongCompositesINTEL)});
+  if (!llvm::is_contained(vceTriple->getExtensions(),
+                          spirv::Extension::SPV_INTEL_long_composites)) {
+    SmallVector<uint32_t, 8> extName;
+    spirv::encodeStringLiteralInto(
+        extName,
+        spirv::stringifyExtension(spirv::Extension::SPV_INTEL_long_composites));
+    encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
+  }
+}
+
+void Serializer::encodeInstructionWithContinuationInto(
+    SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
+    ArrayRef<uint32_t> operands) {
+  if (1 + operands.size() <= spirv::kMaxWordCount) {
+    encodeInstructionInto(binary, op, operands);
+    return;
+  }
+
+  std::optional<spirv::Opcode> continuationOp =
+      spirv::getContinuationOpcode(op);
+  assert(continuationOp && "op is not a splittable composite/struct opcode");
+
+  const unsigned chunk = spirv::kMaxWordCount - 1;
+  encodeInstructionInto(binary, op, operands.take_front(chunk));
+  for (ArrayRef<uint32_t> rest = operands.drop_front(chunk); !rest.empty();
+       rest = rest.drop_front(std::min<size_t>(rest.size(), chunk))) {
+    encodeInstructionInto(binary, *continuationOp, rest.take_front(chunk));
+  }
+
+  addLongCompositesCapability();
 }
 
 void Serializer::processDebugInfo() {
@@ -560,7 +603,11 @@ Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
 
     typeIDMap[type] = typeID;
 
-    encodeInstructionInto(typesGlobalValues, typeEnum, operands);
+    if (typeEnum == spirv::Opcode::OpTypeStruct)
+      encodeInstructionWithContinuationInto(typesGlobalValues, typeEnum,
+                                            operands);
+    else
+      encodeInstructionInto(typesGlobalValues, typeEnum, operands);
 
     if (recursiveStructInfos.count(type) != 0) {
       // This recursive struct type is emitted already, now the OpTypePointer
@@ -747,6 +794,11 @@ LogicalResult Serializer::prepareBasicType(
 
   if (isa<spirv::SamplerType>(type)) {
     typeEnum = spirv::Opcode::OpTypeSampler;
+    return success();
+  }
+
+  if (isa<spirv::NamedBarrierType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeNamedBarrier;
     return success();
   }
 
@@ -1011,16 +1063,17 @@ uint32_t Serializer::prepareArrayConstant(Location loc, Type constType,
   uint32_t resultID = getNextID();
   SmallVector<uint32_t, 4> operands = {typeID, resultID};
   operands.reserve(attr.size() + 2);
-  auto elementType = cast<spirv::ArrayType>(constType).getElementType();
-  for (Attribute elementAttr : attr) {
-    if (auto elementID = prepareConstant(loc, elementType, elementAttr)) {
+  spirv::CompositeType compositeType = cast<spirv::CompositeType>(constType);
+  for (auto [idx, elementAttr] : llvm::enumerate(attr)) {
+    if (uint32_t elementID = prepareConstant(
+            loc, compositeType.getElementType(idx), elementAttr)) {
       operands.push_back(elementID);
     } else {
       return 0;
     }
   }
-  spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
-  encodeInstructionInto(typesGlobalValues, opcode, operands);
+  encodeInstructionWithContinuationInto(
+      typesGlobalValues, spirv::Opcode::OpConstantComposite, operands);
 
   return resultID;
 }
@@ -1099,8 +1152,8 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
       }
     }
   }
-  spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
-  encodeInstructionInto(typesGlobalValues, opcode, operands);
+  encodeInstructionWithContinuationInto(
+      typesGlobalValues, spirv::Opcode::OpConstantComposite, operands);
 
   return resultID;
 }
@@ -1560,7 +1613,7 @@ LogicalResult Serializer::emitPhiForBlockArguments(Block *block) {
 
 LogicalResult Serializer::encodeExtensionInstruction(
     Operation *op, StringRef extensionSetName, uint32_t extensionOpcode,
-    ArrayRef<uint32_t> operands) {
+    ArrayRef<uint32_t> operands, SmallVectorImpl<uint32_t> &binary) {
   // Check if the extension has been imported.
   auto &setID = extendedInstSetIDMap[extensionSetName];
   if (!setID) {
@@ -1583,8 +1636,20 @@ LogicalResult Serializer::encodeExtensionInstruction(
   extInstOperands.push_back(setID);
   extInstOperands.push_back(extensionOpcode);
   extInstOperands.append(std::next(operands.begin(), 2), operands.end());
-  encodeInstructionInto(functionBody, spirv::Opcode::OpExtInst,
-                        extInstOperands);
+  encodeInstructionInto(binary, spirv::Opcode::OpExtInst, extInstOperands);
+  return success();
+}
+
+LogicalResult Serializer::encodeExtensionInstruction(
+    Operation *op, StringRef extensionSetName, uint32_t extensionOpcode,
+    ArrayRef<uint32_t> operands) {
+  if (failed(encodeExtensionInstruction(op, extensionSetName, extensionOpcode,
+                                        operands, functionBody)))
+    return failure();
+
+  if (extensionSetName == extTosa)
+    updateTosaOpsMap(op);
+
   return success();
 }
 
@@ -1600,6 +1665,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processBranchConditionalOp(op);
       })
       .Case([&](spirv::ConstantOp op) { return processConstantOp(op); })
+      .Case([&](spirv::CompositeConstructOp op) {
+        return processCompositeConstructOp(op);
+      })
       .Case([&](spirv::EXTConstantCompositeReplicateOp op) {
         return processConstantCompositeReplicateOp(op);
       })
@@ -1640,6 +1708,41 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
           [&](Operation *op) { return dispatchToAutogenSerialization(op); });
 }
 
+LogicalResult
+Serializer::processCompositeConstructOp(spirv::CompositeConstructOp op) {
+  Location loc = op.getLoc();
+
+  uint32_t resultTypeID = 0;
+  if (failed(processType(loc, op.getType(), resultTypeID)))
+    return failure();
+
+  uint32_t resultID = getNextID();
+  valueIDMap[op.getResult()] = resultID;
+
+  SmallVector<uint32_t, 8> operands;
+  operands.reserve(2 + op.getConstituents().size());
+  operands.push_back(resultTypeID);
+  operands.push_back(resultID);
+  for (Value constituent : op.getConstituents()) {
+    uint32_t id = getValueID(constituent);
+    assert(id && "use before def!");
+    operands.push_back(id);
+  }
+
+  if (failed(emitDebugLine(functionBody, loc)))
+    return failure();
+
+  encodeInstructionWithContinuationInto(
+      functionBody, spirv::Opcode::OpCompositeConstruct, operands);
+
+  for (auto attr : op->getAttrs()) {
+    if (failed(processDecoration(loc, resultID, attr)))
+      return failure();
+  }
+
+  return success();
+}
+
 LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
                                                       StringRef extInstSet,
                                                       uint32_t opcode) {
@@ -1661,8 +1764,10 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   for (Value operand : op->getOperands())
     operands.push_back(getValueID(operand));
 
-  if (failed(emitDebugLine(functionBody, loc)))
-    return failure();
+  if (extInstSet != extTosa)
+    // OpLine cannot be present in graphs
+    if (failed(emitDebugLine(functionBody, loc)))
+      return failure();
 
   if (extInstSet.empty()) {
     encodeInstructionInto(functionBody, static_cast<spirv::Opcode>(opcode),
@@ -1680,6 +1785,16 @@ LogicalResult Serializer::processOpWithoutGrammarAttr(Operation *op,
   }
 
   return success();
+}
+
+void Serializer::updateTosaOpsMap(Operation *op) {
+  if (!options.emitDebugInfo)
+    return;
+
+  if (auto graphOp = dyn_cast<spirv::GraphARMOp>(op->getParentOp())) {
+    if (uint32_t graphID = getFunctionID(graphOp.getName()))
+      tosaOpsMap[graphID][op->getLoc()].insert(op);
+  }
 }
 
 LogicalResult Serializer::emitDecoration(uint32_t target,

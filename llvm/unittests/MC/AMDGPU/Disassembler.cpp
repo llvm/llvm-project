@@ -85,7 +85,7 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
 
   int AsmPrinterVariant = MAI->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> IP(
@@ -157,7 +157,7 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(), STI.get());
+  auto Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
 
   // Define custom UC_VERSION before initializing disassembler.
   const uint8_t UC_VERSION_GFX10_DEFAULT = 0x04;

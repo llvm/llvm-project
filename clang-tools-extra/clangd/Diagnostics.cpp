@@ -180,7 +180,6 @@ const char *getMainFileRange(const Diag &D, const SourceManager &SM,
       case diag::note_checking_constraints_for_class_spec_id_here:
       case diag::note_checking_constraints_for_function_here:
       case diag::note_constraint_substitution_here:
-      case diag::note_constraint_normalization_here:
       case diag::note_parameter_mapping_substitution_here:
         R = N.Range;
         return "in template";

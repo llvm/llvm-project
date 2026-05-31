@@ -1,4 +1,4 @@
-from __future__ import absolute_import, annotations
+from __future__ import annotations
 
 import os
 import pathlib
@@ -77,7 +77,7 @@ def buildPdbgCommand(msg, cmd):
     return res
 
 
-class TimeoutHelper(object):
+class TimeoutHelper:
     """
     Object used to helper manage enforcing a timeout in
     _executeShCmd(). It is passed through recursive calls
@@ -475,7 +475,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     stderr=stderr,
                     env=cmd_shenv.env,
                     close_fds=kUseCloseFDs,
-                    text=False,
+                    universal_newlines=True,
+                    errors="replace",
                 )
             )
             if old_umask != -1:
@@ -520,11 +521,11 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if procs[i].stdout is not None:
             out = procs[i].stdout.read()
         else:
-            out = b""
+            out = ""
         if procs[i].stderr is not None:
             err = procs[i].stderr.read()
         else:
-            err = b""
+            err = ""
         procData[i] = (out, err)
 
     # Read stderr out of the temp files.
@@ -567,7 +568,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         output_files = []
         if res != 0:
             for (name, mode, f, path) in sorted(opened_files):
-                if path is not None and mode in ("wb", "ab"):
+                if path is not None and mode in ("w", "a"):
                     try:
                         with open(path, "rb") as f:
                             data = f.read()
@@ -702,7 +703,7 @@ def executeScriptInternal(
     shenv.env["LIT_CURRENT_TESTCASE"] = test.getFullName()
 
     exitCode, timeoutInfo = executeShCmd(
-        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        cmd, shenv, results, timeout=test.config.maxIndividualTestTime
     )
 
     out = err = ""
@@ -746,7 +747,7 @@ def executeScriptInternal(
 
         # If nothing interesting happened, move on.
         if (
-            litConfig.maxIndividualTestTime == 0
+            test.config.maxIndividualTestTime == 0
             and result.exitCode == 0
             and not result.stdout.strip()
             and not result.stderr.strip()
@@ -775,7 +776,7 @@ def executeScriptInternal(
             else:
                 codeStr = str(result.exitCode)
             out += "# error: command failed with exit status: %s\n" % (codeStr,)
-        if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
+        if test.config.maxIndividualTestTime > 0 and result.timeoutReached:
             out += "# error: command reached timeout: %s\n" % (
                 str(result.timeoutReached),
             )
@@ -899,7 +900,7 @@ def executeScript(
             command,
             cwd=cwd,
             env=env,
-            timeout=litConfig.maxIndividualTestTime,
+            timeout=test.config.maxIndividualTestTime,
         )
         return (out, err, exitCode, None, None)
     except lit.util.ExecuteCommandTimeoutException as e:
@@ -1065,23 +1066,11 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     return substitutions
 
 
-def _memoize(f):
-    cache = {}  # Intentionally unbounded, see applySubstitutions()
-
-    def memoized(x):
-        if x not in cache:
-            cache[x] = f(x)
-        return cache[x]
-
-    return memoized
-
-
-@_memoize
+@lit.util.memoize  # Intentionally unbounded: see applySubstitutions
 def _caching_re_compile(r):
     return re.compile(r)
 
-
-class ExpandableScriptDirective(object):
+class ExpandableScriptDirective:
     """
     Common interface for lit directives for which any lit substitutions must be
     expanded to produce the shell script.  It includes directives (e.g., 'RUN:')
@@ -1445,7 +1434,7 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
     return output
 
 
-class ParserKind(object):
+class ParserKind:
     """
     An enumeration representing the style of an integrated test keyword or
     command.
@@ -1503,7 +1492,7 @@ class ParserKind(object):
         }[value]
 
 
-class IntegratedTestKeywordParser(object):
+class IntegratedTestKeywordParser:
     """A parser for LLVM/Clang style integrated test scripts.
 
     keyword: The keyword to parse for. It must end in either '.' or ':'.

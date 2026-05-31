@@ -177,7 +177,8 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp || module_sp->GetObjectFile() == nullptr) {
     llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
-        image_info.file_spec, image_info.address);
+        image_info.file_spec, image_info.address,
+        image_info.mh_and_load_cmd_size);
     if (auto err = module_sp_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                      "Failed to load module from memory: {0}");
@@ -445,6 +446,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
         mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
+    if (mh->HasKey("sizeof_h_and_loadcmds"))
+      image_infos[i].mh_and_load_cmd_size =
+          mh->GetValueForKey("sizeof_mh_and_loadcmds")
+              ->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -914,7 +919,7 @@ void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+    LLDB_LOG(log, "uuid={} path='{}' (UNLOADED)", uuid.GetAsString(),
              file_spec.GetPath());
   } else {
     LLDB_LOG(log, "address={0:x+16} uuid={1} path='{2}'", address,

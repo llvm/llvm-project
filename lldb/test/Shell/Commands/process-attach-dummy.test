@@ -1,0 +1,22 @@
+# Test that process attach correctly creates a real target instead of attaching
+# to the dummy target when executed inside a sourced script or command session.
+#
+# Sourced scripts run by the IOHandler override the execution context to contain
+# the dummy target by default (as a fallback target). When process attach runs,
+# it expects to bypass the dummy target (adopt_dummy_target = false).
+# CommandInterpreter::GetExecutionContext must respect this flag and clear the
+# dummy target from the overridden context, allowing process attach to create
+# and select a new real target.
+#
+# If the bug is present, process attach attaches directly to the dummy target,
+# leaving the main target list empty (target list outputs "No targets.").
+# If the bug is fixed, it successfully creates "target #0: <none>".
+
+# REQUIRES: python
+
+# RUN: %lldb -s %s 2>&1 | FileCheck %s
+
+script lldb.debugger.GetCommandInterpreter().HandleCommand("process attach -p 99999", lldb.SBCommandReturnObject())
+
+target list
+# CHECK: target #0: <none>

@@ -1161,7 +1161,7 @@ void PathDiagnosticBuilder::generatePathDiagnosticsForNode(
 
     if (C.shouldAddPathEdges()) {
       // Add an edge to the start of the function.
-      const StackFrameContext *CalleeLC = CE->getCalleeContext();
+      const StackFrame *CalleeLC = CE->getCalleeContext();
       const Decl *D = CalleeLC->getDecl();
       // Add the edge only when the callee has body. We jump to the beginning
       // of the *declaration*, however we expect it to be followed by the
@@ -2074,7 +2074,7 @@ PathDiagnosticBuilder::generate(const PathDiagnosticConsumer *PDC) const {
   if (PDC->shouldAddPathEdges()) {
     // Add an edge to the start of the function.
     // We'll prune it out later, but it helps make diagnostics more uniform.
-    const StackFrameContext *CalleeLC =
+    const StackFrame *CalleeLC =
         Construct.getLocationContextForActivePath()->getStackFrame();
     const Decl *D = CalleeLC->getDecl();
     addEdgeToPath(Construct.getActivePath(), PrevLoc,

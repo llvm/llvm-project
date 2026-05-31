@@ -171,7 +171,6 @@ protected:
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
-  Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
   UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
@@ -384,8 +383,8 @@ private:
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
-  void CheckMultipleAppearances(
-      const parser::Name &, const Symbol &, Symbol::Flag);
+  void CheckMultipleAppearances(const parser::Name &, const Symbol &,
+      Symbol::Flag, const parser::AccObject *occurrence = nullptr);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -473,15 +472,17 @@ public:
   // "const T &". For a class D derived from B, and an explicit overload
   // of Pre(const B &), a call to Pre(D) will select the template instead
   // of the base clase overload.
-  // Force user-defined conversion from any const-reference, to make sure
-  // that the Pre(AbsorbAnyReference) and Post(AbsorbAnyReference) overloads
-  // will be worse than derived-to-base conversions. This will, for example,
-  // invoke Pre(const OmpBlockConstruct &) for directives derived from it.
-  struct AbsorbAnyReference {
-    template <typename T> AbsorbAnyReference(const T &) {}
+  // Don't use the inherited Pre/Post functions. Instead, create a last-
+  // resort catch-all overload that is worse than any derived-to-base
+  // conversion. This will, for example,invoke Pre(const OmpBlockConstruct &)
+  // for directives derived from it.
+  struct Anything {
+    // User-defined conversion constructor will be worse than all more
+    // "natural" conversions.
+    template <typename T> Anything(const T &) {}
   };
-  bool Pre(AbsorbAnyReference) { return true; }
-  void Post(AbsorbAnyReference) {}
+  bool Pre(Anything) { return true; }
+  void Post(Anything) {}
 
   bool Pre(const parser::SpecificationPart &) {
     partStack_.push_back(PartKind::SpecificationPart);
@@ -551,8 +552,8 @@ public:
     GetContext().withinConstruct = true;
   }
 
-  bool Pre(const parser::OpenMPGroupprivate &);
-  void Post(const parser::OpenMPGroupprivate &) { PopContext(); }
+  bool Pre(const parser::OmpGroupprivateDirective &);
+  void Post(const parser::OmpGroupprivateDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPStandaloneConstruct &x) {
     common::visit(
@@ -590,8 +591,8 @@ public:
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPSectionConstruct &);
-  void Post(const parser::OpenMPSectionConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpSectionDirective &);
+  void Post(const parser::OmpSectionDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPCriticalConstruct &critical);
   void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
@@ -636,7 +637,7 @@ public:
   }
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+  bool Pre(const parser::OmpRequiresDirective &x) {
     using RequiresClauses = WithOmpDeclarative::RequiresClauses;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
@@ -689,7 +690,7 @@ public:
     AddOmpRequiresToScope(currScope(), &reqs, memOrder);
     return true;
   }
-  void Post(const parser::OpenMPRequiresConstruct &) { PopContext(); }
+  void Post(const parser::OmpRequiresDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpDeclareTargetDirective &);
   void Post(const parser::OmpDeclareTargetDirective &) { PopContext(); }
@@ -700,13 +701,13 @@ public:
   bool Pre(const parser::OmpDeclareReductionDirective &);
   void Post(const parser::OmpDeclareReductionDirective &) { PopContext(); }
 
-  bool Pre(const parser::OpenMPThreadprivate &);
-  void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
+  bool Pre(const parser::OmpThreadprivateDirective &);
+  void Post(const parser::OmpThreadprivateDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpAllocateDirective &);
 
-  bool Pre(const parser::OpenMPAssumeConstruct &);
-  void Post(const parser::OpenMPAssumeConstruct &) { PopContext(); }
+  bool Pre(const parser::OmpAssumeDirective &);
+  void Post(const parser::OmpAssumeDirective &) { PopContext(); }
 
   bool Pre(const parser::OpenMPAtomicConstruct &);
   void Post(const parser::OpenMPAtomicConstruct &) { PopContext(); }
@@ -717,11 +718,11 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
-  bool Pre(const parser::OpenMPUtilityConstruct &x) {
+  bool Pre(const parser::OmpUtilityDirective &x) {
     PushContext(x.source, parser::omp::GetOmpDirectiveName(x).v);
     return true;
   }
-  void Post(const parser::OpenMPUtilityConstruct &) { PopContext(); }
+  void Post(const parser::OmpUtilityDirective &) { PopContext(); }
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_variant);
@@ -760,6 +761,17 @@ public:
   bool Pre(const parser::OmpClause::Lastprivate &x) {
     ResolveOmpObjectList(
         *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
+    return false;
+  }
+  bool Pre(const parser::OmpClause::Detach &x) {
+    // OpenMP 5.0: Variables in detach clause have predetermined shared
+    // data-sharing attribute
+    if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
+      if (auto *symbol{name->symbol})
+        SetSymbolDSA(*symbol,
+            Symbol::Flags{
+                Symbol::Flag::OmpShared, Symbol::Flag::OmpPreDetermined});
+    }
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -844,8 +856,8 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Nontemporal &x) {
-    const auto &nontemporalNameList{x.v};
-    ResolveOmpNameList(nontemporalNameList, Symbol::Flag::OmpNontemporal);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpNontemporal);
     return false;
   }
 
@@ -1013,11 +1025,6 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
       Symbol::Flag::OmpUseDeviceAddr, Symbol::Flag::OmpIsDevicePtr,
       Symbol::Flag::OmpHasDeviceAddr, Symbol::Flag::OmpUniform};
-
-  Symbol::Flags ompFlagsRequireMark{Symbol::Flag::OmpThreadprivate,
-      Symbol::Flag::OmpDeclareTarget, Symbol::Flag::OmpExclusiveScan,
-      Symbol::Flag::OmpInclusiveScan, Symbol::Flag::OmpInScanReduction,
-      Symbol::Flag::OmpGroupPrivate};
 
   Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
@@ -1801,6 +1808,25 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
   }
 }
 
+// Returns true iff symbol qualifies for the pre-OpenACC-3.2 DEFAULT(NONE)
+// scalar extension: an intrinsic numeric or logical non-array, non-pointer,
+// non-allocatable variable.  Characters, derived types, allocatables, and
+// pointers are excluded because their data-sharing semantics under
+// DEFAULT(NONE) differ materially from plain scalar copy.
+static bool IsAccScalar(const Symbol &symbol) {
+  if (IsAllocatable(symbol) || IsPointer(symbol))
+    return false;
+  const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
+  auto cat{type->category()};
+  if (cat != Fortran::semantics::DeclTypeSpec::Category::Numeric &&
+      cat != Fortran::semantics::DeclTypeSpec::Category::Logical)
+    return false;
+  const auto *det{symbol.detailsIf<ObjectEntityDetails>()};
+  return det && !det->IsArray();
+}
+
 void AccAttributeVisitor::Post(const parser::Name &name) {
   if (name.symbol && WithinConstruct()) {
     const Symbol &symbol{name.symbol->GetUltimate()};
@@ -1814,9 +1840,17 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
           name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
-          context_.Say(name.source,
-              "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
-              symbol.name());
+          if (context_.IsEnabled(
+                  common::LanguageFeature::AccDefaultNoneScalars) &&
+              IsAccScalar(symbol)) {
+            context_.Warn(common::UsageWarning::AccImplicitScalar, name.source,
+                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
+                symbol.name());
+          } else {
+            context_.Say(name.source,
+                "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
+                symbol.name());
+          }
         }
       } else {
         // TODO: assertion here?  or clear name.symbol?
@@ -1864,7 +1898,7 @@ void AccAttributeVisitor::ResolveAccObject(
               if (auto *symbol{ResolveAcc(*name, accFlag, currScope())}) {
                 AddToContextObjectWithDSA(*symbol, accFlag);
                 if (dataSharingAttributeFlags.test(accFlag)) {
-                  CheckMultipleAppearances(*name, *symbol, accFlag);
+                  CheckMultipleAppearances(*name, *symbol, accFlag, &accObject);
                 }
               }
             } else {
@@ -1929,20 +1963,31 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
   return &object;
 }
 
-static bool WithMultipleAppearancesAccException(
-    const Symbol &symbol, Symbol::Flag flag) {
-  return false; // Place holder
-}
-
-void AccAttributeVisitor::CheckMultipleAppearances(
-    const parser::Name &name, const Symbol &symbol, Symbol::Flag accFlag) {
+void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
+    const Symbol &symbol, Symbol::Flag accFlag,
+    const parser::AccObject *occurrence) {
   const auto *target{&symbol};
-  if (HasDataSharingAttributeObject(*target) &&
-      !WithMultipleAppearancesAccException(symbol, accFlag)) {
-    context_.Say(name.source,
-        "'%s' appears in more than one data-sharing clause "
-        "on the same OpenACC directive"_err_en_US,
-        name.ToString());
+  if (HasDataSharingAttributeObject(*target)) {
+    // A same-kind duplicate (e.g. private(x, x) or private(x) private(x))
+    // is benign: warn and tag this AccObject occurrence so rewrite-parse-tree
+    // can drop it from the clause list. Cross-kind duplicates (e.g.
+    // private(x) firstprivate(x)) remain hard errors.
+    //
+    // Reduction is excluded from the benign case: two reduction clauses
+    // with the same Symbol::Flag may still differ in operator, which is a
+    // real conflict that dedup would silently hide.
+    auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
+    if (occurrence && firstFlag && *firstFlag == accFlag &&
+        accFlag != Symbol::Flag::AccReduction) {
+      context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
+          "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
+          name.ToString());
+      context_.MarkAccObjectDuplicate(occurrence);
+    } else {
+      context_.Say(name.source,
+          "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
+          name.ToString());
+    }
   } else {
     AddDataSharingAttributeObject(*target);
   }
@@ -2131,7 +2176,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
   }
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_groupprivate);
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{parser::omp::GetArgumentObject(arg)}) {
@@ -2157,7 +2202,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpSectionDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_section);
   GetContext().withinConstruct = true;
   return true;
@@ -2200,7 +2245,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareReductionDirective &x) {
   return true;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
 
@@ -2233,7 +2278,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpAllocateDirective &x) {
   return false;
 }
 
-bool OmpAttributeVisitor::Pre(const parser::OpenMPAssumeConstruct &x) {
+bool OmpAttributeVisitor::Pre(const parser::OmpAssumeDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_assume);
   return true;
 }
@@ -2958,9 +3003,7 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
       // Set the OpenMP flag on the equivalenced symbol
       if (Symbol * resolvedSymbol{ResolveOmp(eqSymbol, ompFlag, currScope())}) {
         // Also add to the context if needed
-        if (ompFlagsRequireMark.test(ompFlag)) {
-          AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
-        }
+        AddToContextObjectWithExplicitDSA(*resolvedSymbol, ompFlag);
       }
     }
   }
@@ -3051,9 +3094,7 @@ Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 Symbol *OmpAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     Symbol &object, Symbol::Flag ompFlag) {
-  if (ompFlagsRequireMark.test(ompFlag)) {
-    object.set(ompFlag);
-  }
+  object.set(ompFlag);
   return &object;
 }
 

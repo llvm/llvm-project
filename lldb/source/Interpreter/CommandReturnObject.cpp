@@ -181,7 +181,7 @@ void CommandReturnObject::Clear() {
   if (stream_sp)
     static_cast<StreamString *>(stream_sp.get())->Clear();
   m_diagnostics.clear();
-  m_status = eReturnStatusStarted;
+  m_status = eReturnStatusInvalid;
   m_did_change_process_state = false;
   m_suppress_immediate_output = false;
   m_interactive = true;

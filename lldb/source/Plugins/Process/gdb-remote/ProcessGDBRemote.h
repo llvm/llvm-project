@@ -67,6 +67,8 @@ public:
 
   static std::chrono::seconds GetPacketTimeout();
 
+  static std::chrono::milliseconds GetPacketTestDelay();
+
   ArchSpec GetSystemArchitecture() override;
 
   // Check if a given Process
@@ -169,6 +171,9 @@ public:
 
   // Process Breakpoints
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
+
+  llvm::Error UpdateBreakpointSites(
+      const BreakpointSiteToActionMap &site_to_action) override;
 
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
@@ -461,6 +466,9 @@ private:
   /// Disable a single breakpoint site directly by sending the appropriate
   /// z packet or restoring the original instruction.
   llvm::Error DoDisableBreakpointSite(BreakpointSite &bp_site);
+
+  llvm::Error UpdateBreakpointSitesNotBatched(
+      const BreakpointSiteToActionMap &site_to_action);
 
   static bool NewThreadNotifyBreakpointHit(void *baton,
                                            StoppointCallbackContext *context,
