@@ -294,7 +294,6 @@ inline void store_hashable_data(char *buf, size_t &off, const T &arg) {
 } // namespace detail
 } // namespace hashing
 
-
 /// Compute a hash_code for a sequence of values.
 ///
 /// This hashes a sequence of values. It produces the same hash_code as
@@ -392,7 +391,6 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 
 template <> struct DenseMapInfo<hash_code, void> {
   static constexpr hash_code getEmptyKey() { return hash_code(-1); }
-  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
   static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }

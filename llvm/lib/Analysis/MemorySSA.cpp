@@ -221,10 +221,6 @@ template <> struct DenseMapInfo<MemoryLocOrCall> {
     return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getEmptyKey());
   }
 
-  static inline MemoryLocOrCall getTombstoneKey() {
-    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
     if (!MLOC.IsCall)
       return hash_combine(
@@ -1620,7 +1616,6 @@ MemorySSAWalker *MemorySSA::getSkipSelfWalker() {
   SkipWalker = std::make_unique<SkipSelfWalker>(this, WalkerBase.get());
   return SkipWalker.get();
  }
-
 
 // This is a helper function used by the creation routines. It places NewAccess
 // into the access and defs lists for a given basic block, at the given

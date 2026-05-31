@@ -50,7 +50,6 @@ public:
     Entry &operator=(Entry &&) = default;
     ~Entry() = default;
 
-
   public:
     /// Returns the Offset of the Compilation Unit associated with this
     /// Accelerator Entry or std::nullopt if the Compilation Unit offset is not
@@ -536,7 +535,6 @@ private:
   /// DenseMapInfo for struct Abbrev.
   struct AbbrevMapInfo {
     LLVM_ABI static Abbrev getEmptyKey();
-    LLVM_ABI static Abbrev getTombstoneKey();
     static unsigned getHashValue(uint32_t Code) {
       return DenseMapInfo<uint32_t>::getHashValue(Code);
     }

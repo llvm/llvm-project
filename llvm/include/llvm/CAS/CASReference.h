@@ -177,10 +177,6 @@ template <> struct DenseMapInfo<cas::ObjectRef> {
     return cas::ObjectRef::getDenseMapEmptyKey();
   }
 
-  static cas::ObjectRef getTombstoneKey() {
-    return cas::ObjectRef::getDenseMapTombstoneKey();
-  }
-
   static unsigned getHashValue(cas::ObjectRef Ref) {
     return Ref.getDenseMapHash();
   }

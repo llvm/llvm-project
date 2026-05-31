@@ -280,7 +280,6 @@ TypeID TypeID::get() {
   } /* namespace detail */                                                     \
   } /* namespace mlir */
 
-
 /// Declare/define an explicit specialization for TypeID using the string
 /// comparison fallback. This is useful for complex shared library setups
 /// where it may be difficult to agree on a source of truth for specific
@@ -306,7 +305,6 @@ TypeID TypeID::get() {
   } /* namespace mlir */
 
 #define MLIR_DEFINE_EXPLICIT_FALLBACK_TYPE_ID(CLASS_NAME)
-
 
 #ifndef MLIR_USE_FALLBACK_TYPE_IDS
 #define MLIR_USE_FALLBACK_TYPE_IDS false
@@ -396,10 +394,6 @@ template <>
 struct DenseMapInfo<mlir::TypeID> {
   static inline mlir::TypeID getEmptyKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::TypeID::getFromOpaquePointer(pointer);
-  }
-  static inline mlir::TypeID getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::TypeID::getFromOpaquePointer(pointer);
   }
   static unsigned getHashValue(mlir::TypeID val) {

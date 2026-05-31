@@ -240,7 +240,6 @@ public:
     assert((SubReg_TargetFlags & F) && "Target flags out of range");
   }
 
-
   /// getParent - Return the instruction that this operand belongs to.
   ///
   MachineInstr *getParent() { return ParentMI; }
@@ -1018,7 +1017,6 @@ private:
   /// Artificial kinds for DenseMap usage.
   enum : unsigned char {
     MO_Empty = MO_Last + 1,
-    MO_Tombstone,
   };
 
   friend struct DenseMapInfo<MachineOperand>;
@@ -1041,18 +1039,12 @@ template <> struct DenseMapInfo<MachineOperand> {
     return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
         MachineOperand::MO_Empty));
   }
-  static MachineOperand getTombstoneKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Tombstone));
-  }
   static unsigned getHashValue(const MachineOperand &MO) {
     return hash_value(MO);
   }
   static bool isEqual(const MachineOperand &LHS, const MachineOperand &RHS) {
     if (LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Empty) ||
-        LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Tombstone))
+                             MachineOperand::MO_Empty))
       return LHS.getType() == RHS.getType();
     return LHS.isIdenticalTo(RHS);
   }

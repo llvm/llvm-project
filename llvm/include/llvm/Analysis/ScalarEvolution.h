@@ -206,11 +206,6 @@ template <> struct DenseMapInfo<SCEVUse> {
     return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
   }
 
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -2732,10 +2727,6 @@ private:
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
   static inline ScalarEvolution::FoldID getEmptyKey() {
     ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
     return ID;
   }
 

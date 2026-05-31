@@ -2396,7 +2396,7 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isSentinel(const VPSingleDefRecipe *Def) {
-    return Def == getEmptyKey() || Def == getTombstoneKey();
+    return Def == getEmptyKey();
   }
 
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
