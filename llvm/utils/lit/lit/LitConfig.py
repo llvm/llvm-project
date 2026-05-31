@@ -42,6 +42,7 @@ class LitConfig(object):
         per_test_coverage=False,
         gtest_sharding=True,
         update_tests=False,
+        checkFilter=None,
     ):
         # The name of the test runner.
         self.progname = progname
@@ -96,6 +97,7 @@ class LitConfig(object):
         self.gtest_sharding = bool(gtest_sharding)
         self.update_tests = update_tests
         self.test_updaters = [diff_test_updater]
+        self.checkFilter = checkFilter
 
     @property
     def maxIndividualTestTime(self):

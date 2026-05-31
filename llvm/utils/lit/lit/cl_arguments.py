@@ -428,6 +428,15 @@ def parse_args():
         default=os.environ.get("LIT_FILTER", ".*"),
     )
     selection_group.add_argument(
+        "--check",
+        dest="checkFilter",
+        metavar="LIST",
+        type=_check_filter,
+        default=None,
+        help="Within each test file, keep only the listed RUN lines. "
+        "LIST is comma-separated 0-indexed integers or ranges: '1,3-5'.",
+    )
+    selection_group.add_argument(
         "--filter-out",
         metavar="REGEX",
         type=_case_insensitive_regex,
@@ -585,6 +594,33 @@ def _case_insensitive_regex(arg):
 
 def _semicolon_list(arg):
     return arg.split(";")
+
+
+def _check_filter(arg):
+    out = []
+    for tok in arg.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if "-" in tok and tok[0] != "-":
+            a, sep, b = tok.partition("-")
+            if a.isdigit() and b.isdigit():
+                lo, hi = int(a), int(b)
+                if hi < lo:
+                    raise _error(
+                        "range '{}' is empty (high < low)", tok
+                    )
+                out.extend(range(lo, hi + 1))
+                continue
+        if tok.isdigit():
+            out.append(int(tok))
+        else:
+            raise _error(
+                "expected integer or integer range, got '{}'", tok
+            )
+    if not out:
+        raise _error("empty selector list")
+    return out
 
 
 def _error(desc, *args):
