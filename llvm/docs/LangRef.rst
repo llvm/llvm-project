@@ -25449,15 +25449,17 @@ Semantics:
 
 ``%elementSize`` is the size of the accessed elements in bytes.
 The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
+is not a multiple of ``%elementsize``.
 
-The element of the result mask is active when loading from %addrA then storing to
-%addrB is safe and doesn't result in a write-after-read hazard, meaning that:
+Each lane of the mask ``%m[i]`` is defined as the ``or`` of:
 
-* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
-  before the store to the same address)
+* ``icmp uge %addrA, %addrB``
+  * (guarantees that all lanes are loaded before any stores)
+* ``icmp ult (%elementSize * i), (%addrB - %addrA)``
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where ``%m`` is the vector mask of active/inactive lanes with its elements
+indexed by ``i``.
 
 Examples:
 """""""""
@@ -25543,16 +25545,18 @@ Semantics:
 
 ``%elementSize`` is the size of the accessed elements in bytes.
 The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
+is not a multiple of ``%elementsize``.
 
-The element of the result mask is active when storing to %addrA then loading from
-%addrB is safe and doesn't result in aliasing, meaning that:
+Each lane of the mask ``%m[i]`` is defined as the ``or`` of:
 
-* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
-  occurs before loading from this address), or
-* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
-  code)
+* ``icmp eq %addrA, %addrB``
+  * (doesn't introduce any new hazards that weren't in the scalar code)
+* ``icmp ult (%elementSize * i), uabs(%addrA,  %addrB)``
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where ``%m`` is the vector mask of active/inactive lanes with its elements
+indexed by ``i`` and ``uabs`` is the unsigned absolute difference between
+``%addrA`` and ``%addrB``.
 
 Examples:
 """""""""
