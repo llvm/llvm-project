@@ -62,7 +62,7 @@ float16x8_t test_vfmaq_lane_f16(float16x8_t a, float16x8_t b,
 // LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <4 x i16> [[C_I]] to <8 x i8>
 // LLVM:      [[C_CAST:%.*]] = bitcast <8 x i8> [[C_BYTES]] to <4 x half>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <4 x half> [[C_CAST]], <4 x half> {{.*}}, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
-// LLVM:      [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> %{{.*}}, <8 x half> [[LANE]], <8 x half> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B_CAST:%.*]], <8 x half> [[LANE]], <8 x half> [[A_CAST:%.*]])
 // LLVM:      ret <8 x half> [[FMA]]
   return vfmaq_lane_f16(a, b, c, 3);
 }
@@ -80,9 +80,11 @@ float16x4_t test_vfma_laneq_f16(float16x4_t a, float16x4_t b,
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <4 x i16> [[A_I]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <4 x i16> [[B_I]] to <8 x i8>
 // LLVM-NEXT: [[C_BYTES:%.*]] = bitcast <8 x i16> [[C_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <4 x half>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <4 x half>
 // LLVM:      [[C_CAST:%.*]] = bitcast <16 x i8> [[C_BYTES]] to <8 x half>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <8 x half> [[C_CAST]], <8 x half> {{.*}}, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
-// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> %{{.*}}, <4 x half> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[LANE]], <4 x half> [[B_CAST]], <4 x half> [[A_CAST]])
 // LLVM:      ret <4 x half> [[FMA]]
   return vfma_laneq_f16(a, b, c, 7);
 }

@@ -81,7 +81,7 @@ float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <2 x i32> [[V_I]] to <8 x i8>
 // LLVM:      [[V_CAST:%.*]] = bitcast <8 x i8> [[V_BYTES]] to <2 x float>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <2 x float> [[V_CAST]], <2 x float> {{.*}}, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// LLVM:      [[FMA:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> [[LANE]], <4 x float> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <4 x float> @llvm.fma.v4f32(<4 x float> [[B_CAST:%.*]], <4 x float> [[LANE]], <4 x float> [[A_CAST:%.*]])
 // LLVM:      ret <4 x float> [[FMA]]
   return vfmaq_lane_f32(a, b, v, 1);
 }
@@ -101,7 +101,7 @@ float64x2_t test_vfmaq_lane_f64(float64x2_t a, float64x2_t b, float64x1_t v) {
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <1 x i64> [[V_INSERT]] to <8 x i8>
 // LLVM:      [[V_CAST:%.*]] = bitcast <8 x i8> [[V_BYTES]] to <1 x double>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <1 x double> [[V_CAST]], <1 x double> {{.*}}, <2 x i32> zeroinitializer
-// LLVM:      [[FMA:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> [[LANE]], <2 x double> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[B_CAST:%.*]], <2 x double> [[LANE]], <2 x double> [[A_CAST:%.*]])
 // LLVM:      ret <2 x double> [[FMA]]
   return vfmaq_lane_f64(a, b, v, 0);
 }
@@ -118,9 +118,11 @@ float32x2_t test_vfma_laneq_f32(float32x2_t a, float32x2_t b, float32x4_t v) {
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <2 x i32> [[A_I]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <2 x i32> [[B_I]] to <8 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <4 x i32> [[V_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <2 x float>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <2 x float>
 // LLVM:      [[V_CAST:%.*]] = bitcast <16 x i8> [[V_BYTES]] to <4 x float>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <4 x float> [[V_CAST]], <4 x float> {{.*}}, <2 x i32> <i32 3, i32 3>
-// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[LANE]], <2 x float> %{{.*}}, <2 x float> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[LANE]], <2 x float> [[B_CAST]], <2 x float> [[A_CAST]])
 // LLVM:      ret <2 x float> [[FMA]]
   return vfma_laneq_f32(a, b, v, 3);
 }
@@ -140,9 +142,11 @@ float64x1_t test_vfma_laneq_f64(float64x1_t a, float64x1_t b,
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <1 x i64> [[A_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <1 x i64> [[B_INSERT]] to <8 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <2 x i64> [[V_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to double
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to double
 // LLVM:      [[V_CAST:%.*]] = bitcast <16 x i8> [[V_BYTES]] to <2 x double>
 // LLVM-NEXT: [[LANE:%.*]] = extractelement <2 x double> [[V_CAST]], i{{32|64}} 0
-// LLVM:      [[FMA:%.*]] = call double @llvm.fma.f64(double %{{.*}}, double [[LANE]], double %{{.*}})
+// LLVM:      [[FMA:%.*]] = call double @llvm.fma.f64(double [[B_CAST]], double [[LANE]], double [[A_CAST]])
 // LLVM:      [[RESULT:%.*]] = bitcast double [[FMA]] to <1 x double>
 // LLVM:      ret <1 x double> [[RESULT]]
   return vfma_laneq_f64(a, b, v, 0);
@@ -161,9 +165,11 @@ float32x2_t test_vfma_laneq_f32_0(float32x2_t a, float32x2_t b,
 // LLVM-NEXT: [[A_BYTES:%.*]] = bitcast <2 x i32> [[A_I]] to <8 x i8>
 // LLVM-NEXT: [[B_BYTES:%.*]] = bitcast <2 x i32> [[B_I]] to <8 x i8>
 // LLVM-NEXT: [[V_BYTES:%.*]] = bitcast <4 x i32> [[V_I]] to <16 x i8>
+// LLVM-NEXT: [[A_CAST:%.*]] = bitcast <8 x i8> [[A_BYTES]] to <2 x float>
+// LLVM-NEXT: [[B_CAST:%.*]] = bitcast <8 x i8> [[B_BYTES]] to <2 x float>
 // LLVM:      [[V_CAST:%.*]] = bitcast <16 x i8> [[V_BYTES]] to <4 x float>
 // LLVM-NEXT: [[LANE:%.*]] = shufflevector <4 x float> [[V_CAST]], <4 x float> {{.*}}, <2 x i32> zeroinitializer
-// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[LANE]], <2 x float> %{{.*}}, <2 x float> %{{.*}})
+// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[LANE]], <2 x float> [[B_CAST]], <2 x float> [[A_CAST]])
 // LLVM:      ret <2 x float> [[FMA]]
   return vfma_laneq_f32(a, b, v, 0);
 }
