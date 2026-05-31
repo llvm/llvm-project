@@ -449,6 +449,9 @@ struct GenericKernelTy {
   /// Get the size of the static per-block memory consumed by the kernel.
   uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
+  /// Get the maximum number of threads per block that this kernel may use.
+  uint32_t getMaxThreads() const { return MaxNumThreads; }
+
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
