@@ -1753,22 +1753,7 @@ namespace {
           if (TA.isDependent())
             return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
-      if (auto *CD = dyn_cast_if_present<ImplicitConceptSpecializationDecl>(
-              LSI->Lambda->getLambdaContextDecl())) {
-        if (llvm::any_of(CD->getTemplateArguments(),
-                         [](const auto &TA) { return TA.isDependent(); }))
-          return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
-      }
       return inherited::ComputeLambdaDependency(LSI);
-    }
-
-    ExprResult TransformConstraint(Expr *AC) {
-      // We don't want the template argument substitution into parameter
-      // mappings to preserve the outer depths.
-      if (AC && SemaRef.inConstraintSubstitution())
-        return TransformExpr(const_cast<Expr *>(AC));
-
-      return AC;
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
@@ -1881,24 +1866,12 @@ namespace {
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
 
-      std::optional<MultiLevelTemplateArgumentList> OldMLTAL;
-      // We need to preserve the lambda depth in parameter mapping.
-      // Otherwise the template argument deduction would fail, if we reduced the
-      // depth too early.
-      if (SemaRef.inParameterMappingSubstitution() &&
-          OrigTPL->getDepth() >= TemplateArgs.getNumSubstitutedLevels())
-        OldMLTAL = ForgetSubstitution();
-
       DeclContext *Owner = OrigTPL->getParam(0)->getDeclContext();
-      TemplateDeclInstantiator DeclInstantiator(getSema(), Owner, TemplateArgs);
-      // We don't want the template argument substitution into parameter
-      // mappings to preserve the outer depths.
-      DeclInstantiator.setEvaluateConstraints(
-          SemaRef.inConstraintSubstitution() || EvaluateConstraints);
-      auto *Transformed = DeclInstantiator.SubstTemplateParams(OrigTPL);
-      if (OldMLTAL)
-        RememberSubstitution(std::move(*OldMLTAL));
-      return Transformed;
+      TemplateDeclInstantiator DeclInstantiator(getSema(),
+                                                /* DeclContext *Owner */ Owner,
+                                                TemplateArgs);
+      DeclInstantiator.setEvaluateConstraints(EvaluateConstraints);
+      return DeclInstantiator.SubstTemplateParams(OrigTPL);
     }
 
     concepts::TypeRequirement *
@@ -3927,8 +3900,7 @@ bool Sema::usesPartialOrExplicitSpecialization(
     //   given (implicit) specialization of the enclosing class template, the
     //   primary member template and its other partial specializations are still
     //   considered for this specialization of the enclosing class template.
-    if (CTD->getMostRecentDecl()->isMemberSpecialization() &&
-        !CTPSD->getMostRecentDecl()->isMemberSpecialization())
+    if (CTD->isMemberSpecialization() && !CTPSD->isMemberSpecialization())
       continue;
 
     TemplateDeductionInfo Info(Loc);
@@ -3984,8 +3956,8 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
       //   primary member template and its other partial specializations are
       //   still considered for this specialization of the enclosing class
       //   template.
-      if (Template->getMostRecentDecl()->isMemberSpecialization() &&
-          !Partial->getMostRecentDecl()->isMemberSpecialization())
+      if (Template->isMemberSpecialization() &&
+          !Partial->isMemberSpecialization())
         continue;
 
       TemplateDeductionInfo Info(FailedCandidates.getLocation());

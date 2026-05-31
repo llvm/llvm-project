@@ -244,6 +244,12 @@ private:
   bool selectOpIsNan(Register ResVReg, SPIRVTypeInst ResType,
                      MachineInstr &I) const;
 
+  bool selectOpIsFinite(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I) const;
+
+  bool selectOpIsNormal(Register ResVReg, SPIRVTypeInst ResType,
+                        MachineInstr &I) const;
+
   bool selectPopCount(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned Opcode) const;
 
@@ -617,7 +623,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
       GIntrinsic *GIntr = cast<GIntrinsic>(MI);
       unsigned IntrID = GIntr->getIntrinsicID();
       if (IntrID != Intrinsic::spv_const_composite &&
-          IntrID != Intrinsic::spv_undef)
+          IntrID != Intrinsic::spv_undef && IntrID != Intrinsic::spv_poison)
         return false;
       continue;
     }
@@ -644,6 +650,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
     case SPIRV::OpConstantSampler:
     case SPIRV::OpConstantNull:
     case SPIRV::OpUndef:
+    case SPIRV::OpPoisonKHR:
     case SPIRV::OpConstantFunctionPointerINTEL:
       continue;
     default:
@@ -695,6 +702,8 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_insertv:
   case Intrinsic::spv_isinf:
   case Intrinsic::spv_isnan:
+  case Intrinsic::spv_isfinite:
+  case Intrinsic::spv_isnormal:
   case Intrinsic::spv_lerp:
   case Intrinsic::spv_length:
   case Intrinsic::spv_normalize:
@@ -2989,6 +2998,30 @@ bool SPIRVInstructionSelector::selectOpIsNan(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectOpIsFinite(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsFinite))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectOpIsNormal(Register ResVReg,
+                                                SPIRVTypeInst ResType,
+                                                MachineInstr &I) const {
+  MachineBasicBlock &BB = *I.getParent();
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIsNormal))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 template <bool Signed>
 bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
                                                    SPIRVTypeInst ResType,
@@ -3686,19 +3719,21 @@ bool SPIRVInstructionSelector::selectBitreverse64(Register ResVReg,
   if (!selectBitreverseNative(Reverse32, VecI32Type, I, Vec32))
     return false;
 
-  // Splits result into highbit lane and lowbit lane
-  auto MaybeParts = splitEvenOddLanes(Reverse32, ComponentCount, I, I32Type);
-  if (!MaybeParts)
-    return false;
-  SplitParts &Parts = *MaybeParts;
-
   // Reversing a 64-bit value = reverse each 32-bit half AND swap them,
   // so the old High word becomes lane 0 (low) and old Low becomes lane 1
   // (high).
   Register SwappedVec = MRI->createVirtualRegister(GR.getRegClass(VecI32Type));
-  if (!selectOpWithSrcs(SwappedVec, VecI32Type, I, {Parts.High, Parts.Low},
-                        SPIRV::OpCompositeConstruct))
-    return false;
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpVectorShuffle))
+                 .addDef(SwappedVec)
+                 .addUse(GR.getSPIRVTypeID(VecI32Type))
+                 .addUse(Reverse32)
+                 .addUse(Reverse32);
+  for (unsigned J = 0; J < ComponentCount; ++J) {
+    MIB.addImm(2 * J + 1);
+    MIB.addImm(2 * J);
+  }
+  MIB.constrainAllUses(TII, TRI, RBI);
 
   // Groups 32 bit vector back to 64 bit scalar.
   return selectOpWithSrcs(ResVReg, ResType, I, {SwappedVec}, SPIRV::OpBitcast);
@@ -3806,14 +3841,25 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
 bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
                                             SPIRVTypeInst ResType,
                                             MachineInstr &I) const {
+  assert(I.getOperand(0).isReg() && I.getOperand(1).isReg() &&
+         "G_FREEZE must define and use a register");
+  Register OpReg = I.getOperand(1).getReg();
+
+  // With SPV_KHR_poison_freeze, lower `freeze` to OpFreezeKHR.
+  if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze)) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFreezeKHR))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(OpReg)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   // There is no way to implement `freeze` correctly without support on SPIR-V
   // standard side, but we may at least address a simple (static) case when
   // undef/poison value presence is obvious. The main benefit of even
   // incomplete `freeze` support is preventing of translation from crashing due
   // to lack of support on legalization and instruction selection steps.
-  if (!I.getOperand(0).isReg() || !I.getOperand(1).isReg())
-    return false;
-  Register OpReg = I.getOperand(1).getReg();
   if (MachineInstr *Def = MRI->getVRegDef(OpReg)) {
     if (Def->getOpcode() == TargetOpcode::COPY)
       Def = MRI->getVRegDef(Def->getOperand(1).getReg());
@@ -3833,9 +3879,13 @@ bool SPIRVInstructionSelector::selectFreeze(Register ResVReg,
     unsigned DestOpCode;
     if (Reg.isValid()) {
       DestOpCode = SPIRV::OpConstantNull;
+      LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. freeze of a "
+                           "static undef/poison lowered to OpConstantNull\n");
     } else {
       DestOpCode = TargetOpcode::COPY;
       Reg = OpReg;
+      LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. freeze "
+                           "skipped, lowered as a copy of the operand\n");
     }
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DestOpCode))
         .addDef(I.getOperand(0).getReg())
@@ -4684,6 +4734,19 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
   }
+  case Intrinsic::spv_poison:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpPoisonKHR))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  case Intrinsic::spv_freeze:
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpFreezeKHR))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg())
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
   case Intrinsic::spv_named_boolean_spec_constant: {
     auto Opcode = I.getOperand(3).getImm() ? SPIRV::OpSpecConstantTrue
                                            : SPIRV::OpSpecConstantFalse;
@@ -4946,6 +5009,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectOpIsInf(ResVReg, ResType, I);
   case Intrinsic::spv_isnan:
     return selectOpIsNan(ResVReg, ResType, I);
+  case Intrinsic::spv_isfinite:
+    return selectOpIsFinite(ResVReg, ResType, I);
+  case Intrinsic::spv_isnormal:
+    return selectOpIsNormal(ResVReg, ResType, I);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
   case Intrinsic::spv_refract:

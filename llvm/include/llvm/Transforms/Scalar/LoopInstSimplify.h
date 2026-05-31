@@ -25,8 +25,9 @@ class LPMUpdater;
 class LoopInstSimplifyPass
     : public OptionalPassInfoMixin<LoopInstSimplifyPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

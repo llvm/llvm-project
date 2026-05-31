@@ -657,6 +657,41 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                          Value *FVal,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &SQ) {
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (match(FVal, m_Zero())) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+  if (!match(TVal, m_Zero()))
+    return nullptr;
+
+  if (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Handles:
+  // (X <= Y) ? 0 : (X - Y)
+  // (X <= Y) ? (Y - X) : 0
+  // (X >= Y) ? 0 : (Y - X)
+  // (X >= Y) ? (X - Y) : 0
+  if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
+      match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+    Value *SMin =
+        Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+    return Builder.CreateNSWSub(CmpLHS, SMin);
+  }
+
+  return nullptr;
+}
+
 /// Try to fold a select to a min/max intrinsic. Many cases are already handled
 /// by matchDecomposedSelectPattern but here we handle the cases where more
 /// extensive modification of the IR is required.
@@ -664,9 +699,12 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
                                    Value *FVal,
                                    InstCombiner::BuilderTy &Builder,
                                    const SimplifyQuery &SQ) {
-  const Value *CmpLHS = Cmp->getOperand(0);
-  const Value *CmpRHS = Cmp->getOperand(1);
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  if (Value *V = canoncalizeSelectICmpMinMax(Cmp, TVal, FVal, Builder, SQ))
+    return V;
 
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
@@ -1749,6 +1787,17 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     }
 
     return replaceInstUsesWith(Sel, FalseVal);
+  }
+
+  Constant *CmpC;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
   }
 
   return nullptr;

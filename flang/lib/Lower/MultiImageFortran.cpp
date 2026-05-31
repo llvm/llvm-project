@@ -410,6 +410,7 @@ genCoBounds(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             std::get<1>(allocSpec.t)) {
       auto expr = Fortran::semantics::GetExpr(*lastCobound);
       lb = fir::getBase(converter.genExprValue(loc, expr, stmtCtx));
+      lb = fir::ConvertOp::create(builder, loc, i64Ty, lb);
     }
     mlir::Value index =
         builder.createIntegerConstant(loc, builder.getIndexType(), i);

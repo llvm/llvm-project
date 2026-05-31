@@ -9188,10 +9188,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(
-      CmpI, TrueVal, FalseVal, LHS, RHS,
-      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
-      CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
+                                            SI->getFastMathFlagsOrNone(),
+                                            CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
