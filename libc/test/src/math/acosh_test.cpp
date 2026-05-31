@@ -22,9 +22,9 @@ TEST_F(LlvmLibcAcoshTest, InDoubleRange) {
   // acosh is defined on [1, +inf).
   // Sweep uniformly in bit-space over [1.0, 2^52].
   constexpr uint64_t COUNT = 123'451;
-  uint64_t START = FPBits(1.0).uintval();
-  uint64_t STOP = FPBits(0x1.0p52).uintval(); // 2^52
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(1.0).uintval();
+  constexpr uint64_t STOP = FPBits(0x1.0p52).uintval(); // 2^52
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);

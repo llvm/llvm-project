@@ -8,12 +8,9 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/acosh.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/stdint_proxy.h"
 
 using LlvmLibcAcoshTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
