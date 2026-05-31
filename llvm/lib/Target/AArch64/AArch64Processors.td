@@ -423,6 +423,7 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     !listconcat(TuneAppleA13.Implies, [
                                     FeatureAggressiveFMA,
                                     FeatureAlignCmpCSelPairs,
+                                    FeatureAlignPageCrossFuncs,
                                     FeatureFastLD1Single,
                                     FeatureFuseAddress,
                                     FeatureFuseArithmeticLogic,
