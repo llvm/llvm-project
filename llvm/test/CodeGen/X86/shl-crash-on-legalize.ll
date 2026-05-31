@@ -12,17 +12,39 @@ define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-LABEL: PR29058:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    je .LBB0_1
+; CHECK-NEXT:  # %bb.2: # %select.false
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    jmp .LBB0_3
+; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
-; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpb $1, %dil
-; CHECK-NEXT:    sbbl %ecx, %ecx
-; CHECK-NEXT:    orb %sil, %cl
+; CHECK-NEXT:  .LBB0_3: # %select.end
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %select.false2
+; CHECK-NEXT:    movl $-1, %ecx
+; CHECK-NEXT:  .LBB0_5: # %select.end1
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    movq %rax, structMember(%rip)
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    je .LBB0_6
+; CHECK-NEXT:  # %bb.7: # %select.false4
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:  .LBB0_9:
+; CHECK-NEXT:    movl $-1, %esi
+; CHECK-NEXT:  .LBB0_10: # %select.end6
+; CHECK-NEXT:    movl %esi, %ecx
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    movl $2147483646, %eax # imm = 0x7FFFFFFE
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    jne .LBB0_10
+; CHECK-NEXT:    jmp .LBB0_9
 entry:
   %bool_1 = icmp ne i8 %x, 0
   %bool_2 = icmp eq i8 %x, 0

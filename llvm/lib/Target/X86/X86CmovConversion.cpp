@@ -173,9 +173,13 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   if (!EnableCmovConverter)
     return false;
 
-  // If the SelectOptimize pass is enabled, cmovs have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
-    return false;
+  // SelectOptimize and X86CmovConversion operate at different levels (IR vs
+  // machine) and are complementary: SelectOptimize converts IR selects to
+  // branches before ISel, while X86CmovConversion converts machine-level cmovs
+  // (including memory-operand cmovs and loop cmovs) to branches after ISel.
+  // Both can safely coexist — if SelectOptimize already converted a select to a
+  // branch, ISel will not emit a cmov for it and X86CmovConversion sees nothing
+  // to do.  Do NOT skip based on SelectOptimize being enabled.
 
   LLVM_DEBUG(dbgs() << "********** " << DEBUG_TYPE << " : " << MF.getName()
                     << "**********\n");

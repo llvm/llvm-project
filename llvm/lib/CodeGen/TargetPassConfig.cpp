@@ -259,7 +259,7 @@ static cl::opt<bool> DisableExpandReductions(
 
 /// Disable the select optimization pass.
 static cl::opt<bool> DisableSelectOptimize(
-    "disable-select-optimize", cl::init(true), cl::Hidden,
+    "disable-select-optimize", cl::init(false), cl::Hidden,
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.

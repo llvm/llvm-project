@@ -147,23 +147,43 @@ entry:
 define i64 @pr155345(ptr %p1, i1 %cond, ptr %p2, ptr %p3) {
 ; X86ASM-LABEL: pr155345:
 ; X86ASM:       # %bb.0: # %entry
+; X86ASM-NEXT:    movq %rcx, %rax
 ; X86ASM-NEXT:    movzbl (%rdi), %edi
-; X86ASM-NEXT:    xorl %eax, %eax
-; X86ASM-NEXT:    orb $1, %dil
+; X86ASM-NEXT:    orq $1, %rdi
 ; X86ASM-NEXT:    movb %dil, (%rdx)
-; X86ASM-NEXT:    movzbl %dil, %edx
-; X86ASM-NEXT:    cmovel %edx, %eax
-; X86ASM-NEXT:    sete %dil
 ; X86ASM-NEXT:    testb $1, %sil
-; X86ASM-NEXT:    cmovnel %edx, %eax
-; X86ASM-NEXT:    movb %dl, (%rcx)
+; X86ASM-NEXT:    je .LBB11_2
+; X86ASM-NEXT:  # %bb.1:
+; X86ASM-NEXT:    xorl %ecx, %ecx
+; X86ASM-NEXT:    testb %cl, %cl
+; X86ASM-NEXT:    jne .LBB11_4
+; X86ASM-NEXT:  .LBB11_5: # %select.false.sink2
+; X86ASM-NEXT:    movq %rdi, %rcx
+; X86ASM-NEXT:    jmp .LBB11_6
+; X86ASM-NEXT:  .LBB11_2: # %select.false.sink
+; X86ASM-NEXT:    cmpb $0, (%rdx)
+; X86ASM-NEXT:    setne %cl
+; X86ASM-NEXT:    testb %cl, %cl
+; X86ASM-NEXT:    je .LBB11_5
+; X86ASM-NEXT:  .LBB11_4:
+; X86ASM-NEXT:    xorl %ecx, %ecx
+; X86ASM-NEXT:  .LBB11_6: # %select.end1
 ; X86ASM-NEXT:    movl $1, %edx
-; X86ASM-NEXT:    movl %eax, %ecx
+; X86ASM-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X86ASM-NEXT:    shlq %cl, %rdx
-; X86ASM-NEXT:    orb %sil, %dil
-; X86ASM-NEXT:    movzbl %dil, %eax
+; X86ASM-NEXT:    movb %dil, (%rax)
+; X86ASM-NEXT:    testb $1, %sil
+; X86ASM-NEXT:    je .LBB11_8
+; X86ASM-NEXT:  # %bb.7:
+; X86ASM-NEXT:    xorl %eax, %eax
+; X86ASM-NEXT:    jmp .LBB11_9
+; X86ASM-NEXT:  .LBB11_8: # %select.false.sink4
+; X86ASM-NEXT:    cmpb $0, (%rax)
+; X86ASM-NEXT:    setne %al
+; X86ASM-NEXT:  .LBB11_9: # %select.end3
+; X86ASM-NEXT:    xorb $1, %al
+; X86ASM-NEXT:    movzbl %al, %eax
 ; X86ASM-NEXT:    andl %edx, %eax
-; X86ASM-NEXT:    andl $1, %eax
 ; X86ASM-NEXT:    retq
 entry:
   %load1 = load i8, ptr %p1, align 1
