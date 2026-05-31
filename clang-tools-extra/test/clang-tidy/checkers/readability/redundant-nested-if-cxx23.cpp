@@ -1,20 +1,7 @@
-// RUN: %check_clang_tidy -std=c++23-or-later %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++23-or-later %s readability-redundant-nested-if %t -- -- \
+// RUN:   -I %S -fno-delayed-template-parsing
 
-bool cond(int X = 0);
-int side_effect();
-void sink();
-void bar();
-
-struct BoolLike {
-  operator bool() const;
-};
-
-BoolLike make_bool_like();
-
-#define INNER_IF(C) if (C) sink()
-#define COND_MACRO cond()
-#define OUTER_IF if (cond())
-
+#include "Inputs/redundant-nested-if/common.h"
 
 void cxx23_positive_anchor(bool B1, bool B2) {
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together

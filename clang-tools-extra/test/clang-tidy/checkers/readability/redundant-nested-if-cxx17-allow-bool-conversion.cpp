@@ -1,20 +1,9 @@
-// RUN: %check_clang_tidy -check-suffixes=ALLOWBOOL -std=c++17-or-later %s readability-redundant-nested-if %t -- -config='{CheckOptions: {readability-redundant-nested-if.AllowUserDefinedBoolConversion: true}}' -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -check-suffixes=ALLOWBOOL -std=c++17-or-later %s \
+// RUN:   readability-redundant-nested-if %t -- \
+// RUN:   -config='{CheckOptions: {readability-redundant-nested-if.AllowUserDefinedBoolConversion: true}}' -- \
+// RUN:   -I %S -fno-delayed-template-parsing
 
-
-bool cond(int X = 0);
-int side_effect();
-void sink();
-void bar();
-
-struct BoolLike {
-  operator bool() const;
-};
-
-BoolLike make_bool_like();
-
-#define INNER_IF(C) if (C) sink()
-#define COND_MACRO cond()
-#define OUTER_IF if (cond())
+#include "Inputs/redundant-nested-if/common.h"
 
 void declaration_condition_boollike_cases() {
   // CHECK-MESSAGES-ALLOWBOOL: :[[@LINE+2]]:3: warning: nested 'if' statements can be merged together

@@ -1,19 +1,7 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-redundant-nested-if %t -- -- \
+// RUN:   -I %S -fno-delayed-template-parsing
 
-bool cond(int X = 0);
-int side_effect();
-void sink();
-void bar();
-
-struct BoolLike {
-  operator bool() const;
-};
-
-BoolLike make_bool_like();
-
-#define INNER_IF(C) if (C) sink()
-#define COND_MACRO cond()
-#define OUTER_IF if (cond())
+#include "Inputs/redundant-nested-if/common.h"
 
 void init_statement_cases() {
   // CHECK-MESSAGES: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
@@ -55,7 +43,6 @@ void init_statement_cases() {
   // CHECK-FIXES: if (bool X = cond() /* here */; X && (cond()))
   // CHECK-FIXES: bar();
 }
-
 
 void declaration_condition_boollike_default_cases() {
   // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
@@ -162,7 +149,3 @@ void mixed_constexpr_and_non_constexpr(bool B) {
       sink();
   }
 }
-
-
-
-
