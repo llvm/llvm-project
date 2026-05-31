@@ -393,4 +393,4 @@ __attribute__((nonnull))), and attempting to inline a call.
 CallEvents are reference-counted objects managed by a CallEventManager. While
 there is no inherent issue with persisting them (say, in a ProgramState's GDM),
 they are intended for short-lived use, and can be recreated from CFGElements or
-non-top-level StackFrameContexts fairly easily.
+non-top-level StackFrames fairly easily.

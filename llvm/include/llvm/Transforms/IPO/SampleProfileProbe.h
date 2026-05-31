@@ -113,7 +113,8 @@ private:
   uint32_t LastProbeId;
 };
 
-class SampleProfileProbePass : public PassInfoMixin<SampleProfileProbePass> {
+class SampleProfileProbePass
+    : public OptionalPassInfoMixin<SampleProfileProbePass> {
   TargetMachine *TM;
 
 public:
@@ -133,7 +134,8 @@ public:
 // pass updates distribution factors for each pseudo probe at the end of the
 // prelink pipeline, to reflect an estimated portion of the real execution
 // count.
-class PseudoProbeUpdatePass : public PassInfoMixin<PseudoProbeUpdatePass> {
+class PseudoProbeUpdatePass
+    : public OptionalPassInfoMixin<PseudoProbeUpdatePass> {
   void runOnFunction(Function &F, FunctionAnalysisManager &FAM);
 
 public:

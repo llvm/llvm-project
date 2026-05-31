@@ -45,7 +45,6 @@ function(set_test_compiler_information dir)
     set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_TSAN_FLAGS}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS}" PARENT_SCOPE)
-    set(OPENMP_TEST_COMPILER_HAS_OMP_H "${OPENMP_TEST_C_COMPILER_HAS_OMP_H}" PARENT_SCOPE)
 
     # Determine major version.
     string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
@@ -74,7 +73,6 @@ if(TARGET tsan)
 else()
   set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
 endif()
-set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
 set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
 set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 
@@ -127,19 +125,23 @@ function(add_openmp_testsuite target comment)
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
+  set(EXTRA_CHECK_DEPENDS "")
+  if (TARGET "clang")
+    list(APPEND EXTRA_CHECK_DEPENDS clang)
+  endif()
   if (ARG_EXCLUDE_FROM_CHECK_ALL)
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
       EXCLUDE_FROM_CHECK_ALL
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
   else()
     add_lit_testsuite(${target}
       ${comment}
       ${ARG_UNPARSED_ARGUMENTS}
-      DEPENDS clang FileCheck not ${ARG_DEPENDS}
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
       ARGS ${ARG_ARGS}
     )
   endif()

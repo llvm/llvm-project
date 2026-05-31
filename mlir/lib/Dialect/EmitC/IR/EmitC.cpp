@@ -461,11 +461,31 @@ struct RemoveRecurringExpressionOperands
   }
 };
 
+/// If an ExpressionOp body yields a block argument directly (no root op),
+/// this means a contained op was folded away (e.g., an identity cast whose
+/// in/out types match). Canonicalize by replacing the expression with the
+/// corresponding operand value.
+struct FoldTrivialExpressionOp : public OpRewritePattern<ExpressionOp> {
+  using OpRewritePattern<ExpressionOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ExpressionOp expressionOp,
+                                PatternRewriter &rewriter) const override {
+    auto yieldOp = cast<YieldOp>(expressionOp.getBody()->getTerminator());
+    Value yieldedValue = yieldOp.getResult();
+    auto blockArg = dyn_cast_if_present<BlockArgument>(yieldedValue);
+    if (!blockArg)
+      return failure();
+    rewriter.replaceOp(expressionOp,
+                       expressionOp.getOperand(blockArg.getArgNumber()));
+    return success();
+  }
+};
+
 } // namespace
 
 void ExpressionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<RemoveRecurringExpressionOperands>(context);
+  results.add<RemoveRecurringExpressionOperands, FoldTrivialExpressionOp>(
+      context);
 }
 
 ParseResult ExpressionOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -586,7 +606,8 @@ LogicalResult ExpressionOp::verify() {
     Operation *op = worklist.back();
     worklist.pop_back();
     if (visited.contains(op)) {
-      if (cast<CExpressionInterface>(op).hasSideEffects())
+      auto cExpr = cast<CExpressionInterface>(op);
+      if (!cExpr.alwaysInline() && cExpr.hasSideEffects())
         return emitOpError(
             "requires exactly one use for operations with side effects");
     }
@@ -595,6 +616,14 @@ LogicalResult ExpressionOp::verify() {
       if (Operation *def = operand.getDefiningOp()) {
         worklist.push_back(def);
       }
+  }
+
+  // It is illegal to forbid inlining of expressions whose root operation must
+  // be inlined.
+  if (getDoNotInline() &&
+      cast<emitc::CExpressionInterface>(rootOp).alwaysInline()) {
+    return emitOpError("root operation must be inlined but expression is marked"
+                       " do-not-inline");
   }
 
   return success();
@@ -1092,6 +1121,10 @@ LogicalResult emitc::YieldOp::verify() {
   if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
 
+  if (result && isa<emitc::LValueType>(result.getType()) &&
+      !isa<ExpressionOp>(containingOp))
+    return emitOpError() << "yielding lvalues is not supported for this op";
+
   return success();
 }
 
@@ -1531,6 +1564,19 @@ void SwitchOp::getSuccessorRegions(
   llvm::append_range(successors, getRegions());
 }
 
+/// Returns the int64_t value of an IntegerAttr regardless of whether its type
+/// is signless, signed, or unsigned. Returns std::nullopt for unknown types.
+static std::optional<int64_t> getIntAttrValue(IntegerAttr attr) {
+  Type type = attr.getType();
+  if (type.isIndex() || type.isSignlessInteger())
+    return attr.getInt();
+  if (type.isSignedInteger())
+    return attr.getSInt();
+  if (type.isUnsignedInteger())
+    return static_cast<int64_t>(attr.getUInt());
+  return std::nullopt;
+}
+
 void SwitchOp::getEntrySuccessorRegions(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &successors) {
@@ -1543,10 +1589,17 @@ void SwitchOp::getEntrySuccessorRegions(
     return;
   }
 
+  std::optional<int64_t> argValue = getIntAttrValue(arg);
+  if (!argValue) {
+    // Unknown type; conservatively treat all regions as possible.
+    llvm::append_range(successors, getRegions());
+    return;
+  }
+
   // Otherwise, try to find a case with a matching value. If not, the
   // default region is the only successor.
   for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
-    if (caseValue == arg.getInt()) {
+    if (caseValue == *argValue) {
       successors.emplace_back(&caseRegion);
       return;
     }
@@ -1563,8 +1616,15 @@ void SwitchOp::getRegionInvocationBounds(
     return;
   }
 
+  std::optional<int64_t> maybeIntValue = getIntAttrValue(operandValue);
+  if (!maybeIntValue) {
+    // Unknown type; conservatively treat all regions as possible.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
   unsigned liveIndex = getNumRegions() - 1;
-  const auto *iteratorToInt = llvm::find(getCases(), operandValue.getInt());
+  const auto *iteratorToInt = llvm::find(getCases(), *maybeIntValue);
 
   liveIndex = iteratorToInt != getCases().end()
                   ? std::distance(getCases().begin(), iteratorToInt)

@@ -56,5 +56,14 @@ func.func @side_effect(%arg : index) {
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_argument, test_resource} ]} : index -> index
 
+  // expected-remark@+1 {{operation has no memory effects}}
+  %9 = "test.conditional_side_effect_op"() {has_effects = false} : () -> i32
+
+  // expected-remark@+4 {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@+3 {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@+2 {{found an instance of 'free' on resource '<Default>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on resource '<Default>'}}
+  %10 = "test.conditional_side_effect_op"() {has_effects = true} : () -> i32
+
   func.return 
 }

@@ -121,6 +121,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
+  bool is_live_session = true;
 
   /// The process event thread normally responds to process exited events by
   /// shutting down the entire adapter. When we're restarting, we keep the id of
@@ -192,7 +193,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log &log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
@@ -305,10 +306,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///   \b false if a fatal error was found while executing these commands,
   ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
   bool RunLLDBCommands(llvm::StringRef prefix,
-                       llvm::ArrayRef<std::string> commands);
+                       llvm::ArrayRef<protocol::String> commands);
 
-  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
-  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error
+  RunAttachCommands(llvm::ArrayRef<protocol::String> attach_commands);
+  llvm::Error
+  RunLaunchCommands(llvm::ArrayRef<protocol::String> launch_commands);
   llvm::Error RunPreInitCommands();
   llvm::Error RunInitCommands();
   llvm::Error RunPreRunCommands();
@@ -475,7 +478,7 @@ private:
 
   /// Event threads.
   /// @{
-  void ProgressEventThread();
+  void ProgressEventThread(lldb::SBListener listener);
 
   /// Event thread is a shared pointer in case we have a multiple
   /// DAP instances sharing the same event thread.

@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @load_number_of_indices(%v : memref<f32>) {
-  // expected-error @+2 {{incorrect number of indices for load}}
+  // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
@@ -9,7 +9,7 @@ func.func @load_number_of_indices(%v : memref<f32>) {
 // -----
 
 func.func @store_number_of_indices(%v : memref<f32>) {
-  // expected-error @+3 {{store index operand count not equal to memref rank}}
+  // expected-error @+3 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   memref.store %f0, %v[%c0] : memref<f32>
@@ -17,7 +17,7 @@ func.func @store_number_of_indices(%v : memref<f32>) {
 
 // -----
 
-func.func @yield_parent(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
+func.func @yield_parent(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) -> memref<?xf32, affine_map<(i)[off]->(off + i)>> {
   // expected-error @+1 {{op expected parent op with LinalgOp interface}}
   linalg.yield %arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
@@ -321,6 +321,24 @@ func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->
 
 // -----
 
+// Unranked tensor inputs must be diagnosed.
+func.func @generic_unranked_input_tensor(%in: tensor<*xf32>) {
+  %out = tensor.empty() : tensor<16x16xf32>
+  // expected-error @+1 {{'linalg.generic' op operand #0 must be a ranked tensor, but got 'tensor<*xf32>'}}
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%in : tensor<*xf32>)
+     outs(%out : tensor<16x16xf32>) {
+      ^bb0(%a: f32, %b: f32):
+        linalg.yield %a : f32
+     } -> tensor<16x16xf32>
+  return
+}
+
+// -----
+
 func.func @generic(%arg0: memref<?x?xf32>) {
   // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) <{fastmath = #arith.fastmath<none>}> : (f32, f32) -> f32}}
   linalg.generic  {
@@ -617,10 +635,10 @@ func.func @invalid_indexing_maps_placement_matmul(%lhs: tensor<4x1xf32>, %rhs: t
 
 // -----
 
-func.func @invalid_type_matmul(%arg0 : !amx.tile<16x16xbf16>)
+func.func @invalid_type_matmul(%arg0 : !x86.amx.tile<16x16xbf16>)
 {
-  // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
-  %0 = linalg.matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!x86.amx.tile<16x16xbf16>' and '!x86.amx.tile<16x16xbf16>'}}
+  %0 = linalg.matmul ins(%arg0, %arg0 : !x86.amx.tile<16x16xbf16>, !x86.amx.tile<16x16xbf16>) outs(%arg0 : !x86.amx.tile<16x16xbf16>) -> !x86.amx.tile<16x16xbf16>
   return
 }
 
@@ -965,7 +983,7 @@ func.func @reduce_wrong_block_argument_input_type(
 func.func @reduce_wrong_block_argument_output_type(
     %input1: tensor<16x32x64xf32>,
     %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
-    %init2: tensor<16x64xf64>)  -> (tensor<16x64xf32>, tensor<16x64xf32>) {
+    %init2: tensor<16x64xf64>)  -> (tensor<16x64xf32>, tensor<16x64xf64>) {
   // expected-error @+1{{'linalg.reduce' op output element type 'f64' does not match corresponding block argument type 'f32'}}
   %reduce, %reduce2 = linalg.reduce
       ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
@@ -1564,10 +1582,10 @@ func.func @invalid_C_map_result_dim_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1
 
 // -----
 
-func.func @invalid_type_batch_matmul(%arg0 : !amx.tile<16x16xbf16>)
+func.func @invalid_type_batch_matmul(%arg0 : !x86.amx.tile<16x16xbf16>)
 {
-  // expected-error @below {{custom op 'linalg.batch_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
-  %0 = linalg.batch_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.batch_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!x86.amx.tile<16x16xbf16>' and '!x86.amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_matmul ins(%arg0, %arg0 : !x86.amx.tile<16x16xbf16>, !x86.amx.tile<16x16xbf16>) outs(%arg0 : !x86.amx.tile<16x16xbf16>) -> !x86.amx.tile<16x16xbf16>
   return
 }
 
@@ -1772,10 +1790,10 @@ func.func @invalid_C_map_result_dim(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>
 
 // -----
 
-func.func @batch_reduce_matmul_invalid_type(%arg0 : !amx.tile<16x16xbf16>)
+func.func @batch_reduce_matmul_invalid_type(%arg0 : !x86.amx.tile<16x16xbf16>)
 {
-  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
-  %0 = linalg.batch_reduce_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!x86.amx.tile<16x16xbf16>' and '!x86.amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_reduce_matmul ins(%arg0, %arg0 : !x86.amx.tile<16x16xbf16>, !x86.amx.tile<16x16xbf16>) outs(%arg0 : !x86.amx.tile<16x16xbf16>) -> !x86.amx.tile<16x16xbf16>
   return
 }
 
@@ -1859,7 +1877,7 @@ func.func @pack_invalid(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf
 
 func.func @pack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1869,7 +1887,7 @@ func.func @pack_mismatch_inner_tile_size_and_output_shape(
 func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x8xf32>) -> tensor<?x?x8x8xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 1: got static shape 8 but dynamic tile size}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, %c8] into %output : tensor<?x?xf32> -> tensor<?x?x8x8xf32>
   return %0 : tensor<?x?x8x8xf32>
 }
@@ -1878,7 +1896,7 @@ func.func @pack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @pack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?xf32>, %output : tensor<?x?x8x?xf32>) -> tensor<?x?x8x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got}}
   %0 = linalg.pack %input inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %output : tensor<?x?xf32> -> tensor<?x?x8x?xf32>
   return %0 : tensor<?x?x8x?xf32>
 }
@@ -1905,7 +1923,7 @@ func.func @unpack_invalid_output_rank(%input: tensor<256x128xf32>, %output: tens
 
 // -----
 
-func.func @unpack_invalid_out_of_bound_outer_perm(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<8x8x32x16xf32> {
+func.func @unpack_invalid_out_of_bound_outer_perm(%input: tensor<256x128xf32>, %output: tensor<8x8x32x16xf32>) -> tensor<256x128xf32> {
   // expected-error@+1 {{invalid outer_dims_perm vector}}
   %0 = linalg.unpack %output outer_dims_perm = [2, 1] inner_dims_pos = [0, 1] inner_tiles = [2, 2] into %input : tensor<8x8x32x16xf32> -> tensor<256x128xf32>
   return %0 : tensor<256x128xf32>
@@ -1969,7 +1987,7 @@ func.func @unpack_invalid_source_shape(%output: tensor<256x128xf32>, %input: ten
 
 func.func @unpack_mismatch_inner_tile_size_and_output_shape(
   %input : tensor<?x?x8x8xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 1: got 8 != 4}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x8x8xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -1979,7 +1997,7 @@ func.func @unpack_mismatch_inner_tile_size_and_output_shape(
 func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
   %input : tensor<?x?x8x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c8 = arith.constant 8 : index
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified at index 0: got static shape 8 but dynamic tile size}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [%c8, 4] into %output : tensor<?x?x8x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -1988,7 +2006,7 @@ func.func @unpack_dynamic_inner_tile_size_and_static_output_shape(
 
 func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
   %input : tensor<?x?x?x4xf32>, %output : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type}}
+  // expected-error@+1 {{mismatch in inner tile sizes specified and shaped of tiled dimension in the packed type at index 0: got}}
   %0 = linalg.unpack %input inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %output : tensor<?x?x?x4xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
@@ -2153,4 +2171,38 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   %0 = linalg.matmul ins(%t, %t : tensor<?xf16>, tensor<?xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/93973.
+// Having more inputs than inits must not crash but produce a clear error.
+
+func.func @reduce_unequal_input_output_count(
+    %arg0: tensor<32xi32>, %arg1: tensor<32xi32>) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %init = tensor.from_elements %c0 : tensor<i32>
+  // expected-error @+1 {{'linalg.reduce' op expected equal number of inputs and outputs}}
+  %reduced = linalg.reduce
+      ins(%arg0, %arg1 : tensor<32xi32>, tensor<32xi32>)
+      outs(%init : tensor<i32>)
+      dimensions = [0]
+      (%in0: i32, %in1: i32, %acc: i32) {
+        %v = arith.addi %in0, %acc : i32
+        linalg.yield %v : i32
+      }
+  %ext = tensor.extract %reduced[] : tensor<i32>
+  return %ext : i32
+}
+
+// -----
+
+func.func @reduce_no_inputs() {
+  // expected-error @+1 {{'linalg.reduce' op expected at least one input}}
+  linalg.reduce
+      dimensions = []
+      () {
+        linalg.yield
+      }
+  func.return
 }

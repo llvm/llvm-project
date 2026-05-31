@@ -9,6 +9,7 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBAddress.h"
@@ -244,7 +245,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
   const llvm::StringRef name = v.GetName();
-  return !name.empty() ? name : "<null>";
+  return !name.empty() ? name : "(anonymous)";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
@@ -311,9 +312,16 @@ VariableDescription::VariableDescription(
     }
   }
 
-  lldb::SBStream evaluateStream;
-  val.GetExpressionPath(evaluateStream);
-  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+  // Only include the evaluation name if the name is not empty. If the name is
+  // empty then 'GetExpressionPath' will return an empty string like 'foo.',
+  // which does not actually work in expression evaluation.
+  if (!llvm::StringRef{val.GetName()}.empty()) {
+    lldb::SBStream evaluateStream;
+    val.GetExpressionPath(evaluateStream);
+    evaluate_name =
+        llvm::StringRef{evaluateStream.GetData(), evaluateStream.GetSize()}
+            .str();
+  }
 }
 
 std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
@@ -338,10 +346,12 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {
-  if (!v.GetType().GetPointeeType().IsFunctionType())
+  lldb::SBType type = v.GetType();
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
@@ -359,10 +369,10 @@ std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
-    llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
+    llvm::StringRef program, const std::vector<protocol::String> &args,
+    const llvm::StringMap<protocol::String> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid,
-    const std::vector<std::optional<std::string>> &stdio, bool external) {
+    const std::vector<std::optional<protocol::String>> &stdio, bool external) {
   llvm::json::Object run_in_terminal_args;
   if (external) {
     // This indicates the IDE to open an external terminal window.
@@ -385,10 +395,14 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
 
     std::stringstream ss;
     std::string_view delimiter;
-    for (const std::optional<std::string> &file : stdio) {
+    for (const std::optional<protocol::String> &file : stdio) {
+#ifdef _WIN32
+      ss << std::exchange(delimiter, ";");
+#else
       ss << std::exchange(delimiter, ":");
+#endif
       if (file)
-        ss << *file;
+        ss << file->str();
     }
     req_args.push_back(ss.str());
   }
@@ -443,13 +457,9 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   case lldb::eStructuredDataTypeBoolean:
     out.try_emplace(key_utf8, value.GetBooleanValue());
     break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    out.try_emplace(key_utf8, llvm::json::fixUTF8(str));
-  } break;
+  case lldb::eStructuredDataTypeString:
+    out.try_emplace(key_utf8, llvm::json::fixUTF8(GetStringValue(value)));
+    break;
   case lldb::eStructuredDataTypeDictionary: {
     lldb::SBStream contents;
     value.GetAsJSON(contents);

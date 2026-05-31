@@ -88,8 +88,7 @@ ProgramStateManager::~ProgramStateManager() {
 }
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
-    ProgramStateRef state, const StackFrameContext *LCtx,
-    SymbolReaper &SymReaper) {
+    ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
 
   // This code essentially performs a "mark-and-sweep" of the VariableBindings.
   // The roots are any Block-level exprs and Decls that our liveness algorithm
@@ -102,8 +101,8 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   NewState.Env = EnvMgr.removeDeadBindings(NewState.Env, SymReaper, state);
 
   // Clean up the store.
-  StoreRef newStore = StoreMgr->removeDeadBindings(NewState.getStore(), LCtx,
-                                                   SymReaper);
+  StoreRef newStore =
+      StoreMgr->removeDeadBindings(NewState.getStore(), SF, SymReaper);
   NewState.setStore(newStore);
   SymReaper.setReapedStore(newStore);
 
@@ -231,7 +230,7 @@ SVal ProgramState::wrapSymbolicRegion(SVal Val) const {
 
 ProgramStateRef
 ProgramState::enterStackFrame(const CallEvent &Call,
-                              const StackFrameContext *CalleeCtx) const {
+                              const StackFrame *CalleeCtx) const {
   return makeWithStore(
       getStateManager().StoreMgr->enterStackFrame(getStore(), Call, CalleeCtx));
 }
@@ -298,12 +297,11 @@ SVal ProgramState::getSVal(Loc location, QualType T) const {
   return V;
 }
 
-ProgramStateRef ProgramState::BindExpr(const Stmt *S,
-                                           const LocationContext *LCtx,
-                                           SVal V, bool Invalidate) const{
-  Environment NewEnv =
-    getStateManager().EnvMgr.bindExpr(Env, EnvironmentEntry(S, LCtx), V,
-                                      Invalidate);
+ProgramStateRef ProgramState::BindExpr(const Expr *E,
+                                       const LocationContext *LCtx, SVal V,
+                                       bool Invalidate) const {
+  Environment NewEnv = getStateManager().EnvMgr.bindExpr(
+      Env, EnvironmentEntry(E, LCtx), V, Invalidate);
   if (NewEnv == Env)
     return this;
 
@@ -531,14 +529,13 @@ AnalysisManager& ProgramState::getAnalysisManager() const {
 // Generic Data Map.
 //===----------------------------------------------------------------------===//
 
-void *const* ProgramState::FindGDM(void *K) const {
+void *const *ProgramState::FindGDM(const void *K) const {
   return GDM.lookup(K);
 }
 
-void*
-ProgramStateManager::FindGDMContext(void *K,
-                               void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                               void (*DeleteContext)(void*)) {
+void *ProgramStateManager::FindGDMContext(
+    const void *K, void *(*CreateContext)(llvm::BumpPtrAllocator &),
+    void (*DeleteContext)(void *)) {
 
   std::pair<void*, void (*)(void*)>& p = GDMContexts[K];
   if (!p.first) {
@@ -549,7 +546,8 @@ ProgramStateManager::FindGDMContext(void *K,
   return p.first;
 }
 
-ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, void *Key, void *Data){
+ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
+                                            void *Data) {
   ProgramState::GenericDataMap M1 = St->getGDM();
   ProgramState::GenericDataMap M2 = GDMFactory.add(M1, Key, Data);
 
@@ -561,7 +559,8 @@ ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, void *Key, void 
   return getPersistentState(NewSt);
 }
 
-ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state, void *Key) {
+ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state,
+                                               const void *Key) {
   ProgramState::GenericDataMap OldM = state->getGDM();
   ProgramState::GenericDataMap NewM = GDMFactory.remove(OldM, Key);
 

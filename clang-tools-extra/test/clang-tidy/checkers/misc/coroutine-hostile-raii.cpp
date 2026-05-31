@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s misc-coroutine-hostile-raii %t \
+// RUN: %check_clang_tidy -std=c++20-or-later %s misc-coroutine-hostile-raii %t \
 // RUN:   -config="{CheckOptions: {\
 // RUN:             misc-coroutine-hostile-raii.RAIITypesList: 'my::Mutex; ::my::other::Mutex', \
 // RUN:             misc-coroutine-hostile-raii.AllowedAwaitablesList: 'safe::awaitable; ::transformable::awaitable', \

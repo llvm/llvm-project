@@ -61,35 +61,24 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
-/// Appends patterns for XeGPU SIMT distribution into `patterns`.
-void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
-/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
-void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Appends patterns for array length optimization into `patterns`.
+void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
-/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// Define only the type conversions needed for XeGPU subgroup to lane
 /// distribution.
-void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
-/// Defines type conversions and legality for XeGPU subgroup to workitem
+void populateXeGPUSgToLaneDistributeTypeConversions(
+    TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to lane
 /// distribution and appends the required conversion patterns into `patterns`.
-/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// Appends patterns for XeGPU subgroup to lane distribution into
 /// `patterns`.
-void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
-/// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
-/// vector::ReductionOps if the multi-reduction involves cross-lane data
-/// movement. This pattern is used as pre-processing step before applying
-/// subgroup to workitem distribution patterns. This pattern will rewrite a
-/// multi reduction in terms of a series of simpler extract, reduction and
-/// insert ops if the reduction require cross-lane data movement.
-void populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
-    RewritePatternSet &patterns, ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as

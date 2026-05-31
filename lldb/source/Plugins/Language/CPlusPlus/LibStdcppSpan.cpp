@@ -13,6 +13,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstddef>
 #include <optional>
 
@@ -41,7 +42,7 @@ public:
     uint64_t offset = (static_cast<uint64_t>(idx) * m_element_size);
     offset += m_start->GetValueAsUnsigned(0);
     const std::string name = llvm::formatv("[{0}]", idx);
-    return CreateValueObjectFromAddress(
+    return CreateChildValueObjectFromAddress(
         name, offset, m_backend.GetExecutionContextRef(), m_element_type);
   }
 
@@ -80,13 +81,11 @@ public:
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (!m_start)
-      return llvm::createStringError(
-          llvm::formatv("Type has no child named {0}", name.GetStringRef()));
+      return llvm::createStringErrorV("type has no child named '{0}'", name);
 
     auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
     if (!optional_idx) {
-      return llvm::createStringError(
-          llvm::formatv("Type has no child named {0}", name.GetStringRef()));
+      return llvm::createStringErrorV("type has no child named '{0}'", name);
     }
     return *optional_idx;
   }

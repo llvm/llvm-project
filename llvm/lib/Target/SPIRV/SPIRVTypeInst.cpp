@@ -11,10 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVTypeInst.h"
+#include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
 
+#include "SPIRV.h"
+
 namespace llvm {
-static bool definesATypeRegister(const MachineInstr &MI) {
+[[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   return MRI.getRegClass(MI.getOperand(0).getReg()) == &SPIRV::TYPERegClass;
 }
@@ -22,5 +25,17 @@ static bool definesATypeRegister(const MachineInstr &MI) {
 SPIRVTypeInst::SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
   // A SPIRV Type whose result is not a type is invalid.
   assert(!MI || definesATypeRegister(*MI));
+}
+
+bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
+  if (MI->getOpcode() != SPIRV::OpTypeInt)
+    return false;
+  if (N)
+    return MI->getOperand(1).getImm() == N;
+  return true;
+}
+
+bool SPIRVTypeInst::isAnyTypeFloat() const {
+  return MI->getOpcode() == SPIRV::OpTypeFloat;
 }
 } // namespace llvm

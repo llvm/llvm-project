@@ -19,12 +19,6 @@ namespace llvm {
 class MachineInstr;
 class MachineRegisterInfo;
 
-/// @deprecated Use SPIRVTypeInst instead
-/// SPIRVType is supposed to represent a MachineInstr that defines a SPIRV Type
-/// (e.g. an OpTypeInt intruction). It is misused in several places and we're
-/// getting rid of it.
-using SPIRVType = const MachineInstr;
-
 class SPIRVTypeInst {
   const MachineInstr *MI;
 
@@ -35,7 +29,7 @@ class SPIRVTypeInst {
 
 public:
   SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
-  SPIRVTypeInst(const MachineInstr *MI);
+  SPIRVTypeInst(const MachineInstr *MI = nullptr);
 
   // No need to verify the register since it's already verified by the copied
   // object.
@@ -53,6 +47,14 @@ public:
   bool operator!=(const MachineInstr *Other) const { return MI != Other; }
 
   operator bool() const { return MI; }
+
+  // Returns true if this is an OpTypeInt instruction.
+  // If N is non-zero, also checks that the bit width matches N.
+  bool isTypeIntN(unsigned N = 0) const;
+  // Returns true if this is an OpTypeFloat instruction.
+  bool isAnyTypeFloat() const;
+  // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
+  bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
@@ -74,4 +76,4 @@ template <> struct DenseMapInfo<SPIRVTypeInst> {
 };
 
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVTYPEINST_H

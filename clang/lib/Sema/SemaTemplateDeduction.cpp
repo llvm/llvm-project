@@ -1003,16 +1003,6 @@ private:
       if (PartialPackDepthIndex ==
             std::make_pair(Info.getDeducedDepth(), Pack.Index)) {
         Pack.New.append(PartialPackArgs, PartialPackArgs + NumPartialPackArgs);
-        // We pre-populate the deduced value of the partially-substituted
-        // pack with the specified value. This is not entirely correct: the
-        // value is supposed to have been substituted, not deduced, but the
-        // cases where this is observable require an exact type match anyway.
-        //
-        // FIXME: If we could represent a "depth i, index j, pack elem k"
-        // parameter, we could substitute the partially-substituted pack
-        // everywhere and avoid this.
-        if (!FinishingDeduction && !IsPartiallyExpanded)
-          Deduced[Pack.Index] = Pack.New[PackElements];
       }
     }
   }
@@ -2521,11 +2511,13 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         if (!NTTP)
           return TemplateDeductionResult::Success;
 
-        llvm::APSInt ArgSize(S.Context.getTypeSize(S.Context.IntTy), false);
+        // Deduce the size parameter of _BitInt as std::size_t
+        QualType T = S.Context.getSizeType();
+        llvm::APSInt ArgSize(S.Context.getTypeSize(T), /*IsUnsigned=*/true);
         ArgSize = IA->getNumBits();
 
         return DeduceNonTypeTemplateArgument(
-            S, TemplateParams, NTTP, ArgSize, S.Context.IntTy, true, Info,
+            S, TemplateParams, NTTP, ArgSize, T, true, Info,
             POK != PartialOrderingKind::None, Deduced, HasDeducedAnyParam);
       }
 
@@ -2550,6 +2542,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
+    case Type::OverflowBehavior:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -2917,7 +2910,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     return TemplateArgumentLoc(Arg, Arg.getAsExpr());
 
   case TemplateArgument::Pack:
-    return TemplateArgumentLoc(Arg, TemplateArgumentLocInfo());
+    return TemplateArgumentLoc(Arg, TemplateArgumentLocInfo(Context, Loc));
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
@@ -3012,7 +3005,9 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
                                          TTP, CTAI.SugaredConverted,
                                          Template->getSourceRange());
-        if (Inst.isInvalid() || !S.SubstDecl(TTP, S.CurContext, Args))
+        if (Inst.isInvalid() ||
+            !S.SubstTemplateParams(TTP->getTemplateParameters(), S.CurContext,
+                                   Args))
           return true;
       }
       // For type parameters, no substitution is ever required.
@@ -3981,12 +3976,11 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     if (CheckFunctionTemplateConstraints(
             Info.getLocation(),
             FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
-            CTAI.SugaredConverted, Info.AssociatedConstraintsSatisfaction))
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
     if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
-      Info.reset(
-          TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted),
-          Info.takeCanonical());
+      Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
+                                         Context, CTAI.CanonicalConverted));
       return TemplateDeductionResult::ConstraintsNotSatisfied;
     }
   }
@@ -5052,21 +5046,27 @@ namespace {
   /// specifier within a type for a given replacement type.
   class SubstituteDeducedTypeTransform :
       public TreeTransform<SubstituteDeducedTypeTransform> {
+    DeducedKind DK;
     QualType Replacement;
-    bool ReplacementIsPack;
     bool UseTypeSugar;
     using inherited = TreeTransform<SubstituteDeducedTypeTransform>;
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
         : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
-          ReplacementIsPack(DA.IsPack), UseTypeSugar(true) {}
+          DK(DA.IsPack ? DeducedKind::DeducedAsPack
+                       : DeducedKind::DeducedAsDependent),
+          UseTypeSugar(true) {}
 
     SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,
                                    bool UseTypeSugar = true)
         : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
-          Replacement(Replacement), ReplacementIsPack(false),
-          UseTypeSugar(UseTypeSugar) {}
+          DK(Replacement.isNull() ? DeducedKind::Undeduced
+                                  : DeducedKind::Deduced),
+          Replacement(Replacement), UseTypeSugar(UseTypeSugar) {
+      assert((!Replacement.isNull() || UseTypeSugar) &&
+             "An undeduced auto type is never type sugar");
+    }
 
     QualType TransformDesugared(TypeLocBuilder &TLB, DeducedTypeLoc TL) {
       assert(isa<TemplateTypeParmType>(Replacement) &&
@@ -5091,8 +5091,8 @@ namespace {
         return TransformDesugared(TLB, TL);
 
       QualType Result = SemaRef.Context.getAutoType(
-          Replacement, TL.getTypePtr()->getKeyword(), Replacement.isNull(),
-          ReplacementIsPack, TL.getTypePtr()->getTypeConstraintConcept(),
+          DK, Replacement, TL.getTypePtr()->getKeyword(),
+          TL.getTypePtr()->getTypeConstraintConcept(),
           TL.getTypePtr()->getTypeConstraintArguments());
       auto NewTL = TLB.push<AutoTypeLoc>(Result);
       NewTL.copy(TL);
@@ -5105,8 +5105,8 @@ namespace {
         return TransformDesugared(TLB, TL);
 
       QualType Result = SemaRef.Context.getDeducedTemplateSpecializationType(
-          TL.getTypePtr()->getKeyword(), TL.getTypePtr()->getTemplateName(),
-          Replacement, Replacement.isNull());
+          DK, Replacement, TL.getTypePtr()->getKeyword(),
+          TL.getTypePtr()->getTemplateName());
       auto NewTL = TLB.push<DeducedTemplateSpecializationTypeLoc>(Result);
       NewTL.setElaboratedKeywordLoc(TL.getElaboratedKeywordLoc());
       NewTL.setNameLoc(TL.getNameLoc());
@@ -5228,26 +5228,17 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *Init, QualType &Result,
     return TemplateDeductionResult::Success;
   }
 
-  // Make sure that we treat 'char[]' equaly as 'char*' in C23 mode.
-  auto *String = dyn_cast<StringLiteral>(Init);
-  if (getLangOpts().C23 && String && Type.getType()->isArrayType()) {
-    Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
-    TypeLoc TL = TypeLoc(Init->getType(), Type.getOpaqueData());
-    Result = SubstituteDeducedTypeTransform(*this, DependentResult).Apply(TL);
-    assert(!Result.isNull() && "substituting DependentTy can't fail");
-    return TemplateDeductionResult::Success;
+  auto *InitList = dyn_cast<InitListExpr>(Init);
+  bool IsArrayType = Type.getType()->isArrayType();
+  if (!getLangOpts().CPlusPlus && (InitList || IsArrayType)) {
+    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c)
+        << (int)AT->getKeyword() << IsArrayType;
+    return TemplateDeductionResult::AlreadyDiagnosed;
   }
 
   // Emit a warning if 'auto*' is used in pedantic and in C23 mode.
   if (getLangOpts().C23 && Type.getType()->isPointerType()) {
     Diag(Type.getBeginLoc(), diag::ext_c23_auto_non_plain_identifier);
-  }
-
-  auto *InitList = dyn_cast<InitListExpr>(Init);
-  if (!getLangOpts().CPlusPlus && InitList) {
-    Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c)
-        << (int)AT->getKeyword() << getLangOpts().C23;
-    return TemplateDeductionResult::AlreadyDiagnosed;
   }
 
   // Deduce type of TemplParam in Func(Init)
@@ -6501,6 +6492,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   if (Inst.isInvalid())
     return false;
 
+  LocalInstantiationScope Scope(*this);
+
   //   Given an invented class template X with the template parameter list of
   //   A (including default arguments):
   //    - Each function template has a single function parameter whose type is
@@ -7077,6 +7070,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::Pipe:
   case Type::BitInt:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

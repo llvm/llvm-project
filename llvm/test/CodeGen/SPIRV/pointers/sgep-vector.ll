@@ -26,10 +26,10 @@ entry:
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#vec_var]] %[[#idx_2]]
 
   %2 = load float, ptr %1, align 4
-  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_elem]] Aligned 4
+  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_elem]]
 
   store float %2, ptr %out, align 4
-  ; CHECK: OpStore %[[#out_var]] %[[#val]] Aligned 4
+  ; CHECK: OpStore %[[#out_var]] %[[#val]]
 
   ret void
 }
@@ -44,10 +44,10 @@ entry:
   ; CHECK: %[[#ptr_elem2:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var]] %[[#idx_1]] %[[#idx_2]]
 
   %2 = load float, ptr %1, align 4
-  ; CHECK: %[[#val2:]] = OpLoad %[[#float]] %[[#ptr_elem2]] Aligned 4
+  ; CHECK: %[[#val2:]] = OpLoad %[[#float]] %[[#ptr_elem2]]
 
   store float %2, ptr %out, align 4
-  ; CHECK: OpStore %[[#out_var2]] %[[#val2]] Aligned 4
+  ; CHECK: OpStore %[[#out_var2]] %[[#val2]]
 
   ret void
 }
@@ -62,19 +62,19 @@ entry:
   ; CHECK: %[[#ptr_elem3_0:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var3]] %[[#idx_0]]
 
   %2 = load float, ptr %1, align 4
-  ; CHECK: %[[#val3_0:]] = OpLoad %[[#float]] %[[#ptr_elem3_0]] Aligned 4
+  ; CHECK: %[[#val3_0:]] = OpLoad %[[#float]] %[[#ptr_elem3_0]]
 
   %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x float]) %arr, i32 5)
   ; CHECK: %[[#ptr_elem3_5:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var3]] %[[#idx_5]]
 
   %4 = load float, ptr %3, align 4
-  ; CHECK: %[[#val3_5:]] = OpLoad %[[#float]] %[[#ptr_elem3_5]] Aligned 4
+  ; CHECK: %[[#val3_5:]] = OpLoad %[[#float]] %[[#ptr_elem3_5]]
 
   %5 = fadd float %2, %4
   ; CHECK: %[[#res:]] = OpFAdd %[[#float]] %[[#val3_0]] %[[#val3_5]]
 
   store float %5, ptr %out, align 4
-  ; CHECK: OpStore %[[#out_var3]] %[[#res]] Aligned 4
+  ; CHECK: OpStore %[[#out_var3]] %[[#res]]
 
   ret void
 }

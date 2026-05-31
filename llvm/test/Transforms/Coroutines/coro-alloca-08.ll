@@ -2,12 +2,12 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 ; Verify that for both foo and bar, testval isn't put on the frame.
 
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
 %"struct.std::coroutine_handle" = type { ptr }
 %"struct.std::coroutine_handle.0" = type { %"struct.std::coroutine_handle" }
 %"struct.lean_future<int>::Awaiter" = type { i32, %"struct.std::coroutine_handle.0" }
 
-; CHECK: %foo.Frame = type { ptr, ptr, i1 }
-; CHECK: %bar.Frame = type { ptr, ptr, i1 }
 
 declare ptr @malloc(i64)
 
@@ -20,22 +20,22 @@ define void @foo() presplitcoroutine {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca [[I8_ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[FOO_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @foo.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TESTVAL]])
 ; CHECK-NEXT:    call void @consume.i8.array(ptr [[TESTVAL]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TESTVAL]])
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[FOO_FRAME]], ptr [[VFRAME]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -63,13 +63,13 @@ define void @bar() presplitcoroutine {
 ; CHECK-LABEL: define void @bar() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca [[I8_ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @bar.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr @bar.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @bar.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[BAR_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @bar.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[BAR_FRAME]], ptr [[VFRAME]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    br i1 false, label %[[AWAIT_READY:.*]], label %[[AFTERCOROEND:.*]]
 ; CHECK:       [[AWAIT_READY]]:
@@ -82,7 +82,7 @@ define void @bar() presplitcoroutine {
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
   %save = call token @llvm.coro.save(ptr null)

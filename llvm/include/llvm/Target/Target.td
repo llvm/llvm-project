@@ -191,6 +191,9 @@ class Register<string n, list<string> altNames = []> {
   // SubRegs.
   list<SubRegIndex> SubRegIndices = [];
 
+  assert !eq(!size(SubRegs), !size(SubRegIndices)),
+    "SubRegs and SubRegIndices must have the same size";
+
   // RegAltNameIndices - The alternate name indices which are valid for this
   // register.
   list<RegAltNameIndex> RegAltNameIndices = [];
@@ -301,6 +304,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // but different count/size of items, like SSE on x86.
   //
   list<ValueType> RegTypes = regTypes;
+  assert !not(!empty(RegTypes)), "RegTypes list must not be empty";
 
   // Size - Specify the spill size in bits of the registers. A default value of
   // zero lets tablegen pick an appropriate size.
@@ -470,6 +474,11 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
   // sub-registers in the synthesized super-registers.
   list<SubRegIndex> SubRegIndices = Indices;
 
+  assert !eq(!size(SubRegs), !size(SubRegIndices)),
+    "SubRegs and SubRegIndices must have the same size";
+
+  assert !ge(!size(SubRegs), 2), "Tuples must have at least 2 sub-registers";
+
   // List of asm names for the generated tuple registers.
   list<string> RegAsmNames = RegNames;
 
@@ -542,7 +551,7 @@ class SubtargetFeature<string n, string f, string v, string d,
   // Implies - Features that this feature implies are present. If one of those
   // features isn't set, then this one shouldn't be set either.
   //
-  list<SubtargetFeature> Implies = i;
+  list<SubtargetFeature> Implies = !sort(f, i, f.Name);
 }
 
 /// Specifies a Subtarget feature that this instruction is deprecated on.
@@ -840,6 +849,10 @@ class Instruction : InstructionEncoding {
   /// ID, so that instruction that is defined earlier can be sorted earlier
   /// in the assembly matching table.
   bit HasPositionOrder = false;
+
+  // If set, GlobalISel match-table type checks for this instruction should
+  // ignore scalar int/float distinctions and match by size/shape only.
+  bit GISelMatchGenericTypes = 0;
 }
 
 /// Defines a Pat match between compressed and uncompressed instruction.
@@ -1658,6 +1671,7 @@ def RELOC_NONE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$symbol);
   let hasSideEffects = true;
+  let isMeta = true;
 }
 
 let hasSideEffects = false, isMeta = true, isConvergent = true in {
@@ -2040,9 +2054,9 @@ class Target {
 
   // AllowRegisterRenaming - Controls whether this target allows
   // post-register-allocation renaming of registers. This is done by
-  // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
-  // for all opcodes if this flag is set to 0.
-  int AllowRegisterRenaming = 0;
+  // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to true
+  // for all opcodes if this flag is set to false.
+  bit AllowRegisterRenaming = false;
 
   // RegistersAreIntervals - Controls whether registers units must form
   // contiguous intervals for each register.
@@ -2055,7 +2069,7 @@ class Target {
   //
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
-  int RegistersAreIntervals = 0;
+  bit RegistersAreIntervals = false;
 }
 
 //===----------------------------------------------------------------------===//

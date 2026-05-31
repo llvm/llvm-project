@@ -138,10 +138,8 @@ private:
 
   MCInst::iterator getAnnotationInstOp(MCInst &Inst) const {
     for (MCInst::iterator Iter = Inst.begin(); Iter != Inst.end(); ++Iter) {
-      if (Iter->isInst()) {
-        assert(Iter->getInst() == nullptr && "Empty instruction expected.");
+      if (MCPlus::isAnnotationSentinel(*Iter))
         return Iter;
-      }
     }
     return Inst.end();
   }
@@ -863,12 +861,7 @@ public:
     return false;
   }
 
-  virtual bool isLDRWl(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
-  virtual bool isLDRXl(const MCInst &Inst) const {
+  virtual bool isLoadLiteralGPR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1595,13 +1588,18 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
   /// Change \p Regs with a bitmask with all general purpose regs
   virtual void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
 
@@ -1795,6 +1793,11 @@ public:
   }
 
   virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void patchFunctionEntryForBTI(BinaryFunction &Function,
+                                        MCInst &Call) {
     llvm_unreachable("not implemented");
   }
 

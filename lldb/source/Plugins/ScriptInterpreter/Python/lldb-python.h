@@ -16,20 +16,7 @@
 static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 // END
 
-#include "lldb/Host/Config.h"
-
-// Python.h needs to be included before any system headers in order to avoid
-// redefinition of macros
-
-#if LLDB_ENABLE_PYTHON
 #include "llvm/Support/Compiler.h"
-#if defined(_WIN32)
-// If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We
-// need to ensure this doesn't happen.  At the same time, Python.h will also try
-// to redefine a bunch of stuff that PosixApi.h defines.  So define it all now
-// so that PosixApi.h doesn't redefine it.
-#define NO_PID_T
-#endif
 #if defined(__linux__)
 // features.h will define _POSIX_C_SOURCE if _GNU_SOURCE is defined.  This value
 // may be different from the value that Python defines it to be which results
@@ -65,7 +52,6 @@ static_assert(PY_VERSION_HEX >= LLDB_MINIMUM_PYTHON_VERSION,
 // See https://github.com/python/cpython/issues/98680
 #ifndef PyBUF_READ
 #define PyBUF_READ 0x100
-#endif
 #endif
 
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H

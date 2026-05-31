@@ -11,7 +11,6 @@
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s32>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s16>), addrspace 1) (in function: test_sextload_global_v2i32_from_v2s16)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s64>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s16>), addrspace 1) (in function: test_sextload_global_v2i64_from_v2s16)
 # ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(<2 x s64>) = G_SEXTLOAD %0:_(p1) :: (load (<2 x s32>), addrspace 1) (in function: test_sextload_global_v2i64_from_v2s32)
-# ERR-NEXT: remark: <unknown>:0:0: unable to legalize instruction: %1:_(s128) = G_SEXTLOAD %0:_(p1) :: (load (s64), addrspace 1) (in function: test_sextload_global_s128_8)
 # ERR-NOT: remark
 
 ---
@@ -492,15 +491,21 @@ body: |
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
+    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
+    ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[LOAD]], [[C]](s32)
+    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s64), [[ASHR]](s64)
+    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     ;
     ; GFX6-LABEL: name: test_sextload_global_s128_8
     ; GFX6: liveins: $vgpr0_vgpr1
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s128) = G_SEXTLOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[SEXTLOAD]](s128)
+    ; GFX6-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 63
+    ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[LOAD]], [[C]](s32)
+    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[LOAD]](s64), [[ASHR]](s64)
+    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s128) = G_SEXTLOAD %0 :: (load (s64), addrspace 1)
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1

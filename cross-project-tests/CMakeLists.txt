@@ -26,6 +26,7 @@ set(CROSS_PROJECT_TEST_DEPS
   llvm-config
   llvm-dis
   llvm-dwarfdump
+  llvm-modextract
   llvm-objdump
   not
   obj2yaml

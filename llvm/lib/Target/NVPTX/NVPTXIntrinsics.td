@@ -23,7 +23,7 @@ def AS_match {
    return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_ENTRY_PARAM;
   }];
 }
 
@@ -2262,6 +2262,21 @@ let Predicates = [callSubtarget<"hasFP8ConversionSupport">] in {
             (CVT_f16x2_e5m2x2 $a, CvtRN_RELU)>;
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e4m3x2", "e5m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_s2f6x2_rn_satfinite_scale_n2_ue8m0 f32:$a, f32:$b, i16:$scale),
             (CVT_s2f6x2_f32_sf_scale $a, $b, $scale, CvtRN)>;
@@ -2317,6 +2332,20 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
   }
 }
 
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach src_type = ["e2m3x2", "e3m2x2"] in {
+    foreach relu = ["", "_relu"] in {
+      foreach satfinite = ["", "_satfinite"] in {
+        defvar intrin = !cast<Intrinsic>("int_nvvm_" # src_type # "_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+        defvar inst = !cast<NVPTXInst>("CVT_bf16x2_" # src_type # "_scale");
+        defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+        def : Pat<(intrin i16:$a, i16:$b),
+                  (inst $a, $b, mode)>;
+      }
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
+
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_e2m1x2_rn_satfinite f32:$a, f32:$b),
             (CVT_e2m1x2_f32_sf $a, $b, CvtRN)>;
@@ -2339,6 +2368,18 @@ let Predicates = [callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">] in {
     }
   }
 }
+
+let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">] in {
+  foreach relu = ["", "_relu"] in {
+    foreach satfinite = ["", "_satfinite"] in {
+      defvar intrin = !cast<Intrinsic>("int_nvvm_e2m1x2_to_bf16x2_rn" # relu # satfinite # "_scale_n2_ue8m0");
+      defvar inst = !cast<NVPTXInst>("CVT_bf16x2_e2m1x2_scale");
+      defvar mode = !cast<PatLeaf>("CvtRN" # !toupper(relu) # !toupper(satfinite));
+      def : Pat<(intrin i16:$a, i16:$b),
+                (inst $a, $b, mode)>;
+    }
+  }
+} // let Predicates = [callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]
 
 let Predicates = [callSubtarget<"hasNarrowFPConversionSupport">] in {
   def : Pat<(int_nvvm_ff_to_ue8m0x2_rz f32:$a, f32:$b),
@@ -4926,6 +4967,14 @@ def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 
+// Reserved shared memory special register reads
+foreach suffix = ["begin", "end", "cap", "0", "1"] in {
+  defvar regname = "reserved_smem_offset_" # suffix;
+  defvar intr = !cast<Intrinsic>("int_nvvm_read_ptx_sreg_" # regname);
+  def "INT_PTX_SREG_RESERVED_SMEM_OFFSET_" # !toupper(suffix) :
+      PTX_READ_SREG_R32<regname, intr, [hasPTX<76>, hasSM<80>]>;
+}
+
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
 def INT_PTX_SREG_WARPSIZE :
@@ -4936,7 +4985,8 @@ def INT_PTX_SREG_WARPSIZE :
 // In addition to target-independent fields provided by WMMA_REGS, it adds
 // the fields commonly used to implement specific PTX instruction -- register
 // types and names, constraints, parts of assembly, etc.
-class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "">
+class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "",
+                   string kind = "", string stype = "", string scale = "">
       : WMMA_REGS<r.geom, r.frag, r.ptx_elt_type,
                   !or(!eq(op, "mma.sp"), !eq(op, "mma.sp.block_scale"))> {
   // NVPTX register types used to carry fragment data.
@@ -4978,6 +5028,18 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
   // longer the case, we can concat all per-fragment predicates to enforce that
   // all fragments of the instruction are viable.
   list<Predicate> Predicates = !cond(
+    !and(!eq(op, "mma.block_scale"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(stype, "ue8m0"),
+         !eq(scale, ".scale_4x"))
+      : [callSubtarget<"hasMMAWithMXF4NVF4Scale4xE8M0">],
+
+    !and(!eq(op, "mma.sp.block_scale"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(stype, "ue8m0"),
+         !eq(scale, ".scale_4x"))
+      : [callSubtarget<"hasMMASparseWithMXF4NVF4Scale4xE8M0">],
+
     !and(!eq(op, "mma.sp.block_scale"),
         !eq(kind, "mxf4nvf4"),
         !eq(kind, "mxf4")) : [callSubtarget<"hasMMASparseBlockScaleF4">],
@@ -5396,10 +5458,14 @@ defset list<WMMA_INSTR> MMA_BLOCK_SCALEs  = {
       foreach stype = ["ue8m0", "ue4m3"] in {
         foreach op = NVVM_MMA_OPS.all_mma_block_scale_ops in {
           if NVVM_MMA_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
-            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind>,
-                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind>,
+            def : MMA_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[1], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[2], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
+                                  WMMA_REGINFO<op[3], "mma.block_scale", "", kind,
+                                               stype, scale_vec_size>,
                                   kind, stype, scale_vec_size>;
           }
         } // op
@@ -5518,10 +5584,14 @@ defset list<WMMA_INSTR> MMA_SP_BLOCK_SCALEs = {
       foreach stype = ["ue8m0", "ue4m3"] in {
       foreach op = NVVM_MMA_OPS.all_mma_sp_block_scale_ops in {
         if NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret then {
-          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
-                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind>,
+          def : MMA_SP_BLOCK_SCALE<WMMA_REGINFO<op[0], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                                stype, scale_vec_size>,
+                       WMMA_REGINFO<op[1], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
+                       WMMA_REGINFO<op[2], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
+                       WMMA_REGINFO<op[3], "mma.sp.block_scale", "sp::ordered_metadata", kind,
+                                    stype, scale_vec_size>,
                        kind, stype, scale_vec_size>;
         }
       } // op
@@ -5601,6 +5671,17 @@ defset list<WMMA_INSTR> STMATRIXs = {
     } // space
   } // transposed
 } // defset
+
+// movmatrix
+let isConvergent = true in {
+def MOVMATRIX_SYNC_ALIGNED_M8N8_TRANS_B16
+  : BasicNVPTXInst<(outs B32:$dst),
+              (ins B32:$src),
+              "movmatrix.sync.aligned.m8n8.trans.b16",
+              [(set B32:$dst,
+                (int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16 B32:$src))]>,
+    Requires<[hasSM<75>, hasPTX<78>]>;
+} // isConvergent = true
 
 // Constructing non-flat DAGs is still a pain. I can't !subst a dag node with a
 // dag, so the ptx.version must be appended *after* foreach replaces 'ins' with
@@ -6135,8 +6216,8 @@ class Tcgen05MMAInst<bit IsSparse, string ASpace, string Kind, int CtaGroup,
 
   let AsmString = Prefix
                   # SpCtaKindStr
-                  # ".collector::a::" # CollectorUsage
                   # !if(IsAShift, ".ashift", "")
+                  # ".collector::a::" # CollectorUsage
                   # BaseOperandsStr
                   # InputDStr
                   # ScaleInpStr

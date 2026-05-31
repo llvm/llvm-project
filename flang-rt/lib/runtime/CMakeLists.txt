@@ -29,15 +29,22 @@ set(supported_sources
   derived.cpp
   descriptor-io.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
   exceptions.cpp
   external-unit.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   file.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
@@ -46,8 +53,18 @@ set(supported_sources
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
@@ -59,6 +76,7 @@ set(supported_sources
   ragged.cpp
   reduction.cpp
   stat.cpp
+  stl-overrides.cpp
   stop.cpp
   sum.cpp
   support.cpp
@@ -74,7 +92,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -88,7 +106,9 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  trampoline.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
 
 # Sources that can be compiled directly for the GPU.
@@ -106,16 +126,35 @@ set(gpu_sources
   copy.cpp
   derived-api.cpp
   derived.cpp
-  dot-product.cpp
+  descriptor.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-output.cpp
-  extrema.cpp
-  findloc.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
+  environment.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   non-tbp-dio.cpp
@@ -124,6 +163,7 @@ set(gpu_sources
   product.cpp
   ragged.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp
@@ -137,6 +177,7 @@ set(gpu_sources
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers
@@ -151,31 +192,35 @@ file(GLOB_RECURSE private_headers
 
 
 # Import changes from flang_rt.quadmath
-get_target_property(f128_sources
-  FortranFloat128MathILib INTERFACE_SOURCES
-  )
-if (f128_sources)
-  # The interface may define special macros for Float128Math files,
-  # so we need to propagate them.
-  get_target_property(f128_defs
-    FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+set(f128_sources "")
+if (TARGET FortranFloat128MathILib)
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
     )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    ${f128_defs}
-    )
-  get_target_property(f128_include_dirs
-    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-    ${f128_include_dirs}
-    )
-else ()
-  set(f128_sources "")
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
+  else ()
+    # Change `f128_sources-NOTFOUND` to "no additional sources"
+    set(f128_sources "")
+  endif ()
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
@@ -192,12 +237,13 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
-  enable_omp_offload_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
-  add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  if (TARGET flang_rt.runtime.default)
+    get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
+    add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  endif ()
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt.runtime)
@@ -227,7 +273,6 @@ else()
       )
 
     enable_cuda_compilation(${name} "${supported_sources}")
-    enable_omp_offload_compilation(${name} "${supported_sources}")
     add_dependencies(flang_rt.runtime ${name})
   endfunction ()
 

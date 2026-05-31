@@ -29,7 +29,10 @@ public:
       : ClangTidyCheck(Name, Context) {}
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus;
+    return LangOpts.CPlusPlus || LangOpts.C23;
+  }
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
   }
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

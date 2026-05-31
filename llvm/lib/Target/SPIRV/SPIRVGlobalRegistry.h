@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVIRMapping.h"
@@ -36,7 +36,7 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // where Reg = OpType...
   // while VRegToTypeMap tracks SPIR-V type assigned to other regs (i.e. not
   // type-declaring ones).
-  DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
+  DenseMap<const MachineFunction *, DenseMap<Register, SPIRVTypeInst>>
       VRegToTypeMap;
 
   DenseMap<SPIRVTypeInst, const Type *> SPIRVToLLVMType;
@@ -58,7 +58,7 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
   SmallPtrSet<const Type *, 4> TypesInProcessing;
-  DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
+  DenseMap<const Type *, SPIRVTypeInst> ForwardPointerTypes;
 
   // Stores for each function the last inserted SPIR-V Type.
   // See: SPIRVGlobalRegistry::createOpType.
@@ -67,8 +67,8 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // if a function returns a pointer, this is to map it into TypedPointerType
   DenseMap<const Function *, TypedPointerType *> FunResPointerTypes;
 
-  // Number of bits pointers and size_t integers require.
-  const unsigned PointerSize;
+  // Current target's datalayout.
+  DataLayout DL;
 
   // Holds the maximum ID we have in the module.
   unsigned Bound;
@@ -102,15 +102,17 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool ExplicitLayoutRequired, bool EmitIR);
 
-  // Internal function creating the an OpType at the correct position in the
-  // function by tweaking the passed "MIRBuilder" insertion point and restoring
-  // it to the correct position. "Op" should be the function creating the
-  // specific OpType you need, and should return the newly created instruction.
-  SPIRVType *createOpType(MachineIRBuilder &MIRBuilder,
-                          std::function<MachineInstr *(MachineIRBuilder &)> Op);
+  // Internal function creating the Types/Constants at the correct position
+  // in the function by tweaking the passed "MIRBuilder" insertion point and
+  // restoring it to the correct position. "Op" should be the function creating
+  // the specific operation you need, and should return the newly created
+  // instruction.
+  const MachineInstr *createConstOrTypeAtFunctionEntry(
+      MachineIRBuilder &MIRBuilder,
+      std::function<MachineInstr *(MachineIRBuilder &)> Op);
 
 public:
-  SPIRVGlobalRegistry(unsigned PointerSize);
+  SPIRVGlobalRegistry(DataLayout DL);
 
   MachineFunction *CurMF;
 
@@ -344,8 +346,8 @@ public:
   // allows to search for the association in a context of the machine functions
   // than the current one, without switching between different "current" machine
   // functions.
-  SPIRVType *getSPIRVTypeForVReg(Register VReg,
-                                 const MachineFunction *MF = nullptr) const;
+  SPIRVTypeInst getSPIRVTypeForVReg(Register VReg,
+                                    const MachineFunction *MF = nullptr) const;
 
   // Return the result type of the instruction defining the register.
   SPIRVTypeInst getResultType(Register VReg, MachineFunction *MF = nullptr);
@@ -367,7 +369,7 @@ public:
 
   // Return true if the type is an aggregate type.
   bool isAggregateType(SPIRVTypeInst Type) const {
-    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct &&
+    return Type && (Type->getOpcode() == SPIRV::OpTypeStruct ||
                     Type->getOpcode() == SPIRV::OpTypeArray);
   }
 
@@ -416,7 +418,9 @@ public:
   getPointerStorageClass(SPIRVTypeInst Type) const;
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
-  unsigned getPointerSize() const { return PointerSize; }
+  unsigned getPointerSize() const {
+    return DL.getPointerSizeInBits(/* AS = */ 0);
+  }
 
   // Returns true if two types are defined and are compatible in a sense of
   // OpBitcast instruction
@@ -689,4 +693,4 @@ public:
   void updateAssignType(CallInst *AssignCI, Value *Arg, Value *OfType);
 };
 } // end namespace llvm
-#endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVGLOBALREGISTRY_H

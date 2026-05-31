@@ -526,7 +526,7 @@ def fir_CharConvertOp : fir_Op<"char_convert", []> {
   let hasVerifier = 1;
 }
 
-def fir_UndefOp : fir_OneResultOp<"undefined", [NoMemoryEffect]> {
+def fir_UndefOp : fir_OneResultOp<"undefined", [Pure]> {
   let summary = "explicit undefined value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with an undefined value.
@@ -549,7 +549,7 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [NoMemoryEffect]> {
   let hasVerifier = 0;
 }
 
-def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoMemoryEffect]> {
+def fir_ZeroOp : fir_OneResultOp<"zero_bits", [Pure]> {
   let summary = "explicit polymorphic zero value of some type";
   let description = [{
     Constructs an ssa-value of the specified type with a value of zero for all
@@ -565,6 +565,16 @@ def fir_ZeroOp : fir_OneResultOp<"zero_bits", [NoMemoryEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
+}
+
+def fir_FakeUseOp : fir_Op<"fake_use", []> {
+  let summary = "fake use of values to extend their lifetime";
+  let description = [{
+    This operation is used to keep values alive for debug information purposes.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "$args attr-dict `:` type($args)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -884,13 +894,16 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
           type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
         - allocator_idx: specify special allocator to use.
+        - optional: indicates that a null pointer `memref` must produce a absent
+          fir.box as opposed to a fir.box containing a nullptr.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref, Optional<AnyShapeType>:$shape,
       Optional<fir_SliceType>:$slice, Variadic<AnyIntegerType>:$typeparams,
       Optional<BoxOrClassType>:$sourceBox,
       OptionalAttr<AffineMapAttr>:$accessMap,
-      OptionalAttr<I32Attr>:$allocator_idx);
+      OptionalAttr<I32Attr>:$allocator_idx,
+      UnitAttr:$optional);
 
   let results = (outs BoxOrClassType);
 
@@ -903,12 +916,13 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
       CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
                     typeparams, sourceBox, mlir::AffineMapAttr{},
-                    allocator_idx); }]>
+                    allocator_idx, /*optional=*/mlir::UnitAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
+      (`source_box` $sourceBox^)? (`map` $accessMap^)?
+      (`optional` $optional^)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -966,18 +980,24 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
       %3 = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
       %4 = fir.rebox %2(%3) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
     ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     BoxOrClassType:$box,
     Optional<AnyShapeOrShiftType>:$shape,
-    Optional<fir_SliceType>:$slice
+    Optional<fir_SliceType>:$slice,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)?
+    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1012,25 +1032,31 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
     Example:
     ```
       fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-    ```    
+    ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     AnyRefOrBoxType:$box,
-    fir_LowerBoundModifierAttribute:$lbs_modifier
+    fir_LowerBoundModifierAttribute:$lbs_modifier,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box `lbs` $lbs_modifier
+    $box `lbs` $lbs_modifier (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
 }
 
-def fir_EmboxCharOp : fir_Op<"emboxchar", [NoMemoryEffect]> {
+def fir_EmboxCharOp : fir_Op<"emboxchar", [Pure]> {
   let summary = "boxes a given CHARACTER reference and its LEN parameter";
 
   let description = [{
@@ -1252,6 +1278,8 @@ def fir_BoxEleSizeOp : fir_SimpleOneResultOp<"box_elesize", [NoMemoryEffect]> {
   let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs AnyIntegerLike);
+
+  let hasCanonicalizer = 1;
 }
 
 def fir_BoxTypeCodeOp : fir_SimpleOneResultOp<"box_typecode", [NoMemoryEffect]>
@@ -1333,7 +1361,7 @@ def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
-def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMemoryEffect]> {
+def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [Pure]> {
   let summary = "get the assumed-size last extent sentinel";
 
   let description = [{
@@ -1351,7 +1379,7 @@ def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMe
   let assemblyFormat = "attr-dict `:` type(results)";
 }
 
-def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [NoMemoryEffect]> {
+def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [Pure]> {
   let summary = "is value the assumed-size last extent sentinel";
 
   let description = [{
@@ -1965,7 +1993,7 @@ def fir_CoordinateOp
   }];
 }
 
-def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
+def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [Pure]> {
   let summary = "Extract a value from an aggregate SSA-value";
 
   let description = [{
@@ -2199,7 +2227,7 @@ def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoMemoryEffect]> {
+def fir_InsertValueOp : fir_OneResultOp<"insert_value", [Pure]> {
   let summary = "insert a new sub-value into a copy of an existing aggregate";
 
   let description = [{
@@ -2231,7 +2259,7 @@ def fir_InsertValueOp : fir_OneResultOp<"insert_value", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [NoMemoryEffect]> {
+def fir_InsertOnRangeOp : fir_OneResultOp<"insert_on_range", [Pure]> {
   let summary = "insert sub-value into a range on an existing sequence";
 
   let description = [{
@@ -2700,13 +2728,7 @@ def fir_CallOp : fir_Op<"call",
     }
 
     /// Set the callee for this operation.
-    void setCalleeFromCallable(mlir::CallInterfaceCallable callee) {
-      if (auto calling =
-          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
-        (*this)->setAttr(getCalleeAttrName(),
-                         llvm::cast<mlir::SymbolRefAttr>(callee));
-      setOperand(0, llvm::cast<mlir::Value>(callee));
-    }
+    void setCalleeFromCallable(mlir::CallInterfaceCallable callee);
   }];
 }
 
@@ -2761,7 +2783,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
 // Constant operations that support Fortran
 
-def fir_StringLitOp : fir_Op<"string_lit", [NoMemoryEffect]> {
+def fir_StringLitOp : fir_Op<"string_lit", [Pure]> {
   let summary = "create a string literal constant";
 
   let description = [{
@@ -2851,6 +2873,77 @@ def fir_DivcOp : ComplexArithmeticOp<"divc",
     [DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
 // Pow is a builtin call and not a primitive
 
+// Logical operations
+
+class LogicalBinaryOp<string mnemonic, list<Trait> traits = []> :
+      fir_ArithmeticOp<mnemonic, !listconcat(traits, [Pure])>,
+      Arguments<(ins AnyLogicalOrIntegerLike:$lhs,
+                     AnyLogicalOrIntegerLike:$rhs)>;
+
+def fir_LogicalAndOp : LogicalBinaryOp<"logical_and", [Commutative]> {
+  let summary = "logical AND";
+
+  let description = [{
+    Logical AND of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_and %a, %b : !fir.logical<4>
+      %s = fir.logical_and %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_LogicalOrOp : LogicalBinaryOp<"logical_or", [Commutative]> {
+  let summary = "logical OR";
+
+  let description = [{
+    Logical OR of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.logical_or %a, %b : !fir.logical<4>
+      %s = fir.logical_or %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_EqvOp : LogicalBinaryOp<"eqv", [Commutative]> {
+  let summary = "logical equivalence";
+
+  let description = [{
+    Logical equivalence (EQV) of two values of fir.logical or integer type.
+    Both operands and the result must have the same type.
+
+    ```
+      %r = fir.eqv %a, %b : !fir.logical<4>
+      %s = fir.eqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
+def fir_NeqvOp : LogicalBinaryOp<"neqv", [Commutative]> {
+  let summary = "logical non-equivalence";
+
+  let description = [{
+    Logical non-equivalence (NEQV / XOR) of two values of fir.logical or
+    integer type. Both operands and the result must have the same type.
+
+    ```
+      %r = fir.neqv %a, %b : !fir.logical<4>
+      %s = fir.neqv %x, %y : i32
+    ```
+  }];
+
+  let hasFolder = 1;
+}
+
 def fir_CmpcOp : fir_Op<"cmpc",
     [NoMemoryEffect, SameTypeOperands, SameOperandsAndResultShape,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
@@ -2890,7 +2983,7 @@ def fir_CmpcOp : fir_Op<"cmpc",
 
 // Other misc. operations
 
-def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
+def fir_AddrOfOp : fir_OneResultOp<"address_of", [Pure]> {
   let summary = "convert a symbol to an SSA value";
 
   let description = [{
@@ -2910,7 +3003,10 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
+def fir_VolatileCastOp
+    : fir_SimpleOneResultOp<
+          "volatile_cast", [Pure, ViewLikeOpInterface,
+                            fir_FortranObjectViewOpInterface]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -2924,6 +3020,14 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+  let extraClassDeclaration = [{
+    // ViewLikeOpInterface methods:
+    mlir::Value getViewSource() { return getValue(); }
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
 }
 
 def fir_ConvertOp
@@ -2981,6 +3085,34 @@ def fir_ConvertOp
   let hasCanonicalizer = 1;
 }
 
+def fir_BitcastOp : fir_SimpleOneResultOp<"bitcast", [Pure]> {
+  let summary = "bitcast between Fortran scalar types of the same bit size";
+
+  let description = [{
+    Reinterpret the bits of a value from one type to another. Both types must
+    have the same bit size. This is a pure bitwise reinterpretation: no value
+    normalization or conversion takes place, unlike `fir.convert`.
+
+    The supported types are integer, floating-point, `fir.logical`, and
+    singleton `fir.char` (i.e. `fir.char<K>` with length 1 for any kind K).
+    Pointer types are not allowed.
+
+    ```
+      %0 = fir.bitcast %v : (i32) -> !fir.logical<4>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$res);
+
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
 def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
     Or<[CPred<"mlir::isa<fir::CharacterType, fir::IntegerType, "
               "fir::UnsignedType, fir::LogicalType, mlir::FloatType, "
@@ -2992,7 +3124,7 @@ def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
   let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
-def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
+def fir_TypeDescOp : fir_OneResultOp<"type_desc", [Pure]> {
   let summary = "get type descriptor for a given type";
   let description = [{
     Generates a constant object that is an abstract type descriptor of the
@@ -3013,7 +3145,7 @@ def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
 }
 
 def fir_NoReassocOp : fir_OneResultOp<"no_reassoc",
-    [NoMemoryEffect, SameOperandsAndResultType]> {
+    [Pure, SameOperandsAndResultType]> {
   let summary = "synthetic op to prevent reassociation";
   let description = [{
     Primitive operation meant to intrusively prevent operator reassociation.
@@ -3193,12 +3325,14 @@ def fir_UseStmtOp
   }];
 
   let arguments = (ins StrAttr:$module_name,
-      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
+      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
+    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
 
@@ -3210,11 +3344,37 @@ def fir_UseStmtOp
     bool hasRenames() { return getRenames().has_value(); }
 
     /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !hasOnlyClause(); }
+    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
+
+    /// Returns true if this USE statement has both ONLY clause and renames
+    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 
 def ImplicitFirTerminator : SingleBlockImplicitTerminator<"FirEndOp">;
+
+def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
+    MemoryEffects<[MemWrite<DebuggingResource>]>,
+    IsolatedFromAbove,
+    ImplicitFirTerminator
+  ]> {
+  let summary = "USE statements inside a Fortran module";
+  let description = [{
+    Records the Fortran `USE` statements that appear in a module's specification
+    part for debug metadata.
+
+    The region holds one `fir.use_stmt` per `USE`, in program order. This
+    operation has no runtime effect. It is emitted only when full debug
+    information is requested.
+  }];
+
+  let arguments = (ins StrAttr:$module_name);
+  let regions = (region SizedRegion<1>:$uses);
+
+  let assemblyFormat = [{
+    $module_name attr-dict-with-keyword $uses
+  }];
+}
 
 def fir_TypeInfoOp : fir_Op<"type_info",
     [IsolatedFromAbove, Symbol, ImplicitFirTerminator]> {
@@ -3351,7 +3511,7 @@ def fir_DTComponentOp : fir_Op<"dt_component", [HasParent<"TypeInfoOp">]> {
   let assemblyFormat = "$name (`lbs` $lower_bounds^)? (`init` $init_val^)? attr-dict";
 }
 
-def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {
+def fir_AbsentOp : fir_OneResultOp<"absent", [Pure]> {
   let summary = "create value to be passed for absent optional function argument";
   let description = [{
     Given the type of a function argument, create a value that will signal that
@@ -3490,7 +3650,7 @@ def fir_DeclareValueOp
     relatively to the operation using the value of the variable,
     this means that the when a mem2reg variable was assigned several
     values, the variable value printed in the debugger at a given code
-    point main not be the actual value the variable had at that code point
+    point may not be the actual value the variable had at that code point
     if instructions using the value were moved above the fir.declare_value.
   }];
 
@@ -3512,7 +3672,7 @@ def fir_DeclareValueOp
   let hasVerifier = 1;
 }
 
-def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
+def fir_BoxOffsetOp : fir_Op<"box_offset", [Pure]> {
 
   let summary = "Get the address of a field in a fir.ref<fir.box>";
 

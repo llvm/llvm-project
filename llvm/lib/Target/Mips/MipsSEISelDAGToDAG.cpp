@@ -724,7 +724,7 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
   case ISD::ConstantFP: {
     auto *CN = cast<ConstantFPSDNode>(Node);
-    if (Node->getValueType(0) == MVT::f64 && CN->isExactlyValue(+0.0)) {
+    if (Node->getValueType(0) == MVT::f64 && CN->isPosZero()) {
       if (Subtarget->isGP64bit()) {
         SDValue Zero = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
                                               Mips::ZERO_64, MVT::i64);
