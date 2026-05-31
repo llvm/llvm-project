@@ -34,7 +34,6 @@ struct Ty {
 
     template<class Self>
     int&& bar(this Self&& self, ...) __attribute__((sentinel(1))); // #BAR_NOTE
-    // cxx17-error@-1 {{explicit object parameters are incompatible with C++ standards before C++2b}}
 };
 
 void test_baseline0() {

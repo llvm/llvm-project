@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=until-cxx11,until-cxx17,until-cxx20,expected,cxx98
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=until-cxx11,until-cxx17,until-cxx20,expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives             -verify=until-cxx17,until-cxx20,expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives             -verify=until-cxx17,until-cxx20,expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives                         -verify=until-cxx20,expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives                                     -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives                                     -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -252,12 +252,20 @@ int i0 = f<X>(0);
 } // namespace cwg2650
 
 namespace cwg2653 { // cwg2653: 18
-#if __cplusplus >= 202302L
-  struct Test { void f(this const auto& = Test{}); };
-  // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
-  auto L = [](this const auto& = Test{}){};
-  // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
-#endif
+  struct Test { void f(this const auto& = Test()); };
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  // until-cxx17-error@-2 {{'auto' parameters are a C++20 extension}}
+  // until-cxx20-error@-3 {{explicit object parameters are a C++23 extension}}
+  // expected-error@-4 {{the explicit object parameter cannot have a default argument}}
+  auto L = [](this const auto& = Test()){};
+  // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
+  // cxx98-error@-2 {{lambdas are a C++11 extension}}
+  // cxx98-error@-3 {{'auto' type specifier is a C++11 extension}}
+  // until-cxx11-error@-4 {{'auto' not allowed in lambda parameter before C++14}}
+  // until-cxx20-error@-5 {{explicit object parameters are a C++23 extension}}
+  // until-cxx11-error@-6 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'Test'}}
+  // until-cxx11-note@-7 {{passing argument to parameter here}}
+  // expected-error@-8 {{the explicit object parameter cannot have a default argument}}
 } // namespace cwg2653
 
 namespace cwg2654 { // cwg2654: 16
@@ -331,20 +339,18 @@ void m() {
 } // namespace cwg2672
 
 namespace cwg2687 { // cwg2687: 18
-#if __cplusplus >= 202302L
 struct S{
     void f(int);
     static void g(int);
-    void h(this const S&, int);
+    void h(this const S&, int); // until-cxx20-error {{explicit object parameters are a C++23 extension}}
 };
 
 void test() {
     (&S::f)(1);
-    // since-cxx23-error@-1 {{called object type 'void (S::*)(int)' is not a function or function pointer}}
+    // expected-error@-1 {{called object type 'void (S::*)(int)' is not a function or function pointer}}
     (&S::g)(1);
     (&S::h)(S(), 1);
 }
-#endif
 } // namespace cwg2687
 
 namespace cwg2692 { // cwg2692: 19

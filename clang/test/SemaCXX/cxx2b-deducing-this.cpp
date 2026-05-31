@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Woverloaded-virtual -verify=expected,cxx20 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual -verify=expectex,cxx23 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b -Woverloaded-virtual -verify=expectex,cxx23 %s -verify -fexperimental-new-constant-interpreter
 
 
 // FIXME: can we improve these diagnostics?
@@ -8,7 +9,8 @@ void f(this); // expected-error{{variable has incomplete type 'void'}} \
 
 void g(this auto); // expected-error{{an explicit object parameter cannot appear in a non-member function}}
 
-auto l1 = [] (this auto) static {}; // expected-error{{an explicit object parameter cannot appear in a static lambda}}
+auto l1 = [] (this auto) static {}; // expected-error{{an explicit object parameter cannot appear in a static lambda}} \
+                                    // cxx20-warning {{static lambdas are a C++23 extension}}
 auto l2 = [] (this auto) mutable {}; // expected-error{{a lambda with an explicit object parameter cannot be mutable}}
 auto l3 = [](this auto...){}; // expected-error {{the explicit object parameter cannot be a function parameter pack}}
 auto l4 = [](int, this auto){}; // expected-error {{an explicit object parameter can only appear as the first parameter of the lambda}}
@@ -26,7 +28,7 @@ struct S {
     void i(this auto) &&; // expected-error{{explicit object member function cannot have '&&' qualifier}}
     void j(this auto) volatile; // expected-error{{explicit object member function cannot have 'volatile' qualifier}}
     void k(this auto) __restrict; // expected-error{{explicit object member function cannot have '__restrict' qualifier}}
-    void l(this auto) _Nonnull; // expected-error{{explicit object member function cannot have '' qualifie}}
+    void l(this auto) _Nonnull; // expected-error{{explicit object member function cannot have '' qualifier}}
 
 
     void variadic(this auto...); // expected-error{{the explicit object parameter cannot be a function parameter pack}}
@@ -172,10 +174,10 @@ struct CorrespondingTpl {
     void d(this Corresponding&&);
     void d(this const Corresponding&);
     void d(this const int&);
-    void d(this const int); // expected-note {{previous declaration is here}}
-    void d(this int);       // expected-error {{class member cannot be redeclared}}
+    void d(this const int);                // expected-note {{previous declaration is here}}
+    void d(this int);                      // expected-error {{class member cannot be redeclared}}
     void e(this const CorrespondingTpl&&); // expected-note {{here}}
-    void e() const &&; // expected-error{{cannot be redeclared}}
+    void e() const &&;                     // expected-error{{cannot be redeclared}}
 };
 
 struct C {
@@ -641,7 +643,7 @@ void test() {
 namespace conversions {
 //[over.best.ics]
 struct Y { Y(int); }; //expected-note 3{{candidate}}
-struct A { operator int(this auto&&); };  //expected-note {{candidate}}
+struct A { operator int(this auto&&); };  // expected-note {{candidate}}
 Y y1 = A();   // expected-error{{no viable conversion from 'A' to 'Y'}}
 
 struct X { X(); }; //expected-note 3{{candidate}}
@@ -1062,41 +1064,41 @@ static_assert(!__is_same(X<B{0}>, X<B{1}>));
 namespace static_overloaded_operator {
 struct A {
   template<auto N>
-  static void operator()(const char (&)[N]);
+  static void operator()(const char (&)[N]); // cxx20-warning 2 {{'static' is a C++23 extension}}
   void operator()(this auto &&, auto &&);
 
   void implicit_this() {
-    operator()("123");
+    operator()("123"); // cxx20-note {{requested here}}
   }
 };
 
 struct B {
   template<auto N>
   void operator()(this auto &&, const char (&)[N]);
-  static void operator()(auto &&);
+  static void operator()(auto &&); // cxx20-warning 2 {{'static' is a C++23 extension}}
 
   void implicit_this() {
-    operator()("123");
+    operator()("123"); // cxx20-note {{requested here}}
   }
 };
 
 struct C {
   template<auto N>
-  static void operator[](const char (&)[N]);
+  static void operator[](const char (&)[N]); // cxx20-warning 2 {{'static' is a C++23 extension}}
   void operator[](this auto &&, auto &&);
 
   void implicit_this() {
-    operator[]("123");
+    operator[]("123"); // cxx20-note {{requested here}}
   }
 };
 
 struct D {
   template<auto N>
   void operator[](this auto &&, const char (&)[N]);
-  static void operator[](auto &&);
+  static void operator[](auto &&); // cxx20-warning 2 {{'static' is a C++23 extension}}
 
   void implicit_this() {
-    operator[]("123");
+    operator[]("123"); // cxx20-note {{requested here}}
   }
 };
 
@@ -1105,7 +1107,7 @@ struct D {
 namespace GH102025 {
 struct Foo {
   template <class T>
-  constexpr auto operator[](this T &&self, auto... i) // expected-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
+  constexpr auto operator[](this T &&self, auto... i) // cxx23-note {{candidate template ignored: substitution failure [with T = Foo &, i:auto = <>]: member '_evaluate' used before its declaration}}
       -> decltype(_evaluate(self, i...)) {
     return self._evaluate(i...);
   }
@@ -1117,7 +1119,8 @@ private:
 
 int main() {
   Foo foo;
-  return foo[]; // expected-error {{no viable overloaded operator[] for type 'Foo'}}
+  return foo[]; // cxx23-error {{no viable overloaded operator[] for type 'Foo'}} \
+                // cxx20-error {{expected expression}}
 }
 }
 
@@ -1317,8 +1320,10 @@ struct S2 {
 struct S3 {
     S3& operator++(this X); // #S3-inc-cand
     S3& operator++(this int); // #S3-inc-cand
-    int operator[](this X); // #S3-sub-cand
-    int operator[](this int); // #S3-sub-cand2
+    int operator[](this X); // #S3-sub-cand \
+                            // cxx20-error {{overloaded 'operator[]' cannot have no parameter before C++23}}
+    int operator[](this int); // #S3-sub-cand2 \
+                              // cxx20-error {{overloaded 'operator[]' cannot have no parameter before C++23}}
     void f(this X); // #S3-f-cand
     void f(this int); // #S3-f-cand2
 };
@@ -1350,10 +1355,10 @@ int main() {
     S3 s3;
     ++s3;
     // expected-error@-1{{cannot increment value of type 'S3'}}
-    s3[];
-    // expected-error@-1{{no viable overloaded operator[] for type 'S3'}}
-    // expected-note@#S3-sub-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
-    // expected-note@#S3-sub-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
+    s3[]; // cxx20-error {{expected expression}}
+    // cxx23-error@-1{{no viable overloaded operator[] for type 'S3'}}
+    // cxx23-note@#S3-sub-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
+    // cxx23-note@#S3-sub-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
 
     s3.f();
     // expected-error@-1{{no matching member function for call to 'f'}}
@@ -1364,8 +1369,8 @@ int main() {
 
 namespace GH113185 {
 
-void Bar(this int) { // expected-note {{candidate function}}
-    // expected-error@-1 {{an explicit object parameter cannot appear in a non-member function}}
+void Bar(this int) { // expected-note {{candidate function}} \
+                     // expected-error {{an explicit object parameter cannot appear in a non-member function}}
     Bar(0);
     Bar(); // expected-error {{no matching function for call to 'Bar'}}
 }
@@ -1406,9 +1411,9 @@ void f() {
 
 namespace GH173943 {
 
-a void Bar(this int) { // expected-note {{candidate function}}
-    // expected-error@-1 {{unknown type name 'a'}}
-    // expected-error@-2 {{an explicit object parameter cannot appear in a non-member function}}
+a void Bar(this int) { // expected-note {{candidate function}} \
+                       // expected-error {{unknown type name 'a'}} \
+                       // expected-error {{an explicit object parameter cannot appear in a non-member function}}
     Bar(0);
     Bar(); // expected-error {{no matching function for call to 'Bar'}}
 }
@@ -1421,9 +1426,10 @@ namespace ConstexprBacktrace {
       (void)(1/b); // expected-note {{division by zero}}
       return 0;
     }
-    constexpr int foo2(this const S& self) {
+    constexpr int foo2(this const S& self) { // cxx20-error {{constexpr function never produces a constant expression}}
       (void)(1/0); // expected-note {{division by zero}} \
-                   // expected-warning {{division by zero is undefined}}
+                   // expected-warning {{division by zero is undefined}} \
+                   // cxx20-note {{division by zero}}
       return 0;
     }
   };
@@ -1448,9 +1454,9 @@ namespace ConstexprBacktrace {
 namespace GH176639 {
 
 struct S {
-  void operator()(this S =) // expected-error {{the explicit object parameter cannot have a default argument}}
-          // expected-error@-1 {{expected ';' at end of declaration list}}
-          // expected-error@-2 {{expected expression}}
+  void operator()(this S =) // expected-error {{the explicit object parameter cannot have a default argument}} \
+                            // expected-error {{expected ';' at end of declaration list}} \
+                            // expected-error {{expected expression}}
 };
 
 void foo() {
