@@ -122,9 +122,9 @@ const Stmt *SymbolConjured::getStmt() const {
 }
 
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << SF->getID();
   if (auto *S = getStmt())
-    os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
+    os << ", S" << S->getID(SF->getDecl()->getASTContext());
   else
     os << ", no stmt";
   os << ", #" << Count << '}';
@@ -386,15 +386,14 @@ bool SymbolReaper::isLive(SymbolRef sym) {
   return KnownLive;
 }
 
-bool
-SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
+bool SymbolReaper::isLive(const Expr *ExprVal, const StackFrame *ESF) const {
   if (SF == nullptr)
     return false;
 
-  if (SF != ELCtx) {
-    // If the reaper's location context is a parent of the expression's
-    // location context, then the expression value is now "out of scope".
-    if (SF->isParentOf(ELCtx))
+  if (SF != ESF) {
+    // If the reaper's stack frame is a parent of the expression's
+    // stack frame, then the expression value is now "out of scope".
+    if (SF->isParentOf(ESF))
       return false;
     return true;
   }
@@ -415,7 +414,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
 
   if (!SF)
     return false;
-  const StackFrame *CurrentSF = SF->getStackFrame();
+  const StackFrame *CurrentSF = SF;
 
   if (VarSF == CurrentSF) {
     // If no statement is provided, everything is live.

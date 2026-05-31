@@ -3,6 +3,10 @@
 # RUN: lld-link -lldmingw -entry:main %t.obj -out:%t.exe
 # RUN: llvm-objdump -s %t.exe | FileCheck %s
 
+## In MSVC mode the second-dot stripping must NOT apply.
+# RUN: lld-link -force:unresolved -entry:main %t.obj -out:%t.msvc.exe
+# RUN: llvm-readobj --section-headers %t.msvc.exe | FileCheck %s --check-prefix=MSVC
+
 .globl main
 main:
   nop
@@ -43,3 +47,10 @@ main:
 # __DTOR_LIST__ pointing at 0x140002038.
 # CHECK-NEXT: Contents of section .data:
 # CHECK-NEXT: 140003000 10200040 01000000 38200040 01000000
+
+# MSVC: Name: .ctors (
+# MSVC: Name: .dtors (
+# MSVC: Name: .ctors.0
+# MSVC: Name: .ctors.0
+# MSVC: Name: .dtors.0
+# MSVC: Name: .dtors.0

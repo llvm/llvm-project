@@ -464,6 +464,26 @@ bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
          global->getType()->isCUDADeviceBuiltinTextureType();
 }
 
+void CIRGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &os,
+                                                   const Decl *d) {
+  // ptxas does not allow '.' in symbol names. On the other hand, HIP prefers
+  // postfix beginning with '.' since the symbol name can be demangled.
+  if (langOpts.HIP)
+    os << (isa<VarDecl>(d) ? ".static." : ".intern.");
+  else
+    os << (isa<VarDecl>(d) ? "__static__" : "__intern__");
+
+  // If the CUID is not specified we try to generate a unique postfix.
+  if (getLangOpts().CUID.empty()) {
+    // TODO: Once we add 'PreprocessorOpts' into CIRGenModule this part can be
+    // brought in from OG.
+    errorNYI(d->getSourceRange(),
+             "printPostfixForExternalizedDecl: CUID is not specified");
+  } else {
+    os << getASTContext().getCUIDHash();
+  }
+}
+
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
   if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
     emitGlobalOpenACCDecl(cd);
@@ -541,11 +561,13 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
         deferredAnnotations[mangledName] = fd;
     }
     if (!fd->doesThisDeclarationHaveABody()) {
-      if (!fd->doesDeclarationForceExternallyVisibleDefinition())
+      if (!fd->doesDeclarationForceExternallyVisibleDefinition() &&
+          (!fd->isMultiVersion() || !getTarget().getTriple().isAArch64()))
         return;
 
-      errorNYI(fd->getSourceRange(),
-               "function declaration that forces code gen");
+      const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+      cir::FuncType ty = getTypes().getFunctionType(fi);
+      getAddrOfFunction(gd, ty, /*ForVTable=*/false, /*DontDefer=*/false);
       return;
     }
   } else {
@@ -1096,6 +1118,8 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  if (getLangOpts().CUDA)
+    getCUDARuntime().handleGlobalReplace(oldGV, newGV);
   eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
@@ -1503,13 +1527,10 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                     cir::CUDAExternallyInitializedAttr::get(&getMLIRContext()));
       }
     } else {
-      // TODO(cir):
       // Adjust linkage of shadow variables in host compilation
-      // getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
+      getCUDARuntime().internalizeDeviceSideVar(vd, linkage);
     }
-    // TODO(cir):
-    // Handle variable registration
-    // getCUDARuntime().handleVarRegistration(vd, gv);
+    getCUDARuntime().handleVarRegistration(vd, gv);
   }
 
   // Set initializer and finalize emission
@@ -3512,6 +3533,9 @@ void CIRGenModule::release() {
 
     addCompilerUsedGlobal(gv);
   }
+
+  if (astContext.getLangOpts().CUDA && cudaRuntime)
+    getCUDARuntime().finalizeModule();
 
   emitLLVMUsed();
 

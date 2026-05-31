@@ -447,6 +447,11 @@ Changes in existing checks
   lambda coroutines using C++23 deducing ``this`` (explicit object parameter)
   are not flagged.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>`
+  check by adding the `IgnoreMacros` option. When enabled, non-const global
+  variables defined in macros are ignored.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by ensuring that
   member pointers are correctly flagged as uninitialized.
@@ -500,6 +505,10 @@ Changes in existing checks
 
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
+
+  - Fixed false positive where calling a non-const member function on a
+    pointer was incorrectly treated as mutating the pointer, when it only
+    mutates the pointee.
 
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
@@ -722,6 +731,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-member-init>` check by adding an
   `IgnoreMacros` option to suppress warnings when the initializer involves
   macros that may expand differently in other configurations.
+
+- Improved :doc:`readability-redundant-parentheses
+  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
+  false positive for parentheses present around an overloaded operator in the
+  context of a binary operation.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

@@ -907,8 +907,7 @@ public:
   AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
-    const FastMathFlags FMF =
-        isa<FPMathOperator>(CB) ? CB.getFastMathFlags() : FastMathFlags();
+    const FastMathFlags FMF = CB.getFastMathFlagsOrNone();
 
     switch (IID) {
     case Intrinsic::assume:
