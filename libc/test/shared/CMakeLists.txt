@@ -1,5 +1,15 @@
 add_custom_target(libc-shared-tests)
 
+# Shared math tests include the entire math library headers into a single file
+# so it might take some time to compile the tests.  We do have dedicated
+# precommit CIs to build and test shared tests.  So we provide a cmake option
+# LIBC_TEST_SKIP_SHARED_TESTS to reduce redundant testings and reduce test time
+# for other precommit CIs.
+if(LIBC_TEST_SKIP_SHARED_TESTS)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "LIBC_TEST_SKIP_SHARED_MATH_TESTS is set.  Skipping libc-shared-tests.")
+  endif()
+else()
 add_fp_unittest(
   shared_math_test
   SUITE
@@ -286,6 +296,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
     libc.src.__support.math.issignalingbf16
@@ -658,6 +669,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
     libc.src.__support.math.issignalingbf16
@@ -800,6 +812,7 @@ add_fp_unittest(
     libc.src.__support.math.totalordermagf16
     libc.src.__support.math.totalordermagl
 )
+endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
 
 add_fp_unittest(
   shared_str_to_num_test

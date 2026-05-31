@@ -1089,8 +1089,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"

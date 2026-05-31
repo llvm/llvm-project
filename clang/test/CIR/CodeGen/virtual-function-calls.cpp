@@ -20,7 +20,7 @@ A::A() {}
 
 // LLVM: @_ZTV1A = external global { [3 x ptr] }
 
-// OGCG: @_ZTV1A = external unnamed_addr constant { [3 x ptr] }
+// OGCG: @_ZTV1A = external constant { [3 x ptr] }
 
 // CIR: cir.func{{.*}} @_ZN1AC2Ev(%arg0: !cir.ptr<!rec_A> {{.*}})
 // CIR:    %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["this", init]

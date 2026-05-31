@@ -345,8 +345,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
                                             LValue lv, bool isInit) {
   if (lv.getType()->isAtomicType() ||
       (!isInit && cgf.isLValueSuitableForInlineAtomic(lv))) {
-    cgf.cgm.errorNYI(loc, "StoreOfComplex with Atomic LV");
-    return;
+    return cgf.emitAtomicStore(RValue::getComplex(val), lv, isInit);
   }
 
   const Address destAddr = lv.getAddress();
@@ -358,8 +357,10 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 //===----------------------------------------------------------------------===//
 
 mlir::Value ComplexExprEmitter::VisitExpr(Expr *e) {
-  cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitExpr");
-  return {};
+  cgf.cgm.errorUnsupported(e, "complex expression");
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  return builder.getConstant(loc, cir::PoisonAttr::get(complexTy));
 }
 
 mlir::Value
@@ -455,14 +456,16 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   case CK_Dependent:
     llvm_unreachable("dependent type must be resolved before the CIR codegen");
 
+  // Atomic to non-atomic casts may be more than a no-op for some platforms
+  // and for some types.
+  case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
     return Visit(op);
 
-  case CK_AtomicToNonAtomic:
-  case CK_NonAtomicToAtomic: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast Atmoic");
+  case CK_AtomicToNonAtomic: {
+    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast AtomicToNonAtomic");
     return {};
   }
 

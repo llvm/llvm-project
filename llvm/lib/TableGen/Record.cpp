@@ -2166,6 +2166,8 @@ const Init *FoldOpInit::resolveReferences(Resolver &R) const {
 }
 
 const Init *FoldOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 
@@ -2368,10 +2370,6 @@ const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
   if (Regex != NewRegex || R.isFinal())
     return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
   return this;
-}
-
-const Init *InstancesOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
 }
 
 std::string InstancesOpInit::getAsString() const {
@@ -2793,6 +2791,8 @@ std::string CondOpInit::getAsString() const {
 }
 
 const Init *CondOpInit::getBit(unsigned Bit) const {
+  if (isa<BitRecTy>(getType()))
+    return this;
   return VarBitInit::get(this, Bit);
 }
 

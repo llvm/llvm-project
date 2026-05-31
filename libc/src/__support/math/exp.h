@@ -109,7 +109,7 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
-  LIBC_CONSTEXPR Float128 COEFFS_128[]{
+  constexpr Float128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
@@ -394,7 +394,7 @@ LIBC_INLINE double exp(double x) {
   } else {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r =
         cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
     return r;
@@ -411,7 +411,7 @@ LIBC_INLINE double exp(double x) {
     if (LIBC_LIKELY(upper == lower)) {
       // to multiply by 2^hi, a fast way is to simply add hi to the exponent
       // field.
-      int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+      int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
       double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
       return r;
     }
@@ -429,7 +429,7 @@ LIBC_INLINE double exp(double x) {
     double lower_dd = r_dd.hi + (r_dd.lo - EXP_ERR_DD);
 
     if (LIBC_LIKELY(upper_dd == lower_dd)) {
-      int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+      int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
       double r =
           cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
       return r;
