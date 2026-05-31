@@ -316,3 +316,8 @@ void FromPaper1() {
 void FromPaper2(_BitInt(8) a1, _BitInt(24) a2) {
   static_assert(__is_same(decltype(a1 * (_BitInt(32))a2), _BitInt(32)), "");
 }
+
+namespace GH196948{
+  constexpr _BitInt(128) i = 42;
+  static_assert(i == 42.0k);
+}
