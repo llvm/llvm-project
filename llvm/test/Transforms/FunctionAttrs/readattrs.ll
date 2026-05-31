@@ -385,7 +385,7 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@unsound_readnone
-; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; ATTRIBUTOR-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; ATTRIBUTOR-NEXT:    call void @escape_readnone_ptr(ptr [[ADDR]], ptr nofree [[ESCAPED_THEN_WRITTEN]])
 ; ATTRIBUTOR-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -393,7 +393,7 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@unsound_readnone
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; ATTRIBUTOR-CGSCC-NEXT:    call void @escape_readnone_ptr(ptr [[ADDR]], ptr nofree [[ESCAPED_THEN_WRITTEN]])
 ; ATTRIBUTOR-CGSCC-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -417,7 +417,7 @@ define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@unsound_readonly
-; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; ATTRIBUTOR-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; ATTRIBUTOR-NEXT:    call void @escape_readonly_ptr(ptr [[ADDR]], ptr nofree [[ESCAPED_THEN_WRITTEN]])
 ; ATTRIBUTOR-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -425,7 +425,7 @@ define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@unsound_readonly
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr nofree [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; ATTRIBUTOR-CGSCC-NEXT:    call void @escape_readonly_ptr(ptr [[ADDR]], ptr nofree [[ESCAPED_THEN_WRITTEN]])
 ; ATTRIBUTOR-CGSCC-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -467,12 +467,12 @@ define void @fptr_test1b(ptr %p, ptr %f) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@fptr_test1b
-; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr nofree readnone [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@fptr_test1b
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    call void [[F]](ptr nofree readnone [[P]])
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
 ;
@@ -489,13 +489,13 @@ define void @fptr_test1c(ptr %p, ptr %f) {
 ;
 ; ATTRIBUTOR: Function Attrs: memory(read)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@fptr_test1c
-; ATTRIBUTOR-SAME: (ptr nofree readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2:[0-9]+]] {
+; ATTRIBUTOR-SAME: (ptr readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr nofree readnone [[P]]) #[[ATTR2]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC: Function Attrs: memory(read)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@fptr_test1c
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2:[0-9]+]] {
+; ATTRIBUTOR-CGSCC-SAME: (ptr readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2:[0-9]+]] {
 ; ATTRIBUTOR-CGSCC-NEXT:    call void [[F]](ptr nofree readnone [[P]]) #[[ATTR2]]
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
 ;
@@ -531,12 +531,12 @@ define void @fptr_test2b(ptr %p, ptr %f) {
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@fptr_test2b
-; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
+; ATTRIBUTOR-SAME: (ptr [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr nofree readonly [[P]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@fptr_test2b
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
+; ATTRIBUTOR-CGSCC-SAME: (ptr [[P:%.*]], ptr nofree nonnull captures(none) [[F:%.*]]) {
 ; ATTRIBUTOR-CGSCC-NEXT:    call void [[F]](ptr nofree readonly [[P]])
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
 ;
@@ -553,13 +553,13 @@ define void @fptr_test2c(ptr %p, ptr %f) {
 ;
 ; ATTRIBUTOR: Function Attrs: memory(read)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@fptr_test2c
-; ATTRIBUTOR-SAME: (ptr nofree readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR-SAME: (ptr readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2]] {
 ; ATTRIBUTOR-NEXT:    call void [[F]](ptr nofree readonly [[P]]) #[[ATTR2]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
 ; ATTRIBUTOR-CGSCC: Function Attrs: memory(read)
 ; ATTRIBUTOR-CGSCC-LABEL: define {{[^@]+}}@fptr_test2c
-; ATTRIBUTOR-CGSCC-SAME: (ptr nofree readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2]] {
+; ATTRIBUTOR-CGSCC-SAME: (ptr readonly [[P:%.*]], ptr nofree nonnull readonly captures(none) [[F:%.*]]) #[[ATTR2]] {
 ; ATTRIBUTOR-CGSCC-NEXT:    call void [[F]](ptr nofree readonly [[P]]) #[[ATTR2]]
 ; ATTRIBUTOR-CGSCC-NEXT:    ret void
 ;

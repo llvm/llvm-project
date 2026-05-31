@@ -2123,8 +2123,8 @@ template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle
 __tree<_Tp, _Compare, _Allocator>::__node_handle_extract(key_type const& __key) {
-  iterator __it = find(__key);
-  if (__it == end())
+  iterator __it = __lower_bound_multi(__key);
+  if (__it == end() || __value_comp_(__key, *__it))
     return _NodeHandle();
   return __node_handle_extract<_NodeHandle>(__it);
 }
