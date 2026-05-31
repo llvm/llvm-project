@@ -35,6 +35,7 @@
 //     void assign_range(R&& rg); // C++23
 //
 // void push_front(const value_type& v);
+// void push_front(value_type&& v);
 // template <class... Args> reference emplace_front(Args&&... args);  // reference in C++17
 // template<container-compatible-range<T> R>
 //    void prepend_range(R&& rg); // C++23
@@ -74,9 +75,17 @@ int main(int, char**) {
       c.push_front(*from);
     });
 
+    // void push_front(value_type&& v);
+    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.emplace_front(std::move(*from));
+    });
+
     // template <class... Args> reference emplace_front(Args&&... args);
     test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
-      c.push_front(*from);
+      c.emplace_front(*from);
+    });
+    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.emplace_front(std::move(*from));
     });
 
     // iterator insert_after(const_iterator p, const value_type& v);
