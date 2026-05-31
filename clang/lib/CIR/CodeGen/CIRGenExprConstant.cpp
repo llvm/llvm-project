@@ -1048,16 +1048,59 @@ public:
     return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
   }
 
+  mlir::Attribute emitArrayInitialization(InitListExpr *ile, QualType t) {
+    auto *cat = cgm.getASTContext().getAsConstantArrayType(ile->getType());
+    assert(cat && "can't emit array init for non-constant-bound array");
+    const unsigned numInitElements = ile->getNumInits();
+    const unsigned numElements = cat->getZExtSize();
+
+    // Initialising an array requires us to automatically
+    // initialise any elements that have not been initialised explicitly.
+    unsigned numInitableElts = std::min(numInitElements, numElements);
+
+    QualType eltType = cat->getElementType();
+
+    // Initialize remaining array elements.
+    mlir::TypedAttr fillC;
+    if (const Expr *filler = ile->getArrayFiller()) {
+      fillC = mlir::dyn_cast_or_null<mlir::TypedAttr>(
+          emitter.tryEmitPrivateForMemory(filler, eltType));
+      if (!fillC)
+        return {};
+    }
+
+    // Copy initializer elements.
+    SmallVector<mlir::TypedAttr, 16> elts;
+    if (fillC && cgm.getBuilder().isNullValue(fillC))
+      elts.reserve(numInitableElts + 1);
+    else
+      elts.reserve(numElements);
+
+    mlir::Type commonElementType;
+    for (unsigned i = 0; i < numInitableElts; ++i) {
+      const Expr *init = ile->getInit(i);
+      mlir::Attribute c = emitter.tryEmitPrivateForMemory(init, eltType);
+      if (!c)
+        return {};
+      auto typedC = mlir::cast<mlir::TypedAttr>(c);
+      if (i == 0)
+        commonElementType = typedC.getType();
+      else if (typedC.getType() != commonElementType)
+        commonElementType = {};
+      elts.push_back(typedC);
+    }
+
+    mlir::Type desiredType = cgm.convertType(ile->getType());
+    return emitArrayConstant(cgm, desiredType, commonElementType, numElements,
+                             elts, fillC);
+  }
+
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
     if (ile->isTransparent())
       return Visit(ile->getInit(0), t);
 
-    if (ile->getType()->isArrayType()) {
-      // If we return null here, the non-constant initializer will take care of
-      // it, but we would prefer to handle it here.
-      assert(!cir::MissingFeatures::constEmitterArrayILE());
-      return {};
-    }
+    if (ile->getType()->isArrayType())
+      return emitArrayInitialization(ile, t);
 
     if (ile->getType()->isRecordType()) {
       return ConstRecordBuilder::buildRecord(emitter, ile, t);
