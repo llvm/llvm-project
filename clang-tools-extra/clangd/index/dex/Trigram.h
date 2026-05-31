@@ -37,8 +37,8 @@ namespace dex {
 // Trigram generation is the hot path of indexing, so Token is too wasteful.
 class Trigram {
   std::array<char, 4> Data; // Last element is length.
-  // Steal some invalid bit patterns for DenseMap sentinels.
-  enum class Sentinel { Empty = 5 };
+  // Steal an invalid bit pattern for the DenseMap sentinel.
+  enum class Sentinel { Empty = 4 };
   Trigram(Sentinel S) : Data{0, 0, 0, static_cast<char>(S)} {}
   uint32_t id() const { return llvm::bit_cast<uint32_t>(Data); }
 
