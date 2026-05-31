@@ -1222,7 +1222,10 @@ void ValueHandleBase::RemoveFromUseList() {
   LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
   DenseMap<Value*, ValueHandleBase*> &Handles = pImpl->ValueHandles;
   if (Handles.isPointerIntoBucketsArray(PrevPtr)) {
-    Handles.erase(getValPtr());
+    // TODO: Remove the only user of DenseMap's callback erase.
+    Handles.erase(getValPtr(), [](auto &Bucket) {
+      Bucket.second->setPrevPtr(&Bucket.second);
+    });
     getValPtr()->HasValueHandle = false;
   }
 }

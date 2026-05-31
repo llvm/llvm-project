@@ -942,10 +942,9 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Cmp = Builder.CreateICmpEQ(IntVal, ConstantInt::getSigned(IntTy, 0));
   Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
   applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
   });
 
   // if.end:
@@ -968,10 +967,9 @@ static void expandIToFP(Instruction *IToFP) {
   // exponent. This is rare case, so the True path is mared as likely.
   Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
   applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then4:
@@ -984,13 +982,12 @@ static void expandIToFP(Instruction *IToFP) {
   // order they were added (SwBB, then SwEpilog). Because the following cases
   // are rare, the defalut case is given a likely weight.
   if (!ProfcheckDisableMetadataFixes) {
-    if (!ProfcheckDisableMetadataFixes)
-      SI->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(SI->getContext())
-              .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
-                                    llvm::MDBuilder::kUnlikelyBranchWeight,
-                                    llvm::MDBuilder::kUnlikelyBranchWeight}));
+    SI->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(SI->getContext())
+            .createBranchWeights({llvm::MDBuilder::kLikelyBranchWeight,
+                                  llvm::MDBuilder::kUnlikelyBranchWeight,
+                                  llvm::MDBuilder::kUnlikelyBranchWeight}));
   }
 
   // sw.bb:
@@ -1049,10 +1046,9 @@ static void expandIToFP(Instruction *IToFP) {
   // overflow is rare. The False path is unlikely to be taken.
   Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
   applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
-    if (!ProfcheckDisableMetadataFixes)
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
   });
 
   // if.then20
@@ -1170,6 +1166,37 @@ static void expandIToFP(Instruction *IToFP) {
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
   } else // float type
     A4 = Builder.CreateBitCast(Or35, IToFP->getType());
+
+  // Sub2 is the unbiased exponent (the index of the top set bit in the input).
+  // The exponent arithmetic above wraps to garbage instead of inf once it
+  // overflows the exponent field, so saturate to a correctly-signed infinity
+  // when Sub2 reaches 1 << (ExponentWidth - 1). Sub2 is at most BitWidth - 1,
+  // so skip the check entirely when even that can't reach the threshold.
+  // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
+  // these are handled by the conversion's own rounding, not by this
+  // saturation.)
+  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
+  uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
+  if (BitWidth - 1 >= MinInfExp) {
+    Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
+    Value *Overflow = Builder.CreateICmpUGE(Sub2, MinInfExpVal);
+    Value *Inf = ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/false);
+    if (IsSigned) {
+      Value *NegInf =
+          ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
+      Value *IsNeg =
+          Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
+      Inf = Builder.CreateSelectWithUnknownProfile(IsNeg, NegInf, Inf,
+                                                   DEBUG_TYPE);
+    }
+    A4 = Builder.CreateSelect(Overflow, Inf, A4);
+    // We consider overflow to be an unlikely case.
+    applyProfMetadataIfEnabled(A4, [&](Instruction *Inst) {
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    });
+  }
   Builder.CreateBr(End);
 
   // return:
