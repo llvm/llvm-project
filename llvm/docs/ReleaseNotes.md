@@ -87,6 +87,8 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Fast math flags are now permitted on `uitofp` and `sitofp`.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to

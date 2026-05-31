@@ -1,5 +1,5 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck -strict-whitespace %s
-; XUN: opt -S < %s | FileCheck -strict-whitespace %s
+; RUN: opt -S < %s | FileCheck -strict-whitespace %s
 ; RUN: verify-uselistorder %s
 
 @addr   = external global i64
