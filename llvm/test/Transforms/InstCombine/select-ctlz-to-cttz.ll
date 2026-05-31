@@ -2,8 +2,6 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare i3 @llvm.cttz.i3(i3, i1)
-declare i33 @llvm.cttz.i33(i33, i1)
-declare i33 @llvm.ctlz.i33(i33, i1)
 declare i32 @llvm.cttz.i32(i32, i1 immarg)
 declare i32 @llvm.ctlz.i32(i32, i1 immarg)
 declare i64 @llvm.cttz.i64(i64, i1 immarg)
