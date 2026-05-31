@@ -1146,6 +1146,19 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   }
   OS << "};\n"; // End of HW encoding table
 
+  // Emit the *_SaveList list of callee-saved registers.
+  for (const Record *CSRSet :
+       Records.getAllDerivedDefinitions("CalleeSavedRegs")) {
+    const SetTheory::RecVec *Regs = RegBank.getSets().expand(CSRSet);
+    assert(Regs && "Cannot expand CalleeSavedRegs instance");
+
+    OS << "static const MCPhysReg " << CSRSet->getName() << "_SaveList[] = { ";
+    for (const Record *Reg : *Regs)
+      OS << getQualifiedName(Reg) << ", ";
+    OS << "0 };\n";
+  }
+  OS << "\n";
+
   // MCRegisterInfo initialization routine.
   OS << "static inline void Init" << TargetName
      << "MCRegisterInfo(MCRegisterInfo *RI, unsigned RA, "
@@ -1766,7 +1779,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     const SetTheory::RecVec *Regs = RegBank.getSets().expand(CSRSet);
     assert(Regs && "Cannot expand CalleeSavedRegs instance");
 
-    // Emit the *_SaveList list of callee-saved registers.
+    // Emit the *_SaveList list of callee-saved registers. Also
+    // emitted in runMCDesc so MC layer has access.
     OS << "static const MCPhysReg " << CSRSet->getName() << "_SaveList[] = { ";
     for (const Record *Reg : *Regs)
       OS << getQualifiedName(Reg) << ", ";

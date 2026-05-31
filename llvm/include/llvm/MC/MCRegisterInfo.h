@@ -166,6 +166,7 @@ private:
   unsigned NumRegs;                           // Number of entries in the array
   MCRegister RAReg;                           // Return address register
   MCRegister PCReg;                           // Program counter register
+  ArrayRef<MCPhysReg> DefaultCalleeSavedRegs; // Callee saved registers from ABI
   const MCRegisterClass *Classes;             // Pointer to the regclass array
   unsigned NumClasses;                        // Number of entries in the array
   unsigned NumRegUnits;                       // Number of regunits.
@@ -369,6 +370,16 @@ public:
   /// Return the register which is the program counter.
   MCRegister getProgramCounter() const {
     return PCReg;
+  }
+
+  /// Provide the target's default ABI callee-saved register set.
+  void setDefaultCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
+    DefaultCalleeSavedRegs = CSRs;
+  }
+
+  /// Return the target's default ABI callee-saved register set.
+  ArrayRef<MCPhysReg> getDefaultCalleeSavedRegs() const {
+    return DefaultCalleeSavedRegs;
   }
 
   const MCRegisterDesc &operator[](MCRegister Reg) const {

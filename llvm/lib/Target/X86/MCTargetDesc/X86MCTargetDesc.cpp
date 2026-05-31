@@ -417,6 +417,22 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
                         X86_MC::getDwarfRegFlavour(TT, true), RA);
   X86_MC::initLLVMToSEHAndCVRegMapping(X);
+
+  // Save the callee-saved register set based on triple in the MCRegisterInfo
+  // Use the matching getter to get initial frame state without polluting eh frame.
+  ArrayRef<MCPhysReg> CSRs;
+  if (TT.isX86_64()) {
+    if (TT.isOSWindows()) {
+      // Win64 GPRs only. XMM6–XMM15 also preserved if use CSR_Win64_SaveList 
+      CSRs = CSR_Win64_NoSSE_SaveList;
+    } else {
+      CSRs = CSR_64_SaveList;
+    }
+  } else {
+    CSRs = CSR_32_SaveList;
+  }
+  X->setDefaultCalleeSavedRegs(CSRs);
+
   return X;
 }
 
