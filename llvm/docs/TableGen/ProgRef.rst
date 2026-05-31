@@ -2056,6 +2056,24 @@ and non-0 as true.
     is specified by *length*; if not specified, the rest of the string is
     extracted. The *start* and *length* arguments must be integers.
 
+``!switch(``\ *key*\ ``,`` *case1* ``:`` *val1*\ ``, ...,`` *casen* ``:`` *valn*\ ``,`` *default*\ ``)``
+    This operator compares *key* to each *casei* in turn using ``!eq``.
+    If *key* equals *casei*, the operator returns *vali*. If no case
+    matches, the operator returns *default* --- the trailing argument
+    with no ``:`` is the default value, identified by position. Both 
+    the trailing default and at least one *casei* : *vali* pair are 
+    mandatory.
+
+    ``!switch`` is a compact form of ``!cond`` using ``!eq`` comparisons.
+    The expression ``!switch(key, c1: v1, c2: v2, vd)`` is equivalent to
+    ``!cond(!eq(key, c1): v1, !eq(key, c2): v2, true: vd)``.
+
+    This example maps an integer size to a register-class name::
+
+    !switch(size, 1: "byte", 2: "halfword", 4: "word", "unknown")
+
+    (See also ``!cond``.)
+
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
     of the list *a* except for the zeroth one. (See also ``!head``.)

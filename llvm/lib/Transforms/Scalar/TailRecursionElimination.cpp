@@ -721,6 +721,10 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // the result of the call anymore, instead, use the PHI node we just
     // inserted.
     AccRecInstr->setOperand(AccRecInstr->getOperand(0) != CI, AccPN);
+
+    // Reassociating into the loop reorders the operands, so flags from the
+    // original order (nsw/nuw/exact/...) may no longer hold.
+    AccRecInstr->dropPoisonGeneratingFlags();
   }
 
   // Update our return value tracking

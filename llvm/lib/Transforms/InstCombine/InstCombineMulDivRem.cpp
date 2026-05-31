@@ -1082,10 +1082,10 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
                      m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
-    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
-    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
-      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
-    }
+    Value *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath))
+      if (auto *SinI = dyn_cast<Instruction>(Sin))
+        SinI->setMetadata(LLVMContext::MD_fpmath, Metadata);
     return replaceInstUsesWith(I, Sin);
   }
 

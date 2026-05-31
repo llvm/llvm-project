@@ -242,6 +242,45 @@ struct CountLeadingZerosPattern final
   }
 };
 
+/// Converts math.cttz to GL FindILsb. GL FindILsb returns -1 for a zero
+/// input while math.cttz must return the bitwidth, so the zero case is
+/// patched up with a select.
+struct CountTrailingZerosPattern final
+    : public OpConversionPattern<math::CountTrailingZerosOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(math::CountTrailingZerosOp countOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (LogicalResult res = checkSourceOpTypes(rewriter, countOp); failed(res))
+      return res;
+
+    Type type = getTypeConverter()->convertType(countOp.getType());
+    if (!type)
+      return failure();
+
+    unsigned bitwidth = 0;
+    if (isa<IntegerType>(type))
+      bitwidth = type.getIntOrFloatBitWidth();
+    else if (auto vectorType = dyn_cast<VectorType>(type))
+      bitwidth = vectorType.getElementTypeBitWidth();
+    if (bitwidth != 32)
+      return failure();
+
+    Location loc = countOp.getLoc();
+    Value input = adaptor.getOperand();
+    Value val0 = getScalarOrVectorI32Constant(type, 0, rewriter, loc);
+    Value valBitwidth =
+        getScalarOrVectorI32Constant(type, bitwidth, rewriter, loc);
+
+    Value lsb = spirv::GLFindILsbOp::create(rewriter, loc, input);
+    Value isZero = spirv::IEqualOp::create(rewriter, loc, input, val0);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(countOp, isZero, valBitwidth,
+                                                 lsb);
+    return success();
+  }
+};
+
 /// Converts math.expm1 to SPIR-V ops.
 ///
 /// SPIR-V does not have a direct operations for exp(x)-1. Explicitly lower to
@@ -530,35 +569,36 @@ void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
           typeConverter, patterns.getContext());
 
   // GLSL patterns
-  patterns.add<
-      CountLeadingZerosPattern, Log1pOpPattern<spirv::GLLogOp>, Log10OpPattern,
-      ExpM1OpPattern<spirv::GLExpOp>, PowFOpPattern, RoundOpPattern,
-      CheckedElementwiseOpPattern<math::AbsFOp, spirv::GLFAbsOp>,
-      CheckedElementwiseOpPattern<math::AbsIOp, spirv::GLSAbsOp>,
-      CheckedElementwiseOpPattern<math::AtanOp, spirv::GLAtanOp>,
-      CheckedElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
-      CheckedElementwiseOpPattern<math::ClampFOp, spirv::GLFClampOp>,
-      CheckedElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
-      CheckedElementwiseOpPattern<math::ExpOp, spirv::GLExpOp>,
-      CheckedElementwiseOpPattern<math::Exp2Op, spirv::GLExp2Op>,
-      CheckedElementwiseOpPattern<math::FloorOp, spirv::GLFloorOp>,
-      CheckedElementwiseOpPattern<math::FmaOp, spirv::GLFmaOp>,
-      CheckedElementwiseOpPattern<math::LogOp, spirv::GLLogOp>,
-      CheckedElementwiseOpPattern<math::Log2Op, spirv::GLLog2Op>,
-      CheckedElementwiseOpPattern<math::RoundEvenOp, spirv::GLRoundEvenOp>,
-      CheckedElementwiseOpPattern<math::RsqrtOp, spirv::GLInverseSqrtOp>,
-      CheckedElementwiseOpPattern<math::SinOp, spirv::GLSinOp>,
-      CheckedElementwiseOpPattern<math::SqrtOp, spirv::GLSqrtOp>,
-      CheckedElementwiseOpPattern<math::TanhOp, spirv::GLTanhOp>,
-      CheckedElementwiseOpPattern<math::TanOp, spirv::GLTanOp>,
-      CheckedElementwiseOpPattern<math::AsinOp, spirv::GLAsinOp>,
-      CheckedElementwiseOpPattern<math::AcosOp, spirv::GLAcosOp>,
-      CheckedElementwiseOpPattern<math::SinhOp, spirv::GLSinhOp>,
-      CheckedElementwiseOpPattern<math::CoshOp, spirv::GLCoshOp>,
-      CheckedElementwiseOpPattern<math::AsinhOp, spirv::GLAsinhOp>,
-      CheckedElementwiseOpPattern<math::AcoshOp, spirv::GLAcoshOp>,
-      CheckedElementwiseOpPattern<math::AtanhOp, spirv::GLAtanhOp>>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<CountLeadingZerosPattern, CountTrailingZerosPattern,
+           Log1pOpPattern<spirv::GLLogOp>, Log10OpPattern,
+           ExpM1OpPattern<spirv::GLExpOp>, PowFOpPattern, RoundOpPattern,
+           CheckedElementwiseOpPattern<math::AbsFOp, spirv::GLFAbsOp>,
+           CheckedElementwiseOpPattern<math::AbsIOp, spirv::GLSAbsOp>,
+           CheckedElementwiseOpPattern<math::AtanOp, spirv::GLAtanOp>,
+           CheckedElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
+           CheckedElementwiseOpPattern<math::ClampFOp, spirv::GLFClampOp>,
+           CheckedElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
+           CheckedElementwiseOpPattern<math::ExpOp, spirv::GLExpOp>,
+           CheckedElementwiseOpPattern<math::Exp2Op, spirv::GLExp2Op>,
+           CheckedElementwiseOpPattern<math::FloorOp, spirv::GLFloorOp>,
+           CheckedElementwiseOpPattern<math::FmaOp, spirv::GLFmaOp>,
+           CheckedElementwiseOpPattern<math::LogOp, spirv::GLLogOp>,
+           CheckedElementwiseOpPattern<math::Log2Op, spirv::GLLog2Op>,
+           CheckedElementwiseOpPattern<math::RoundEvenOp, spirv::GLRoundEvenOp>,
+           CheckedElementwiseOpPattern<math::RsqrtOp, spirv::GLInverseSqrtOp>,
+           CheckedElementwiseOpPattern<math::SinOp, spirv::GLSinOp>,
+           CheckedElementwiseOpPattern<math::SqrtOp, spirv::GLSqrtOp>,
+           CheckedElementwiseOpPattern<math::TanhOp, spirv::GLTanhOp>,
+           CheckedElementwiseOpPattern<math::TanOp, spirv::GLTanOp>,
+           CheckedElementwiseOpPattern<math::AsinOp, spirv::GLAsinOp>,
+           CheckedElementwiseOpPattern<math::AcosOp, spirv::GLAcosOp>,
+           CheckedElementwiseOpPattern<math::SinhOp, spirv::GLSinhOp>,
+           CheckedElementwiseOpPattern<math::CoshOp, spirv::GLCoshOp>,
+           CheckedElementwiseOpPattern<math::AsinhOp, spirv::GLAsinhOp>,
+           CheckedElementwiseOpPattern<math::AcoshOp, spirv::GLAcoshOp>,
+           CheckedElementwiseOpPattern<math::AtanhOp, spirv::GLAtanhOp>>(
+          typeConverter, patterns.getContext());
 
   // OpenCL patterns
   patterns.add<
