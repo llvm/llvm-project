@@ -798,7 +798,8 @@ struct Allocator {
     thread_stats.reallocs++;
     thread_stats.realloced += new_size;
 
-    void *new_ptr = Allocate(new_size, 8, stack, FROM_MALLOC, true);
+    void* new_ptr = Allocate(new_size, /*alignment=*/8, stack, FROM_MALLOC,
+                             /*can_fill=*/true);
     if (new_ptr) {
       u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
@@ -820,7 +821,8 @@ struct Allocator {
         return nullptr;
       ReportCallocOverflow(nmemb, size, stack);
     }
-    void* ptr = Allocate(nmemb * size, align, stack, FROM_MALLOC, false);
+    void* ptr = Allocate(nmemb * size, align, stack, FROM_MALLOC,
+                         /*can_fill=*/false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
     if (ptr && allocator.FromPrimary(ptr))
@@ -1067,7 +1069,8 @@ void asan_free_aligned_sized(void* ptr, uptr alignment, uptr size,
 }
 
 void *asan_malloc(uptr size, BufferedStackTrace *stack) {
-  return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, /*alignment=*/8, stack,
+                                          FROM_MALLOC, /*can_fill=*/true));
 }
 
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
@@ -1076,7 +1079,8 @@ void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
 
 #if SANITIZER_AIX
 void* asan_vec_malloc(uptr size, BufferedStackTrace* stack) {
-  return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, /*alignment=*/16, stack,
+                                          FROM_MALLOC, /*can_fill=*/true));
 }
 
 void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
@@ -1097,7 +1101,8 @@ void *asan_reallocarray(void *p, uptr nmemb, uptr size,
 
 void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
   if (!p)
-    return SetErrnoOnNull(instance.Allocate(size, 8, stack, FROM_MALLOC, true));
+    return SetErrnoOnNull(instance.Allocate(size, /*alignment=*/8, stack,
+                                            FROM_MALLOC, /*can_fill=*/true));
   if (size == 0) {
     if (flags()->allocator_frees_and_returns_null_on_realloc_zero) {
       instance.Deallocate(p, 0, 0, stack, FROM_MALLOC);
@@ -1110,8 +1115,8 @@ void *asan_realloc(void *p, uptr size, BufferedStackTrace *stack) {
 }
 
 void *asan_valloc(uptr size, BufferedStackTrace *stack) {
-  return SetErrnoOnNull(
-      instance.Allocate(size, GetPageSizeCached(), stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, GetPageSizeCached(), stack,
+                                          FROM_MALLOC, /*can_fill=*/true));
 }
 
 void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
@@ -1125,7 +1130,7 @@ void *asan_pvalloc(uptr size, BufferedStackTrace *stack) {
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
   return SetErrnoOnNull(
-      instance.Allocate(size, PageSize, stack, FROM_MALLOC, true));
+      instance.Allocate(size, PageSize, stack, FROM_MALLOC, /*can_fill=*/true));
 }
 
 void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack) {
@@ -1135,8 +1140,8 @@ void *asan_memalign(uptr alignment, uptr size, BufferedStackTrace *stack) {
       return nullptr;
     ReportInvalidAllocationAlignment(alignment, stack);
   }
-  return SetErrnoOnNull(
-      instance.Allocate(size, alignment, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, alignment, stack, FROM_MALLOC,
+                                          /*can_fill=*/true));
 }
 
 void *asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
@@ -1146,8 +1151,8 @@ void *asan_aligned_alloc(uptr alignment, uptr size, BufferedStackTrace *stack) {
       return nullptr;
     ReportInvalidAlignedAllocAlignment(size, alignment, stack);
   }
-  return SetErrnoOnNull(
-      instance.Allocate(size, alignment, stack, FROM_MALLOC, true));
+  return SetErrnoOnNull(instance.Allocate(size, alignment, stack, FROM_MALLOC,
+                                          /*can_fill=*/true));
 }
 
 int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
@@ -1157,7 +1162,8 @@ int asan_posix_memalign(void **memptr, uptr alignment, uptr size,
       return errno_EINVAL;
     ReportInvalidPosixMemalignAlignment(alignment, stack);
   }
-  void *ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC, true);
+  void* ptr = instance.Allocate(size, alignment, stack, FROM_MALLOC,
+                                /*can_fill=*/true);
   if (UNLIKELY(!ptr))
     // OOM error is already taken care of by Allocate.
     return errno_ENOMEM;
@@ -1190,8 +1196,9 @@ uptr asan_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
 namespace {
 
 void *asan_new(uptr size, BufferedStackTrace *stack, bool array) {
-  return SetErrnoOnNull(
-      instance.Allocate(size, 0, stack, array ? FROM_NEW_BR : FROM_NEW, true));
+  return SetErrnoOnNull(instance.Allocate(size, /*alignment=*/0, stack,
+                                          array ? FROM_NEW_BR : FROM_NEW,
+                                          /*can_fill=*/true));
 }
 
 void *asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace *stack,
@@ -1202,8 +1209,9 @@ void *asan_new_aligned(uptr size, uptr alignment, BufferedStackTrace *stack,
       return nullptr;
     ReportInvalidAllocationAlignment(alignment, stack);
   }
-  return SetErrnoOnNull(instance.Allocate(
-      size, alignment, stack, array ? FROM_NEW_BR : FROM_NEW, true));
+  return SetErrnoOnNull(instance.Allocate(size, alignment, stack,
+                                          array ? FROM_NEW_BR : FROM_NEW,
+                                          /*can_fill=*/true));
 }
 
 void asan_delete(void *ptr, BufferedStackTrace *stack, bool array) {
