@@ -20,10 +20,6 @@
 namespace llvm {
 
 class SuperHTargetMachine : public CodeGenTargetMachineImpl {
-private:
-
-protected:
-
 public:
   SuperHTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
@@ -33,6 +29,7 @@ public:
   ~SuperHTargetMachine() override;
 
 };
+
 } // end namespace llvm
 
 #endif

@@ -18,6 +18,12 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/DataTypes.h"
 
+#define GET_REGINFO_ENUM
+#include "SuperHGenRegisterInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "SuperHGenSubtargetInfo.inc"
+
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;

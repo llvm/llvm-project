@@ -9,6 +9,7 @@
 #include "TargetInfo/SuperHTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
+
 using namespace llvm;
 
 Target &llvm::getTheSuperHTarget() {
@@ -16,8 +17,15 @@ Target &llvm::getTheSuperHTarget() {
   return TheSuperHTarget;
 }
 
+Target &llvm::getTheSuperHLETarget() {
+  static Target TheSuperHLETarget;
+  return TheSuperHLETarget;
+}
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY
 void LLVMInitializeSuperHTargetInfo() {
   RegisterTarget<Triple::sh, /*HasJIT=*/false> X(getTheSuperHTarget(),
-                                                    "sh", "SuperH", "SuperH");
+                                                    "sh", "SuperH (big endian)", "SuperH");
+  RegisterTarget<Triple::sh_le, /*HasJIT=*/false> Y(getTheSuperHLETarget(),
+                                                    "sh_le", "SuperH (little endian)", "SuperH");
 }

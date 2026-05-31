@@ -1,4 +1,5 @@
-//===-- SuperHTargetMachine.cpp - Define TargetMachine for SuperH -----------===//
+//===-- SuperHTargetMachine.cpp - Define TargetMachine for SuperH
+//-----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,21 +21,23 @@
 using namespace llvm;
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSuperHTarget() {
-    RegisterTargetMachine<SuperHTargetMachine> SH(getTheSuperHTarget());
+  RegisterTargetMachine<SuperHTargetMachine> SH(getTheSuperHTarget());
+  RegisterTargetMachine<SuperHTargetMachine> SHLE(getTheSuperHLETarget());
 }
 
-SuperHTargetMachine::~SuperHTargetMachine() { }
+SuperHTargetMachine::~SuperHTargetMachine() {}
 
 /// Create a SuperH architecture model.
 SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
-                                           StringRef CPU, StringRef FS,
-                                           const TargetOptions &Options,
-                                           std::optional<Reloc::Model> RM,
-                                           std::optional<CodeModel::Model> CM,
-                                           CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(
-        T, TT.computeDataLayout(), TT, CPU, FS, Options,
-        RM.value_or(Reloc::Static), getEffectiveCodeModel(CM, CodeModel::Small), 
-        OL) {
+                                         StringRef CPU, StringRef FS,
+                                         const TargetOptions &Options,
+                                         std::optional<Reloc::Model> RM,
+                                         std::optional<CodeModel::Model> CM,
+                                         CodeGenOptLevel OL, bool JIT)
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               RM.value_or(Reloc::Static),
+                               getEffectiveCodeModel(CM, CodeModel::Small),
+                               OL) {
 
+  initAsmInfo();
 }
