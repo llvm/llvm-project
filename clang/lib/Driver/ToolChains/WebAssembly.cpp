@@ -88,8 +88,8 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   return WantsPthread;
 }
 
-static bool WantsLibcallThreadContext(const llvm::Triple &Triple,
-                                      const ArgList &Args) {
+static bool WantsCooperativeMultithreading(const llvm::Triple &Triple,
+                                           const ArgList &Args) {
   return Triple.getOS() == llvm::Triple::WASIp3;
 }
 
@@ -174,8 +174,8 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (WantsLibcallThreadContext(ToolChain.getTriple(), Args))
-    CmdArgs.push_back("--libcall-thread-context");
+  if (WantsCooperativeMultithreading(ToolChain.getTriple(), Args))
+    CmdArgs.push_back("--cooperative-multithreading");
 
   if (WantsPthread(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");

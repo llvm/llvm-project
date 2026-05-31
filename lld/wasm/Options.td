@@ -238,9 +238,12 @@ def page_size: JJ<"page-size=">,
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 
+def cooperative_multithreading: FF<"cooperative-multithreading">,
+  HelpText<"Enable cooperative multithreading.">;
+
 def libcall_thread_context: FF<"libcall-thread-context">,
   HelpText<"Use library calls for thread context access instead of globals.">;
-  
+
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 

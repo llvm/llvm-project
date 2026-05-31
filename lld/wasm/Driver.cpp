@@ -561,6 +561,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
+  ctx.arg.cooperativeMultithreading = args.hasArg(OPT_cooperative_multithreading);
   ctx.arg.libcallThreadContext = args.hasArg(OPT_libcall_thread_context);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
@@ -755,6 +756,12 @@ static void setConfigs() {
   if (!ctx.arg.memoryExport.has_value() && !ctx.arg.memoryImport.has_value()) {
     ctx.arg.memoryExport = memoryName;
   }
+
+  if (ctx.arg.cooperativeMultithreading) {
+    ctx.arg.threadModel = ThreadModel::Cooperative;
+    ctx.arg.libcallThreadContext = true;
+  } else if (ctx.arg.sharedMemory)
+    ctx.arg.threadModel = ThreadModel::SharedMemory;
 }
 
 // Some command line options or some combinations of them are not allowed.
@@ -964,7 +971,7 @@ static void createSyntheticSymbols() {
         createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.arg.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
     auto tls_base_name =
         ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
@@ -1028,7 +1035,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory)
+  if (!ctx.sym.tlsBase)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 

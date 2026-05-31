@@ -57,7 +57,7 @@ void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.getTLSBase->getFunctionIndex(), "function index");
   } else {
-    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_SET");
+    writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
     writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
   }
 }
@@ -265,11 +265,11 @@ void ImportSection::writeBody() {
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
-    if (out.memorySec->maxMemoryPages != 0 || ctx.arg.sharedMemory) {
+    if (out.memorySec->maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory) {
       import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       import.Memory.Maximum = out.memorySec->maxMemoryPages;
     }
-    if (ctx.arg.sharedMemory)
+    if (ctx.arg.threadModel == ThreadModel::SharedMemory)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (is64)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
@@ -406,12 +406,12 @@ void TableSection::assignIndexes() {
 void MemorySection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  bool hasMax = maxMemoryPages != 0 || ctx.arg.sharedMemory;
+  bool hasMax = maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory;
   writeUleb128(os, 1, "memory count");
   unsigned flags = 0;
   if (hasMax)
     flags |= WASM_LIMITS_FLAG_HAS_MAX;
-  if (ctx.arg.sharedMemory)
+  if (ctx.arg.threadModel == ThreadModel::SharedMemory)
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
   if (ctx.arg.is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
@@ -532,7 +532,7 @@ void GlobalSection::writeBody() {
         mutable_ = true;
       // With multi-threading any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
-      if (ctx.arg.sharedMemory && sym->isTLS())
+      if (ctx.arg.isMultithreaded() && sym->isTLS())
         mutable_ = true;
     }
     WasmGlobalType type{itype, mutable_};
@@ -569,10 +569,10 @@ void GlobalSection::writeBody() {
     } else {
       WasmInitExpr initExpr;
       if (auto *d = dyn_cast<DefinedData>(sym))
-        // In the sharedMemory case TLS globals are set during
-        // `__wasm_apply_global_tls_relocs`, but in the non-shared case
+        // In the multithreaded case, TLS globals are set during
+        // `__wasm_apply_global_tls_relocs`, but in the single-threaded case
         // we know the absolute value at link time.
-        initExpr = intConst(d->getVA(/*absolute=*/!ctx.arg.sharedMemory), is64);
+        initExpr = intConst(d->getVA(/*absolute=*/!ctx.arg.isMultithreaded()), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
@@ -680,7 +680,7 @@ bool DataCountSection::isNeeded() const {
   // instructions are not yet supported in input files.  However, in the case
   // of shared memory, lld itself will generate these instructions as part of
   // `__wasm_init_memory`. See Writer::createInitMemoryFunction.
-  return numSegments && ctx.arg.sharedMemory;
+  return numSegments && ctx.arg.isMultithreaded();
 }
 
 void LinkingSection::writeBody() {
