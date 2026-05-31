@@ -367,12 +367,13 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
 
   // Create a temporary.  This needs to be big enough to hold the
   // atomic integer.
+  Address temp = Address::invalid();
   if (asValue && getEvaluationKind() == TEK_Aggregate) {
     cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
     return RValue::get(nullptr);
+  } else {
+    temp = createTempAlloca();
   }
-
-  Address temp = createTempAlloca();
 
   // Slam the integer into the temporary.
   Address castTemp = castToAtomicIntPointer(temp);
