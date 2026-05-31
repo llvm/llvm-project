@@ -2851,7 +2851,7 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
   const Init *Key = ParseValue(CurRec);
   if (!Key)
     return nullptr;
-  // Push key as the first element of the vector for type checking
+  // Push the key as the first element of the vector for type-checking.
   KeyAndCases.push_back(Key);
 
   if (!consume(tgtok::comma)) {
@@ -2867,13 +2867,14 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
     if (!V)
       return nullptr;
 
-    // Parse mandatory default value
+    // Parse the mandatory default value.
     if (consume(tgtok::r_paren)) {
-      // Default was parsed without the ItemType hint; coerce now to match
-      // case-value parses
+      // The default value was parsed without the ItemType hint. Coerce it now
+      // to match case-value parses.
       if (const Init *Coerced = V->convertInitializerTo(ItemType))
         V = Coerced;
-      // Push default value as the last element of the vector for type checking
+      // Push the default value as the last element of the vector for
+      // type-checking.
       Vals.push_back(V);
       break;
     }
@@ -2903,7 +2904,7 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
     return nullptr;
   }
 
-  // Check value type consistency
+  // Check value type consistency.
   std::optional<const RecTy *> ValTypeOpt =
       resolveInitTypes(Vals, "for !switch values");
   if (!ValTypeOpt)
@@ -2914,8 +2915,9 @@ const Init *TGParser::ParseOperationSwitch(Record *CurRec,
     return nullptr;
   }
 
-  // Check key/case-key type consistency. We only care about conflicts here;
-  // all-unset is fine because no downstream code uses the key type
+  // Check key/case-key type consistency. We only care about conflicts here.
+  // The all-unset case should be fine because no downstream code uses the key
+  // type.
   if (!resolveInitTypes(KeyAndCases, "between !switch key and case keys"))
     return nullptr;
 
