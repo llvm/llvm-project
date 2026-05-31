@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORM_VECTORIZE_VPLANPATTERNMATCH_H
 
 #include "VPlan.h"
+#include "VPlanUtils.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 
 using namespace llvm::PatternMatchHelpers;
@@ -958,27 +959,7 @@ struct IntrinsicID_match {
   IntrinsicID_match(Intrinsic::ID IntrID) : ID(IntrID) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (const auto *R = dyn_cast<VPWidenIntrinsicRecipe>(V))
-      return R->getVectorIntrinsicID() == ID;
-    if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
-      return R->getCalledScalarFunction()->getIntrinsicID() == ID;
-
-    auto MatchCalleeIntrinsic = [&](VPValue *CalleeOp) {
-      if (!isa<VPIRValue>(CalleeOp))
-        return false;
-      auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
-      return F->getIntrinsicID() == ID;
-    };
-    if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
-      if (R->getOpcode() == Instruction::Call) {
-        // The mask is always the last operand if predicated.
-        return MatchCalleeIntrinsic(
-            R->getOperand(R->getNumOperands() - 1 - R->isPredicated()));
-      }
-    if (const auto *R = dyn_cast<VPInstruction>(V))
-      if (R->getOpcode() == Instruction::Call)
-        return MatchCalleeIntrinsic(R->getOperand(R->getNumOperands() - 1));
-    return false;
+    return vputils::getIntrinsicID(V) == ID;
   }
 };
 
@@ -1124,6 +1105,23 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
                       /*Commutative*/ false, VPInstruction>({Op0, Op1});
 }
 
+/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
+/// return nullptr;
+template <typename MatchT>
+static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  auto It = find_if(V->users(), match_fn(P));
+  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
+}
+
+/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
+/// return nullptr.
+template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
+}
+
+template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
+}
 } // namespace llvm::VPlanPatternMatch
 
 #endif

@@ -3,7 +3,7 @@
 ; RUN: llvm-mc -triple m68k --mcpu=M68020 --position-independent -show-encoding %s -o - \
 ; RUN:   | FileCheck -check-prefix=INSTR %s
 
-; RELOC: R_68K_PLT16 target 0x0
+; RELOC: R_68K_PLT32 target 0x0
 ; INSTR: jsr     (target@PLT,%pc)
 jsr	(target@PLT,%pc)
 

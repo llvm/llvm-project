@@ -909,12 +909,15 @@ CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
                          {DerivedPtr}, {}, Name);
 }
 
-CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                              FMFSource FMFSource,
-                                              const Twine &Name) {
+Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                           FMFSource FMFSource,
+                                           const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {V->getType()});
-  return createCallHelper(Fn, {V}, Name, FMFSource);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
+  if (Value *V = Folder.FoldUnaryIntrinsic(ID, Op, Fn->getReturnType(),
+                                           FMFSource.get(FMF)))
+    return V;
+  return createCallHelper(Fn, Op, Name, FMFSource);
 }
 
 Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,

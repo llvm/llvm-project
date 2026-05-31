@@ -1008,9 +1008,9 @@ public:
 
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
-  LLVM_ABI CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                          FMFSource FMFSource = {},
-                                          const Twine &Name = "");
+  LLVM_ABI Value *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                       FMFSource FMFSource = {},
+                                       const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
   /// first type.
@@ -1045,8 +1045,8 @@ public:
   }
 
   /// Create call to the fabs intrinsic.
-  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
-                       const Twine &Name = "") {
+  Value *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                    const Twine &Name = "") {
     return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 

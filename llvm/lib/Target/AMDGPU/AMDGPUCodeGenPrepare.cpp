@@ -1113,8 +1113,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  FQ->copyFastMathFlags(Builder.getFastMathFlags());
+  Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
+  auto *FQI = dyn_cast<Instruction>(FQ);
+  if (FQI)
+    FQI->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
   Value *FQNeg = Builder.CreateFNeg(FQ);
@@ -1123,18 +1125,18 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   auto FMAD = !ST.hasMadMacF32Insts()
                   ? Intrinsic::fma
                   : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR = Builder.CreateIntrinsic(FMAD,
-                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
+  Value *FR =
+      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQI);
 
   // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQI);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
