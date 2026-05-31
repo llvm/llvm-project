@@ -580,6 +580,10 @@ Changes in existing checks
   - Preserved used iterator results when replacing ``std::unique`` calls with
     ``std::ranges::unique``.
 
+  - Preserved used iterator results when replacing ``std::remove``,
+    ``std::remove_if``, ``std::partition``, ``std::stable_partition``, and
+    ``std::rotate`` calls with their ``std::ranges`` counterparts.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
