@@ -1060,14 +1060,16 @@ public:
 
 /// Generates code to check that an operand is a pointer to any address space.
 ///
-/// In SelectionDAG, the types did not describe pointers or address spaces. As a
-/// result, iN is used to describe a pointer of N bits to any address space and
+/// Used when the imported pattern marks an operand as a pointer (iPTR or
+/// IsPointer). SelectionDAG did not distinguish pointer from integer types, so
 /// PatFrag predicates are typically used to constrain the address space.
-/// There's no reliable means to derive the missing type information from the
-/// pattern so imported rules must test the components of a pointer separately.
 ///
-/// If SizeInBits is zero, then the pointer size will be obtained from the
-/// subtarget.
+/// Scalar and pointer-vector operands are accepted when the scalar element
+/// size matches \p SizeInBits. When the pattern instead expected an integer
+/// MVT, \p GIM_CheckType uses isLLTIntegerCompatibleWithPointer().
+///
+/// If SizeInBits is zero, the pointer size is obtained from the data layout
+/// for the operand's address space.
 class PointerToAnyOperandMatcher : public OperandPredicateMatcher {
 protected:
   unsigned SizeInBits;

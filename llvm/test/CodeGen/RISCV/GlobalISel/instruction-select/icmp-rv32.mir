@@ -742,9 +742,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 10
-    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: $x10 = COPY [[SLTU]]
+    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 10
+    ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
@@ -766,9 +765,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -10
-    ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: $x10 = COPY [[SLT]]
+    ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -10
+    ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
@@ -790,9 +788,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 10
-    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[ADDI]], [[COPY]]
-    ; CHECK-NEXT: $x10 = COPY [[SLTU]]
+    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 11
+    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTIU]], 1
+    ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
@@ -814,9 +812,9 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -10
-    ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[ADDI]], [[COPY]]
-    ; CHECK-NEXT: $x10 = COPY [[SLT]]
+    ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -9
+    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
+    ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
@@ -838,9 +836,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 10
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:gpr = XOR [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[XOR]], 1
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], -10
+    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[ADDI]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -863,9 +860,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -10
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:gpr = XOR [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[XOR]]
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY]], 10
+    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
@@ -888,10 +884,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 10
-    ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[ADDI]], [[COPY]]
-    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
-    ; CHECK-NEXT: $x10 = COPY [[XORI]]
+    ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 11
+    ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
@@ -913,10 +907,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -10
-    ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[ADDI]], [[COPY]]
-    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
-    ; CHECK-NEXT: $x10 = COPY [[XORI]]
+    ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -9
+    ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
@@ -963,9 +955,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
-    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, -10
-    ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY]], [[ADDI]]
-    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
+    ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -10
+    ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
