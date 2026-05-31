@@ -57,8 +57,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
           ? static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u)
           : 0;
 
-  DoubleDouble m_dd{FPBits(m_lo_bits).get_val(),
-                    FPBits(m_hi_bits).get_val()};
+  DoubleDouble m_dd{FPBits(m_lo_bits).get_val(), FPBits(m_hi_bits).get_val()};
 
   double r = R1[idx];
   DoubleDouble v_lo_p = fputil::exact_mult(m_dd.lo, r);
@@ -67,7 +66,7 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   v_hi_p = fputil::multiply_add(r, m_dd.hi, -1.0);
 #else
   double c = FPBits((static_cast<uint64_t>(idx) << (FRACTION_LEN - 7)) +
-                      uint64_t(0x3FF0'0000'0000'0000ULL))
+                    uint64_t(0x3FF0'0000'0000'0000ULL))
                  .get_val();
   v_hi_p = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]);
 #endif
