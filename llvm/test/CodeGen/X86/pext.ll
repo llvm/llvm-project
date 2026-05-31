@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+bmi2 | FileCheck %s --check-prefix=BMI2
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=NOBMI2
 
-define i8 @bext_i8(i8 %val, i8 %mask) nounwind {
-; BMI2-LABEL: bext_i8:
+define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
+; BMI2-LABEL: pext_i8:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzbl %sil, %eax
 ; BMI2-NEXT:    movzbl %dil, %ecx
@@ -11,7 +11,7 @@ define i8 @bext_i8(i8 %val, i8 %mask) nounwind {
 ; BMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_i8:
+; NOBMI2-LABEL: pext_i8:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl %esi, %ecx
 ; NOBMI2-NEXT:    notb %cl
@@ -91,12 +91,12 @@ define i8 @bext_i8(i8 %val, i8 %mask) nounwind {
 ; NOBMI2-NEXT:    shrb $4, %al
 ; NOBMI2-NEXT:    orb %dil, %al
 ; NOBMI2-NEXT:    retq
-  %res = call i8 @llvm.bext.i8(i8 %val, i8 %mask)
+  %res = call i8 @llvm.pext.i8(i8 %val, i8 %mask)
   ret i8 %res
 }
 
-define i16 @bext_i16(i16 %val, i16 %mask) nounwind {
-; BMI2-LABEL: bext_i16:
+define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
+; BMI2-LABEL: pext_i16:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzwl %si, %eax
 ; BMI2-NEXT:    movzwl %di, %ecx
@@ -104,7 +104,7 @@ define i16 @bext_i16(i16 %val, i16 %mask) nounwind {
 ; BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_i16:
+; NOBMI2-LABEL: pext_i16:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    pushq %rbx
 ; NOBMI2-NEXT:    andl %esi, %edi
@@ -316,17 +316,17 @@ define i16 @bext_i16(i16 %val, i16 %mask) nounwind {
 ; NOBMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NOBMI2-NEXT:    popq %rbx
 ; NOBMI2-NEXT:    retq
-  %res = call i16 @llvm.bext.i16(i16 %val, i16 %mask)
+  %res = call i16 @llvm.pext.i16(i16 %val, i16 %mask)
   ret i16 %res
 }
 
-define i32 @bext_i32(i32 %val, i32 %mask) nounwind {
-; BMI2-LABEL: bext_i32:
+define i32 @pext_i32(i32 %val, i32 %mask) nounwind {
+; BMI2-LABEL: pext_i32:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pextl %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_i32:
+; NOBMI2-LABEL: pext_i32:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    andl %esi, %edi
 ; NOBMI2-NEXT:    movl %esi, %eax
@@ -820,17 +820,17 @@ define i32 @bext_i32(i32 %val, i32 %mask) nounwind {
 ; NOBMI2-NEXT:    shrl $16, %eax
 ; NOBMI2-NEXT:    orl %esi, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bext.i32(i32 %val, i32 %mask)
+  %res = call i32 @llvm.pext.i32(i32 %val, i32 %mask)
   ret i32 %res
 }
 
-define i64 @bext_i64(i64 %val, i64 %mask) nounwind {
-; BMI2-LABEL: bext_i64:
+define i64 @pext_i64(i64 %val, i64 %mask) nounwind {
+; BMI2-LABEL: pext_i64:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pextq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_i64:
+; NOBMI2-LABEL: pext_i64:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    andq %rsi, %rdi
 ; NOBMI2-NEXT:    movq %rsi, %rax
@@ -2002,49 +2002,49 @@ define i64 @bext_i64(i64 %val, i64 %mask) nounwind {
 ; NOBMI2-NEXT:    shrq $32, %rax
 ; NOBMI2-NEXT:    orq %rdi, %rax
 ; NOBMI2-NEXT:    retq
-  %res = call i64 @llvm.bext.i64(i64 %val, i64 %mask)
+  %res = call i64 @llvm.pext.i64(i64 %val, i64 %mask)
   ret i64 %res
 }
 
-define i32 @bext_mask_zero(i32 %val) nounwind {
-; BMI2-LABEL: bext_mask_zero:
+define i32 @pext_mask_zero(i32 %val) nounwind {
+; BMI2-LABEL: pext_mask_zero:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    xorl %eax, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_mask_zero:
+; NOBMI2-LABEL: pext_mask_zero:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    xorl %eax, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bext.i32(i32 %val, i32 0)
+  %res = call i32 @llvm.pext.i32(i32 %val, i32 0)
   ret i32 %res
 }
 
-define i32 @bext_mask_allones(i32 %val) nounwind {
-; BMI2-LABEL: bext_mask_allones:
+define i32 @pext_mask_allones(i32 %val) nounwind {
+; BMI2-LABEL: pext_mask_allones:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl %edi, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_mask_allones:
+; NOBMI2-LABEL: pext_mask_allones:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl %edi, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bext.i32(i32 %val, i32 -1)
+  %res = call i32 @llvm.pext.i32(i32 %val, i32 -1)
   ret i32 %res
 }
 
-define i32 @bext_const_fold() nounwind {
-; BMI2-LABEL: bext_const_fold:
+define i32 @pext_const_fold() nounwind {
+; BMI2-LABEL: pext_const_fold:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl $10, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bext_const_fold:
+; NOBMI2-LABEL: pext_const_fold:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl $10, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bext.i32(i32 170, i32 204)
+  %res = call i32 @llvm.pext.i32(i32 170, i32 204)
   ret i32 %res
 }
 

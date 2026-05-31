@@ -8974,7 +8974,7 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
 }
 
-SDValue TargetLowering::expandBEXT(SDNode *Node, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
   SDValue Val = Node->getOperand(0);
@@ -9006,7 +9006,7 @@ SDValue TargetLowering::expandBEXT(SDNode *Node, SelectionDAG &DAG) const {
   return X;
 }
 
-SDValue TargetLowering::expandBDEP(SDNode *Node, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
   SDValue Val = Node->getOperand(0);

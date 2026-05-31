@@ -5575,12 +5575,12 @@ public:
   /// Expand bit extract (compress).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
-  SDValue expandBEXT(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand bit deposit (expand).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
-  SDValue expandBDEP(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand

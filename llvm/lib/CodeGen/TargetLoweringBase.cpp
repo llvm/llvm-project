@@ -1189,7 +1189,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
 
     // Bit extract/deposit (compress/expand)
-    setOperationAction({ISD::BEXT, ISD::BDEP}, VT, Expand);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
 
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);

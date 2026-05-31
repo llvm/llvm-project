@@ -7410,16 +7410,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::CLMUL, sdl, X.getValueType(), X, Y));
     return;
   }
-  case Intrinsic::bext: {
+  case Intrinsic::pext: {
     SDValue X = getValue(I.getArgOperand(0));
     SDValue Y = getValue(I.getArgOperand(1));
-    setValue(&I, DAG.getNode(ISD::BEXT, sdl, X.getValueType(), X, Y));
+    setValue(&I, DAG.getNode(ISD::PEXT, sdl, X.getValueType(), X, Y));
     return;
   }
-  case Intrinsic::bdep: {
+  case Intrinsic::pdep: {
     SDValue X = getValue(I.getArgOperand(0));
     SDValue Y = getValue(I.getArgOperand(1));
-    setValue(&I, DAG.getNode(ISD::BDEP, sdl, X.getValueType(), X, Y));
+    setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {

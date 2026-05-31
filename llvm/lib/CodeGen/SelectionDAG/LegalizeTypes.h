@@ -359,8 +359,8 @@ private:
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
   SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
   SDValue PromoteIntRes_CLMUL(SDNode *N);
-  SDValue PromoteIntRes_BEXT(SDNode *N);
-  SDValue PromoteIntRes_BDEP(SDNode *N);
+  SDValue PromoteIntRes_PEXT(SDNode *N);
+  SDValue PromoteIntRes_PDEP(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -504,8 +504,8 @@ private:
   void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_BEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
-  void ExpandIntRes_BDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);

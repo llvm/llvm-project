@@ -474,8 +474,8 @@ namespace {
     SDValue visitABS(SDNode *N);
     SDValue visitABS_MIN_POISON(SDNode *N);
     SDValue visitCLMUL(SDNode *N);
-    SDValue visitBEXT(SDNode *N);
-    SDValue visitBDEP(SDNode *N);
+    SDValue visitPEXT(SDNode *N);
+    SDValue visitPDEP(SDNode *N);
     SDValue visitBSWAP(SDNode *N);
     SDValue visitBITREVERSE(SDNode *N);
     SDValue visitCTLZ(SDNode *N);
@@ -1994,8 +1994,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CLMUL:
   case ISD::CLMULR:
   case ISD::CLMULH:             return visitCLMUL(N);
-  case ISD::BEXT:               return visitBEXT(N);
-  case ISD::BDEP:               return visitBDEP(N);
+  case ISD::PEXT:               return visitPEXT(N);
+  case ISD::PDEP:               return visitPDEP(N);
   case ISD::BSWAP:              return visitBSWAP(N);
   case ISD::BITREVERSE:         return visitBITREVERSE(N);
   case ISD::CTLZ:               return visitCTLZ(N);
@@ -12212,38 +12212,38 @@ SDValue DAGCombiner::visitCLMUL(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::visitBEXT(SDNode *N) {
+SDValue DAGCombiner::visitPEXT(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDLoc DL(N);
 
-  // bext(x, 0) -> 0
+  // pext(x, 0) -> 0
   if (isNullOrNullSplat(N1))
     return DAG.getConstant(0, DL, VT);
-  // bext(x, -1) -> x  (all bits selected, packed into low positions = x)
+  // pext(x, -1) -> x  (all bits selected, packed into low positions = x)
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
-  // fold bext(c1, c2) -> compressBits(c1, c2)
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::BEXT, DL, VT, {N0, N1}))
+  // fold pext(c1, c2) -> compressBits(c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::PEXT, DL, VT, {N0, N1}))
     return C;
   return SDValue();
 }
 
-SDValue DAGCombiner::visitBDEP(SDNode *N) {
+SDValue DAGCombiner::visitPDEP(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDLoc DL(N);
 
-  // bdep(x, 0) -> 0
+  // pdep(x, 0) -> 0
   if (isNullOrNullSplat(N1))
     return DAG.getConstant(0, DL, VT);
-  // bdep(x, -1) -> x  (all positions selected, bits deposited at identity)
+  // pdep(x, -1) -> x  (all positions selected, bits deposited at identity)
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
-  // fold bdep(c1, c2) -> expandBits(c1, c2)
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::BDEP, DL, VT, {N0, N1}))
+  // fold pdep(c1, c2) -> expandBits(c1, c2)
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::PDEP, DL, VT, {N0, N1}))
     return C;
   return SDValue();
 }

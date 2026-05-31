@@ -2107,17 +2107,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    // Map generic BEXT/BDEP to SVE2 bitperm BEXT/BDEP instructions.
+    // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
     if (Subtarget->hasSVEBitPerm() &&
         (Subtarget->isSVEAvailable() ||
          (Subtarget->isSVEorStreamingSVEAvailable() &&
           Subtarget->hasSSVE_BitPerm()))) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
-        setOperationAction(ISD::BEXT, VT, Custom);
-        setOperationAction(ISD::BDEP, VT, Custom);
+        setOperationAction(ISD::PEXT, VT, Custom);
+        setOperationAction(ISD::PDEP, VT, Custom);
       }
-      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i32, Custom);
-      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i64, Custom);
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Custom);
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Custom);
     }
 
     if (Subtarget->hasBF16())
@@ -8655,12 +8655,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   case ISD::CLMUL:
     return LowerCLMUL(Op, DAG);
-  case ISD::BEXT:
-  case ISD::BDEP: {
-    // Lower generic BEXT/BDEP to SVE2 intrinsics.
+  case ISD::PEXT:
+  case ISD::PDEP: {
+    // Lower generic PEXT/PDEP to SVE2 intrinsics.
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
-    unsigned IntrID = Op.getOpcode() == ISD::BEXT
+    unsigned IntrID = Op.getOpcode() == ISD::PEXT
                           ? Intrinsic::aarch64_sve_bext_x
                           : Intrinsic::aarch64_sve_bdep_x;
 

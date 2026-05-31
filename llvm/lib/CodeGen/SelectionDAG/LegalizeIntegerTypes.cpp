@@ -370,12 +370,12 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     Res = PromoteIntRes_CLMUL(N);
     break;
 
-  case ISD::BEXT:
-    Res = PromoteIntRes_BEXT(N);
+  case ISD::PEXT:
+    Res = PromoteIntRes_PEXT(N);
     break;
 
-  case ISD::BDEP:
-    Res = PromoteIntRes_BDEP(N);
+  case ISD::PDEP:
+    Res = PromoteIntRes_PDEP(N);
     break;
 
   case ISD::IS_FPCLASS:
@@ -1771,28 +1771,28 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
                      DAG.getShiftAmountConstant(ShAmt, VT, DL));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_BEXT(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_PEXT(SDNode *N) {
   SDLoc DL(N);
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::BEXT, VT)) {
-    if (SDValue Res = TLI.expandBEXT(N, DAG))
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::PEXT, VT)) {
+    if (SDValue Res = TLI.expandPEXT(N, DAG))
       return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
   }
   SDValue X = ZExtPromotedInteger(N->getOperand(0));
   SDValue Y = ZExtPromotedInteger(N->getOperand(1));
-  return DAG.getNode(ISD::BEXT, DL, VT, X, Y);
+  return DAG.getNode(ISD::PEXT, DL, VT, X, Y);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_BDEP(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
   SDLoc DL(N);
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::BDEP, VT)) {
-    if (SDValue Res = TLI.expandBDEP(N, DAG))
+  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::PDEP, VT)) {
+    if (SDValue Res = TLI.expandPDEP(N, DAG))
       return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
   }
   SDValue X = ZExtPromotedInteger(N->getOperand(0));
   SDValue Y = ZExtPromotedInteger(N->getOperand(1));
-  return DAG.getNode(ISD::BDEP, DL, VT, X, Y);
+  return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_TRUNCATE(SDNode *N) {
@@ -3344,12 +3344,12 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
     ExpandIntRes_CLMUL(N, Lo, Hi);
     break;
 
-  case ISD::BEXT:
-    ExpandIntRes_BEXT(N, Lo, Hi);
+  case ISD::PEXT:
+    ExpandIntRes_PEXT(N, Lo, Hi);
     break;
 
-  case ISD::BDEP:
-    ExpandIntRes_BDEP(N, Lo, Hi);
+  case ISD::PDEP:
+    ExpandIntRes_PDEP(N, Lo, Hi);
     break;
 
   case ISD::VSCALE:
@@ -5661,13 +5661,13 @@ void DAGTypeLegalizer::ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi) {
   Hi = DAG.getNode(ISD::XOR, DL, HalfVT, LoH, HiLoCross);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_BEXT(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDValue Res = TLI.expandBEXT(N, DAG);
+void DAGTypeLegalizer::ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandPEXT(N, DAG);
   SplitInteger(Res, Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandIntRes_BDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDValue Res = TLI.expandBDEP(N, DAG);
+void DAGTypeLegalizer::ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Res = TLI.expandPDEP(N, DAG);
   SplitInteger(Res, Lo, Hi);
 }
 

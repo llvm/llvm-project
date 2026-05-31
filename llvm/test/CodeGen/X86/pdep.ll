@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+bmi2 | FileCheck %s --check-prefix=BMI2
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefix=NOBMI2
 
-define i8 @bdep_i8(i8 %val, i8 %mask) nounwind {
-; BMI2-LABEL: bdep_i8:
+define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
+; BMI2-LABEL: pdep_i8:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzbl %sil, %eax
 ; BMI2-NEXT:    movzbl %dil, %ecx
@@ -11,7 +11,7 @@ define i8 @bdep_i8(i8 %val, i8 %mask) nounwind {
 ; BMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_i8:
+; NOBMI2-LABEL: pdep_i8:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl %esi, %eax
 ; NOBMI2-NEXT:    notb %al
@@ -94,12 +94,12 @@ define i8 @bdep_i8(i8 %val, i8 %mask) nounwind {
 ; NOBMI2-NEXT:    andb %sil, %al
 ; NOBMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; NOBMI2-NEXT:    retq
-  %res = call i8 @llvm.bdep.i8(i8 %val, i8 %mask)
+  %res = call i8 @llvm.pdep.i8(i8 %val, i8 %mask)
   ret i8 %res
 }
 
-define i16 @bdep_i16(i16 %val, i16 %mask) nounwind {
-; BMI2-LABEL: bdep_i16:
+define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
+; BMI2-LABEL: pdep_i16:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzwl %si, %eax
 ; BMI2-NEXT:    movzwl %di, %ecx
@@ -107,7 +107,7 @@ define i16 @bdep_i16(i16 %val, i16 %mask) nounwind {
 ; BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_i16:
+; NOBMI2-LABEL: pdep_i16:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    pushq %rbx
 ; NOBMI2-NEXT:    movl %esi, %edx
@@ -316,17 +316,17 @@ define i16 @bdep_i16(i16 %val, i16 %mask) nounwind {
 ; NOBMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NOBMI2-NEXT:    popq %rbx
 ; NOBMI2-NEXT:    retq
-  %res = call i16 @llvm.bdep.i16(i16 %val, i16 %mask)
+  %res = call i16 @llvm.pdep.i16(i16 %val, i16 %mask)
   ret i16 %res
 }
 
-define i32 @bdep_i32(i32 %val, i32 %mask) nounwind {
-; BMI2-LABEL: bdep_i32:
+define i32 @pdep_i32(i32 %val, i32 %mask) nounwind {
+; BMI2-LABEL: pdep_i32:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pdepl %esi, %edi, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_i32:
+; NOBMI2-LABEL: pdep_i32:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    pushq %rbp
 ; NOBMI2-NEXT:    pushq %r14
@@ -830,17 +830,17 @@ define i32 @bdep_i32(i32 %val, i32 %mask) nounwind {
 ; NOBMI2-NEXT:    popq %r14
 ; NOBMI2-NEXT:    popq %rbp
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bdep.i32(i32 %val, i32 %mask)
+  %res = call i32 @llvm.pdep.i32(i32 %val, i32 %mask)
   ret i32 %res
 }
 
-define i64 @bdep_i64(i64 %val, i64 %mask) nounwind {
-; BMI2-LABEL: bdep_i64:
+define i64 @pdep_i64(i64 %val, i64 %mask) nounwind {
+; BMI2-LABEL: pdep_i64:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    pdepq %rsi, %rdi, %rax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_i64:
+; NOBMI2-LABEL: pdep_i64:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    pushq %r15
 ; NOBMI2-NEXT:    pushq %r14
@@ -2025,49 +2025,49 @@ define i64 @bdep_i64(i64 %val, i64 %mask) nounwind {
 ; NOBMI2-NEXT:    popq %r14
 ; NOBMI2-NEXT:    popq %r15
 ; NOBMI2-NEXT:    retq
-  %res = call i64 @llvm.bdep.i64(i64 %val, i64 %mask)
+  %res = call i64 @llvm.pdep.i64(i64 %val, i64 %mask)
   ret i64 %res
 }
 
-define i32 @bdep_mask_zero(i32 %val) nounwind {
-; BMI2-LABEL: bdep_mask_zero:
+define i32 @pdep_mask_zero(i32 %val) nounwind {
+; BMI2-LABEL: pdep_mask_zero:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    xorl %eax, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_mask_zero:
+; NOBMI2-LABEL: pdep_mask_zero:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    xorl %eax, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bdep.i32(i32 %val, i32 0)
+  %res = call i32 @llvm.pdep.i32(i32 %val, i32 0)
   ret i32 %res
 }
 
-define i32 @bdep_mask_allones(i32 %val) nounwind {
-; BMI2-LABEL: bdep_mask_allones:
+define i32 @pdep_mask_allones(i32 %val) nounwind {
+; BMI2-LABEL: pdep_mask_allones:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl %edi, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_mask_allones:
+; NOBMI2-LABEL: pdep_mask_allones:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl %edi, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bdep.i32(i32 %val, i32 -1)
+  %res = call i32 @llvm.pdep.i32(i32 %val, i32 -1)
   ret i32 %res
 }
 
-define i32 @bdep_const_fold() nounwind {
-; BMI2-LABEL: bdep_const_fold:
+define i32 @pdep_const_fold() nounwind {
+; BMI2-LABEL: pdep_const_fold:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movl $136, %eax
 ; BMI2-NEXT:    retq
 ;
-; NOBMI2-LABEL: bdep_const_fold:
+; NOBMI2-LABEL: pdep_const_fold:
 ; NOBMI2:       # %bb.0:
 ; NOBMI2-NEXT:    movl $136, %eax
 ; NOBMI2-NEXT:    retq
-  %res = call i32 @llvm.bdep.i32(i32 10, i32 204)
+  %res = call i32 @llvm.pdep.i32(i32 10, i32 204)
   ret i32 %res
 }
 

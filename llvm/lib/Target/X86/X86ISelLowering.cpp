@@ -481,11 +481,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (Subtarget.hasBMI2()) {
-    setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i8, Promote);
-    setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i16, Promote);
-    setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i32, Legal);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i8, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i16, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Legal);
     if (Subtarget.is64Bit())
-      setOperationAction({ISD::BEXT, ISD::BDEP}, MVT::i64, Legal);
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Legal);
   }
 
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);

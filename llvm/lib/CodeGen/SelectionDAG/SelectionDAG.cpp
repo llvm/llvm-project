@@ -7449,9 +7449,9 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
     return APIntOps::clmulr(C1, C2);
   case ISD::CLMULH:
     return APIntOps::clmulh(C1, C2);
-  case ISD::BEXT:
+  case ISD::PEXT:
     return APIntOps::compressBits(C1, C2);
-  case ISD::BDEP:
+  case ISD::PDEP:
     return APIntOps::expandBits(C1, C2);
   }
   return std::nullopt;
