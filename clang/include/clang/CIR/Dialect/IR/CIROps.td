@@ -114,13 +114,25 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 class HasAtMostOneOfAttrsPred<list<string> names> :
-  CPred<!foldl("0", names, acc, name,  acc # " + (" # name # " ? 1 : 0)")
+  CPred<!foldl("0", names, acc, name,
+    acc # " + (this->get" # snakeCaseToCamelCase<name>.ret # "() ? 1 : 0)")
         # " <= 1">;
 
 class HasAtMostOneOfAttrs<list<string> names> : PredOpTrait<
   "has only one of the optional attributes: " # !interleave(names, ", "),
-  HasAtMostOneOfAttrsPred<!foreach(name, names, "$" # name)>
+  HasAtMostOneOfAttrsPred<names>
 >;
+
+// Requires that a boolean flag attribute implies integer result type.
+class FlagRequiresIntType<string flag> : PredOpTrait<
+  "only operations on integer values may have the " # flag # " flag",
+  Or<[Neg<CPred<"this->get" # snakeCaseToCamelCase<flag>.ret # "()">>,
+      CPred<"::mlir::isa<::cir::IntType>(this->getResult().getType())">]>
+>;
+
+def NSWFlagIntOnly : FlagRequiresIntType<"no_signed_wrap">;
+def NUWFlagIntOnly : FlagRequiresIntType<"no_unsigned_wrap">;
+def SatFlagIntOnly : FlagRequiresIntType<"saturated">;
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -1846,11 +1858,12 @@ class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
                                    list<Trait> traits = []>
     : CIR_UnaryOp<mnemonic, type, traits>
 {
-  let arguments = (ins type:$input, UnitProp:$no_signed_wrap);
+  let append traits = [NSWFlagIntOnly];
 
-  let assemblyFormat = [{
+  let append arguments = (ins UnitProp:$no_signed_wrap);
+
+  let prepend assemblyFormat = [{
     (`nsw` $no_signed_wrap^)?
-    $input `:` type($input) attr-dict
   }];
 }
 
@@ -2393,34 +2406,47 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = []>
   }];
 }
 
-// Base class for binary ops that support integer overflow flags (nsw/nuw)
-// and saturated arithmetic.
-class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
-                                    list<Trait> traits = []>
-    : CIR_BinaryOp<mnemonic, type, !listconcat([Pure], traits)>
+// Base class for binary ops that support integer overflow flags (nsw/nuw).
+class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type>
+    : CIR_BinaryOp<mnemonic, type>
 {
-  let arguments = (ins
-    type:$lhs, type:$rhs,
+  let append traits = [Pure, NSWFlagIntOnly, NUWFlagIntOnly];
+
+  let append arguments = (ins
     UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap,
-    UnitProp:$saturated
+    UnitProp:$no_unsigned_wrap
   );
 
-  let assemblyFormat = [{
+  let prepend assemblyFormat = [{
     (`nsw` $no_signed_wrap^)?
     (`nuw` $no_unsigned_wrap^)?
-    (`sat` $saturated^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
+}
 
-  let hasVerifier = 1;
+// Extends CIR_BinaryOpWithOverflowFlags with saturated arithmetic support.
+class CIR_SaturatableBinaryOp<string mnemonic, Type type>
+    : CIR_BinaryOpWithOverflowFlags<mnemonic, type>
+{
+  let append traits = [
+    SatFlagIntOnly,
+    HasAtMostOneOfAttrs<["saturated", "no_signed_wrap"]>,
+    HasAtMostOneOfAttrs<["saturated", "no_unsigned_wrap"]>
+  ];
+
+  let append arguments = (ins UnitProp:$saturated);
+
+  let prepend assemblyFormat = [{
+    (`sat` $saturated^)?
+  }];
 }
 
 //===----------------------------------------------------------------------===//
 // AddOp
 //===----------------------------------------------------------------------===//
 
-def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
+def CIR_AddOp : CIR_SaturatableBinaryOp<"add", CIR_AnyArithType> {
+  let append traits = [Commutative];
+
   let summary = "Integer or floating-point addition";
   let description = [{
     The `cir.add` operation performs addition on integer or floating-point
@@ -2448,7 +2474,7 @@ def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
 // SubOp
 //===----------------------------------------------------------------------===//
 
-def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
+def CIR_SubOp : CIR_SaturatableBinaryOp<"sub", CIR_AnyArithType> {
   let summary = "Integer or floating-point subtraction";
   let description = [{
     The `cir.sub` operation performs subtraction on integer or floating-point
@@ -2475,7 +2501,9 @@ def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
+def CIR_MulOp : CIR_BinaryOpWithOverflowFlags<"mul", CIR_AnyArithType> {
+  let append traits = [Commutative];
+
   let summary = "Integer or floating-point multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer or floating-point
@@ -2494,20 +2522,6 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
     %3 = cir.mul %a, %b : !cir.float
     ```
   }];
-  
-  let arguments = (ins
-    CIR_AnyArithType:$lhs, CIR_AnyArithType:$rhs,
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap
-  );
-
-  let assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
-  }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -149,7 +149,7 @@ void test_sized_array_delete(SizedArrayDelete *ptr) {
 // LLVM: [[DELETE_NOTNULL]]:
 // LLVM:   %[[ALLOC_PTR:.*]] = getelementptr i8, ptr %[[PTR]], i64 -8
 // LLVM:   %[[NUM_ELEM:.*]] = load i64, ptr %[[ALLOC_PTR]], align 4
-// LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
+// LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 %[[NUM_ELEM]], 4
 // LLVM:   %[[TOTAL_SIZE:.*]] = add i64 %[[ARRAY_SIZE]], 8
 // LLVM:   call void @_ZN16SizedArrayDeletedaEPvm(ptr %[[ALLOC_PTR]], i64 %[[TOTAL_SIZE]])
 // LLVM:   br label %[[DELETE_END]]
@@ -259,7 +259,7 @@ void test_delete_array_destructed(Destructed *ptr) {
 // LLVM: [[LOOP_END]]:
 // LLVM:   br label %[[CALL_DELETE]]
 // LLVM: [[CALL_DELETE]]:
-// LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
+// LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 %[[NUM_ELEM]], 4
 // LLVM:   %[[TOTAL_SIZE:.*]] = add i64 %[[ARRAY_SIZE]], 8
 // LLVM:   call void @_ZdaPvm(ptr %[[ALLOC_PTR]], i64 %[[TOTAL_SIZE]])
 // LLVM:   br label %{{.*}}
