@@ -228,9 +228,6 @@ public:
   /// \a Instruction::hasMetadata().
   explicit operator bool() const { return Loc; }
 
-  /// Check whether this has a trivial destructor.
-  bool hasTrivialDestructor() const { return true; }
-
   enum { ReplaceLastInlinedAt = true };
   /// Rebuild the entire inlined-at chain for this instruction so that the top
   /// of the chain now is inlined-at the new call site.
