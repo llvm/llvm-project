@@ -651,8 +651,8 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanonicalIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
@@ -840,16 +840,16 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 /// inserted for predicated reductions or tail folding.
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res = vputils::findUserOf<VPInstruction::ComputeReductionResult>(
-          BackedgeVal))
+  if (auto *Res =
+          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR = vputils::findUserOf(
-      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  VPRecipeBase *SelR =
+      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+  return findUserOf<VPInstruction::ComputeReductionResult>(
       cast<VPSingleDefRecipe>(SelR));
 }
 
