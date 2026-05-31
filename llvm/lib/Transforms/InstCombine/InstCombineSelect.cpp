@@ -1507,7 +1507,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!isPowerOf2_64(BitWidth) || !ICI->isEquality() ||
+  if (!isPowerOf2_32(BitWidth) || !ICI->isEquality() ||
       !match(ICI->getOperand(1), m_Zero()))
     return nullptr;
 
