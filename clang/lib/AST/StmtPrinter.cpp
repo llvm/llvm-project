@@ -1789,7 +1789,7 @@ void StmtPrinter::VisitCallExpr(CallExpr *Call) {
 static bool isImplicitThis(const Expr *E) {
   if (const auto *TE = dyn_cast<CXXThisExpr>(E))
     return TE->isImplicit();
-  return isa<CThisExpr>(E);
+  return false;
 }
 
 void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
@@ -2291,7 +2291,6 @@ void StmtPrinter::VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *Node) {
 void StmtPrinter::VisitCXXThisExpr(CXXThisExpr *Node) {
   OS << "this";
 }
-
 
 void StmtPrinter::VisitCXXThrowExpr(CXXThrowExpr *Node) {
   if (!Node->getSubExpr())

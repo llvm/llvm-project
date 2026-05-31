@@ -9975,9 +9975,8 @@ BuildTypeCoupledDecls(Expr *E,
     Expr *Base = ME->getBase()->IgnoreParenImpCasts();
     
     // Drill down through any nested anonymous structs
-    while (auto *InnerME = dyn_cast<MemberExpr>(Base)) {
+    while (auto *InnerME = dyn_cast<MemberExpr>(Base)) 
       Base = InnerME->getBase()->IgnoreParenImpCasts();
-    }
     
     assert(isa<CThisExpr>(Base) && 
            "Expected CThisExpr base for MemberExpr count");

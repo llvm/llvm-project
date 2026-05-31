@@ -507,9 +507,7 @@ til::SExpr *SExprBuilder::translateCXXThisExpr(const CXXThisExpr *TE,
 til::SExpr *
 SExprBuilder::translateCThisExpr(const CThisExpr *CE,
                                  CallingContext *Ctx) {
-  // CThisExpr appears in attribute arguments referencing a sibling
-  // field of the enclosing record (typically in C). Substitute the current
-  // SelfArg the exact same way we do for CXXThisExpr.
+  // Substitute the current SelfArg as we do for C++ this
   return translateCXXThisExpr(/*TE=*/nullptr, Ctx);
 }
 

@@ -336,12 +336,7 @@ ExprDependence clang::computeDependence(CXXThisExpr *E) {
 }
 
 ExprDependence clang::computeDependence(CThisExpr *E) {
-  // The implicit reference is type-dependent if the enclosing record type
-  // is dependent. This primarily matters when the C struct is utilized 
-  // within a C++ template context. 
-  // Unlike CXXThisExpr, CThisExpr cannot be captured by lambdas or 
-  // explicitly object parameters, so we only need to forward the implied 
-  // type's dependence.
+  // Forward the implied type's dependence.
   return toExprDependenceForImpliedType(E->getType()->getDependence());
 }
 
