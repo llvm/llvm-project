@@ -47,6 +47,15 @@ static cl::opt<bool>
                                " instruction output for test purposes only."),
                       cl::init(false));
 
+static bool getWasmGlobalMutable(const GlobalValue *Global) {
+  const auto *BaseObject = Global->getAliaseeObject();
+  const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
+  if (!GV)
+    report_fatal_error(
+        "wasm_var address space symbol must resolve to a GlobalVariable");
+  return !GV->isConstant();
+}
+
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
 MCSymbol *
@@ -62,13 +71,12 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
+
+      bool Mutable = getWasmGlobalMutable(Global);
+
       Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
-
-      bool Mutable = true;
-      if (const auto *GV = dyn_cast<GlobalVariable>(Global))
-        Mutable = !GV->isConstant();
 
       WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, Mutable);
     }
