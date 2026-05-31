@@ -1559,14 +1559,8 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
 }
 
 void WaitcntBrackets::purgeEmptyTrackingData() {
-  for (auto &[K, V] : make_early_inc_range(VMem)) {
-    if (V.empty())
-      VMem.erase(K);
-  }
-  for (auto &[K, V] : make_early_inc_range(SGPRs)) {
-    if (V.empty())
-      SGPRs.erase(K);
-  }
+  VMem.remove_if([](const auto &P) { return P.second.empty(); });
+  SGPRs.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
@@ -3072,6 +3066,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(AMDGPU::EXP_CNT, Imm);
   }
+
+  // Set XCNT to zero in the bracket for instructions that implicitly drain
+  // XCNT.
+  if (ST.hasWaitXcnt() && SIInstrInfo::isXcntDrain(Inst))
+    ScoreBrackets->applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,

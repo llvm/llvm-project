@@ -2087,17 +2087,11 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       model == GlobalValue::LocalDynamicTLSModel ||
       (model == GlobalValue::GeneralDynamicTLSModel &&
        getTargetMachine().shouldAssumeDSOLocal(GV))) {
-    // For DSO-local TLS variables we use offset from __tls_base
+    // For DSO-local TLS variables we use offset from __tls_base, or
+    // __wasm_get_tls_base() if using libcall thread context.
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *BaseName = MF.createExternalSymbolName("__tls_base");
-
-    SDValue BaseAddr(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(BaseName, PtrVT)),
-        0);
+    SDValue BaseAddr(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
 
     SDValue TLSOffset = DAG.getTargetGlobalAddress(
         GV, DL, PtrVT, GA->getOffset(), WebAssemblyII::MO_TLS_BASE_REL);
@@ -2283,14 +2277,7 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
   }
 
   case Intrinsic::thread_pointer: {
-    MVT PtrVT = getPointerTy(DAG.getDataLayout());
-    auto GlobalGet = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
-                                       : WebAssembly::GLOBAL_GET_I32;
-    const char *TlsBase = MF.createExternalSymbolName("__tls_base");
-    return SDValue(
-        DAG.getMachineNode(GlobalGet, DL, PtrVT,
-                           DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
-        0);
+    return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
   }
   }
 }
@@ -3372,7 +3359,7 @@ static SDValue performBitcastCombine(SDNode *N,
   EVT SrcVT = Src.getValueType();
 
   if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
+        SrcVT.isFixedLengthVectorOf(MVT::i1)))
     return SDValue();
 
   unsigned NumElts = SrcVT.getVectorNumElements();
@@ -3621,7 +3608,7 @@ static SDValue performSETCCCombine(SDNode *N,
     return SDValue();
 
   EVT FromVT = LHS->getOperand(0).getValueType();
-  if (!FromVT.isFixedLengthVector() || FromVT.getVectorElementType() != MVT::i1)
+  if (!FromVT.isFixedLengthVectorOf(MVT::i1))
     return SDValue();
 
   unsigned NumElts = FromVT.getVectorNumElements();

@@ -1123,24 +1123,24 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
-    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible]> {
+def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
+    [AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
     within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
     all non-exited threads participating in the barrier to arrive.
 
-    The operation takes two optional operands:
+    The operation takes the following optional operands:
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
       Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
-    - `reductionOp`: specifies the reduction operation (`popc`, `and`, `or`).
-    - `reductionPredicate`: specifies the predicate to be used with the
-      `reductionOp`. 
+
+    Reduction variants of the barrier instruction are modeled by the
+    `nvvm.barrier.reduction` op.
 
     The barrier operation guarantees that when the barrier completes, prior memory 
     accesses requested by participating threads are performed relative to all threads 
@@ -1157,32 +1157,57 @@ def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
-  let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
-      OptionalAttr<BarrierReductionAttr>:$reductionOp,
-      Optional<I32>:$reductionPredicate);
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    if ($reductionOp)
-      $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
-                                builder.getInt32Ty());
-    else 
-      createIntrinsicCall(builder, id, args);
-  }];
-  let results = (outs Optional<I32>:$res);
-
-  let hasVerifier = 1;
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      Optional<I32>:$numberOfThreads);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
-      "(qualified($reductionOp)^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
+      "attr-dict";
 
   let builders = [OpBuilder<(ins), [{
-      return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
-    }]>,
-                  OpBuilder<(ins "Value":$barrierId), [{
-      return build($_builder, $_state, TypeRange{}, barrierId, Value{}, {}, Value{});
+      return build($_builder, $_state, Value{}, Value{});
     }]>];
+}
+
+def NVVM_BarrierReductionOp :
+    NVVM_IntrinsicLoweringOp<"barrier.reduction"> {
+  let summary = "CTA Barrier Reduction Op";
+  let description = [{
+    The `nvvm.barrier.reduction` operation performs barrier synchronization with a
+    reduction across the per-thread predicates contributed by participating threads
+    in a CTA.
+
+    - `barrierId`: Specifies a logical barrier resource with value 0 through 15.
+      Optional; defaults to barrier id 0 when not specified.
+    - `reductionOp`: The reduction kind (`popc`, `and`, `or`) applied across the
+      per-thread predicates.
+    - `reductionPredicate`: The per-thread i32 predicate. It is compared against
+      zero to form the i1 value fed into the reduction.
+
+    The result is the i32 reduction value computed across all threads
+    participating in the barrier. This op always lowers to the aligned form of
+    the `@llvm.nvvm.barrier.cta.red.*` intrinsic family.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      BarrierReductionAttr:$reductionOp,
+      I32:$reductionPredicate);
+  let results = (outs I32:$res);
+
+  let assemblyFormat =
+      "qualified($reductionOp) $reductionPredicate "
+      "(`id` `=` $barrierId^)? `->` type($res) attr-dict";
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
+                              builder.getInt32Ty());
+  }];
 }
 
 def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
@@ -6577,6 +6602,28 @@ def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
     For more information, see PTX ISA:
     [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM div op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_DivFOp
+    : NVVM_SingleResultIntrinsicOp<"divf", [Pure, SameOperandsAndResultType]> {
+  let summary = "Divide one value by another";
+  let description = [{
+    Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

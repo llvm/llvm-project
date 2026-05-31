@@ -120,6 +120,52 @@ In any case, if we want the normal detach behavior we will just send:
 D
 ```
 
+## jAcceleratorPluginInitialize
+
+This packet requests initialization data from all accelerator plugins
+installed in lldb-server. Accelerator plugins allow lldb-server to support
+debugging of hardware accelerators (e.g. GPUs, FPGAs) alongside the native
+host process.
+
+This packet requires the `accelerator-plugins+` feature from `qSupported`.
+It should be sent early in the session, after `qSupported` but before
+launching or attaching to an inferior process. If the hardware accelerator
+is not present, launching or attaching to the accelerator debug session
+will fail.
+
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [<accelerator_action>,...]
+```
+
+Each `accelerator_action` is a JSON object with the following required fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `plugin_name`  | string  | Unique name identifying the accelerator plugin (e.g. `"mock"`, `"amdgpu"`). Each installed plugin has a globally unique name. |
+| `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
+| `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
+
+There can be multiple accelerator plugins installed, each with a globally
+unique `plugin_name`. The response is a JSON array with one entry per
+installed plugin.
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
+```
+
+If no accelerator plugins are installed, the server does not advertise the
+`accelerator-plugins+` feature and this packet should not be sent.
+
+In future patches, each `accelerator_action` will include additional fields
+such as breakpoints to set in the native process, connection info for
+secondary debug sessions, and synchronization options.
+
+**Priority To Implement:** Low. Only needed for hardware accelerator
+debugging support.
+
 ## jGetDyldProcessState
 
 This packet fetches the process launch state, as reported by libdyld on
@@ -813,6 +859,11 @@ On macOS with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
 the previous FP and PC), and follow the backchain. Most backtraces on macOS and
 iOS now don't require us to read any memory.
+
+An expedited register may have an empty string as its value (`"21":""`)
+which indicates that the register cannot be read at this current
+stop point, and lldb should not try to read the register value with
+a separate `p` read-register request, it will not succeed.
 
 **Priority To Implement:** Low
 
@@ -2174,6 +2225,9 @@ following forms:
   followed by a series of key/value pairs:
     * If key is a hex number, it is a register number and value is
       the hex value of the register in debuggee endian byte order.
+      An empty value indicates that the register cannot be fetched
+      at this stop point; lldb will not succeed if it sends a separate
+      read-register packet.
     * If key == "thread", then the value is the big endian hex
       thread-id of the stopped thread.
     * If key == "core", then value is a hex number of the core on

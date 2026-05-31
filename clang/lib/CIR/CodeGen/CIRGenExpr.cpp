@@ -2379,11 +2379,12 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
         implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
       return emitCallee(implicitCast->getSubExpr());
     }
-    // When performing an indirect call through a function pointer lvalue, the
-    // function pointer lvalue is implicitly converted to an rvalue through an
-    // lvalue-to-rvalue conversion.
-    assert(implicitCast->getCastKind() == CK_LValueToRValue &&
-           "unexpected implicit cast on function pointers");
+    // Classic codegen has some handling here for ptr-auth (as a part of the
+    // large ptr-auth-qualifier PR (#100830)). In the meantime, other cast kinds
+    // can fall-through and be handled by the indirect call work below,
+    // including L-to-R value conversions and atomic conversions.
+    assert(!MissingFeatures::pointerAuthentication());
+
   } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
     // Resolve direct calls.
     if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
