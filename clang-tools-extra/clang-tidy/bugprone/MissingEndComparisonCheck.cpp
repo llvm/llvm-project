@@ -204,8 +204,6 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EndExprText)
     return;
 
-  const auto *NotOp = Result.Nodes.getNodeAs<UnaryOperator>("Neg");
-
   auto Diag = diag(BoolOp->getBeginLoc(),
                    "result of standard algorithm used as 'bool'; did you "
                    "mean to compare with the end iterator?");
@@ -214,7 +212,8 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Suppress fix-it if the expression is part of a variable declaration or a
-  // condition variable declaration.
+  // condition variable declaration: a correct fix may need to rewrite the
+  // declaration or the enclosing condition, not just the matched expression.
   if (const auto *InitVar = Result.Nodes.getNodeAs<VarDecl>("initVar");
       InitVar && (InitVar->getType()->isBooleanType() ||
                   Result.Nodes.getNodeAs<Stmt>("condVarParent")))
@@ -226,6 +225,8 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const SourceLocation AfterBoolOp =
       Lexer::getLocForEndOfToken(BoolOp->getEndLoc(), 0, *Result.SourceManager,
                                  Result.Context->getLangOpts());
+
+  const auto *NotOp = Result.Nodes.getNodeAs<UnaryOperator>("Neg");
 
   if (NotOp)
     Diag << FixItHint::CreateReplacement(NotOp->getOperatorLoc(), "(");
