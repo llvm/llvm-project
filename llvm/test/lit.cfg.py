@@ -39,6 +39,13 @@ extra_substitutions = extra_substitutions = (
 )
 config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
 
+# --param decorate=PROG prepends PROG to a pipeline stage (debugger, profiler,
+# etc.). Registered before fn_param so subsequent fn_extract substitutions
+# correctly retarget the now-decorated stage.
+from lit.llvm import decorate
+
+decorate.install(config, lit_config)
+
 # --param fn=NAMES narrows compilation to the named functions and their
 # transitive dependencies. See lit.llvm.fn_param.install for dispatch details.
 from lit.llvm import fn_param
