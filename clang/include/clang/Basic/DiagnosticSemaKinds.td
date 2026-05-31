@@ -2667,6 +2667,9 @@ def err_auto_not_allowed : Error<
   "|in declaration of conversion function template"
   "|in lambda parameter before C++14}1">;
 
+def ext_auto_arg : ExtWarn<
+  "'auto' parameters are a C++20 extension">, InGroup<CXX20>;
+
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
