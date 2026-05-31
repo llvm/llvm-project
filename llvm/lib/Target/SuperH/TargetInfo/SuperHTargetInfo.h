@@ -14,6 +14,7 @@ namespace llvm {
 class Target;
 
 Target &getTheSuperHTarget();
+Target &getTheSuperHLETarget();
 
 } // namespace llvm
 

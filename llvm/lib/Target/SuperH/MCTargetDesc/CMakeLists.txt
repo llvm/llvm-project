@@ -1,9 +1,11 @@
 add_llvm_component_library(LLVMSuperHDesc
   SuperHMCTargetDesc.cpp
+  SuperHMCAsmInfo.cpp
+  SuperHInstPrinter.cpp
 
   LINK_COMPONENTS
   MC
-  MCDisassembler
+  SuperHInfo
   Support
   TargetParser
 

@@ -49,13 +49,13 @@ class SHRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs>
 }
 
 // SH General Purpose Registers.
-class GPRReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
+class GPRReg<bits<16> Enc, string n> : SHReg<Enc, n>;
 
 // Control Registers
-class CtrlReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
+class CtrlReg<bits<16> Enc, string n> : SHReg<Enc, n>;
 
 // SH System Registers.
-class SysReg<bits<16> Enc, string n> : MipsReg<Enc, n>;
+class SysReg<bits<16> Enc, string n> : SHReg<Enc, n>;
 
 // 32-bit floating point registers
 class FRReg<bits<16> Enc, string n> : SHReg<Enc, n>;
@@ -84,26 +84,26 @@ class MTRXReg<bits<16> Enc, string n> : SHReg<Enc, n>;
 let Namespace = "SH" in {
 
   // General Purpose Registers
-  def R0  : SHGPRReg<0,  "r0">,   DwarfRegNum<[0]>;
-  def R1  : SHGPRReg<1,  "r1">,   DwarfRegNum<[1]>;
-  def R2  : SHGPRReg<2,  "r2">,   DwarfRegNum<[2]>;
-  def R3  : SHGPRReg<3,  "r3">,   DwarfRegNum<[3]>;
-  def R4  : SHGPRReg<4,  "r4">,   DwarfRegNum<[4]>;
-  def R5  : SHGPRReg<5,  "r5">,   DwarfRegNum<[5]>;
-  def R6  : SHGPRReg<6,  "r6">,   DwarfRegNum<[6]>;
-  def R7  : SHGPRReg<7,  "r7">,   DwarfRegNum<[7]>;
-  def R8  : SHGPRReg<8,  "r8">,   DwarfRegNum<[8]>;
-  def R9  : SHGPRReg<9,  "r9">,   DwarfRegNum<[9]>;
-  def R10 : SHGPRReg<10, "r10">,  DwarfRegNum<[10]>;
-  def R11 : SHGPRReg<11, "r11">,  DwarfRegNum<[11]>;
-  def R12 : SHGPRReg<12, "r12">,  DwarfRegNum<[12]>;
-  def R13 : SHGPRReg<13, "r13">,  DwarfRegNum<[13]>;
-  def R14 : SHGPRReg<14, "r14">,  DwarfRegNum<[14]>;
-  def R15 : SHGPRReg<15, "r15">,  DwarfRegNum<[15]>;
+  def R0  : GPRReg<0,  "r0">,   DwarfRegNum<[0]>;
+  def R1  : GPRReg<1,  "r1">,   DwarfRegNum<[1]>;
+  def R2  : GPRReg<2,  "r2">,   DwarfRegNum<[2]>;
+  def R3  : GPRReg<3,  "r3">,   DwarfRegNum<[3]>;
+  def R4  : GPRReg<4,  "r4">,   DwarfRegNum<[4]>;
+  def R5  : GPRReg<5,  "r5">,   DwarfRegNum<[5]>;
+  def R6  : GPRReg<6,  "r6">,   DwarfRegNum<[6]>;
+  def R7  : GPRReg<7,  "r7">,   DwarfRegNum<[7]>;
+  def R8  : GPRReg<8,  "r8">,   DwarfRegNum<[8]>;
+  def R9  : GPRReg<9,  "r9">,   DwarfRegNum<[9]>;
+  def R10 : GPRReg<10, "r10">,  DwarfRegNum<[10]>;
+  def R11 : GPRReg<11, "r11">,  DwarfRegNum<[11]>;
+  def R12 : GPRReg<12, "r12">,  DwarfRegNum<[12]>;
+  def R13 : GPRReg<13, "r13">,  DwarfRegNum<[13]>;
+  def R14 : GPRReg<14, "r14">,  DwarfRegNum<[14]>;
+  def R15 : GPRReg<15, "r15">,  DwarfRegNum<[15]>;
 
   // Control Registers
-  def SR : CtrlReg<0, "sr">;    // Status Register
-  def GBR : CtrlReg<0, "gbr";   // Global Base Register
+  def SR  : CtrlReg<0, "sr">;   // Status Register
+  def GBR : CtrlReg<0, "gbr">;  // Global Base Register
   def VBR : CtrlReg<0, "vbr">;  // Vector Base Register
   def SGR : CtrlReg<0, "sgr">;  // Saved General Register
   def DBR : CtrlReg<0, "dbr">;  // Debug Base Register
@@ -111,12 +111,12 @@ let Namespace = "SH" in {
   def SPC : CtrlReg<0, "spc">;  // Saved Program Counter
 
   // System Registers
-  def PR : SysReg<0, "pr">;       // Procedure Register
-  def PC : SysReg<0, "pc">;       // Program Counter
-  def MACL : SysReg<0, "macl">;   // Mult & Accum Low
-  def MACH : SysReg<1, "mach">;   // Mult & Accum Hi
+  def PR    : SysReg<0, "pr">;    // Procedure Register
+  def PC    : SysReg<0, "pc">;    // Program Counter
+  def MACL  : SysReg<0, "macl">;  // Mult & Accum Low
+  def MACH  : SysReg<1, "mach">;  // Mult & Accum Hi
   def FPSCR : SysReg<0, "fpscr">; // FPU Status/Control Register
-  def FPUL : SysReg<0, "fpul">;   // FPU Comms Register
+  def FPUL  : SysReg<0, "fpul">;  // FPU Comms Register
 
   // 32-bit floating point registers
   foreach I = 0-15 in
@@ -126,21 +126,21 @@ let Namespace = "SH" in {
 
   // 64-bit floating point registers
   foreach I = 0-7 in
-    def DR#I : DRReg<!shl(I, 1), "dr"#!shl(I, 1),
-    [!cast<FPReg>("FR"#!shl(I, 1)),
-     !cast<FPReg>("FR"#!add(!shl(I, 1), 1)]>;
+    def DR#!shl(I, 1) : DRReg<!shl(I, 1), "dr"#!shl(I, 1),
+    [!cast<FRReg>("FR"#!shl(I, 1)),
+     !cast<FRReg>("FR"#!add(!shl(I, 1), 1))]>;
   foreach I = 0-7 in
-    def XD#I : DRReg<!shl(I, 1), "xd"#!shl(I, 1),
-    [!cast<FPReg>("XF"#!shl(I, 1)),
-     !cast<FPReg>("XF"#!add(!shl(I, 1), 1)]>;
+    def XD#!shl(I, 1) : DRReg<!shl(I, 1), "xd"#!shl(I, 1),
+    [!cast<FRReg>("XF"#!shl(I, 1)),
+     !cast<FRReg>("XF"#!add(!shl(I, 1), 1))]>;
 
   // 128-bit floating point vector registers
   foreach I = 0-3 in
-    def FV#I : FVReg<!shl(I, 2), "fv"#!shl(I, 2),
-    [!cast<FPReg>("FR"#!shl(I, 2)),
-     !cast<FPReg>("FR"#!add(!shl(I, 2), 1)),
-     !cast<FPReg>("FR"#!add(!shl(I, 2), 2)),
-     !cast<FPReg>("XF"#!add(!shl(I, 2), 3)]>;
+    def FV#!shl(I, 2) : FVReg<!shl(I, 2), "fv"#!shl(I, 2),
+    [!cast<FRReg>("FR"#!shl(I, 2)),
+     !cast<FRReg>("FR"#!add(!shl(I, 2), 1)),
+     !cast<FRReg>("FR"#!add(!shl(I, 2), 2)),
+     !cast<FRReg>("XF"#!add(!shl(I, 2), 3))]>;
   
   // 512-bit matrix register (shadows XF registers)
   // TODO: Add proper subregisters here.
@@ -151,49 +151,41 @@ let Namespace = "SH" in {
 // Register Classes
 //===----------------------------------------------------------------------===//
 
-def GPR : RegisterClass<"SH", [ i32 ], 32, (
-  add(
-    R0, R1, R2,  R3,  R4,  R5,  R6,  R7,  // Banked memory
-    R8, R9, R10, R11, R12, R13, R14, R15, // Non-banked memory.
-  ) 
+def GPR : RegisterClass<"SH", [ i32 ], 32, (add
+  R0, R1, R2,  R3,  R4,  R5,  R6,  R7,  // Banked memory
+  R8, R9, R10, R11, R12, R13, R14, R15  // Non-banked memory.
 )>;
 
 // 32-bit floating point registers.
-def FGR32 : RegisterClass<"SH", [f32], 32, (
-  add(
-    // FR
-    FR0,  FR1,  FR2,  FR3,  FR4,  FR5,  FR6,  FR7,
-    FR8,  FR9, FR10, FR11, FR12, FR13, FR14, FR15,
+def FR32 : RegisterClass<"SH", [f32], 32, (add
+  // FR
+  FR0,  FR1,  FR2,  FR3,  FR4,  FR5,  FR6,  FR7,
+  FR8,  FR9, FR10, FR11, FR12, FR13, FR14, FR15,
 
-    // XF
-    XF0,  XF1,  XF2,  XF3,  XF4,  XF5,  XF6,  XF7,
-    XF8,  XF9, XF10, XF11, XF12, XF13, XF14, XF15,
-  )
+  // XF
+  XF0,  XF1,  XF2,  XF3,  XF4,  XF5,  XF6,  XF7,
+  XF8,  XF9, XF10, XF11, XF12, XF13, XF14, XF15
 )>;
 
 // 64-bit floating point registers.
-def FGR64 : RegisterClass<"SH", [f64], 64, (add
+def FR64 : RegisterClass<"SH", [f64], 64, (add
   // DR
-  DR0,  DR1,  DR2,  DR3,  DR4,  DR5,  DR6,  DR7,
-  DR8,  DR9, DR10, DR11, DR12, DR13, DR14, DR15,
+  DR0, DR2, DR4, DR6, DR8, DR10, DR12, DR14,
 
   // XD
-  XD0,  XD1,  XD2,  XD3,  XD4,  XD5,  XD6,  XD7,
-  XD8,  XD9, XD10, XD11, XD12, XD13, XD14, XD15,
+  XD0, XD2, XD4, XD6, XD8, XD10, XD12, XD14
 )>;
 
 // Vector registers
-def VEC128 : RegisterClass<"SH", [v4f32], 128, (add
-  FV0, FV4, FV8, FV12)>;
+def VEC128 : RegisterClass<"SH", [v4f32], 128, (add FV0, FV4, FV8, FV12)>;
 
 // Matrix register
-def MTRX512 : RegisterClass<"SH", [v16f32],
-  (add (sequence "FR%u", 0, 15), (sequence "XF%u", 0, 15))>;
+def MTRX512 : RegisterClass<"SH", [v16f32], 512, (add (sequence "FR%u", 0, 15), (sequence "XF%u", 0, 15))>;
 
 // Control registers
-def CR : RegisterClass<"SH", [ i32 ], 32, 
+def CTRL : RegisterClass<"SH", [ i32 ], 32, 
   (add SR, GBR, VBR, SGR, DBR, SSR, SPC)>, Unallocatable;
 
 // System registers.
-def SR : RegisterClass<"SH", [ i32 ], 32, 
+def SYS : RegisterClass<"SH", [ i32 ], 32, 
   (add PR, PC, MACL, MACH, FPSCR, FPUL)>, Unallocatable;

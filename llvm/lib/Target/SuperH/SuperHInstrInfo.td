@@ -11,6 +11,11 @@
 /// and properties of the instructions which are needed for code generation,
 /// machine code emission, and analysis.
 ///
+/// The subsystems are ordered after the instruction classification that
+/// The SuperH ISA manuals use.
+///
+/// See: https://www.shared-ptr.com/sh_insns.html
+///
 //===----------------------------------------------------------------------===//
 
 include "SuperHInstrFormats.td"
@@ -19,3 +24,35 @@ include "SuperHInstrFormats.td"
 // SuperH Type Profiles
 //===----------------------------------------------------------------------===//
 
+def SHSDT_CallSeqStart 	: SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SHSDT_CallSeqEnd	: SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SHSDT_Call    		: SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def SHSDT_Ret           : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
+//===----------------------------------------------------------------------===//
+// Nodes
+//===----------------------------------------------------------------------===//
+
+def SHCallSeqStart  : SDNode<"ISD::CALLSEQ_START", SHSDT_CallSeqStart,
+							 [SDNPHasChain, SDNPOutGlue]>;
+
+def SHCallSeqEnd    : SDNode<"ISD::CALLSEQ_END", SHSDT_CallSeqEnd,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+def SHCall          : SDNode<"SHISD::CALL", SHSDT_Call,
+                             [SDNPHasChain, SDNPOutGlue,
+                             SDNPOptInGlue, SDNPVariadic]>;
+
+def SHRet 		    : SDNode<"SHISD::RET", SHSDT_Ret,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+//===----------------------------------------------------------------------===//
+// Operands
+//===----------------------------------------------------------------------===//
+
+
+//===----------------------------------------------------------------------===//
+// Subsystems
+//===----------------------------------------------------------------------===//
+
+include "SuperHInstrData.td"
