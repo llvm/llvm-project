@@ -57,8 +57,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 
 // CHECK: [[THEN]]:
-// CHECK-NEXT: %{{.+}} = load i32
-// CHECK-NEXT: store i32
+// CHECK-NEXT: call void @_omp_reduction_global_to_list_copy_func
 // CHECK-NEXT: %[[FINAL_LHS:[A-Za-z0-9_.]*]] = load i32
 // CHECK-NEXT: %[[FINAL_RHS:[A-Za-z0-9_.]*]] = load i32
 // CHECK-NEXT: %[[FINAL_RESULT:[A-Za-z0-9_.]*]] = add i32 %[[FINAL_LHS]], %[[FINAL_RHS]]

@@ -109,26 +109,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK: icmp eq i32 %[[MASTER]], 1
 // CHECK: i1 %{{.+}}, label %[[THEN:[A-Za-z0-9_.]*]], label %[[DONE:[A-Za-z0-9_.]*]]
 // CHECK: [[THEN]]:
-// CHECK-NEXT: %{{.+}} = load double
-// CHECK-NEXT: store double
+// CHECK-NEXT: call void @_omp_reduction_global_to_list_copy_func
 // CHECK-NEXT: %[[FINAL_LHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RHS0:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT0:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS0]], %[[FINAL_RHS0]]
 // CHECK-NEXT: store double %[[FINAL_RESULT0]]
-// CHECK-NEXT: %{{.+}} = load double
-// CHECK-NEXT: store double
 // CHECK-NEXT: %[[FINAL_LHS1:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RHS1:[A-Za-z0-9_.]*]] = load double
 // CHECK-NEXT: %[[FINAL_RESULT1:[A-Za-z0-9_.]*]] = fadd contract double %[[FINAL_LHS1]], %[[FINAL_RHS1]]
 // CHECK-NEXT: store double %[[FINAL_RESULT1]]
-// CHECK-NEXT: %{{.+}} = load float
-// CHECK-NEXT: store float
 // CHECK-NEXT: %[[FINAL_LHS2:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RHS2:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RESULT2:[A-Za-z0-9_.]*]] = fadd contract float %[[FINAL_LHS2]], %[[FINAL_RHS2]]
 // CHECK-NEXT: store float %[[FINAL_RESULT2]]
-// CHECK-NEXT: %{{.+}} = load float
-// CHECK-NEXT: store float
 // CHECK-NEXT: %[[FINAL_LHS3:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RHS3:[A-Za-z0-9_.]*]] = load float
 // CHECK-NEXT: %[[FINAL_RESULT3:[A-Za-z0-9_.]*]] = fadd contract float %[[FINAL_LHS3]], %[[FINAL_RHS3]]

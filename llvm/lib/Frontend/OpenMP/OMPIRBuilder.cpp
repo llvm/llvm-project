@@ -3896,6 +3896,31 @@ OpenMPIRBuilder::generateReductionDescriptor(
   return Builder.saveIP();
 }
 
+Expected<Value *> OpenMPIRBuilder::createReductionDescriptorCopy(
+    InsertPointTy AllocaIP, const ReductionInfo &RI, Value *DataPtr,
+    Value *SrcDescriptorAddr, Type *DescriptorPtrTy, const Twine &Name) {
+  InsertPointTy OldIP = Builder.saveIP();
+  Builder.restoreIP(AllocaIP);
+
+  AllocaInst *DescriptorAlloca =
+      Builder.CreateAlloca(RI.ByRefAllocatedType, nullptr, Name);
+  DescriptorAlloca->setAlignment(
+      M.getDataLayout().getPrefTypeAlign(RI.ByRefAllocatedType));
+  Value *DescriptorAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      DescriptorAlloca, DescriptorPtrTy,
+      DescriptorAlloca->getName() + ".ascast");
+
+  Builder.restoreIP(OldIP);
+
+  InsertPointOrErrorTy GenResult =
+      generateReductionDescriptor(DescriptorAddr, DataPtr, SrcDescriptorAddr,
+                                  RI.ByRefAllocatedType, RI.DataPtrPtrGen);
+  if (!GenResult)
+    return GenResult.takeError();
+
+  return DescriptorAddr;
+}
+
 Expected<Function *> OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs, ArrayRef<bool> IsByRef) {
@@ -4098,15 +4123,6 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.restoreIP(AllocaIP);
-
-      Value *ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
-      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
-
-      Builder.restoreIP(OldIP);
-
       // Get source descriptor from the reduce list argument
       Value *ReduceList =
           Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
@@ -4118,14 +4134,12 @@ Expected<Function *> OpenMPIRBuilder::emitListToGlobalReduceFunction(
           Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
 
       // Copy descriptor from source and update base_ptr to global buffer data
-      InsertPointOrErrorTy GenResult =
-          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
-                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
+      Expected<Value *> ByRefAlloc = createReductionDescriptorCopy(
+          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, Builder.getPtrTy());
+      if (!ByRefAlloc)
+        return ByRefAlloc.takeError();
 
-      if (!GenResult)
-        return GenResult.takeError();
-
-      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+      Builder.CreateStore(*ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
     }
@@ -4340,15 +4354,6 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
         ReductionsBufferTy, BufferVD, 0, En.index());
 
     if (!IsByRef.empty() && IsByRef[En.index()] && RI.DataPtrPtrGen) {
-      InsertPointTy OldIP = Builder.saveIP();
-      Builder.restoreIP(AllocaIP);
-
-      Value *ByRefAlloc = Builder.CreateAlloca(RI.ByRefAllocatedType);
-      ByRefAlloc = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ByRefAlloc, Builder.getPtrTy(), ByRefAlloc->getName() + ".ascast");
-
-      Builder.restoreIP(OldIP);
-
       // Get source descriptor from the reduce list
       Value *ReduceListVal =
           Builder.CreateLoad(Builder.getPtrTy(), ReduceListArgAddrCast);
@@ -4360,13 +4365,12 @@ Expected<Function *> OpenMPIRBuilder::emitGlobalToListReduceFunction(
           Builder.CreateLoad(Builder.getPtrTy(), SrcElementPtrPtr);
 
       // Copy descriptor from source and update base_ptr to global buffer data
-      InsertPointOrErrorTy GenResult =
-          generateReductionDescriptor(ByRefAlloc, GlobValPtr, SrcDescriptorAddr,
-                                      RI.ByRefAllocatedType, RI.DataPtrPtrGen);
-      if (!GenResult)
-        return GenResult.takeError();
+      Expected<Value *> ByRefAlloc = createReductionDescriptorCopy(
+          AllocaIP, RI, GlobValPtr, SrcDescriptorAddr, Builder.getPtrTy());
+      if (!ByRefAlloc)
+        return ByRefAlloc.takeError();
 
-      Builder.CreateStore(ByRefAlloc, TargetElementPtrPtr);
+      Builder.CreateStore(*ByRefAlloc, TargetElementPtrPtr);
     } else {
       Builder.CreateStore(GlobValPtr, TargetElementPtrPtr);
     }
@@ -4637,14 +4641,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
   Value *RL = Builder.CreatePointerBitCastOrAddrSpaceCast(ReductionList, PtrTy);
 
-  // NOTE: ReductionDataSize is passed as the reduce_data_size
-  // argument to __kmpc_nvptx_{parallel,teams}_reduce_nowait_v2, but
-  // the runtime implementations do not currently use it.  It is computed
-  // here conservatively as max(element sizes) * N rather than the
-  // exact sum, which over-calculates the size for mixed reduction
-  // types but is harmless given the argument is unused.
-  // TODO: Consider dropping this computation if the runtime API is
-  // ever revised to remove the unused parameter.
+  // NOTE: ReductionDataSize is passed as the reduce_data_size argument to
+  // __kmpc_nvptx_parallel_reduce_nowait_v2, but the runtime implementations do
+  // not currently use it.  It is computed here conservatively as max(element
+  // sizes) * N rather than the exact sum, which over-calculates the size for
+  // mixed reduction types but is harmless given the argument is unused.
+  // TODO: Consider dropping this computation if the runtime API is ever revised
+  // to remove the unused parameter.
   unsigned MaxDataSize = 0;
   SmallVector<Type *> ReductionTypeArgs;
   for (auto En : enumerate(ReductionInfos)) {
@@ -4662,12 +4665,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   Value *ReductionDataSize =
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
 
-  // Populated by the teams-reduction branch with per-thread scratch field
-  // pointers (one per reduction variable). The writer-thread combine loop
-  // below reads the final reduced values from these slots instead of from
-  // RI.PrivateVariable, since the runtime leaves the result in the per-thread
-  // scratch rather than touching the original team-local storage.
-  SmallVector<Value *, 4> PerThreadScratchFieldPtrs;
+  // Helper function to copy thread-local data back to the original reduction
+  // list.
+  Function *CopyScratchToListFunc = nullptr;
+  // Thread-local storage for the reduction variables.
+  Value *ScratchForCopyBack = nullptr;
+  // RL pointer to which the final value from the per-thread scratch should be
+  // copied back. (Basically RL, appropriately casted if necessary.)
+  Value *RLForCopyBack = RL;
 
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
@@ -4710,62 +4715,77 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     // When the kernel is in Non-SPMD execution mode at codegen time, clang's
     // Generic-mode globalization put the reduction private into team-shared
     // LDS.  OpenMPOpt may later upgrade the kernel to Generic-SPMD, at which
-    // point all threads of the last team enter the cross-team final aggregate
-    // — and they would race on the shared LDS slot if we passed RL through.
-    // Emit a per-thread scratch buffer + a per-thread red_list, copy the
-    // team-local value in, and hand the per-thread red_list to the runtime
-    // instead.  `PerThreadScratchFieldPtrs` is then non-empty, which signals
-    // the writer-thread combine loop below to source the final value from
-    // the per-thread scratch (which the runtime updated) rather than from
-    // RI.PrivateVariable (which still holds the team-local value).
-    Value *RuntimeRedList = RL;
+    // point all threads of the last team would race on the shared LDS slot.
+    // Emit a per-thread scratch buffer and a per-thread RL, copy the team-local
+    // value in, and hand the per-thread RL to the runtime instead. The writer
+    // thread copies the final value from that per-thread scratch back to RL
+    // before running the existing combine path below.
+
+    // Thread-local RL (might need localization below before being passed to the
+    // runtime).
+    Value *RuntimeRL = RL;
+
     if (!IsSPMD) {
       CodeGenIP = Builder.saveIP();
       Builder.restoreIP(AllocaIP);
+      // Allocate thread-local buffer for the reduction variables.
       Value *PerThreadScratchAlloca = Builder.CreateAlloca(
           ReductionsBufferTy, /*ArraySize=*/nullptr, ".omp.reduction.scratch");
       Value *PerThreadScratch = Builder.CreatePointerBitCastOrAddrSpaceCast(
           PerThreadScratchAlloca, PtrTy,
           PerThreadScratchAlloca->getName() + ".ascast");
-      ArrayType *PerThreadRedListTy =
-          ArrayType::get(PtrTy, ReductionInfos.size());
+      // Allocate thread-local buffer for the pointers to the reduction
+      // variables.
       Value *PerThreadRedListAlloca =
-          Builder.CreateAlloca(PerThreadRedListTy, /*ArraySize=*/nullptr,
+          Builder.CreateAlloca(RedArrayTy, /*ArraySize=*/nullptr,
                                ".omp.reduction.per_thread_red_list");
-      Value *PerThreadRedList = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      RuntimeRL = Builder.CreatePointerBitCastOrAddrSpaceCast(
           PerThreadRedListAlloca, PtrTy,
           PerThreadRedListAlloca->getName() + ".ascast");
       Builder.restoreIP(CodeGenIP);
 
-      PerThreadScratchFieldPtrs.assign(ReductionInfos.size(), nullptr);
+      // Iterate over the reduction variables and copy the team-local value to
+      // the thread-local buffer.
       for (auto En : enumerate(ReductionInfos)) {
         const ReductionInfo &RI = En.value();
-        Type *FieldTy = ReductionTypeArgs[En.index()];
+        bool IsByRefElem = !IsByRef.empty() && IsByRef[En.index()];
+
         Value *FieldPtr = Builder.CreateConstInBoundsGEP2_32(
             ReductionsBufferTy, PerThreadScratch, 0, En.index());
-        Value *Slot =
-            Builder.CreateInBoundsGEP(PerThreadRedListTy, PerThreadRedList,
-                                      {ConstantInt::get(IndexTy, 0),
-                                       ConstantInt::get(IndexTy, En.index())});
-        Builder.CreateStore(FieldPtr, Slot);
+        Value *Slot = Builder.CreateConstInBoundsGEP2_32(RedArrayTy, RuntimeRL,
+                                                         0, En.index());
 
-        // Strictly only thread 0 needs the team value copied in (only it
-        // does the initial GB[TeamId] save), but having every thread copy
-        // keeps this branchless; the non-thread-0 garbage is overwritten by
-        // the runtime's glcpyFct before being read.
-        Value *SrcPtr = RI.PrivateVariable;
-        if (!IsByRef.empty() && IsByRef[En.index()])
-          SrcPtr = Builder.CreateLoad(PtrTy, SrcPtr);
-        Value *TeamVal = Builder.CreateLoad(FieldTy, SrcPtr);
-        Builder.CreateStore(TeamVal, FieldPtr);
-
-        PerThreadScratchFieldPtrs[En.index()] = FieldPtr;
+        Value *RuntimeListEntry = FieldPtr;
+        if (IsByRefElem && RI.DataPtrPtrGen) {
+          Value *SrcDescriptor =
+              Builder.CreateLoad(RI.ElementType, RI.PrivateVariable);
+          Expected<Value *> Descriptor = createReductionDescriptorCopy(
+              AllocaIP, RI, FieldPtr, SrcDescriptor, PtrTy);
+          if (!Descriptor)
+            return Descriptor.takeError();
+          RuntimeListEntry = *Descriptor;
+        }
+        Builder.CreateStore(RuntimeListEntry, Slot);
       }
-      RuntimeRedList = PerThreadRedList;
+      // The copy helpers were emitted with default-AS (AS 0) pointer params
+      // (see emitListToGlobalCopyFunction / emitGlobalToListCopyFunction),
+      // but PerThreadScratch and RL live in the target's default AS, which
+      // is non-zero on e.g. SPIRV. (See Config.getDefaultTargetAS().)
+      Type *CopyArg0Ty = (*LtGCFunc)->getFunctionType()->getParamType(0);
+      Type *CopyArg2Ty = (*LtGCFunc)->getFunctionType()->getParamType(2);
+      ScratchForCopyBack = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          PerThreadScratch, CopyArg0Ty);
+      RLForCopyBack =
+          Builder.CreatePointerBitCastOrAddrSpaceCast(RL, CopyArg2Ty);
+      // Use index 0 because there is no array of target values to index into,
+      // there is only one thread-local memory slot.
+      Builder.CreateCall(
+          *LtGCFunc, {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
+      CopyScratchToListFunc = *GtLCFunc;
     }
 
-    Value *Args3[] = {SrcLocInfo, RuntimeRedList, *SarFunc, WcFunc,
-                      *LtGCFunc,  *GtLCFunc,      *GtLRFunc};
+    Value *Args3[] = {SrcLocInfo, RuntimeRL, *SarFunc, WcFunc,
+                      *LtGCFunc,  *GtLCFunc, *GtLRFunc};
 
     Function *TeamsReduceFn = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_gpu_xteam_reduce_nowait);
@@ -4784,29 +4804,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   //    break;
   emitBlock(ThenBB, CurFunc);
 
+  // Copy the writer thread's per-thread scratch result back into the original
+  // red-list storage before the existing combine path reads RI.PrivateVariable.
+  if (ScratchForCopyBack)
+    Builder.CreateCall(
+        CopyScratchToListFunc,
+        {ScratchForCopyBack, Builder.getInt32(0), RLForCopyBack});
+
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Type *ValueType = RI.ElementType;
     Value *RedValue = RI.Variable;
-
-    // For the Non-SPMD teams-reduction path the call site above redirected
-    // the runtime onto a per-thread scratch buffer (see the `if (!IsSPMD)`
-    // block).  The writer thread's final reduced value lives in
-    // PerThreadScratchFieldPtrs[i] rather than in RI.PrivateVariable — which
-    // still holds only the team-local value.  Publish the final value back
-    // into RI.PrivateVariable so the combiner below reads it unchanged.
-    // Only the writer thread executes this `then` branch, so the store to
-    // the team-shared LDS slot is race-free.
-    if (!PerThreadScratchFieldPtrs.empty()) {
-      Type *FieldTy = ReductionTypeArgs[En.index()];
-      Value *FinalVal =
-          Builder.CreateLoad(FieldTy, PerThreadScratchFieldPtrs[En.index()]);
-      Value *DstPtr = RI.PrivateVariable;
-      if (!IsByRef.empty() && IsByRef[En.index()])
-        DstPtr = Builder.CreateLoad(PtrTy, DstPtr);
-      Builder.CreateStore(FinalVal, DstPtr);
-    }
 
     Value *RHS =
         Builder.CreatePointerBitCastOrAddrSpaceCast(RI.PrivateVariable, PtrTy);

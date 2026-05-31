@@ -2046,7 +2046,7 @@ private:
   ///
   /// \param DescriptorAddr Address of the descriptor to initialize
   /// \param DataPtr Pointer to the actual data the descriptor should reference
-  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from
   /// \param DescriptorType Type of the descriptor structure
   /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
   ///
@@ -2056,6 +2056,22 @@ private:
       Type *DescriptorType,
       function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
           DataPtrPtrGen);
+
+  /// Allocate a by-ref reduction descriptor, copy \p SrcDescriptorAddr into it,
+  /// and update its data pointer to reference \p DataPtr.
+  ///
+  /// \param AllocaIP Insertion point for the descriptor allocation.
+  /// \param RI Reduction info containing descriptor type and access callback.
+  /// \param DataPtr Pointer to the actual data the descriptor should reference.
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from.
+  /// \param DescriptorPtrTy Pointer type expected by the descriptor consumer.
+  ///
+  /// \return The new descriptor address, or an Error if descriptor generation
+  ///         fails.
+  Expected<Value *> createReductionDescriptorCopy(
+      InsertPointTy AllocaIP, const ReductionInfo &RI, Value *DataPtr,
+      Value *SrcDescriptorAddr, Type *DescriptorPtrTy,
+      const Twine &Name = ".omp.reduction.byref_descriptor");
 
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.

@@ -22,7 +22,9 @@ static constexpr uint32_t kmpc_min(uint32_t a, uint32_t b) {
   return a < b ? a : b;
 }
 
-static uint32_t round_to_warpsize(uint32_t s) {
+// Round down to the nearest multiple of the warp size. Return 1 if the value is
+// less than the warp size.
+static uint32_t round_down_to_warpsize(uint32_t s) {
   if (s < mapping::getWarpSize())
     return 1;
   return (s & ~static_cast<uint32_t>(mapping::getWarpSize() - 1u));
@@ -89,7 +91,8 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 // - 0 otherwise
 //
 // Note that it is expected that the caller checks for NumThreads <= 1 and acts
-// in a way that suits the callers situation.
+// in a way that suits the callers situation. If checkLiveness is false, this
+// function performs a regular warp reduce unconditionally.
 //
 template <bool checkLiveness = true>
 static uint32_t gpu_block_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
@@ -277,7 +280,7 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
     return 0;
 
   // The last team performs final reduction across all team values.
-  NumThreads = kmpc_min(NumThreads, round_to_warpsize(NumTeams));
+  NumThreads = kmpc_min(NumThreads, round_down_to_warpsize(NumTeams));
   if (ThreadId >= NumThreads)
     return 0;
 
