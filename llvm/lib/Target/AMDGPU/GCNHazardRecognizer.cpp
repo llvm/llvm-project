@@ -996,8 +996,7 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
     if (DataIdx >= 0 &&
         TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
       int Need = WindowFor(MI) - Distance;
-      if (Need > WaitStatesNeeded)
-        WaitStatesNeeded = Need;
+      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
     }
     Distance += SIInstrInfo::getNumWaitStates(MI);
     return false;
