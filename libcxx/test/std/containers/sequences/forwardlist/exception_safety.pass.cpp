@@ -10,11 +10,6 @@
 
 // UNSUPPORTED: c++03, no-exceptions
 
-// TODO:
-// - throwing upon moving;
-// - initializer lists;
-// - throwing when constructing the element in place.
-
 // forward_list(size_type n, const value_type& v);
 // forward_list(size_type n, const value_type& v, const allocator_type& a);
 // template <class InputIterator>
@@ -75,17 +70,9 @@ int main(int, char**) {
       c.push_front(*from);
     });
 
-    // void push_front(value_type&& v);
-    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
-      c.emplace_front(std::move(*from));
-    });
-
     // template <class... Args> reference emplace_front(Args&&... args);
     test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
       c.emplace_front(*from);
-    });
-    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
-      c.emplace_front(std::move(*from));
     });
 
     // iterator insert_after(const_iterator p, const value_type& v);
@@ -93,18 +80,54 @@ int main(int, char**) {
       c.insert_after(c.before_begin(), *from);
     });
 
-    // iterator insert_after(const_iterator p, value_type&& v);
-    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
-      c.insert_after(c.before_begin(), std::move(*from));
-    });
-
     // template <class... Args>
     //     iterator emplace_after(const_iterator p, Args&&... args);
     test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
       c.emplace_after(c.before_begin(), *from);
     });
-    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+  }
+
+  {
+    constexpr int ThrowOn = 1;
+    constexpr int Size    = 1;
+    using T               = ThrowingMove<ThrowOn>;
+
+    // void push_front(value_type&& v);
+    test_strong_exception_safety_throwing_move<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.push_front(std::move(*from));
+    });
+
+    // template <class... Args>
+    //     iterator emplace_after(const_iterator p, Args&&... args);
+    test_strong_exception_safety_throwing_move<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
       c.emplace_after(c.before_begin(), std::move(*from));
+    });
+
+    // template <class... Args> reference emplace_front(Args&&... args);
+    test_strong_exception_safety_throwing_move<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.emplace_front(std::move(*from));
+    });
+
+    // iterator insert_after(const_iterator p, value_type&& v);
+    test_strong_exception_safety_throwing_move<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.insert_after(c.before_begin(), std::move(*from));
+    });
+  }
+
+  {
+    constexpr int ThrowOn = 1;
+    constexpr int Size    = 1;
+    using T               = ThrowingInplace<ThrowOn>;
+
+    // template <class... Args>
+    //     iterator emplace_after(const_iterator p, Args&&... args);
+    test_strong_exception_safety_throwing_inplace<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.emplace_after(c.before_begin(), from->x);
+    });
+
+    // template <class... Args> reference emplace_front(Args&&... args);
+    test_strong_exception_safety_throwing_inplace<ThrowOn, Size>([](std::forward_list<T>& c, T* from, T*) {
+      c.emplace_front(from->x);
     });
   }
 
