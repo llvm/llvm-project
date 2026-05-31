@@ -567,6 +567,12 @@ Changes in existing checks
   positives on functions returning specializations of class templates marked
   ``[[nodiscard]]``.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check:
+
+  - Preserved used iterator results when replacing ``std::unique`` calls with
+    ``std::ranges::unique``.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check:
 
