@@ -153,6 +153,31 @@ for.exit:
   ret void
 }
 
+;; Check that uadd.sat histogram gets a "saturated inc:" label in VPlan.
+; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
+; CHECK:     WIDEN-HISTOGRAM buckets: {{.*}}, saturated inc: ir<1>
+
+define void @simple_histogram_uadd_sat(ptr noalias %buckets, ptr readonly %indices, i64 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.uadd.sat.i32(i32 %l.bucket, i32 1)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
 !0 = !{!1}
 !1 = distinct !{!1, !2}
 !2 = distinct !{!2}
