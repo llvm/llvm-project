@@ -91,8 +91,8 @@ TEST_F(LlvmLibcExp10Test, TrickyInputs) {
 
 TEST_F(LlvmLibcExp10Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  constexpr uint64_t START = FPBits<double>(0.25).uintval();
-  constexpr uint64_t STOP = FPBits<double>(4.0).uintval();
+  constexpr uint64_t START = FPBits(0.25).uintval();
+  constexpr uint64_t STOP = FPBits(4.0).uintval();
   constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
