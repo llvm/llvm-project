@@ -55,7 +55,7 @@ class MCSection;
 class MCSectionCOFF;
 class MCSectionDXContainer;
 class MCSectionELF;
-class MCSectionMetalLib;
+class MCSectionAIRLib;
 class MCSectionMachO;
 class MCSectionSPIRV;
 class MCSectionWasm;
@@ -96,7 +96,7 @@ public:
     IsWasm,
     IsXCOFF,
     IsDXContainer,
-    IsMetalLib
+    IsAIRLib
   };
 
 private:
@@ -143,7 +143,7 @@ private:
 
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
-  SpecificBumpPtrAllocator<MCSectionMetalLib> MetalLibAllocator;
+  SpecificBumpPtrAllocator<MCSectionAIRLib> AIRLibAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
   SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
   SpecificBumpPtrAllocator<MCSectionGOFF> GOFFAllocator;
@@ -322,7 +322,7 @@ private:
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
-  StringMap<MCSectionMetalLib *> MetalLibUniquingMap;
+  StringMap<MCSectionAIRLib *> AIRLibUniquingMap;
   StringMap<bool> RelSecNames;
 
   SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
@@ -657,8 +657,8 @@ public:
   LLVM_ABI MCSectionDXContainer *getDXContainerSection(StringRef Section,
                                                        SectionKind K);
 
-  /// Get the section for the provided MetalLib Section name.
-  LLVM_ABI MCSectionMetalLib *getMetalLibSection(StringRef Section,
+  /// Get the section for the provided AIRLib Section name.
+  LLVM_ABI MCSectionAIRLib *getAIRLibSection(StringRef Section,
                                                  SectionKind K);
 
   LLVM_ABI bool hasXCOFFSection(StringRef Section,

@@ -19,7 +19,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionDXContainer.h"
-#include "llvm/MC/MCSectionMetalLib.h"
+#include "llvm/MC/MCSectionAIRLib.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
@@ -1177,11 +1177,11 @@ void MCObjectFileInfo::initDXContainerObjectFileInfo(const Triple &T) {
   TextSection = Ctx->getDXContainerSection("DXBC", SectionKind::getText());
 }
 
-void MCObjectFileInfo::initMetalLibMCObjectFileInfo(const Triple &T) {
+void MCObjectFileInfo::initAIRLibMCObjectFileInfo(const Triple &T) {
   // The .metallib container is a single blob; the embedder pass writes its
   // bytes into a global with this section name and the object writer copies
   // it verbatim.
-  TextSection = Ctx->getMetalLibSection(".metallib", SectionKind::getText());
+  TextSection = Ctx->getAIRLibSection(".metallib", SectionKind::getText());
 }
 
 MCObjectFileInfo::~MCObjectFileInfo() = default;
@@ -1233,8 +1233,8 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsDXContainer:
     initDXContainerObjectFileInfo(TheTriple);
     break;
-  case MCContext::IsMetalLib:
-    initMetalLibMCObjectFileInfo(TheTriple);
+  case MCContext::IsAIRLib:
+    initAIRLibMCObjectFileInfo(TheTriple);
     break;
   }
 }
@@ -1254,7 +1254,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::SPIRV:
   case Triple::XCOFF:
   case Triple::DXContainer:
-  case Triple::MetalLib:
+  case Triple::AIRLib:
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot get DWARF comdat section for this object file "
                        "format: not implemented.");

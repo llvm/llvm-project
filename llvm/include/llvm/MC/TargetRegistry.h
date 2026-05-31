@@ -119,7 +119,7 @@ createDXContainerStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                           std::unique_ptr<MCObjectWriter> &&OW,
                           std::unique_ptr<MCCodeEmitter> &&CE);
 LLVM_ABI MCStreamer *
-createMetalLibStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+createAIRLibStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                        std::unique_ptr<MCObjectWriter> &&OW,
                        std::unique_ptr<MCCodeEmitter> &&CE);
 

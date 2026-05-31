@@ -90,8 +90,8 @@ MCStreamer *Target::createMCObjectStreamer(
     S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
                                   std::move(Emitter));
     break;
-  case Triple::MetalLib:
-    S = createMetalLibStreamer(Ctx, std::move(TAB), std::move(OW),
+  case Triple::AIRLib:
+    S = createAIRLibStreamer(Ctx, std::move(TAB), std::move(OW),
                                std::move(Emitter));
     break;
   }

@@ -1,0 +1,43 @@
+//===- AIRPassRegistry.def - Registry of AIR passes ---------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is the registry of passes that are part of the AIR backend.
+// New-PM passes are registered here for use via the PassBuilder pipeline.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("air-inline-non-kernel", AIRInlineNonKernelPass())
+MODULE_PASS("air-lower-fneg", AIRLowerFNegPass())
+MODULE_PASS("air-nan-min-max", AIRNaNMinMaxPass())
+MODULE_PASS("air-llvm-to-air-intrinsics", LLVMToAIRIntrinsicsPass())
+MODULE_PASS("air-barrier-rename", AIRBarrierRenamePass())
+MODULE_PASS("air-lower-atomic-rmw", AIRLowerAtomicRMWPass())
+MODULE_PASS("air-split-i64-shuffle", AIRSplitI64ShufflePass())
+MODULE_PASS("air-scalar-store-guard", AIRScalarStoreGuardPass())
+MODULE_PASS("air-tg-global-coalesce", AIRTGGlobalCoalescePass())
+MODULE_PASS("air-tg-barrier-insert", AIRTGBarrierInsertPass())
+MODULE_PASS("air-device-loads-volatile", AIRDeviceLoadsVolatilePass())
+MODULE_PASS("air-async-event-to-alloca", AIRAsyncEventToAllocaPass())
+MODULE_PASS("air-normalize-allocas", AIRNormalizeAllocasPass())
+MODULE_PASS("air-bfloat16-cast-decompose", AIRBFloat16CastDecomposePass())
+MODULE_PASS("air-scalar-buffer-packing", AIRScalarBufferPackingPass())
+MODULE_PASS("air-air-system-values", AIRSystemValuesPass())
+MODULE_PASS("air-alias-annotate", AIRAliasAnnotatePass())
+MODULE_PASS("air-prepare", AIRPreparePass())
+MODULE_PASS("air-embed", AIREmbedderPass())
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+#undef FUNCTION_PASS

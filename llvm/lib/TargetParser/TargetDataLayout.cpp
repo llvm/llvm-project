@@ -614,7 +614,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
     return "e-m:e-ve-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-"
            "f32:32-f64:64-n8:16:32:64";
   case Triple::air:
-    // Metal AIR (matches Apple's metal-toolchain output):
+    // AIR AIR (matches Apple's air-toolchain output):
     // 64-bit pointers everywhere, vectors aligned up to their natural size.
     return "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-"
            "f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32-v48:64:64-"

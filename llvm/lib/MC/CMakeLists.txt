@@ -28,8 +28,8 @@ add_llvm_component_library(LLVMMC
   MCDwarf.cpp
   MCDXContainerStreamer.cpp
   MCDXContainerWriter.cpp
-  MCMetalLibStreamer.cpp
-  MetalLibObjectWriter.cpp
+  MCAIRLibStreamer.cpp
+  AIRLibObjectWriter.cpp
   MCELFObjectTargetWriter.cpp
   MCELFStreamer.cpp
   MCExpr.cpp
