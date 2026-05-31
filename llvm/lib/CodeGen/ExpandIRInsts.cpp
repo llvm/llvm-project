@@ -1186,9 +1186,16 @@ static void expandIToFP(Instruction *IToFP) {
           ConstantFP::getInfinity(IToFP->getType(), /*Negative=*/true);
       Value *IsNeg =
           Builder.CreateICmpSLT(IntVal, ConstantInt::getNullValue(IntTy));
-      Inf = Builder.CreateSelect(IsNeg, NegInf, Inf);
+      Inf = Builder.CreateSelectWithUnknownProfile(IsNeg, NegInf, Inf,
+                                                   DEBUG_TYPE);
     }
     A4 = Builder.CreateSelect(Overflow, Inf, A4);
+    // We consider overflow to be an unlikely case.
+    applyProfMetadataIfEnabled(A4, [&](Instruction *Inst) {
+      Inst->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+    });
   }
   Builder.CreateBr(End);
 
