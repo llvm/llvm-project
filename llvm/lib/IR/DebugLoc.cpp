@@ -42,12 +42,6 @@ DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//
-DebugLoc::DebugLoc(const DILocation *L) : Loc(const_cast<DILocation *>(L)) {}
-DebugLoc::DebugLoc(const MDNode *L) : Loc(const_cast<MDNode *>(L)) {}
-
-DILocation *DebugLoc::get() const {
-  return cast_or_null<DILocation>(Loc.get());
-}
 
 unsigned DebugLoc::getLine() const {
   assert(get() && "Expected valid DebugLoc");
@@ -81,6 +75,8 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
 
   return DebugLoc();
 }
+
+MDNode *DebugLoc::getAsMDNode() const { return Loc; }
 
 bool DebugLoc::isImplicitCode() const {
   if (DILocation *Loc = get())

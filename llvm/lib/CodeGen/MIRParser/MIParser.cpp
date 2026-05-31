@@ -1198,7 +1198,7 @@ bool MIParser::parse(MachineInstr *&MI) {
     }
     if (!isa<DILocation>(Node))
       return error("referenced metadata is not a DILocation");
-    DebugLocation = DebugLoc(Node);
+    DebugLocation = DebugLoc(cast<DILocation>(Node));
   }
 
   // Parse the machine memory operands.

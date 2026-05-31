@@ -108,35 +108,24 @@ template <> struct simplify_type<const DILocAndCoverageTracking> {
   }
 };
 
-using DebugLocTrackingRef = DILocAndCoverageTracking;
+using DebugLocRef = DILocAndCoverageTracking;
 #else
-using DebugLocTrackingRef = TrackingMDNodeRef;
+using DebugLocRef = DILocation *;
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 
 /// A debug info location.
 ///
-/// This class is a wrapper around a tracking reference to an \a DILocation
+/// This class is a wrapper around an \a DILocation
 /// pointer.
 ///
 /// To avoid extra includes, \a DebugLoc doubles the \a DILocation API with a
 /// one based on relatively opaque \a MDNode pointers.
 class DebugLoc {
-
-  DebugLocTrackingRef Loc;
+  DebugLocRef Loc = {};
 
 public:
-  DebugLoc() = default;
-
   /// Construct from an \a DILocation.
-  LLVM_ABI DebugLoc(const DILocation *L);
-
-  /// Construct from an \a MDNode.
-  ///
-  /// Note: if \c N is not an \a DILocation, a verifier check will fail, and
-  /// accessors will crash.  However, construction from other nodes is
-  /// supported in order to handle forward references when reading textual
-  /// IR.
-  LLVM_ABI explicit DebugLoc(const MDNode *N);
+  DebugLoc(const DILocation *L = nullptr) : Loc(const_cast<DILocation *>(L)) {}
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   DebugLoc(DebugLocKind Kind) : Loc(Kind) {}
@@ -225,7 +214,7 @@ public:
   ///
   /// \pre !*this or \c isa<DILocation>(getAsMDNode()).
   /// @{
-  LLVM_ABI DILocation *get() const;
+  DILocation *get() const { return Loc; }
   operator DILocation *() const { return get(); }
   DILocation *operator->() const { return get(); }
   DILocation &operator*() const { return *get(); }
@@ -240,7 +229,7 @@ public:
   explicit operator bool() const { return Loc; }
 
   /// Check whether this has a trivial destructor.
-  bool hasTrivialDestructor() const { return Loc.hasTrivialDestructor(); }
+  bool hasTrivialDestructor() const { return true; }
 
   enum { ReplaceLastInlinedAt = true };
   /// Rebuild the entire inlined-at chain for this instruction so that the top
@@ -287,7 +276,7 @@ public:
   LLVM_ABI DebugLoc getFnDebugLoc() const;
 
   /// Return \c this as a bar \a MDNode.
-  MDNode *getAsMDNode() const { return Loc; }
+  LLVM_ABI MDNode *getAsMDNode() const;
 
   /// Check if the DebugLoc corresponds to an implicit code.
   LLVM_ABI bool isImplicitCode() const;
