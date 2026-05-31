@@ -219,6 +219,12 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  Identifies redundant pointer null-checks, by finding cases where the pointer
+  cannot be null at the location of the null-check.
+
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
 
