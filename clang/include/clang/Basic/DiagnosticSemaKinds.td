@@ -8185,8 +8185,8 @@ def err_compound_qualified_function_type : Error<
 def err_qualified_function_typeid : Error<
   "type operand %0 of 'typeid' cannot have '%1' qualifier">;
 
-def err_cxx20_deducing_this  : Error<
-  "explicit object parameters are incompatible with C++ standards before C++2b">;
+def ext_deducing_this  : ExtWarn<
+  "explicit object parameters are a C++23 extension">, InGroup<CXX23>;
 def err_explicit_object_default_arg: Error<
   "the explicit object parameter cannot have a default argument">;
 def err_explicit_object_parameter_pack: Error<

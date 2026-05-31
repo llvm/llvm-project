@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify
-// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify -fexperimental-new-constant-interpreter
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 %s -verify=cxx20 -Wno-c++23-extensions
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify=cxx23
+// RUN: %clang_cc1 -fsyntax-only -std=c++2b %s -verify=cxx23 -fexperimental-new-constant-interpreter
+// cxx23-no-diagnostics
 
 template <typename Base>
 struct Wrap : Base {
@@ -14,7 +15,7 @@ struct S {
     constexpr int f(this const S&, auto&&... args) {
         return (args + ... + 0);
     }
-    constexpr int operator[](this const S&) {
+    constexpr int operator[](this const S&) { // cxx20-error {{overloaded 'operator[]' cannot have no parameter before C++23}}
         return 42;
     }
     constexpr int operator[](this const S& self, int i) {
@@ -45,7 +46,7 @@ struct S {
 consteval void test() {
     constexpr S s;
     static_assert(s.f() == 42);
-    static_assert(s[] == 42);
+    static_assert(s[] == 42); // cxx20-error {{expected expression}}
     static_assert(s[22] == 42);
     static_assert(s.f() == 42);
     static_assert(s() == 42);

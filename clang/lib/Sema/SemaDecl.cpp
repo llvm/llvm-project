@@ -15666,8 +15666,7 @@ static void CheckExplicitObjectParameter(Sema &S, ParmVarDecl *P,
   assert(S.getLangOpts().CPlusPlus &&
          "explicit parameter in non-cplusplus mode");
   if (!S.getLangOpts().CPlusPlus23)
-    S.Diag(ExplicitThisLoc, diag::err_cxx20_deducing_this)
-        << P->getSourceRange();
+    S.Diag(ExplicitThisLoc, diag::ext_deducing_this) << P->getSourceRange();
 
   // C++2b [dcl.fct/7] An explicit object parameter shall not be a function
   // parameter pack.

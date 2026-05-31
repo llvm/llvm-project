@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -Wno-c++23-extensions -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -Wno-c++23-extensions -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -Wno-c++23-extensions -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -Wno-c++23-extensions -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -Wno-c++23-extensions -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives                       -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives                       -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -256,12 +256,10 @@ int i0 = f<X>(0);
 } // namespace cwg2650
 
 namespace cwg2653 { // cwg2653: 18
-#if __cplusplus >= 202302L
   struct Test { void f(this const auto& = Test{}); };
   // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
   auto L = [](this const auto& = Test{}){};
   // since-cxx23-error@-1 {{the explicit object parameter cannot have a default argument}}
-#endif
 } // namespace cwg2653
 
 namespace cwg2654 { // cwg2654: 16
@@ -335,7 +333,6 @@ void m() {
 } // namespace cwg2672
 
 namespace cwg2687 { // cwg2687: 18
-#if __cplusplus >= 202302L
 struct S{
     void f(int);
     static void g(int);
@@ -348,7 +345,6 @@ void test() {
     (&S::g)(1);
     (&S::h)(S(), 1);
 }
-#endif
 } // namespace cwg2687
 
 namespace cwg2692 { // cwg2692: 19
