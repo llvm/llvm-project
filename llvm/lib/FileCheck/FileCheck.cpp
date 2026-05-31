@@ -2531,6 +2531,30 @@ static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
   return true;
 }
 
+void FileCheck::filterByLabel(ArrayRef<StringRef> Names) {
+  if (Names.empty())
+    return;
+
+  // (name1|name2|...) bracketed by non-chars (or string ends).
+  std::string Alts;
+  for (StringRef Name : Names) {
+    if (!Alts.empty())
+      Alts += '|';
+    Alts += Regex::escape(Name);
+  }
+  Regex Re("(^|[^[:alnum:]_])(" + Alts + ")([^[:alnum:]_]|$)");
+
+  std::vector<FileCheckString> Filtered;
+  bool Keeping = false;
+  for (auto &CS : CheckStrings) {
+    if (CS.Pat.getCheckTy() == Check::CheckLabel)
+      Keeping = Re.match(CS.Pat.getFixedStr());
+    if (Keeping)
+      Filtered.push_back(std::move(CS));
+  }
+  CheckStrings = std::move(Filtered);
+}
+
 bool FileCheck::ValidateCheckPrefixes() {
   StringSet<> UniquePrefixes;
   // Add default prefixes to catch user-supplied duplicates of them below.

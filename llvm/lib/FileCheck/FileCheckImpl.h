@@ -745,6 +745,11 @@ public:
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
 
+  /// \returns the literal pattern text, or an empty StringRef if the pattern
+  /// requires a regex match. Used by FileCheck::filterByLabel to identify
+  /// CHECK-LABEL sections by their literal text.
+  StringRef getFixedStr() const { return FixedStr; }
+
   int getCount() const { return CheckTy.getCount(); }
 
 private:

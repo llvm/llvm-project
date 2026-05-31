@@ -143,6 +143,12 @@ enum DumpInputFilterValue {
   DumpInputFilterAll
 };
 
+static cl::list<std::string> FilterLabel(
+    "filter-label", cl::CommaSeparated,
+    cl::desc("Keep only CHECKs in CHECK-LABEL sections whose label\n"
+             "matches one of the given names."),
+    cl::value_desc("name"));
+
 static cl::list<DumpInputFilterValue> DumpInputFilters(
     "dump-input-filter",
     cl::desc("In the dump requested by -dump-input, print only input lines of\n"
@@ -867,6 +873,12 @@ int main(int argc, char **argv) {
   std::pair<unsigned, unsigned> ImpPatBufferIDRange;
   if (FC.readCheckFile(SM, CheckFileText, &ImpPatBufferIDRange))
     return 2;
+
+  if (!FilterLabel.empty()) {
+    SmallVector<StringRef, 4> FilterLabelRefs(FilterLabel.begin(),
+                                              FilterLabel.end());
+    FC.filterByLabel(FilterLabelRefs);
+  }
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
