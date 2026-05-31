@@ -319,5 +319,5 @@ void FromPaper2(_BitInt(8) a1, _BitInt(24) a2) {
 
 namespace GH196948{
   constexpr _BitInt(128) i = 42;
-  static_assert(i == 42.0k);// expected-error {{invalid operands to binary expression}}
+  static_assert(i == 42.0k);// expected-error {{invalid operands to binary expression ('const _Bitint(128)' and '_Accum')}}
 }
