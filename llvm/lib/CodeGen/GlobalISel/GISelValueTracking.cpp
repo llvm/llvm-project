@@ -2173,8 +2173,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       FirstAnswer = MRI.getType(R).getScalarSizeInBits();
       break;
     }
-    unsigned Src1NumSignBits =
-        computeNumSignBits(Op0, DemandedElts, Depth + 1);
+    unsigned Src1NumSignBits = computeNumSignBits(Op0, DemandedElts, Depth + 1);
 
     if (Src1NumSignBits != 1) {
       unsigned Src2NumSignBits =
