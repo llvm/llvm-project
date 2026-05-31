@@ -106,6 +106,118 @@ DLWRAP_FINALIZE()
 #define DEBUG_PREFIX "TARGET " GETNAME(TARGET_NAME) " RTL"
 #endif
 
+// Extension function pointer for getting argument sizes
+static ze_result_t (*zexKernelGetArgumentSize_ptr)(ze_kernel_handle_t, uint32_t,
+                                                   uint32_t *) = nullptr;
+static bool zexKernelGetArgumentSize_initialized = false;
+
+static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
+    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
+    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
+    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
+
+  ze_result_t res;
+
+  if (!zexKernelGetArgumentSize_initialized) {
+    zexKernelGetArgumentSize_initialized = true;
+
+    // Get the driver to query for extensions
+    uint32_t driverCount = 0;
+    res = zeDriverGet(&driverCount, nullptr);
+    if (res == ZE_RESULT_SUCCESS && driverCount > 0) {
+      ze_driver_handle_t driver;
+      driverCount = 1;
+      res = zeDriverGet(&driverCount, &driver);
+      if (res == ZE_RESULT_SUCCESS) {
+        // Try to get the extension function address
+        void *extFunc = nullptr;
+        res = zeDriverGetExtensionFunctionAddress(
+            driver, "zexKernelGetArgumentSize", &extFunc);
+        if (res == ZE_RESULT_SUCCESS && extFunc) {
+          zexKernelGetArgumentSize_ptr =
+              reinterpret_cast<decltype(zexKernelGetArgumentSize_ptr)>(extFunc);
+          ODBG(OLDT_Init) << "Loaded zexKernelGetArgumentSize extension";
+        }
+      }
+    }
+    if (!zexKernelGetArgumentSize_ptr) {
+      ODBG(OLDT_Kernel)
+          << "zeCommandListAppendLaunchKernelWithArguments is not "
+             "available, and no fallback is possible without "
+             "argument size information.";
+      return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
+    }
+  }
+
+  res = zeKernelSetGroupSize(hKernel, groupSizes.groupSizeX,
+                             groupSizes.groupSizeY, groupSizes.groupSizeZ);
+  if (res != ZE_RESULT_SUCCESS)
+    return res;
+
+  ze_kernel_properties_t kernelProps = {};
+  kernelProps.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+  res = zeKernelGetProperties(hKernel, &kernelProps);
+  if (res != ZE_RESULT_SUCCESS)
+    return res;
+
+  uint32_t numKernelArgs = kernelProps.numKernelArgs;
+
+  for (uint32_t i = 0; i < numKernelArgs; i++) {
+    uint32_t argSize = 0;
+
+    res = zexKernelGetArgumentSize_ptr(hKernel, i, &argSize);
+    if (res != ZE_RESULT_SUCCESS)
+      return res;
+
+    res = zeKernelSetArgumentValue(hKernel, i, argSize, pArguments[i]);
+    if (res != ZE_RESULT_SUCCESS) {
+      return res;
+    }
+  }
+
+  bool isCooperative = false;
+  if (pNext) {
+    const ze_command_list_append_launch_kernel_param_cooperative_desc_t
+        *coopDesc = static_cast<
+            const ze_command_list_append_launch_kernel_param_cooperative_desc_t
+                *>(pNext);
+    if (coopDesc->stype ==
+        ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC) {
+      isCooperative = coopDesc->isCooperative;
+    }
+  }
+
+  if (isCooperative) {
+    return zeCommandListAppendLaunchCooperativeKernel(
+        hCommandList, hKernel, &groupCounts, hSignalEvent, numWaitEvents,
+        phWaitEvents);
+  } else {
+    return zeCommandListAppendLaunchKernel(hCommandList, hKernel, &groupCounts,
+                                           hSignalEvent, numWaitEvents,
+                                           phWaitEvents);
+  }
+}
+
+static struct {
+  const char *name;
+  void *fallback_func;
+} zeFallbackFuncs[] = {
+    {"zeCommandListAppendLaunchKernelWithArguments",
+     reinterpret_cast<void *>(
+         &zeCommandListAppendLaunchKernelWithArgumentsFallback)}};
+constexpr size_t zeFallbackFuncsSz =
+    sizeof(zeFallbackFuncs) / sizeof(zeFallbackFuncs[0]);
+
+static void *findZeFallback(const char *name) {
+  for (size_t i = 0; i < zeFallbackFuncsSz; i++) {
+    if (strcmp(name, zeFallbackFuncs[i].name) == 0)
+      return zeFallbackFuncs[i].fallback_func;
+  }
+  return nullptr;
+}
+
+
 static bool loadLevelZero() {
   std::string L0Library{LEVEL_ZERO_LIBRARY};
   std::string ErrMsg;
@@ -150,16 +262,23 @@ static bool loadLevelZero() {
     const char *Sym = dlwrap::symbol(I);
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
+    void *Fallback = nullptr;
     if (P == nullptr) {
-      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << L0Library
-                      << "'!";
-      emitCheckVersion();
-      return false;
+      Fallback = findZeFallback(Sym);
+      if (!Fallback) {
+        ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                        << "' and no fallback is available!";
+        emitCheckVersion();
+        return false;
+      }
+      ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                      << "'. Using fallback implementation -> " << Fallback;
     }
-    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
-                    << ") -> " << P;
+    if (P)
+      ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                      << ") -> " << P;
 
-    *dlwrap::pointer(I) = P;
+    *dlwrap::pointer(I) = P ? P : Fallback;
   }
 
   return true;

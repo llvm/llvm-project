@@ -111,21 +111,19 @@ public:
     return Plugin::success();
   }
 
-  Error appendLaunchKernelWithArgs(ze_kernel_handle_t Kernel,
-                                   const ze_group_count_t *GroupCounts, 
-                                   const ze_group_size_t *GroupSizes,
-                                   void **ArgPtrs,
-                                   ze_event_handle_t SignalEvent = nullptr,
-                                   uint32_t NumWaitEvents = 0,
-                                   ze_event_handle_t *WaitEvents = nullptr,
-                                   bool IsCooperative = false) {
+  Error appendLaunchKernelWithArgs(
+      ze_kernel_handle_t Kernel, const ze_group_count_t *GroupCounts,
+      const ze_group_size_t *GroupSizes, void **ArgPtrs,
+      ze_event_handle_t SignalEvent = nullptr, uint32_t NumWaitEvents = 0,
+      ze_event_handle_t *WaitEvents = nullptr, bool IsCooperative = false) {
     ze_command_list_append_launch_kernel_param_cooperative_desc_t CoopDesc = {
         ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC, nullptr,
         static_cast<ze_bool_t>(IsCooperative)};
+    std::lock_guard<std::mutex> Lock(Mtx);
     CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernelWithArguments, CmdList,
-                      Kernel, *GroupCounts, *GroupSizes,
-                      ArgPtrs, IsCooperative ? &CoopDesc : nullptr,
-                      SignalEvent, NumWaitEvents, WaitEvents);
+                      Kernel, *GroupCounts, *GroupSizes, ArgPtrs,
+                      IsCooperative ? &CoopDesc : nullptr, SignalEvent,
+                      NumWaitEvents, WaitEvents);
     return Plugin::success();
   }
 };

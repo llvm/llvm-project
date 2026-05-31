@@ -50,11 +50,12 @@ Error AsyncQueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
   if (KEnv.IsPtrArg)
     return CmdList->appendLaunchKernelWithArgs(
-        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent, NumWaitEvents,
-        WaitEvents, KEnv.IsCooperative);
+        Kernel, &KEnv.GroupCounts, &KEnv.GroupSizes, KEnv.ArgPtrs, SignalEvent,
+        NumWaitEvents, WaitEvents, KEnv.IsCooperative);
 
   return CmdList->appendLaunchKernel(Kernel, &KEnv.GroupCounts, SignalEvent,
-                                     NumWaitEvents, WaitEvents, KEnv.IsCooperative);
+                                     NumWaitEvents, WaitEvents,
+                                     KEnv.IsCooperative);
 }
 
 // L0AsyncQueueTy implementation.

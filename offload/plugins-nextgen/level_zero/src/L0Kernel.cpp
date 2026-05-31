@@ -102,7 +102,8 @@ ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &l0Device,
   auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY, KEnv.GroupSizes.groupSizeZ);
+       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY,
+       KEnv.GroupSizes.groupSizeZ);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
