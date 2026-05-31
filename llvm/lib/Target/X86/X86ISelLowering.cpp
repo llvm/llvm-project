@@ -32730,21 +32730,30 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
   const Instruction *I = AI->user_back();
   auto BitChange = FindSingleBitChange(AI->getValOperand());
   if (BitChange.second == UndefBit || !AI->hasOneUse() ||
-      I->getOpcode() != Instruction::And ||
       AI->getType()->getPrimitiveSizeInBits() == 8 ||
       AI->getParent() != I->getParent())
     return AtomicExpansionKind::CmpXChg;
 
-  unsigned OtherIdx = I->getOperand(0) == AI ? 1 : 0;
-
-  // This is a redundant AND, it should get cleaned up elsewhere.
-  if (AI == I->getOperand(OtherIdx))
+  // InstCombine folds (atomicrmw & 1) == 1 into trunc atomicrmw to i1
+  const bool IsTruncToI1 = isa<TruncInst>(I) && I->getType()->isIntegerTy(1);
+  if (!IsTruncToI1 && I->getOpcode() != Instruction::And)
     return AtomicExpansionKind::CmpXChg;
+
+  const Value *Mask;
+  if (IsTruncToI1) {
+    Mask = ConstantInt::get(AI->getType(), 1);
+  } else {
+    unsigned OtherIdx = I->getOperand(0) == AI ? 1 : 0;
+    // This is a redundant AND, it should get cleaned up elsewhere.
+    if (AI == I->getOperand(OtherIdx))
+      return AtomicExpansionKind::CmpXChg;
+    Mask = I->getOperand(OtherIdx);
+  }
 
   // The following instruction must be a AND single bit.
   if (BitChange.second == ConstantBit || BitChange.second == NotConstantBit) {
     auto *C1 = cast<ConstantInt>(AI->getValOperand());
-    auto *C2 = dyn_cast<ConstantInt>(I->getOperand(OtherIdx));
+    auto *C2 = dyn_cast<ConstantInt>(Mask);
     if (!C2 || !isPowerOf2_64(C2->getZExtValue())) {
       return AtomicExpansionKind::CmpXChg;
     }
@@ -32759,7 +32768,7 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 
   assert(BitChange.second == ShiftBit || BitChange.second == NotShiftBit);
 
-  auto BitTested = FindSingleBitChange(I->getOperand(OtherIdx));
+  auto BitTested = FindSingleBitChange(Mask);
   if (BitTested.second != ShiftBit && BitTested.second != NotShiftBit)
     return AtomicExpansionKind::CmpXChg;
 
@@ -32812,11 +32821,17 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
   assert(BitTested.first != nullptr);
 
   if (BitTested.second == ConstantBit || BitTested.second == NotConstantBit) {
-    auto *C = cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
-
-    unsigned Imm = llvm::countr_zero(C->getZExtValue());
+    const bool IsTruncToI1 = isa<TruncInst>(I) && I->getType()->isIntegerTy(1);
+    unsigned Imm = 0;
+    if (!IsTruncToI1) {
+      auto *C =
+          cast<ConstantInt>(I->getOperand(I->getOperand(0) == AI ? 1 : 0));
+      Imm = llvm::countr_zero(C->getZExtValue());
+    }
     Result = Builder.CreateIntrinsic(IID_C, AI->getType(),
                                      {Addr, Builder.getInt8(Imm)});
+    if (IsTruncToI1)
+      Result = Builder.CreateTrunc(Result, I->getType());
   } else {
     assert(BitTested.second == ShiftBit || BitTested.second == NotShiftBit);
 
