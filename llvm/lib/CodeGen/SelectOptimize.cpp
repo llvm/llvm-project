@@ -60,6 +60,10 @@ STATISTIC(NumSelectConvertedLoop,
           "Number of select groups converted due to loop-level analysis");
 STATISTIC(NumSelectsConverted, "Number of selects converted");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 static cl::opt<unsigned> ColdOperandThreshold(
     "cold-operand-threshold",
     cl::desc("Maximum frequency of path for an operand to be considered cold."),
@@ -560,6 +564,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     SmallVector<std::stack<Instruction *>, 2> TrueSlices, FalseSlices;
     typedef std::stack<Instruction *>::size_type StackSizeType;
     StackSizeType maxTrueSliceLen = 0, maxFalseSliceLen = 0;
+    Instruction *SelectWithProfile = nullptr;
     for (SelectLike &SI : ASI.Selects) {
       if (!isa<SelectInst>(SI.getI()))
         continue;
@@ -579,6 +584,10 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
           FalseSlices.push_back(FalseSlice);
         }
       }
+      // Also see if the select has profile data that we can propagate later
+      // to the conditional branch.
+      if (hasProfMD(*SI.getI()))
+        SelectWithProfile = SI.getI();
     }
     // In the case of multiple select instructions in the same group, the order
     // of non-dependent instructions (instructions of different dependence
@@ -749,7 +758,12 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       PN->setDebugLoc(SI.getI()->getDebugLoc());
       ++NumSelectsConverted;
     }
-    IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    Instruction *CondBr = IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    if (!ProfcheckDisableMetadataFixes && SelectWithProfile) {
+      CondBr->copyMetadata(*SelectWithProfile, {llvm::LLVMContext::MD_prof});
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
+    }
 
     // Remove the old select instructions, now that they are not longer used.
     for (SelectLike &SI : ASI.Selects)

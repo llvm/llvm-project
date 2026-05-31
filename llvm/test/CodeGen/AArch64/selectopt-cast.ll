@@ -287,7 +287,7 @@ define void @test_add_sext_not_and_regular_select(ptr %dst, ptr %src, i64 %j.sta
 ; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
 ; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
 ; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
-; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE_SINK:%.*]]
+; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       select.false.sink:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[J]], -1
 ; CHECK-NEXT:    br label [[SELECT_END1]]
@@ -317,7 +317,7 @@ loop:
   %not.cmp3 = xor i1 %cmp3, true
   %dec = sext i1 %not.cmp3 to i64
   %j.next = add nsw i64 %j, %dec
-  %sink = select i1 %cmp3, ptr %l.i, ptr %l.j
+  %sink = select i1 %cmp3, ptr %l.i, ptr %l.j, !prof !0
   %gep.dst = getelementptr inbounds ptr, ptr %dst, i64 %iv
   store ptr %sink, ptr %gep.dst, align 8
   %iv.next = add i64 %iv, 1
@@ -938,3 +938,6 @@ loop:
 exit:
   ret void
 }
+
+!0 = !{!"branch_weights", i32 1000, i32 1}
+
