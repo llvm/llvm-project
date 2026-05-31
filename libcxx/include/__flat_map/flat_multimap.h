@@ -84,8 +84,10 @@ class flat_multimap {
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
   static_assert(is_same_v<_Tp, typename _MappedContainer::value_type>);
-  static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
-  static_assert(!is_same_v<_MappedContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
+
+  using __key_const_reference _LIBCPP_NODEBUG    = iter_reference_t<typename _KeyContainer::const_iterator>;
+  using __mapped_reference _LIBCPP_NODEBUG       = iter_reference_t<typename _MappedContainer::iterator>;
+  using __mapped_const_reference _LIBCPP_NODEBUG = iter_reference_t<typename _MappedContainer::const_iterator>;
 
   template <bool _Const>
   using __iterator _LIBCPP_NODEBUG = __key_value_iterator<flat_multimap, _KeyContainer, _MappedContainer, _Const>;
@@ -96,8 +98,8 @@ public:
   using mapped_type            = _Tp;
   using value_type             = pair<key_type, mapped_type>;
   using key_compare            = __type_identity_t<_Compare>;
-  using reference              = pair<const key_type&, mapped_type&>;
-  using const_reference        = pair<const key_type&, const mapped_type&>;
+  using reference              = pair<__key_const_reference, __mapped_reference>;
+  using const_reference        = pair<__key_const_reference, __mapped_const_reference>;
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using iterator               = __iterator<false>; // see [container.requirements]
@@ -117,6 +119,12 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
     operator()(const_reference __x, const_reference __y) const {
       return __comp_(__x.first, __y.first);
+    }
+
+    template <class _PairLikeA, class _PairLikeB>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
+    operator()(const _PairLikeA& __x, const _PairLikeB& __y) const {
+      return __comp_(std::get<0>(__x), std::get<0>(__y));
     }
   };
 

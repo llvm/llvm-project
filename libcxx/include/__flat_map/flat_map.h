@@ -119,6 +119,11 @@ public:
     friend flat_map;
 
   public:
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
+    operator()(const_reference __x, const_reference __y) const {
+      return __comp_(__x.first, __y.first);
+    }
+
     template <class _PairLikeA, class _PairLikeB>
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
     operator()(const _PairLikeA& __x, const _PairLikeB& __y) const {

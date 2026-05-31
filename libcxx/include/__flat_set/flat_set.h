@@ -77,7 +77,6 @@ class flat_set {
   friend __flat_set_utils;
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
-  static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
   using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;
 
@@ -87,8 +86,8 @@ public:
   using value_type             = _Key;
   using key_compare            = __type_identity_t<_Compare>;
   using value_compare          = _Compare;
-  using reference              = value_type&;
-  using const_reference        = const value_type&;
+  using reference              = iter_reference_t<__key_iterator>;
+  using const_reference        = iter_reference_t<__key_iterator>;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;
   using iterator               = __ra_iterator<flat_set, typename _KeyContainer::const_iterator>;
@@ -783,8 +782,8 @@ private:
 
   struct __key_equiv {
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
+    template <class _Tp, class _Up>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _Tp& __x, const _Up& __y) const {
       return !__comp_(__x, __y) && !__comp_(__y, __x);
     }
     key_compare __comp_;

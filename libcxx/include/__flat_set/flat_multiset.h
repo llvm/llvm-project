@@ -75,7 +75,6 @@ class flat_multiset {
   friend __flat_set_utils;
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
-  static_assert(!is_same_v<_KeyContainer, std::vector<bool>>, "vector<bool> is not a sequence container");
 
 public:
   // types
@@ -83,8 +82,8 @@ public:
   using value_type             = _Key;
   using key_compare            = __type_identity_t<_Compare>;
   using value_compare          = _Compare;
-  using reference              = value_type&;
-  using const_reference        = const value_type&;
+  using reference              = iter_reference_t<typename _KeyContainer::const_iterator>;
+  using const_reference        = iter_reference_t<typename _KeyContainer::const_iterator>;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;
   using iterator               = __ra_iterator<flat_multiset, typename _KeyContainer::const_iterator>;

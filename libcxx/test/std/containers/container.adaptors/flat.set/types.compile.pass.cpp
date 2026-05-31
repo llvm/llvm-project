@@ -38,7 +38,7 @@ void test() {
     static_assert(std::is_same_v<typename M::value_type, int>);
     static_assert(std::is_same_v<typename M::key_compare, std::less<int>>);
     static_assert(std::is_same_v<typename M::value_compare, std::less<int>>);
-    static_assert(std::is_same_v<typename M::reference, int&>);
+    static_assert(std::is_same_v<typename M::reference, const int&>);
     static_assert(std::is_same_v<typename M::const_reference, const int&>);
     static_assert(std::is_same_v<typename M::size_type, size_t>);
     static_assert(std::is_same_v<typename M::difference_type, ptrdiff_t>);
@@ -61,7 +61,7 @@ void test() {
     static_assert(std::is_same_v<typename M::value_type, std::string>);
     static_assert(std::is_same_v<typename M::key_compare, Compare>);
     static_assert(std::is_same_v<typename M::value_compare, Compare>);
-    static_assert(std::is_same_v<typename M::reference, std::string&>);
+    static_assert(std::is_same_v<typename M::reference, const std::string&>);
     static_assert(std::is_same_v<typename M::const_reference, const std::string&>);
     static_assert(std::is_same_v<typename M::size_type, size_t>);
     static_assert(std::is_same_v<typename M::difference_type, ptrdiff_t>);
@@ -78,7 +78,7 @@ void test() {
     static_assert(std::is_same_v<C::value_type, short>);
     static_assert(std::is_same_v<C::key_compare, std::greater<long>>);
     static_assert(std::is_same_v<C::value_compare, std::greater<long>>);
-    static_assert(std::is_same_v<C::reference, short&>);
+    static_assert(std::is_same_v<C::reference, const short&>);
     static_assert(std::is_same_v<C::const_reference, const short&>);
     static_assert(std::random_access_iterator<C::iterator>);
     static_assert(std::random_access_iterator<C::const_iterator>);
