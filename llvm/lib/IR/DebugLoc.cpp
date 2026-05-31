@@ -33,12 +33,6 @@ void DbgLocOrigin::addTrace() {
 }
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
-DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
-    : TrackingMDNodeRef(const_cast<DILocation *>(L)), DbgLocOrigin(!L),
-      Kind(DebugLocKind::Normal) {}
-#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
-
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//

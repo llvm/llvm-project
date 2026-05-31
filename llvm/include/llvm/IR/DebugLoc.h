@@ -70,41 +70,42 @@ enum class DebugLocKind : uint8_t {
   Temporary
 };
 
-// Extends TrackingMDNodeRef to also store a DebugLocKind and Origin,
+// Extends a DILocation pointer to also store a DebugLocKind and Origin,
 // allowing Debugify to ignore intentionally-empty DebugLocs and display the
 // code responsible for generating unintentionally-empty DebugLocs.
 // Currently we only need to track the Origin of this DILoc when using a
 // DebugLoc that is not annotated (i.e. has DebugLocKind::Normal) and has a
 // null DILocation, so only collect the origin stacktrace in those cases.
-class DILocAndCoverageTracking : public TrackingMDNodeRef, public DbgLocOrigin {
+class DILocAndCoverageTracking : public DbgLocOrigin {
+  DILocation *Loc;
+
 public:
   DebugLocKind Kind;
   // Default constructor for empty DebugLocs.
   DILocAndCoverageTracking()
-      : TrackingMDNodeRef(nullptr), DbgLocOrigin(true),
+      : DbgLocOrigin(true), Loc(nullptr), Kind(DebugLocKind::Normal) {}
+  // Valid or nullptr DILocation*, no annotative DebugLocKind.
+  DILocAndCoverageTracking(const DILocation *Loc)
+      : DbgLocOrigin(!Loc), Loc(const_cast<DILocation *>(Loc)),
         Kind(DebugLocKind::Normal) {}
-  // Valid or nullptr MDNode*, no annotative DebugLocKind.
-  DILocAndCoverageTracking(const MDNode *Loc)
-      : TrackingMDNodeRef(const_cast<MDNode *>(Loc)), DbgLocOrigin(!Loc),
-        Kind(DebugLocKind::Normal) {}
-  LLVM_ABI DILocAndCoverageTracking(const DILocation *Loc);
-  // Explicit DebugLocKind, which always means a nullptr MDNode*.
+  // Explicit DebugLocKind, which always means a nullptr DILocation*.
   DILocAndCoverageTracking(DebugLocKind Kind)
-      : TrackingMDNodeRef(nullptr), DbgLocOrigin(Kind == DebugLocKind::Normal),
-        Kind(Kind) {}
+      : DbgLocOrigin(Kind == DebugLocKind::Normal), Loc(nullptr), Kind(Kind) {}
+
+  operator DILocation *() const { return Loc; }
 };
 template <> struct simplify_type<DILocAndCoverageTracking> {
-  using SimpleType = MDNode *;
+  using SimpleType = DILocation *;
 
-  static MDNode *getSimplifiedValue(DILocAndCoverageTracking &MD) {
-    return MD.get();
+  static DILocation *getSimplifiedValue(DILocAndCoverageTracking &MD) {
+    return MD;
   }
 };
 template <> struct simplify_type<const DILocAndCoverageTracking> {
-  using SimpleType = MDNode *;
+  using SimpleType = DILocation *;
 
-  static MDNode *getSimplifiedValue(const DILocAndCoverageTracking &MD) {
-    return MD.get();
+  static DILocation *getSimplifiedValue(const DILocAndCoverageTracking &MD) {
+    return MD;
   }
 };
 
