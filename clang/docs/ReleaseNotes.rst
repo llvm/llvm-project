@@ -652,6 +652,7 @@ Bug Fixes in This Version
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
+- Fixed an assertion on omp taskloop transparent (#GH197162)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

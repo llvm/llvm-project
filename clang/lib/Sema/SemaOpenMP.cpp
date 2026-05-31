@@ -17811,6 +17811,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                                     SourceLocation EndLoc) {
   Stmt *HelperValStmt = nullptr;
   OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+
+  if (!isAllowedClauseForDirective(DKind, OMPC_transparent,
+                                   getLangOpts().OpenMP))
+    return nullptr;
+
   OpenMPDirectiveKind CaptureRegion = getOpenMPCaptureRegionForClause(
       DKind, OMPC_transparent, getLangOpts().OpenMP);
   if (CaptureRegion != OMPD_unknown &&
