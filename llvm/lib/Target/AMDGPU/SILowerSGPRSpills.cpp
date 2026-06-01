@@ -277,7 +277,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
     // can be emitted appropriately.
     if (SpillRetAddrReg) {
       const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(RetAddrReg, MVT::i64);
+          TRI->getMinimalPhysRegClass(RetAddrReg);
       int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                          TRI->getSpillAlign(*RC), true);
       CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
