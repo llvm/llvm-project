@@ -1,4 +1,4 @@
-//===- GlobalISelMatchTable.cpp -------------------------------------------===//
+//===- Matchers.cpp -------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "GlobalISelMatchTable.h"
+#include "Matchers.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "llvm/ADT/Statistic.h"
@@ -17,7 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 
-#define DEBUG_TYPE "gi-match-table"
+#define DEBUG_TYPE "gi-match-table-matchers"
 
 STATISTIC(NumPatternEmitted, "Number of patterns emitted");
 
@@ -44,53 +44,7 @@ getMatchOpcodeForImmPredicate(const TreePredicateFn &Predicate) {
   return "GIM_Check" + Predicate.getImmTypeIdentifier().str() + "ImmPredicate";
 }
 
-// GIMT_Encode2/4/8
-constexpr StringLiteral EncodeMacroName = "GIMT_Encode";
-
 //===- Helpers ------------------------------------------------------------===//
-
-void llvm::gi::emitEncodingMacrosDef(raw_ostream &OS) {
-  OS << "#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__\n"
-     << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t(Val), uint8_t((Val) >> 8)\n"
-     << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t(Val), uint8_t((Val) >> 8), "
-        "uint8_t((Val) >> 16), uint8_t((Val) >> 24)\n"
-     << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(Val), uint8_t((Val) >> 8), "
-        "uint8_t((Val) >> 16), uint8_t((Val) >> 24),  "
-        "uint8_t(uint64_t(Val) >> 32), uint8_t(uint64_t(Val) >> 40), "
-        "uint8_t(uint64_t(Val) >> 48), uint8_t(uint64_t(Val) >> 56)\n"
-     << "#else\n"
-     << "#define " << EncodeMacroName << "2(Val)"
-     << " uint8_t((Val) >> 8), uint8_t(Val)\n"
-     << "#define " << EncodeMacroName << "4(Val)"
-     << " uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
-        "uint8_t((Val) >> 8), uint8_t(Val)\n"
-     << "#define " << EncodeMacroName << "8(Val)"
-     << " uint8_t(uint64_t(Val) >> 56), uint8_t(uint64_t(Val) >> 48), "
-        "uint8_t(uint64_t(Val) >> 40), uint8_t(uint64_t(Val) >> 32),  "
-        "uint8_t((Val) >> 24), uint8_t((Val) >> 16), "
-        "uint8_t((Val) >> 8), uint8_t(Val)\n"
-     << "#endif\n";
-}
-
-void llvm::gi::emitEncodingMacrosUndef(raw_ostream &OS) {
-  OS << "#undef " << EncodeMacroName << "2\n"
-     << "#undef " << EncodeMacroName << "4\n"
-     << "#undef " << EncodeMacroName << "8\n";
-}
-
-std::string
-llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
-                                  int HwModeIdx) {
-  std::string Name = "GIFBS";
-  for (const Record *Feature : FeatureBitset)
-    Name += ("_" + Feature->getName()).str();
-  if (HwModeIdx >= 0)
-    Name += ("_HwMode" + std::to_string(HwModeIdx));
-  return Name;
-}
 
 template <class GroupT>
 static std::vector<Matcher *>
@@ -181,201 +135,8 @@ std::vector<Matcher *> llvm::gi::optimizeRuleset(
   return OptRules;
 }
 
-static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
-  if (NumBytes == 2 || NumBytes == 4 || NumBytes == 8)
-    return (EncodeMacroName + Twine(NumBytes) + "(" + NamedValue + ")").str();
-  llvm_unreachable("Unsupported number of bytes!");
-}
-
-template <class Range> static bool matchersRecordOperand(Range &&R) {
-  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
-}
-
-//===- Global Data --------------------------------------------------------===//
-
-std::set<LLTCodeGen> llvm::gi::KnownTypes;
-
-//===- MatchTableRecord ---------------------------------------------------===//
-
-void MatchTableRecord::emit(raw_ostream &OS, bool LineBreakIsNextAfterThis,
-                            const MatchTable &Table) const {
-  bool UseLineComment =
-      LineBreakIsNextAfterThis || (Flags & MTRF_LineBreakFollows);
-  if (Flags & (MTRF_JumpTarget | MTRF_CommaFollows))
-    UseLineComment = false;
-
-  if (Flags & MTRF_Comment)
-    OS << (UseLineComment ? "// " : "/*");
-
-  if (NumElements > 1 && !(Flags & (MTRF_PreEncoded | MTRF_Comment)))
-    OS << getEncodedEmitStr(EmitStr, NumElements);
-  else
-    OS << EmitStr;
-
-  if (Flags & MTRF_Label)
-    OS << ": @" << Table.getLabelIndex(LabelID);
-
-  if ((Flags & MTRF_Comment) && !UseLineComment)
-    OS << "*/";
-
-  if (Flags & MTRF_JumpTarget) {
-    if (Flags & MTRF_Comment)
-      OS << " ";
-    // TODO: Could encode this AOT to speed up build of generated file
-    OS << getEncodedEmitStr(llvm::to_string(Table.getLabelIndex(LabelID)),
-                            NumElements);
-  }
-
-  if (Flags & MTRF_CommaFollows) {
-    OS << ",";
-    if (!LineBreakIsNextAfterThis && !(Flags & MTRF_LineBreakFollows))
-      OS << " ";
-  }
-
-  if (Flags & MTRF_LineBreakFollows)
-    OS << "\n";
-}
-
-//===- MatchTable ---------------------------------------------------------===//
-
-MatchTableRecord MatchTable::LineBreak = {
-    std::nullopt, "" /* Emit String */, 0 /* Elements */,
-    MatchTableRecord::MTRF_LineBreakFollows};
-
-MatchTableRecord MatchTable::Comment(StringRef Comment) {
-  return MatchTableRecord(std::nullopt, Comment, 0,
-                          MatchTableRecord::MTRF_Comment);
-}
-
-MatchTableRecord MatchTable::Opcode(StringRef Opcode, int IndentAdjust) {
-  unsigned ExtraFlags = 0;
-  if (IndentAdjust > 0)
-    ExtraFlags |= MatchTableRecord::MTRF_Indent;
-  if (IndentAdjust < 0)
-    ExtraFlags |= MatchTableRecord::MTRF_Outdent;
-
-  return MatchTableRecord(std::nullopt, Opcode, 1,
-                          MatchTableRecord::MTRF_CommaFollows | ExtraFlags);
-}
-
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes,
-                                        StringRef NamedValue) {
-  return MatchTableRecord(std::nullopt, NamedValue, NumBytes,
-                          MatchTableRecord::MTRF_CommaFollows);
-}
-
-MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
-                                        StringRef NamedValue) {
-  return MatchTableRecord(std::nullopt, (Namespace + "::" + NamedValue).str(),
-                          NumBytes, MatchTableRecord::MTRF_CommaFollows);
-}
-
-MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
-  assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  uint64_t UIntValue = IntValue;
-  if (NumBytes < 8)
-    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
-  std::string Str = llvm::to_string(UIntValue);
-  if (UIntValue > INT64_MAX)
-    Str += 'u';
-  // TODO: Could optimize this directly to save the compiler some work when
-  // building the file
-  return MatchTableRecord(std::nullopt, Str, NumBytes,
-                          MatchTableRecord::MTRF_CommaFollows);
-}
-
-MatchTableRecord MatchTable::ULEB128Value(uint64_t IntValue) {
-  uint8_t Buffer[10];
-  unsigned Len = encodeULEB128(IntValue, Buffer);
-
-  // Simple case (most common)
-  if (Len == 1) {
-    return MatchTableRecord(std::nullopt, llvm::to_string((unsigned)Buffer[0]),
-                            1, MatchTableRecord::MTRF_CommaFollows);
-  }
-
-  // Print it as, e.g. /* -123456 (*/, 0xC0, 0xBB, 0x78 /*)*/
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << "/* " << llvm::to_string(IntValue) << "(*/";
-  for (unsigned K = 0; K < Len; ++K) {
-    if (K)
-      OS << ", ";
-    OS << "0x" << llvm::toHex({Buffer[K]});
-  }
-  OS << "/*)*/";
-  return MatchTableRecord(std::nullopt, Str, Len,
-                          MatchTableRecord::MTRF_CommaFollows |
-                              MatchTableRecord::MTRF_PreEncoded);
-}
-
-MatchTableRecord MatchTable::Label(unsigned LabelID) {
-  return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 0,
-                          MatchTableRecord::MTRF_Label |
-                              MatchTableRecord::MTRF_Comment |
-                              MatchTableRecord::MTRF_LineBreakFollows);
-}
-
-MatchTableRecord MatchTable::JumpTarget(unsigned LabelID) {
-  return MatchTableRecord(LabelID, "Label " + llvm::to_string(LabelID), 4,
-                          MatchTableRecord::MTRF_JumpTarget |
-                              MatchTableRecord::MTRF_Comment |
-                              MatchTableRecord::MTRF_CommaFollows);
-}
-
-void MatchTable::emitUse(raw_ostream &OS) const { OS << "MatchTable" << ID; }
-
-void MatchTable::emitDeclaration(raw_ostream &OS) const {
-  static constexpr unsigned BaseIndent = 4;
-  unsigned Indentation = 0;
-  OS << "  constexpr static uint8_t MatchTable" << ID << "[] = {";
-  LineBreak.emit(OS, true, *this);
-
-  // We want to display the table index of each line in a consistent
-  // manner. It has to appear as a column on the left side of the table.
-  // To determine how wide the column needs to be, check how many characters
-  // we need to fit the largest possible index in the current table.
-  const unsigned NumColsForIdx = llvm::to_string(CurrentSize).size();
-
-  unsigned CurIndex = 0;
-  const auto BeginLine = [&]() {
-    OS.indent(BaseIndent);
-    std::string IdxStr = llvm::to_string(CurIndex);
-    // Pad the string with spaces to keep the size of the prefix consistent.
-    OS << " /* ";
-    OS.indent(NumColsForIdx - IdxStr.size()) << IdxStr << " */ ";
-    OS.indent(Indentation);
-  };
-
-  BeginLine();
-  for (auto I = Contents.begin(), E = Contents.end(); I != E; ++I) {
-    bool LineBreakIsNext = false;
-    const auto &NextI = std::next(I);
-
-    if (NextI != E) {
-      if (NextI->EmitStr == "" &&
-          NextI->Flags == MatchTableRecord::MTRF_LineBreakFollows)
-        LineBreakIsNext = true;
-    }
-
-    if (I->Flags & MatchTableRecord::MTRF_Indent)
-      Indentation += 2;
-
-    I->emit(OS, LineBreakIsNext, *this);
-    if (I->Flags & MatchTableRecord::MTRF_LineBreakFollows)
-      BeginLine();
-
-    if (I->Flags & MatchTableRecord::MTRF_Outdent)
-      Indentation -= 2;
-
-    CurIndex += I->size();
-  }
-  assert(CurIndex == CurrentSize);
-  OS << "}; // Size: " << CurrentSize << " bytes\n";
-}
-
-MatchTable MatchTable::buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
-                                  bool IsCombiner) {
+MatchTable llvm::gi::buildMatchTable(ArrayRef<Matcher *> Rules,
+                                     bool WithCoverage, bool IsCombiner) {
   MatchTable Table(WithCoverage, IsCombiner);
   for (Matcher *Rule : Rules)
     Rule->emit(Table);
@@ -383,146 +144,15 @@ MatchTable MatchTable::buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
   return Table << MatchTable::Opcode("GIM_Reject") << MatchTable::LineBreak;
 }
 
-//===- LLTCodeGen ---------------------------------------------------------===//
-
-std::string LLTCodeGen::getCxxEnumValue() const {
-  std::string Str;
-  raw_string_ostream OS(Str);
-
-  emitCxxEnumValue(OS);
-  return Str;
+template <class Range> static bool matchersRecordOperand(Range &&R) {
+  return any_of(R, [](const auto &I) { return I->recordsOperand(); });
 }
 
-void LLTCodeGen::emitCxxEnumValue(raw_ostream &OS) const {
-  if (Ty.isScalar()) {
-    if (Ty.isBFloat16())
-      OS << "GILLT_bf16";
-    else if (Ty.isPPCF128())
-      OS << "GILLT_ppcf128";
-    else if (Ty.isX86FP80())
-      OS << "GILLT_x86fp80";
-    else if (Ty.isFloat())
-      OS << "GILLT_f" << Ty.getSizeInBits();
-    else if (Ty.isInteger())
-      OS << "GILLT_i" << Ty.getSizeInBits();
-    else
-      OS << "GILLT_s" << Ty.getSizeInBits();
-    return;
-  }
-  if (Ty.isVector()) {
-    OS << (Ty.isScalable() ? "GILLT_nxv" : "GILLT_v")
-       << Ty.getElementCount().getKnownMinValue();
-
-    LLT ElemTy = Ty.getElementType();
-    if (ElemTy.isBFloat16())
-      OS << "bf16";
-    else if (ElemTy.isPPCF128())
-      OS << "ppcf128";
-    else if (ElemTy.isX86FP80())
-      OS << "x86fp80";
-    else if (ElemTy.isFloat())
-      OS << "f" << ElemTy.getSizeInBits();
-    else if (ElemTy.isInteger())
-      OS << "i" << ElemTy.getSizeInBits();
-    else
-      OS << "s" << ElemTy.getSizeInBits();
-    return;
-  }
-
-  if (Ty.isPointer()) {
-    OS << "GILLT_p" << Ty.getAddressSpace();
-    if (Ty.getSizeInBits() > 0)
-      OS << "s" << Ty.getSizeInBits();
-    return;
-  }
-
-  llvm_unreachable("Unhandled LLT");
-}
-
-void LLTCodeGen::emitCxxConstructorCall(raw_ostream &OS) const {
-  auto EmitScalarType = [&OS](LLT T) {
-    if (T.isInteger())
-      OS << "LLT(LLT::Kind::INTEGER, ElementCount::getFixed(0), "
-         << T.getScalarSizeInBits() << ")";
-    else if (T.isBFloat16())
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
-            "LLT::FpSemantics::S_BFloat)";
-    else if (T.isPPCF128())
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
-            "LLT::FpSemantics::S_PPCDoubleDouble)";
-    else if (T.isX86FP80())
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 80, "
-            "LLT::FpSemantics::S_x87DoubleExtended)";
-    else if (T.isFloat(16))
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 16, "
-            "LLT::FpSemantics::S_IEEEhalf)";
-    else if (T.isFloat(32))
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 32, "
-            "LLT::FpSemantics::S_IEEEsingle)";
-    else if (T.isFloat(64))
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 64, "
-            "LLT::FpSemantics::S_IEEEdouble)";
-    else if (T.isFloat(128))
-      OS << "LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 128, "
-            "LLT::FpSemantics::S_IEEEquad)";
-    else
-      OS << "LLT::scalar(" << T.getScalarSizeInBits() << ")";
-  };
-
-  if (Ty.isScalar()) {
-    EmitScalarType(Ty);
-    return;
-  }
-
-  if (Ty.isVector()) {
-    OS << "LLT::vector("
-       << (Ty.isScalable() ? "ElementCount::getScalable("
-                           : "ElementCount::getFixed(")
-       << Ty.getElementCount().getKnownMinValue() << "), ";
-    EmitScalarType(Ty.getElementType());
-    OS << ")";
-    return;
-  }
-
-  if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
-    OS << "LLT::pointer(" << Ty.getAddressSpace() << ", " << Ty.getSizeInBits()
-       << ")";
-    return;
-  }
-
-  llvm_unreachable("Unhandled LLT");
-}
-
-/// This ordering is used for std::unique() and llvm::sort(). There's no
-/// particular logic behind the order but either A < B or B < A must be
-/// true if A != B.
-bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
-  return Ty.getUniqueRAWLLTData() < Other.Ty.getUniqueRAWLLTData();
-}
-
-//===- LLTCodeGen Helpers -------------------------------------------------===//
-
-std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
-  if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(LLT(VT));
-
-  if (VT.isInteger() || VT.isFloatingPoint())
-    return LLTCodeGen(LLT(VT));
-
-  return std::nullopt;
-}
-
-std::optional<LLTCodeGen> llvm::gi::MVTToGenericLLT(MVT VT) {
-  if (VT.isVector() && !VT.getVectorElementCount().isScalar()) {
-    unsigned ElemBits = VT.getVectorElementType().getSizeInBits();
-    return LLTCodeGen(
-        LLT::vector(VT.getVectorElementCount(), LLT::scalar(ElemBits)));
-  }
-
-  if (VT.isInteger() || VT.isFloatingPoint())
-    return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
-
-  return std::nullopt;
+static void emitType(MatchTable &Table, const LLTCodeGenOrTempType &Ty) {
+  if (Ty.isLLTCodeGen())
+    Table << MatchTable::NamedValue(1, Ty.getLLTCodeGen().getCxxEnumValue());
+  else
+    Table << MatchTable::IntValue(1, Ty.getTempTypeIdx());
 }
 
 //===- Matcher ------------------------------------------------------------===//
@@ -1503,8 +1133,7 @@ void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::LineBreak;
 }
 
-//===- OperandLeafPredicateMatcher
-//-----------------------------------------===//
+//===- OperandLeafPredicateMatcher ----------------------------------------===//
 
 void OperandLeafPredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
@@ -2274,9 +1903,10 @@ void ImmRenderer::emitRenderOpcodes(MatchTable &Table,
     assert(Table.isCombiner() &&
            "ConstantInt immediate are only for combiners!");
     Table << MatchTable::Opcode("GIR_AddCImm") << MatchTable::Comment("InsnID")
-          << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type")
-          << *CImmLLT << MatchTable::Comment("Imm")
-          << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
+          << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type");
+    emitType(Table, *CImmLLT);
+    Table << MatchTable::Comment("Imm") << MatchTable::IntValue(8, Imm)
+          << MatchTable::LineBreak;
   } else {
     emitAddImm(Table, Rule, InsnID, Imm);
   }
@@ -2614,6 +2244,7 @@ void MakeTempRegisterAction::emitActionOpcodes(MatchTable &Table,
                                                RuleMatcher &Rule) const {
   Table << MatchTable::Opcode("GIR_MakeTempReg")
         << MatchTable::Comment("TempRegID")
-        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID")
-        << Ty << MatchTable::LineBreak;
+        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("TypeID");
+  emitType(Table, Ty);
+  Table << MatchTable::LineBreak;
 }
