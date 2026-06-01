@@ -22,11 +22,14 @@ int main() {
   if (hsa_amd_test_require_init())
     return 1;
 
-  const size_t kSize = 4096;
-  const uint64_t kAlign = 65536;
+  const size_t kSize = 4096; //4KiB size
+  // Here alignment is larger than a page size, so the reserved address will be aligned to 64KiB.
+  const uint64_t kAlign = 65536; //64KiB alignment
   void *mem = nullptr;
-  if (hsa_amd_vmem_address_reserve_align(&mem, kSize, /*address=*/0, kAlign,
-                                         /*flags=*/0) != HSA_STATUS_SUCCESS ||
+  // Host-accessible vmem reserve via NO_REGISTER (host mmap, not KFD VA).
+  if (hsa_amd_vmem_address_reserve_align(
+          &mem, kSize, /*address=*/0, kAlign,
+          /*flags=*/HSA_AMD_VMEM_ADDRESS_NO_REGISTER) != HSA_STATUS_SUCCESS ||
       !mem) {
     fprintf(stderr, "hsa_amd_vmem_address_reserve_align failed\n");
     return 1;
@@ -40,14 +43,16 @@ int main() {
 
   hsa_amd_pointer_info_t info = {};
   info.size = sizeof(hsa_amd_pointer_info_t);
+  // Intercepted by ASan, where hostBaseAddress is the user pointer.
   if (hsa_amd_pointer_info(mem, &info, nullptr, nullptr, nullptr) !=
       HSA_STATUS_SUCCESS) {
     fprintf(stderr, "hsa_amd_pointer_info failed\n");
     return 1;
   }
 
-  if (info.agentBaseAddress != mem ||
-      reinterpret_cast<uintptr_t>(info.agentBaseAddress) + info.sizeInBytes !=
+  // Verify: User Pointer(mem) returned is hostBaseAddress as expected.
+  if (info.hostBaseAddress != mem ||
+      reinterpret_cast<uintptr_t>(info.hostBaseAddress) + info.sizeInBytes !=
           user + kSize) {
     fprintf(stderr,
             "pointer_info mismatch: user=%p begin=%p size=%zu (expected %zu)\n",
@@ -56,7 +61,7 @@ int main() {
   }
 
   printf("pointer_info_vmem sizeInBytes: %zu\n", info.sizeInBytes);
-  printf("pointer_info_vmem begin: %p\n", info.agentBaseAddress);
+  printf("pointer_info_vmem begin: %p\n", info.hostBaseAddress);
 
   if (hsa_amd_vmem_address_free(mem, kSize) != HSA_STATUS_SUCCESS) {
     fprintf(stderr, "hsa_amd_vmem_address_free failed\n");
