@@ -1,14 +1,23 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.Test import Test, TestSuite
 
 
-def _get_test_times_path(suite):
+def _get_test_times_path(suite: TestSuite) -> str:
     test_times_file = os.path.join(suite.exec_root, ".lit_test_times.txt")
     if not os.path.exists(test_times_file):
         test_times_file = os.path.join(suite.source_root, ".lit_test_times.txt")
     return test_times_file
 
 
-def read_test_times(suite, lit_config=None):
+def read_test_times(
+    suite: TestSuite, lit_config: Optional[LitConfig] = None
+) -> Dict[Any, Any]:
     test_times = {}
     test_times_file = _get_test_times_path(suite)
     if os.path.exists(test_times_file):
@@ -33,7 +42,7 @@ def read_test_times(suite, lit_config=None):
     return test_times
 
 
-def record_test_times(tests, lit_config):
+def record_test_times(tests: List[Test], lit_config: LitConfig) -> None:
     times_by_suite = {}
     for t in tests:
         assert t.suite.test_times is None

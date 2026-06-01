@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import os
 import enum
@@ -9,6 +11,11 @@ import lit.formats
 import lit.TestingConfig
 import lit.util
 from lit.DiffUpdater import diff_test_updater
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from lit.cl_arguments import TestOrder
+
 
 # LitConfig must be a new style class for properties to work
 class LitConfig:
@@ -23,25 +30,25 @@ class LitConfig:
 
     def __init__(
         self,
-        progname,
-        path,
-        diagnostic_level,
-        useValgrind,
-        valgrindLeakCheck,
-        valgrindArgs,
-        noExecute,
-        debug,
-        isWindows,
-        order,
-        params,
-        config_prefix=None,
-        maxIndividualTestTime=None,
-        maxRetriesPerTest=None,
-        parallelism_groups={},
-        per_test_coverage=False,
-        gtest_sharding=True,
-        update_tests=False,
-    ):
+        progname: str,
+        path: List[str],
+        diagnostic_level: str,
+        useValgrind: bool,
+        valgrindLeakCheck: bool,
+        valgrindArgs: List[str],
+        noExecute: bool,
+        debug: bool,
+        isWindows: bool,
+        order: TestOrder,
+        params: Dict[str, Any],
+        config_prefix: Optional[str] = None,
+        maxIndividualTestTime: Optional[int] = None,
+        maxRetriesPerTest: Optional[int] = None,
+        parallelism_groups: Dict[Any, Any] = {},
+        per_test_coverage: bool = False,
+        gtest_sharding: bool = True,
+        update_tests: bool = False,
+    ) -> None:
         # The name of the test runner.
         self.progname = progname
         # The items to add to the PATH environment variable.
@@ -215,7 +222,7 @@ class LitConfig:
 
         return dir
 
-    def _write_message(self, kind, message):
+    def _write_message(self, kind: str, message: str) -> None:
         if not self.diagnostic_level_enabled(kind):
             return
         # Get the file/line where this message was generated.
@@ -245,14 +252,14 @@ class LitConfig:
                 "unable to find %r parameter, use '--param=%s=VALUE'" % (key, key)
             )
 
-    def diagnostic_level_enabled(self, kind):
+    def diagnostic_level_enabled(self, kind: str) -> bool:
         if kind == "debug":
             return self.debug
         return DiagnosticLevel.create(self.diagnostic_level) >= DiagnosticLevel.create(
             kind
         )
 
-    def dbg(self, message):
+    def dbg(self, message: str) -> None:
         self._write_message("debug", message)
 
     def note(self, message):

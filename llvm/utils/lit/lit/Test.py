@@ -1,10 +1,17 @@
+from __future__ import annotations
 import abc
+
 import itertools
 import os
 from json import JSONEncoder
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
 
 from lit.BooleanExpression import BooleanExpression
 from lit.TestTimes import read_test_times
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.TestingConfig import TestingConfig
 
 # Test result codes.
 
@@ -16,14 +23,16 @@ class ResultCode:
     _all_codes = []
 
     @staticmethod
-    def all_codes():
+    def all_codes() -> List[ResultCode]:
         return ResultCode._all_codes
 
     # We override __new__ and __getnewargs__ to ensure that pickling still
     # provides unique ResultCode objects in any particular instance.
     _instances = {}
 
-    def __new__(cls, name, label, isFailure):
+    def __new__(
+        cls: Type[ResultCode], name: str, label: str, isFailure: bool
+    ) -> "ResultCode":
         res = cls._instances.get(name)
         if res is None:
             cls._instances[name] = res = super().__new__(cls)
@@ -32,7 +41,7 @@ class ResultCode:
     def __getnewargs__(self):
         return (self.name, self.label, self.isFailure)
 
-    def __init__(self, name, label, isFailure):
+    def __init__(self, name: str, label: str, isFailure: bool) -> None:
         self.name = name
         self.label = label
         self.isFailure = isFailure
@@ -155,13 +164,13 @@ class Result:
 
     def __init__(
         self,
-        code,
-        output="",
-        elapsed=None,
-        attempts=1,
-        max_allowed_attempts=None,
-        test_updater_outputs=[],
-    ):
+        code: ResultCode,
+        output: str = "",
+        elapsed: None = None,
+        attempts: int = 1,
+        max_allowed_attempts: None = None,
+        test_updater_outputs: List[Any] = [],
+    ) -> None:
         # The result code.
         self.code = code
         # The test output.
@@ -223,7 +232,14 @@ class TestSuite:
     A test suite groups together a set of logically related tests.
     """
 
-    def __init__(self, name, source_root, exec_root, config, lit_config=None):
+    def __init__(
+        self,
+        name: str,
+        source_root: str,
+        exec_root: str,
+        config: TestingConfig,
+        lit_config: Optional[LitConfig] = None,
+    ) -> None:
         self.name = name
         self.source_root = source_root
         self.exec_root = exec_root
@@ -232,10 +248,10 @@ class TestSuite:
 
         self.test_times = read_test_times(self, lit_config)
 
-    def getSourcePath(self, components):
+    def getSourcePath(self, components: Union[Tuple[str], Tuple[()]]) -> str:
         return os.path.join(self.source_root, *components)
 
-    def getExecPath(self, components):
+    def getExecPath(self, components: Tuple[str]) -> str:
         return os.path.join(self.exec_root, *components)
 
 
@@ -243,8 +259,13 @@ class Test:
     """Test - Information on a single test instance."""
 
     def __init__(
-        self, suite, path_in_suite, config, file_path=None, gtest_json_file=None
-    ):
+        self,
+        suite: TestSuite,
+        path_in_suite: Union[Tuple[str], Tuple[str, str]],
+        config: TestingConfig,
+        file_path: None = None,
+        gtest_json_file: None = None,
+    ) -> None:
         self.suite = suite
         self.path_in_suite = path_in_suite
         self.config = config
@@ -313,14 +334,14 @@ class Test:
                     result.code = XFAIL
         self.result = result
 
-    def isFailure(self):
+    def isFailure(self) -> bool:
         assert self.result
         return self.result.code.isFailure
 
-    def getFullName(self):
+    def getFullName(self) -> str:
         return self.suite.config.name + " :: " + "/".join(self.path_in_suite)
 
-    def getSummaryName(self, printPathRelativeCWD):
+    def getSummaryName(self, printPathRelativeCWD: bool) -> str:
         if printPathRelativeCWD:
             return os.path.relpath(self.getFilePath())
         return self.getFullName()

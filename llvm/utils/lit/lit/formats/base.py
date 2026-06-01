@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING, Iterator, Tuple, Union
 
 import lit.Test
 import lit.util
+
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.TestingConfig import TestingConfig
 
 
 class TestFormat:
@@ -17,11 +24,18 @@ class TestFormat:
         """
         yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 
+
 ###
 
 
 class FileBasedTest(TestFormat):
-    def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsForPath(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: Union[Tuple[str], Tuple[str, str]],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         """
         Expand each path in a test suite to a Lit test using that path and assuming
         it is a file containing the test. File extensions excluded by the configuration
@@ -36,16 +50,25 @@ class FileBasedTest(TestFormat):
         if any(filename.endswith(suffix) for suffix in localConfig.suffixes):
             yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 
-    def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsInDirectory(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: Union[Tuple[()], Tuple[str]],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         source_path = testSuite.getSourcePath(path_in_suite)
         for filename in os.listdir(source_path):
             filepath = os.path.join(source_path, filename)
             if not os.path.isdir(filepath):
-                for t in self.getTestsForPath(testSuite, path_in_suite + (filename,), litConfig, localConfig):
+                for t in self.getTestsForPath(
+                    testSuite, path_in_suite + (filename,), litConfig, localConfig
+                ):
                     yield t
 
 
 ###
+
 
 # Check exit code of a simple executable with no input
 class ExecutableTest(FileBasedTest):

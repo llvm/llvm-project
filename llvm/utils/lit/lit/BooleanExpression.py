@@ -1,4 +1,5 @@
 import re
+from typing import Set, Union
 
 
 class BooleanExpression:
@@ -26,7 +27,7 @@ class BooleanExpression:
     # 'true' is true.
     # All other identifiers are false.
     @staticmethod
-    def evaluate(string, variables):
+    def evaluate(string: str, variables: Set[str]) -> bool:
         try:
             parser = BooleanExpression(string, set(variables))
             return parser.parseAll()
@@ -35,7 +36,7 @@ class BooleanExpression:
 
     #####
 
-    def __init__(self, string, variables):
+    def __init__(self, string: str, variables: Set[str]) -> None:
         self.tokens = BooleanExpression.tokenize(string)
         self.variables = variables
         self.variables.add("true")
@@ -71,14 +72,14 @@ class BooleanExpression:
         else:
             return repr(token)
 
-    def accept(self, t):
+    def accept(self, t: str) -> bool:
         if self.token == t:
             self.token = next(self.tokens)
             return True
         else:
             return False
 
-    def expect(self, t):
+    def expect(self, t: Union[object, str]) -> None:
         if self.token == t:
             if self.token != BooleanExpression.END:
                 self.token = next(self.tokens)
@@ -88,7 +89,7 @@ class BooleanExpression:
             )
 
     @staticmethod
-    def isMatchExpression(token):
+    def isMatchExpression(token: str) -> bool:
         if (
             token is BooleanExpression.END
             or token == "&&"
@@ -100,7 +101,7 @@ class BooleanExpression:
             return False
         return True
 
-    def parseMATCH(self):
+    def parseMATCH(self) -> None:
         regex = ""
         for part in filter(None, re.split(r"(\{\{.+?\}\})", self.token)):
             if part.startswith("{{"):
@@ -112,7 +113,7 @@ class BooleanExpression:
         self.value = any(regex.fullmatch(var) for var in self.variables)
         self.token = next(self.tokens)
 
-    def parseNOT(self):
+    def parseNOT(self) -> None:
         if self.accept("!"):
             self.parseNOT()
             self.value = not self.value
@@ -127,7 +128,7 @@ class BooleanExpression:
         else:
             self.parseMATCH()
 
-    def parseAND(self):
+    def parseAND(self) -> None:
         self.parseNOT()
         while self.accept("&&"):
             left = self.value
@@ -137,7 +138,7 @@ class BooleanExpression:
             # doesn't matter for this limited expression grammar
             self.value = left and right
 
-    def parseOR(self):
+    def parseOR(self) -> None:
         self.parseAND()
         while self.accept("||"):
             left = self.value
@@ -147,7 +148,7 @@ class BooleanExpression:
             # doesn't matter for this limited expression grammar
             self.value = left or right
 
-    def parseAll(self):
+    def parseAll(self) -> bool:
         self.token = next(self.tokens)
         self.parseOR()
         self.expect(BooleanExpression.END)

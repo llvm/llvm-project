@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import annotations
 
 # Source: http://code.activestate.com/recipes/475116/, with
 # modifications by Daniel Dunbar.
@@ -7,6 +8,8 @@ import os
 import re
 import sys
 import time
+from io import TextIOWrapper
+from typing import Type
 
 
 def to_bytes(str):
@@ -86,7 +89,9 @@ class TerminalController:
 
     _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
 
-    def __new__(cls, term_stream=sys.stdout):
+    def __new__(
+        cls: Type[TerminalController], term_stream: TextIOWrapper = sys.stdout
+    ) -> "_PosixTerminalController":
         if cls is TerminalController:
             if sys.platform == "win32":
                 return super().__new__(_WindowsTerminalController)
@@ -117,7 +122,7 @@ class _PosixTerminalController(TerminalController):
     HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
     _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
 
-    def __init__(self, term_stream=sys.stdout):
+    def __init__(self, term_stream: TextIOWrapper = sys.stdout) -> None:
         try:
             import curses
         except:
@@ -249,11 +254,11 @@ class SimpleProgressBar:
       'Header:  0.. 10.. 20.. ...'
     """
 
-    def __init__(self, header):
+    def __init__(self, header: str) -> None:
         self.header = header
         self.atIndex = None
 
-    def update(self, percent, message):
+    def update(self, percent: float, message: str) -> None:
         if self.atIndex is None:
             sys.stdout.write(self.header)
             self.atIndex = 0
@@ -275,7 +280,7 @@ class SimpleProgressBar:
         sys.stdout.flush()
         self.atIndex = next
 
-    def clear(self, interrupted):
+    def clear(self, interrupted: bool) -> None:
         if self.atIndex is not None and not interrupted:
             sys.stdout.write("\n")
             sys.stdout.flush()
@@ -297,7 +302,13 @@ class ProgressBar:
     BAR = "%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s"
     HEADER = "${BOLD}${CYAN}%s${NORMAL}\n\n"
 
-    def __init__(self, term, header, minOutputInterval, useETA=True):
+    def __init__(
+        self,
+        term: _PosixTerminalController,
+        header: str,
+        minOutputInterval: float,
+        useETA: bool = True,
+    ):
         self.term = term
         if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
             raise ValueError(
