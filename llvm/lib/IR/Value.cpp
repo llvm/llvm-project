@@ -542,8 +542,11 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
     U.set(New);
   }
 
-  if (BasicBlock *BB = dyn_cast<BasicBlock>(this))
+  if (BasicBlock *BB = dyn_cast<BasicBlock>(this)) {
     BB->replaceSuccessorsPhiUsesWith(cast<BasicBlock>(New));
+    if (BB->hasAddressTaken())
+      BlockAddress::lookup(BB)->handleOperandChange(this, New);
+  }
 }
 
 void Value::replaceAllUsesWith(Value *New) {

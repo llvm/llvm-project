@@ -632,10 +632,6 @@ bool LLParser::parseTopLevelEntities() {
       if (parseUseListOrder())
         return true;
       break;
-    case lltok::kw_uselistorder_bb:
-      if (parseUseListOrderBB())
-        return true;
-      break;
     }
   }
 }
@@ -9466,53 +9462,6 @@ bool LLParser::parseUseListOrder(PerFunctionState *PFS) {
       parseToken(lltok::comma, "expected comma in uselistorder directive") ||
       parseUseListOrderIndexes(Indexes))
     return true;
-
-  return sortUseListOrder(V, Indexes, Loc);
-}
-
-/// parseUseListOrderBB
-///   ::= 'uselistorder_bb' @foo ',' %bar ',' UseListOrderIndexes
-bool LLParser::parseUseListOrderBB() {
-  assert(Lex.getKind() == lltok::kw_uselistorder_bb);
-  SMLoc Loc = Lex.getLoc();
-  Lex.Lex();
-
-  ValID Fn, Label;
-  SmallVector<unsigned, 16> Indexes;
-  if (parseValID(Fn, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseValID(Label, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseUseListOrderIndexes(Indexes))
-    return true;
-
-  // Check the function.
-  GlobalValue *GV;
-  if (Fn.Kind == ValID::t_GlobalName)
-    GV = M->getNamedValue(Fn.StrVal);
-  else if (Fn.Kind == ValID::t_GlobalID)
-    GV = NumberedVals.get(Fn.UIntVal);
-  else
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (!GV)
-    return error(Fn.Loc,
-                 "invalid function forward reference in uselistorder_bb");
-  auto *F = dyn_cast<Function>(GV);
-  if (!F)
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (F->isDeclaration())
-    return error(Fn.Loc, "invalid declaration in uselistorder_bb");
-
-  // Check the basic block.
-  if (Label.Kind == ValID::t_LocalID)
-    return error(Label.Loc, "invalid numeric label in uselistorder_bb");
-  if (Label.Kind != ValID::t_LocalName)
-    return error(Label.Loc, "expected basic block name in uselistorder_bb");
-  Value *V = F->getValueSymbolTable()->lookup(Label.StrVal);
-  if (!V)
-    return error(Label.Loc, "invalid basic block in uselistorder_bb");
-  if (!isa<BasicBlock>(V))
-    return error(Label.Loc, "expected basic block in uselistorder_bb");
 
   return sortUseListOrder(V, Indexes, Loc);
 }
