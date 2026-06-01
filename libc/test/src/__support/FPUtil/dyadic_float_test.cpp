@@ -13,7 +13,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
+using DFloat128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
 using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
 using LIBC_NAMESPACE::Sign;
