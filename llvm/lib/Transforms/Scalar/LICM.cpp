@@ -1161,6 +1161,47 @@ static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
   return Source;
 }
 
+bool llvm::canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                        Loop *CurLoop, MemorySSA &MSSA,
+                        bool TargetExecutesOncePerLoop,
+                        SinkAndHoistLICMFlags &Flags,
+                        OptimizationRemarkEmitter *ORE) {
+  if (!LI.isUnordered())
+    return false; // Don't sink/hoist volatile or ordered atomic loads!
+
+  // Loads from constant memory are always safe to move, even if they end up
+  // in the same alias set as something that ends up being modified.
+  if (!isModSet(AA->getModRefInfoMask(LI.getOperand(0))))
+    return true;
+  if (LI.hasMetadata(LLVMContext::MD_invariant_load))
+    return true;
+
+  if (LI.isAtomic() && !TargetExecutesOncePerLoop)
+    return false; // Don't risk duplicating unordered loads
+
+  // This checks for an invariant.start dominating the load.
+  if (isLoadInvariantInLoop(&LI, DT, CurLoop))
+    return true;
+
+  auto *MU = cast<MemoryUse>(MSSA.getMemoryAccess(&LI));
+
+  bool InvariantGroup = LI.hasMetadata(LLVMContext::MD_invariant_group);
+
+  bool Invalidated =
+      pointerInvalidatedByLoop(&MSSA, MU, CurLoop, LI, Flags, InvariantGroup);
+  // Check loop-invariant address because this may also be a sinkable load
+  // whose address is not necessarily loop-invariant.
+  if (ORE && Invalidated && CurLoop->isLoopInvariant(LI.getPointerOperand()))
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(
+                 DEBUG_TYPE, "LoadWithLoopInvariantAddressInvalidated", &LI)
+             << "failed to move load with loop-invariant address "
+                "because the loop may invalidate its value";
+    });
+
+  return !Invalidated;
+}
+
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, MemorySSAUpdater &MSSAU,
                               bool TargetExecutesOncePerLoop,
@@ -1173,40 +1214,8 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
   MemorySSA *MSSA = MSSAU.getMemorySSA();
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
-    if (!LI->isUnordered())
-      return false; // Don't sink/hoist volatile or ordered atomic loads!
-
-    // Loads from constant memory are always safe to move, even if they end up
-    // in the same alias set as something that ends up being modified.
-    if (!isModSet(AA->getModRefInfoMask(LI->getOperand(0))))
-      return true;
-    if (LI->hasMetadata(LLVMContext::MD_invariant_load))
-      return true;
-
-    if (LI->isAtomic() && !TargetExecutesOncePerLoop)
-      return false; // Don't risk duplicating unordered loads
-
-    // This checks for an invariant.start dominating the load.
-    if (isLoadInvariantInLoop(LI, DT, CurLoop))
-      return true;
-
-    auto MU = cast<MemoryUse>(MSSA->getMemoryAccess(LI));
-
-    bool InvariantGroup = LI->hasMetadata(LLVMContext::MD_invariant_group);
-
-    bool Invalidated = pointerInvalidatedByLoop(
-        MSSA, MU, CurLoop, I, Flags, InvariantGroup);
-    // Check loop-invariant address because this may also be a sinkable load
-    // whose address is not necessarily loop-invariant.
-    if (ORE && Invalidated && CurLoop->isLoopInvariant(LI->getPointerOperand()))
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(
-                   DEBUG_TYPE, "LoadWithLoopInvariantAddressInvalidated", LI)
-               << "failed to move load with loop-invariant address "
-                  "because the loop may invalidate its value";
-      });
-
-    return !Invalidated;
+    return canHoistLoad(*LI, AA, DT, CurLoop, *MSSA, TargetExecutesOncePerLoop,
+                        Flags, ORE);
   } else if (CallInst *CI = dyn_cast<CallInst>(&I)) {
     // Don't sink calls which can throw.
     if (CI->mayThrow())
@@ -2593,6 +2602,9 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);
@@ -2674,6 +2686,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);

@@ -58,6 +58,7 @@ class CanonicalLoopInfo;
 
 namespace clang {
 class ASTContext;
+class AsmConstraintsInfo;
 class CXXDestructorDecl;
 class CXXForRangeStmt;
 class CXXTryStmt;
@@ -259,6 +260,7 @@ class CodeGenFunction : public CodeGenTypeCache {
   void operator=(const CodeGenFunction &) = delete;
 
   friend class CGCXXABI;
+  friend class clang::AsmConstraintsInfo;
 
 public:
   /// A jump destination is an abstract label, branching to which may
@@ -2868,8 +2870,7 @@ public:
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
   /// block if \p ArraySize is nullptr, otherwise inserts it at the current
   /// insertion point of the builder. The caller is responsible for setting an
-  /// appropriate alignment on
-  /// the alloca.
+  /// appropriate alignment on the alloca.
   ///
   /// \p ArraySize is the number of array elements to be allocated if it
   ///    is not nullptr.
@@ -2889,7 +2890,7 @@ public:
   /// various ways, this function will perform the cast. The original alloca
   /// instruction is returned through \p Alloca if it is not nullptr.
   ///
-  /// The cast is not performaed in CreateTempAllocaWithoutCast. This is
+  /// The cast is not performed in CreateTempAllocaWithoutCast. This is
   /// more efficient if the caller knows that the address will not be exposed.
   llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty, const Twine &Name = "tmp",
                                      llvm::Value *ArraySize = nullptr);
@@ -2962,7 +2963,7 @@ public:
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
     return AggValueSlot::forAddr(
-        CreateMemTemp(T, Name, Alloca), T.getQualifiers(),
+        CreateMemTemp(T.getUnqualifiedType(), Name, Alloca), T.getQualifiers(),
         AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
         AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
   }
@@ -4611,6 +4612,15 @@ public:
   llvm::CallInst *EmitRuntimeCall(llvm::FunctionCallee callee,
                                   ArrayRef<llvm::Value *> args,
                                   const Twine &name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Value *> Args,
+                                    const Twine &Name = "");
+  llvm::CallInst *EmitIntrinsicCall(llvm::Intrinsic::ID ID,
+                                    ArrayRef<llvm::Type *> Types,
+                                    ArrayRef<llvm::Value *> Args,
+                                    const Twine &Name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
                                           const Twine &name = "");
   llvm::CallInst *EmitNounwindRuntimeCall(llvm::FunctionCallee callee,
@@ -5437,11 +5447,11 @@ public:
   void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
                                SourceLocation Loc);
 
-private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
+private:
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);

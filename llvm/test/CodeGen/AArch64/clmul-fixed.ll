@@ -6536,15 +6536,13 @@ define <2 x i64> @clmulr_v2i64_neon(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; CHECK-AES-LABEL: clmulr_v2i64_neon:
 ; CHECK-AES:       // %bb.0:
-; CHECK-AES-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-AES-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-AES-NEXT:    rbit v1.16b, v1.16b
-; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-AES-NEXT:    pmull2 v2.1q, v0.2d, v1.2d
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-AES-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-AES-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
+; CHECK-AES-NEXT:    zip2 v1.2d, v0.2d, v2.2d
+; CHECK-AES-NEXT:    mov v3.16b, v0.16b
+; CHECK-AES-NEXT:    mov v3.d[1], v2.d[0]
+; CHECK-AES-NEXT:    add v0.2d, v1.2d, v1.2d
+; CHECK-AES-NEXT:    usra v0.2d, v3.2d, #63
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <2 x i64> %a to <2 x i128>
   %b.ext = zext <2 x i64> %b to <2 x i128>
@@ -7015,13 +7013,10 @@ define <1 x i64> @clmulr_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ;
 ; CHECK-AES-LABEL: clmulr_v1i64_neon:
 ; CHECK-AES:       // %bb.0:
-; CHECK-AES-NEXT:    rev64 v1.8b, v1.8b
-; CHECK-AES-NEXT:    rev64 v0.8b, v0.8b
-; CHECK-AES-NEXT:    rbit v1.8b, v1.8b
-; CHECK-AES-NEXT:    rbit v0.8b, v0.8b
-; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-AES-NEXT:    rev64 v0.8b, v0.8b
-; CHECK-AES-NEXT:    rbit v0.8b, v0.8b
+; CHECK-AES-NEXT:    pmull v1.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
+; CHECK-AES-NEXT:    shl d0, d0, #1
+; CHECK-AES-NEXT:    usra d0, d1, #63
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <1 x i64> %a to <1 x i128>
   %b.ext = zext <1 x i64> %b to <1 x i128>
@@ -8089,16 +8084,9 @@ define <2 x i64> @clmulh_v2i64_neon(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; CHECK-AES-LABEL: clmulh_v2i64_neon:
 ; CHECK-AES:       // %bb.0:
-; CHECK-AES-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-AES-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-AES-NEXT:    rbit v1.16b, v1.16b
-; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-AES-NEXT:    pmull2 v2.1q, v0.2d, v1.2d
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-AES-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-AES-NEXT:    rev64 v0.16b, v0.16b
-; CHECK-AES-NEXT:    rbit v0.16b, v0.16b
-; CHECK-AES-NEXT:    ushr v0.2d, v0.2d, #1
+; CHECK-AES-NEXT:    zip2 v0.2d, v0.2d, v2.2d
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <2 x i64> %a to <2 x i128>
   %b.ext = zext <2 x i64> %b to <2 x i128>
@@ -8570,14 +8558,9 @@ define <1 x i64> @clmulh_v1i64_neon(<1 x i64> %a, <1 x i64> %b) nounwind {
 ;
 ; CHECK-AES-LABEL: clmulh_v1i64_neon:
 ; CHECK-AES:       // %bb.0:
-; CHECK-AES-NEXT:    rev64 v1.8b, v1.8b
-; CHECK-AES-NEXT:    rev64 v0.8b, v0.8b
-; CHECK-AES-NEXT:    rbit v1.8b, v1.8b
-; CHECK-AES-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-AES-NEXT:    rev64 v0.8b, v0.8b
-; CHECK-AES-NEXT:    rbit v0.8b, v0.8b
-; CHECK-AES-NEXT:    ushr d0, d0, #1
+; CHECK-AES-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-AES-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-AES-NEXT:    ret
   %a.ext = zext <1 x i64> %a to <1 x i128>
   %b.ext = zext <1 x i64> %b to <1 x i128>

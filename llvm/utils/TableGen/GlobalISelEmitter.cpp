@@ -35,8 +35,8 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchTable/Matchers.h"
 #include "Common/InfoByHwMode.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -2309,45 +2309,14 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
 MatchTable
 GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                    bool Optimize, bool WithCoverage) {
-  std::vector<Matcher *> InputRules;
-  for (Matcher &Rule : Rules)
-    InputRules.push_back(&Rule);
-
-  if (!Optimize)
-    return MatchTable::buildTable(InputRules, WithCoverage);
-
-  unsigned CurrentOrdering = 0;
-  StringMap<unsigned> OpcodeOrder;
-  for (RuleMatcher &Rule : Rules) {
-    const StringRef Opcode = Rule.getOpcode();
-    assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
-      ++CurrentOrdering;
+  if (!Optimize) {
+    SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
+    return ::buildMatchTable(InputRules, WithCoverage);
   }
 
-  llvm::stable_sort(
-      InputRules, [&OpcodeOrder](const Matcher *A, const Matcher *B) {
-        auto *L = static_cast<const RuleMatcher *>(A);
-        auto *R = static_cast<const RuleMatcher *>(B);
-        return std::tuple(OpcodeOrder[L->getOpcode()],
-                          L->insnmatchers_front().getNumOperandMatchers()) <
-               std::tuple(OpcodeOrder[R->getOpcode()],
-                          R->insnmatchers_front().getNumOperandMatchers());
-      });
-
-  for (Matcher *Rule : InputRules)
-    Rule->optimize();
-
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
-  std::vector<Matcher *> OptRules =
-      optimizeRules<GroupMatcher>(InputRules, MatcherStorage);
-
-  for (Matcher *Rule : OptRules)
-    Rule->optimize();
-
-  OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
-
-  return MatchTable::buildTable(OptRules, WithCoverage);
+  std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
+  return ::buildMatchTable(OptRules, WithCoverage);
 }
 
 void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {

@@ -92,6 +92,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_VecInregOp(N);
     break;
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::ANY_EXTEND:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
@@ -900,6 +901,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STORE:
     Res = ScalarizeVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
+  case ISD::ATOMIC_STORE:
+    Res = ScalarizeVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::STRICT_FP_ROUND:
     Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
     break;
@@ -1162,6 +1166,15 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
                       N->getMemOperand()->getFlags(), N->getAAInfo());
 }
 
+/// If the value to store is a vector that needs to be scalarized, it must be
+/// <1 x ty>.  Just store the element.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N) {
+  SDValue ScalarVal = GetScalarizedVector(N->getVal());
+  return DAG.getAtomic(ISD::ATOMIC_STORE, SDLoc(N),
+                       N->getMemoryVT().getVectorElementType(), N->getChain(),
+                       ScalarVal, N->getBasePtr(), N->getMemOperand());
+}
+
 /// If the value to round is a vector that needs to be scalarized, it must be
 /// <1 x ty>. Convert the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
@@ -1406,6 +1419,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::VP_ABS:
   case ISD::BITREVERSE:
   case ISD::VP_BITREVERSE:
@@ -3498,6 +3512,17 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   SDValue EVL = N->getOperand(2);
   SDLoc DL(N);
 
+  // The stack round-trip uses a byte stride, so a sub-byte element (e.g. i1)
+  // would get stride 0 and alias every lane. Widen to a byte integer, reverse,
+  // then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Val);
+  }
+
   // Fallback to VP_STRIDED_STORE to stack followed by VP_LOAD.
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3532,6 +3557,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
@@ -3550,6 +3579,18 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
   // SelectionDAGBuilder. Promote EVL1 here if needed.
   if (getTypeAction(EVL1.getValueType()) == TargetLowering::TypePromoteInteger)
     EVL1 = ZExtPromotedInteger(EVL1);
+
+  // The stack splice addresses elements by byte offset/stride, which breaks for
+  // a sub-byte element (e.g. i1): getVectorElementPointer asserts and the
+  // stride is 0. Widen to a byte integer, splice, then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    V1 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V1);
+    V2 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V2);
+  }
 
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3599,8 +3640,12 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
     Load = DAG.getLoadVP(VT, DL, StoreV2, StackPtr2, Mask, EVL2, LoadMMO);
   }
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(OrigVT);
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
                    DAG.getVectorIdxConstant(0, DL));
   Hi =
@@ -5383,6 +5428,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     [[fallthrough]];
 
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::VP_ABS:
   case ISD::BITREVERSE:
   case ISD::VP_BITREVERSE:
@@ -6606,11 +6652,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
       TLI.getTypeToTransformTo(*DAG.getContext(), LD->getValueType(0));
   EVT LdVT = LD->getMemoryVT();
   SDLoc dl(LD);
-  assert(LdVT.isVector() && WidenVT.isVector() && "Expected vectors");
-  assert(LdVT.isScalableVector() == WidenVT.isScalableVector() &&
-         "Must be scalable");
-  assert(LdVT.getVectorElementType() == WidenVT.getVectorElementType() &&
-         "Expected equivalent element types");
 
   // Load information
   SDValue Chain = LD->getChain();

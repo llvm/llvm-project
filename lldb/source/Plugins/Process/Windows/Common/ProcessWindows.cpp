@@ -62,7 +62,7 @@ std::string GetProcessExecutableName(HANDLE process_handle) {
   do {
     file_name_size *= 2;
     file_name.resize(file_name_size);
-    copied = ::GetModuleFileNameExW(process_handle, NULL, file_name.data(),
+    copied = ::GetModuleFileNameExW(process_handle, nullptr, file_name.data(),
                                     file_name_size);
   } while (copied >= file_name_size);
   file_name.resize(copied);
@@ -75,7 +75,7 @@ std::string GetProcessExecutableName(DWORD pid) {
   std::string file_name;
   HANDLE process_handle =
       ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-  if (process_handle != NULL) {
+  if (process_handle != nullptr) {
     file_name = GetProcessExecutableName(process_handle);
     ::CloseHandle(process_handle);
   }
@@ -127,7 +127,7 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
           RegisterContextWindows::GetNumHardwareBreakpointSlots(),
           LLDB_INVALID_BREAK_ID) {}
 
-ProcessWindows::~ProcessWindows() {}
+ProcessWindows::~ProcessWindows() = default;
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
@@ -644,7 +644,7 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
 }
 
 DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
-  if (m_dyld_up.get() == NULL)
+  if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderWindowsDYLD::GetPluginNameStatic()));
   return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_up.get());
@@ -1100,8 +1100,8 @@ public:
         m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
         m_write_file(conpty_input),
         m_interrupt_event(
-            CreateEvent(/*lpEventAttributes=*/NULL, /*bManualReset=*/FALSE,
-                        /*bInitialState=*/FALSE, /*lpName=*/NULL)) {}
+            CreateEvent(/*lpEventAttributes=*/nullptr, /*bManualReset=*/FALSE,
+                        /*bInitialState=*/FALSE, /*lpName=*/nullptr)) {}
 
   ~IOHandlerProcessSTDIOWindows() override {
     if (m_interrupt_event != INVALID_HANDLE_VALUE)
@@ -1126,7 +1126,7 @@ public:
     // Check if there are already characters buffered. Pressing enter counts as
     // 2 characters '\r\n' and only one of them is a keyDown event.
     DWORD bytesAvailable = 0;
-    if (PeekNamedPipe(hStdin, NULL, 0, NULL, &bytesAvailable, NULL)) {
+    if (PeekNamedPipe(hStdin, nullptr, 0, nullptr, &bytesAvailable, nullptr)) {
       if (bytesAvailable > 0)
         return true;
     }

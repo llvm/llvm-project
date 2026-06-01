@@ -478,6 +478,11 @@ private:
   /// A queue of (optional) vtables to consider emitting.
   std::vector<const CXXRecordDecl*> DeferredVTables;
 
+  /// In incremental compilation, the set of vtable classes whose vtable
+  /// definitions were emitted into a previous PTU's module. Carried forward
+  /// by moveLazyEmissionStates() so later PTUs skip re-defining them.
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> EmittedVTables;
+
   /// A queue of (optional) vtables that may be emitted opportunistically.
   std::vector<const CXXRecordDecl *> OpportunisticVTables;
 
@@ -1292,6 +1297,9 @@ public:
   // are needed or if they are alias to each other.
   llvm::Function *codegenCXXStructor(GlobalDecl GD);
 
+  /// Emit a trap stub body for functions in ASTContext::CUDADeviceInvalidFuncs.
+  bool tryEmitCUDADeviceInvalidFunctionBody(GlobalDecl GD, llvm::Function *Fn);
+
   /// Return the address of the constructor/destructor of the given type.
   llvm::Constant *
   getAddrOfCXXStructor(GlobalDecl GD, const CGFunctionInfo *FnInfo = nullptr,
@@ -1852,7 +1860,7 @@ public:
   bool shouldEmitConvergenceTokens() const {
     // TODO: this should probably become unconditional once the controlled
     // convergence becomes the norm.
-    return getTriple().isSPIRVLogical();
+    return getTriple().isSPIRVLogical() || getTriple().isDXIL();
   }
 
   void addUndefinedGlobalForTailCall(

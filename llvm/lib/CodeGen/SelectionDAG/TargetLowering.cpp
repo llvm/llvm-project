@@ -821,13 +821,18 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Op.getOperand(1);
     break;
   }
-  case ISD::ADD: {
-    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    if (RHSKnown.isZero())
+  case ISD::ADD:
+  case ISD::MUL:
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX: {
+    if (DAG.isIdentityElement(Op.getOpcode(), Op->getFlags(), Op.getOperand(1),
+                              DemandedElts, 1, Depth + 1))
       return Op.getOperand(0);
 
-    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    if (LHSKnown.isZero())
+    if (DAG.isIdentityElement(Op.getOpcode(), Op->getFlags(), Op.getOperand(0),
+                              DemandedElts, 0, Depth + 1))
       return Op.getOperand(1);
     break;
   }
@@ -1251,6 +1256,13 @@ bool TargetLowering::SimplifyDemandedBits(
     // Implicitly truncate the bits to match the official semantics of
     // SPLAT_VECTOR.
     Known = KnownScl.trunc(BitWidth);
+    break;
+  }
+  case ISD::FREEZE: {
+    SDValue N0 = Op.getOperand(0);
+    if (TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            N0, DemandedElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
+      return TLO.CombineTo(Op, N0);
     break;
   }
   case ISD::LOAD: {
@@ -10628,6 +10640,15 @@ SDValue TargetLowering::expandABS(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
 
+  // If expanding ABS_MIN_POISON, fall back to ABS if the target supports it.
+  if (N->getOpcode() == ISD::ABS_MIN_POISON &&
+      isOperationLegalOrCustom(ISD::ABS, VT)) {
+    SDValue AbsVal = DAG.getNode(ISD::ABS, dl, VT, Op);
+    if (IsNegative)
+      return DAG.getNegative(AbsVal, dl, VT);
+    return AbsVal;
+  }
+
   // abs(x) -> smax(x,sub(0,x))
   if (!IsNegative && isOperationLegal(ISD::SUB, VT) &&
       isOperationLegal(ISD::SMAX, VT)) {
@@ -13090,6 +13111,29 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   bool ZeroIsPoison = Node->getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON;
   auto [Mask, StepVec] =
       getLegalMaskAndStepVector(Node->getOperand(0), ZeroIsPoison, DL, DAG);
+
+  // No legal step vector: split mask in half and recombine results.
+  // LoNumElts uses the non-poison CTTZ_ELTS so its result is well-defined
+  // (== LoNumElts when no active lane), allowing the SETNE comparison.
+  // Result: (ResLo != LoNumElts) ? ResLo : (LoNumElts + ResHi)
+  if (!StepVec) {
+    EVT ResVT = Node->getValueType(0);
+    auto [MaskLo, MaskHi] = DAG.SplitVector(Node->getOperand(0), DL);
+    SDValue LoNumElts = DAG.getElementCount(
+        DL, ResVT, MaskLo.getValueType().getVectorElementCount());
+    SDValue ResLo = DAG.getNode(ISD::CTTZ_ELTS, DL, ResVT, MaskLo);
+    SDValue ResHi = DAG.getNode(Node->getOpcode(), DL, ResVT, MaskHi);
+    SDValue ResLoNotNumElts = DAG.getSetCC(
+        DL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResVT),
+        ResLo, LoNumElts, ISD::SETNE);
+    // Per LangRef, ResVT must be wide enough to hold the total element count,
+    // so the sum cannot wrap as an unsigned add. NSW is not guaranteed since
+    // the count is only required to fit unsigned.
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, ResVT, LoNumElts, ResHi,
+                              SDNodeFlags::NoUnsignedWrap);
+    return DAG.getSelect(DL, ResVT, ResLoNotNumElts, ResLo, Sum);
+  }
+
   EVT StepVecVT = StepVec.getValueType();
   EVT StepVT = StepVecVT.getVectorElementType();
 

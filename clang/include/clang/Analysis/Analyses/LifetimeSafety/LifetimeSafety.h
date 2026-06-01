@@ -41,9 +41,9 @@ struct LifetimeSafetyOpts {
 };
 
 /// Enum to track functions visible across or within TU.
-enum class SuggestionScope {
-  CrossTU, // For suggestions on declarations visible across Translation Units.
-  IntraTU  // For suggestions on definitions local to a Translation Unit.
+enum class WarningScope {
+  CrossTU, // For warnings on declarations visible across Translation Units.
+  IntraTU  // For warnings on functions local to a Translation Unit.
 };
 
 /// Abstract interface for operations requiring Sema access.
@@ -67,8 +67,7 @@ public:
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,
-                                    const Expr *MovedExpr,
-                                    SourceLocation ExpiryLoc) {}
+                                    const Expr *MovedExpr) {}
 
   virtual void reportDanglingField(const Expr *IssueExpr,
                                    const FieldDecl *Field,
@@ -88,12 +87,24 @@ public:
   virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
                                           const Expr *UseExpr,
                                           const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const Expr *IssueExpr,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedField(const ParmVarDecl *PVD,
+                                      const FieldDecl *Field,
+                                      const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const Expr *IssueExpr,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
+  virtual void reportInvalidatedGlobal(const ParmVarDecl *PVD,
+                                       const VarDecl *Global,
+                                       const Expr *InvalidationExpr) {}
 
   using EscapingTarget =
       llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
 
   // Suggests lifetime bound annotations for function parameters.
-  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToParmVar(WarningScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
                                              EscapingTarget Target) {}
 
@@ -113,8 +124,25 @@ public:
   virtual void
   reportLifetimeboundViolation(const ParmVarDecl *ParmWithLifetimebound) {}
 
+  // Reports misuse of [[clang::lifetimebound]] when implicit this parameter
+  // doesn't escape through return.
+  virtual void
+  reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
+
+  // Reports a member function definition that has [[clang::lifetimebound]] on
+  // the implicit this parameter when the canonical declaration does not.
+  virtual void reportMisplacedLifetimebound(WarningScope Scope,
+                                            const CXXMethodDecl *FDef,
+                                            const CXXMethodDecl *FDecl) {}
+
+  // Reports a function definition parameter that has [[clang::lifetimebound]]
+  // when the corresponding parameter in the canonical declaration.
+  virtual void reportMisplacedLifetimebound(WarningScope Scope,
+                                            const ParmVarDecl *PVDDef,
+                                            const ParmVarDecl *PVDDecl) {}
+
   // Suggests lifetime bound annotations for implicit this.
-  virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+  virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
                                                   const CXXMethodDecl *MD,
                                                   const Expr *EscapeExpr) {}
 
