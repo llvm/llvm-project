@@ -2052,7 +2052,7 @@ bool VectorCombine::foldInsertElementsStore(Instruction &I) {
   // Now we know the transform is profitable. It is safe to mutate IR.
   for (auto [InsertVal, Idx] : InsertElements) {
     auto ScalarizableIdx =
-        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(&I));
     assert(!ScalarizableIdx.isUnsafe() && "already checked above");
 
     if (ScalarizableIdx.isSafeWithFreeze())
