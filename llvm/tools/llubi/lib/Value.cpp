@@ -339,16 +339,9 @@ ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
 }
 
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
-  std::vector<Byte> Val(divideCeil(BitWidth, 8), Byte::poison());
-  // Zero high-bits if it is not a byte-sized value.
-  if (BitWidth & 7) {
-    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
-    if (IsLittleEndian)
-      Val.back().zeroBits(Mask);
-    else
-      Val.front().zeroBits(Mask);
-  }
-  return ByteValue(BitWidth, std::move(Val), IsLittleEndian);
+  return ByteValue(BitWidth,
+                   std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
+                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
 }
 
 void ByteValue::print(raw_ostream &OS) const {
