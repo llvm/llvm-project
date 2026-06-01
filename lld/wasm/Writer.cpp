@@ -431,7 +431,8 @@ void Writer::layoutMemory() {
   }
 
   // Make space for the memory initialization flag
-  if (ctx.arg.threadModel == ThreadModel::SharedMemory && hasPassiveInitializedSegments()) {
+  if (ctx.arg.threadModel == ThreadModel::SharedMemory &&
+      hasPassiveInitializedSegments()) {
     memoryPtr = alignTo(memoryPtr, 4);
     ctx.sym.initMemoryFlag = symtab->addSyntheticDataSymbol(
         "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
@@ -1063,8 +1064,8 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all.
   bool needsPassiveInit = ctx.arg.threadModel == ThreadModel::SharedMemory ||
-                        (ctx.arg.threadModel == ThreadModel::Cooperative &&
-                         (s->isTLS() || s->name.starts_with(".bss")));
+                          (ctx.arg.threadModel == ThreadModel::Cooperative &&
+                           (s->isTLS() || s->name.starts_with(".bss")));
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
@@ -1798,7 +1799,8 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (ctx.isPic && !ctx.arg.extendedConst && ctx.arg.threadModel != ThreadModel::SharedMemory) {
+  if (ctx.isPic && !ctx.arg.extendedConst &&
+      ctx.arg.threadModel != ThreadModel::SharedMemory) {
     // In shared memory mode all data segments are passive and initialized
     // via __wasm_init_memory.
     log("-- combineOutputSegments");

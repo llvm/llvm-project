@@ -265,7 +265,8 @@ void ImportSection::writeBody() {
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
-    if (out.memorySec->maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory) {
+    if (out.memorySec->maxMemoryPages != 0 ||
+        ctx.arg.threadModel == ThreadModel::SharedMemory) {
       import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       import.Memory.Maximum = out.memorySec->maxMemoryPages;
     }
@@ -406,7 +407,8 @@ void TableSection::assignIndexes() {
 void MemorySection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  bool hasMax = maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory;
+  bool hasMax =
+      maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory;
   writeUleb128(os, 1, "memory count");
   unsigned flags = 0;
   if (hasMax)
@@ -572,7 +574,8 @@ void GlobalSection::writeBody() {
         // In the multithreaded case, TLS globals are set during
         // `__wasm_apply_global_tls_relocs`, but in the single-threaded case
         // we know the absolute value at link time.
-        initExpr = intConst(d->getVA(/*absolute=*/!ctx.arg.isMultithreaded()), is64);
+        initExpr =
+            intConst(d->getVA(/*absolute=*/!ctx.arg.isMultithreaded()), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
