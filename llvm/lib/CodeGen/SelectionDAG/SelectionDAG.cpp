@@ -6656,7 +6656,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     // div exact can only produce a zero if the dividend is zero.
     // TODO: For udiv this is also true if Op1 u<= Op0
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
     break;
 
   case ISD::ADD:
@@ -13795,8 +13795,9 @@ bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   N = peekThroughBitcasts(N);
   unsigned BitWidth = N.getScalarValueSizeInBits();
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && C->isAllOnes() && C->getValueSizeInBits(0) == BitWidth;
+  ConstantSDNode *C =
+      isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation=*/true);
+  return C && C->getAPIntValue().countTrailingOnes() >= BitWidth;
 }
 
 bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {

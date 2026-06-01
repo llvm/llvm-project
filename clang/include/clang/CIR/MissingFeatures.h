@@ -83,7 +83,6 @@ struct MissingFeatures {
   static bool opFuncReadOnly() { return false; }
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
-  static bool opFuncNoReturn() { return false; }
   static bool handleCUDALaunchBoundsAttr() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
@@ -126,7 +125,6 @@ struct MissingFeatures {
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
-  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -219,7 +217,6 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool hipModuleCtor() { return false; }
-  static bool globalRegistration() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
@@ -282,7 +279,6 @@ struct MissingFeatures {
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
-  static bool loopSpecificCleanupHandling() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }

@@ -26,7 +26,8 @@ CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.
 CHECK: HEATMAP: building heat map
 CHECK: BOLT-INFO: Functions with density >= {{.*}} account for 99.00% total sample counts.
-CHECK-MULTI: BOLT-INFO
+CHECK-MULTI: PERF2BOLT: Starting data aggregation job
+CHECK-MULTI: PERF2BOLT: Starting data aggregation job
 
 RUN: %clang %S/Inputs/perf_test.c -no-pie -fuse-ld=lld -o %t4
 RUN: perf record -Fmax -e cycles:u -o %t5 -- %t4

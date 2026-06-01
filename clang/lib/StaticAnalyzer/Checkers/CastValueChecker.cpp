@@ -252,7 +252,7 @@ static void addCastTransition(const CallEvent &Call, DefinedOrUnknownSVal DV,
   SVal V = CastSucceeds ? C.getSValBuilder().evalCast(DV, CastToTy, CastFromTy)
                         : C.getSValBuilder().makeNullWithType(CastToTy);
   C.addTransition(
-      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), V, false),
+      State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), V, false),
       getNoteTag(C, CastInfo, CastToTy, Object, CastSucceeds, IsKnownCast));
 }
 
@@ -313,11 +313,11 @@ static void addInstanceOfTransition(const CallEvent &Call,
 
     if (CastSucceeds) {
       Success = true;
-      C.addTransition(
-          NewState->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                             C.getSValBuilder().makeTruthVal(true)),
-          getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0), true,
-                     IsKnownCast));
+      C.addTransition(NewState->BindExpr(Call.getOriginExpr(),
+                                         C.getStackFrame(),
+                                         C.getSValBuilder().makeTruthVal(true)),
+                      getNoteTag(C, CastInfo, CastToTy, Call.getArgExpr(0),
+                                 true, IsKnownCast));
       if (IsKnownCast)
         return;
     } else if (CastInfo && CastInfo->succeeds()) {
@@ -327,10 +327,9 @@ static void addInstanceOfTransition(const CallEvent &Call,
   }
 
   if (!Success) {
-    C.addTransition(
-        State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
-                        C.getSValBuilder().makeTruthVal(false)),
-        getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
+    C.addTransition(State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
+                                    C.getSValBuilder().makeTruthVal(false)),
+                    getNoteTag(C, CastToTyVec, Call.getArgExpr(0), IsAnyKnown));
   }
 }
 
@@ -357,8 +356,7 @@ static void evalNullParamNullReturn(const CallEvent &Call,
                                     DefinedOrUnknownSVal DV,
                                     CheckerContext &C) {
   if (ProgramStateRef State = C.getState()->assume(DV, false))
-    C.addTransition(State->BindExpr(Call.getOriginExpr(),
-                                    C.getLocationContext(),
+    C.addTransition(State->BindExpr(Call.getOriginExpr(), C.getStackFrame(),
                                     C.getSValBuilder().makeNullWithType(
                                         Call.getOriginExpr()->getType()),
                                     false),

@@ -269,7 +269,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   std::optional<bool> BoltedCollection;
   std::optional<bool> NoLBRCollection;
   std::mutex BoltedCollectionMutex;
-  StringSet<> EventNames;
+  std::set<std::string> EventNames;
   struct CounterTy {
     uint64_t Exec{0};
     uint64_t Mispred{0};
@@ -326,7 +326,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
         NoLBRLine.trim().split(Events, ' ', /*MaxSplit=*/-1,
                                /*KeepEmpty=*/false);
         for (StringRef Event : Events)
-          EventNames.insert(Event);
+          EventNames.insert(Event.str());
       }
       Profile = &Profiles[tid];
     }
@@ -399,7 +399,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     output() << "boltedcollection\n";
   if (NoLBRCollection.value_or(false)) {
     output() << "no_lbr";
-    for (StringRef Entry : EventNames.keys())
+    for (StringRef Entry : EventNames)
       output() << ' ' << Entry;
     output() << '\n';
   }

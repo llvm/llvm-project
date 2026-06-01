@@ -927,8 +927,9 @@ its enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_USE_SANITIZER**:STRING
   Define the sanitizer used to build LLVM binaries and tests. Possible values
-  are ``Address``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``, ``Thread``,
-  ``DataFlow``, and ``Address;Undefined``. Defaults to empty string.
+  are ``Address``, ``HWAddress``, ``Memory``, ``MemoryWithOrigins``, ``Undefined``,
+  ``Thread``, ``DataFlow``, ``Leaks``, and ``Address;Undefined``. Defaults to
+  empty string.
 
 **LLVM_USE_SPLIT_DWARF**:BOOL
   If enabled CMake will pass ``-gsplit-dwarf`` to the compiler. This option
