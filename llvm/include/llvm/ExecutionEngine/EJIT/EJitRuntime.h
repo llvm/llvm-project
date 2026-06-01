@@ -83,6 +83,8 @@ typedef struct {
   size_t maxCacheEntries;
   size_t maxCacheSize;
   bool enableLogger;
+  /// If true, force the static registry table path (skip constructors).
+  bool forceStaticRegistry;
   /// If non-NULL, dump JIT-optimized LLVM IR (.ll) to this directory.
   const char *dumpJITDir;
 } ejit_config_t;

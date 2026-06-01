@@ -28,6 +28,10 @@ struct Config {
   size_t maxCacheSize = 32 * 1024 * 1024;
   size_t maxSingleFuncSize = 512 * 1024;
   bool enableLogger = true;
+  /// If true, skip the constructor-based registration path and use the
+  /// static registry table (__ejit_registry_*[]).  For bare-metal where
+  /// global constructors are unavailable, or for testing.
+  bool forceStaticRegistry = false;
   /// If non-empty, dump JIT-optimized LLVM IR (.ll) to this directory.
   /// One file per specialization, named <funcName>_<cacheKey>.ll.
   std::string dumpJITDir;

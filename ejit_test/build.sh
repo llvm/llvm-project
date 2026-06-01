@@ -161,6 +161,7 @@ ALL_TESTS=(
   ejit_multiversion_test
   ejit_nested_struct_test
   ejit_opt_level_test
+  ejit_manual_register_test
   ejit_perf_bench
   ejit_ptr_period_test
   ejit_trace_test
