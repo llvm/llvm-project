@@ -226,6 +226,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  netinet_tcp
+  ../libc/include/netinet/tcp.yaml
+  netinet/tcp.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h
@@ -666,6 +674,15 @@ add_header_macro(
     .llvm-libc-types.off_t
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
+)
+
+add_header_macro(
+  sys_param
+  ../libc/include/sys/param.yaml
+  sys/param.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_param_macros
 )
 
 add_header_macro(

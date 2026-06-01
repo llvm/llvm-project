@@ -127,9 +127,12 @@ public:
       return getNullDataMemberAttr(dataMemberTy);
     if (auto methodTy = mlir::dyn_cast<cir::MethodType>(ty))
       return getNullMethodAttr(methodTy);
+    if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(ty))
+      return cir::ZeroAttr::get(vptrTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
+
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 

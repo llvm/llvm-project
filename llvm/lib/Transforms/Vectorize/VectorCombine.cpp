@@ -2016,7 +2016,10 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
 
   auto *LI = cast<LoadInst>(&I);
   auto *VecTy = cast<VectorType>(LI->getType());
-  if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
+
+  // The isSimple() check could be isUnordered(), but for now we cowardly
+  // refuse to handle even unordered atomics.
+  if (!LI->isSimple() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
   bool AllExtracts = true;

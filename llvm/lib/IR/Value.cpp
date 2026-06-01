@@ -834,13 +834,18 @@ bool Value::canBeFreed() const {
   if (auto *A = dyn_cast<Argument>(this)) {
     if (A->hasPointeeInMemoryValueAttr())
       return false;
-    // A pointer to an object in a function which neither frees, nor can arrange
-    // for another thread to free on its behalf, can not be freed in the scope
-    // of the function.  Note that this logic is restricted to memory
-    // allocations in existance before the call; a nofree function *is* allowed
-    // to free memory it allocated.
+    // A nofree function can not free (including via synchronization) any
+    // allocations that existed prior to the call, but may free allocations
+    // created inside the function. This logic is limited to argument pointers,
+    // as they definitely exist prior to the call.
     const Function *F = A->getParent();
-    if (F->doesNotFreeMemory() && F->hasNoSync())
+    if (F->doesNotFreeMemory())
+      return false;
+
+    // nofree on the argument ensures that it cannot be freed through that
+    // pointer. noalias additionally ensures that it can't be freed through
+    // another pointer to the same allocation. Readonly implies nofree.
+    if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
   }
 

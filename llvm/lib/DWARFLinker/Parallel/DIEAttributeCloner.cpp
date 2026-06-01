@@ -565,9 +565,7 @@ size_t DIEAttributeCloner::cloneBlockAttr(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       InUnit.getOrigUnit().isLittleEndian(),
-                       InUnit.getOrigUnit().getAddressByteSize());
+    DataExtractor Data(Bytes, InUnit.getOrigUnit().isLittleEndian());
     DWARFExpression Expr(Data, InUnit.getOrigUnit().getAddressByteSize(),
                          InUnit.getFormParams().Format);
 
