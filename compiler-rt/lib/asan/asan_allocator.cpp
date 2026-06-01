@@ -544,7 +544,7 @@ struct Allocator {
   // (true) or a fatal Report*+Die() (false).
   void* AllocateImpl(uptr size, uptr alignment, BufferedStackTrace* stack,
                      AllocType alloc_type, bool can_fill,
-                     bool may_return_null,DeviceAllocationInfo *da_info = nullptr) {
+                     bool may_return_null,DeviceAllocationInfo *da_info) {
     if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
@@ -688,9 +688,9 @@ struct Allocator {
 
   // Defer to the global, flag controlled, OOM policy.
   void* Allocate(uptr size, uptr alignment, BufferedStackTrace* stack,
-                 AllocType alloc_type, bool can_fill) {
+                 AllocType alloc_type, bool can_fill, DeviceAllocationInfo *da_info = nullptr) {
     return AllocateImpl(size, alignment, stack, alloc_type, can_fill,
-                        AllocatorMayReturnNull());
+                        AllocatorMayReturnNull(),da_info);
   }
 
   // Set quarantine flag if chunk is allocated, issue ASan error report on
