@@ -158,12 +158,6 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
-if(COMPILER_RT_BUILD_PROFILE_ROCM)
-  set(EXTRA_FLAGS
-      ${EXTRA_FLAGS}
-      -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
-endif()
-
 # The HIP host interceptor in InstrProfilingPlatformROCm.cpp pulls in
 # RTInterception + sanitizer_common object libs. Those targets are only created
 # when COMPILER_RT_BUILD_SANITIZERS / _MEMPROF / _XRAY / _CTX_PROFILE is enabled
@@ -188,6 +182,17 @@ endif()
 
 if(NOT PROFILE_HAS_HIP_INTERCEPTOR)
   list(REMOVE_ITEM PROFILE_SOURCES InstrProfilingPlatformROCm.cpp)
+endif()
+
+# Only advertise the ROCm interceptor to InstrProfilingFile.c when its
+# definition (InstrProfilingPlatformROCm.cpp) is actually compiled into the
+# archive. Otherwise InstrProfilingFile.c references
+# __llvm_profile_hip_collect_device_data with no definition; on COFF/Windows
+# there is no weak-undefined fallback, so the link fails (see PR #200111).
+if(COMPILER_RT_BUILD_PROFILE_ROCM AND PROFILE_HAS_HIP_INTERCEPTOR)
+  set(EXTRA_FLAGS
+      ${EXTRA_FLAGS}
+      -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
 endif()
 
 if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
