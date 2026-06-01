@@ -1,9 +1,14 @@
-//===-- Interface for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation header for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H
@@ -12,7 +17,7 @@
 #include <stddef.h>
 
 #include "block.h"
-#include "freestore.h"
+#include "freetrie.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
@@ -62,7 +67,7 @@ private:
   cpp::byte *begin;
   cpp::byte *end;
   bool is_initialized = false;
-  FreeStore free_store;
+  TrieFreeStore free_store;
 };
 
 template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
@@ -93,7 +98,7 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!request_size)
     return nullptr;
 
-  Block *block = free_store.remove_best_fit(request_size);
+  Block *block = free_store.find_and_remove_fit(request_size);
   if (!block)
     return nullptr;
 

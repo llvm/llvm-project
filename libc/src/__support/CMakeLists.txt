@@ -49,14 +49,7 @@ add_object_library(
   DEPENDS
     .block
     .freelist
-)
-
-add_header_library(
-  freestore
-  HDRS
-    freestore.h
-  DEPENDS
-    .freetrie
+    libc.src.__support.CPP.array
 )
 
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
@@ -71,7 +64,6 @@ add_object_library(
   DEPENDS
     .block
     .freelist
-    .freestore
     .freetrie
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
