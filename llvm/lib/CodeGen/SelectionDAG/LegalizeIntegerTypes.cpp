@@ -1778,7 +1778,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PEXT(SDNode *N) {
     if (SDValue Res = TLI.expandPEXT(N, DAG))
       return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
   }
-  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  // Only the mask operand needs zero-extension because the implicit AND from
+  // masking clears the corresponding bits in X anyway.
+  SDValue X = GetPromotedInteger(N->getOperand(0));
   SDValue Y = ZExtPromotedInteger(N->getOperand(1));
   return DAG.getNode(ISD::PEXT, DL, VT, X, Y);
 }
@@ -1790,7 +1792,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
     if (SDValue Res = TLI.expandPDEP(N, DAG))
       return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
   }
-  SDValue X = ZExtPromotedInteger(N->getOperand(0));
+  // Only the mask operand needs zero-extension because the implicit AND from
+  // masking clears the corresponding bits in X anyway.
+  SDValue X = GetPromotedInteger(N->getOperand(0));
   SDValue Y = ZExtPromotedInteger(N->getOperand(1));
   return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
 }
