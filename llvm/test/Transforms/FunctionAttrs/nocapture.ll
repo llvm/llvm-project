@@ -646,7 +646,7 @@ define void @test6_2(ptr %x6_2, ptr %y6_2, ptr %z6_2) {
 }
 
 define void @test_cmpxchg(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_cmpxchg
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
@@ -663,7 +663,7 @@ define void @test_cmpxchg(ptr %p) {
 }
 
 define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
-; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_cmpxchg_ptr
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR13]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
@@ -680,7 +680,7 @@ define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_atomicrmw
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR13]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4

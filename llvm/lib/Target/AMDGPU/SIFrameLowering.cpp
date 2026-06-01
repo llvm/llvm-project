@@ -1131,6 +1131,9 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
     IsCalleeSaved.set(CSRegs[I]);
   }
   auto ProcessReg = [&](MCPhysReg Reg) {
+    // VCC is not preserved across calls.
+    if (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI)
+      return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
     MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
