@@ -245,8 +245,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 
   // Also compute the mixed (static+dynamic) strip-mined sizes for the
   // expand_shape output. This is needed to support dynamic inner tile sizes,
-  // since the 3-arg ExpandShapeOp builder cannot infer shapes when multiple
-  // dynamic dims appear in a single reassociation group.
+  // since the shapes cannot be inferred automatically when multiple dynamic
+  // dims appear in a single reassociation group during ExpandShapeOp
+  // construction.
   SmallVector<OpFoldResult> stripMinedMixedSizes =
       tensor::getMixedSizes(rewriter, loc, packOp.getDest());
   applyPermutationToVector(stripMinedMixedSizes, packedToStripMinedShapePerm);
