@@ -34,7 +34,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 class File : public IOObject {
 public:
   static constexpr int kInvalidDescriptor = -1;
-  static FILE *kInvalidStream;
+  static constexpr FILE *kInvalidStream = nullptr;
 
   // NB this enum is used in the lldb platform gdb-remote packet
   // vFile:open: and existing values cannot be modified.
