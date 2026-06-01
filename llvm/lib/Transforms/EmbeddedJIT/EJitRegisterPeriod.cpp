@@ -142,14 +142,20 @@ generateRegistryTablePeriod(
 
   SmallVector<Constant *, 16> Entries;
 
+  // Helper: create a private global string constant.
+  auto makeStrGV = [&](const std::string &S) -> Constant * {
+    Constant *Str = ConstantDataArray::getString(Ctx, S, true);
+    auto *GV = new GlobalVariable(M, Str->getType(), true,
+        GlobalValue::PrivateLinkage, Str, ".ejit.str.");
+    return ConstantExpr::getBitCast(GV, PtrTy);
+  };
+
   // Period array entries
   for (auto &[GV, PeriodName, VarName, Size] : PeriodArrays) {
     Entries.push_back(ConstantStruct::get(EntryTy, {
         ConstantInt::get(I32Ty, 1),                  // EJIT_REG_PERIOD_ARRAY
-        ConstantExpr::getBitCast(
-            M.getOrInsertGlobal(PeriodName, PtrTy), PtrTy),
-        ConstantExpr::getBitCast(
-            M.getOrInsertGlobal(VarName, PtrTy), PtrTy),
+        makeStrGV(PeriodName),
+        makeStrGV(VarName),
         ConstantExpr::getBitCast(GV, PtrTy),         // base address
         ConstantInt::get(I64Ty, Size),
     }));
@@ -159,8 +165,7 @@ generateRegistryTablePeriod(
   for (auto &[GV, VarName] : StaticVars) {
     Entries.push_back(ConstantStruct::get(EntryTy, {
         ConstantInt::get(I32Ty, 2),                  // EJIT_REG_STATIC_VAR
-        ConstantExpr::getBitCast(
-            M.getOrInsertGlobal(VarName, PtrTy), PtrTy),
+        makeStrGV(VarName),
         ConstantPointerNull::get(PtrTy),
         ConstantExpr::getBitCast(GV, PtrTy),
         ConstantInt::get(I64Ty, 0),

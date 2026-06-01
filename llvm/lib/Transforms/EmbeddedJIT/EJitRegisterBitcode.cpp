@@ -427,12 +427,15 @@ generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
 
   SmallVector<Constant *, 16> Entries;
 
-  // Bitcode entries
+  // Bitcode entries — use CreateGlobalStringPtr to avoid name clashes
+  // with existing functions in the module.
   for (Function *F : EntryFuncs) {
+    Constant *NameStr = ConstantDataArray::getString(Ctx, F->getName(), true);
+    auto *NameGV = new GlobalVariable(M, NameStr->getType(), true,
+        GlobalValue::PrivateLinkage, NameStr, ".ejit.str.");
     Entries.push_back(ConstantStruct::get(EntryTy, {
         ConstantInt::get(I32Ty, 0),                          // EJIT_REG_BITCODE
-        ConstantExpr::getBitCast(
-            M.getOrInsertGlobal(F->getName(), PtrTy), PtrTy),// global string name1
+        ConstantExpr::getBitCast(NameGV, PtrTy),             // name1 string
         ConstantPointerNull::get(PtrTy),                     // name2 = NULL
         ConstantExpr::getBitCast(BitcodeGV, PtrTy),          // bitcode data ptr
         ConstantInt::get(I64Ty,
@@ -443,12 +446,14 @@ generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
   // Symbol entries for external references
   SmallPtrSet<const Function *, 8> SymbolsDone;
   auto addSymbol = [&](const Function *F) {
-    if (F->isIntrinsic() || F->isDeclaration()) {
+    if (!F->isIntrinsic() && F->isDeclaration()) {
       if (SymbolsDone.insert(F).second) {
+        Constant *NameStr = ConstantDataArray::getString(Ctx, F->getName(), true);
+        auto *NameGV = new GlobalVariable(M, NameStr->getType(), true,
+            GlobalValue::PrivateLinkage, NameStr, ".ejit.str.");
         Entries.push_back(ConstantStruct::get(EntryTy, {
             ConstantInt::get(I32Ty, 3),                      // EJIT_REG_SYMBOL
-            ConstantExpr::getBitCast(
-                M.getOrInsertGlobal(F->getName(), PtrTy), PtrTy),
+            ConstantExpr::getBitCast(NameGV, PtrTy),         // name1 string
             ConstantPointerNull::get(PtrTy),
             ConstantExpr::getBitCast(const_cast<Function *>(F), PtrTy),
             ConstantInt::get(I64Ty, 0),
@@ -460,7 +465,8 @@ generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
     for (const BasicBlock &BB : *F) {
       for (const Instruction &I : BB) {
         if (const CallBase *CB = dyn_cast<CallBase>(&I))
-          addSymbol(const_cast<CallBase *>(CB)->getCalledFunction());
+          if (Function *Callee = CB->getCalledFunction())
+            addSymbol(Callee);
       }
     }
   }
@@ -474,10 +480,12 @@ generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
           if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Op)) {
             if (!GV->isConstant() && !GV->getName().starts_with("llvm.") &&
                 GVsDone.insert(GV).second) {
+              Constant *NameStr = ConstantDataArray::getString(Ctx, GV->getName(), true);
+              auto *NameGV = new GlobalVariable(M, NameStr->getType(), true,
+                  GlobalValue::PrivateLinkage, NameStr, ".ejit.str.");
               Entries.push_back(ConstantStruct::get(EntryTy, {
                   ConstantInt::get(I32Ty, 3),                // EJIT_REG_SYMBOL
-                  ConstantExpr::getBitCast(
-                      M.getOrInsertGlobal(GV->getName(), PtrTy), PtrTy),
+                  ConstantExpr::getBitCast(NameGV, PtrTy),   // name1 string
                   ConstantPointerNull::get(PtrTy),
                   ConstantExpr::getBitCast(
                       const_cast<GlobalVariable *>(GV), PtrTy),
