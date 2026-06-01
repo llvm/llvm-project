@@ -924,7 +924,7 @@ RT_API_ATTRS bool EditRealInput(
   }
 }
 
-// 13.7.3 in Fortran 2018 (B descriptor is an extension)
+// F2018 13.7.3 (B descriptor is a non-standard extension)
 RT_API_ATTRS bool EditLogicalInput(
     IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
