@@ -584,6 +584,7 @@ private:
   void mangleFloatLiteral(QualType T, const llvm::APFloat &V);
   void mangleFixedPointLiteral();
   void mangleNullPointer(QualType T);
+  void mangleReflection(ReflectionKind Kind, const void *OpaqueOperand);
 
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
@@ -1276,6 +1277,24 @@ void CXXNameMangler::mangleNullPointer(QualType T) {
   Out << 'L';
   mangleType(T);
   Out << "0E";
+}
+
+void CXXNameMangler::mangleReflection(ReflectionKind Kind,
+                                      const void *OpaqueOperand) {
+  // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
+  Out << "LDm";
+  switch (Kind) {
+  case ReflectionKind::Null:
+    Out << "nu";
+    break;
+  case ReflectionKind::Type: {
+    const auto *TSI = static_cast<const TypeSourceInfo *>(OpaqueOperand);
+    Out << "ty";
+    mangleType(TSI->getType());
+    break;
+  }
+  }
+  Out << 'E';
 }
 
 void CXXNameMangler::mangleNumber(const llvm::APSInt &Value) {
@@ -5007,22 +5026,8 @@ recurse:
     goto recurse;
 
   case Expr::CXXReflectExprClass: {
-    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
     const CXXReflectExpr *RE = cast<CXXReflectExpr>(E);
-    Out << "LDm";
-    switch (RE->getKind()) {
-    case ReflectionKind::Null: {
-      Out << "nu";
-      break;
-    }
-    case ReflectionKind::Type: {
-      Out << "ty";
-      const TypeSourceInfo* TSI = RE->getTypeSourceInfo();
-      mangleType(TSI->getType());
-      break;
-    }
-    }
-    Out << 'E';
+    mangleReflection(RE->getKind(), RE->getOpaqueValue());
     break;
   }
 
@@ -6957,22 +6962,8 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
   }
 
   case APValue::Reflection: {
-    // https://github.com/itanium-cxx-abi/cxx-abi/issues/208
-    Out << "LDm";
-    switch (V.getReflectionOperandKind()) {
-    case ReflectionKind::Null: {
-        Out << "nu";
-        break;
-    }
-    case ReflectionKind::Type: {
-      const auto *TSI =
-          static_cast<const TypeSourceInfo *>(V.getReflectionOpaqueOperand());
-      Out << "ty";
-      mangleType(TSI->getType());
-      break;
-    }
-    }
-    Out << 'E';
+    mangleReflection(V.getReflectionOperandKind(),
+                     V.getReflectionOpaqueOperand());
     break;
   }
 
