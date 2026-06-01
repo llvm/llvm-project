@@ -1798,9 +1798,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass:
     case Stmt::HLSLOutArgExprClass: {
-      const ExplodedNode *node = Engine.makePostStmtNode(
+      const ExplodedNode *Node = Engine.makePostStmtNode(
           S, Pred->getState(), Pred, /*MarkAsSink=*/true);
-      Engine.addAbortedBlock(node, getCurrBlock());
+      Engine.addAbortedBlock(Node, getCurrBlock());
       break;
     }
 
@@ -2046,9 +2046,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       if (AMgr.options.ShouldInlineLambdas) {
         VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
       } else {
-        const ExplodedNode *node = Engine.makePostStmtNode(
+        const ExplodedNode *Node = Engine.makePostStmtNode(
             S, Pred->getState(), Pred, /*MarkAsSink=*/true);
-        Engine.addAbortedBlock(node, getCurrBlock());
+        Engine.addAbortedBlock(Node, getCurrBlock());
       }
       break;
 
