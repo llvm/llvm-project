@@ -1341,8 +1341,10 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
     const uArch *uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
+    int chunkSize =
+        1; // placeHolder for future use when LoadMatrix supports coalescing
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
-        layoutKind, resVecTy, consumerLayoutAttr, uArch);
+        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
     loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 }
@@ -1360,8 +1362,10 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
     if (!uArch)
       return;
-    auto requiredAnchorLayoutAttr =
-        xegpu::setupStoreMatrixAnchorLayout(layoutKind, srcVecTy, uArch);
+    int chunkSize =
+        1; // placeHolder for future use when StoreMatrix supports coalescing
+    auto requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
+        layoutKind, srcVecTy, chunkSize, uArch);
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     layout = LayoutInfo(requiredAnchorLayoutAttr);
   }
