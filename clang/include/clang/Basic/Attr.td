@@ -1823,10 +1823,10 @@ def OffloadGlobalAddressSpace : TypeAttr {
   }];
 }
 
-// TODO: Remove OpenCLGlobalDeviceAddressSpace after deprecation.
-def OpenCLGlobalDeviceAddressSpace : TypeAttr {
+// TODO: Remove OffloadGlobalDeviceAddressSpace after deprecation.
+def OffloadGlobalDeviceAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_device">, Clang<"sycl_global_device">];
-  let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
+  let Documentation = [OffloadAddressSpaceGlobalExtDocs];
   let AdditionalMembers = [{
     static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
       return A.getAttributeSpellingListIndex() == GNU_sycl_global_device ||
@@ -1839,10 +1839,10 @@ def OpenCLGlobalDeviceAddressSpace : TypeAttr {
   }];
 }
 
-// TODO: Remove OpenCLGlobalHostAddressSpace after deprecation.
-def OpenCLGlobalHostAddressSpace : TypeAttr {
+// TODO: Remove OffloadGlobalHostAddressSpace after deprecation.
+def OffloadGlobalHostAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_host">, Clang<"sycl_global_host">];
-  let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
+  let Documentation = [OffloadAddressSpaceGlobalExtDocs];
   let AdditionalMembers = [{
     static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
       return A.getAttributeSpellingListIndex() == GNU_sycl_global_host ||

@@ -9096,8 +9096,8 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     case ParsedAttr::AT_OffloadPrivateAddressSpace:
     case ParsedAttr::AT_OffloadGlobalAddressSpace:
-    case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
-    case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+    case ParsedAttr::AT_OffloadGlobalDeviceAddressSpace:
+    case ParsedAttr::AT_OffloadGlobalHostAddressSpace:
     case ParsedAttr::AT_OffloadLocalAddressSpace:
     case ParsedAttr::AT_OffloadConstantAddressSpace:
     case ParsedAttr::AT_OffloadGenericAddressSpace:

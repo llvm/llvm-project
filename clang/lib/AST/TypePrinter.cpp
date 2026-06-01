@@ -1994,8 +1994,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::OffloadPrivateAddressSpace:
   case attr::OffloadGlobalAddressSpace:
-  case attr::OpenCLGlobalDeviceAddressSpace:
-  case attr::OpenCLGlobalHostAddressSpace:
+  case attr::OffloadGlobalDeviceAddressSpace:
+  case attr::OffloadGlobalHostAddressSpace:
   case attr::OffloadLocalAddressSpace:
   case attr::OffloadConstantAddressSpace:
   case attr::OffloadGenericAddressSpace:
@@ -2676,13 +2676,9 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__constant";
   case LangAS::opencl_generic:
     return "__generic";
-  // TODO: Remove *_global_device and *_global_host after corresponding
-  // attributes are deprecated for the required time.
   case LangAS::opencl_global_device:
-  case LangAS::sycl_global_device:
     return "__global_device";
   case LangAS::opencl_global_host:
-  case LangAS::sycl_global_host:
     return "__global_host";
   case LangAS::sycl_global:
     return "sycl_global";
@@ -2692,6 +2688,10 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "sycl_private";
   case LangAS::sycl_generic:
     return "sycl_generic";
+  case LangAS::sycl_global_device:
+    return "sycl_global_device";
+  case LangAS::sycl_global_host:
+    return "sycl_global_host";
   case LangAS::cuda_device:
     return "__device__";
   case LangAS::cuda_constant:

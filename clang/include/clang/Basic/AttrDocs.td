@@ -5090,9 +5090,9 @@ local variables. Starting with OpenCL v2.0, the global address space can be used
   }];
 }
 
-def OpenCLAddressSpaceGlobalExtDocs : Documentation {
+def OffloadAddressSpaceGlobalExtDocs : Documentation {
   let Category = DocOffloadAddressSpaces;
-  let Heading = "[[clang::opencl_global_device]], [[clang::opencl_global_host]]";
+  let Heading = "[[clang::opencl_global_device]], [[clang::opencl_global_host]], [[clang::sycl_global_device]], [[clang::sycl_global_host]]";
   let Content = [{
 The ``global_device`` and ``global_host`` address space attributes specify that
 an object is allocated in global memory on the device/host. It helps to

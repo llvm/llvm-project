@@ -231,8 +231,8 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
   case AT_AddressSpace:
   case AT_OffloadPrivateAddressSpace:
   case AT_OffloadGlobalAddressSpace:
-  case AT_OpenCLGlobalDeviceAddressSpace:
-  case AT_OpenCLGlobalHostAddressSpace:
+  case AT_OffloadGlobalDeviceAddressSpace:
+  case AT_OffloadGlobalHostAddressSpace:
   case AT_OffloadLocalAddressSpace:
   case AT_OffloadConstantAddressSpace:
   case AT_OffloadGenericAddressSpace:
@@ -318,10 +318,10 @@ LangAS ParsedAttr::asLangAS() const {
   switch (getParsedKind()) {
   case ParsedAttr::AT_OffloadGlobalAddressSpace:
     return OffloadGlobalAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
-    return OpenCLGlobalDeviceAddressSpaceAttr::getLangAS(*this);
-  case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
-    return OpenCLGlobalHostAddressSpaceAttr::getLangAS(*this);
+  case ParsedAttr::AT_OffloadGlobalDeviceAddressSpace:
+    return OffloadGlobalDeviceAddressSpaceAttr::getLangAS(*this);
+  case ParsedAttr::AT_OffloadGlobalHostAddressSpace:
+    return OffloadGlobalHostAddressSpaceAttr::getLangAS(*this);
   case ParsedAttr::AT_OffloadLocalAddressSpace:
     return OffloadLocalAddressSpaceAttr::getLangAS(*this);
   case ParsedAttr::AT_OffloadPrivateAddressSpace:
