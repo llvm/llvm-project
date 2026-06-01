@@ -1474,6 +1474,7 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:  .LBB28_2: ; %Flow
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s0, s13
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
+; GFX10-W32-NEXT:    s_and_b32 s0, exec_lo, s0
 ; GFX10-W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB28_4
 ; GFX10-W32-NEXT:  ; %bb.3: ; %ELSE
