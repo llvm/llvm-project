@@ -151,3 +151,26 @@ llvm.func @store_load_store_back() {
   llvm.store %v, %p : i64, !llvm.ptr
   llvm.return
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/200844.
+// `getStored` synthesizes casts at the builder's insertion point. Setting the
+// insertion point before the store ensures the cast dominates the `dbg.value`
+// created by `visitReplacedValues` after the store.
+
+// CHECK-LABEL: llvm.func @dbg_declare_with_store_type_conversion
+// CHECK-SAME: (%[[VAL:.*]]: f32)
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[VAL]] : f32 to i32
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[BITCAST]] : i32
+// CHECK: llvm.return %[[BITCAST]] : i32
+llvm.func @dbg_declare_with_store_type_conversion(%val : f32) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %1 : !llvm.ptr
+  llvm.store %val, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  llvm.return %2 : i32
+}

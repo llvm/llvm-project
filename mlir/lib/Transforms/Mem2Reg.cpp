@@ -591,7 +591,10 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
       MemorySlot aliasSlot =
           getOpAliasSlot(memOp, slot, info.aliasMap).value_or(slot);
       if (memOp.storesTo(aliasSlot)) {
-        builder.setInsertionPointAfter(memOp);
+        // Insert helper IR introduced by `getStored` before the storing op.
+        // This ensures the returned value dominates the store, allowing
+        // `visitReplacedValues` to safely create new uses after the store.
+        builder.setInsertionPoint(memOp);
         // To not expose default value creation to the interfaces, if we have
         // no reaching definition by now, we set it to the default value.
         // This is slightly too eager as `getStored` may not need it.

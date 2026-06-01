@@ -121,11 +121,13 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
         storing a value to a slot must always be able to provide the value it
         stores. This method is only called once per slot promotion, and only
         on operations that store to the slot according to the `storesTo` method.
-        The returned value must dominate all operations dominated by the storing
-        operation.
 
-        The builder is located immediately after the memory operation on call.
-        No IR deletion is allowed in this method. IR mutations must not
+        The returned value must dominate the memory operation. This ensures
+        that new uses inserted by `visitReplacedValues` after the memory
+        operation are properly dominated.
+
+        The builder is positioned immediately before the memory operation on
+        call. No IR deletion is allowed in this method. IR mutations must not
         introduce new uses of the memory slot. Existing control flow must not
         be modified.
       }],
