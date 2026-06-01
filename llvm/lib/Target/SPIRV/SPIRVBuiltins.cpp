@@ -3158,8 +3158,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
         Opcode = Builtin->IsDestinationSigned ? SPIRV::OpSatConvertUToS
                                               : SPIRV::OpSatConvertSToU;
       else
-        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpUConvert
-                                              : SPIRV::OpSConvert;
+        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpSConvert
+                                              : SPIRV::OpUConvert;
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
       // Int -> Float
