@@ -322,3 +322,20 @@ EJitPeriodHandlerPass    →  读取 ejit.metadata 生成生命周期调用
 *文档版本: 2.0*
 *创建日期: 2026-04-26*
 *最后更新: 2026-04-27*
+
+---
+
+## 静态注册表生成 (v1.7)
+
+裸核环境无构造器，PASS2 同时生成 `__ejit_registry_period[]` 全局常量数组。
+
+- Period 数组条目: `{EJIT_REG_PERIOD_ARRAY(1), periodName, varName, baseAddr, size}`
+- Static var 条目: `{EJIT_REG_STATIC_VAR(2), varName, NULL, addr, 0}`
+- 末尾 sentinel: `{EJIT_REG_NONE(4), NULL, NULL, NULL, 0}`
+
+`ejit_init()` 中与 `__ejit_registry_bitcode[]` 一起遍历。
+
+---
+
+*文档版本: 1.1*  
+*更新日期: 2026-06-01*

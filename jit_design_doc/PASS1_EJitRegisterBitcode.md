@@ -484,3 +484,22 @@ EJitPeriodHandlerPass    (晚期: 生命周期处理)
 
 *文档版本: 1.0*
 *创建日期: 2026-04-26*
+
+10. **静态注册表生成 (v1.7)**: 裸核环境无 `llvm.global_ctors`，PASS1 同时生成全局常量数组 `__ejit_registry_bitcode[]` 作为 fallback 路径：
+
+```
+五项结构体 { i32 type, ptr name1, ptr name2, ptr data, i64 size }
+```
+
+- Bitcode 条目: `{EJIT_REG_BITCODE(0), funcName, NULL, bitcodePtr, size}`
+- 符号条目: `{EJIT_REG_SYMBOL(3), symName, NULL, addr, 0}`
+- 末尾 sentinel: `{EJIT_REG_NONE(4), NULL, NULL, NULL, 0}`
+
+`ejit_init()` 中若 `EJitRegistrationStore` 为空（裸核无构造器）或 `forceStaticRegistry=true`，
+则遍历此数组完成注册。
+
+---
+
+*文档版本: 1.1*  
+*创建日期: 2026-04-26*  
+*更新日期: 2026-06-01*

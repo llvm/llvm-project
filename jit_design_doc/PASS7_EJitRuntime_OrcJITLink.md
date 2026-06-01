@@ -1608,3 +1608,57 @@ llvm/include/llvm/ExecutionEngine/EJIT/
 *文档版本: 1.1*
 *创建日期: 2026-04-26*
 *更新日期: 2026-04-29*
+
+---
+
+## 双路径注册机制 (v1.2)
+
+### 注册路径
+
+| 路径 | 触发方式 | 适用 |
+|---|---|---|
+| 构造器 | `llvm.global_ctors` → CRT 调用 `ejit_auto_register()` | hosted |
+| 静态注册表 | `ejit_init()` 遍历 `__ejit_registry_bitcode[]` + `__ejit_registry_period[]` | 裸核 / `forceStaticRegistry=true` |
+| 手动 API | `ejit_register_*()` 在 `ejit_init()` 之后调用 | 运行时动态 |
+
+### 运行时选择
+
+```cpp
+StoredData data = EJitRegistrationStore::instance().consume();
+if (config_.forceStaticRegistry || data.empty()) {
+    walkTable(__ejit_registry_bitcode);   // PASS1
+    walkTable(__ejit_registry_period);    // PASS2
+} else {
+    // 构造器路径(现有)
+}
+```
+
+### C API dual-path
+
+`ejit_register_bitcode` / `ejit_register_period_array` / `ejit_register_static_var` /
+`ejit_register_symbol` 均支持双路径：`gEJIT` 非空 → 直接转发引擎，否则暂存 `EJitRegistrationStore`。
+
+### 裸核运行时修复
+
+- `Builder.setLinkProcessSymbolsByDefault(false)` — 避免 dlopen/dlsym
+- `EJIT_DEFAULT_TARGET_TRIPLE` 强制要求 — 代替 detectHost()
+- `setNumCompileThreads(0)` — 单线程
+- `forceStaticRegistry` 配置项 — 强制走静态注册表路径
+
+### ejit_config_t 新增字段
+
+```c
+typedef struct {
+    ...
+    bool forceStaticRegistry;  // true = 强制静态表路径
+} ejit_config_t;
+```
+
+### 测试
+
+`ejit_test/ejit_manual_register_test.c` — x86 上 PASS，验证 forceStaticRegistry + JIT 编译执行。
+
+---
+
+*文档版本: 1.2*  
+*更新日期: 2026-06-01*
