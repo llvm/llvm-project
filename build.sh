@@ -12,11 +12,14 @@
 #   ./build.sh release aarch64 minimal # → build_release_aarch64_minimal/
 #
 # Options:
-#   -c           configure only (skip build)
-#   -b           build only (skip configure)
-#   --static     debug build with static libs (for ejit_test with assertions)
-#   --no-ccache  disable ccache
-#   -h           show help
+#   -c              configure only (skip build)
+#   -b              build only (skip configure)
+#   --static        debug build with static libs (for ejit_test with assertions)
+#   --no-ccache     disable ccache
+#   --bare-metal    build with EJIT_BARE_METAL=ON (OS/arch code stripping)
+#   --target-triple=<triple>  set EJIT_DEFAULT_TARGET_TRIPLE (required for
+#                             aarch64 bare-metal cross-compilation)
+#   -h              show help
 #===----------------------------------------------------------------------===#
 
 set -euo pipefail
@@ -118,7 +121,7 @@ do_configure() {
   if [ "$variant" = "minimal" ]; then
     log "Configuring: release ${arch} minimal → ${build_dir}"
     extra_flags="
-      -DLLVM_ENABLE_PROJECTS=\"\"
+      -DLLVM_ENABLE_PROJECTS=
       -DLLVM_INCLUDE_TESTS=OFF
       -DLLVM_INCLUDE_EXAMPLES=OFF
       -DLLVM_INCLUDE_DOCS=OFF
@@ -127,21 +130,21 @@ do_configure() {
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_LIBXML2=OFF
       -DLLVM_ENABLE_TERMINFO=OFF
-      -DCMAKE_C_FLAGS=\"-ffunction-sections -fdata-sections\"
-      -DCMAKE_CXX_FLAGS=\"-ffunction-sections -fdata-sections\"
-      -DCMAKE_C_FLAGS_RELEASE=\"-Os -DNDEBUG\"
-      -DCMAKE_CXX_FLAGS_RELEASE=\"-Os -DNDEBUG\"
-      -DCMAKE_EXE_LINKER_FLAGS=\"-Wl,--gc-sections -Wl,--strip-all\"
-      -DCMAKE_SHARED_LINKER_FLAGS=\"-Wl,--gc-sections -Wl,--strip-all\""
+      -DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections
+      -DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections
+      -DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG
+      -DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG
+      -DCMAKE_EXE_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all
+      -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections -Wl,--strip-all
   else
     log "Configuring: release ${arch} → ${build_dir}"
     extra_flags+="
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_ZLIB=OFF
-      -DCMAKE_C_FLAGS=\"-ffunction-sections -fdata-sections\"
-      -DCMAKE_CXX_FLAGS=\"-ffunction-sections -fdata-sections\"
-      -DCMAKE_C_FLAGS_RELEASE=\"-Os -DNDEBUG\"
-      -DCMAKE_CXX_FLAGS_RELEASE=\"-Os -DNDEBUG\""
+      -DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections
+      -DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections
+      -DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG
+      -DCMAKE_CXX_FLAGS_RELEASE=-Os -DNDEBUG
   fi
 
   # shellcheck disable=SC2086
@@ -154,6 +157,8 @@ do_configure() {
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
     "-DCMAKE_C_COMPILER=${cc}" \
     "-DCMAKE_CXX_COMPILER=${cxx}" \
+    -DEJIT_BARE_METAL=${EJIT_BARE_METAL} \
+    ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
     ${ccache_opts} \
     ${extra_flags}
 }
@@ -193,6 +198,8 @@ VARIANT="default"
 DO_CONFIGURE=true
 DO_BUILD=true
 USE_CCACHE=true
+EJIT_BARE_METAL=OFF
+EJIT_TARGET_TRIPLE=""
 
 shift 2 2>/dev/null || true
 while [[ $# -gt 0 ]]; do
@@ -202,6 +209,8 @@ while [[ $# -gt 0 ]]; do
     -c) DO_BUILD=false ;;
     -b) DO_CONFIGURE=false ;;
     --no-ccache) USE_CCACHE=false ;;
+    --bare-metal) EJIT_BARE_METAL=ON ;;
+    --target-triple=*) EJIT_TARGET_TRIPLE="${1#--target-triple=}" ;;
     -h|--help)
       sed -n '2,18p' "$0"
       exit 0
