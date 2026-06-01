@@ -1,4 +1,4 @@
-//===- GlobalISelMatchTable.h ---------------------------------------------===//
+//===- Matchers.h ---------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,16 +7,18 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This file contains the code related to the GlobalISel Match Table emitted by
-/// GlobalISelEmitter.cpp. The generated match table is interpreted at runtime
-/// by `GIMatchTableExecutorImpl.h` to match & apply ISel patterns.
+/// This file contains the code related to the GlobalISel Matchers, which
+/// are the data structures used to model amd optimize state machines that
+/// can be emitted as "match tables" (see MatchTable.h/.cpp).
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
-#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_MATCHTABLE_MATCHERS_H
+#define LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_MATCHTABLE_MATCHERS_H
 
 #include "Common/CodeGenDAGPatterns.h"
+#include "MatchTable.h"
+#include "Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -42,8 +44,6 @@ class Record;
 class SMLoc;
 class CodeGenRegisterClass;
 
-// Use a namespace to avoid conflicts because there's some fairly generic names
-// in there (e.g. Matcher).
 namespace gi {
 class MatchTable;
 class Matcher;
@@ -60,12 +60,6 @@ enum {
 using GISelFlags = std::uint32_t;
 
 //===- Helper functions ---------------------------------------------------===//
-
-void emitEncodingMacrosDef(raw_ostream &OS);
-void emitEncodingMacrosUndef(raw_ostream &OS);
-
-std::string getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
-                                    int HwModeIdx);
 
 /// Takes a sequence of \p Rules and group them based on the predicates
 /// they share. \p MatcherStorage is used as a memory container
@@ -95,213 +89,9 @@ std::vector<Matcher *>
 optimizeRuleset(MutableArrayRef<RuleMatcher> Rules,
                 std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
 
-/// A record to be stored in a MatchTable.
-///
-/// This class represents any and all output that may be required to emit the
-/// MatchTable. Instances  are most often configured to represent an opcode or
-/// value that will be emitted to the table with some formatting but it can also
-/// represent commas, comments, and other formatting instructions.
-struct MatchTableRecord {
-  enum RecordFlagsBits {
-    MTRF_None = 0x0,
-    /// Causes EmitStr to be formatted as comment when emitted.
-    MTRF_Comment = 0x1,
-    /// Causes the record value to be followed by a comma when emitted.
-    MTRF_CommaFollows = 0x2,
-    /// Causes the record value to be followed by a line break when emitted.
-    MTRF_LineBreakFollows = 0x4,
-    /// Indicates that the record defines a label and causes an additional
-    /// comment to be emitted containing the index of the label.
-    MTRF_Label = 0x8,
-    /// Causes the record to be emitted as the index of the label specified by
-    /// LabelID along with a comment indicating where that label is.
-    MTRF_JumpTarget = 0x10,
-    /// Causes the formatter to add a level of indentation before emitting the
-    /// record.
-    MTRF_Indent = 0x20,
-    /// Causes the formatter to remove a level of indentation after emitting the
-    /// record.
-    MTRF_Outdent = 0x40,
-    /// Causes the formatter to not use encoding macros to emit this multi-byte
-    /// value.
-    MTRF_PreEncoded = 0x80,
-  };
-
-  /// When MTRF_Label or MTRF_JumpTarget is used, indicates a label id to
-  /// reference or define.
-  unsigned LabelID;
-  /// The string to emit. Depending on the MTRF_* flags it may be a comment, a
-  /// value, a label name.
-  std::string EmitStr;
-
-private:
-  /// The number of MatchTable elements described by this record. Comments are 0
-  /// while values are typically 1. Values >1 may occur when we need to emit
-  /// values that exceed the size of a MatchTable element.
-  unsigned NumElements;
-
-public:
-  /// A bitfield of RecordFlagsBits flags.
-  unsigned Flags;
-
-  MatchTableRecord(std::optional<unsigned> LabelID_, StringRef EmitStr,
-                   unsigned NumElements, unsigned Flags)
-      : LabelID(LabelID_.value_or(~0u)), EmitStr(EmitStr),
-        NumElements(NumElements), Flags(Flags) {
-    assert((!LabelID_ || LabelID != ~0u) &&
-           "This value is reserved for non-labels");
-  }
-  MatchTableRecord(const MatchTableRecord &Other) = default;
-  MatchTableRecord(MatchTableRecord &&Other) = default;
-
-  /// Useful if a Match Table Record gets optimized out
-  void turnIntoComment() {
-    Flags |= MTRF_Comment;
-    Flags &= ~MTRF_CommaFollows;
-    NumElements = 0;
-  }
-
-  void emit(raw_ostream &OS, bool LineBreakNextAfterThis,
-            const MatchTable &Table) const;
-  unsigned size() const { return NumElements; }
-};
-
-/// Holds the contents of a generated MatchTable to enable formatting and the
-/// necessary index tracking needed to support GIM_Try.
-class MatchTable {
-  /// An unique identifier for the table. The generated table will be named
-  /// MatchTable${ID}.
-  unsigned ID;
-  /// The records that make up the table. Also includes comments describing the
-  /// values being emitted and line breaks to format it.
-  std::vector<MatchTableRecord> Contents;
-  /// The currently defined labels.
-  DenseMap<unsigned, unsigned> LabelMap;
-  /// Tracks the sum of MatchTableRecord::NumElements as the table is built.
-  unsigned CurrentSize = 0;
-  /// A unique identifier for a MatchTable label.
-  unsigned CurrentLabelID = 0;
-  /// Determines if the table should be instrumented for rule coverage tracking.
-  bool IsWithCoverage;
-  /// Whether this table is for the GISel combiner.
-  bool IsCombinerTable;
-
-public:
-  static MatchTableRecord LineBreak;
-  static MatchTableRecord Comment(StringRef Comment);
-  static MatchTableRecord Opcode(StringRef Opcode, int IndentAdjust = 0);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef NamedValue);
-  static MatchTableRecord NamedValue(unsigned NumBytes, StringRef Namespace,
-                                     StringRef NamedValue);
-  static MatchTableRecord IntValue(unsigned NumBytes, int64_t IntValue);
-  static MatchTableRecord ULEB128Value(uint64_t IntValue);
-  static MatchTableRecord Label(unsigned LabelID);
-  static MatchTableRecord JumpTarget(unsigned LabelID);
-
-  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
-                               bool IsCombiner = false);
-
-  MatchTable(bool WithCoverage, bool IsCombinerTable, unsigned ID = 0)
-      : ID(ID), IsWithCoverage(WithCoverage), IsCombinerTable(IsCombinerTable) {
-  }
-
-  bool isWithCoverage() const { return IsWithCoverage; }
-  bool isCombiner() const { return IsCombinerTable; }
-
-  void push_back(const MatchTableRecord &Value) {
-    if (Value.Flags & MatchTableRecord::MTRF_Label)
-      defineLabel(Value.LabelID);
-    Contents.push_back(Value);
-    CurrentSize += Value.size();
-  }
-
-  unsigned allocateLabelID() { return CurrentLabelID++; }
-
-  void defineLabel(unsigned LabelID) {
-    LabelMap.try_emplace(LabelID, CurrentSize);
-  }
-
-  unsigned getLabelIndex(unsigned LabelID) const {
-    const auto I = LabelMap.find(LabelID);
-    assert(I != LabelMap.end() && "Use of undeclared label");
-    return I->second;
-  }
-
-  void emitUse(raw_ostream &OS) const;
-  void emitDeclaration(raw_ostream &OS) const;
-};
-
-inline MatchTable &operator<<(MatchTable &Table,
-                              const MatchTableRecord &Value) {
-  Table.push_back(Value);
-  return Table;
-}
-
-/// This class stands in for LLT wherever we want to tablegen-erate an
-/// equivalent at compiler run-time.
-class LLTCodeGen {
-private:
-  LLT Ty;
-
-public:
-  LLTCodeGen() = default;
-  LLTCodeGen(const LLT &Ty) : Ty(Ty) {}
-
-  std::string getCxxEnumValue() const;
-
-  void emitCxxEnumValue(raw_ostream &OS) const;
-  void emitCxxConstructorCall(raw_ostream &OS) const;
-
-  const LLT &get() const { return Ty; }
-
-  /// This ordering is used for std::unique() and llvm::sort(). There's no
-  /// particular logic behind the order but either A < B or B < A must be
-  /// true if A != B.
-  bool operator<(const LLTCodeGen &Other) const;
-  bool operator==(const LLTCodeGen &B) const { return Ty == B.Ty; }
-};
-
-// Track all types that are used so we can emit the corresponding enum.
-extern std::set<LLTCodeGen> KnownTypes;
-
-/// Convert an MVT to an equivalent LLT if possible, or the invalid LLT() for
-/// MVTs that don't map cleanly to an LLT (e.g., iPTR, *any, ...).
-std::optional<LLTCodeGen> MVTToLLT(MVT VT);
-std::optional<LLTCodeGen> MVTToGenericLLT(MVT VT);
-
-using TempTypeIdx = int64_t;
-class LLTCodeGenOrTempType {
-public:
-  LLTCodeGenOrTempType(const LLTCodeGen &LLT) : Data(LLT) {}
-  LLTCodeGenOrTempType(TempTypeIdx TempTy) : Data(TempTy) {}
-
-  bool isLLTCodeGen() const { return std::holds_alternative<LLTCodeGen>(Data); }
-  bool isTempTypeIdx() const {
-    return std::holds_alternative<TempTypeIdx>(Data);
-  }
-
-  const LLTCodeGen &getLLTCodeGen() const {
-    assert(isLLTCodeGen());
-    return std::get<LLTCodeGen>(Data);
-  }
-
-  TempTypeIdx getTempTypeIdx() const {
-    assert(isTempTypeIdx());
-    return std::get<TempTypeIdx>(Data);
-  }
-
-private:
-  std::variant<LLTCodeGen, TempTypeIdx> Data;
-};
-
-inline MatchTable &operator<<(MatchTable &Table,
-                              const LLTCodeGenOrTempType &Ty) {
-  if (Ty.isLLTCodeGen())
-    Table << MatchTable::NamedValue(1, Ty.getLLTCodeGen().getCxxEnumValue());
-  else
-    Table << MatchTable::IntValue(1, Ty.getTempTypeIdx());
-  return Table;
-}
+/// Build a MatchTable for emission from \p Rules
+MatchTable buildMatchTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
+                           bool IsCombiner = false);
 
 //===- Matchers -----------------------------------------------------------===//
 class Matcher {
@@ -2621,4 +2411,4 @@ public:
 } // namespace gi
 } // namespace llvm
 
-#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHTABLE_H
+#endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_GLOBALISELMATCHERS_H

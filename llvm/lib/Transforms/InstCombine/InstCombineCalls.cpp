@@ -3138,7 +3138,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      Value *Fabs = Builder.CreateFAbs(X, II);
       return replaceInstUsesWith(CI, Fabs);
     }
 
@@ -3168,7 +3168,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
+      Value *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 

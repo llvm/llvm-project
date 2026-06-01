@@ -77,6 +77,7 @@ public:
       : ConstantExpr(C1->getType(), Opcode, AllocMarker) {
     Op<0>() = C1;
     Op<1>() = C2;
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     SubclassOptionalData = Flags;
   }
 
@@ -213,6 +214,7 @@ public:
     GetElementPtrConstantExpr *Result = new (AllocMarker)
         GetElementPtrConstantExpr(SrcElementTy, C, IdxList, DestTy,
                                   std::move(InRange), AllocMarker);
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     Result->SubclassOptionalData = Flags;
     return Result;
   }
