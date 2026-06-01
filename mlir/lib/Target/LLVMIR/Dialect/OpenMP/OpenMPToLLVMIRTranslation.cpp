@@ -3712,6 +3712,98 @@ convertOmpTaskgroupOp(omp::TaskgroupOp tgOp, llvm::IRBuilderBase &builder,
 }
 
 static LogicalResult
+convertOmpInteropInitOp(omp::InteropInitOp initOp, llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  if (!initOp.getDependVars().empty() || initOp.getDependKinds() ||
+      !initOp.getDependIterated().empty() || initOp.getDependIteratedKinds())
+    return initOp.emitError()
+           << "not yet implemented: Unhandled clause depend in "
+           << omp::InteropInitOp::getOperationName() << " operation";
+
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Value *interopVar =
+      moduleTranslation.lookupValue(initOp.getInteropVar());
+  llvm::Value *device = initOp.getDevice()
+                            ? moduleTranslation.lookupValue(initOp.getDevice())
+                            : nullptr;
+
+  // TODO: Handle depend clauses when supported.
+  llvm::Value *numDeps = llvm::ConstantInt::get(builder.getInt32Ty(), 0);
+  llvm::Value *depArray = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  bool hasNowait = initOp.getNowait();
+
+  // Emit one call per interop type. The runtime expects a single type per call.
+  for (auto typeAttr : initOp.getInteropTypes()) {
+    auto interopTypeEnum = cast<omp::InteropTypeAttr>(typeAttr).getValue();
+    llvm::omp::OMPInteropType interopType;
+    switch (interopTypeEnum) {
+    case omp::InteropType::target:
+      interopType = llvm::omp::OMPInteropType::Target;
+      break;
+    case omp::InteropType::targetsync:
+      interopType = llvm::omp::OMPInteropType::TargetSync;
+      break;
+    }
+    ompBuilder->createOMPInteropInit(builder, interopVar, interopType, device,
+                                     numDeps, depArray, hasNowait);
+  }
+  return success();
+}
+
+static LogicalResult
+convertOmpInteropDestroyOp(omp::InteropDestroyOp destroyOp,
+                           llvm::IRBuilderBase &builder,
+                           LLVM::ModuleTranslation &moduleTranslation) {
+  if (!destroyOp.getDependVars().empty() || destroyOp.getDependKinds() ||
+      !destroyOp.getDependIterated().empty() ||
+      destroyOp.getDependIteratedKinds())
+    return destroyOp.emitError()
+           << "not yet implemented: Unhandled clause depend in "
+           << omp::InteropDestroyOp::getOperationName() << " operation";
+
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Value *interopVar =
+      moduleTranslation.lookupValue(destroyOp.getInteropVar());
+  llvm::Value *device =
+      destroyOp.getDevice()
+          ? moduleTranslation.lookupValue(destroyOp.getDevice())
+          : nullptr;
+
+  llvm::Value *numDeps = llvm::ConstantInt::get(builder.getInt32Ty(), 0);
+  llvm::Value *depArray = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  bool hasNowait = destroyOp.getNowait();
+
+  ompBuilder->createOMPInteropDestroy(builder, interopVar, device, numDeps,
+                                      depArray, hasNowait);
+  return success();
+}
+
+static LogicalResult
+convertOmpInteropUseOp(omp::InteropUseOp useOp, llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  if (!useOp.getDependVars().empty() || useOp.getDependKinds() ||
+      !useOp.getDependIterated().empty() || useOp.getDependIteratedKinds())
+    return useOp.emitError()
+           << "not yet implemented: Unhandled clause depend in "
+           << omp::InteropUseOp::getOperationName() << " operation";
+
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::Value *interopVar =
+      moduleTranslation.lookupValue(useOp.getInteropVar());
+  llvm::Value *device = useOp.getDevice()
+                            ? moduleTranslation.lookupValue(useOp.getDevice())
+                            : nullptr;
+
+  llvm::Value *numDeps = llvm::ConstantInt::get(builder.getInt32Ty(), 0);
+  llvm::Value *depArray = llvm::ConstantPointerNull::get(builder.getPtrTy());
+  bool hasNowait = useOp.getNowait();
+
+  ompBuilder->createOMPInteropUse(builder, interopVar, device, numDeps,
+                                  depArray, hasNowait);
+  return success();
+}
+
+static LogicalResult
 convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
   if (failed(checkImplementationStatus(*twOp)))
@@ -8883,6 +8975,15 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TaskwaitOp op) {
             return convertOmpTaskwaitOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::InteropInitOp op) {
+            return convertOmpInteropInitOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::InteropDestroyOp op) {
+            return convertOmpInteropDestroyOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::InteropUseOp op) {
+            return convertOmpInteropUseOp(op, builder, moduleTranslation);
           })
           .Case<omp::YieldOp, omp::TerminatorOp, omp::DeclareMapperOp,
                 omp::DeclareMapperInfoOp, omp::DeclareReductionOp,
