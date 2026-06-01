@@ -2316,10 +2316,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // ObjCIndirectCopyRestoreExpr implies passing a temporary for
       // correctness of lifetime management.  Due to limited analysis
       // of ARC, this is implemented as direct arg passing.
-      ProgramStateRef state = Pred->getState();
       const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
       const Expr *E = OIE->getSubExpr();
-      SVal V = state->getSVal(E, Pred->getStackFrame());
+      SVal V = Pred->getState()->getSVal(E, Pred->getStackFrame());
       Dst.insert(Engine.makeNodeWithBinding(Pred, OIE, V));
       break;
     }
