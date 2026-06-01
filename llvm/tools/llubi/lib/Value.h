@@ -207,6 +207,26 @@ public:
   bool isPointer() const { return Kind == StorageKind::Pointer; }
   bool isAggregate() const { return Kind == StorageKind::Aggregate; }
 
+  bool isCompatibleWith(Type *Ty) const {
+    switch (Kind) {
+    case StorageKind::None:
+      return Ty->isVoidTy();
+    case StorageKind::Poison:
+      return Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy();
+    case StorageKind::Integer:
+      return Ty->isIntegerTy();
+    case StorageKind::Float:
+      return Ty->isFloatingPointTy();
+    case StorageKind::Pointer:
+      return Ty->isPointerTy();
+    // We don't check elements recursively.
+    case StorageKind::Aggregate:
+      return Ty->isAggregateType() || Ty->isVectorTy();
+    default:
+      llvm_unreachable("Unhandled storage kind.");
+    }
+  }
+
   const APInt &asInteger() const {
     assert(Kind == StorageKind::Integer && "Expect an integer value");
     return IntVal;
