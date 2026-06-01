@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <optional>
 #include <random>
+#include <vector>
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -83,7 +84,7 @@ struct Runtime {
 
   // The benchmark options that were used to perform the measurement.
   // This is decided by the framework.
-  BenchmarkOptions BenchmarkOptions;
+  struct BenchmarkOptions BenchmarkOptions;
 };
 
 //--------
@@ -93,7 +94,7 @@ struct Runtime {
 // The root object containing all the data (configuration and measurements).
 struct Study {
   std::string StudyName;
-  Runtime Runtime;
+  struct Runtime Runtime;
   StudyConfiguration Configuration;
   std::vector<Duration> Measurements;
 };
@@ -139,12 +140,20 @@ public:
   }
 };
 
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+using MismatchIndicesType = llvm::SmallVector<uint32_t, 16>;
+using MismatchIndicesImplType = llvm::SmallVectorImpl<uint32_t>;
+#else
+using MismatchIndicesType = std::vector<uint32_t>;
+using MismatchIndicesImplType = std::vector<uint32_t>;
+#endif
+
 // Helper to generate random buffer offsets that satisfy the configuration
 // constraints. It is specifically designed to benchmark `memcmp` functions
 // where we may want the Nth byte to differ.
 class MismatchOffsetDistribution {
   std::uniform_int_distribution<size_t> MismatchIndexSelector;
-  llvm::SmallVector<uint32_t, 16> MismatchIndices;
+  MismatchIndicesType MismatchIndices;
   const uint32_t MismatchAt;
 
 public:
@@ -153,7 +162,7 @@ public:
 
   explicit operator bool() const { return !MismatchIndices.empty(); }
 
-  const llvm::SmallVectorImpl<uint32_t> &getMismatchIndices() const {
+  const MismatchIndicesImplType &getMismatchIndices() const {
     return MismatchIndices;
   }
 

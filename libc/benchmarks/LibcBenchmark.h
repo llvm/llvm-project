@@ -39,6 +39,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "llvm/Support/ErrorHandling.h"
+
 namespace llvm {
 namespace libc_benchmarks {
 
@@ -95,11 +97,18 @@ struct BenchmarkState {
                       // current samples.
 };
 
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+using BenchmarkLogType = llvm::SmallVector<BenchmarkState, 16>;
+#else
+#include <vector>
+using BenchmarkLogType = std::vector<BenchmarkState>;
+#endif
+
 // A lightweight result for a benchmark.
 struct BenchmarkResult {
   BenchmarkStatus TerminationStatus = BenchmarkStatus::Running;
   Duration BestGuess = {};
-  std::optional<llvm::SmallVector<BenchmarkState, 16>> MaybeBenchmarkLog;
+  std::optional<BenchmarkLogType> MaybeBenchmarkLog;
 };
 
 // Stores information about a cache in the host memory system.

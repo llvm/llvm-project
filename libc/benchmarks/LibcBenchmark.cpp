@@ -8,7 +8,9 @@
 
 #include "LibcBenchmark.h"
 #include "llvm/ADT/StringRef.h"
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 #include "llvm/TargetParser/Host.h"
+#endif
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -25,7 +27,11 @@ HostState HostState::get() {
   const auto &CpuInfo = benchmark::CPUInfo::Get();
   HostState H;
   H.CpuFrequency = CpuInfo.cycles_per_second;
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
   H.CpuName = llvm::sys::getHostCPUName().str();
+#else
+  H.CpuName = "";
+#endif
   for (const auto &BenchmarkCacheInfo : CpuInfo.caches) {
     CacheInfo CI;
     CI.Type = BenchmarkCacheInfo.type;
@@ -39,3 +45,24 @@ HostState HostState::get() {
 
 } // namespace libc_benchmarks
 } // namespace llvm
+
+#ifndef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+#include "llvm/ADT/Twine.h"
+#include <cstdlib>
+#include <iostream>
+
+namespace llvm {
+void report_fatal_error(const char *reason, bool gen_crash_diag) {
+  std::cerr << "Fatal error: " << reason << std::endl;
+  std::abort();
+}
+void report_fatal_error(StringRef reason, bool gen_crash_diag) {
+  std::cerr << "Fatal error: " << reason.str() << std::endl;
+  std::abort();
+}
+void report_fatal_error(const Twine &reason, bool gen_crash_diag) {
+  std::cerr << "Fatal error: (twine reason)" << std::endl;
+  std::abort();
+}
+} // namespace llvm
+#endif

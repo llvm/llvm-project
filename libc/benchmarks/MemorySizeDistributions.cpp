@@ -1,7 +1,12 @@
 #include "MemorySizeDistributions.h"
 
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#else
+#include <iostream>
+#include <sstream>
+#endif
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -189,6 +194,7 @@ getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
     if (MSD.Name == Name)
       return MSD;
 
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
   std::string Message;
   raw_string_ostream Stream(Message);
   Stream << "Unknown MemorySizeDistribution '" << Name
@@ -196,6 +202,14 @@ getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
   for (const auto &MSD : Distributions)
     Stream << "'" << MSD.Name << "'\n";
   report_fatal_error(Message);
+#else
+  std::stringstream Stream;
+  Stream << "Unknown MemorySizeDistribution '" << std::string(Name)
+         << "', available distributions:\n";
+  for (const auto &MSD : Distributions)
+    Stream << "'" << MSD.Name.str() << "'\n";
+  report_fatal_error(Stream.str());
+#endif
 }
 
 } // namespace libc_benchmarks

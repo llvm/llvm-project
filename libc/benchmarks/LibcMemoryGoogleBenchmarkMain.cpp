@@ -3,7 +3,9 @@
 #include "MemorySizeDistributions.h"
 #include "benchmark/benchmark.h"
 #include "llvm/ADT/ArrayRef.h"
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 #include "llvm/ADT/Twine.h"
+#endif
 #include <chrono>
 #include <cstdint>
 #include <random>
@@ -11,7 +13,9 @@
 
 using llvm::Align;
 using llvm::ArrayRef;
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 using llvm::Twine;
+#endif
 using llvm::libc_benchmarks::BzeroConfiguration;
 using llvm::libc_benchmarks::ComparisonSetup;
 using llvm::libc_benchmarks::CopySetup;
@@ -53,7 +57,11 @@ template <typename SetupType, typename ConfigurationType> struct Runner {
         (State.iterations() * Setup.getBatchBytes()) / Setup.BatchSize;
     State.SetBytesProcessed(TotalBytes);
     State.SetItemsProcessed(State.iterations());
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
     State.SetLabel((Twine(Configuration.Name) + "," + Distribution.Name).str());
+#else
+    State.SetLabel(Configuration.Name.str() + "," + Distribution.Name.str());
+#endif
     State.counters["bytes_per_cycle"] = benchmark::Counter(
         TotalBytes / benchmark::CPUInfo::Get().cycles_per_second,
         benchmark::Counter::kIsRate);

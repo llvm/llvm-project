@@ -8,10 +8,13 @@
 
 #include "LibcMemoryBenchmark.h"
 #include "llvm/ADT/SmallVector.h"
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#endif
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <optional>
 
 namespace llvm {
 namespace libc_benchmarks {
@@ -61,7 +64,8 @@ MismatchOffsetDistribution::MismatchOffsetDistribution(size_t BufferSize,
       std::uniform_int_distribution<size_t>(0, MismatchIndices.size() - 1);
 }
 
-static size_t getL1DataCacheSize() {
+static std::optional<size_t> getL1DataCacheSize() {
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
   const std::vector<CacheInfo> &CacheInfos = HostState::get().Caches;
   const auto IsL1DataCache = [](const CacheInfo &CI) {
     return CI.Type == "Data" && CI.Level == 1;
@@ -70,6 +74,9 @@ static size_t getL1DataCacheSize() {
   if (CacheIt != CacheInfos.end())
     return CacheIt->Size;
   report_fatal_error("Unable to read L1 Cache Data Size");
+#else
+  return std::nullopt;
+#endif
 }
 
 static constexpr int64_t KiB = 1024;
@@ -77,7 +84,9 @@ static constexpr int64_t ParameterStorageBytes = 4 * KiB;
 static constexpr int64_t L1LeftAsideBytes = 1 * KiB;
 
 static size_t getAvailableBufferSize() {
-  return getL1DataCacheSize() - L1LeftAsideBytes - ParameterStorageBytes;
+  auto L1Size = getL1DataCacheSize();
+  return (L1Size ? *L1Size : 32 * 1024) - L1LeftAsideBytes -
+         ParameterStorageBytes;
 }
 
 ParameterBatch::ParameterBatch(size_t BufferCount)
@@ -88,7 +97,8 @@ ParameterBatch::ParameterBatch(size_t BufferCount)
     report_fatal_error("Not enough L1 cache");
   const size_t ParameterBytes = Parameters.size() * sizeof(ParameterType);
   const size_t BufferBytes = BufferSize * BufferCount;
-  if (ParameterBytes + BufferBytes + L1LeftAsideBytes > getL1DataCacheSize())
+  auto L1Size = getL1DataCacheSize();
+  if (L1Size && ParameterBytes + BufferBytes + L1LeftAsideBytes > *L1Size)
     report_fatal_error(
         "We're splitting a buffer of the size of the L1 cache between a data "
         "buffer and a benchmark parameters buffer, so by construction the "
@@ -103,7 +113,8 @@ size_t ParameterBatch::getBatchBytes() const {
 }
 
 void ParameterBatch::checkValid(const ParameterType &P) const {
-  if (P.OffsetBytes + P.SizeBytes >= BufferSize)
+  if (P.OffsetBytes + P.SizeBytes >= BufferSize) {
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
     report_fatal_error(
         llvm::Twine("Call would result in buffer overflow: Offset=")
             .concat(llvm::Twine(P.OffsetBytes))
@@ -111,6 +122,14 @@ void ParameterBatch::checkValid(const ParameterType &P) const {
             .concat(llvm::Twine(P.SizeBytes))
             .concat(", BufferSize=")
             .concat(llvm::Twine(BufferSize)));
+#else
+    std::string Message = "Call would result in buffer overflow: Offset=" +
+                          std::to_string(P.OffsetBytes) +
+                          ", Size=" + std::to_string(P.SizeBytes) +
+                          ", BufferSize=" + std::to_string(BufferSize);
+    report_fatal_error(Message.c_str());
+#endif
+  }
 }
 
 CopySetup::CopySetup()
