@@ -32,4 +32,3 @@ target triple = "wasm32-unknown-unknown"
 ; BULK-MEM-NEXT: .int8 15
 ; BULK-MEM-NEXT: .ascii "bulk-memory-opt"
 ; BULK-MEM-NEXT: .tbss.foo,"T",@
-
