@@ -998,7 +998,10 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
       int Need = WindowFor(MI) - Distance;
       WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
     }
-    Distance += SIInstrInfo::getNumWaitStates(MI);
+    // Mirror getWaitStatesSince's accounting, which does not count inline asm
+    // towards the wait-state distance.
+    if (!MI.isInlineAsm())
+      Distance += SIInstrInfo::getNumWaitStates(MI);
     return false;
   };
   getWaitStatesSince(Counter, MaxWaitStates);
