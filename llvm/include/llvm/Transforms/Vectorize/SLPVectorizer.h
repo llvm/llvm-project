@@ -37,6 +37,7 @@ class GetElementPtrInst;
 class InsertElementInst;
 class InsertValueInst;
 class Instruction;
+class LoopAccessInfoManager;
 class LoopInfo;
 class OptimizationRemarkEmitter;
 class PHINode;
@@ -70,6 +71,7 @@ struct SLPVectorizerPass : public OptionalPassInfoMixin<SLPVectorizerPass> {
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
   DemandedBits *DB = nullptr;
+  LoopAccessInfoManager *LAIs = nullptr;
   const DataLayout *DL = nullptr;
 
 public:
@@ -80,7 +82,8 @@ public:
                         TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
                         AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
                         AssumptionCache *AC_, DemandedBits *DB_,
-                        OptimizationRemarkEmitter *ORE_);
+                        OptimizationRemarkEmitter *ORE_,
+                        LoopAccessInfoManager *LAIs_);
 
 private:
   /// Collect store and getelementptr instructions and organize them
@@ -170,6 +173,10 @@ private:
                                           slpvectorizer::BoUpSLP &R,
                                           unsigned Idx, unsigned MinVF,
                                           unsigned &Size);
+
+  /// Returns true if vectorizing the store chain would cause store-to-load
+  /// forwarding conflicts due to short loop-carried dependence distances.
+  bool hasStoreLoadForwardingConflict(ArrayRef<Value *> Chain, unsigned VF);
 
   bool vectorizeStores(
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,

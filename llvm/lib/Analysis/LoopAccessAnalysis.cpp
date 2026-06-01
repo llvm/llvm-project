@@ -1898,20 +1898,18 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   //   place. Vectorizing in such cases does not make sense.
   // Store-load forwarding distance.
 
-  // After this many iterations store-to-load forwarding conflicts should not
-  // cause any slowdowns.
-  const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
       std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
                MaxStoreLoadForwardSafeDistanceInBits);
 
-  // Compute the smallest VF at which the store and load would be misaligned.
+  // Compute the smallest VF at which the store and load would be misaligned
+  // and recent enough to still be in the store buffer. The predicate is
+  // shared with SLP via VectorizerParams::isStoreLoadForwardingConflict.
   for (uint64_t VF = 2 * TypeByteSize;
        VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
-    // If the number of vector iteration between the store and the load are
-    // small we could incur conflicts.
-    if (Distance % VF && Distance / VF < NumItersForStoreLoadThroughMemory) {
+    if (VectorizerParams::isStoreLoadForwardingConflict(Distance, VF,
+                                                        TypeByteSize)) {
       MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }

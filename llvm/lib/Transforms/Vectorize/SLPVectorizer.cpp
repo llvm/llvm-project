@@ -272,6 +272,10 @@ static cl::opt<bool> PerLaneGatherScale(
     cl::desc("Use per-lane execution scale for gather/buildvector tree "
              "entries to model LICM-hoistable buildvector sequences."));
 
+static cl::opt<bool> EnableSLPStoreLoadForwardCheck(
+    "slp-store-load-forward-check", cl::init(true), cl::Hidden,
+    cl::desc("Check for store-to-load forwarding conflicts in SLP"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -27292,13 +27296,18 @@ PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &A
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DB = &AM.getResult<DemandedBitsAnalysis>(F);
   auto *ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  auto *LAIs = &AM.getResult<LoopAccessAnalysis>(F);
 
-  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
+  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE, LAIs);
   if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  // SLP rewrites instructions but does not restructure loops, so LAA's
+  // per-loop dependence summaries and runtime checks remain valid for
+  // downstream consumers. Mirrors LoopVectorize's preservation policy.
+  PA.preserve<LoopAccessAnalysis>();
   return PA;
 }
 
@@ -27307,7 +27316,8 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 TargetLibraryInfo *TLI_, AAResults *AA_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
-                                OptimizationRemarkEmitter *ORE_) {
+                                OptimizationRemarkEmitter *ORE_,
+                                LoopAccessInfoManager *LAIs_) {
   if (!RunSLPVectorization)
     return false;
   SE = SE_;
@@ -27318,6 +27328,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT = DT_;
   AC = AC_;
   DB = DB_;
+  LAIs = LAIs_;
   DL = &F.getDataLayout();
 
   Stores.clear();
@@ -27384,6 +27395,115 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   return Changed;
 }
 
+bool SLPVectorizerPass::hasStoreLoadForwardingConflict(ArrayRef<Value *> Chain,
+                                                       unsigned VF) {
+  if (Chain.empty() || !LAIs)
+    return false;
+
+  auto *FirstStore = cast<StoreInst>(Chain[0]);
+  Loop *L = LI->getLoopFor(FirstStore->getParent());
+  if (!L) {
+    // STLF stalls only matter inside loops where the store buffer stays hot
+    // across iterations.
+    LLVM_DEBUG(dbgs() << "SLP: STLF check: stores not in a loop, skipping\n");
+    return false;
+  }
+
+  Type *ValueTy = FirstStore->getValueOperand()->getType();
+  TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
+  // SLP only handles fixed-width vectors; bail out on scalable types.
+  if (StoreSize.isScalable())
+    return false;
+  uint64_t ElementSize = StoreSize.getFixedValue();
+  if (ElementSize == 0)
+    return false;
+  uint64_t VectorStoreBytes = uint64_t(VF) * ElementSize;
+  LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
+                    << " ElementSize=" << ElementSize
+                    << " VectorStoreBytes=" << VectorStoreBytes << "\n");
+
+  // Build a quick lookup of the chain's stores so we can pick out only the
+  // dependences that actually involve this chain. LAA computes a single
+  // per-loop store-load forwarding cap that is the minimum across *every*
+  // dep in the loop, which over-restricts when the loop contains multiple
+  // independent SLP chains. Iterating per-dep keeps us chain-granular.
+  SmallPtrSet<const Instruction *, 8> ChainStores;
+  for (Value *V : Chain)
+    if (auto *I = dyn_cast<Instruction>(V))
+      ChainStores.insert(I);
+  if (ChainStores.empty())
+    return false;
+
+  // LoopAccessInfo is computed lazily and cached per loop, so subsequent
+  // queries for chains in the same loop are O(1) (same machinery the loop
+  // vectorizer consumes).
+  const LoopAccessInfo &LAI = LAIs->getInfo(*L);
+  const MemoryDepChecker &Dep = LAI.getDepChecker();
+  const auto *Deps = Dep.getDependences();
+  if (!Deps) {
+    // LAA bailed (volatile load, indirect access, exceeded MaxDependences,
+    // ...). Be conservative and don't reject vectorization on the SLP side.
+    LLVM_DEBUG(dbgs() << "SLP: STLF: no LAA dependence list available\n");
+    return false;
+  }
+
+  // Avoid repeating the predicate work for loads that LAA reports against
+  // multiple chain stores in turn.
+  SmallPtrSet<const LoadInst *, 8> SeenLoads;
+  for (const MemoryDepChecker::Dependence &D : *Deps) {
+    Instruction *Src = D.getSource(Dep);
+    Instruction *Dst = D.getDestination(Dep);
+
+    // Only inspect deps where one end is a store from this chain and the
+    // other end is a (simple) load.
+    bool SrcInChain = ChainStores.contains(Src);
+    bool DstInChain = ChainStores.contains(Dst);
+    if (!SrcInChain && !DstInChain)
+      continue;
+    auto *LoadI = dyn_cast<LoadInst>(SrcInChain ? Dst : Src);
+    if (!LoadI || !LoadI->isSimple() || !SeenLoads.insert(LoadI).second)
+      continue;
+
+    // Compute distance from the chain's leading edge (Chain[0]) rather than
+    // the specific store LAA paired with the load: LAA may pick any chain
+    // store as the dependence representative, but the predicate cares about
+    // the chain window's start.
+    std::optional<int64_t> Diff =
+        getPointersDiff(ValueTy, FirstStore->getPointerOperand(),
+                        LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
+                        /*StrictCheck=*/false, /*CheckType=*/false);
+    if (!Diff) {
+      LLVM_DEBUG(dbgs() << "SLP: STLF: getPointersDiff returned nullopt\n");
+      continue;
+    }
+    // Only negative diffs (load below the chain) are backward loop-carried;
+    // forward references within an iteration don't cause STLF stalls.
+    if (*Diff >= 0)
+      continue;
+
+    uint64_t Distance = -static_cast<uint64_t>(*Diff) * ElementSize;
+    LLVM_DEBUG(dbgs() << "SLP: STLF: chain-relevant dep distance=" << Distance
+                      << " bytes\n");
+
+    // Loads inside the widened store window [base, base+VectorStoreBytes)
+    // don't overlap a *previous* iteration's vector store; they are
+    // forwarded normally.
+    if (Distance < VectorStoreBytes)
+      continue;
+
+    if (VectorizerParams::isStoreLoadForwardingConflict(
+            Distance, VectorStoreBytes, ElementSize)) {
+      LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: distance "
+                        << Distance << " bytes, vector store width "
+                        << VectorStoreBytes << " bytes, misalignment "
+                        << (Distance % VectorStoreBytes) << "\n");
+      return true;
+    }
+  }
+
+  return false;
+}
+
 std::optional<bool>
 SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
                                        unsigned Idx, unsigned MinVF,
@@ -27403,6 +27523,21 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
     // isAllowedNonPowerOf2VF for supported widths.
     if (!VectorizeNonPowerOf2 || (VF < MinVF && VF + 1 != MinVF))
       return false;
+  }
+
+  // Early bail-out: reject chains that would suffer STLF stalls before doing
+  // expensive tree analysis (buildTree, reorder, getTreeCost, etc.).
+  if (EnableSLPStoreLoadForwardCheck &&
+      hasStoreLoadForwardingConflict(Chain, VF)) {
+    LLVM_DEBUG(dbgs() << "SLP: Skipping store chain due to potential "
+                         "store-to-load forwarding conflict\n");
+    using namespace ore;
+    R.getORE()->emit(
+        OptimizationRemarkMissed(SV_NAME, "StoreLoadForwardConflict",
+                                 cast<StoreInst>(Chain[0]))
+        << "Stores not SLP vectorized: short loop-carried dependence "
+           "distance could cause store-to-load forwarding stalls");
+    return false;
   }
 
   LLVM_DEBUG(dbgs() << "SLP: Analyzing " << VF << " stores at offset " << Idx
