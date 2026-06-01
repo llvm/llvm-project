@@ -53,6 +53,7 @@ struct Byte {
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
     Value &= ~Mask;
+    TagMask &= ~Mask;
   }
 
   void poisonBits(uint8_t Mask) {
@@ -112,6 +113,12 @@ struct Byte {
                 static_cast<uint8_t>(Value << Shift),
                 static_cast<uint8_t>(TagMask << Shift),
                 static_cast<uint8_t>(TagValue << Shift)};
+  }
+
+  bool AreHighBitsZExtd(uint8_t BitsFrom) const {
+    uint8_t Mask = static_cast<uint8_t>((~0U) << BitsFrom);
+    return (ConcreteMask & Mask) == Mask && (Value & Mask) == 0 &&
+           (TagMask & Mask) == 0;
   }
 };
 
@@ -237,24 +244,41 @@ public:
 /// Represents a scalar byte value. If the value is not byte-sized, the high
 /// bits are zero-padded.
 class ByteValue {
+  // The byte order is endianness-dependent.
   std::vector<Byte> Val;
-  uint32_t BitWidth;
+  uint32_t BitWidth : 31;
+  uint32_t IsLittleEndian : 1;
 
 public:
   ByteValue(const APInt &V, bool IsLittleEndian);
-  /// The caller is responsible to zero high bits for non-byte-sized values.
-  ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val)
-      : Val(Val), BitWidth(BitWidth) {}
-  /// The caller is responsible to zero high bits for non-byte-sized values.
-  ByteValue(uint32_t BitWidth, std::vector<Byte> Val)
-      : Val(std::move(Val)), BitWidth(BitWidth) {}
+  ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
+            bool ImplicitClearHighBits = false)
+      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian,
+                  ImplicitClearHighBits) {}
+  ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
+            bool ImplicitClearHighBits = false)
+      : Val(std::move(Val)), BitWidth(BitWidth),
+        IsLittleEndian(IsLittleEndian) {
+    if (ImplicitClearHighBits && (BitWidth & 7) != 0) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+      if (IsLittleEndian)
+        this->Val.back().zeroBits(Mask);
+      else
+        this->Val.front().zeroBits(Mask);
+    }
+    assert(((BitWidth & 7) == 0 ||
+            ((IsLittleEndian ? this->Val.back() : this->Val.front())
+                 .AreHighBitsZExtd(BitWidth & 7))) &&
+           "The caller is responsible to zero high bits for non-byte-sized "
+           "values.");
+  }
   ByteValue(const ByteValue &) = default;
   ByteValue(ByteValue &&) = default;
   ByteValue &operator=(const ByteValue &) = default;
   ByteValue &operator=(ByteValue &&) = default;
   ~ByteValue() = default;
 
-  static ByteValue zero(uint32_t BitWidth);
+  static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
   static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
 
   uint32_t getBitWidth() const { return BitWidth; }

@@ -424,7 +424,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     }
 
     if (IsByteType) {
-      LogicalBytes[BitsStart / 8] = LogicalByte;
+      LogicalBytes[I / 8] = LogicalByte;
       continue;
     }
 
@@ -453,7 +453,7 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     }
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
-    return ByteValue(NumBits, std::move(LogicalBytes));
+    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian());
   }
 
   OffsetInBits = NewOffsetInBits;
@@ -500,14 +500,8 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
         }
     }
     unsigned BitWidth = Ty->getByteBitWidth();
-    ByteValue Res(BitWidth, Bytes);
-    if (BitWidth & 7) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
-      if (DL.isLittleEndian())
-        Res.mutableBytes().back().zeroBits(Mask);
-      else
-        Res.mutableBytes().front().zeroBits(Mask);
-    }
+    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
+                  /*ImplicitClearHighBits=*/true);
     return AnyValue(std::move(Res));
   }
 

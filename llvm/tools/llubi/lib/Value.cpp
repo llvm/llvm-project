@@ -297,7 +297,8 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
   if (Ty->isPointerTy())
     return Pointer::null(Ty->getPointerAddressSpace(), Ctx.getDataLayout());
   if (Ty->isByteTy())
-    return ByteValue::zero(Ty->getByteBitWidth());
+    return ByteValue::zero(Ty->getByteBitWidth(),
+                           Ctx.getDataLayout().isLittleEndian());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(
@@ -323,10 +324,18 @@ AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
   return AnyValue(std::vector<AnyValue>(NumElements, Scalar));
 }
 
-ByteValue::ByteValue(const APInt &V, bool IsLittleEndian) {}
-ByteValue ByteValue::zero(uint32_t BitWidth) {
+ByteValue::ByteValue(const APInt &V, bool IsLittleEndian)
+    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian) {
+  Val.resize(divideCeil(BitWidth, 8));
+  MutableBytesView View(Val, IsLittleEndian);
+  for (uint8_t I = 0; I < BitWidth; I += 8)
+    View[I / 8] = Byte::concrete(static_cast<uint8_t>(
+        V.extractBitsAsZExtValue(std::min(BitWidth - I, 8), I)));
+}
+ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
   return ByteValue(
-      BitWidth, std::vector<Byte>(divideCeil(BitWidth, 8), Byte::concrete(0)));
+      BitWidth, std::vector<Byte>(divideCeil(BitWidth, 8), Byte::concrete(0)),
+      IsLittleEndian);
 }
 
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
@@ -339,22 +348,26 @@ ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
     else
       Val.front().zeroBits(Mask);
   }
-  return ByteValue(BitWidth, std::move(Val));
+  return ByteValue(BitWidth, std::move(Val), IsLittleEndian);
 }
 
 void ByteValue::print(raw_ostream &OS) const {
   OS << 'b' << BitWidth << ' ';
   for (const Byte &V : Val) {
+    bool IsFullByte = (BitWidth & 7) == 0 ||
+                      (IsLittleEndian ? &Val.back() : &Val.front()) != &V;
     // Try to print a byte in short form
-    if (V.ConcreteMask == 255 && V.TagMask == 0) {
+    if (IsFullByte && V.ConcreteMask == 255 && V.TagMask == 0) {
       // Concrete value without provenance.
       OS << hexdigit(V.Value >> 4) << hexdigit(V.Value & 15);
-    } else if (V.ConcreteMask == 0 && (V.Value == 0 || V.Value == 255)) {
+    } else if (IsFullByte && V.ConcreteMask == 0 &&
+               (V.Value == 0 || V.Value == 255)) {
       // Poison/undef bytes.
       OS << (V.Value == 0 ? "!!" : "??");
     } else {
-      for (uint32_t I = 0; I != 8; ++I) {
-        uint32_t Mask = 1U << (8 - I);
+      uint32_t BitEnd = IsFullByte ? 8 : BitWidth & 7;
+      for (uint32_t I = 0; I != BitEnd; ++I) {
+        uint32_t Mask = 1U << (BitEnd - 1 - I);
         if (V.ConcreteMask & Mask)
           OS << (V.Value & Mask ? '1' : '0');
         else
@@ -363,8 +376,8 @@ void ByteValue::print(raw_ostream &OS) const {
       if (uint32_t TagMask = V.ConcreteMask & V.TagMask) {
         // Print tags if available.
         OS << '(';
-        for (uint32_t I = 0; I != 8; ++I) {
-          uint32_t Mask = 1U << (8 - I);
+        for (uint32_t I = 0; I != BitEnd; ++I) {
+          uint32_t Mask = 1U << (BitEnd - 1 - I);
           if (TagMask & Mask)
             OS << (V.TagValue & Mask ? '1' : '0');
           else
