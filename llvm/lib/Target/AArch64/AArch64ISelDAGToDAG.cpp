@@ -1957,6 +1957,10 @@ void AArch64DAGToDAGISel::SelectPostLoad(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i),
           CurDAG->getTargetExtractSubreg(SubRegIdx + i, dl, VT, SuperReg));
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   // Update the chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
   CurDAG->RemoveDeadNode(N);
@@ -2522,6 +2526,10 @@ void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
                    N->getOperand(NumVecs + 2), // Incremental
                    N->getOperand(0)};          // Chain
   SDNode *St = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
