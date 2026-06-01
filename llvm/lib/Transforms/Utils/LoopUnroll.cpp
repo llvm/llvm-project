@@ -1728,10 +1728,16 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
 
   // Don't unroll reductions with constant ops; those can be folded to a
-  // single induction update.
-  if (any_of(cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()))
-                 ->operands(),
-             IsaPred<Constant>))
+  // single induction update. For calls (e.g. fmuladd or min/max
+  // intrinsics), the called function is itself a Constant operand and is
+  // not a reduction operand, so restrict the check to the argument list.
+  Instruction *LatchInst =
+      cast<Instruction>(Phi.getIncomingValueForBlock(L->getLoopLatch()));
+  bool HasConstOp =
+      isa<CallBase>(LatchInst)
+          ? any_of(cast<CallBase>(LatchInst)->args(), IsaPred<Constant>)
+          : any_of(LatchInst->operands(), IsaPred<Constant>);
+  if (HasConstOp)
     return std::nullopt;
 
   BasicBlock *Latch = L->getLoopLatch();
