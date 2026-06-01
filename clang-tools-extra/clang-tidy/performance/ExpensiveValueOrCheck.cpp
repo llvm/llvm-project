@@ -57,13 +57,10 @@ std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
 std::optional<FixItHint>
 buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
            const Expr *FallbackArg, const CXXRecordDecl *OptionalClass,
-           const ASTContext &Ctx, const SourceManager &SM,
-           const LangOptions &LO) {
+           const SourceManager &SM, const LangOptions &LO) {
   if (Call->getBeginLoc().isMacroID())
     return std::nullopt;
-  if (!ObjExpr || !ObjExpr->isLValue())
-    return std::nullopt;
-  if (FallbackArg->HasSideEffects(Ctx))
+  if (!ObjExpr->isLValue())
     return std::nullopt;
   if (!hasOperatorStar(OptionalClass))
     return std::nullopt;
@@ -133,12 +130,15 @@ void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
 
 void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
+  assert(Call && "Matcher guaranteed a bound 'call' node");
   const Expr *ObjExpr = Call->getImplicitObjectArgument();
+  assert(ObjExpr && "CXXMemberCallExpr must have an implicit object argument");
+
   const ASTContext &Ctx = *Result.Context;
-  const QualType ValueType = Call->getType().getCanonicalType();
+  const QualType ValueType = Call->getType();
 
   // Rvalue optional uses && overload which moves. Suppress if move is cheap.
-  if (ObjExpr && !ObjExpr->isLValue() &&
+  if (!ObjExpr->isLValue() &&
       utils::type_traits::hasNonTrivialMoveConstructor(ValueType))
     return;
 
@@ -162,8 +162,8 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
                 << buildSuggestion(OptionalClass);
 
     if (!HasSideEffects) {
-      if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass, Ctx,
-                                *Result.SourceManager, Ctx.getLangOpts()))
+      if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass,
+                                Ctx.getSourceManager(), Ctx.getLangOpts()))
         Diag << *Fix;
     }
   }
