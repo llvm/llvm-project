@@ -360,6 +360,14 @@ protected:
 
 } // namespace lldb_private
 
+#if __SIZEOF_POINTER__ == 8
+static_assert(sizeof(lldb_private::Symbol) == 80,
+              "Symbol size must be kept to a minimum");
+#elif __SIZEOF_POINTER__ == 4
+static_assert(sizeof(lldb_private::Symbol) == 52,
+              "Symbol size must be kept to a minimum");
+#endif
+
 namespace llvm {
 namespace json {
 
