@@ -1506,7 +1506,7 @@ define i32 @phi_trans6(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMDEP:       [[HEADER]]:
 ; LE-MEMDEP-NEXT:    [[L1:%.*]] = phi i32 [ [[L0]], %[[ENTRY]] ], [ [[L1_PRE:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; LE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE]] ]
-; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %latch]
+; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; LE-MEMDEP:       [[LATCH]]:
 ; LE-MEMDEP-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; LE-MEMDEP-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LATCH_HEADER_CRIT_EDGE]]
@@ -1525,7 +1525,7 @@ define i32 @phi_trans6(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMSSA-NEXT:    br label %[[HEADER:.*]]
 ; LE-MEMSSA:       [[HEADER]]:
 ; LE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH]]), [label %latch]
+; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH]]), [label %[[LATCH]]]
 ; LE-MEMSSA:       [[LATCH]]:
 ; LE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[IV]]
 ; LE-MEMSSA-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1543,7 +1543,7 @@ define i32 @phi_trans6(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMDEP:       [[HEADER]]:
 ; BE-MEMDEP-NEXT:    [[L1:%.*]] = phi i32 [ [[L0]], %[[ENTRY]] ], [ [[L1_PRE:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; BE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE]] ]
-; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %latch]
+; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; BE-MEMDEP:       [[LATCH]]:
 ; BE-MEMDEP-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; BE-MEMDEP-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[LATCH_HEADER_CRIT_EDGE]]
@@ -1562,7 +1562,7 @@ define i32 @phi_trans6(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMSSA-NEXT:    br label %[[HEADER:.*]]
 ; BE-MEMSSA:       [[HEADER]]:
 ; BE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH]]), [label %latch]
+; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans6, %[[LATCH]]), [label %[[LATCH]]]
 ; BE-MEMSSA:       [[LATCH]]:
 ; BE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[IV]]
 ; BE-MEMSSA-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1601,7 +1601,7 @@ define i32 @phi_trans7(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMDEP:       [[HEADER]]:
 ; LE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; LE-MEMDEP-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
-; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %latch]
+; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; LE-MEMDEP:       [[LATCH]]:
 ; LE-MEMDEP-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
 ; LE-MEMDEP-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1621,7 +1621,7 @@ define i32 @phi_trans7(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMSSA:       [[HEADER]]:
 ; LE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; LE-MEMSSA-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
-; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH]]), [label %latch]
+; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH]]), [label %[[LATCH]]]
 ; LE-MEMSSA:       [[LATCH]]:
 ; LE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
 ; LE-MEMSSA-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1639,7 +1639,7 @@ define i32 @phi_trans7(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMDEP:       [[HEADER]]:
 ; BE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
 ; BE-MEMDEP-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
-; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %latch]
+; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; BE-MEMDEP:       [[LATCH]]:
 ; BE-MEMDEP-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
 ; BE-MEMDEP-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1659,7 +1659,7 @@ define i32 @phi_trans7(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMSSA:       [[HEADER]]:
 ; BE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; BE-MEMSSA-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
-; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH]]), [label %latch]
+; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans7, %[[LATCH]]), [label %[[LATCH]]]
 ; BE-MEMSSA:       [[LATCH]]:
 ; BE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
 ; BE-MEMSSA-NEXT:    [[L1:%.*]] = load i32, ptr [[GEP_1]], align 4
@@ -1698,7 +1698,7 @@ define i32 @phi_trans8(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMDEP-NEXT:    br label %[[HEADER:.*]]
 ; LE-MEMDEP:       [[HEADER]]:
 ; LE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
-; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %latch]
+; LE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; LE-MEMDEP:       [[LATCH]]:
 ; LE-MEMDEP-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
 ; LE-MEMDEP-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
@@ -1718,7 +1718,7 @@ define i32 @phi_trans8(ptr noalias nocapture readonly %x, i1 %cond) {
 ; LE-MEMSSA-NEXT:    br label %[[HEADER:.*]]
 ; LE-MEMSSA:       [[HEADER]]:
 ; LE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH]]), [label %latch]
+; LE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH]]), [label %[[LATCH]]]
 ; LE-MEMSSA:       [[LATCH]]:
 ; LE-MEMSSA-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
 ; LE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
@@ -1736,7 +1736,7 @@ define i32 @phi_trans8(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMDEP-NEXT:    br label %[[HEADER:.*]]
 ; BE-MEMDEP:       [[HEADER]]:
 ; BE-MEMDEP-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH_HEADER_CRIT_EDGE:.*]] ]
-; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %latch]
+; BE-MEMDEP-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH:.*]]), [label %[[LATCH]]]
 ; BE-MEMDEP:       [[LATCH]]:
 ; BE-MEMDEP-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
 ; BE-MEMDEP-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
@@ -1756,7 +1756,7 @@ define i32 @phi_trans8(ptr noalias nocapture readonly %x, i1 %cond) {
 ; BE-MEMSSA-NEXT:    br label %[[HEADER:.*]]
 ; BE-MEMSSA:       [[HEADER]]:
 ; BE-MEMSSA-NEXT:    [[IV:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH]]), [label %latch]
+; BE-MEMSSA-NEXT:    indirectbr ptr blockaddress(@phi_trans8, %[[LATCH]]), [label %[[LATCH]]]
 ; BE-MEMSSA:       [[LATCH]]:
 ; BE-MEMSSA-NEXT:    [[OFFSET:%.*]] = add i32 [[IV]], -2
 ; BE-MEMSSA-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[X]], i32 [[OFFSET]]
@@ -2352,39 +2352,14 @@ declare void @use3(ptr, ptr)
 
 ; PR8908
 define void @test_escape1() nounwind {
-; LE-MEMDEP-LABEL: define void @test_escape1(
-; LE-MEMDEP-SAME: ) #[[ATTR3]] {
-; LE-MEMDEP-NEXT:    [[X:%.*]] = alloca ptr, align 8
-; LE-MEMDEP-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
-; LE-MEMDEP-NEXT:    call void @use() #[[ATTR3]]
-; LE-MEMDEP-NEXT:    call void @use3(ptr [[X]], ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2)) #[[ATTR3]]
-; LE-MEMDEP-NEXT:    ret void
-;
-; LE-MEMSSA-LABEL: define void @test_escape1(
-; LE-MEMSSA-SAME: ) #[[ATTR3]] {
-; LE-MEMSSA-NEXT:    [[X:%.*]] = alloca ptr, align 8
-; LE-MEMSSA-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
-; LE-MEMSSA-NEXT:    call void @use() #[[ATTR3]]
-; LE-MEMSSA-NEXT:    [[DEAD:%.*]] = load ptr, ptr [[X]], align 8
-; LE-MEMSSA-NEXT:    call void @use3(ptr [[X]], ptr [[DEAD]]) #[[ATTR3]]
-; LE-MEMSSA-NEXT:    ret void
-;
-; BE-MEMDEP-LABEL: define void @test_escape1(
-; BE-MEMDEP-SAME: ) #[[ATTR3]] {
-; BE-MEMDEP-NEXT:    [[X:%.*]] = alloca ptr, align 8
-; BE-MEMDEP-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
-; BE-MEMDEP-NEXT:    call void @use() #[[ATTR3]]
-; BE-MEMDEP-NEXT:    call void @use3(ptr [[X]], ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2)) #[[ATTR3]]
-; BE-MEMDEP-NEXT:    ret void
-;
-; BE-MEMSSA-LABEL: define void @test_escape1(
-; BE-MEMSSA-SAME: ) #[[ATTR3]] {
-; BE-MEMSSA-NEXT:    [[X:%.*]] = alloca ptr, align 8
-; BE-MEMSSA-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
-; BE-MEMSSA-NEXT:    call void @use() #[[ATTR3]]
-; BE-MEMSSA-NEXT:    [[DEAD:%.*]] = load ptr, ptr [[X]], align 8
-; BE-MEMSSA-NEXT:    call void @use3(ptr [[X]], ptr [[DEAD]]) #[[ATTR3]]
-; BE-MEMSSA-NEXT:    ret void
+; CHECK-LABEL: define void @test_escape1(
+; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-NEXT:    [[X:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr [[X]], align 8
+; CHECK-NEXT:    call void @use() #[[ATTR3]]
+; CHECK-NEXT:    [[DEAD:%.*]] = load ptr, ptr [[X]], align 8
+; CHECK-NEXT:    call void @use3(ptr [[X]], ptr [[DEAD]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
 ;
   %x = alloca ptr, align 8
   store ptr getelementptr inbounds ([5 x ptr], ptr @_ZTV1X, i64 0, i64 2), ptr %x, align 8

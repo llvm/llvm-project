@@ -182,7 +182,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 
-declare noalias ptr @malloc(i64) willreturn allockind("alloc,uninitialized") "alloc-family"="malloc"
+declare noalias ptr @malloc(i64) willreturn allockind("alloc,uninitialized") memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc"
 declare void @readnone(ptr) readnone nounwind
 declare void @free(ptr nocapture) allockind("free") "alloc-family"="malloc"
 

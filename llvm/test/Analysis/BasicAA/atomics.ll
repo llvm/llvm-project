@@ -253,7 +253,7 @@ define ptr @inline_asm() {
 }
 
 ; CHECK-LABEL: Function: arbitrary_call
-; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call()
+; CHECK:  Both ModRef:  Ptr: i32* %a	<->  call void @call()
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #0
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #1
 ; CHECK:  NoModRef:  Ptr: i32* %a	<->  call void @call() #2
