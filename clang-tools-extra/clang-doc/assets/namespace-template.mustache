@@ -164,7 +164,7 @@
                         {{#Records}}
                         <li id="{{USR}}" style="max-height: 40px;">
                             <a href="{{DocumentationFileName}}.html">
-                                <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
+                                <pre><code class="language-cpp code-clang-doc">class {{Name}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^SpecParamEnd}}, {{/SpecParamEnd}}{{/Parameters}}&gt;{{/Specialization}}</code></pre>
                             </a>
                         </li>
                         {{/Records}}

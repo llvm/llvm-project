@@ -2018,6 +2018,15 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_abort);
     Reqs.addCapability(SPIRV::Capability::AbortKHR);
     break;
+  case SPIRV::OpPoisonKHR:
+  case SPIRV::OpFreezeKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
+      report_fatal_error("OpPoisonKHR/OpFreezeKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_poison_freeze",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
+    Reqs.addCapability(SPIRV::Capability::PoisonFreezeKHR);
+    break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
@@ -2655,7 +2664,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::LocalSizeHint, ST);
-    if (F.getMetadata("intel_reqd_sub_group_size"))
+    if (F.getMetadata("intel_reqd_sub_group_size") ||
+        F.getMetadata("reqd_sub_group_size"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::SubgroupSize, ST);

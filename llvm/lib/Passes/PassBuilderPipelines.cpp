@@ -212,7 +212,7 @@ static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
 static cl::opt<bool>
-    EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
+    EnableLoopInterchange("enable-loopinterchange", cl::init(true), cl::Hidden,
                           cl::desc("Enable the LoopInterchange Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
@@ -425,16 +425,14 @@ static void instructionCountersPass(ModulePassManager &MPM,
   if (AreStatisticsEnabled()) {
     MPM.addPass(
         createModuleToFunctionPassAdaptor(InstCountPass(IsPreOptimization)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        FunctionPropertiesStatisticsPass(IsPreOptimization)));
   }
 }
 
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  if (AreStatisticsEnabled()) {
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
-  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO

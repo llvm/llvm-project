@@ -647,6 +647,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("gt", tgtok::XGt)
           .Case("if", tgtok::XIf)
           .Case("cond", tgtok::XCond)
+          .Case("switch", tgtok::XSwitch)
           .Case("isa", tgtok::XIsA)
           .Case("head", tgtok::XHead)
           .Case("tail", tgtok::XTail)

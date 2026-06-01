@@ -188,6 +188,11 @@ void LLParser::dropUnknownMetadataReferences() {
   for (GlobalVariable &GV : M->globals())
     GV.eraseMetadataIf(Pred);
 
+  llvm::erase_if(PendingDbgRecords,
+                 [](const auto &E) { return std::get<2>(E)->isTemporary(); });
+  llvm::erase_if(PendingDbgInsts,
+                 [](const auto &E) { return std::get<2>(E)->isTemporary(); });
+
   for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
     // Check whether there is only a single use left, which would be in our
     // own NumberedMetadata.
@@ -326,6 +331,30 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined comdat '$" +
                      ForwardRefComdats.begin()->first + "'");
 
+  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
+    dropUnknownMetadataReferences();
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  // Set debug locations.
+  for (auto [Loc, DR, MD] : PendingDbgRecords) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      DR->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid debug location");
+  }
+  PendingDbgRecords.clear();
+  for (auto [Loc, I, MD] : PendingDbgInsts) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      I->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid !dbg metadata");
+  }
+  PendingDbgInsts.clear();
+
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
@@ -416,14 +445,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefValIDs.begin()->second.second,
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
-
-  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
-    dropUnknownMetadataReferences();
-
-  if (!ForwardRefMDNodes.empty())
-    return error(ForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(ForwardRefMDNodes.begin()->first) + "'");
 
   // Resolve metadata cycles.
   for (auto &N : NumberedMetadata) {
@@ -2407,11 +2428,14 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
 
     unsigned MDK;
     MDNode *N;
+    auto Loc = Lex.getLoc();
     if (parseMetadataAttachment(MDK, N))
       return true;
 
     if (MDK == LLVMContext::MD_DIAssignID)
       TempDIAssignIDAttachments[N].push_back(&Inst);
+    else if (MDK == LLVMContext::MD_dbg)
+      PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
 
@@ -7479,7 +7503,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
       return true;
     if (parseToken(lltok::rparen, "Expected ')' here"))
       return true;
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label, DbgLoc);
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label);
+    PendingDbgRecords.emplace_back(DVRLoc, DR, DbgLoc);
     return false;
   }
 
@@ -7547,7 +7572,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
     return true;
   DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
       ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
-      AddressExpression, DebugLoc);
+      AddressExpression);
+  PendingDbgRecords.emplace_back(DVRLoc, DR, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//

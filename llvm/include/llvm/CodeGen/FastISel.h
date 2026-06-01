@@ -63,7 +63,7 @@ class Value;
 /// This is a fast-path instruction selection class that generates poor
 /// code and doesn't support illegal types or non-trivial lowering, but runs
 /// quickly.
-class FastISel {
+class LLVM_ABI FastISel {
 public:
   using ArgListEntry = TargetLoweringBase::ArgListEntry;
   using ArgListTy = TargetLoweringBase::ArgListTy;
@@ -158,10 +158,10 @@ public:
       return *this;
     }
 
-    CallLoweringInfo &setCallee(const DataLayout &DL, MCContext &Ctx,
-                                CallingConv::ID CC, Type *ResultTy,
-                                StringRef Target, ArgListTy &&ArgsList,
-                                unsigned FixedArgs = ~0U);
+    LLVM_ABI CallLoweringInfo &setCallee(const DataLayout &DL, MCContext &Ctx,
+                                         CallingConv::ID CC, Type *ResultTy,
+                                         StringRef Target, ArgListTy &&ArgsList,
+                                         unsigned FixedArgs = ~0U);
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultTy,
                                 MCSymbol *Target, ArgListTy &&ArgsList,
