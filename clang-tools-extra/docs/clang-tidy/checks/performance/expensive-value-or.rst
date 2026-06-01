@@ -39,7 +39,7 @@ Options
    is considered expensive to copy. Types with ``sizeof(T) > SizeThreshold``
    trigger the warning even if they are trivially copyable. Types at or below
    this threshold only trigger if they are not trivially copyable.
-   Default is `8`.
+   Default is `16`.
 
 .. option:: OptionalTypes
 

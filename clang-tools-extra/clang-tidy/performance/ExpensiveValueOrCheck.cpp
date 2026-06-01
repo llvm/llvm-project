@@ -20,7 +20,7 @@ namespace clang::tidy::performance {
 ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      SizeThreshold(Options.get("SizeThreshold", 8U)),
+      SizeThreshold(Options.get("SizeThreshold", 16U)),
       WarnOnRvalueOptional(Options.get("WarnOnRvalueOptional", false)),
       OptionalTypes(utils::options::parseStringList(
           Options.get("OptionalTypes",

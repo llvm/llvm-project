@@ -86,12 +86,12 @@ void negativeSmallPOD(std::optional<SmallPOD> opt) {
   auto val = opt.value_or(SmallPOD{0, 0});
 }
 
-struct EightBytes {
-  char d[8];
+struct SixteenBytes {
+  char d[16];
 };
 
-void negativeBoundary(std::optional<EightBytes> opt) {
-  auto val = opt.value_or(EightBytes{});
+void negativeBoundary(std::optional<SixteenBytes> opt) {
+  auto val = opt.value_or(SixteenBytes{});
 }
 
 struct TrivialCopyNonTrivialAssign {
