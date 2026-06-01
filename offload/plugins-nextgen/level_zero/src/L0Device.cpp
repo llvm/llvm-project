@@ -24,10 +24,6 @@
 
 namespace llvm::omp::target::plugin {
 
-L0DeviceTLSTy &L0DeviceTy::getTLS() {
-  return getPlugin().getDeviceTLS(getDeviceId());
-}
-
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
 static struct {
@@ -270,9 +266,9 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
-Expected<AsyncQueueTy *>
+Expected<L0QueueTy *>
 L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
-  AsyncQueueTy *Queue = static_cast<AsyncQueueTy *>(AsyncInfo->Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
     auto NewQueueOrErr = QueueCache.getQueue();
     if (!NewQueueOrErr)
@@ -286,7 +282,7 @@ L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
 Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                                   bool ReleaseQueue) {
 
-  AsyncQueueTy *Queue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   if (!Queue)
     return Plugin::success();
 
@@ -303,7 +299,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
 Expected<bool>
 L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  AsyncQueueTy *Queue = AsyncInfoWrapper.getQueueAs<AsyncQueueTy *>();
+  L0QueueTy *Queue = AsyncInfoWrapper.getQueueAs<L0QueueTy *>();
   if (!Queue)
     return false;
   return Queue->hasPendingWork();
@@ -311,7 +307,7 @@ L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 
 Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                  bool *IsQueueWorkCompleted) {
-  AsyncQueueTy *Queue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   bool WorkCompleted = true;
 
   if (Queue) {
@@ -393,8 +389,9 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
-                                (__tgt_async_info *)AsyncInfoWrapper))
+  if (auto Err =
+          enqueueMemCopy(DstPtr, SrcPtr, Size,
+                         static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
 }
@@ -667,7 +664,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
   auto QueueOrErr = getOrCreateQueue(AsyncInfo);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
-  AsyncQueueTy *AsyncQueue = *QueueOrErr;
+  L0QueueTy *AsyncQueue = *QueueOrErr;
   return AsyncQueue->memoryFill(Ptr, Pattern, PatternSize, Size);
 }
 
@@ -732,7 +729,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-// TODO: logic from this function should be moved to AsyncQueue
+// TODO: logic from this function should be moved to L0QueueTy
 Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
@@ -744,7 +741,7 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   auto QueueOrErr = getOrCreateQueue(Async);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
-  AsyncQueueTy *Queue = *QueueOrErr;
+  L0QueueTy *Queue = *QueueOrErr;
   ze_command_list_handle_t CmdList = Queue->getCmdList();
   CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
 
