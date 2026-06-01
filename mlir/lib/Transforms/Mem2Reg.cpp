@@ -268,7 +268,8 @@ private:
   void promoteInRegion(Region *region, Value reachingDef);
 
   /// Calls `visitReplacedValues` on ops in `region` that requested it.
-  /// Must run before `removeBlockingUses` so load results remain live.
+  /// Must run before `removeBlockingUses` so that replacedValues are still
+  /// valid (`removeBlockingUses` can later replace them).
   void visitReplacedValuesForRegion(
       Region *region, ArrayRef<std::pair<Operation *, Value>> replacedValues);
 
