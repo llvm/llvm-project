@@ -565,6 +565,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     typedef std::stack<Instruction *>::size_type StackSizeType;
     StackSizeType maxTrueSliceLen = 0, maxFalseSliceLen = 0;
     Instruction *SelectWithProfile = nullptr;
+    bool SelectWithProfileIsInverted = false;
     for (SelectLike &SI : ASI.Selects) {
       if (!isa<SelectInst>(SI.getI()))
         continue;
@@ -586,8 +587,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       }
       // Also see if the select has profile data that we can propagate later
       // to the conditional branch.
-      if (hasProfMD(*SI.getI()))
+      Value *SelectCondition = cast<SelectInst>(SI.getI())->getCondition();
+      if (hasProfMD(*SI.getI()) && ASI.Condition == SelectCondition) {
         SelectWithProfile = SI.getI();
+      } else if (hasProfMD(*SI.getI()) &&
+                 match(SelectCondition, m_Not(m_Value(ASI.Condition)))) {
+        SelectWithProfile = SI.getI();
+        SelectWithProfileIsInverted = true;
+      }
     }
     // In the case of multiple select instructions in the same group, the order
     // of non-dependent instructions (instructions of different dependence
@@ -761,6 +768,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     Instruction *CondBr = IB.CreateCondBr(CondFr, TT, FT, SI.getI());
     if (!ProfcheckDisableMetadataFixes && SelectWithProfile) {
       CondBr->copyMetadata(*SelectWithProfile, {llvm::LLVMContext::MD_prof});
+      if (SelectWithProfileIsInverted)
+        CondBr->swapProfMetadata();
     } else {
       setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
     }
