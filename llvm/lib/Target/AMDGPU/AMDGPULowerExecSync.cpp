@@ -135,7 +135,8 @@ static bool lowerExecSyncGlobalVariables(Module &M,
       unsigned BarID = allocateExecSyncID(KernelBarrierIDs, Kernels,
                                           BarrierScope, NumBarScopes, BarCnt);
 
-      LLVM_DEBUG(dbgs() << "barrier: @" << GV->getName() << " id: " << BarID
+      LLVM_DEBUG(GV->printAsOperand(dbgs(), false);
+                 dbgs() << " was assigned barrier id: " << BarID
                         << " id-count: " << BarCnt << "\n");
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
