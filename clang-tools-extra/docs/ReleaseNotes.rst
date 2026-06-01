@@ -441,6 +441,12 @@ Changes in existing checks
   - Avoid false positives when moving object is reinitialized via the base
     class's ``operator=``.
 
+- Improved :doc:`cert-err33-c
+  <clang-tidy/checks/cert/err33-c>` check by not inheriting
+  `CheckedReturnTypes` option from :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>`, which caused false
+  positives on functions returning ``std::error_code`` or similar types.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,

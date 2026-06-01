@@ -1205,6 +1205,29 @@ public:
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
 
+    /// Force the emission of EH cleanups now, but defer promoting any
+    /// lifetime-extended cleanup entries onto the EH scope stack. The caller
+    /// must subsequently call forceLifetimeExtendedCleanups() to finalize the
+    /// scope.
+    void forceCleanupExceptLifetimeExtended() {
+      assert(performCleanup && "Already forced cleanup");
+      cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
+      cgf.popCleanupBlocks(cleanupStackDepth);
+    }
+
+    /// Promote any pending lifetime-extended cleanup entries onto the EH scope
+    /// stack at the current insertion point and finalize this scope. This must
+    /// be paired with a prior call to forceCleanupExceptLifetimeExtended().
+    void forceLifetimeExtendedCleanups() {
+      assert(performCleanup && "Already forced cleanup");
+      assert(deactivateCleanups.deactivated &&
+             "forceCleanupExceptLifetimeExtended() must be called first");
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
     /// Whether there are any pending cleanups that have been pushed since
     /// this scope was entered.
     bool hasPendingCleanups() const {
