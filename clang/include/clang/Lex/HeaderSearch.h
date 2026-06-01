@@ -286,9 +286,8 @@ class HeaderSearch {
   /// SpecificModuleCachePath.
   size_t NormalizedModuleCachePathLen = 0;
 
-  /// All of the preprocessor-specific data about files that are
-  /// included, indexed by the FileEntry's UID.
-  mutable std::vector<HeaderFileInfo> FileInfo;
+  /// All the preprocessor-specific data about files that are included.
+  mutable llvm::DenseMap<FileEntryRef, HeaderFileInfo> FileInfo;
 
   /// Keeps track of each lookup performed by LookupFile.
   struct LookupFileCacheInfo {
@@ -899,8 +898,6 @@ public:
   /// Retrieve the module map.
   const ModuleMap &getModuleMap() const { return ModMap; }
 
-  unsigned header_file_size() const { return FileInfo.size(); }
-
   /// Return the HeaderFileInfo structure for the specified FileEntry, in
   /// preparation for updating it in some way.
   HeaderFileInfo &getFileInfo(FileEntryRef FE);
@@ -909,9 +906,11 @@ public:
   /// ever been filled in (either locally or externally).
   const HeaderFileInfo *getExistingFileInfo(FileEntryRef FE) const;
 
-  /// Return the headerFileInfo structure for the specified FileEntry, if it has
-  /// ever been filled in locally.
-  const HeaderFileInfo *getExistingLocalFileInfo(FileEntryRef FE) const;
+  /// Iterate HeaderFileInfo structures and their corresponding FileEntryRef, if
+  /// they have ever been filled in locally.
+  void forEachExistingLocalFileInfo(
+      llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn)
+      const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }
