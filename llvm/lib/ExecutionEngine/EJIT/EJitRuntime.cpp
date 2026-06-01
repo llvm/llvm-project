@@ -4,6 +4,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -57,6 +59,36 @@ void ejit_register_symbol(const char *name, void *addr) {
   } else {
     // Constructor-phase call (before ejit_init): stage for later consumption.
     EJitRegistrationStore::instance().registerSymbol(name, addr);
+  }
+}
+
+void ejit_register_bitcode(const char *funcName,
+                           const uint8_t *bitcodeData, uint64_t bitcodeSize) {
+  if (gEJIT) {
+    gEJIT->registerBitcode(funcName, bitcodeData,
+                           static_cast<size_t>(bitcodeSize));
+  } else {
+    EJitRegistrationStore::instance().registerBitcode(
+        funcName, bitcodeData, static_cast<size_t>(bitcodeSize));
+  }
+}
+
+void ejit_register_period_array(const char *periodName,
+                                const char *varName,
+                                void *baseAddr, uint64_t arraySize) {
+  if (gEJIT) {
+    gEJIT->registerPeriodArray(periodName, varName, baseAddr, arraySize);
+  } else {
+    EJitRegistrationStore::instance().registerPeriodArray(
+        periodName, varName, baseAddr, arraySize);
+  }
+}
+
+void ejit_register_static_var(const char *varName, void *varAddr) {
+  if (gEJIT) {
+    gEJIT->registerStaticVar(varName, varAddr);
+  } else {
+    EJitRegistrationStore::instance().registerStaticVar(varName, varAddr);
   }
 }
 

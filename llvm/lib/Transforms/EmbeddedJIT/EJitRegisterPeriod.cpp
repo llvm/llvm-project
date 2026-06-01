@@ -29,6 +29,13 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+static void
+generateRegistryTablePeriod(
+    Module &M,
+    const SmallVectorImpl<std::tuple<GlobalVariable *, std::string,
+                                     std::string, uint32_t>> &PeriodArrays,
+    const SmallVectorImpl<std::pair<GlobalVariable *, std::string>> &StaticVars);
+
 #define DEBUG_TYPE "ejit-register-period"
 
 PreservedAnalyses
@@ -107,5 +114,68 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
+  // Also build the static registry table for bare-metal fallback.
+  generateRegistryTablePeriod(M, PeriodArrays, StaticVars);
+
   return PreservedAnalyses::none();
+}
+
+/// Build a global constant array __ejit_registry_period[] that ejit_init()
+/// walks on bare-metal where global constructors are unavailable.
+static void
+generateRegistryTablePeriod(
+    Module &M,
+    const SmallVectorImpl<std::tuple<GlobalVariable *, std::string,
+                                     std::string, uint32_t>> &PeriodArrays,
+    const SmallVectorImpl<std::pair<GlobalVariable *, std::string>> &StaticVars) {
+  LLVMContext &Ctx = M.getContext();
+  auto *I32Ty = Type::getInt32Ty(Ctx);
+  auto *PtrTy = PointerType::getUnqual(Ctx);
+  auto *I64Ty = Type::getInt64Ty(Ctx);
+
+  StructType *EntryTy = StructType::get(
+      Ctx, {I32Ty, PtrTy, PtrTy, PtrTy, I64Ty}, /*isPacked=*/false);
+
+  SmallVector<Constant *, 16> Entries;
+
+  // Period array entries
+  for (auto &[GV, PeriodName, VarName, Size] : PeriodArrays) {
+    Entries.push_back(ConstantStruct::get(EntryTy, {
+        ConstantInt::get(I32Ty, 1),                  // EJIT_REG_PERIOD_ARRAY
+        ConstantExpr::getBitCast(
+            M.getOrInsertGlobal(PeriodName, PtrTy), PtrTy),
+        ConstantExpr::getBitCast(
+            M.getOrInsertGlobal(VarName, PtrTy), PtrTy),
+        ConstantExpr::getBitCast(GV, PtrTy),         // base address
+        ConstantInt::get(I64Ty, Size),
+    }));
+  }
+
+  // Static var entries
+  for (auto &[GV, VarName] : StaticVars) {
+    Entries.push_back(ConstantStruct::get(EntryTy, {
+        ConstantInt::get(I32Ty, 2),                  // EJIT_REG_STATIC_VAR
+        ConstantExpr::getBitCast(
+            M.getOrInsertGlobal(VarName, PtrTy), PtrTy),
+        ConstantPointerNull::get(PtrTy),
+        ConstantExpr::getBitCast(GV, PtrTy),
+        ConstantInt::get(I64Ty, 0),
+    }));
+  }
+
+  // Sentinel
+  Entries.push_back(ConstantStruct::get(EntryTy, {
+      ConstantInt::get(I32Ty, 4),                    // EJIT_REG_NONE
+      ConstantPointerNull::get(PtrTy),
+      ConstantPointerNull::get(PtrTy),
+      ConstantPointerNull::get(PtrTy),
+      ConstantInt::get(I64Ty, 0),
+  }));
+
+  ArrayType *ArrayTy = ArrayType::get(EntryTy, Entries.size());
+  Constant *ArrayInit = ConstantArray::get(ArrayTy, Entries);
+
+  (void)new GlobalVariable(M, ArrayTy, /*isConstant=*/true,
+                           GlobalValue::ExternalLinkage, ArrayInit,
+                           "__ejit_registry_period");
 }

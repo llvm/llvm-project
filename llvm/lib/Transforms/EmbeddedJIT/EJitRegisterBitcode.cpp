@@ -358,6 +358,11 @@ static void generateSymbolRegisters(
   }
 }
 
+static void
+generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
+                      const SetVector<Function *> &ClosureFuncs,
+                      GlobalVariable *BitcodeGV);
+
 static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
                                  const SmallVectorImpl<Function *> &EntryFuncs,
                                  const SetVector<Function *> &ClosureFuncs) {
@@ -396,6 +401,106 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
   generateSymbolRegisters(M, ClosureFuncs, AutoReg);
 
   appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
+
+  // Also build the static registry table for bare-metal fallback.
+  generateRegistryTable(M, EntryFuncs, ClosureFuncs, BitcodeGV);
+}
+
+/// Build a global constant array __ejit_registry_bitcode[] that ejit_init()
+/// walks on bare-metal where global constructors are unavailable.
+static void
+generateRegistryTable(Module &M, const SmallVectorImpl<Function *> &EntryFuncs,
+                      const SetVector<Function *> &ClosureFuncs,
+                      GlobalVariable *BitcodeGV) {
+  LLVMContext &Ctx = M.getContext();
+  auto *I32Ty = Type::getInt32Ty(Ctx);
+  auto *PtrTy = PointerType::getUnqual(Ctx);
+  auto *I64Ty = Type::getInt64Ty(Ctx);
+
+  // Struct: { i32 type, ptr name1, ptr name2, ptr data, i64 size }
+  StructType *EntryTy = StructType::get(
+      Ctx, {I32Ty, PtrTy, PtrTy, PtrTy, I64Ty}, /*isPacked=*/false);
+
+  SmallVector<Constant *, 16> Entries;
+
+  // Bitcode entries
+  for (Function *F : EntryFuncs) {
+    Entries.push_back(ConstantStruct::get(EntryTy, {
+        ConstantInt::get(I32Ty, 0),                          // EJIT_REG_BITCODE
+        ConstantExpr::getBitCast(
+            M.getOrInsertGlobal(F->getName(), PtrTy), PtrTy),// global string name1
+        ConstantPointerNull::get(PtrTy),                     // name2 = NULL
+        ConstantExpr::getBitCast(BitcodeGV, PtrTy),          // bitcode data ptr
+        ConstantInt::get(I64Ty,
+            BitcodeGV->getValueType()->getArrayNumElements()),// bitcode size
+    }));
+  }
+
+  // Symbol entries for external references
+  SmallPtrSet<const Function *, 8> SymbolsDone;
+  auto addSymbol = [&](const Function *F) {
+    if (F->isIntrinsic() || F->isDeclaration()) {
+      if (SymbolsDone.insert(F).second) {
+        Entries.push_back(ConstantStruct::get(EntryTy, {
+            ConstantInt::get(I32Ty, 3),                      // EJIT_REG_SYMBOL
+            ConstantExpr::getBitCast(
+                M.getOrInsertGlobal(F->getName(), PtrTy), PtrTy),
+            ConstantPointerNull::get(PtrTy),
+            ConstantExpr::getBitCast(const_cast<Function *>(F), PtrTy),
+            ConstantInt::get(I64Ty, 0),
+        }));
+      }
+    }
+  };
+  for (Function *F : ClosureFuncs) {
+    for (const BasicBlock &BB : *F) {
+      for (const Instruction &I : BB) {
+        if (const CallBase *CB = dyn_cast<CallBase>(&I))
+          addSymbol(const_cast<CallBase *>(CB)->getCalledFunction());
+      }
+    }
+  }
+
+  // Global variable symbol entries
+  SmallPtrSet<const GlobalVariable *, 4> GVsDone;
+  for (Function *F : ClosureFuncs) {
+    for (const BasicBlock &BB : *F) {
+      for (const Instruction &I : BB) {
+        for (const Value *Op : I.operands()) {
+          if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Op)) {
+            if (!GV->isConstant() && !GV->getName().starts_with("llvm.") &&
+                GVsDone.insert(GV).second) {
+              Entries.push_back(ConstantStruct::get(EntryTy, {
+                  ConstantInt::get(I32Ty, 3),                // EJIT_REG_SYMBOL
+                  ConstantExpr::getBitCast(
+                      M.getOrInsertGlobal(GV->getName(), PtrTy), PtrTy),
+                  ConstantPointerNull::get(PtrTy),
+                  ConstantExpr::getBitCast(
+                      const_cast<GlobalVariable *>(GV), PtrTy),
+                  ConstantInt::get(I64Ty, 0),
+              }));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Sentinel entry
+  Entries.push_back(ConstantStruct::get(EntryTy, {
+      ConstantInt::get(I32Ty, 4),                            // EJIT_REG_NONE
+      ConstantPointerNull::get(PtrTy),
+      ConstantPointerNull::get(PtrTy),
+      ConstantPointerNull::get(PtrTy),
+      ConstantInt::get(I64Ty, 0),
+  }));
+
+  ArrayType *ArrayTy = ArrayType::get(EntryTy, Entries.size());
+  Constant *ArrayInit = ConstantArray::get(ArrayTy, Entries);
+
+  (void)new GlobalVariable(M, ArrayTy, /*isConstant=*/true,
+                           GlobalValue::ExternalLinkage, ArrayInit,
+                           "__ejit_registry_bitcode");
 }
 
 PreservedAnalyses

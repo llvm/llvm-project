@@ -49,6 +49,11 @@ struct StoredData {
   std::vector<PeriodArrayEntry> periodArrays;
   std::vector<StaticVarEntry> staticVars;
   std::vector<SymbolEntry> userSymbols;
+
+  bool empty() const {
+    return bitcodes.empty() && periodArrays.empty() &&
+           staticVars.empty() && userSymbols.empty();
+  }
 };
 
 /// Process-global singleton staging area for data passed from
