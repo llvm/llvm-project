@@ -337,6 +337,13 @@ protected:
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
+  /// Whether the back-end that emitted this RuleMatcher relies on
+  /// RecordNamedOperandMatcher for C++ code to access instruction operands.
+  /// When false, it means the back-end uses other means that we do not know
+  /// about and we thus need to assume ANY operand can be accessed by ANY C++
+  /// code (GenericInstructionPredicateMatcher)
+  bool UsesRecordOperand = true;
+
   std::vector<std::string> RequiredSimplePredicates;
   std::vector<const Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
@@ -389,6 +396,9 @@ public:
   ArrayRef<const Record *> getRequiredFeatures() const {
     return RequiredFeatures;
   }
+
+  void setUsesRecordOperand(bool Value) { UsesRecordOperand = Value; }
+  bool usesRecordOperand() const { return UsesRecordOperand; }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
   int getHwModeIdx() const { return HwModeIdx; }
@@ -1523,7 +1533,7 @@ protected:
 
 public:
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
-                                     TreePredicateFn Predicate);
+                                     TreePredicateFn Predicatem);
 
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
                                      const std::string &EnumVal)

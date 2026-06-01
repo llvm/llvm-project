@@ -484,7 +484,7 @@ uint64_t RuleMatcher::NextRuleID = 0;
 StringRef RuleMatcher::getOpcode() const { return Roots.front()->getOpcode(); }
 
 bool RuleMatcher::recordsOperand() const {
-  return matchersRecordOperand(Roots);
+  return !usesRecordOperand() || matchersRecordOperand(Matchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() const {
