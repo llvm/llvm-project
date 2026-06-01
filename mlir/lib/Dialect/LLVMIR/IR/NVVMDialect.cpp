@@ -4829,8 +4829,10 @@ NVVM::IDArgPair ConvertF8x2ToBF16x2Op::getIntrinsicIDAndArgs(
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(packedI16);
   if (!isa<Float8E8M0FNUType>(curOp.getSrcType()))
-    args.push_back(hasScale ? mt.lookupValue(curOp.getScaleFactor())
-                            : builder.getInt16(0x7f7f));
+    args.push_back(
+        hasScale ? mt.lookupValue(curOp.getScaleFactor())
+                 : builder.getInt16(0x7f7f)); // default scale factor (value of
+                                              // 1 for both elements)
 
   return {intId, std::move(args)};
 }
@@ -4900,8 +4902,11 @@ NVVM::IDArgPair ConvertF6x2ToBF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(packedI16);
-  args.push_back(hasScale ? mt.lookupValue(curOp.getScaleFactor())
-                          : builder.getInt16(0x7f7f));
+  args.push_back(
+      hasScale
+          ? mt.lookupValue(curOp.getScaleFactor())
+          : builder.getInt16(
+                0x7f7f)); // default scale factor (value of 1 for both elements)
 
   return {intId, std::move(args)};
 }
@@ -4959,8 +4964,11 @@ NVVM::IDArgPair ConvertF4x2ToBF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::SmallVector<llvm::Value *> args;
   args.push_back(extendedI16);
-  args.push_back(hasScale ? mt.lookupValue(curOp.getScaleFactor())
-                          : builder.getInt16(0x7f7f));
+  args.push_back(
+      hasScale
+          ? mt.lookupValue(curOp.getScaleFactor())
+          : builder.getInt16(
+                0x7f7f)); // default scale factor (value of 1 for both elements)
 
   return {intId, std::move(args)};
 }
