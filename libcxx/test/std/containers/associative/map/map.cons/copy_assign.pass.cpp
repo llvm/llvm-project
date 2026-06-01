@@ -28,7 +28,7 @@
 struct NonTrivial {
   int i;
   // TEST_CONSTEXPR_CXX26 NonTrivial() = default;
-  TEST_CONSTEXPR_CXX26 NonTrivial(int i) : i(i) {}
+  TEST_CONSTEXPR_CXX26 NonTrivial(int arg_i) : i(arg_i) {}
   TEST_CONSTEXPR_CXX26 NonTrivial(const NonTrivial& other) : i(other.i) {}
   TEST_CONSTEXPR_CXX26 NonTrivial(NonTrivial&& other) : i(other.i) {
     // i = 0, means the object got moved from
