@@ -1,9 +1,14 @@
-//===-- Interface for freelist --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the definition of a circular free block list.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_H
@@ -13,9 +18,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-/// A circularly-linked FIFO list storing free Blocks. All Blocks on a list
-/// are the same size. The blocks are referenced by Nodes in the list; the list
-/// refers to these, but it does not own them.
+/// A circularly-linked FIFO list storing free Blocks. The blocks are referenced
+/// by Nodes in the list; the list refers to these, but it does not own them.
 ///
 /// Allocating free blocks in FIFO order maximizes the amount of time before a
 /// free block is reused. This in turn maximizes the number of opportunities for
@@ -33,8 +37,11 @@ public:
     /// @returns The block containing this node.
     LIBC_INLINE Block *block() { return Block::from_usable_space(this); }
 
-    /// @returns The inner size of blocks in the list containing this node.
+    /// @returns The inner size of the block containing this node.
     LIBC_INLINE size_t size() const { return block()->inner_size(); }
+
+    /// @returns The next node in the list containing this node.
+    LIBC_INLINE Node *next_node() const { return next; }
 
   private:
     // Circularly linked pointers to adjacent nodes.

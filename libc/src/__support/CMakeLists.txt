@@ -52,6 +52,22 @@ add_object_library(
     libc.src.__support.CPP.array
 )
 
+add_header_library(
+  tlsf_freestore
+  HDRS
+    tlsf_freestore.h
+  DEPENDS
+    .block
+    .freelist
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
 add_object_library(
   freelist_heap
