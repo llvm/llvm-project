@@ -127,11 +127,7 @@ llvm.func @keep_dbg_if_not_promoted() {
   llvm.return
 }
 
-// Regression test for https://github.com/llvm/llvm-project/issues/197158:
-// When a loaded value is stored back, `replacedValuesMap` records the load's
-// result. Running `visitReplacedValues` before `replaceAllUsesWith` ensures
-// the new `dbg.value` references the live load result, which is then
-// correctly redirected to the reaching definition.
+// Regression test for https://github.com/llvm/llvm-project/issues/197158.
 
 // CHECK-LABEL: llvm.func @store_load_store_back
 // CHECK-NOT: = llvm.alloca
@@ -153,9 +149,6 @@ llvm.func @store_load_store_back() {
 }
 
 // Regression test for https://github.com/llvm/llvm-project/issues/200844.
-// `getStored` synthesizes casts at the builder's insertion point. Setting the
-// insertion point before the store ensures the cast dominates the `dbg.value`
-// created by `visitReplacedValues` after the store.
 
 // CHECK-LABEL: llvm.func @dbg_declare_with_store_type_conversion
 // CHECK-SAME: (%[[VAL:.*]]: f32)

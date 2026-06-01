@@ -682,9 +682,6 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
         builder.setInsertionPointAfter(op);
         reachingDef = promotableRegionOp.finalizePromotion(
             slot, reachingDef, hasValueStores, reachingAtBlockEnd, builder);
-
-        // `visitReplacedValuesForRegion` and `removeBlockingUses` for these
-        // inner regions are deferred until after the entire DFS finishes.
       }
     }
   }
@@ -862,7 +859,6 @@ void MemorySlotPromoter::visitReplacedValuesForRegion(
   if (blockingUsesMap.empty())
     return;
 
-  // `replacedValues` is built once from per-store snapshots.
   for (auto &[op, _] : blockingUsesMap) {
     auto toVisit = dyn_cast<PromotableOpInterface>(op);
     if (!toVisit || !toVisit.requiresReplacedValues())
@@ -994,20 +990,12 @@ void MemorySlotPromoter::removeUnusedItems() {
 
 std::optional<PromotableAllocationOpInterface>
 MemorySlotPromoter::promoteSlot() {
-  // Pass 1: compute reaching definitions and run `finalizePromotion` for
-  // nested `PromotableRegionOpInterface` ops.
+  // Pass 1: perform the promotion recursively through nested regions. The
+  // reaching definition starts with a null value that will be replaced by a
+  // lazily-created default value if the value must be passed to a promotion
+  // interface while no store has been encountered yet.
+  // Blocking uses are not removed yet.
   promoteInRegion(slot.ptr.getParentRegion(), nullptr);
-
-#ifndef NDEBUG
-  // Every region tracked in `info.userToBlockingUses` must have been visited
-  // by `promoteInRegion` (either directly for the slot's parent region or
-  // recursively through `PromotableRegionOpInterface`).
-  llvm::SmallPtrSet<Region *, 4> visitedRegions(llvm::from_range,
-                                                regionsInPostOrder);
-  for (auto &[region, _] : info.userToBlockingUses)
-    assert(visitedRegions.contains(region) &&
-           "every region with blocking uses must be visited during promotion");
-#endif
 
   // Pass 2: call `visitReplacedValues` on operations that requested it.
   if (info.needsAnyReplacedValuesVisit) {
@@ -1020,8 +1008,8 @@ MemorySlotPromoter::promoteSlot() {
       visitReplacedValuesForRegion(region, replacedValues);
   }
 
-  // Pass 3: remove the slot's blocking uses across all regions. Iterating in
-  // DFS post-order (innermost regions first) is required.
+  // Pass 3: remove the slot's blocking uses across all regions. Iterating
+  // in through the regions in same order as promoteInRegion.
   for (Region *region : regionsInPostOrder)
     removeBlockingUses(region);
 
