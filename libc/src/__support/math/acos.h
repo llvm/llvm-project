@@ -265,7 +265,8 @@ LIBC_INLINE double acos(double x) {
   // Perform computations in DFloat128:
   //   acos(x) = (v_hi + v_lo + vll) * P(u)         , when 0.5 <= x < 1,
   //           = pi - (v_hi + v_lo + vll) * P(u)    , when -1 < x <= -0.5.
-  DFloat128 y_f128(fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
+  DFloat128 y_f128(
+      fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
 
   DFloat128 p_f128 = asin_eval(y_f128, idx);
   DFloat128 r_f128 = fputil::quick_mul(m_v, p_f128);
