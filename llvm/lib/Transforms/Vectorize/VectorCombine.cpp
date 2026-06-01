@@ -4003,6 +4003,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstWorklist.push(VecOpEE);
 
   bool IsPartialReduction = false;
+  bool HasLaneDuplication = false;
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -4122,6 +4123,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       // Update mask values.
       ShuffleMaskHalf *= 2;
       ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      HasLaneDuplication |= (ExpectedParityMask & 1) != 0;
       ExpectedParityMask >>= 1;
 
       OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
@@ -4151,6 +4153,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Full reduction pattern should end with a shuffle op.
   // Partial reduction ends when the source vector is reached.
   if (ShouldBeCallOrBinInst && !IsPartialReduction)
+    return false;
+
+  // If the parity masks duplicated any lane, the fold only preserves semantics
+  // for idempotent ops.
+  if (HasLaneDuplication && CommonBinOp &&
+      !Instruction::isIdempotent(*CommonBinOp))
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");

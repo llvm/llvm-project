@@ -279,9 +279,9 @@ void while_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[AFTER]]:
 // LLVM:   ret void
@@ -346,9 +346,9 @@ void for_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[OLDI:.*]] = load i32, ptr %[[I]]
 // LLVM:   %[[NEWI:.*]] = add nsw i32 %[[OLDI]], 1
 // LLVM:   store i32 %[[NEWI]], ptr %[[I]]
@@ -421,9 +421,9 @@ void do_body_temp_ref() {
 // LLVM: [[FALSE]]:
 // LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   store ptr %[[REF_TMP]], ptr %[[SPILL]]
-// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
 // LLVM:   store ptr %[[RELOAD]], ptr %[[OP]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[REF_TMP]])
 // LLVM:   br label %[[LOOP_COND]]
 // LLVM: [[AFTER]]:
 // LLVM:   ret void
