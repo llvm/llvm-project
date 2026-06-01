@@ -18,6 +18,23 @@ using namespace clang::interp;
 
 State::~State() {}
 
+// With -fms-compatibility we allow pointer to integer casts
+// followed by nullptr casts.
+void State::clearDiagIfNeeded(diag::kind DiagId) {
+  switch (DiagId) {
+  case diag::note_constexpr_invalid_cast_ptrtoint:
+  case diag::note_constexpr_null_subobject:
+    return;
+  }
+
+  auto *Diag = EvalStatus.Diag;
+  if (!Ctx.getLangOpts().MSVCCompat || !Diag || Diag->size() != 1 ||
+      (*Diag)[0].second.getDiagID() !=
+          diag::note_constexpr_invalid_cast_ptrtoint)
+    return;
+  Diag->clear();
+}
+
 OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
                                  unsigned ExtraNotes) {
   return diag(Loc, DiagId, ExtraNotes, false);
@@ -44,6 +61,7 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
   EvalStatus.DiagEmitted = true;
+  clearDiagIfNeeded(DiagId);
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
   if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
