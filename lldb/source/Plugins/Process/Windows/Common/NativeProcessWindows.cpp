@@ -320,10 +320,7 @@ size_t NativeProcessWindows::GetSoftwareBreakpointPCOffset() {
 }
 
 bool NativeProcessWindows::FindSoftwareBreakpoint(lldb::addr_t addr) {
-  auto it = m_software_breakpoints.find(addr);
-  if (it == m_software_breakpoints.end())
-    return false;
-  return true;
+  return m_software_breakpoints.find(addr) != m_software_breakpoints.end();
 }
 
 Status NativeProcessWindows::SetBreakpoint(lldb::addr_t addr, uint32_t size,
