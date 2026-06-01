@@ -9,8 +9,9 @@
 // CHECK:       [[A_EXT:%.*]] = zext <6 x i1> %{{.*}} to <6 x i32>
 // CHECK:       store <6 x i32> [[A_EXT]], ptr [[A_ADDR]], align 4
 // CHECK:       [[A:%.*]] = load <6 x i32>, ptr [[A_ADDR]], align 4
-// COLMAJOR:    [[TRANS:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[A]], i32 2, i32 3)
-// ROWMAJOR:    [[TRANS:%.*]] = call <6 x i32> @llvm.matrix.transpose.v6i32(<6 x i32> [[A]], i32 3, i32 2)
+// CHECK:       [[TRUNC:%.*]] = trunc <6 x i32> [[A]] to <6 x i1>
+// COLMAJOR:    [[TRANS:%.*]] = call <6 x i1> @llvm.matrix.transpose.v6i1(<6 x i1> [[TRUNC]], i32 2, i32 3)
+// ROWMAJOR:    [[TRANS:%.*]] = call <6 x i1> @llvm.matrix.transpose.v6i1(<6 x i1> [[TRUNC]], i32 3, i32 2)
 bool3x2 test_transpose_bool2x3(bool2x3 a) {
   return transpose(a);
 }

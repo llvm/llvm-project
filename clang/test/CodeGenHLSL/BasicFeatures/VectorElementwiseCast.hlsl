@@ -193,19 +193,21 @@ export void call8(int3x1 M) {
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[M_ADDR]], align 4
-// CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[HLSL_EWCAST_SRC]], align 4
+// CHECK-NEXT:    [[LOADEDV0:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i1>
+// CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i1> [[LOADEDV0]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[HLSL_EWCAST_SRC]], align 4
 // CHECK-NEXT:    [[MATRIX_GEP:%.*]] = getelementptr inbounds <2 x i32>, ptr [[HLSL_EWCAST_SRC]], i32 0
-// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
-// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i32 [[MATRIXEXT]], 0
-// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i1> [[TMP2]], i1 [[LOADEDV]], i64 0
-// CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
-// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
+// CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i1>, ptr [[FLATCAST_TMP]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
+// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
+// CHECK-NEXT:    [[LOADEDV1:%.*]] = icmp ne i32 [[MATRIXEXT]], 0
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i1> [[TMP3]], i1 [[LOADEDV1]], i64 0
+// CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr [[MATRIX_GEP]], align 4
+// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <2 x i32> [[TMP6]], i32 1
 // CHECK-NEXT:    [[LOADEDV2:%.*]] = icmp ne i32 [[MATRIXEXT1]], 0
-// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i1> [[TMP4]], i1 [[LOADEDV2]], i64 1
-// CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i1> [[TMP6]] to <2 x i32>
-// CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[V]], align 4
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i1> [[TMP5]], i1 [[LOADEDV2]], i64 1
+// CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i1> [[TMP7]] to <2 x i32>
+// CHECK-NEXT:    store <2 x i32> [[TMP8]], ptr [[V]], align 4
 // CHECK-NEXT:    ret void
 export void call9(bool1x2 M) {
     bool2 V = (bool2)M;
