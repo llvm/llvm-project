@@ -45,7 +45,7 @@
 # RUN: FileCheck --check-prefix=CHECK-QUICK < %t.cmd.out %s
 
 # CHECK-QUICK: PASS: googletest-timeout :: {{[Dd]ummy[Ss]ub[Dd]ir}}/OneTest.py/0/2 {{.*}}
-# CHECK-QUICK: Passed: 1
+# CHECK-QUICK: Passed: 2
 
 # Test per test timeout via a config file and on the command line.
 # The value set on the command line should override the config file.
