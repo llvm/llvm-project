@@ -15926,8 +15926,7 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       // (truncate (bitcast vNi1 -> iN) -> iK); use the wider vNi1 as X.
       SDValue Src = AndSrc.getOperand(0).getOperand(0);
       EVT SrcVT = Src.getValueType();
-      if (SrcVT.isVector() && !SrcVT.isScalableVT() &&
-          SrcVT.getVectorElementType() == MVT::i1) {
+      if (SrcVT.isFixedLengthVectorOf(MVT::i1)) {
         EVT WideIntVT =
             EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
         if (TLI.isTypeLegal(WideIntVT))
@@ -16199,8 +16198,7 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
                AndSrc.getOperand(0).getConstantOperandVal(1) == 0) {
       SDValue Src = AndSrc.getOperand(0).getOperand(0);
       EVT SrcVT = Src.getValueType();
-      if (SrcVT.isVector() && !SrcVT.isScalableVT() &&
-          SrcVT.getVectorElementType() == MVT::i1) {
+      if (SrcVT.isFixedLengthVectorOf(MVT::i1)) {
         EVT WideIntVT =
             EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
         if (TLI.isTypeLegal(WideIntVT))
