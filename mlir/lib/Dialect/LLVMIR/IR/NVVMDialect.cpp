@@ -819,8 +819,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -2828,9 +2827,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -3455,7 +3452,8 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 /// Maps the (aligned, hasCount) pair to the `@llvm.nvvm.barrier.cta.sync.*`
 /// intrinsic ID.
-static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned, bool hasCount) {
+static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
+                                                   bool hasCount) {
   if (hasCount)
     return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
                    : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
@@ -3499,8 +3497,8 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierReductionOp>(op);
-  llvm::Intrinsic::ID id =
-      getBarrierReductionIntrinsic(thisOp.getAligned(), thisOp.getReductionOp());
+  llvm::Intrinsic::ID id = getBarrierReductionIntrinsic(
+      thisOp.getAligned(), thisOp.getReductionOp());
   llvm::Value *barrierId = thisOp.getBarrierId()
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
@@ -6276,9 +6274,9 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
     if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
         !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
-             << "'" << attrName << "' attribute must be used along with "
-             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
-             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+             << "'" << attrName << "' attribute must be used along with " << "'"
+             << NVVMDialect::getReqntidAttrName() << "' and " << "'"
+             << NVVMDialect::getClusterDimAttrName() << "'";
     }
   }
 
