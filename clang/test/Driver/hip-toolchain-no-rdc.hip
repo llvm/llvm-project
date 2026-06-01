@@ -53,14 +53,14 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // OLD-SAME: "-emit-obj"
-// NEW-SAME: "-emit-llvm-bc"
+// NEW-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
-// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_803:.*(o|bc)]]" "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_803:.*o]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC:".*a.cu"]]
 
 // CHECK-NOT: {{".*llvm-link"}}
@@ -76,14 +76,14 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
+// CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_900:.*(o|bc)]]" "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_A_900:.*o]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK-NOT: {{".*llvm-link"}}
@@ -101,22 +101,19 @@
 // OLD-SAME: "-bundle-align=4096"
 // OLD-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // OLD-SAME: "-input={{.*}}" "-input=[[IMG_DEV_A_803]]" "-input=[[IMG_DEV_A_900]]" "-output=[[BUNDLE_A:.*hipfb]]"
-
-// NEW: [[PACKAGER:".*llvm-offload-binary"]] "-o" "[[PACKAGE_A:.*.out]]"
+// NEW: [[PACKAGER:".*llvm-offload-binary"]] "-o" "[[PACKAGED_A:.*out]]"
 // NEW-SAME: "--image=file=[[OBJ_DEV_A_803]],triple=amdgcn-amd-amdhsa,arch=gfx803,kind=hip"
 // NEW-SAME: "--image=file=[[OBJ_DEV_A_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
-
-// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
-// NEW-SAME: "--host-triple=x86_64-unknown-linux-gnu"
-// NEW-SAME: "--emit-fatbin-only"
-// NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
+// NEW: [[WRAPPER:".*clang-linker-wrapper"]]
+// NEW-SAME: "--should-extract=gfx803" "--should-extract=gfx900"
+// NEW-SAME: "--linker-path={{.*}}clang-offload-bundler"
+// NEW-SAME: "--emit-fatbin-only" "-o" "[[BUNDLE_A:.*hipfb]]" "[[PACKAGED_A]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
-// OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
-// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_A]]"
+// CHECK-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_A]]"
 // CHECK-SAME: {{.*}} "-o" [[A_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
@@ -126,14 +123,14 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
+// CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
-// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_803:.*(o|bc)]]" "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_803:.*o]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC:".*b.hip"]]
 
 // CHECK-NOT: {{".*llvm-link"}}
@@ -149,14 +146,14 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-{{(obj|llvm-bc)}}"
+// CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_900:.*(o|bc)]]" "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" "[[OBJ_DEV_B_900:.*o]]" "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: {{".*llvm-link"}}
@@ -170,25 +167,23 @@
 // Bundle and embed device code in host object for b.hip.
 //
 
-// OLD: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
+// OLD: [[BUNDLER]] "-type=o"
 // OLD-SAME: "-bundle-align=4096"
 // OLD-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // OLD-SAME: "-input={{.*}}" "-input=[[IMG_DEV_B_803]]" "-input=[[IMG_DEV_B_900]]" "-output=[[BUNDLE_B:.*hipfb]]"
-
-// NEW: [[PACKAGER:".*llvm-offload-binary"]] "-o" "[[PACKAGE_B:.*.out]]"
+// NEW: [[PACKAGER]] "-o" "[[PACKAGED_B:.*out]]"
 // NEW-SAME: "--image=file=[[OBJ_DEV_B_803]],triple=amdgcn-amd-amdhsa,arch=gfx803,kind=hip"
 // NEW-SAME: "--image=file=[[OBJ_DEV_B_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
-
-// NEW: [[WRAPPER:".*clang-linker-wrapper]]"
-// NEW-SAME: "--emit-fatbin-only"
-// NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
+// NEW: [[WRAPPER]]
+// NEW-SAME: "--should-extract=gfx803" "--should-extract=gfx900"
+// NEW-SAME: "--linker-path={{.*}}clang-offload-bundler"
+// NEW-SAME: "--emit-fatbin-only" "-o" "[[BUNDLE_B:.*hipfb]]" "[[PACKAGED_B]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-aux-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-emit-obj"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
-// OLD-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_B]]"
-// NEW-SAME: {{.*}} "-fcuda-include-gpubinary" "[[HIPFB_B]]"
+// CHECK-SAME: {{.*}} "-fcuda-include-gpubinary" "[[BUNDLE_B]]"
 // CHECK-SAME: {{.*}} "-o" [[B_OBJ_HOST:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 

@@ -5370,6 +5370,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-cir");
     } else if (JA.getType() == types::TY_Image && IsAMDSPIRVForHIPDevice) {
       CmdArgs.push_back("-emit-obj");
+    } else if (JA.getType() == types::TY_Object) {
+      CmdArgs.push_back("-emit-obj");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }

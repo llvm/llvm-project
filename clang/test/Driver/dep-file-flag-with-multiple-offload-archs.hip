@@ -3,7 +3,7 @@
 // CHECK-NOT: {{.*}}clang{{.*}}"-target-cpu" "gfx1030"{{.*}}"-dependency-file" "tmp.d"
 // CHECK-NOT: {{.*}}clang{{.*}}"-target-cpu" "gfx1100"{{.*}}"-dependency-file" "tmp.d"
 // CHECK-NOT: {{.*}}clang{{.*}}"-target-cpu" "gfx1101"{{.*}}"-dependency-file" "tmp.d"
-// CHECK: {{.*}}llvm-offload-binary
+// CHECK: {{.*}}clang-offload-bundler
 // CHECK: {{.*}}clang{{.*}}"-target-cpu"{{.*}}"-dependency-file" "tmp.d"
 
 void main(){}

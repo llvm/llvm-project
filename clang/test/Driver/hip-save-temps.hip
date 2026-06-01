@@ -70,15 +70,14 @@
 // NOUT: {{.*}}ld{{.*}}"-o" "a.out"
 // WOUT: {{.*}}ld{{.*}}"-o" "executable"
 
-// Check to ensure we have a .tmp for unoptimized bitcode with -fno-gpu-rdc.
+// Check the direct object-producing compile action with -fno-gpu-rdc.
 // RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \
 // RUN:   -save-temps -fno-gpu-rdc -nogpuinc --offload-arch=gfx906 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=NORDC-BINDINGS %s
 //      NORDC-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HIPI:.+]]"
-// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[TMP_BC:.+]]"
-// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[TMP_BC]]"], output: "[[BC:.+]]"
-// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[BC]]"], output: "[[OUTPUT:.+]]"
-// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[OUTPUT]]"], output: "[[FATBIN:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[HIPI]]"], output: "[[OBJ:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[OBJ]]"], output: "[[IMG:.+]]"
+// NORDC-BINDINGS-NEXT: "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[IMG]]"], output: "[[FATBIN:.+]]"
 
 // Check to ensure we have a .tmp for unoptimized bitcode with -fgpu-rdc.
 // RUN: %clang -### -ccc-print-bindings --target=x86_64-linux-gnu -nogpulib \

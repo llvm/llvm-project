@@ -4970,6 +4970,21 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   return Sorted;
 }
 
+static bool shouldEmitHIPNewDriverNoRDCCodeObject(
+    const Compilation &C, const llvm::opt::ArgList &Args, const Driver &D,
+    Action::OffloadKind TargetDeviceOffloadKind,
+    const ToolChain *OffloadingToolChain) {
+  return TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
+         OffloadingToolChain->getTriple().isAMDGPU() &&
+         Args.hasFlag(options::OPT_offload_new_driver,
+                      options::OPT_no_offload_new_driver,
+                      C.getActiveOffloadKinds() != Action::OFK_None) &&
+         !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                       false) &&
+         !D.offloadDeviceOnly() && !Args.hasArg(options::OPT_emit_llvm) &&
+         !Args.hasArg(options::OPT_S) && !D.isUsingOffloadLTO();
+}
+
 Action *
 Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
                                const InputTy &Input, StringRef CUID,
@@ -5096,10 +5111,13 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
-    for (Action *&A : DeviceActions) {
-      auto *OffloadTriple = A->getOffloadingToolChain()
-                                ? &A->getOffloadingToolChain()->getTriple()
-                                : nullptr;
+    for (unsigned I = 0, E = DeviceActions.size(); I != E; ++I) {
+      Action *&A = DeviceActions[I];
+      const ToolChain *OffloadingToolChain = A->getOffloadingToolChain();
+      if (!OffloadingToolChain)
+        OffloadingToolChain = TCAndArchs[I].first;
+      const llvm::Triple *OffloadTriple =
+          OffloadingToolChain ? &OffloadingToolChain->getTriple() : nullptr;
       bool IsHIPSPV =
           OffloadTriple && OffloadTriple->isSPIRV() &&
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
@@ -5116,10 +5134,14 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
           IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
           UseSPIRVBackend;
 
-      if ((A->getType() != types::TY_Object && !IsHIPSPV &&
-           A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
-          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
+      // Non-RDC HIP needs to produce a code object before packaging the HIP
+      // fat binary.
+      bool ShouldLinkHIPDeviceOnlyNoRDC =
+          HIPNoRDC && !HIPRelocatableObj && offloadDeviceOnly() &&
+          !IsAMDGCNSPIRVWithBackend &&
+          (A->getType() == types::TY_Object || IsHIPSPV ||
+           A->getType() == types::TY_LTO_BC);
+      if (!ShouldLinkHIPDeviceOnlyNoRDC)
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5232,6 +5254,8 @@ Action *Driver::ConstructPhaseAction(
   // Some types skip the assembler phase (e.g., llvm-bc), but we can't
   // encode this in the steps because the intermediate type depends on
   // arguments. Just special case here.
+  if (Phase == phases::Backend && Input->getType() == types::TY_Object)
+    return Input;
   if (Phase == phases::Assemble && Input->getType() != types::TY_PP_Asm)
     return Input;
 
@@ -5336,12 +5360,17 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
     if (Args.hasArg(options::OPT_extract_api))
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
+    if (shouldEmitHIPNewDriverNoRDCCodeObject(C, Args, *this,
+                                              TargetDeviceOffloadKind,
+                                              Input->getOffloadingToolChain()))
+      return C.MakeAction<CompileJobAction>(Input, types::TY_Object);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
-    // Skip a redundant Backend phase for HIP device code when using the new
-    // offload driver, where mid-end is done in linker wrapper. With
-    // -save-temps, we still need the Backend phase to produce optimized IR.
+    // Skip a redundant Backend phase for HIP device code when the new offload
+    // driver will pass device IR to the linker wrapper.
+    // With -save-temps, keep the Backend phase so intermediate device output is
+    // materialized.
     if (TargetDeviceOffloadKind == Action::OFK_HIP &&
         Args.hasFlag(options::OPT_offload_new_driver,
                      options::OPT_no_offload_new_driver,
@@ -5370,7 +5399,7 @@ Action *Driver::ConstructPhaseAction(
                                         options::OPT_no_use_spirv_backend,
                                         /*Default=*/false);
 
-    auto OffloadingToolChain = Input->getOffloadingToolChain();
+    const ToolChain *OffloadingToolChain = Input->getOffloadingToolChain();
     // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
     // LLVM bitcode was requested explicitly or RDC is set. If
     // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will

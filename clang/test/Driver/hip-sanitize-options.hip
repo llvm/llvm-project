@@ -102,7 +102,7 @@
 // CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 // CHECK: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
-// NORDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* .* "-mlink-bitcode-file" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
+// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* .* "-mlink-bitcode-file" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
 // NORDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
 // RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
