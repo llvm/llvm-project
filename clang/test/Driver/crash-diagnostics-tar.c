@@ -11,6 +11,9 @@
 
 // RUN: not %crash_opt %clang -fcrash-diagnostics-tar=%t/nonexistent/repro.tar -c %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID
 
+// RUN: not %crash_opt %clang -fcrash-diagnostics-tar=repro-stdin.tar -c -x c - -o /dev/null < %s 2>&1 | FileCheck %s --check-prefix=STDIN
+// RUN: not ls repro-stdin.tar
+
 #pragma clang __debug parser_crash
 
 // TAR: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
@@ -27,3 +30,7 @@
 
 // SH: # Crash reproducer for
 // C: # 1 "
+
+// STDIN: PLEASE submit a bug report to
+// STDIN: note: diagnostic msg: Error generating preprocessed source(s) - ignoring input from stdin.
+// STDIN: note: diagnostic msg: Error generating preprocessed source(s) - no preprocessable inputs.
