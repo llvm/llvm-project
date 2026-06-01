@@ -2072,13 +2072,14 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //
 // Category 3: SWMMAC with Latency 16
 //   SWMMAC_IU8
-static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
-                                            const SIInstrInfo *TII,
-                                            unsigned Latency) {
+static unsigned
+getWMMAHazardInstInCategory(const MachineInstr &MI, const SIInstrInfo *TII,
+                            const TargetSchedModel &SchedModel) {
   assert(TII->isXDLWMMA(MI) && "must be xdl wmma");
   bool IsSWMMAC = SIInstrInfo::isSWMMAC(MI);
   unsigned Category = 0;
 
+  unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
   case 8:
     Category = IsSWMMAC ? 2 : 0;
@@ -2114,9 +2115,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    Category = getWMMAHazardInstInCategory(I, TII, Latency);
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
     return hasWMMAToWMMARegOverlap(I, *MI);
   };
 
@@ -2124,9 +2123,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    Category = getWMMAHazardInstInCategory(I, TII, Latency);
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
     return hasWMMAToVALURegOverlap(I, *MI);
   };
 
