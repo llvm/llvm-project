@@ -108,7 +108,15 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   const CXXMethodDecl *Method = Call->getMethodDecl();
 
   diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
-      << Method->getName() << ValueType << buildSuggestion(Method->getParent());
+      << Method->getName() << ValueType
+      << buildSuggestion(Method->getParent());
+
+  const Expr *FallbackArg = Call->getArg(0)->IgnoreImplicit();
+  if (FallbackArg->HasSideEffects(Ctx))
+    diag(FallbackArg->getExprLoc(),
+         "the fallback is always evaluated; a conditional rewrite would "
+         "change evaluation semantics",
+         DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::performance

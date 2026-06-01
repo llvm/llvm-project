@@ -36,6 +36,21 @@ void positiveDirectUse(std::optional<std::string> opt) {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
 }
 
+std::string makeFallback();
+void positiveSideEffectFallback(std::optional<std::string> opt) {
+  auto val = opt.value_or(makeFallback());
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES: :[[@LINE-2]]:27: note: the fallback is always evaluated; a conditional rewrite would change evaluation semantics
+}
+
+// Constructing a temporary with a non-trivial destructor is treated as a side
+// effect (CXXBindTemporaryExpr), so the note fires here too.
+void positiveSideEffectTemporary(std::optional<std::string> opt) {
+  auto val = opt.value_or(std::string("fallback"));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES: :[[@LINE-2]]:27: note: the fallback is always evaluated; a conditional rewrite would change evaluation semantics
+}
+
 template <typename T> void positiveTemplate(std::optional<T> opt) {
   auto val = opt.value_or(T{});
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
