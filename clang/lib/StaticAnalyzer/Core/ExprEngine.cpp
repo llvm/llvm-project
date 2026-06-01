@@ -2076,31 +2076,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::CXXOperatorCallExprClass: {
-      const auto *OCE = cast<CXXOperatorCallExpr>(S);
-
-      // For instance method operators, make sure the 'this' argument has a
-      // valid region.
-      const Decl *Callee = OCE->getCalleeDecl();
-      if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Callee)) {
-        if (MD->isImplicitObjectMemberFunction()) {
-          ProgramStateRef State = Pred->getState();
-          const StackFrame *SF = Pred->getStackFrame();
-          ProgramStateRef NewState =
-              createTemporaryRegionIfNeeded(State, SF, OCE->getArg(0));
-          if (NewState != State) {
-            PreStmt PS(OCE, SF, /*tag=*/nullptr);
-            Pred = Engine.makeNode(PS, NewState, Pred);
-            if (!Pred)
-              break; // Cached out.
-          }
-        }
-      }
-      // FIXME: Move this logic into `VisitCallExpr` to reduce the complexity
-      // of `Visit`.
-      [[fallthrough]];
-    }
-
+    case Stmt::CXXOperatorCallExprClass:
     case Stmt::CallExprClass:
     case Stmt::CXXMemberCallExprClass:
     case Stmt::UserDefinedLiteralClass:
