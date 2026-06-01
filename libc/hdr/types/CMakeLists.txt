@@ -484,6 +484,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_udphdr
+  HDRS
+    struct_udphdr.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_udphdr
+    libc.include.netinet_udp
+)
+
+
+add_proxy_header_library(
   socklen_t
   HDRS
     socklen_t.h
