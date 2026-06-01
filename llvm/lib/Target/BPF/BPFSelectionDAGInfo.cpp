@@ -35,24 +35,27 @@ unsigned BPFSelectionDAGInfo::getCommonMaxStoresPerMemFunc() const {
 
 SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
+  // TODO: Not sure which alignment to use below.
+
   // Requires the copy size to be a constant.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (!ConstantSize)
     return SDValue();
 
   // BPF::MEMCPY supports alignment up to 8 bytes.
-  if (Alignment.value() > 8)
+  if (DstAlign.value() > 8)
     return SDValue();
 
   unsigned CopyLen = ConstantSize->getZExtValue();
-  unsigned StoresNumEstimate = alignTo(CopyLen, Alignment) >> Log2(Alignment);
+  unsigned StoresNumEstimate = alignTo(CopyLen, DstAlign) >> Log2(DstAlign);
   // Impose the same copy length limit as MaxStoresPerMemcpy.
   if (StoresNumEstimate > getCommonMaxStoresPerMemFunc())
     return SDValue();
 
   return DAG.getNode(BPFISD::MEMCPY, dl, MVT::Other, Chain, Dst, Src,
                      DAG.getConstant(CopyLen, dl, MVT::i64),
-                     DAG.getConstant(Alignment.value(), dl, MVT::i64));
+                     DAG.getConstant(DstAlign.value(), dl, MVT::i64));
 }

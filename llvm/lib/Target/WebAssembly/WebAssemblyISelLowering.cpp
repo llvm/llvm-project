@@ -1392,8 +1392,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
-      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode,
-                            Out.Flags.getNonZeroByValAlign(),
+      Align Align = Out.Flags.getNonZeroByValAlign();
+      Chain = DAG.getMemcpy(Chain, DL, FINode, OutVal, SizeNode, Align, Align,
                             /*isVolatile*/ false, /*AlwaysInline=*/false,
                             /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
                             MachinePointerInfo());

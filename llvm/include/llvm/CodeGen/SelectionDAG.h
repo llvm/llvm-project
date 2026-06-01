@@ -1334,8 +1334,9 @@ public:
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
   LLVM_ABI SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                             SDValue Src, SDValue Size, Align Alignment,
-                             bool isVol, bool AlwaysInline, const CallInst *CI,
+                             SDValue Src, SDValue Size, Align DstAlign,
+                             Align SrcAlign, bool isVol, bool AlwaysInline,
+                             const CallInst *CI,
                              std::optional<bool> OverrideTailCall,
                              MachinePointerInfo DstPtrInfo,
                              MachinePointerInfo SrcPtrInfo,
@@ -1346,8 +1347,8 @@ public:
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
   LLVM_ABI SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                              SDValue Src, SDValue Size, Align Alignment,
-                              bool isVol, const CallInst *CI,
+                              SDValue Src, SDValue Size, Align DstAlign,
+                              Align SrcAlign, bool isVol, const CallInst *CI,
                               std::optional<bool> OverrideTailCall,
                               MachinePointerInfo DstPtrInfo,
                               MachinePointerInfo SrcPtrInfo,

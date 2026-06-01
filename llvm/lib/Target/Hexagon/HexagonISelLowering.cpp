@@ -215,8 +215,9 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
+  Align Align = Flags.getNonZeroByValAlign();
   return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
+      Chain, dl, Dst, Src, SizeNode, Align, Align,
       /*isVolatile=*/false, /*AlwaysInline=*/false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
@@ -1046,10 +1047,11 @@ HexagonTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   // Size of the va_list is 12 bytes as it has 3 pointers. Therefore,
   // we need to memcopy 12 bytes from va_list to another similar list.
-  return DAG.getMemcpy(
-      Chain, DL, DestPtr, SrcPtr, DAG.getIntPtrConstant(12, DL), Align(4),
-      /*isVolatile*/ false, false, /*CI=*/nullptr, std::nullopt,
-      MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+  return DAG.getMemcpy(Chain, DL, DestPtr, SrcPtr,
+                       DAG.getIntPtrConstant(12, DL), Align(4), Align(4),
+                       /*isVolatile*/ false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
