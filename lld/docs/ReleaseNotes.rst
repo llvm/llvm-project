@@ -48,6 +48,12 @@ Breaking changes
   feature saw no adoption beyond a Chromium experiment that has since been
   retired.
 
+* An OutputSection that has an address expression, and is also assigned
+  to a MEMORY region, will now use the address expression in preference
+  to the next available location in the MEMORY region. This brings LLD
+  in line with GNU ld, but is a change in behavior from previous LLD
+  releases.
+  
 COFF Improvements
 -----------------
 

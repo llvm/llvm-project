@@ -1957,6 +1957,10 @@ void AArch64DAGToDAGISel::SelectPostLoad(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i),
           CurDAG->getTargetExtractSubreg(SubRegIdx + i, dl, VT, SuperReg));
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   // Update the chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
   CurDAG->RemoveDeadNode(N);
@@ -2522,6 +2526,10 @@ void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,
                    N->getOperand(NumVecs + 2), // Incremental
                    N->getOperand(0)};          // Chain
   SDNode *St = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }
@@ -7659,7 +7667,7 @@ FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
 static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
                                                 unsigned NumVec) {
   assert(NumVec > 0 && NumVec < 5 && "Invalid number of vectors.");
-  if (!PredVT.isScalableVector() || PredVT.getVectorElementType() != MVT::i1)
+  if (!PredVT.isScalableVectorOf(MVT::i1))
     return EVT();
 
   if (PredVT != MVT::nxv16i1 && PredVT != MVT::nxv8i1 &&
@@ -7887,8 +7895,7 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
 }
 
 bool AArch64DAGToDAGISel::SelectAnyPredicate(SDValue N) {
-  EVT VT = N.getValueType();
-  return VT.isScalableVector() && VT.getVectorElementType() == MVT::i1;
+  return N.getValueType().isScalableVectorOf(MVT::i1);
 }
 
 bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,

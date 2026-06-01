@@ -259,6 +259,7 @@ protected:
 
   bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                           bool ConstantContext) override;
+  bool visitDtorCall(const VarDecl *VD, const APValue &Value) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -428,6 +429,7 @@ private:
 
   bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
                               QualType DestType, const Expr *E);
+  bool emitVectorConversion(const Expr *Src, const Expr *E);
 
   /// A scalar element extracted during HLSL aggregate flattening.
   struct HLSLFlatElement {

@@ -13,58 +13,19 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
-  Type *ResTy = inferScalarType(R->getIncomingValue(0));
-  for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
-    VPValue *Inc = R->getIncomingValue(I);
-    assert(inferScalarType(Inc) == ResTy &&
-           "different types inferred for different incoming values");
-    CachedTypes[Inc] = ResTy;
-  }
-  return ResTy;
-}
-
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
-  if (Type *CachedTy = CachedTypes.lookup(V))
-    return CachedTy;
-
-  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
-          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
-          VPWidenLoadEVLRecipe, VPDerivedIVRecipe, VPHeaderPHIRecipe,
-          VPInstruction, VPReplicateRecipe, VPWidenRecipe>(V)) {
-    Type *Ty = V->getScalarType();
-    assert(Ty && "Scalar type must be set by recipe construction");
-    return Ty;
-  }
-
-  Type *ResultTy =
-      TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPBlendRecipe>(
-              [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([this](const VPReductionRecipe *R) {
-            return inferScalarType(R->getChainOp());
-          })
-          .Case([this](const VPExpressionRecipe *R) {
-            return inferScalarType(R->getOperandOfResultType());
-          });
-
-  assert(ResultTy && "could not infer type for the given VPValue");
-  CachedTypes[V] = ResultTy;
-  return ResultTy;
+  Type *Ty = V->getScalarType();
+  assert(Ty && "Scalar type must be set by recipe construction");
+  return Ty;
 }
 
 void llvm::collectEphemeralRecipesForVPlan(
