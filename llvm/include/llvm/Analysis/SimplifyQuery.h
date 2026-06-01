@@ -120,6 +120,15 @@ struct SimplifyQuery {
   /// Otherwise always return false.
   LLVM_ABI bool isUndefValue(Value *V) const;
 
+  bool isStrictFP() const {
+    if (CxtI) {
+      assert(CxtI->getParent() && "isolated instruction");
+      const Function *F = CxtI->getFunction();
+      return F->hasFnAttribute(Attribute::StrictFP);
+    }
+    return true;
+  }
+
   SimplifyQuery getWithoutDomCondCache() const {
     SimplifyQuery Copy(*this);
     Copy.DC = nullptr;

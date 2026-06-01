@@ -402,7 +402,7 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
       //
       // select c, (ldexp v0, e0), (ldexp v1, e1) ->
       //     ldexp (select c, v0, v1), (select c, e0, e1)
-      if (TII->getIntrinsicID() == Intrinsic::ldexp) {
+      if (TII->getIntrinsicID() == Intrinsic::ldexp && !StrictFPFunction) {
         Value *LdexpVal0 = TII->getArgOperand(0);
         Value *LdexpExp0 = TII->getArgOperand(1);
         Value *LdexpVal1 = FII->getArgOperand(0);

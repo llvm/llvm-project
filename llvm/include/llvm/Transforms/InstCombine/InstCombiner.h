@@ -99,6 +99,9 @@ protected:
   SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
   bool ComputedBackEdges = false;
 
+  /// Caches StrictFP function attribute.
+  bool StrictFPFunction;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
                AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
@@ -111,7 +114,8 @@ public:
         F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
         DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
                    /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT),
+        StrictFPFunction(F.hasFnAttribute(Attribute::StrictFP)) {}
 
   virtual ~InstCombiner() = default;
 
@@ -354,6 +358,7 @@ public:
   }
   BlockFrequencyInfo *getBlockFrequencyInfo() const { return BFI; }
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
+  bool isStrictFP() const { return StrictFPFunction; }
 
   // Call target specific combiners
   std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);

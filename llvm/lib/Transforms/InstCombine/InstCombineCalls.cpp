@@ -2474,15 +2474,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // 0 and 1 are handled in instsimplify
       // powi(x, -1) -> 1/x
-      if (Power->isMinusOne())
+      if (Power->isMinusOne() && !StrictFPFunction)
         return BinaryOperator::CreateFDivFMF(ConstantFP::get(CI.getType(), 1.0),
                                              II->getArgOperand(0), II);
       // powi(x, 2) -> x*x
-      if (Power->equalsInt(2))
+      if (Power->equalsInt(2) && !StrictFPFunction)
         return BinaryOperator::CreateFMulFMF(II->getArgOperand(0),
                                              II->getArgOperand(0), II);
 
-      if (!Power->getValue()[0]) {
+      if (!Power->getValue()[0] && !StrictFPFunction) {
         Value *X;
         // If power is even:
         // powi(-x, p) -> powi(x, p)
@@ -2824,6 +2824,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::maximumnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum: {
+    if (StrictFPFunction)
+      break;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     Value *X, *Y;
@@ -3162,7 +3164,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::rint:
   case Intrinsic::trunc: {
     Value *ExtSrc;
-    if (match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc))))) {
+    if (!StrictFPFunction &&
+        match(II->getArgOperand(0), m_OneUse(m_FPExt(m_Value(ExtSrc))))) {
       // Narrow the call: intrinsic (fpext x) -> fpext (intrinsic x)
       Value *NarrowII = Builder.CreateUnaryIntrinsic(IID, ExtSrc, II);
       return new FPExtInst(NarrowII, II->getType());
@@ -3228,6 +3231,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return BinaryOperator::CreateFMulFMF(Src, FPConst, II);
       }
     }
+
+    if (StrictFPFunction)
+      break;
 
     Value *InnerSrc;
     Value *InnerExp;

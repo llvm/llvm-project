@@ -2210,6 +2210,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       // operation to be itself an fpext from the type to which we're
       // truncating.
       if (II->getIntrinsicID() != Intrinsic::fabs) {
+        if (StrictFPFunction)
+          break;
         FPExtInst *FPExtSrc = dyn_cast<FPExtInst>(Src);
         if (!FPExtSrc || FPExtSrc->getSrcTy() != Ty)
           break;
