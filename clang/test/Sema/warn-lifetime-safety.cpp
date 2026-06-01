@@ -2449,7 +2449,7 @@ void from_template_instantiation() {
 
 struct FieldInitFromLifetimebound {
   S value; // expected-note {{this field dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{address of stack memory escapes to a field}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with local temporary object escapes to the field 'value' which will dangle}}
 };
 
 S S::return_self_after_registration() const {
@@ -2639,12 +2639,12 @@ void nested_local_pointer() {
 
 struct PFieldFromParam {
   Pointer<Bar> value;                      // expected-note {{this field dangles}}
-  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{address of stack memory escapes to a field}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{stack memory associated with parameter 'bar' escapes to the field 'value' which will dangle}}
 };
 
 struct PFieldFromTemp {
   Pointer<Bar> value;                // expected-note {{this field dangles}}
-  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{address of stack memory escapes to a field}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{stack memory associated with local temporary object escapes to the field 'value' which will dangle}}
 };
 
 } // namespace gslpointer_construction_from_lifetimebound
@@ -3210,7 +3210,7 @@ struct S2 : S {
 
 namespace CXXDefaultInitExprTests {
 struct Holder {
-  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  std::string_view view = std::string("temporary"); // expected-warning {{stack memory associated with local temporary object escapes to the field 'view' which will dangle}} expected-note {{this field dangles}}
   Holder() {}
 };
 } // namespace CXXDefaultInitExprTests
@@ -3222,7 +3222,7 @@ struct Y : X {
   void bar() {
     {
       int a;
-      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+      x = &a; // expected-warning {{stack memory associated with local variable 'a' escapes to the field 'x' which will dangle}}
     }
     (void)x;
   }
