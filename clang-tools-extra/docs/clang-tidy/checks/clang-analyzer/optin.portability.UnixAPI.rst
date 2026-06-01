@@ -5,7 +5,7 @@
 clang-analyzer-optin.portability.UnixAPI
 ========================================
 
-Finds implementation-defined behavior in UNIX/Posix functions.
+Finds dynamic memory allocation with size zero.
 
 The `clang-analyzer-optin.portability.UnixAPI` check is an alias, please see
 `Clang Static Analyzer Available Checkers
