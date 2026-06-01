@@ -4,6 +4,7 @@ set(TSAN_UNIT_TEST_SOURCES
   tsan_ilist_test.cpp
   tsan_mman_test.cpp
   tsan_percent_test.cpp
+  tsan_report_test.cpp
   tsan_shadow_test.cpp
   tsan_stack_test.cpp
   tsan_sync_test.cpp
