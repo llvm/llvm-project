@@ -23,6 +23,7 @@
 #include "DXILOpLowering.h"
 #include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
+#include "DXILRemoveUnusedResources.h"
 #include "DXILResourceAccess.h"
 #include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
@@ -71,6 +72,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXContainerGlobalsPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
+  initializeDXILRemoveUnusedResourcesLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILResourceImplicitBindingLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
@@ -117,6 +119,7 @@ public:
     addPass(createGlobalDCEPass());
     addPass(createDXILMemIntrinsicsLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
+    addPass(createDXILRemoveUnusedResourcesLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());

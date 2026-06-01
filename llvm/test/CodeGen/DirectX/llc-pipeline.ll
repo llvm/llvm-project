@@ -21,6 +21,7 @@
 ; CHECK-NEXT:   DXIL Memory Intrinsic Elimination
 ; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   FunctionPass Manager
+; CHECK-NEXT:     DXIL Remove Unused Resources
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL Data Scalarization

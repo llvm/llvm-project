@@ -1,5 +1,5 @@
 ; RUN: opt -S --passes="print-dx-shader-flags" 2>&1 %s | FileCheck %s
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=OBJ
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=OBJ
 
 ; This test makes sure that no overflow is happening when a resource is followed
 ; by an unbounded array of UAVs. 
