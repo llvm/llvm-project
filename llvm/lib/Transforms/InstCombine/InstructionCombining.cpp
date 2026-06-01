@@ -1341,8 +1341,9 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
     if (Mask[I] != I + 1 || Mask[I + 1] != I)
       return nullptr;
 
-  LLVM_DEBUG(dbgs() << "IC: Folding <2X x I> icmp_eq to <X x 2I> icmp_eq pattern"
-                    << '\n');
+  LLVM_DEBUG(
+      dbgs() << "IC: Folding <2X x I> icmp_eq to <X x 2I> icmp_eq pattern"
+             << '\n');
 
   // Perform folding
   unsigned int OldElementCount = OldVecType->getElementCount().getFixedValue();
@@ -1468,8 +1469,9 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
     }
   }
 
- LLVM_DEBUG(dbgs() << "IC: Folding <2X x I> icmp_gt to <X x 2I> icmp_gt pattern"
-                    << '\n');
+  LLVM_DEBUG(
+      dbgs() << "IC: Folding <2X x I> icmp_gt to <X x 2I> icmp_gt pattern"
+             << '\n');
 
   // Perform folding
   Type *NewElementType = IntegerType::get(I.getContext(), OldElementWidth * 2);
