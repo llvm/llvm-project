@@ -196,7 +196,7 @@ public:
   template <typename KernelName = detail::AutoName, typename KernelType>
   event single_task(const std::vector<event> &depEvents,
                     const KernelType &kernelFunc) {
-     static_assert(
+    static_assert(
         detail::CheckFunctionCallOperator<std::remove_reference_t<KernelType>,
                                           void()>::value,
         "Invalid kernel function signature.");
