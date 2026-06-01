@@ -205,3 +205,28 @@ TEST(NVPTXPackedRegister, Full_DW_OP_regx_CallbackMiss) {
 
   EXPECT_EQ(OS.str(), "DW_OP_regx %rs2");
 }
+
+// Preserved-behavior test for the llvm-objdump LiveVariable::print
+TEST(NVPTXPackedRegister, Compact_DW_OP_regx_TrulyUnknown_FlushesBuffer) {
+  SmallVector<uint8_t, 16> Enc;
+  Enc.push_back(DW_OP_regx);
+  appendULEB128(Enc, 0x100u); // not packed ASCII; NVPTX decode rejects
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  DataExtractor DE(Enc, true, 8);
+  DWARFExpression Expr(DE, 8);
+
+  std::string UnknownBuf;
+  raw_string_ostream UnknownOS(UnknownBuf);
+  auto GetRegName = [&UnknownOS](uint64_t DwarfRegNum,
+                                 bool /*IsEH*/) -> StringRef {
+    UnknownOS << "<unknown register " << DwarfRegNum << ">";
+    return {};
+  };
+
+  if (!printDwarfExpressionCompact(&Expr, OS, GetRegName))
+    OS << UnknownBuf;
+
+  EXPECT_EQ(OS.str(), "<unknown register 256>");
+}
