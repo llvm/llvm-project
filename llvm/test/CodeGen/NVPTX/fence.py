@@ -1,5 +1,9 @@
-# For manual usage, not as a part of lit tests. Used for generating fence.ll
+# Test generator for the fence-sm*.py lit tests, which import this module and
+# call main(). Emits the test IR plus structural FileCheck lines to stdout; not a
+# lit test itself (excluded in lit.local.cfg).
 
+import argparse
+import sys
 from string import Template
 from itertools import product
 
@@ -11,14 +15,6 @@ define void @fence_${ordering}_${ptx_scope}() {
 }
 """
 )
-
-run_statement = Template(
-    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}"""
-)
-
-# (sm, ptx)
-TESTS = [(30, 50), (70, 60), (90, 87)]
 
 LLVM_SCOPES = ["singlethread", "", "block", "cluster", "device"]
 
@@ -32,20 +28,42 @@ SCOPE_LLVM_TO_PTX = {
 
 ORDERINGS = ["acquire", "release", "acq_rel", "seq_cst"]
 
+
+# A `fence` lowers to exactly one barrier instruction, so we check it precisely.
+# The form depends on the PTX ISA version:
+#   - sm_60-: legacy `membar.<scope>` with no ordering semantics.
+#   - sm_70:  `fence` exists but only `.acq_rel`/`.sc`, and `.cluster` isn't
+#             available so it's widened to `.cta`; we pin the scope but wildcard
+#             the semantic.
+#   - sm_90+: the full `fence.<sem>.<scope>` set; pinned exactly.
+# A singlethread fence is a no-op and emits nothing.
+def emit_func(out, sm, ordering, llvm_scope):
+    scope = SCOPE_LLVM_TO_PTX[llvm_scope]
+    print("; CHECK-LABEL: fence_{}_{}(".format(ordering, scope), file=out)
+    if scope == "thread":
+        # Match the instructions' trailing "."; the function names contain "fence" too.
+        print("; CHECK-NOT: fence.", file=out)
+        print("; CHECK-NOT: membar.", file=out)
+    elif sm < 70:
+        print("; CHECK: membar.{{[a-z]+}};", file=out)
+    elif sm < 90:
+        fence_scope = "cta" if scope == "cluster" else scope
+        print("; CHECK: fence.{{[a-z_]+}}.%s;" % fence_scope, file=out)
+    else:
+        sem = "sc" if ordering == "seq_cst" else ordering
+        print("; CHECK: fence.{}.{};".format(sem, scope), file=out)
+    print(fence_func.substitute(
+        llvm_scope=llvm_scope, ptx_scope=scope, ordering=ordering), file=out)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sm", type=int, required=True)
+    args = parser.parse_args()
+    out = sys.stdout
+    for ordering, llvm_scope in product(ORDERINGS, LLVM_SCOPES):
+        emit_func(out, args.sm, ordering, llvm_scope)
+
+
 if __name__ == "__main__":
-    with open("fence.ll", "w") as fp:
-        for sm, ptx in TESTS:
-            print(run_statement.substitute(sm=sm, ptx=ptx, ptxfp=ptx / 10.0), file=fp)
-        print(
-            "; NOTE: Please do not modify this file manually- instead modify fence.py",
-            file=fp,
-        )
-        for ordering, llvm_scope in product(ORDERINGS, LLVM_SCOPES):
-            print(
-                fence_func.substitute(
-                    llvm_scope=llvm_scope,
-                    ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
-                    ordering=ordering,
-                ),
-                file=fp,
-            )
+    main()

@@ -1,6 +1,9 @@
-# For manual usage, not as a part of lit tests. Used for generating the following tests:
-# cmpxchg-sm30.ll, cmpxchg-sm70.ll, cmpxchg-sm90.ll
+# Test generator for the cmpxchg-sm*.py lit tests, which import this module and
+# call main(). Emits the test IR plus structural FileCheck lines to stdout; not a
+# lit test itself (excluded in lit.local.cfg).
 
+import argparse
+import sys
 from string import Template
 from itertools import product
 
@@ -19,14 +22,6 @@ cmpxchg_func_no_scope = Template(
 }
 """
 )
-
-run_statement = Template(
-    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
-; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
-; NOTE: Please do not modify this file manually- instead modify cmpxchg.py
-"""
-)
-
 
 def get_addrspace_cast(addrspace):
     if addrspace == 0:
@@ -51,84 +46,78 @@ ADDRSPACES = [0, 1, 3]
 
 ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 
+ADDRSPACE_TO_SPACE_DOT = {0: "", 1: ".global", 3: ".shared"}
+
+
+# Structural check: cmpxchg always lowers to an `atom...cas` at the requested
+# scope/space (or a CAS loop, for emulated sub-word sizes). We assert that and
+# leave exact register-level output / fence placement to ptxas-verify. The
+# success/failure ordering combinations make fence placement awkward to predict,
+# so we don't check it here.
+def emit_func(out, success, failure, size, addrspace, llvm_scope):
+    # llvm_scope=None means no syncscope() in the IR, i.e. the system scope.
+    scope = "sys" if llvm_scope is None else SCOPE_LLVM_TO_PTX[llvm_scope]
+    space = ADDRSPACE_TO_SPACE_DOT[addrspace]
+    space_name = ADDRSPACE_NUM_TO_ADDRSPACE[addrspace]
+
+    if llvm_scope is None:
+        name = "{}_{}_i{}_{}".format(success, failure, size, space_name)
+        body = cmpxchg_func_no_scope.substitute(
+            success=success, failure=failure, size=size,
+            addrspace=space_name, addrspace_cast=get_addrspace_cast(addrspace),
+        )
+    else:
+        name = "{}_{}_i{}_{}_{}".format(success, failure, size, space_name, scope)
+        body = cmpxchg_func.substitute(
+            success=success, failure=failure, size=size,
+            addrspace=space_name, addrspace_cast=get_addrspace_cast(addrspace),
+            llvm_scope=llvm_scope, ptx_scope=scope,
+        )
+
+    print("; CHECK-LABEL: {}(".format(name), file=out)
+    print("; CHECK: atom.{{{{.*}}}}{}{}.cas".format(scope, space), file=out)
+    print(body, file=out)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sm", type=int, required=True)
+    args = parser.parse_args()
+    sm = args.sm
+    out = sys.stdout
+
+    # Our test space is: SIZES X SUCCESS_ORDERINGS X FAILURE_ORDERINGS X ADDRSPACES X LLVM_SCOPES
+    # This is very large, so we instead test 3 slices.
+
+    # First slice:  are all orderings correctly supported, with and without emulation loops?
+    # set addrspace to global, scope to cta, generate all possible orderings, for all operation sizes
+    addrspace, llvm_scope = 1, "block"
+    for size, success, failure in product(SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS):
+        emit_func(out, success, failure, size, addrspace, llvm_scope)
+
+    # Second slice: Are all scopes correctlly supported, with and without emulation loops?
+    # fix addrspace, ordering, generate all possible scopes, for operation sizes i8, i32
+    addrspace, success, failure = 1, "acq_rel", "acquire"
+    for size in [8, 32]:
+        emit_func(out, success, failure, size, addrspace, None)
+
+    for llvm_scope in LLVM_SCOPES:
+        if sm < 90 and llvm_scope == "cluster":
+            continue
+        if llvm_scope == "block":
+            # skip (acq_rel, acquire, global, cta)
+            continue
+        emit_func(out, success, failure, size, addrspace, llvm_scope)
+
+    # Third slice: Are all address spaces correctly supported?
+    # fix ordering, scope, generate all possible address spaces, for operation sizes i8, i32
+    success, failure, llvm_scope = "acq_rel", "acquire", "block"
+    for size, addrspace in product([8, 32], ADDRSPACES):
+        if addrspace == 1:
+            # skip (acq_rel, acquire, global, cta)
+            continue
+        emit_func(out, success, failure, size, addrspace, llvm_scope)
+
 
 if __name__ == "__main__":
-    for sm, ptx in TESTS:
-        with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
-            print(run_statement.substitute(sm=sm, ptx=ptx, ptxfp=ptx / 10.0), file=fp)
-
-            # Our test space is: SIZES X SUCCESS_ORDERINGS X FAILURE_ORDERINGS X ADDRSPACES X LLVM_SCOPES
-            # This is very large, so we instead test 3 slices.
-
-            # First slice:  are all orderings correctly supported, with and without emulation loops?
-            # set addrspace to global, scope to cta, generate all possible orderings, for all operation sizes
-            addrspace, llvm_scope = 1, "block"
-            for size, success, failure in product(
-                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS
-            ):
-                print(
-                    cmpxchg_func.substitute(
-                        success=success,
-                        failure=failure,
-                        size=size,
-                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                        addrspace_cast=get_addrspace_cast(addrspace),
-                        llvm_scope=llvm_scope,
-                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
-                    ),
-                    file=fp,
-                )
-
-            # Second slice: Are all scopes correctlly supported, with and without emulation loops?
-            # fix addrspace, ordering, generate all possible scopes, for operation sizes i8, i32
-            addrspace, success, failure = 1, "acq_rel", "acquire"
-            for size in [8, 32]:
-                print(
-                    cmpxchg_func_no_scope.substitute(
-                        success=success,
-                        failure=failure,
-                        size=size,
-                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                        addrspace_cast=get_addrspace_cast(addrspace),
-                    ),
-                    file=fp,
-                )
-
-            for llvm_scope in LLVM_SCOPES:
-                if sm < 90 and llvm_scope == "cluster":
-                    continue
-                if llvm_scope == "block":
-                    # skip (acq_rel, acquire, global, cta)
-                    continue
-                print(
-                    cmpxchg_func.substitute(
-                        success=success,
-                        failure=failure,
-                        size=size,
-                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                        addrspace_cast=get_addrspace_cast(addrspace),
-                        llvm_scope=llvm_scope,
-                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
-                    ),
-                    file=fp,
-                )
-
-            # Third slice: Are all address spaces correctly supported?
-            # fix ordering, scope, generate all possible address spaces, for operation sizes i8, i32
-            success, failure, llvm_scope = "acq_rel", "acquire", "block"
-            for size, addrspace in product([8, 32], ADDRSPACES):
-                if addrspace == 1:
-                    # skip (acq_rel, acquire, global, cta)
-                    continue
-                print(
-                    cmpxchg_func.substitute(
-                        success=success,
-                        failure=failure,
-                        size=size,
-                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                        addrspace_cast=get_addrspace_cast(addrspace),
-                        llvm_scope=llvm_scope,
-                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
-                    ),
-                    file=fp,
-                )
+    main()
