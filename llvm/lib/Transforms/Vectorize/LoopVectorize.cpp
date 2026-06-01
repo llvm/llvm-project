@@ -1188,8 +1188,7 @@ public:
     // TODO: Reductions are not supported as values outside the "ClampedVF" are
     // not masked out for the final horizontal reductions.
     if (!ForcePartialAliasingVectorization ||
-        !Legal->getFixedOrderRecurrences().empty() ||
-        !Legal->getReductionVars().empty())
+        !Legal->getFixedOrderRecurrences().empty())
       return;
 
     const RuntimePointerChecking *Checks = Legal->getRuntimePointerChecking();
@@ -1264,6 +1263,11 @@ public:
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
+      return true;
+
+    // Force a predicated select with alias-masking to avoid propagating poison
+    // values to the header phi for lanes outside the alias-mask.
+    if (maskPartialAliasing())
       return true;
 
     // Note: For FindLast recurrences we prefer a predicated select to simplify
