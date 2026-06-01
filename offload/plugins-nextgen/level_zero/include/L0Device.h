@@ -17,10 +17,10 @@
 
 #include "PerThreadTable.h"
 
-#include "L0Queue.h"
 #include "L0CmdListManager.h"
 #include "L0Context.h"
 #include "L0Program.h"
+#include "L0Queue.h"
 #include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
@@ -401,14 +401,14 @@ public:
     auto QueueOrErr = getOrCreateQueue(AsyncInfo);
     if (!QueueOrErr)
       return QueueOrErr.takeError();
-    AsyncQueueTy *Queue = *QueueOrErr;
+    L0QueueTy *Queue = *QueueOrErr;
     return Queue->memoryCopy(Dst, Src, Size);
   }
 
   Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
     __tgt_async_info AsyncInfo;
     if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
-      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      releaseQueue((L0QueueTy *)AsyncInfo.Queue);
       return Err;
     }
     return synchronize(&AsyncInfo);
@@ -422,7 +422,7 @@ public:
     __tgt_async_info AsyncInfo;
     if (auto Err =
             enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
-      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      releaseQueue((L0QueueTy *)AsyncInfo.Queue);
       return Err;
     }
     return synchronize(&AsyncInfo);
@@ -457,8 +457,8 @@ public:
 
   /// Returns the Queue from an async info object, or creates a new one if
   /// the async info does not have a queue yet.
-  Expected<AsyncQueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(AsyncQueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
   // Allocation related routines.
 

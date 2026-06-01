@@ -22,7 +22,7 @@ namespace llvm::omp::target::plugin {
 // Forward declarations.
 class L0DeviceTy;
 class L0ProgramTy;
-struct AsyncQueueTy;
+class L0QueueTy;
 struct L0LaunchEnvTy;
 
 /// Kernel properties.

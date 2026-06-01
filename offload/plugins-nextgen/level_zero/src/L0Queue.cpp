@@ -20,7 +20,7 @@ namespace llvm::omp::target::plugin {
 
 /// common methods
 
-Error AsyncQueueTy::init() {
+Error L0QueueTy::init() {
   auto CmdListOrErr = Device.getCmdListManager(IsInorder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
@@ -28,7 +28,7 @@ Error AsyncQueueTy::init() {
   return initImpl();
 }
 
-Error AsyncQueueTy::deinit() {
+Error L0QueueTy::deinit() {
   if (auto Err = deinitImpl())
     return Err;
   reset();
@@ -41,11 +41,11 @@ Error AsyncQueueTy::deinit() {
   return Plugin::success();
 }
 
-Error AsyncQueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
-                                         L0LaunchEnvTy &KEnv,
-                                         ze_event_handle_t SignalEvent,
-                                         uint32_t NumWaitEvents,
-                                         ze_event_handle_t *WaitEvents) {
+Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
+                                      L0LaunchEnvTy &KEnv,
+                                      ze_event_handle_t SignalEvent,
+                                      uint32_t NumWaitEvents,
+                                      ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
   if (KEnv.IsPtrArg)
@@ -331,16 +331,16 @@ Error L0SyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
 }
 
 // L0QueueCache implementation.
-Expected<AsyncQueueTy *> L0QueueCacheTy::getQueue() {
+Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
   {
     std::lock_guard<std::mutex> Lock(Mtx);
     if (!Queues.empty()) {
-      AsyncQueueTy *Queue = Queues.back();
+      L0QueueTy *Queue = Queues.back();
       Queues.pop_back();
       return Queue;
     }
   }
-  AsyncQueueTy *Queue = nullptr;
+  L0QueueTy *Queue = nullptr;
   switch (CachedCmdMode) {
   case CommandModeTy::Async:
     Queue = new L0AsyncQueueTy(Device);
@@ -364,7 +364,7 @@ Expected<AsyncQueueTy *> L0QueueCacheTy::getQueue() {
   return Queue;
 }
 
-void L0QueueCacheTy::releaseQueue(AsyncQueueTy *Queue) {
+void L0QueueCacheTy::releaseQueue(L0QueueTy *Queue) {
   if (!Queue)
     return;
   Queue->reset();
