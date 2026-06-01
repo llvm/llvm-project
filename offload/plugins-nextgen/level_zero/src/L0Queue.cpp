@@ -78,17 +78,15 @@ void L0AsyncQueueTy::resetImpl() {
 }
 
 void L0AsyncQueueTy::processCopyQueues() {
-  for (auto &USM2M : USM2MList) {
-    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
-                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
-  }
-  // Commit delayed H2M copies.
-  for (auto &H2M : H2MList) {
-    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
-                static_cast<char *>(std::get<1>(H2M)));
-  }
-  H2MList.clear();
-  USM2MList.clear();
+  auto processQueue = [](auto &Queue) {
+    for (auto &[Src, Dst, Size] : Queue)
+      std::copy_n(static_cast<const char *>(Src), Size,
+                  static_cast<char *>(Dst));
+    Queue.clear();
+  };
+
+  processQueue(USM2MList);
+  processQueue(H2MList);
 }
 
 Error L0AsyncQueueTy::synchronizeImpl() {
@@ -165,7 +163,8 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
     if (KernelEvent) {
       // Delay Host/Shared USM to host memory copy since it must wait for
       // kernel completion.
-      USM2MList.emplace_back(TgtPtr, HstPtr, Size);
+      USM2MList.emplace_back(
+          PendingCopyDescTy{TgtPtr, HstPtr, static_cast<size_t>(Size)});
       CopyNow = false;
     }
     if (CopyNow) {
@@ -190,7 +189,8 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
     return Err;
 
   if (DstPtr != HstPtr)
-    H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
+    H2MList.emplace_back(
+        PendingCopyDescTy{DstPtr, HstPtr, static_cast<size_t>(Size)});
   return Plugin::success();
 }
 
