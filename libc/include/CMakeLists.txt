@@ -226,6 +226,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  netinet_tcp
+  ../libc/include/netinet/tcp.yaml
+  netinet/tcp.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   assert
   ../libc/include/assert.yaml
   assert.h
