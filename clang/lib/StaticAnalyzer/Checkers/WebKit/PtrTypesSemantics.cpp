@@ -139,8 +139,8 @@ bool isCheckedPtr(const std::string &Name) {
 }
 
 bool isOwnerPtr(const std::string &Name) {
-  return isRefType(Name) || isCheckedPtr(Name) || Name == "unique_ptr" ||
-         Name == "UniqueRef" || Name == "LazyUniqueRef";
+  return isRefType(Name) || isCheckedPtr(Name) || isRetainPtrOrOSPtr(Name) ||
+         Name == "unique_ptr" || Name == "UniqueRef" || Name == "LazyUniqueRef";
 }
 
 static bool isWeakPtrClass(const std::string &Name) {
@@ -565,6 +565,14 @@ class TrivialFunctionAnalysisVisitor
     // T*, T& or T&& does not run its destructor.
     if (Ty->isPointerOrReferenceType())
       return true;
+
+    // FIXME: Handle a case when there is a local autorelease pool.
+    if (Ty->isObjCObjectPointerType()) {
+      auto Type = Ty.isDestructedType();
+      if (Type == QualType::DK_objc_weak_lifetime || Type == QualType::DK_none)
+        return true;
+      // strong lifetime in ARC could dealloc an object.
+    }
 
     // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
     if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
