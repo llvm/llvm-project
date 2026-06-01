@@ -162,8 +162,38 @@ void AmdgpuDeviceAllocator::Deallocate(void* p) {
   }
 }
 
+static uptr AmdgpuPointerInfoMapBase(uptr ptr,
+                                     const hsa_amd_pointer_info_t& info) {
+  switch (info.type) {
+    case HSA_EXT_POINTER_TYPE_RESERVED_ADDR: {
+      uptr map_beg = reinterpret_cast<uptr>(info.hostBaseAddress);
+      // ROCr sets hostBaseAddress to the OS/KFD reservation base (os_addr).
+      // With HSA_AMD_VMEM_ADDRESS_NO_REGISTER the user VA from reserve_align
+      // is AlignUp(os_addr, alignment) and is the handle for vmem_address_free;
+      // it can differ from hostBaseAddress when alignment > page size.
+      if (map_beg && ptr >= map_beg && ptr < map_beg + info.sizeInBytes)
+        return map_beg;
+      return ptr;
+    }
+    case HSA_EXT_POINTER_TYPE_HSA:
+    case HSA_EXT_POINTER_TYPE_HSA_VMEM:
+    case HSA_EXT_POINTER_TYPE_IPC:
+      // Match ROCr PtrInfo block_info: prefer host mapping when present.
+      if (info.hostBaseAddress)
+        return reinterpret_cast<uptr>(info.hostBaseAddress);
+      return reinterpret_cast<uptr>(info.agentBaseAddress);
+    case HSA_EXT_POINTER_TYPE_LOCKED:
+      return reinterpret_cast<uptr>(info.hostBaseAddress);
+    default:
+      return 0;
+  }
+}
+
 bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
                                            DevicePointerInfo* ptr_info) {
+  if (!ptr_info)
+    return false;
+
   // GetPointerInfo returns false after AMDGPU runtime shutdown
   if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(1,
@@ -180,10 +210,14 @@ bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
   if (status != HSA_STATUS_SUCCESS)
     return false;
 
-  if (info.type == HSA_EXT_POINTER_TYPE_RESERVED_ADDR)
-    ptr_info->map_beg = reinterpret_cast<uptr>(info.hostBaseAddress);
-  else if (info.type == HSA_EXT_POINTER_TYPE_HSA)
-    ptr_info->map_beg = reinterpret_cast<uptr>(info.agentBaseAddress);
+  if (info.type == HSA_EXT_POINTER_TYPE_UNKNOWN || !info.sizeInBytes)
+    return false;
+
+  const uptr map_beg = AmdgpuPointerInfoMapBase(ptr, info);
+  if (!map_beg)
+    return false;
+
+  ptr_info->map_beg = map_beg;
   ptr_info->map_size = info.sizeInBytes;
   ptr_info->type = reinterpret_cast<hsa_amd_pointer_type_t>(info.type);
 

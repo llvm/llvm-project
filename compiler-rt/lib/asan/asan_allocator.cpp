@@ -543,8 +543,8 @@ struct Allocator {
   // may_return_null tells AllocateImpl() whether OOM should produce a nullptr
   // (true) or a fatal Report*+Die() (false).
   void* AllocateImpl(uptr size, uptr alignment, BufferedStackTrace* stack,
-                     AllocType alloc_type, bool can_fill,
-                     bool may_return_null,DeviceAllocationInfo *da_info) {
+                     AllocType alloc_type, bool can_fill, bool may_return_null,
+                     DeviceAllocationInfo* da_info) {
     if (UNLIKELY(!AsanInited()))
       AsanInitFromRtl();
     if (UNLIKELY(IsRssLimitExceeded())) {
@@ -688,9 +688,10 @@ struct Allocator {
 
   // Defer to the global, flag controlled, OOM policy.
   void* Allocate(uptr size, uptr alignment, BufferedStackTrace* stack,
-                 AllocType alloc_type, bool can_fill, DeviceAllocationInfo *da_info = nullptr) {
+                 AllocType alloc_type, bool can_fill,
+                 DeviceAllocationInfo* da_info = nullptr) {
     return AllocateImpl(size, alignment, stack, alloc_type, can_fill,
-                        AllocatorMayReturnNull(),da_info);
+                        AllocatorMayReturnNull(), da_info);
   }
 
   // Set quarantine flag if chunk is allocated, issue ASan error report on
@@ -1745,10 +1746,16 @@ hsa_status_t asan_hsa_amd_pointer_info(const void* ptr,
     // hsa_amd_vmem_address_reserve_align())  uses alignment > page size (device
     // allocator padding and ASan redzones/headers).
     const uptr offset = user - reinterpret_cast<uptr>(hsa_map_base);
-    info->agentBaseAddress = reinterpret_cast<void*>(
-        reinterpret_cast<uptr>(info->agentBaseAddress) + offset);
-    info->hostBaseAddress = reinterpret_cast<void*>(
-        reinterpret_cast<uptr>(info->hostBaseAddress) + offset);
+    // hostBaseAddress must reflect the user-visible reservation base (ROCr may
+    // report os_addr below an aligned user VA for NO_REGISTER reserves).
+    if (info->hostBaseAddress)
+      info->hostBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->hostBaseAddress) + offset);
+    // agentBaseAddress is NULL for unmapped RESERVED_ADDR (no GPU backing).
+    // Do not turn NULL + offset into a fake agent address.
+    if (info->agentBaseAddress)
+      info->agentBaseAddress = reinterpret_cast<void*>(
+          reinterpret_cast<uptr>(info->agentBaseAddress) + offset);
     info->sizeInBytes = m->UsedSize();
   }
   return status;
