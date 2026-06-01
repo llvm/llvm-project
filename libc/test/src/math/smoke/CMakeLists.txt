@@ -1,6 +1,16 @@
 add_custom_target(libc-math-smoke-tests)
 add_dependencies(libc-math-unittests libc-math-smoke-tests)
 
+add_libc_unittest(
+  float128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    float128_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.float128
+)
+
 add_fp_unittest(
   cosf_test
   SUITE

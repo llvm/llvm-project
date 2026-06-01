@@ -13,6 +13,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
+#include "src/__support/FPUtil/float128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
@@ -37,9 +38,10 @@ public:
                               float128
 #endif
                               ,
-                              bfloat16>();
+                              bfloat16
                               ,
-                              Float128>();
+                              fputil::Float128>();
+
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_floating_point_v =

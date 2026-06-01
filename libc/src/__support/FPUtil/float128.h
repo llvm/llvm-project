@@ -1,4 +1,4 @@
-//===-- Utilities for Float128 data type  -----------------------*- C++ -*-===//
+//===-- Definition for Float128 data type  ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,33 +9,34 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 
-#include "FPBits.h"
-#include "hdr/fenv_macros.h"
-#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/bit.h"         // cpp::bit_cast
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 struct Float128 {
   UInt128 bits;
-  // Testing
-  constexpr Float128() = default;
-  /* TODO: precision
-     TODO: explicit so it does not convert without warn
-     VERIFY :   template <cpp::enable_if_t<fputil::get_fp_type<Double>() ==
-                                 fputil::FPType::IEEE754_Binary64,
-                             int> = 0>
-  */
-  constexpr Float128(double x) {
-    FPBits<double> x_bits(x);
-    uint64_t val = x_bits.uintval();
-    bits = fputil::cast<UInt128>(val) << 64;
+
+  LIBC_INLINE Float128() = default;
+
+  LIBC_INLINE constexpr explicit Float128(double x) {
+    uint64_t d = cpp::bit_cast<uint64_t>(x);
+    bits = static_cast<UInt128>(d) << 64U;
   }
 
-  constexpr operator double() const {
-    uint64_t val = static_cast<uint64_t>(bits >> 64U);
-    return cpp::bit_cast<double>(val);
+  LIBC_INLINE constexpr explicit operator double() const {
+    return cpp::bit_cast<double>(static_cast<uint64_t>(bits >> 64U));
+  }
+
+  LIBC_INLINE constexpr bool operator==(Float128 other) const {
+    return bits == other.bits;
+  }
+  LIBC_INLINE constexpr bool operator!=(Float128 other) const {
+    return bits != other.bits;
   }
 };
 
