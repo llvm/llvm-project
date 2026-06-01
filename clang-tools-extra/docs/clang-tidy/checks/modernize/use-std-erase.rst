@@ -3,7 +3,7 @@
 modernize-use-std-erase
 =======================
 
-Replaces erase-remove idiom with C++20's `std::erase` and `std::erase_if`
+Replaces erase-remove idiom with C++20's ``std::erase`` and ``std::erase_if``
 for improved readability.
 
 Covered scenarios:

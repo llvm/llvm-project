@@ -16,6 +16,8 @@ namespace clang::tidy::modernize {
 /// Replace erase-remove idiom with C++20's std::erase and std::erase_if for
 /// improved readability.
 ///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-erase.html
 class UseStdEraseCheck : public ClangTidyCheck {
 public:
   UseStdEraseCheck(StringRef Name, ClangTidyContext *Context)
