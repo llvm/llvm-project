@@ -336,7 +336,7 @@ TEST_F(MemoryTest, TestReadInteger) {
 }
 
 /// A process class that, when asked to read memory from some address X, returns
-/// the most or least significant byte of X, depending on how it is configured.
+/// the least significant byte of X.
 class DummyReaderProcess : public Process {
 public:
   // If true, `DoReadMemory` will not return all requested bytes.
