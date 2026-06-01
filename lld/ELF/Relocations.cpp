@@ -1829,8 +1829,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (auto &t : *thunkVec)
-    if (isThunkSectionCompatible(isec, *t) &&
-        t->isCompatibleWith(*isec, rel) &&
+    if (isThunkSectionCompatible(isec, *t) && t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
       return std::make_pair(t.get(), false);
