@@ -96,14 +96,14 @@ david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHu
 Alina Sbirlea \
 asbirlea@google.com (email), [alinas](https://github.com/alinas) (GitHub)
 
-### DependenceAnalysis
+#### DependenceAnalysis
 
 Ryotaro Kasuga \
 kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
 Ehsan Amiri \
 ehsan.amiri@huawei.com, [amehsan](https://github.com/amehsan) (GitHub)
 
-### Delinearization, ScalarEvolutionDivision
+#### Delinearization, ScalarEvolutionDivision
 
 Ryotaro Kasuga \
 kasuga.ryotaro@fujitsu.com, krkr9893@gmail.com (email), [kasuga-fj](https://github.com/kasuga-fj) (GitHub)
