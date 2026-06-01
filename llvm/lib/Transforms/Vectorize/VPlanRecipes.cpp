@@ -505,7 +505,12 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
       AssertOperandType(Idx, Op1Ty);
     return Op1Ty;
   }
-  case Instruction::ExtractValue:
+  case Instruction::ExtractValue: {
+    assert(Operands.size() == 2 && "expected single level extractvalue");
+    auto *StructTy = cast<StructType>(Op0Ty);
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(Operands[1])->getZExtValue());
+  }
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
@@ -3192,7 +3197,10 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
+                        cast<VPReductionRecipe>(ExpressionRecipes.back())
+                            ->getChainOp()
+                            ->getScalarType()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(

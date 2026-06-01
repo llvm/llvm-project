@@ -3138,7 +3138,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      Value *Fabs = Builder.CreateFAbs(X, II);
       return replaceInstUsesWith(CI, Fabs);
     }
 
@@ -3168,7 +3168,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
+      Value *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -3676,7 +3676,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Remove align 1 bundles; they don't add any useful information.
         if (RK.ArgValue == 1)
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
@@ -3690,7 +3690,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
             RK.ArgValue)
           continue;
-        return CallBase::removeOperandBundle(II, OBU.getTagID());
+        return CallBase::removeOperandBundleAt(II, Idx);
       }
 
       if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
@@ -3701,7 +3701,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Drop assume if we can prove nonnull without it
         if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
 
         // Fold the assume into metadata if it's valid at the load
         if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
@@ -3710,7 +3710,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
-          return CallBase::removeOperandBundle(II, OBU.getTagID());
+          return CallBase::removeOperandBundleAt(II, Idx);
         }
 
         // TODO: apply nonnull return attributes to calls and invokes

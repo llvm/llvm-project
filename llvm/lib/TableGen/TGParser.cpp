@@ -12,6 +12,7 @@
 
 #include "TGParser.h"
 #include "TGLexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -2236,6 +2237,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XCond:
     return ParseOperationCond(CurRec, ItemType);
 
+  case tgtok::XSwitch:
+    return ParseOperationSwitch(CurRec, ItemType);
+
   case tgtok::XFoldl: {
     // Value ::= !foldl '(' Value ',' Value ',' Id ',' Id ',' Expr ')'
     Lex.Lex(); // eat the operation
@@ -2738,6 +2742,40 @@ const Init *TGParser::ParseOperationListComprehension(Record *CurRec,
   return (TernOpInit::get(Opc, LHS, MHS, RHS, OutType))->Fold(CurRec);
 }
 
+/// Unify the types of \p Inits, treating UnsetInits as wildcards. Returns
+/// std::nullopt on type conflict (a TokError has been emitted). Returns
+/// optional containing nullptr if every Init is unset (no error emitted —
+/// caller decides whether that is acceptable).
+std::optional<const RecTy *>
+TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
+  const RecTy *Type = nullptr;
+  for (const Init *V : Inits) {
+    if (isa<UnsetInit>(V))
+      continue;
+
+    const RecTy *VTy = nullptr;
+    if (const auto *Vt = dyn_cast<TypedInit>(V))
+      VTy = Vt->getType();
+    if (const auto *Vbits = dyn_cast<BitsInit>(V))
+      VTy = BitsRecTy::get(Records, Vbits->getNumBits());
+    if (isa<BitInit>(V))
+      VTy = BitRecTy::get(Records);
+
+    if (!Type) {
+      Type = VTy;
+      continue;
+    }
+    const RecTy *RType = resolveTypes(Type, VTy);
+    if (!RType) {
+      TokError(Twine("inconsistent types '") + Type->getAsString() + "' and '" +
+               VTy->getAsString() + "' " + ErrCtx);
+      return std::nullopt;
+    }
+    Type = RType;
+  }
+  return Type;
+}
+
 /// Parse the !cond operation. Return null on error.
 ///
 /// Cond ::= !cond([cond: val,]+) => val type
@@ -2788,37 +2826,113 @@ const Init *TGParser::ParseOperationCond(Record *CurRec,
   }
 
   // resolve type
-  const RecTy *Type = nullptr;
-  for (const Init *V : Val) {
-    const RecTy *VTy = nullptr;
-    if (const auto *Vt = dyn_cast<TypedInit>(V))
-      VTy = Vt->getType();
-    if (const auto *Vbits = dyn_cast<BitsInit>(V))
-      VTy = BitsRecTy::get(Records, Vbits->getNumBits());
-    if (isa<BitInit>(V))
-      VTy = BitRecTy::get(Records);
-
-    if (Type == nullptr) {
-      if (!isa<UnsetInit>(V))
-        Type = VTy;
-    } else {
-      if (!isa<UnsetInit>(V)) {
-        const RecTy *RType = resolveTypes(Type, VTy);
-        if (!RType) {
-          TokError(Twine("inconsistent types '") + Type->getAsString() +
-                   "' and '" + VTy->getAsString() + "' for !cond");
-          return nullptr;
-        }
-        Type = RType;
-      }
-    }
-  }
-
+  std::optional<const RecTy *> TypeOpt = resolveInitTypes(Val, "for !cond");
+  if (!TypeOpt)
+    return nullptr;
+  const RecTy *Type = *TypeOpt;
   if (!Type) {
     TokError("could not determine type for !cond from its arguments");
     return nullptr;
   }
   return CondOpInit::get(Case, Val, Type)->Fold(CurRec);
+}
+
+/// Switch ::= !switch(key, [case : val,]+ default-val) => val type
+const Init *TGParser::ParseOperationSwitch(Record *CurRec,
+                                           const RecTy *ItemType) {
+  Lex.Lex(); // eat the operation 'switch'
+
+  if (!consume(tgtok::l_paren)) {
+    TokError("expected '(' after !switch operator");
+    return nullptr;
+  }
+
+  SmallVector<const Init *, 4> KeyAndCases;
+  const Init *Key = ParseValue(CurRec);
+  if (!Key)
+    return nullptr;
+  // Push the key as the first element of the vector for type-checking.
+  KeyAndCases.push_back(Key);
+
+  if (!consume(tgtok::comma)) {
+    TokError("expected ',' after key in !switch operator");
+    return nullptr;
+  }
+
+  // After parsing each Value, the next token disambiguates: ')' means it was
+  // the default; ':' means it was a case key whose value follows.
+  SmallVector<const Init *, 4> Vals;
+  while (true) {
+    const Init *V = ParseValue(CurRec);
+    if (!V)
+      return nullptr;
+
+    // Parse the mandatory default value.
+    if (consume(tgtok::r_paren)) {
+      // The default value was parsed without the ItemType hint. Coerce it now
+      // to match case-value parses.
+      if (const Init *Coerced = V->convertInitializerTo(ItemType))
+        V = Coerced;
+      // Push the default value as the last element of the vector for
+      // type-checking.
+      Vals.push_back(V);
+      break;
+    }
+
+    if (!consume(tgtok::colon)) {
+      TokError("expected ':' after case key, or ')' to close !switch operator");
+      return nullptr;
+    }
+    KeyAndCases.push_back(V);
+
+    V = ParseValue(CurRec, ItemType);
+    if (!V)
+      return nullptr;
+    Vals.push_back(V);
+
+    if (!consume(tgtok::comma)) {
+      TokError("expected ',' after case value in !switch operator");
+      return nullptr;
+    }
+  }
+  assert(KeyAndCases.size() == Vals.size() &&
+         "inconsistent keys and values for !switch");
+
+  if (KeyAndCases.size() < 2) {
+    TokError(
+        "there should be at least 1 'case: value' in the !switch operator");
+    return nullptr;
+  }
+
+  // Check value type consistency.
+  std::optional<const RecTy *> ValTypeOpt =
+      resolveInitTypes(Vals, "for !switch values");
+  if (!ValTypeOpt)
+    return nullptr;
+  const RecTy *ValType = *ValTypeOpt;
+  if (!ValType) {
+    TokError("could not determine type for !switch from its arguments");
+    return nullptr;
+  }
+
+  // Check key/case-key type consistency. We only care about conflicts here.
+  // The all-unset case should be fine because no downstream code uses the key
+  // type.
+  if (!resolveInitTypes(KeyAndCases, "between !switch key and case keys"))
+    return nullptr;
+
+  // Reduce !switch to !cond: each case becomes !eq(Key, c_i) -> v_i, with a
+  // trailing 'true' arm carrying the default value.
+  SmallVector<const Init *, 4> Conds;
+  size_t ValsSize = Vals.size();
+  Conds.reserve(ValsSize);
+  const RecTy *BitTy = BitRecTy::get(Records);
+  for (const Init *CaseKey : llvm::drop_begin(KeyAndCases))
+    Conds.push_back(
+        BinOpInit::get(BinOpInit::EQ, Key, CaseKey, BitTy)->Fold(CurRec));
+  Conds.push_back(IntInit::get(Records, 1));
+  assert(Conds.size() == ValsSize && "inconsistent !switch to !cond reduction");
+  return CondOpInit::get(Conds, Vals, ValType)->Fold(CurRec);
 }
 
 /// ParseSimpleValue - Parse a tblgen value. This returns null on error.

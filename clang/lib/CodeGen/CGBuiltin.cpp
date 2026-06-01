@@ -757,8 +757,9 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::CallInst *Call = CGF.Builder.CreateFAbs(V);
-  Call->setDoesNotAccessMemory();
+  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
+  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
+    CallI->setDoesNotAccessMemory();
   return Call;
 }
 
