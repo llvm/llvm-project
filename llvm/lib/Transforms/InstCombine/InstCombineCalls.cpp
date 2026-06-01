@@ -3117,7 +3117,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceOperand(*II, 0, X);
 
     // copysign(floor(fabs(X)), X) --> trunc(X)
-    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Specific(Sign))))) {
+    // Requires nnan: for NaN X the source returns a NaN with X's sign bit
+    // preserved (via copysign), but trunc(X) may return any NaN, making the
+    // target more undefined.
+    if (II->hasNoNaNs() &&
+        match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Specific(Sign))))) {
       Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
       return replaceInstUsesWith(*II, Trunc);
     }
