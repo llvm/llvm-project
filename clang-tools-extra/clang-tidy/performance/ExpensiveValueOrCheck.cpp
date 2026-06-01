@@ -59,6 +59,8 @@ buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
            const Expr *FallbackArg, const CXXRecordDecl *OptionalClass,
            const ASTContext &Ctx, const SourceManager &SM,
            const LangOptions &LO) {
+  if (Call->getBeginLoc().isMacroID())
+    return std::nullopt;
   if (!ObjExpr || !ObjExpr->isLValue())
     return std::nullopt;
   if (FallbackArg->HasSideEffects(Ctx))

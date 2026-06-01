@@ -188,3 +188,12 @@ void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
   auto val = opt.ValueOr("default");
   // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
 }
+
+// Macro test: verify the warning points to a useful location.
+
+#define GET_OR_DEFAULT(opt, def) opt.value_or(def)
+
+void positiveMacro(std::optional<std::string> opt) {
+  auto val = GET_OR_DEFAULT(opt, "default");
+  // CHECK-MESSAGES-OWNING: :[[@LINE-1]]:14: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+}
