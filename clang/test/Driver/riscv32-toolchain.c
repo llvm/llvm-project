@@ -247,6 +247,31 @@
 // RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-RELAX %s
 // CHECK-RV32-GNU-RELAX-NOT: "--no-relax"
 
+/// Check that "--relax-gp" is forwarded to LLD for RISC-V on Linux by default.
+// RUN: %clang -### %s -fuse-ld=lld -B%S/Inputs/lld -no-pie \
+// RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
+// RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV32-LLD-RELAXGP %s
+// CHECK-RV32-LLD-RELAXGP: "--relax-gp"
+
+/// Check that "--relax-gp" is NOT forwarded to GNU ld for RISC-V on Linux.
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
+// RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
+// RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV32-GNU-NO-RELAXGP %s
+// CHECK-RV32-GNU-NO-RELAXGP-NOT: "--relax-gp"
+
+/// Check that "--relax-gp" is NOT forwarded to LLD when -mno-relax is set.
+// RUN: %clang -### %s -fuse-ld=lld -B%S/Inputs/lld -no-pie -mno-relax \
+// RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=ilp32 \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
+// RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-RV32-LLD-NORELAX-NOGP %s
+// CHECK-RV32-LLD-NORELAX-NOGP: "--no-relax"
+// CHECK-RV32-LLD-NORELAX-NOGP-NOT: "--relax-gp"
+
 /// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
 // RUN: %clang -static-pie -### %s -fuse-ld= \
 // RUN:   --target=riscv32-unknown-elf -rtlib=platform --unwindlib=platform \

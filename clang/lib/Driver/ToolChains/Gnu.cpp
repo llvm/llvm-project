@@ -343,6 +343,16 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("--no-relax");
   }
 
+  // Default-enable LLD's --relax-gp for RISC-V on Linux when LLD is used and
+  // linker relaxation is not disabled by -mno-relax.
+  if (Triple.isRISCV() && Triple.isOSLinux()) {
+    bool IsLLD = false;
+    ToolChain.GetLinkerPath(&IsLLD);
+    if (IsLLD &&
+        Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
+      CmdArgs.push_back("--relax-gp");
+  }
+
   const bool IsShared = Args.hasArg(options::OPT_shared);
   if (IsShared)
     CmdArgs.push_back("-shared");
