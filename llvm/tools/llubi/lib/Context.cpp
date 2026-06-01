@@ -133,26 +133,14 @@ std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
     return std::move(Elts);
   }
 
-  if (auto *BA = dyn_cast<BlockAddress>(C)) {
-    auto It = BlockAddrMap.find(BA->getBasicBlock());
-    if (It == BlockAddrMap.end())
-      return std::nullopt;
-    return It->second;
-  }
+  if (auto *BA = dyn_cast<BlockAddress>(C))
+    return BlockAddrMap.at(BA->getBasicBlock());
 
-  if (auto *GV = dyn_cast<GlobalVariable>(C)) {
-    auto It = GlobalAddrMap.find(GV);
-    if (It == GlobalAddrMap.end())
-      return std::nullopt;
-    return It->second;
-  }
+  if (auto *GV = dyn_cast<GlobalVariable>(C))
+    return GlobalAddrMap.at(GV);
 
-  if (auto *F = dyn_cast<Function>(C)) {
-    auto It = FuncAddrMap.find(F);
-    if (It == FuncAddrMap.end())
-      return std::nullopt;
-    return It->second;
-  }
+  if (auto *F = dyn_cast<Function>(C))
+    return FuncAddrMap.at(F);
 
   return std::nullopt;
 }
@@ -560,11 +548,11 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind,
-                           MemAllocKind AllocKind, bool IsGlobalValue)
+                           MemAllocKind AllocKind, bool IsIRGlobalValue)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
       State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
                                               : MemoryObjectState::Dead),
-      AllocKind(AllocKind), IsGlobalValue(IsGlobalValue) {
+      AllocKind(AllocKind), IsIRGlobalValue(IsIRGlobalValue) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte::concrete(0));

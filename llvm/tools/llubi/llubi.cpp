@@ -269,10 +269,7 @@ int main(int argc, char **argv) {
   if (EntryFn->getFunctionType() == MainFuncTy) {
     const ubi::AnyValue *Argc =
         Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size()));
-    if (!Argc) {
-      WithColor::error() << "Failed to initialize argc.\n";
-      return 1;
-    }
+    assert(Argc && "failed to initialize argc");
     Args.push_back(*Argc);
 
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();

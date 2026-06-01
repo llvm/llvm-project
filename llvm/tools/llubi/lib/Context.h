@@ -109,7 +109,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemoryObjectState State;
   MemAllocKind AllocKind;
   bool IsConstant = false;
-  bool IsGlobalValue = false;
+  bool IsIRGlobalValue = false;
 
   // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
@@ -120,7 +120,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
                MemInitKind InitKind, MemAllocKind AllocKind,
-               bool IsGlobalValue = false);
+               bool IsIRGlobalValue = false);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -134,7 +134,7 @@ public:
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
   MemAllocKind getAllocKind() const { return AllocKind; }
-  bool isGlobalValue() const { return IsGlobalValue; }
+  bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 

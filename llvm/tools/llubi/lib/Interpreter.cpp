@@ -150,7 +150,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
-  AnyValue UnsupportedConstantValue;
+  std::list<AnyValue> UnsupportedConstantValues;
   Library Lib;
 
   const AnyValue &getValue(Value *V) {
@@ -158,8 +158,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (const AnyValue *Val = Ctx.getConstantValue(C))
         return *Val;
       reportError() << "Unsupported constant: " << *C << ".";
-      UnsupportedConstantValue = AnyValue::getPoisonValue(Ctx, C->getType());
-      return UnsupportedConstantValue;
+      UnsupportedConstantValues.push_back(
+          AnyValue::getPoisonValue(Ctx, C->getType()));
+      return UnsupportedConstantValues.back();
     }
     return CurrentFrame->ValueMap.at(V);
   }
