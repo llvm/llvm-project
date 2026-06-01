@@ -21,6 +21,7 @@
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_SUBTARGETINFO_HEADER
@@ -29,6 +30,16 @@
 namespace llvm {
 
 class GCNTargetMachine;
+
+/// Module flag names controlling out-of-bounds buffer access semantics.
+/// Each flag is an i32 with Module::Max merge behaviour and tri-state values:
+///   0 = any (absent/default - backend currently treats as strict)
+///   1 = relaxed
+///   2 = strict
+namespace AMDGPUOOBMode {
+inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.mode");
+inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.mode");
+} // namespace AMDGPUOOBMode
 
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
                            public AMDGPUSubtarget {
@@ -73,6 +84,8 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
+  const bool BufferOOBRelaxed;
+  const bool TBufferOOBRelaxed;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -99,7 +112,8 @@ private:
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM);
+               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
+               bool TBufferOOBRelaxed = false);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -335,6 +349,9 @@ public:
 
   bool isTgSplitEnabled() const { return EnableTgSplit; }
 
+  bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
+  bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
+
   bool isCuModeEnabled() const { return EnableCuMode; }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
@@ -424,6 +441,23 @@ public:
   }
 
   bool hasPrefetch() const { return HasGFX12Insts; }
+
+  bool hasInstPrefSize() const { return isGFX11Plus(); }
+
+  void getInstPrefSizeArgs(uint32_t &Mask, uint32_t &Shift, uint32_t &Width,
+                           uint32_t &CacheLineSize) const {
+    assert(isGFX11Plus());
+    CacheLineSize = getInstCacheLineSize();
+    if (getGeneration() == GFX11) {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE_WIDTH;
+    } else {
+      Mask = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE;
+      Shift = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_SHIFT;
+      Width = amdhsa::COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE_WIDTH;
+    }
+  }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
@@ -721,36 +755,38 @@ public:
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
+  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getSGPRAllocGranule(this);
+    return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
   unsigned getSGPREncodingGranule() const {
-    return AMDGPU::IsaInfo::getSGPREncodingGranule(this);
+    return AMDGPU::IsaInfo::getSGPREncodingGranule(*this);
   }
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumSGPRs(this);
+    return AMDGPU::IsaInfo::getTotalNumSGPRs(*this);
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumSGPRs(this);
+    return AMDGPU::IsaInfo::getAddressableNumSGPRs(*this);
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per
   /// execution unit requirement supported by the subtarget.
   unsigned getMinNumSGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMinNumSGPRs(this, WavesPerEU);
+    return AMDGPU::IsaInfo::getMinNumSGPRs(*this, WavesPerEU);
   }
 
   /// \returns Maximum number of SGPRs that meets the given number of waves per
   /// execution unit requirement supported by the subtarget.
   unsigned getMaxNumSGPRs(unsigned WavesPerEU, bool Addressable) const {
-    return AMDGPU::IsaInfo::getMaxNumSGPRs(this, WavesPerEU, Addressable);
+    return AMDGPU::IsaInfo::getMaxNumSGPRs(*this, WavesPerEU, Addressable);
   }
 
   /// \returns Reserved number of SGPRs. This is common
@@ -796,35 +832,35 @@ public:
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, DynamicVGPRBlockSize);
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(*this, DynamicVGPRBlockSize);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
   unsigned getVGPREncodingGranule() const {
-    return AMDGPU::IsaInfo::getVGPREncodingGranule(this);
+    return AMDGPU::IsaInfo::getVGPREncodingGranule(*this);
   }
 
   /// \returns Total number of VGPRs supported by the subtarget.
   unsigned getTotalNumVGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumVGPRs(this);
+    return AMDGPU::IsaInfo::getTotalNumVGPRs(*this);
   }
 
   /// \returns Addressable number of architectural VGPRs supported by the
   /// subtarget.
   unsigned getAddressableNumArchVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(this);
+    return AMDGPU::IsaInfo::getAddressableNumArchVGPRs(*this);
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
   unsigned getAddressableNumVGPRs(unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, DynamicVGPRBlockSize);
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(*this, DynamicVGPRBlockSize);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
   unsigned getMinNumVGPRs(unsigned WavesPerEU,
                           unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU,
+    return AMDGPU::IsaInfo::getMinNumVGPRs(*this, WavesPerEU,
                                            DynamicVGPRBlockSize);
   }
 
@@ -832,7 +868,7 @@ public:
   /// at least the specified number of waves \p WavesPerEU.
   unsigned getMaxNumVGPRs(unsigned WavesPerEU,
                           unsigned DynamicVGPRBlockSize) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU,
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(*this, WavesPerEU,
                                            DynamicVGPRBlockSize);
   }
 
@@ -870,7 +906,7 @@ public:
 
   bool supportsWave32() const { return getGeneration() >= GFX10; }
 
-  bool supportsWave64() const { return !hasGFX1250Insts(); }
+  bool supportsWave64() const { return !hasGFX1250Insts() || HasGFX13Insts; }
 
   bool isWave32() const { return getWavefrontSize() == 32; }
 
@@ -891,12 +927,12 @@ public:
   /// \returns Maximum number of work groups per compute unit supported by the
   /// subtarget and limited by given \p FlatWorkGroupSize.
   unsigned getMaxWorkGroupsPerCU(unsigned FlatWorkGroupSize) const override {
-    return AMDGPU::IsaInfo::getMaxWorkGroupsPerCU(this, FlatWorkGroupSize);
+    return AMDGPU::IsaInfo::getMaxWorkGroupsPerCU(*this, FlatWorkGroupSize);
   }
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(this);
+    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
@@ -908,13 +944,13 @@ public:
   /// \p FlatWorkGroupSize.
   unsigned
   getWavesPerEUForWorkGroup(unsigned FlatWorkGroupSize) const override {
-    return AMDGPU::IsaInfo::getWavesPerEUForWorkGroup(this, FlatWorkGroupSize);
+    return AMDGPU::IsaInfo::getWavesPerEUForWorkGroup(*this, FlatWorkGroupSize);
   }
 
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(this);
+    return AMDGPU::IsaInfo::getMinWavesPerEU(*this);
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,

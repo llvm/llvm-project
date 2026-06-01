@@ -17,6 +17,6 @@
 
 #include <sys/sem.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_SYS_SEM_MACROS_H

@@ -13,14 +13,14 @@ define { i64, i64 } @compute_min(ptr nocapture noundef nonnull readonly align 2 
 ; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X]], align 2
 ; SSE-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 ; SSE-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i64>
-; SSE-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
+; SSE-NEXT:    [[TMP4:%.*]] = shl nuw <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
 ; SSE-NEXT:    [[RETVAL_SROA_0_0_INSERT_INSERT:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP4]])
 ; SSE-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[RETVAL_SROA_0_0_INSERT_INSERT]], 0
 ; SSE-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I10_4]], align 2
 ; SSE-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I_4]], align 2
 ; SSE-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP6]], <4 x i16> [[TMP7]])
 ; SSE-NEXT:    [[TMP9:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i64>
-; SSE-NEXT:    [[TMP10:%.*]] = shl <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
+; SSE-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
 ; SSE-NEXT:    [[RETVAL_SROA_5_8_INSERT_INSERT:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP10]])
 ; SSE-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[RETVAL_SROA_5_8_INSERT_INSERT]], 1
 ; SSE-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
@@ -33,14 +33,14 @@ define { i64, i64 } @compute_min(ptr nocapture noundef nonnull readonly align 2 
 ; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X]], align 2
 ; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 ; AVX-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i64>
-; AVX-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP4:%.*]] = shl nuw <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
 ; AVX-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP4]])
 ; AVX-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP24]], 0
 ; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I10_4]], align 2
 ; AVX-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I_4]], align 2
 ; AVX-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP6]], <4 x i16> [[TMP7]])
 ; AVX-NEXT:    [[TMP9:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i64>
-; AVX-NEXT:    [[TMP10:%.*]] = shl <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
+; AVX-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
 ; AVX-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP10]])
 ; AVX-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP25]], 1
 ; AVX-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]
@@ -53,14 +53,14 @@ define { i64, i64 } @compute_min(ptr nocapture noundef nonnull readonly align 2 
 ; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[X]], align 2
 ; AVX2-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 ; AVX2-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i64>
-; AVX2-NEXT:    [[TMP4:%.*]] = shl <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
+; AVX2-NEXT:    [[TMP4:%.*]] = shl nuw <4 x i64> [[TMP3]], <i64 0, i64 16, i64 32, i64 48>
 ; AVX2-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP4]])
 ; AVX2-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP24]], 0
 ; AVX2-NEXT:    [[TMP6:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I10_4]], align 2
 ; AVX2-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_I_I_4]], align 2
 ; AVX2-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP6]], <4 x i16> [[TMP7]])
 ; AVX2-NEXT:    [[TMP9:%.*]] = zext <4 x i16> [[TMP8]] to <4 x i64>
-; AVX2-NEXT:    [[TMP10:%.*]] = shl <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
+; AVX2-NEXT:    [[TMP10:%.*]] = shl nuw <4 x i64> [[TMP9]], <i64 0, i64 16, i64 32, i64 48>
 ; AVX2-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP10]])
 ; AVX2-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { i64, i64 } [[DOTFCA_0_INSERT]], i64 [[TMP25]], 1
 ; AVX2-NEXT:    ret { i64, i64 } [[DOTFCA_1_INSERT]]

@@ -1054,6 +1054,31 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
+TEST(ScudoCombinedTest, StackDepotSpecifics) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+
+  scudo::uptr TabBytes = sizeof(scudo::atomic_u32) * 1024;
+
+  // Test buffer too small for the base structure
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) - 1));
+  // Test buffer too small for the hash table
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) + TabBytes - 1));
+
+  // Test duplicate insert
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Hash1 = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::u32 Hash2 = Depot->insert(&Stack[0], &Stack[3]);
+  EXPECT_EQ(Hash1, Hash2);
+
+  // Test disable/enable
+  Depot->disable();
+  Depot->enable();
+}
+
 #if SCUDO_CAN_USE_PRIMARY64
 #if SCUDO_TRUSTY
 

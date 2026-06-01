@@ -3003,7 +3003,10 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [Pure]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
+def fir_VolatileCastOp
+    : fir_SimpleOneResultOp<
+          "volatile_cast", [Pure, ViewLikeOpInterface,
+                            fir_FortranObjectViewOpInterface]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -3017,6 +3020,14 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+  let extraClassDeclaration = [{
+    // ViewLikeOpInterface methods:
+    mlir::Value getViewSource() { return getValue(); }
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
 }
 
 def fir_ConvertOp

@@ -3499,7 +3499,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
       off_t StoredSize = 0;
       time_t StoredModTime = 0;
-      unsigned ImplicitModuleSuffixLength = 0;
+      unsigned FileNameKind = 0;
       ASTFileSignature StoredSignature;
       ModuleFileName ImportedFile;
       std::string StoredFile;
@@ -3523,7 +3523,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (!IsImportingStdCXXModule) {
         StoredSize = (off_t)Record[Idx++];
         StoredModTime = (time_t)Record[Idx++];
-        ImplicitModuleSuffixLength = (unsigned)Record[Idx++];
+        FileNameKind = (unsigned)Record[Idx++];
 
         StringRef SignatureBytes = Blob.substr(0, ASTFileSignature::size);
         StoredSignature = ASTFileSignature::create(SignatureBytes.begin(),
@@ -3532,12 +3532,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          ImportedFile = ImplicitModuleSuffixLength
-                             ? ModuleFileName::makeImplicit(
-                                   StoredFile, ImplicitModuleSuffixLength)
-                             : ModuleFileName::makeExplicit(StoredFile);
-          assert((ImportedKind == MK_ImplicitModule) ==
-                 (ImplicitModuleSuffixLength != 0));
+          ImportedFile = ModuleFileName::makeFromRaw(StoredFile, FileNameKind);
         } else if (!getDiags().isIgnored(
                        diag::warn_module_file_mapping_mismatch,
                        CurrentImportLoc)) {
@@ -4691,6 +4686,8 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
                  Kind == MK_ImplicitModule
              ? ModuleMgr.lookupByModuleName(Name)
              : ModuleMgr.lookupByFileName(ModuleFileName::makeExplicit(Name)));
+    if (!OM)
+      OM = ModuleMgr.lookupByFileName(ModuleFileName::makeInMemory(Name));
     if (!OM) {
       std::string Msg = "refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
@@ -5755,42 +5752,6 @@ void ASTReader::InitializeContext() {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
           Context.setucontext_tDecl(Tag->getDecl());
-        }
-      }
-    }
-
-    if (TypeID Fexcept_t = SpecialTypes[SPECIAL_TYPE_FEXCEPT_T]) {
-      QualType Fexcept_tType = GetType(Fexcept_t);
-      if (Fexcept_tType.isNull()) {
-        Error("fexcept_t type is NULL");
-        return;
-      }
-
-      if (!Context.fexcept_tDecl) {
-        if (const TypedefType *Typedef = Fexcept_tType->getAs<TypedefType>())
-          Context.setfexcept_tDecl(Typedef->getDecl());
-        else {
-          const TagType *Tag = Fexcept_tType->getAs<TagType>();
-          assert(Tag && "Invalid fexcept_t type in AST file");
-          Context.setfexcept_tDecl(Tag->getDecl());
-        }
-      }
-    }
-
-    if (TypeID Fenv_t = SpecialTypes[SPECIAL_TYPE_FENV_T]) {
-      QualType Fenv_tType = GetType(Fenv_t);
-      if (Fenv_tType.isNull()) {
-        Error("fenv_t type is NULL");
-        return;
-      }
-
-      if (!Context.fenv_tDecl) {
-        if (const TypedefType *Typedef = Fenv_tType->getAs<TypedefType>())
-          Context.setfenv_tDecl(Typedef->getDecl());
-        else {
-          const TagType *Tag = Fenv_tType->getAs<TagType>();
-          assert(Tag && "Invalid fenv_t type in AST file");
-          Context.setfenv_tDecl(Tag->getDecl());
         }
       }
     }
@@ -8773,14 +8734,16 @@ bool ASTReader::LoadExternalSpecializationsImpl(
     ArrayRef<TemplateArgument> TemplateArgs) {
   assert(D);
 
-  reader::LazySpecializationInfoLookupTable *LookupTable = nullptr;
-  if (auto It = SpecLookups.find(D); It != SpecLookups.end())
-    LookupTable = &It->getSecond();
-  if (!LookupTable)
+  auto It = SpecLookups.find(D);
+  if (It == SpecLookups.end())
     return false;
 
-  // NOTE: The getNameForDiagnostic usage in the lambda may mutate the
-  // `SpecLookups` object.
+  Deserializing LookupResults(this);
+  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
+
+  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
+      It->second.Table.find(HashValue);
+
   llvm::TimeTraceScope TimeScope("Load External Specializations for ", [&] {
     std::string Name;
     llvm::raw_string_ostream OS(Name);
@@ -8789,13 +8752,6 @@ bool ASTReader::LoadExternalSpecializationsImpl(
                              /*Qualified=*/true);
     return Name;
   });
-
-  Deserializing LookupResults(this);
-  auto HashValue = StableHashForTemplateArguments(TemplateArgs);
-
-  // Get Decl may violate the iterator from SpecLookups
-  llvm::SmallVector<serialization::reader::LazySpecializationInfo, 8> Infos =
-      LookupTable->Table.find(HashValue);
 
   bool NewSpecsFound = false;
   for (auto &Info : Infos) {
