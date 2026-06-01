@@ -32,6 +32,12 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.elementwise kind=#linalg.elementwise_kind<erf>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<sin>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<cos>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<tan>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   return
 }
 
@@ -75,6 +81,15 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<erf>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sin>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<cos>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<tan>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
