@@ -18,15 +18,13 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-namespace {
-
-bool hasOperatorStar(const CXXRecordDecl *RD) {
+static bool hasOperatorStar(const CXXRecordDecl *RD) {
   return llvm::any_of(RD->methods(), [](const CXXMethodDecl *M) {
     return M->getOverloadedOperator() == OO_Star;
   });
 }
 
-StringRef findValueMethod(const CXXRecordDecl *RD) {
+static StringRef findValueMethod(const CXXRecordDecl *RD) {
   for (const auto *M : RD->methods()) {
     if (!M->getDeclName().isIdentifier())
       continue;
@@ -37,8 +35,8 @@ StringRef findValueMethod(const CXXRecordDecl *RD) {
   return {};
 }
 
-std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
-  bool HasDeref = hasOperatorStar(OptionalClass);
+static std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
+  const bool HasDeref = hasOperatorStar(OptionalClass);
   StringRef ValueName = findValueMethod(OptionalClass);
 
   if (HasDeref && !ValueName.empty())
@@ -54,7 +52,7 @@ std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
   return "consider avoiding the copy";
 }
 
-std::optional<FixItHint>
+static std::optional<FixItHint>
 buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
            const Expr *FallbackArg, const CXXRecordDecl *OptionalClass,
            const SourceManager &SM, const LangOptions &LO) {
@@ -73,12 +71,10 @@ buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
   if (ObjText.empty() || ArgText.empty())
     return std::nullopt;
 
-  std::string Replacement =
+  const std::string Replacement =
       ("(" + ObjText + " ? *" + ObjText + " : " + ArgText + ")").str();
   return FixItHint::CreateReplacement(Call->getSourceRange(), Replacement);
 }
-
-} // namespace
 
 ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
                                              ClangTidyContext *Context)
