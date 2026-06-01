@@ -272,6 +272,40 @@ subroutine test_dynamic_static_score_order(flag)
 #endif
 end subroutine
 
+! The score on condition(high) makes that dynamic candidate rank before the
+! lexically earlier condition(low) candidate and the unscored static candidate:
+!
+!   if (high) barrier
+!   else if (low) taskyield
+!   else taskwait
+!
+! CHECK-LABEL: func.func @_QPtest_dynamic_user_score_order(
+! CHECK-SAME:    %[[LOW_ARG:[^,]*]]: !fir.ref<!fir.logical<4>>
+! CHECK-SAME:    %[[HIGH_ARG:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK-DAG:     %[[LOW_DECL:.*]]:2 = hlfir.declare %[[LOW_ARG]]
+! CHECK-DAG:     %[[HIGH_DECL:.*]]:2 = hlfir.declare %[[HIGH_ARG]]
+! CHECK:         %[[HIGH_LOAD:.*]] = fir.load %[[HIGH_DECL]]#0
+! CHECK:         %[[HIGH_COND:.*]] = fir.convert %[[HIGH_LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[HIGH_COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           %[[LOW_LOAD:.*]] = fir.load %[[LOW_DECL]]#0
+! CHECK:           %[[LOW_COND:.*]] = fir.convert %[[LOW_LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:           fir.if %[[LOW_COND]] {
+! CHECK:             omp.taskyield
+! CHECK:           } else {
+! CHECK:             omp.taskwait
+! CHECK:           }
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_user_score_order(low, high)
+  logical, intent(in) :: low, high
+  !$omp metadirective &
+  !$omp & when(device={kind(host)}, user={condition(low)}: taskyield) &
+  !$omp & when(user={condition(score(1000): high)}: barrier) &
+  !$omp & when(device={kind(host)}: taskwait)
+end subroutine
+
 ! The explicit directive variant wins this tie over the earlier implicit
 ! nothing candidate.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(

@@ -4787,8 +4787,21 @@ static void genMetadirective(lower::AbstractConverter &converter,
       // variant is selected, the condition becomes a fir.if guard below.
       if (dynamicCond) {
         llvm::omp::VariantMatchInfo dynamicVMI = vmi;
+        std::optional<llvm::APInt> conditionScore;
+        auto scoreIt = dynamicVMI.ScoreMap.find(
+            llvm::omp::TraitProperty::user_condition_unknown);
+        if (scoreIt != dynamicVMI.ScoreMap.end()) {
+          conditionScore = scoreIt->second;
+          dynamicVMI.ScoreMap.erase(scoreIt);
+        }
         dynamicVMI.RequiredTraits.reset(
             unsigned(llvm::omp::TraitProperty::user_condition_unknown));
+        // Keep a score attached to user={condition(...)} for ranking without
+        // requiring the runtime condition to be statically true.
+        if (conditionScore && !conditionScore->isZero()) {
+          dynamicVMI.addTrait(llvm::omp::TraitProperty::user_condition_true,
+                              "<condition>", &*conditionScore);
+        }
         if (!llvm::omp::isVariantApplicableInContext(dynamicVMI, ompCtx))
           continue;
         candidates.emplace_back(spec, dynamicVMI, isExplicit, dynamicCond);
