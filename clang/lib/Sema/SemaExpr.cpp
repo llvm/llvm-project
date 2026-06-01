@@ -16325,7 +16325,11 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                          << resultType << Input.get()->getSourceRange());
       }
 
-      if (resultType->isScalarType() && !isScopedEnumerationType(resultType)) {
+      if (resultType->isScalarType() && !isScopedEnumerationType(resultType)
+           && !resultType->isMetaInfoType()) {
+        // before C++26, scalar types are contextually converted to bool,
+        // std::meta::info is a scalar type but not an arithmetic type.
+
         // C99 6.5.3.3p1: ok, fallthrough;
         if (Context.getLangOpts().CPlusPlus) {
           // C++03 [expr.unary.op]p8, C++0x [expr.unary.op]p9:

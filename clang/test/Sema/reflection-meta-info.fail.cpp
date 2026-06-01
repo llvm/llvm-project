@@ -18,8 +18,39 @@ consteval void test()
     (^^char)++; // expected-error {{cannot increment value of type 'std::meta::info'}}
     (^^short)++; // expected-error {{cannot increment value of type 'std::meta::info'}}
     (^^int)++; // expected-error {{cannot increment value of type 'std::meta::info'}}
-
     (^^char)--; // expected-error {{cannot decrement value of type 'std::meta::info'}}
     (^^short)--; // expected-error {{cannot decrement value of type 'std::meta::info'}}
     (^^int)--; // expected-error {{cannot decrement value of type 'std::meta::info'}}
+
+    ++(^^char); // expected-error {{cannot increment value of type 'std::meta::info'}}
+    ++(^^short); // expected-error {{cannot increment value of type 'std::meta::info'}}
+    ++(^^int); // expected-error {{cannot increment value of type 'std::meta::info'}}
+    --(^^char); // expected-error {{cannot decrement value of type 'std::meta::info'}}
+    --(^^short); // expected-error {{cannot decrement value of type 'std::meta::info'}}
+    --(^^int); // expected-error {{cannot decrement value of type 'std::meta::info'}}
+
+    ~(^^int);  // expected-error {{invalid argument type 'std::meta::info' to unary expression}}
+    !(^^float);  // expected-error {{invalid argument type 'std::meta::info' to unary expression}}
+
+    (^^int) + (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^double) - (^^float); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^char) * (^^short); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^long) / (^^long); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+
+    (^^int) & (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) | (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) ^ (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+
+    (^^int) < (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) > (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) <= (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) >= (^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) <=>(^^int); // expected-error {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+
+    // expected-error@+2 {{value of type 'std::meta::info' is not contextually convertible to 'bool'}}
+    // expected-error@+1 {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) && (^^int);
+    // expected-error@+2 {{value of type 'std::meta::info' is not contextually convertible to 'bool'}}
+    // expected-error@+1 {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
+    (^^int) || (^^int);
 }
