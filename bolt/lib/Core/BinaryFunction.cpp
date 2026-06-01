@@ -3702,7 +3702,7 @@ void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
         MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
-                                    Ctx);
+                                    Ctx, DIM);
         return true;
       };
 

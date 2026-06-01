@@ -2191,38 +2191,29 @@ public:
     }
   }
 
-  bool is32BitVariant(unsigned Opcode) const {
-    switch (Opcode) {
-    default:
-      return false;
-    case AArch64::CBGTWri:
-    case AArch64::CBLTWri:
-    case AArch64::CBHIWri:
-    case AArch64::CBLOWri:
-      return true;
-    }
-  }
-
   bool isReversibleBranch(const MCInst &Inst,
                           DataflowInfoManager *DIM = nullptr) const override {
     if (isCompAndBranch(Inst)) {
-      bool IsReversible =
-          DIM ? !DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
-              : false;
+      bool NZCVflagsAreLive =
+          DIM ? DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
+              : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
       if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
-          !IsReversible)
+          NZCVflagsAreLive)
         return false;
       if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
-          !IsReversible)
+          NZCVflagsAreLive)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                              const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
+  void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const override {
+    assert(isReversibleBranch(Inst, DIM) && "Irreversible branch");
+
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
       bool ImmediateOutOfBounds = false;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
@@ -2245,6 +2236,17 @@ public:
           Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
       }
       if (ImmediateOutOfBounds) {
+        auto is32BitVariant = [](unsigned Opcode) {
+          switch (Opcode) {
+          default:
+            return false;
+          case AArch64::CBGTWri:
+          case AArch64::CBLTWri:
+          case AArch64::CBHIWri:
+          case AArch64::CBLOWri:
+            return true;
+          }
+        };
         InstructionListType Code;
         MCInstBuilder Cmp =
             is32BitVariant(InvertedOpcode)

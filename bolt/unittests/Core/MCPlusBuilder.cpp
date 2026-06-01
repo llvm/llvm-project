@@ -348,16 +348,16 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Underflows) {
 
   ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get());
-  auto R = EntryBB->rbegin();
-  ASSERT_EQ(R->getOpcode(), AArch64::Bcc);
-  ASSERT_EQ(R->getOperand(0).getImm(), AArch64CC::GE);
-  R++;
-  ASSERT_EQ(R->getOpcode(), AArch64::SUBSXri);
-  ASSERT_EQ(R->getOperand(0).getReg(), AArch64::XZR);
-  ASSERT_EQ(R->getOperand(1).getReg(), AArch64::X0);
-  ASSERT_EQ(R->getOperand(2).getImm(), 0);
-  ASSERT_EQ(R->getOperand(3).getImm(), 0);
+                                  BC->Ctx.get(), &DIM);
+  I = EntryBB->begin();
+  ASSERT_EQ(I->getOpcode(), AArch64::SUBSXri);
+  ASSERT_EQ(I->getOperand(0).getReg(), AArch64::XZR);
+  ASSERT_EQ(I->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(I->getOperand(2).getImm(), 0);
+  ASSERT_EQ(I->getOperand(3).getImm(), 0);
+  I++;
+  ASSERT_EQ(I->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(I->getOperand(0).getImm(), AArch64CC::GE);
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Overflows) {
@@ -387,16 +387,16 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Overflows) {
 
   ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get());
-  auto R = EntryBB->rbegin();
-  ASSERT_EQ(R->getOpcode(), AArch64::Bcc);
-  ASSERT_EQ(R->getOperand(0).getImm(), AArch64CC::LS);
-  R++;
-  ASSERT_EQ(R->getOpcode(), AArch64::SUBSWri);
-  ASSERT_EQ(R->getOperand(0).getReg(), AArch64::WZR);
-  ASSERT_EQ(R->getOperand(1).getReg(), AArch64::W0);
-  ASSERT_EQ(R->getOperand(2).getImm(), 63);
-  ASSERT_EQ(R->getOperand(3).getImm(), 0);
+                                  BC->Ctx.get(), &DIM);
+  I = EntryBB->begin();
+  ASSERT_EQ(I->getOpcode(), AArch64::SUBSWri);
+  ASSERT_EQ(I->getOperand(0).getReg(), AArch64::WZR);
+  ASSERT_EQ(I->getOperand(1).getReg(), AArch64::W0);
+  ASSERT_EQ(I->getOperand(2).getImm(), 63);
+  ASSERT_EQ(I->getOperand(3).getImm(), 0);
+  I++;
+  ASSERT_EQ(I->getOpcode(), AArch64::Bcc);
+  ASSERT_EQ(I->getOperand(0).getImm(), AArch64CC::LS);
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_IsReversibleBranch_LiveCondFlags) {

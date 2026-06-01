@@ -102,7 +102,11 @@ immediate_overflow:
     ret
 
 # BOLT-INFO-NO-LIVENESS: unable to swap successors in immediate_overflow
-
+#
+# Without liveness the blocks get reordered, but since the branch is
+# irreversible an additional unconditional branch is emitted.
+# This codegen is suboptimal yet correct.
+#
 # NO-LIVENESS: <immediate_overflow>:
 # NO-LIVENESS-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
 # NO-LIVENESS-NEXT:            {{.*}} b               0x[[ADDR4:[0-9a-f]+]] <{{.*}}>

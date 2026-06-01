@@ -322,7 +322,8 @@ cl::opt<unsigned>
 
 cl::opt<bool> LivenessAnalysis(
     "liveness-analysis",
-    cl::desc("use liveness analysis in FixupBranches and LongJmpPass"),
+    cl::desc("use liveness analysis in FixupBranches and LongJmpPass"
+             "(needed for branch inversion on AArch64)"),
     cl::init(false), cl::cat(BoltCategory));
 
 bool processAllFunctions() {

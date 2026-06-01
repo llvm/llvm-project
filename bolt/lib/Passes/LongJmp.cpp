@@ -847,7 +847,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       if (ShouldReverseBranch && IsReversibleBranch) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(), BC.Ctx.get());
+        MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(), BC.Ctx.get(),
+                                    DIM);
       } else {
         auto L = BC.scopeLock();
         MIB->replaceBranchTarget(Inst, TrampolineBB->getLabel(), BC.Ctx.get());

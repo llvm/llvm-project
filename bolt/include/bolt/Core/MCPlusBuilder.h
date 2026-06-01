@@ -2130,9 +2130,11 @@ public:
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  virtual void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                                      const MCSymbol *TBB,
-                                      MCContext *Ctx) const {
+  /// Assumes that the branch is reversible.
+  virtual void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const {
     llvm_unreachable("not implemented");
   }
 
