@@ -61,23 +61,45 @@ ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
       SizeThreshold(Options.get("SizeThreshold", 16U)),
       OptionalTypes(utils::options::parseStringList(
           Options.get("OptionalTypes",
-                      "::std::optional;::absl::optional;::boost::optional"))) {}
+                      "::std::optional;::absl::optional;::boost::optional"))),
+      WarnOnOwnershipTaking(Options.get("WarnOnOwnershipTaking", false)) {}
 
 void ExpensiveValueOrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SizeThreshold", SizeThreshold);
   Options.store(Opts, "OptionalTypes",
                 utils::options::serializeStringList(OptionalTypes));
+  Options.store(Opts, "WarnOnOwnershipTaking", WarnOnOwnershipTaking);
 }
 
 void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
   auto OptionalTypesMatcher =
       matchers::matchesAnyListedRegexName(OptionalTypes);
   auto ValueOrMatcher = hasAnyName("value_or", "valueOr", "ValueOr");
+  auto ValueOrCall = cxxMemberCallExpr(
+      callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))));
 
+  if (WarnOnOwnershipTaking) {
+    Finder->addMatcher(ValueOrCall.bind("call"), this);
+    return;
+  }
+
+  // Binding to const T& variable.
   Finder->addMatcher(
-      cxxMemberCallExpr(
-          callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))))
-          .bind("call"),
+      varDecl(hasType(lValueReferenceType(pointee(isConstQualified()))),
+              hasInitializer(ignoringImplicit(ValueOrCall.bind("call")))),
+      this);
+
+  // Passing to a const T& parameter.
+  Finder->addMatcher(callExpr(forEachArgumentWithParam(
+                         ignoringImplicit(ValueOrCall.bind("call")),
+                         parmVarDecl(hasType(lValueReferenceType(
+                             pointee(isConstQualified())))))),
+                     this);
+
+  // Calling a const member function on the result.
+  Finder->addMatcher(
+      cxxMemberCallExpr(on(ignoringImplicit(ValueOrCall.bind("call"))),
+                        callee(cxxMethodDecl(isConst()))),
       this);
 }
 
@@ -108,8 +130,7 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   const CXXMethodDecl *Method = Call->getMethodDecl();
 
   diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
-      << Method->getName() << ValueType
-      << buildSuggestion(Method->getParent());
+      << Method->getName() << ValueType << buildSuggestion(Method->getParent());
 
   const Expr *FallbackArg = Call->getArg(0)->IgnoreImplicit();
   if (FallbackArg->HasSideEffects(Ctx))

@@ -21,14 +21,28 @@ Example:
     #include <optional>
     #include <string>
 
-    void example(std::optional<std::string> opt) {
-      // Warning: copies the std::string out of the optional.
-      auto val = opt.value_or("default");
+    void consumeRef(const std::string &);
 
-      // Alternatives that avoid the copy:
-      const std::string fallback = "default";
-      const auto &ref = opt.has_value() ? *opt : fallback;
+    void example(std::optional<std::string> opt,
+                 const std::string &fallback) {
+      // Warning: result binds to const reference, copy is avoidable.
+      const std::string &ref = opt.value_or(fallback);
+
+      // Warning: result passed to const reference parameter.
+      consumeRef(opt.value_or(fallback));
+
+      // Warning: const member called on temporary.
+      auto len = opt.value_or(fallback).size();
+
+      // No warning by default: caller takes ownership.
+      std::string val = opt.value_or("default");
     }
+
+By default, the check only warns in reference-friendly contexts where the copy
+is clearly avoidable: binding to ``const T&``, passing to a ``const T&``
+parameter, or calling a const member function on the temporary. Contexts where
+the caller takes ownership (binding to a value, passing to a by-value
+parameter) are not flagged unless ``WarnOnOwnershipTaking`` is enabled.
 
 Options
 -------
@@ -54,3 +68,9 @@ Options
 
        CheckOptions:
          performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::boost::optional;::myproject::.*Optional"
+
+.. option:: WarnOnOwnershipTaking
+
+   When `true`, the check also warns when the result of ``value_or`` is used in
+   an ownership-taking context (e.g., initializing a value variable or passing
+   to a by-value parameter). Default is `false`.

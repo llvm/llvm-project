@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
+// RUN:   -config='{CheckOptions: {performance-expensive-value-or.WarnOnOwnershipTaking: true}}'
 
 #include <string>
 

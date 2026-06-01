@@ -32,6 +32,7 @@ public:
 private:
   const unsigned SizeThreshold;
   const std::vector<StringRef> OptionalTypes;
+  const bool WarnOnOwnershipTaking;
 };
 
 } // namespace clang::tidy::performance

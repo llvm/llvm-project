@@ -1,22 +1,52 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=DEFAULT %s performance-expensive-value-or %t \
 // RUN:   -config='{CheckOptions: {performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional"}}'
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=AGGRESSIVE %s performance-expensive-value-or %t \
+// RUN:   -config='{CheckOptions: {performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional", performance-expensive-value-or.WarnOnOwnershipTaking: true}}'
 
 #include <optional>
 #include <string>
 #include <utility>
 
-void positiveNonTriviallyCopyable(std::optional<std::string> opt) {
+void consumeRef(const std::string &);
+void consume(std::string s);
+
+// Reference-friendly contexts: warn in both default and aggressive modes.
+
+void positiveConstRefBinding(std::optional<std::string> opt,
+                             const std::string &fallback) {
+  const std::string &ref = opt.value_or(fallback);
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+}
+
+void positiveConstRefParam(std::optional<std::string> opt,
+                           const std::string &fallback) {
+  consumeRef(opt.value_or(fallback));
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+}
+
+void positiveConstMemberCall(std::optional<std::string> opt,
+                             const std::string &fallback) {
+  auto len = opt.value_or(fallback).size();
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+}
+
+// Ownership-taking contexts: only warn in aggressive mode.
+
+void positiveOwnershipValue(std::optional<std::string> opt) {
   auto val = opt.value_or("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
 }
 
 struct LargeStruct {
   char data[128];
 };
 
-void positiveLargeStruct(std::optional<LargeStruct> opt) {
+void positiveOwnershipLarge(std::optional<LargeStruct> opt) {
   auto val = opt.value_or(LargeStruct{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'LargeStruct'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'LargeStruct'
 }
 
 struct SmallNonTrivial {
@@ -25,55 +55,57 @@ struct SmallNonTrivial {
   SmallNonTrivial(const SmallNonTrivial &o) : x(o.x) {}
 };
 
-void positiveSmallNonTrivial(std::optional<SmallNonTrivial> opt) {
+void positiveOwnershipSmallNonTrivial(std::optional<SmallNonTrivial> opt) {
   auto val = opt.value_or(SmallNonTrivial{42});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'SmallNonTrivial'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'SmallNonTrivial'
 }
 
-void consume(std::string s);
-void positiveDirectUse(std::optional<std::string> opt) {
+void positiveOwnershipByValueParam(std::optional<std::string> opt) {
   consume(opt.value_or("fallback"));
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:15: warning: 'value_or' copies expensive type 'std::basic_string<char>'
 }
+
+// Side-effect note tests (aggressive mode).
 
 std::string makeFallback();
 void positiveSideEffectFallback(std::optional<std::string> opt) {
   auto val = opt.value_or(makeFallback());
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
-  // CHECK-MESSAGES: :[[@LINE-2]]:27: note: the fallback is always evaluated; a conditional rewrite would change evaluation semantics
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:27: note: the fallback is always evaluated
 }
 
 // Constructing a temporary with a non-trivial destructor is treated as a side
 // effect (CXXBindTemporaryExpr), so the note fires here too.
 void positiveSideEffectTemporary(std::optional<std::string> opt) {
   auto val = opt.value_or(std::string("fallback"));
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
-  // CHECK-MESSAGES: :[[@LINE-2]]:27: note: the fallback is always evaluated; a conditional rewrite would change evaluation semantics
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:27: note: the fallback is always evaluated
 }
+
+// Template instantiation (aggressive mode).
 
 template <typename T> void positiveTemplate(std::optional<T> opt) {
   auto val = opt.value_or(T{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
 }
 void instantiate() {
   positiveTemplate(std::optional<std::string>{});
 }
 
-using OptString = std::optional<std::string>;
-void positiveTypeAlias(OptString opt) {
-  auto val = opt.value_or("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+// Rvalue optional tests.
+
+std::optional<std::string> getOpt();
+void negativeRvalueOptional() {
+  auto val = getOpt().value_or("default");
 }
 
-void positiveNested(std::optional<std::optional<std::string>> opt) {
-  auto val = opt.value_or(std::optional<std::string>{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::optional<std::basic_string<char>>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+std::optional<LargeStruct> getLargeOpt();
+void positiveRvalueNoMoveAdvantage() {
+  auto val = getLargeOpt().value_or(LargeStruct{});
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'LargeStruct'
 }
 
-void positiveMoveResult(std::optional<std::string> opt) {
-  auto val = std::move(opt.value_or("default"));
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
-}
+// Negative cases: no warning in either mode.
 
 void negativeInt(std::optional<int> opt) {
   auto val = opt.value_or(0);
@@ -96,6 +128,8 @@ void negativeBoundary(std::optional<SixteenBytes> opt) {
   auto val = opt.value_or(SixteenBytes{});
 }
 
+// Non-trivially-copyable (due to user-defined copy assignment) but copy
+// construction itself is trivial. No point warning about an inexpensive copy.
 struct TrivialCopyNonTrivialAssign {
   int x;
   TrivialCopyNonTrivialAssign() = default;
@@ -109,16 +143,7 @@ void negativeTrivialCopyNonTrivialAssign(
   auto val = opt.value_or(TrivialCopyNonTrivialAssign{});
 }
 
-std::optional<std::string> getOpt();
-void negativeRvalueOptional() {
-  auto val = getOpt().value_or("default");
-}
-
-std::optional<LargeStruct> getLargeOpt();
-void positiveRvalueNoMoveAdvantage() {
-  auto val = getLargeOpt().value_or(LargeStruct{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'LargeStruct'
-}
+// Alternative spellings and custom optional types (aggressive mode).
 
 namespace absl {
 template <typename T> class optional {
@@ -129,7 +154,7 @@ public:
 
 void positiveAbslDefault(absl::optional<std::string> opt) {
   auto val = opt.value_or("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider avoiding the copy [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
 }
 
 namespace custom {
@@ -145,10 +170,10 @@ public:
 
 void positiveValueOr(custom::CamelOptional<std::string> opt) {
   auto val = opt.valueOr("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'valueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'valueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
 }
 
 void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
   auto val = opt.ValueOr("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy [performance-expensive-value-or]
+  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive type 'std::basic_string<char>'; consider avoiding the copy
 }
