@@ -2141,7 +2141,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   //   so no V_NOP insertion is needed.
   if (TII->isXDLWMMA(*MI)) {
     const unsigned WMMAWaitsLimit = 9; // Maximum of WMMAWaitStates
-    ExistingVALUs = getWaitStatesSince(IsWMMAHazardFn, WaitsLimit,
+    ExistingVALUs = getWaitStatesSince(IsWMMAHazardFn, WMMAWaitsLimit,
                                        GetWaitStatesFn);
     WaitStatesNeeded = WMMAWaitStates[Category] - ExistingVALUs;
   } else { // Must be a co-executable VALU.
