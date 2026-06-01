@@ -602,7 +602,7 @@ struct Allocator {
       allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
-      AllocatorCache *cache = &fallback_allocator_cache;
+      AllocatorCache* cache = &fallback_allocator_cache;
       allocated = allocator.Allocate(cache, needed_size, 8, da_info);
     }
     if (UNLIKELY(!allocated)) {
@@ -1699,20 +1699,28 @@ hsa_status_t asan_hsa_amd_vmem_address_free(void* ptr, size_t size,
     return HSA_STATUS_SUCCESS;
   }
 
+  // GPU-only free: only supported when host-accessible VA (NO_REGISTER) is
+  // used.
   using VmemGpuReserveTracker = __sanitizer::VmemGpuReserveTracker;
-  switch (
-      VmemGpuReserveTracker::Get().OnFree(reinterpret_cast<uptr>(ptr), size)) {
+  const uptr ptr_uptr = reinterpret_cast<uptr>(ptr);
+  switch (VmemGpuReserveTracker::Get().CheckFree(ptr_uptr, size)) {
     case VmemGpuReserveTracker::kNotTracked:
       break;
-    case VmemGpuReserveTracker::kFirstFree:
-      return REAL(hsa_amd_vmem_address_free)(ptr, size);
+    case VmemGpuReserveTracker::kFirstFree: {
+      const hsa_status_t status = REAL(hsa_amd_vmem_address_free)(ptr, size);
+      if (status == HSA_STATUS_SUCCESS)
+        VmemGpuReserveTracker::Get().MarkFreed(ptr_uptr, size);
+      return status;
+    }
     case VmemGpuReserveTracker::kSizeMismatch:
       errno = errno_EINVAL;
       return HSA_STATUS_ERROR_INVALID_ARGUMENT;
     case VmemGpuReserveTracker::kDoubleFree:
-      ReportDoubleFree(reinterpret_cast<uptr>(ptr), stack);
+      ReportDoubleFree(ptr_uptr, stack);
       return HSA_STATUS_SUCCESS;
   }
+  // Passthrough: untracked vmem frees (eg: fixed-address reservations) go
+  // straight to ROCr.
   return REAL(hsa_amd_vmem_address_free)(ptr, size);
 }
 
