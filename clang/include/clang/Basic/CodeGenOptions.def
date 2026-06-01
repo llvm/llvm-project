@@ -28,6 +28,10 @@ CODEGENOPT(Name, Bits, Default, Compatibility)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0, Benign) ///< -no-integrated-as
+CODEGENOPT(ExperimentalABILowering, 1, 0, Benign) ///< -fexperimental-abi-lowering:
+                                                  ///< route function ABI lowering
+                                                  ///< through the in-tree LLVMABI
+                                                  ///< library where supported.
 CODEGENOPT(Crel, 1, 0, Benign) ///< -Wa,--crel
 ENUM_CODEGENOPT(RelocSectionSym, RelocSectionSymType, 2,
                 RelocSectionSymType::All, Benign) ///< -Wa,--reloc-section-sym=
@@ -163,6 +167,7 @@ CODEGENOPT(InstrumentForProfiling , 1, 0, Benign) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0, Benign) ///< Set when -mfentry is enabled.
 CODEGENOPT(MNopMCount , 1, 0, Benign) ///< Set when -mnop-mcount is enabled.
 CODEGENOPT(RecordMCount , 1, 0, Benign) ///< Set when -mrecord-mcount is enabled.
+CODEGENOPT(StackProtectorGuardRecord, 1, 0, Benign) ///< Set when -mstack-protector-guard-record is enabled.
 CODEGENOPT(PackedStack , 1, 0, Benign) ///< Set when -mpacked-stack is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0, Benign) ///< Enable less precise MAD instructions to
                                              ///< be generated.
@@ -336,6 +341,7 @@ CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.
 CODEGENOPT(FineGrainedBitfieldAccesses, 1, 0, Benign) ///< Enable fine-grained bitfield accesses.
 CODEGENOPT(StrictEnums       , 1, 0, Benign) ///< Optimize based on strict enum definition.
+ENUM_CODEGENOPT(LoadBoolFromMem, BoolFromMem, 2, BoolFromMem::Strict, Benign) ///> Optimize based on in-memory bool values being 0 or 1.
 CODEGENOPT(StrictVTablePointers, 1, 0, Benign) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0, Benign) ///< Set when -ftime-report, -ftime-report=, -ftime-report-json, or -stats-file-timers is enabled.
 CODEGENOPT(TimePassesPerRun  , 1, 0, Benign) ///< Set when -ftime-report=per-pass-run is enabled.
@@ -427,6 +433,9 @@ ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVar
 
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
+
+/// The width to use for the stack protector guard value.
+VALUE_CODEGENOPT(StackProtectorGuardValueWidth, 32, UINT_MAX, Benign)
 
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)

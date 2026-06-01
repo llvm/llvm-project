@@ -165,7 +165,7 @@ struct base {
 
 struct bar : public base {
   using base::foo;
-  template <int N> 
+  template <int N>
   int foo() { return 2; }; // expected-note {{candidate template ignored: substitution failure: too many template arguments for function template 'foo'}}
 };
 

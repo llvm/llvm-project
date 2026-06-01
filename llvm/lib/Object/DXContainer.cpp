@@ -20,10 +20,14 @@ static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
 }
 
+static bool readIsOutOfBounds(StringRef Buffer, const char *Src, size_t Size) {
+  return Src < Buffer.begin() || Src + Size > Buffer.end();
+}
+
 template <typename T>
 static Error readStruct(StringRef Buffer, const char *Src, T &Struct) {
   // Don't read before the beginning or past the end of the file
-  if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
+  if (readIsOutOfBounds(Buffer, Src, sizeof(T)))
     return parseFailed("Reading structure out of file bounds");
 
   memcpy(&Struct, Src, sizeof(T));
@@ -39,7 +43,7 @@ static Error readInteger(StringRef Buffer, const char *Src, T &Val,
   static_assert(std::is_integral_v<T>,
                 "Cannot call readInteger on non-integral type.");
   // Don't read before the beginning or past the end of the file
-  if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())
+  if (readIsOutOfBounds(Buffer, Src, sizeof(T)))
     return parseFailed(Twine("Reading ") + Str + " out of file bounds");
 
   // The DXContainer offset table is comprised of uint32_t values but not padded
@@ -55,21 +59,68 @@ static Error readInteger(StringRef Buffer, const char *Src, T &Val,
   return Error::success();
 }
 
+/// Read a null-terminated string at the position Src from Buffer, with maximum
+/// byte size of MaxSize (including the null-terminator). Advance Src by the
+/// number of bytes read.
+static Error readString(StringRef Buffer, const char *&Src, size_t MaxSize,
+                        StringRef &Val, Twine Desc) {
+  if (readIsOutOfBounds(Buffer, Src, MaxSize))
+    return parseFailed(Desc + " is out of file bounds");
+
+  // Ensure that the null-terminator is somewhere within MaxSize bytes.
+  Buffer = Buffer.substr(Src - Buffer.data(), MaxSize);
+  size_t Length = Buffer.find('\0');
+  if (Length == Buffer.npos)
+    return parseFailed(Desc + " does not end with null-terminator");
+
+  Val = StringRef(Buffer.data(), Length);
+  Src += Length + 1;
+  return Error::success();
+}
+
 DXContainer::DXContainer(MemoryBufferRef O) : Data(O) {}
 
 Error DXContainer::parseHeader() {
-  return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
+  if (Error Err = readStruct(Data.getBuffer(), Data.getBuffer().data(), Header))
+    return Err;
+  if (StringRef(reinterpret_cast<char *>(Header.Magic), 4) != "DXBC")
+    return parseFailed("Missing DXBC header magic");
+  return Error::success();
 }
 
-Error DXContainer::parseDXILHeader(StringRef Part) {
+Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {
+  bool IsDebug = dxbc::isDebugProgramPart(PT);
+  std::optional<DXILData> &DXIL = IsDebug ? this->DebugDXIL : this->DXIL;
+
   if (DXIL)
-    return parseFailed("More than one DXIL part is present in the file");
+    return parseFailed(formatv("more than one {0} part is present in the file",
+                               dxbc::getProgramPartName(IsDebug)));
   const char *Current = Part.begin();
   dxbc::ProgramHeader Header;
   if (Error Err = readStruct(Part, Current, Header))
     return Err;
   Current += offsetof(dxbc::ProgramHeader, Bitcode) + Header.Bitcode.Offset;
   DXIL.emplace(std::make_pair(Header, Current));
+  return Error::success();
+}
+
+Error DXContainer::parseDebugName(StringRef Part) {
+  if (DebugName)
+    return parseFailed("more than one ILDN part is present in the file");
+  const char *Current = Part.begin();
+  dxbc::DebugNameHeader Header;
+  if (Error Err = readStruct(Part, Current, Header))
+    return Err;
+  Current += sizeof(Header);
+
+  StringRef Name;
+  if (Error Err = readString(Part, Current, Header.NameLength + 1, Name,
+                             "debug file name"))
+    return Err;
+  if (Name.size() != Header.NameLength)
+    return parseFailed("debug file name length mismatch");
+  DebugName.emplace(Header, Name.data());
+
   return Error::success();
 }
 
@@ -136,6 +187,36 @@ Error DirectX::Signature::initialize(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parseCompilerVersionInfo(StringRef Part) {
+  if (VersionInfo)
+    return parseFailed("more than one VERS part is present in the file");
+  const char *Current = Part.begin();
+  dxbc::CompilerVersionHeader Header;
+  if (Error Err = readStruct(Part, Current, Header))
+    return Err;
+  Current += sizeof(Header);
+
+  if (!dxbc::isValidCompilerVersionFlags(to_underlying(Header.Flags)))
+    return parseFailed("Incorrect shader compiler version flags combination");
+
+  StringRef CommitSha;
+  const char *Prev = Current;
+  if (Error Err = readString(Part, Current, Header.ContentSizeInBytes,
+                             CommitSha, "CommitSha"))
+    return Err;
+  StringRef CustomVersionString;
+  if (Error Err = readString(Part, Current,
+                             Header.ContentSizeInBytes - (Current - Prev),
+                             CustomVersionString, "CustomVersionString"))
+    return Err;
+
+  VersionInfo.emplace();
+  VersionInfo->Parameters = Header;
+  VersionInfo->CommitSha = CommitSha;
+  VersionInfo->CustomVersionString = CustomVersionString;
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   uint32_t LastOffset =
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
@@ -174,7 +255,12 @@ Error DXContainer::parsePartOffsets() {
     LastOffset = PartOffset + PartSize;
     switch (PT) {
     case dxbc::PartType::DXIL:
-      if (Error Err = parseDXILHeader(PartData))
+    case dxbc::PartType::ILDB:
+      if (Error Err = parseDXILHeader(PT, PartData))
+        return Err;
+      break;
+    case dxbc::PartType::ILDN:
+      if (Error Err = parseDebugName(PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:
@@ -207,16 +293,26 @@ Error DXContainer::parsePartOffsets() {
       if (Error Err = parseRootSignature(PartData))
         return Err;
       break;
+    case dxbc::PartType::VERS:
+      if (Error Err = parseCompilerVersionInfo(PartData))
+        return Err;
+      break;
     }
   }
+
+  if (DXIL && DebugDXIL &&
+      DXIL->first.ShaderKind != DebugDXIL->first.ShaderKind)
+    return parseFailed(
+        "ILDB part shader kind does not match DXIL part shader kind");
 
   // Fully parsing the PSVInfo requires knowing the shader kind which we read
   // out of the program header in the DXIL part.
   if (PSVInfo) {
-    if (!DXIL)
-      return parseFailed("Cannot fully parse pipeline state validation "
-                         "information without DXIL part.");
-    if (Error Err = PSVInfo->parse(DXIL->first.ShaderKind))
+    std::optional<uint16_t> ShaderKind = getShaderKind();
+    if (!ShaderKind)
+      return parseFailed("cannot fully parse pipeline state validation "
+                         "information without DXIL or ILDB part");
+    if (Error Err = PSVInfo->parse(*ShaderKind))
       return Err;
   }
   return Error::success();

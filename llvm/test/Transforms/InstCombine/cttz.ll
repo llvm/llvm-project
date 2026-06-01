@@ -6,8 +6,8 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 declare <2 x i64> @llvm.cttz.v2i64(<2 x i64>, i1)
 declare void @use(i32)
 
-define i32 @cttz_zext_zero_undef(i16 %x) {
-; CHECK-LABEL: @cttz_zext_zero_undef(
+define i32 @cttz_zext_zero_poison(i16 %x) {
+; CHECK-LABEL: @cttz_zext_zero_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TZ]]
@@ -28,8 +28,8 @@ define i32 @cttz_zext_zero_def(i16 %x) {
   ret i32 %tz
 }
 
-define i32 @cttz_zext_zero_undef_extra_use(i16 %x) {
-; CHECK-LABEL: @cttz_zext_zero_undef_extra_use(
+define i32 @cttz_zext_zero_poison_extra_use(i16 %x) {
+; CHECK-LABEL: @cttz_zext_zero_poison_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[Z]])
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[Z]], i1 true)
@@ -41,8 +41,8 @@ define i32 @cttz_zext_zero_undef_extra_use(i16 %x) {
   ret i32 %tz
 }
 
-define <2 x i64> @cttz_zext_zero_undef_vec(<2 x i32> %x) {
-; CHECK-LABEL: @cttz_zext_zero_undef_vec(
+define <2 x i64> @cttz_zext_zero_poison_vec(<2 x i32> %x) {
+; CHECK-LABEL: @cttz_zext_zero_poison_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
@@ -63,8 +63,8 @@ define <2 x i64> @cttz_zext_zero_def_vec(<2 x i32> %x) {
   ret <2 x i64> %tz
 }
 
-define i32 @cttz_sext_zero_undef(i16 %x) {
-; CHECK-LABEL: @cttz_sext_zero_undef(
+define i32 @cttz_sext_zero_poison(i16 %x) {
+; CHECK-LABEL: @cttz_sext_zero_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[TZ]]
@@ -85,8 +85,8 @@ define i32 @cttz_sext_zero_def(i16 %x) {
   ret i32 %tz
 }
 
-define i32 @cttz_sext_zero_undef_extra_use(i16 %x) {
-; CHECK-LABEL: @cttz_sext_zero_undef_extra_use(
+define i32 @cttz_sext_zero_poison_extra_use(i16 %x) {
+; CHECK-LABEL: @cttz_sext_zero_poison_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[S]])
 ; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[S]], i1 true)
@@ -98,8 +98,8 @@ define i32 @cttz_sext_zero_undef_extra_use(i16 %x) {
   ret i32 %tz
 }
 
-define <2 x i64> @cttz_sext_zero_undef_vec(<2 x i32> %x) {
-; CHECK-LABEL: @cttz_sext_zero_undef_vec(
+define <2 x i64> @cttz_sext_zero_poison_vec(<2 x i32> %x) {
+; CHECK-LABEL: @cttz_sext_zero_poison_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TZ:%.*]] = zext nneg <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]

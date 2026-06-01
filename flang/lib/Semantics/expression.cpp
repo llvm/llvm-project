@@ -2839,8 +2839,29 @@ static int CompareCudaMatchingDistance(
   return 0;
 }
 
-// Compute the matching distance as described in section 3.2.3 of the CUDA
-// Fortran references.
+// Compute the matching distance for one (dummy, actual) pair as described
+// in section 3.2.3 ("Table 2: Attributed Argument Matching Distance Values")
+// of the CUDA Fortran Programming Guide. The column applied for the actual
+// depends on its CUDA data attribute and (for unattributed actuals) on the
+// active -gpu=mem:{unified,managed} mode.
+//
+// Distance values returned (smaller is a better match; INF means
+// incompatible and disqualifies the candidate):
+//
+//                       Actual argument attribute
+//                 None                              ACC      gpu=    gpu=
+//   Dummy attr   (Host)  Device  Managed Unified  use_dev  unified  managed
+//   ----------+--------+-------+--------+-------+--------+--------+--------+
+//   None(host)|    0   |  INF  |   3    |   3   |   3    |   3    |   3    |
+//   Device    |   INF  |   0   |   2    |   2   |   0    |   2    |   2    |
+//   Managed   |   INF  |  INF  |   0    |   1   |  INF   |   1    |   0    |
+//   Unified   |   INF  |  INF  |   1    |   0   |  INF   |   0    |   1    |
+//
+// In addition: a dummy declared TYPE(*) (assumed-size/rank opaque buffer)
+// is "CUDA address space agnostic" and accepts any attributed actual at a
+// non-zero distance (3) so an explicit Device overload still wins. The
+// "ACC use_dev" column applies to actuals appearing in a surrounding
+// ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
@@ -2875,13 +2896,23 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   }
 
+  bool dummyIsCudaAddressSpaceAgnostic{false};
   common::visit(common::visitors{
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
+                      dummyIsCudaAddressSpaceAgnostic =
+                          semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
       dummy.u);
+
+  if (actualDataAttr && dummyIsCudaAddressSpaceAgnostic) {
+    // TYPE(*) assumed-size/rank dummies model opaque buffers, so they can
+    // accept host or device storage. Keep a non-zero distance so an explicit
+    // DEVICE overload remains a better CUDA match.
+    return 3;
+  }
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
@@ -2930,6 +2961,17 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
       return 0;
     }
   }
+  // An actual argument with the UseDevice attribute comes from an OpenACC
+  // host_data use_device clause: the variable itself is host-resident, but
+  // inside the host_data region it is referenced via its device address.
+  // It matches a Device dummy with distance 0, a host dummy (no attribute)
+  // with distance 3, and is incompatible with any other dummy attribute.
+  if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
+    if (!dummyDataAttr)
+      return 3;
+    if (*dummyDataAttr == common::CUDADataAttr::Device)
+      return 0;
+  }
   return cudaInfMatchingValue;
 }
 
@@ -2944,6 +2986,10 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
+    if (!actual) {
+      // Omitted optional arguments do not affect CUDA matching distances.
+      continue;
+    }
     int d{GetMatchingDistance(features, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
@@ -3634,6 +3680,9 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
             } else if (evaluate::IsCoarray(*lastWhole)) {
               Say("Left-hand side of intrinsic assignment may not be polymorphic if it is a coarray"_err_en_US);
+            } else if (context_.langOptions().NoReallocateLHS) {
+              Warn(common::UsageWarning::IgnoredNoReallocateLHS,
+                  "-fno-realloc-lhs is ignored for assignment to polymorphic allocatable"_warn_en_US);
             }
           }
           if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
@@ -3958,17 +4007,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ConditionalExpr &x) {
         thenType->AsFortran(), elseType->AsFortran());
     return std::nullopt;
   }
-  if (thenCat == TypeCategory::Derived &&
-      (thenType->IsPolymorphic() || elseType->IsPolymorphic())) {
-    Say("Conditional expressions with polymorphic types (CLASS) are not yet supported"_todo_en_US);
-    return std::nullopt;
-  }
-  if (thenCat == TypeCategory::Derived &&
-      !AreSameDerivedType(
-          thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
-    Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
-        thenType->AsFortran(), elseType->AsFortran());
-    return std::nullopt;
+  if (thenCat == TypeCategory::Derived) {
+    if (thenType->IsUnlimitedPolymorphic() ||
+        elseType->IsUnlimitedPolymorphic()) {
+      Say("Unlimited polymorphic types (CLASS(*)) not allowed in conditional expression"_err_en_US);
+      return std::nullopt;
+    }
+    if (!AreSameDerivedType(
+            thenType->GetDerivedTypeSpec(), elseType->GetDerivedTypeSpec())) {
+      Say("All values in conditional expression must be the same derived type; have %s and %s"_err_en_US,
+          thenType->AsFortran(), elseType->AsFortran());
+      return std::nullopt;
+    }
   }
 
   // Dispatch on the else-expr to recover the concrete kind type T.
@@ -4769,6 +4819,10 @@ void ArgumentAnalyzer::Analyze(
               actual->set_isPercentVal();
             }
           },
+          [&](const parser::ConditionalArg &) {
+            context_.Say(
+                "Fortran 2023 conditional arguments are not yet supported"_todo_en_US);
+          },
       },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
@@ -5484,7 +5538,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? "TYPE("s + type->AsFortran() + ')'
+        ? (type->GetDerivedTypeSpec().IsVectorType()
+                  ? type->AsFortran()
+                  : "TYPE("s + type->AsFortran() + ')')
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());

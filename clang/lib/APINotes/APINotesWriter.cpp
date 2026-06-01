@@ -1155,6 +1155,8 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   flags <<= 3;
   if (auto RCC = FI.getRetainCountConvention())
     flags |= static_cast<uint8_t>(RCC.value()) + 1;
+  flags <<= 0x01;
+  flags |= FI.UnsafeBufferUsage;
 
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 

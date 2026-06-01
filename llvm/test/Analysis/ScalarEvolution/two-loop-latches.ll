@@ -12,13 +12,13 @@ define void @f(ptr %a0) {
 ; CHECK-NEXT:    %inc = getelementptr i8, ptr %phi1, i64 -32
 ; CHECK-NEXT:    --> {(-32 + null)<nuw><nsw>,+,-32}<%b1> U: [0,-31) S: [-9223372036854775808,9223372036854775777) Exits: <<Unknown>> LoopDispositions: { %b1: Computable, %b3: Invariant }
 ; CHECK-NEXT:    %phi2 = phi ptr [ %a0, %b2 ], [ %inc2, %b5 ]
-; CHECK-NEXT:    --> {%a0,+,1}<%b3> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a0 to i64)) + %a0) LoopDispositions: { %b3: Computable, %b1: Variant }
+; CHECK-NEXT:    --> {%a0,+,1}<%b3> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a0 to i64)) + %a0) LoopDispositions: { %b3: Computable, %b1: Uniform }
 ; CHECK-NEXT:    %ld1 = load i8, ptr %phi2, align 1
 ; CHECK-NEXT:    --> %ld1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %b3: Variant, %b1: Variant }
 ; CHECK-NEXT:    %ld2 = load i8, ptr null, align 1
 ; CHECK-NEXT:    --> %ld2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %b3: Variant, %b1: Variant }
 ; CHECK-NEXT:    %inc2 = getelementptr i8, ptr %phi2, i64 1
-; CHECK-NEXT:    --> {(1 + %a0),+,1}<%b3> U: full-set S: full-set Exits: (1 + (-1 * (ptrtoint ptr %a0 to i64)) + %a0) LoopDispositions: { %b3: Computable, %b1: Variant }
+; CHECK-NEXT:    --> {(1 + %a0),+,1}<%b3> U: full-set S: full-set Exits: (1 + (-1 * (ptrtoint ptr %a0 to i64)) + %a0) LoopDispositions: { %b3: Computable, %b1: Uniform }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %b3: <multiple exits> backedge-taken count is (-1 * (ptrtoint ptr %a0 to i64))
 ; CHECK-NEXT:    exit count for b3: (-1 * (ptrtoint ptr %a0 to i64))

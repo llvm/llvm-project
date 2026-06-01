@@ -58,18 +58,18 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE2]] ]
 ; TAILFOLD-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; TAILFOLD-NEXT:    [[TMP2:%.*]] = sext <2 x i32> [[VEC_IND]] to <2 x i64>
-; TAILFOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
+; TAILFOLD-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; TAILFOLD-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TAILFOLD:       pred.store.if:
-; TAILFOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP2]], i32 0
+; TAILFOLD-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
 ; TAILFOLD-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[P:%.*]], i64 [[TMP4]]
 ; TAILFOLD-NEXT:    store i16 0, ptr [[TMP5]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; TAILFOLD:       pred.store.continue:
-; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
+; TAILFOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; TAILFOLD-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; TAILFOLD:       pred.store.if1:
-; TAILFOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP2]], i32 1
+; TAILFOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
 ; TAILFOLD-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[TMP7]]
 ; TAILFOLD-NEXT:    store i16 0, ptr [[TMP8]], align 4
 ; TAILFOLD-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -1058,13 +1058,13 @@ define void @scalar_predication(ptr %addr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[ADDR:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp une <2 x float> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store float 1.000000e+01, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1

@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScheduleOrderedAssignments.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/TemporaryStorage.h"
@@ -256,6 +257,11 @@ private:
   /// loop nest on success.
   bool currentLoopNestIterationNumberCanBeComputed(
       llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest);
+
+  /// Return the induction variables of the enclosing fir.do_loop nest at the
+  /// current insertion point, innermost first (same order as
+  /// currentLoopNestIterationNumberCanBeComputed).
+  llvm::SmallVector<mlir::Value> getLoopIndices();
 
   template <typename T>
   fir::factory::TemporaryStorage *insertSavedEntity(mlir::Region &region,
@@ -669,7 +675,8 @@ OrderedAssignmentRewriter::getIfSaved(mlir::Region &region) {
   // If the region was saved in a previous run, fetch the saved value.
   if (auto temp = savedEntities.find(&region); temp != savedEntities.end()) {
     doBeforeLoopNest([&]() { temp->second.resetFetchPosition(loc, builder); });
-    return ValueAndCleanUp{temp->second.fetch(loc, builder), std::nullopt};
+    return ValueAndCleanUp{temp->second.fetch(loc, builder, getLoopIndices()),
+                           std::nullopt};
   }
   return std::nullopt;
 }
@@ -1109,6 +1116,61 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
   return loopExtent;
 }
 
+/// If \p value is a compile-time integer constant (possibly hidden behind
+/// fir.convert ops), return its value. Otherwise return std::nullopt.
+static std::optional<int64_t> unwrapConstantInt(mlir::Value value) {
+  while (auto convert = value.getDefiningOp<fir::ConvertOp>())
+    value = convert.getValue();
+  return fir::getIntIfConstant(value);
+}
+
+/// Compute the extents and lower bounds of \p loopNest, in the same order as
+/// \p loopNest (innermost first). The lower bound of each dimension is the
+/// smallest induction variable value, so that the loop induction variable
+/// can directly index the temp via fir.shape_shift. This only works when
+/// every loop has a unit step: for step +1 the smallest iv is the loop's
+/// lower bound; for step -1 it is the loop's upper bound. Returns false
+/// (with \p extents and \p lowerBounds left in an unspecified state) when
+/// any loop has a non-unit or non-constant step, signalling that the caller
+/// should fall back to a counter-based temp.
+static bool computeLoopNestExtentsAndLowerBounds(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    llvm::ArrayRef<fir::DoLoopOp> loopNest,
+    llvm::SmallVectorImpl<mlir::Value> &extents,
+    llvm::SmallVectorImpl<mlir::Value> &lowerBounds) {
+  extents.reserve(loopNest.size());
+  lowerBounds.reserve(loopNest.size());
+  for (fir::DoLoopOp doLoop : loopNest) {
+    auto step = unwrapConstantInt(doLoop.getStep());
+    if (!step || std::abs(*step) != 1)
+      return false;
+    mlir::Value extent = builder.genExtentFromTriplet(
+        loc, doLoop.getLowerBound(), doLoop.getUpperBound(), doLoop.getStep(),
+        builder.getIndexType());
+    extents.push_back(extent);
+    lowerBounds.push_back(*step == 1 ? doLoop.getLowerBound()
+                                     : doLoop.getUpperBound());
+  }
+  return true;
+}
+
+llvm::SmallVector<mlir::Value> OrderedAssignmentRewriter::getLoopIndices() {
+  llvm::SmallVector<mlir::Value> indices;
+  if (constructStack.empty())
+    return indices;
+  mlir::Operation *outerLoop = constructStack[0];
+  mlir::Operation *currentConstruct = constructStack.back();
+  while (currentConstruct) {
+    if (auto doLoop = mlir::dyn_cast<fir::DoLoopOp>(currentConstruct))
+      indices.push_back(doLoop.getInductionVar());
+    if (currentConstruct == outerLoop)
+      currentConstruct = nullptr;
+    else
+      currentConstruct = currentConstruct->getParentOp();
+  }
+  return indices;
+}
+
 /// Return a name for temporary storage that indicates in which context
 /// the temporary storage was created.
 static llvm::StringRef
@@ -1160,11 +1222,27 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     bool loopShapeCanBePreComputed =
         currentLoopNestIterationNumberCanBeComputed(loopNest);
     doBeforeLoopNest([&] {
-      /// For simple scalars inside loops whose total iteration number can be
-      /// pre-computed, create a rank-1 array outside of the loops. It will be
-      /// assigned/fetched inside the loops like a normal Fortran array given
-      /// the iteration count.
-      if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
+      // For simple scalars in a precomputable loop nest, prefer the
+      // multidimensional ArrayTemp (indexed by loop induction variables) so
+      // there is no loop-carried counter. Fall back to the 1D counter-based
+      // HomogeneousScalarStack when the nest is deeper than the maximum
+      // fir.array rank or when any loop has a non-unit/non-constant step
+      // (in which case the loop induction variable cannot index the temp
+      // directly).
+      llvm::SmallVector<mlir::Value> tempExtents;
+      llvm::SmallVector<mlir::Value> tempLowerBounds;
+      if (loopShapeCanBePreComputed && fir::isa_trivial(entityType) &&
+          loopNest.size() <= static_cast<size_t>(Fortran::common::maxRank) &&
+          computeLoopNestExtentsAndLowerBounds(loc, builder, loopNest,
+                                               tempExtents, tempLowerBounds)) {
+        auto sequenceType = mlir::cast<fir::SequenceType>(
+            builder.getVarLenSeqTy(entityType, /*rank=*/loopNest.size()));
+        temp = insertSavedEntity(
+            region,
+            fir::factory::ArrayTemp{loc, builder, sequenceType, tempExtents,
+                                    tempLowerBounds,
+                                    /*lengths=*/{}, allocateOnHeap, tempName});
+      } else if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
         mlir::Value loopExtent =
             computeLoopNestIterationNumber(loc, builder, loopNest);
         auto sequenceType =
@@ -1174,7 +1252,6 @@ void OrderedAssignmentRewriter::generateSaveEntity(
                                      loc, builder, sequenceType, loopExtent,
                                      /*lenParams=*/{}, allocateOnHeap,
                                      /*stackThroughLoops=*/true, tempName});
-
       } else {
         // If the number of iteration is not known, or if the values at each
         // iterations are values that may have different shape, type parameters
@@ -1185,8 +1262,8 @@ void OrderedAssignmentRewriter::generateSaveEntity(
       }
     });
     // Inside the loop nest (and any fir.if if there are active masks), copy
-    // the value to the temp and do clean-ups for the value if any.
-    temp->pushValue(loc, builder, entity);
+    // the value to the temp and do clean-ups of the value if any.
+    temp->pushValue(loc, builder, entity, getLoopIndices());
   }
 
   // Delay the clean-up if the entity will be used in the same run (i.e., the

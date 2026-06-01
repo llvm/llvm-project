@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG
 
 template <typename T>
 struct IsChar {
@@ -570,7 +570,7 @@ void foo18() {
 // LLVM-NEXT: [[F:%.*]] = getelementptr {{.*}}i8, ptr [[G]], i64 4
 // LLVM-NEXT: call void @{{.*F.*}}(ptr noundef nonnull align 1 dereferenceable(1) [[F]], i32 noundef 1)
 // LLVM: ret void
-// CIR: cir.func no_inline dso_local @_Z5foo19v() attributes {nothrow} {
+// CIR: cir.func no_inline dso_local @_Z5foo19v() attributes {{{.*}}nothrow} {
 // CIR: %[[G_ALLOCA:.*]] = cir.alloca ![[STRUCT_G]], !cir.ptr<![[STRUCT_G]]>, ["g", init]
 // CIR: %[[GET_A:.*]] = cir.get_member %[[G_ALLOCA]][0] {name = "a"} : !cir.ptr<![[STRUCT_G]]> -> !cir.ptr<!s32i>
 // CIR: %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
@@ -768,7 +768,7 @@ namespace gh61567 {
 namespace gh68198 {
   // LLVM: define {{.*}} void @{{.*foo25.*}} {
   // LLVM: [[ARR_8:%.*]] = alloca ptr
-  // LLVM-NEXT: [[CALL_PTR:%.*]] = call {{.*}}ptr @_Znam(i64 noundef 8)
+  // LLVM-NEXT: [[CALL_PTR:%.*]] = call {{.*}}nonnull ptr @_Znam(i64 noundef 8)
   // LLVM-NEXT: store i32 1, ptr [[CALL_PTR]], align 4
   // LLVM-NEXT: [[ARRAY_EXP_NEXT:%.*]] = getelementptr {{.*}}i32, ptr [[CALL_PTR]], i64 1
   // LLVM-NEXT: store i32 2, ptr [[ARRAY_EXP_NEXT]], align 4
@@ -778,7 +778,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo25Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arr8", init] {alignment = 8 : i64}
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<8> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store{{.*}} %[[ONE]], %[[ALLOC_TO_ARR]] : !s32i, !cir.ptr<!s32i>
@@ -795,7 +795,7 @@ namespace gh68198 {
 
   // LLVM: define {{.*}} void @{{.*foo26.*}} {
   // LLVM: [[ARR_10:%.*]] = alloca ptr
-  // LLVM-NEXT: [[CALL_PTR]] = call {{.*}}ptr @_Znam(i64 noundef 16)
+  // LLVM-NEXT: [[CALL_PTR]] = call {{.*}}nonnull ptr @_Znam(i64 noundef 16)
   // LLVM: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr {{.*}}i32, ptr {{.*}}, i64 1
   // LLVM-NEXT: store i32 2, ptr [[ARRAYINIT_ELEMENT]], align 4
   // LLVM-NEXT: [[ARRAY_EXP_NEXT:%.*]] = getelementptr {{.*}}[2 x i32], ptr {{.*}}, i64 1
@@ -808,7 +808,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo26Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["arr9", init] {alignment = 8 : i64}
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
   // CIR: %[[ELT0_0:.*]] = cir.cast array_to_ptrdecay %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -836,7 +836,7 @@ namespace gh68198 {
 
   // LLVM: define {{.*}} void @{{.*foo27.*}} {
   // LLVM: [[ARR_10:%.*]] = alloca ptr
-  // LLVM-NEXT: [[CALL_PTR]] = call {{.*}}@_Znam(i64 noundef 32)
+  // LLVM-NEXT: [[CALL_PTR]] = call {{.*}}nonnull {{.*}}@_Znam(i64 noundef 32)
   // LLVM: store i32 5, ptr {{.*}}, align 4
   // LLVM-NEXT: [[ARRAYINIT_ELEMENT:%.*]] = getelementptr {{.*}}i32, ptr {{.*}}, i64 1
   // LLVM-NEXT: store i32 6, ptr [[ARRAYINIT_ELEMENT]], align 4
@@ -851,7 +851,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo27Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["arr10", init] {alignment = 8 : i64}
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<32> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
   // CIR: %[[ELT0_0:.*]] = cir.cast array_to_ptrdecay %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
   // CIR: %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
@@ -881,4 +881,46 @@ namespace gh68198 {
   void foo27() {
     void* arr10 = new int[4][2]({5, 6}, {7, 8});
   }
+}
+
+
+namespace base_cleanup {
+
+struct Base {
+  ~Base() {}
+  int b;
+};
+
+struct Derived : Base {
+  int d;
+};
+
+void base_cleanup() {
+  Derived x{{1}, 2};
+}
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// CIR: cir.cleanup.scope {
+// CIR:   cir.yield
+// CIR: } cleanup normal {
+// CIR:   cir.call @_ZN12base_cleanup7DerivedD1Ev(
+// CIR:   cir.yield
+// CIR: }
+
+// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// OGCG-NOT: define
+// OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// OGCG: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
+
+// LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// LLVMCIR-NOT: define
+// LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// LLVMCIR: }
+
 }

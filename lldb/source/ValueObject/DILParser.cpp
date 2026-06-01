@@ -59,18 +59,8 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
-static CompilerType ResolveTypeByName(const std::string &name,
-                                      ExecutionContextScope &ctx_scope) {
+CompilerType ResolveTypeByName(const std::string &name,
+                               ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
@@ -516,7 +506,7 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
 
   if (type_name.size() > 0) {
     lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
-    ConstString const_type_name(type_name.c_str());
+    ConstString const_type_name(type_name);
     for (auto type_system_sp : target_sp->GetScratchTypeSystems())
       if (auto compiler_type =
               type_system_sp->GetBuiltinTypeByName(const_type_name))

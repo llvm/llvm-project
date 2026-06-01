@@ -168,7 +168,7 @@ public:
   }
 
   /// Determine which values are affected by this assume operand bundle.
-  static void
+  LLVM_ABI static void
   findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
                                     function_ref<void(Value *)> InsertAffected);
 };
@@ -189,15 +189,14 @@ public:
 };
 
 /// Printer pass for the \c AssumptionAnalysis results.
-class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
+class AssumptionPrinterPass
+    : public RequiredPassInfoMixin<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit AssumptionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// An immutable pass that tracks lazily created \c AssumptionCache

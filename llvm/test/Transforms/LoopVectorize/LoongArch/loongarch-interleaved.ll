@@ -1,4 +1,4 @@
-; RUN: opt --passes=loop-vectorize,dce,instcombine --mtriple loongarch64 \
+; RUN: opt --passes=loop-vectorize --mtriple loongarch64 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: foo

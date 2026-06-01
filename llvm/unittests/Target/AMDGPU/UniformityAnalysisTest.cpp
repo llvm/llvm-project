@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "AMDGPUUnitTests.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -19,25 +20,11 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-
-static std::unique_ptr<TargetMachine>
-createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
-  Triple TT(TStr);
-  std::string Error;
-  const Target *T = TargetRegistry::lookupTarget(TT, Error);
-  if (!T)
-    return nullptr;
-  return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TT, CPU, FS, {}, std::nullopt));
-}
 
 static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
                                         Function *F) {
@@ -50,10 +37,7 @@ static UniformityInfo computeUniformity(const TargetTransformInfo *TTI,
   return UI;
 }
 
-TEST(UniformityAnalysis, NewValueIsConservativelyDivergent) {
-  LLVMInitializeAMDGPUTargetInfo();
-  LLVMInitializeAMDGPUTarget();
-  LLVMInitializeAMDGPUTargetMC();
+TEST_F(AMDGPUTestBase, NewValueIsConservativelyDivergent) {
 
   StringRef ModuleString = R"(
   target triple = "amdgcn-unknown-amdhsa"
@@ -80,9 +64,9 @@ TEST(UniformityAnalysis, NewValueIsConservativelyDivergent) {
   // Existing values from the analysis are uniform (kernel args are inreg).
   Instruction *AddInst = &*F->getEntryBlock().begin();
   ASSERT_TRUE(isa<BinaryOperator>(AddInst));
-  EXPECT_FALSE(UI.isDivergent(AddInst)) << "%add should be uniform";
-  EXPECT_FALSE(UI.isDivergent(F->getArg(0))) << "%a should be uniform";
-  EXPECT_FALSE(UI.isDivergent(F->getArg(1))) << "%b should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(AddInst)) << "%add should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(F->getArg(0))) << "%a should be uniform";
+  EXPECT_FALSE(UI.isDivergentAtDef(F->getArg(1))) << "%b should be uniform";
 
   // Create a new instruction after analysis. It was not present during
   // analysis, so it is not in UniformValues and must be conservatively
@@ -90,6 +74,6 @@ TEST(UniformityAnalysis, NewValueIsConservativelyDivergent) {
   IRBuilder<> Builder(AddInst->getNextNode());
   Value *NewInst = Builder.CreateMul(F->getArg(0), F->getArg(1), "new_mul");
 
-  EXPECT_TRUE(UI.isDivergent(NewInst))
+  EXPECT_TRUE(UI.isDivergentAtDef(NewInst))
       << "New instruction created after analysis must be reported divergent";
 }

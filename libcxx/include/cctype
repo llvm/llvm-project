@@ -39,13 +39,11 @@ int toupper(int c);
 #else
 #  include <__config>
 
-#  include <ctype.h>
-
-#  ifndef _LIBCPP_CTYPE_H
-#   error <cctype> tried including <ctype.h> but didn't find libc++'s <ctype.h> header. \
-          This usually means that your header search paths are not configured properly.  \
-          The header search paths should contain the C++ Standard Library headers before \
-          any C Standard Library.
+#  if __has_include(<ctype.h>)
+#    include <ctype.h>
+#    ifdef _LIBCPP_CTYPE_H
+#      error "If libc++ starts defining <ctype.h>, the __has_include check should move to libc++'s <ctype.h>"
+#    endif
 #  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -53,62 +51,6 @@ int toupper(int c);
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-
-#  ifdef isalnum
-#    undef isalnum
-#  endif
-
-#  ifdef isalpha
-#    undef isalpha
-#  endif
-
-#  ifdef isblank
-#    undef isblank
-#  endif
-
-#  ifdef iscntrl
-#    undef iscntrl
-#  endif
-
-#  ifdef isdigit
-#    undef isdigit
-#  endif
-
-#  ifdef isgraph
-#    undef isgraph
-#  endif
-
-#  ifdef islower
-#    undef islower
-#  endif
-
-#  ifdef isprint
-#    undef isprint
-#  endif
-
-#  ifdef ispunct
-#    undef ispunct
-#  endif
-
-#  ifdef isspace
-#    undef isspace
-#  endif
-
-#  ifdef isupper
-#    undef isupper
-#  endif
-
-#  ifdef isxdigit
-#    undef isxdigit
-#  endif
-
-#  ifdef tolower
-#    undef tolower
-#  endif
-
-#  ifdef toupper
-#    undef toupper
-#  endif
 
 using ::isalnum _LIBCPP_USING_IF_EXISTS;
 using ::isalpha _LIBCPP_USING_IF_EXISTS;

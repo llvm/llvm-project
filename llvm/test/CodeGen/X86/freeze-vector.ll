@@ -470,7 +470,7 @@ define void @freeze_two_buildvectors_one_undef_elt(ptr %origin0, ptr %origin1, p
 ;
 ; X64-LABEL: freeze_two_buildvectors_one_undef_elt:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [7,7]

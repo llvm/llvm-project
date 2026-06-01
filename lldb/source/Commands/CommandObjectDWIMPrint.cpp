@@ -34,7 +34,8 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
     : CommandObjectRaw(interpreter, "dwim-print",
                        "Print a variable or expression.",
                        "dwim-print [<variable-name> | <expression>]",
-                       eCommandProcessMustBePaused | eCommandTryTargetAPILock) {
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock |
+                           eCommandAllowsDummyTarget) {
 
   AddSimpleArgumentList(eArgTypeVarName);
 
@@ -108,23 +109,23 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // Objective-C
     // "<Name: 0x...>. The regex is:
     // - Start with "<".
-    // - Followed by 1 or more non-whitespace characters.
+    // - Capture 1 or more non-whitespace characters (the class name).
     // - Followed by ": 0x".
     // - Followed by 5 or more hex digits.
     // - Followed by ">".
     // - End with zero or more whitespace characters.
     static const std::regex swift_class_regex(
-        "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+        "^<(\\S+): 0x[[:xdigit:]]{5,}>\\s*$");
 
+    std::cmatch match;
     if (GetDebugger().GetShowDontUsePoHint() && !target.IsDummyTarget() &&
         (language.AsLanguageType() == lldb::eLanguageTypeSwift ||
          language.IsObjC()) &&
-        std::regex_match(output.data(), swift_class_regex)) {
+        std::regex_match(output.data(), match, swift_class_regex)) {
 
-      result.AppendNote(
-          "object description requested, but type doesn't implement "
-          "a custom object description. Consider using \"p\" instead of "
-          "\"po\" (this note will only be shown once per debug session)");
+      result.AppendNoteWithFormatv(
+          "{0} has no custom object description, use \"p\" to see its children",
+          match[1].str());
       note_shown = true;
     }
   };
@@ -168,8 +169,9 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
         expr, eval_options.GetUseDynamic(),
-        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp, status,
-        lldb::eDILModeSimple);
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess |
+            StackFrame::eExpressionPathOptionsDisallowGlobals,
+        var_sp, status, lldb::eDILModeSimple);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())

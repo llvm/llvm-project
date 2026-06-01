@@ -830,6 +830,12 @@ public:
   bool pointsToStringLiteral() const;
   /// Whether this points to a block created for an AddrLabelExpr.
   bool pointsToLabel() const;
+  /// Returns the AddrLabelExpr the Pointer points to, if any.
+  const AddrLabelExpr *getPointedToLabel() const {
+    if (const Descriptor *Desc = getDeclDesc())
+      return dyn_cast_if_present<AddrLabelExpr>(Desc->asExpr());
+    return nullptr;
+  }
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
@@ -837,7 +843,8 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  std::optional<size_t>
+  computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
@@ -888,6 +895,9 @@ private:
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
   OS << ' ';
+  if (P.isZero())
+    return OS;
+
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
   if (P.isArrayElement()) {
@@ -895,7 +905,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       OS << " one-past-the-end";
     else
       OS << " index " << P.getIndex();
-  }
+  } else if (P.isArrayRoot())
+    OS << " arrayroot";
+
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())

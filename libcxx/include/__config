@@ -40,9 +40,6 @@
 #  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
 #  define _LIBCPP_CONCAT3(X, Y, Z) _LIBCPP_CONCAT(X, _LIBCPP_CONCAT(Y, Z))
 
-#  define _LIBCPP_TOSTRING2(x) #x
-#  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
-
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
 #  endif
@@ -472,10 +469,6 @@ typedef __char32_t char32_t;
 #    endif
 #  else
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
-#  endif
-
-#  if defined(__OBJC__) && defined(_LIBCPP_APPLE_CLANG_VER)
-#    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
 #  define _PSTL_PRAGMA(x) _Pragma(#x)

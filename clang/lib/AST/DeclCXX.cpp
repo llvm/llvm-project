@@ -2083,34 +2083,30 @@ CXXRecordDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK) {
 }
 
 const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
-  auto GetDefinitionOrSelf =
-      [](const CXXRecordDecl *D) -> const CXXRecordDecl * {
-    if (auto *Def = D->getDefinition())
-      return Def;
-    return D;
-  };
-
   // If it's a class template specialization, find the template or partial
   // specialization from which it was instantiated.
   if (auto *TD = dyn_cast<ClassTemplateSpecializationDecl>(this)) {
     auto From = TD->getInstantiatedFrom();
     if (auto *CTD = dyn_cast_if_present<ClassTemplateDecl *>(From)) {
-      while (auto *NewCTD = CTD->getInstantiatedFromMemberTemplate()) {
-        if (NewCTD->isMemberSpecialization())
+      while (!CTD->isMemberSpecialization()) {
+        ClassTemplateDecl *D = CTD->getInstantiatedFromMemberTemplate();
+        if (!D)
           break;
-        CTD = NewCTD;
+        CTD = D;
       }
-      return GetDefinitionOrSelf(CTD->getTemplatedDecl());
+      return CTD->getTemplatedDecl();
     }
     if (auto *CTPSD =
             dyn_cast_if_present<ClassTemplatePartialSpecializationDecl *>(
                 From)) {
-      while (auto *NewCTPSD = CTPSD->getInstantiatedFromMember()) {
-        if (NewCTPSD->isMemberSpecialization())
+      while (!CTPSD->isMemberSpecialization()) {
+        ClassTemplatePartialSpecializationDecl *D =
+            CTPSD->getInstantiatedFromMember();
+        if (!D)
           break;
-        CTPSD = NewCTPSD;
+        CTPSD = D;
       }
-      return GetDefinitionOrSelf(CTPSD);
+      return CTPSD;
     }
   }
 
@@ -2119,7 +2115,7 @@ const CXXRecordDecl *CXXRecordDecl::getTemplateInstantiationPattern() const {
       const CXXRecordDecl *RD = this;
       while (auto *NewRD = RD->getInstantiatedFromMemberClass())
         RD = NewRD;
-      return GetDefinitionOrSelf(RD);
+      return RD;
     }
   }
 
@@ -2354,7 +2350,7 @@ bool CXXRecordDecl::isEffectivelyFinal() const {
 
 void CXXDeductionGuideDecl::anchor() {}
 
-bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
+bool ExplicitSpecifier::isEquivalent(ExplicitSpecifier Other) const {
   if ((getKind() != Other.getKind() ||
        getKind() == ExplicitSpecKind::Unresolved)) {
     if (getKind() == ExplicitSpecKind::Unresolved &&
@@ -2369,7 +2365,7 @@ bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
   return true;
 }
 
-ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
+ExplicitSpecifier ExplicitSpecifier::getFromDecl(const FunctionDecl *Function) {
   switch (Function->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
     return cast<CXXConstructorDecl>(Function)->getExplicitSpecifier();
