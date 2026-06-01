@@ -21,11 +21,11 @@
 // (e.g. `vector<1x32xindex>`) are handled by treating the inner dim as the
 // lane dim.
 //
-// The `Broadcast` case (constancy along the innermost dim equals the inner
-// length) is special: there is no layout-only encoding for "all lanes load
-// the same scalar", so for loads we still rewrite to a length-1
-// `xegpu.load` followed by `vector.broadcast`. Stores in this shape are
-// skipped (last-writer-wins is ambiguous).
+// All-equal offsets ("uniform inner dim") are detected by the analysis
+// but the pass currently leaves such ops alone — there is no layout-only
+// encoding for "all lanes load the same scalar", and the previous
+// length-1-load + `vector.broadcast` rewrite was removed because it
+// conflicts with downstream layout propagation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,6 +37,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -49,13 +50,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
-
-namespace mlir {
-namespace xegpu {
-#define GEN_PASS_DEF_XEGPUCOALESCEGATHERSCATTER
-#include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
-} // namespace xegpu
-} // namespace mlir
 
 #define DEBUG_TYPE "xegpu-coalesce-gather-scatter"
 
@@ -866,7 +860,7 @@ using ::mlir::xegpu::detail::axis_dataflow::AxisInfoLattice;
 //===----------------------------------------------------------------------===//
 
 struct CoalesceDecision {
-  enum class Kind { None, Broadcast, Chunked };
+  enum class Kind { None, Chunked };
   Kind kind = Kind::None;
   int64_t laneLayout = 1; // lane_layout along the innermost dim
   int64_t factor = 1;     // lane_data factor along the innermost dim
@@ -907,11 +901,10 @@ static CoalesceDecision decide(const AxisInfo &info,
   if (inner < 2)
     return d;
 
-  // Broadcast if the innermost dim is uniform across all lanes.
-  if (info.constancy[innerDim] >= inner) {
-    d.kind = CoalesceDecision::Kind::Broadcast;
+  // All-equal offsets: every lane sees the same address. There is no
+  // layout-only encoding for this; we leave the op alone.
+  if (info.constancy[innerDim] >= inner)
     return d;
-  }
 
   // Pick lane_layout first: PropagateLayout's default for a 1-D / inner dim
   // is `min(subgroupSize, inner)`, rounded down to a divisor of inner.
@@ -979,40 +972,6 @@ static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
 // Rewrites.
 //===----------------------------------------------------------------------===//
 
-/// Replace an `xegpu.load` whose offsets are uniform along the innermost
-/// dim with a length-1 load + `vector.broadcast` back to the original
-/// value type. Works for any rank; the length-1 load uses an inner-dim
-/// length-1 offsets/mask vector.
-static LogicalResult rewriteBroadcastLoad(xegpu::LoadGatherOp op,
-                                          PatternRewriter &rewriter) {
-  Location loc = op.getLoc();
-  auto valueTy = op.getValueType();
-  auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
-  if (!valueTy || !offsetsTy)
-    return failure();
-
-  // Extract a scalar offset from index 0...0.
-  SmallVector<int64_t> zeros(offsetsTy.getRank(), 0);
-  Value scalarOffset =
-      vector::ExtractOp::create(rewriter, loc, op.getOffsets(), zeros);
-  auto idxVecTy = VectorType::get({1}, rewriter.getIndexType());
-  auto maskVecTy = VectorType::get({1}, rewriter.getI1Type());
-  Value newOffsets =
-      vector::BroadcastOp::create(rewriter, loc, idxVecTy, scalarOffset);
-  Value newMask = arith::ConstantOp::create(
-      rewriter, loc, DenseIntElementsAttr::get(maskVecTy, true));
-  auto newValueTy = VectorType::get({1}, valueTy.getElementType());
-  auto newLoad = xegpu::LoadGatherOp::create(
-      rewriter, loc, newValueTy, op.getSource(), newOffsets, newMask,
-      /*chunk_size=*/IntegerAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-      op.getL3HintAttr(), /*layout=*/xegpu::DistributeLayoutAttr());
-  Value scalar = vector::ExtractOp::create(rewriter, loc, newLoad.getResult(),
-                                           ArrayRef<int64_t>{0});
-  Value bcast = vector::BroadcastOp::create(rewriter, loc, valueTy, scalar);
-  rewriter.replaceOp(op, bcast);
-  return success();
-}
-
 namespace {
 
 /// Look up the subgroup size from the enclosing gpu.module's xevm.target.
@@ -1026,148 +985,133 @@ static unsigned lookupSubgroupSize(Operation *op) {
   return uArch ? static_cast<unsigned>(uArch->getSubgroupSize()) : 16u;
 }
 
-struct CoalesceLoadPattern final : OpRewritePattern<xegpu::LoadGatherOp> {
-  CoalesceLoadPattern(MLIRContext *ctx, unsigned maxChunkSize,
-                      DataFlowSolver &solver)
-      : OpRewritePattern(ctx), maxChunkSize(maxChunkSize), solver(solver) {}
+/// Discardable attribute name for the coalesce hint.
+static constexpr llvm::StringLiteral kCoalesceHintAttrName =
+    "xegpu.coalesce_hint";
 
-  LogicalResult matchAndRewrite(xegpu::LoadGatherOp op,
-                                PatternRewriter &rewriter) const override {
-    auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
-    if (!offsetsTy)
-      return rewriter.notifyMatchFailure(op, "expected vector offsets");
-    if (offsetsTy.getNumElements() <= 1)
-      return rewriter.notifyMatchFailure(op, "nothing to coalesce");
-    auto valueTy = op.getValueType();
-    if (!valueTy)
-      return rewriter.notifyMatchFailure(op, "expected vector value");
-    if (!isAllTrueMask(op.getMask()))
-      return rewriter.notifyMatchFailure(op, "non-uniform mask");
+/// Common analysis preconditions: vector offsets/value, all-true mask,
+/// no existing non-trivial lane_data, no explicit chunk_size > 1.
+template <typename OpTy>
+static bool isCandidateForCoalesce(OpTy op) {
+  auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+  if (!offsetsTy || offsetsTy.getNumElements() <= 1)
+    return false;
+  if (!op.getValueType())
+    return false;
+  if (!isAllTrueMask(op.getMask()))
+    return false;
+  if (auto layout = op.getLayoutAttr())
+    if (!layout.getEffectiveLaneDataAsInt().empty())
+      return false;
+  if (op.getChunkSizeAttr() && op.getChunkSize().value_or(1) > 1)
+    return false;
+  return true;
+}
 
-    // Already coalesced (a previous run, or another pass tagged it).
-    if (auto layout = op.getLayoutAttr())
-      if (!layout.getEffectiveLaneDataAsInt().empty())
-        return rewriter.notifyMatchFailure(op, "lane_data already set");
+/// Run the analysis on a single op. If the offsets analyze as `Chunked`,
+/// stamp a `xegpu.coalesce_hint` attribute carrying the FCD lane_data
+/// factor.
+template <typename OpTy>
+static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
+                                unsigned maxChunkSize) {
+  if (!isCandidateForCoalesce(op))
+    return;
+  auto offsetsTy = cast<VectorType>(op.getOffsets().getType());
+  unsigned subgroupSize = lookupSubgroupSize(op);
+  const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
+  if (!lat || !lat->getValue().isInitialized())
+    return;
+  int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
+  auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
+                  maxChunkSize, subgroupSize);
+  if (d.kind != CoalesceDecision::Kind::Chunked)
+    return;
+  auto hint = xegpu::CoalesceHintAttr::get(op.getContext(), d.factor);
+  op->setAttr(kCoalesceHintAttrName, hint);
+}
 
-    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
-    if (op.getChunkSizeAttr() && origChunk > 1)
-      return rewriter.notifyMatchFailure(
-          op, "explicit chunk_size > 1, leaving op alone");
+/// Apply a stamped hint on `op`: build a lane_layout/lane_data/inst_data
+/// layout from the hint's `factor` and the op's offsets inner extent +
+/// chip-derived subgroup size, install it, drop a trivial `chunk_size = 1`,
+/// and remove the hint. Returns success on apply (or no-op when no hint),
+/// failure when the hint is malformed.
+template <typename OpTy>
+static LogicalResult applyHintOnOp(OpTy op) {
+  auto hint = op->template getAttrOfType<xegpu::CoalesceHintAttr>(
+      kCoalesceHintAttrName);
+  if (!hint)
+    return success(); // no hint: idempotent no-op.
 
-    unsigned subgroupSize = lookupSubgroupSize(op);
+  auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+  auto valueTy = op.getValueType();
+  if (!offsetsTy || !valueTy || offsetsTy.getNumElements() <= 1)
+    return failure();
 
-    const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
-    if (!lat || !lat->getValue().isInitialized())
-      return rewriter.notifyMatchFailure(op, "no axis-info available");
+  int64_t factor = hint.getFactor().getInt();
+  int64_t inner = offsetsTy.getShape().back();
+  unsigned subgroupSize = lookupSubgroupSize(op);
+  int64_t laneLayout =
+      largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
+  if (laneLayout < 1 || inner % (laneLayout * factor) != 0)
+    return failure();
 
-    auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
-                    maxChunkSize, subgroupSize);
-
-    // TODO: Don't do broadcast coalescing for now.
-    // if (d.kind == CoalesceDecision::Kind::Broadcast)
-    //   return rewriteBroadcastLoad(op, rewriter);
-
-    if (d.kind != CoalesceDecision::Kind::Chunked)
-      return rewriter.notifyMatchFailure(op, "offsets not coalescible");
-
-    auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
-                                      d.laneLayout, d.factor);
-    // If the op carried an explicit chunk_size = 1 (the trivial / default
-    // value), drop it: the new lane_data FCD > 1 supersedes it.
-    bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && d.factor > 1;
-    rewriter.modifyOpInPlace(op, [&] {
-      op.setLayoutAttr(layout);
-      if (dropChunk)
-        op.removeChunkSizeAttr();
-    });
-    return success();
-  }
-
-  unsigned maxChunkSize;
-  DataFlowSolver &solver;
-};
-
-struct CoalesceStorePattern final : OpRewritePattern<xegpu::StoreScatterOp> {
-  CoalesceStorePattern(MLIRContext *ctx, unsigned maxChunkSize,
-                       DataFlowSolver &solver)
-      : OpRewritePattern(ctx), maxChunkSize(maxChunkSize), solver(solver) {}
-
-  LogicalResult matchAndRewrite(xegpu::StoreScatterOp op,
-                                PatternRewriter &rewriter) const override {
-    auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
-    if (!offsetsTy)
-      return rewriter.notifyMatchFailure(op, "expected vector offsets");
-    if (offsetsTy.getNumElements() <= 1)
-      return rewriter.notifyMatchFailure(op, "nothing to coalesce");
-    auto valueTy = op.getValueType();
-    if (!valueTy)
-      return rewriter.notifyMatchFailure(op, "expected vector value");
-    if (!isAllTrueMask(op.getMask()))
-      return rewriter.notifyMatchFailure(op, "non-uniform mask");
-
-    if (auto layout = op.getLayoutAttr())
-      if (!layout.getEffectiveLaneDataAsInt().empty())
-        return rewriter.notifyMatchFailure(op, "lane_data already set");
-
-    int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
-    if (op.getChunkSizeAttr() && origChunk > 1)
-      return rewriter.notifyMatchFailure(
-          op, "explicit chunk_size > 1, leaving op alone");
-
-    unsigned subgroupSize = lookupSubgroupSize(op);
-
-    const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
-    if (!lat || !lat->getValue().isInitialized())
-      return rewriter.notifyMatchFailure(op, "no axis-info available");
-
-    auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
-                    maxChunkSize, subgroupSize);
-
-    if (d.kind == CoalesceDecision::Kind::Broadcast)
-      return rewriter.notifyMatchFailure(
-          op, "all-equal offsets on store would be ambiguous");
-
-    if (d.kind != CoalesceDecision::Kind::Chunked)
-      return rewriter.notifyMatchFailure(op, "offsets not coalescible");
-
-    auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
-                                      d.laneLayout, d.factor);
-    bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && d.factor > 1;
-    rewriter.modifyOpInPlace(op, [&] {
-      op.setLayoutAttr(layout);
-      if (dropChunk)
-        op.removeChunkSizeAttr();
-    });
-    return success();
-  }
-
-  unsigned maxChunkSize;
-  DataFlowSolver &solver;
-};
-
-struct XeGPUCoalesceGatherScatterPass final
-    : public xegpu::impl::XeGPUCoalesceGatherScatterBase<
-          XeGPUCoalesceGatherScatterPass> {
-  using XeGPUCoalesceGatherScatterBase::XeGPUCoalesceGatherScatterBase;
-
-  void runOnOperation() override {
-    Operation *root = getOperation();
-
-    DataFlowSolver solver;
-    solver.load<dataflow::DeadCodeAnalysis>();
-    solver.load<mlir::xegpu::detail::axis_dataflow::AxisInfoAnalysis>();
-    if (failed(solver.initializeAndRun(root)))
-      return signalPassFailure();
-
-    MLIRContext *ctx = &getContext();
-    RewritePatternSet patterns(ctx);
-    patterns.add<CoalesceLoadPattern, CoalesceStorePattern>(ctx, maxChunkSize,
-                                                            solver);
-    if (failed(applyPatternsGreedily(root, std::move(patterns))))
-      return signalPassFailure();
-  }
-};
+  auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
+                                    laneLayout, factor);
+  int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
+  bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && factor > 1;
+  op.setLayoutAttr(layout);
+  if (dropChunk)
+    op.removeChunkSizeAttr();
+  op->removeAttr(kCoalesceHintAttrName);
+  return success();
+}
 
 } // namespace
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// Public APIs.
+//===----------------------------------------------------------------------===//
+
+void mlir::xegpu::runCoalesceGatherScatterAnalysis(
+    Operation *root, const CoalesceGatherScatterAnalysisOptions &options) {
+  DataFlowSolver solver;
+  solver.load<dataflow::DeadCodeAnalysis>();
+  solver.load<mlir::xegpu::detail::axis_dataflow::AxisInfoAnalysis>();
+  if (failed(solver.initializeAndRun(root)))
+    return;
+
+  root->walk([&](Operation *op) {
+    if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+      analyzeAndStampHint(load, solver, options.maxChunkSize);
+    else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+      analyzeAndStampHint(store, solver, options.maxChunkSize);
+  });
+}
+
+LogicalResult mlir::xegpu::applyCoalesceGatherScatterHint(Operation *op) {
+  if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+    return applyHintOnOp(load);
+  if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+    return applyHintOnOp(store);
+  // Hint attached to an unsupported op: silently drop it.
+  if (op->hasAttr(kCoalesceHintAttrName))
+    op->removeAttr(kCoalesceHintAttrName);
+  return success();
+}
+
+void mlir::xegpu::applyCoalesceGatherScatterHints(Operation *root) {
+  root->walk([&](Operation *op) {
+    if (op->hasAttr(kCoalesceHintAttrName))
+      (void)applyCoalesceGatherScatterHint(op);
+  });
+}
+
+void mlir::xegpu::clearCoalesceGatherScatterHints(Operation *root) {
+  StringRef name = kCoalesceHintAttrName;
+  root->walk([&](Operation *op) {
+    if (op->hasAttr(name))
+      op->removeAttr(name);
+  });
+}

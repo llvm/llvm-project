@@ -1214,6 +1214,21 @@ RangeAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// XeGPU_CoalesceHintAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult CoalesceHintAttr::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    IntegerAttr factor) {
+  int64_t f = factor.getInt();
+  if (f < 2)
+    return emitError() << "'factor' : " << f << " must be >= 2";
+  if ((f & (f - 1)) != 0)
+    return emitError() << "'factor' : " << f << " must be a power of two";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // XeGPU_TensorDescType
 //===----------------------------------------------------------------------===//
 

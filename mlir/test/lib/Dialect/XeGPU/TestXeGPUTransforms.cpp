@@ -495,6 +495,48 @@ struct TestXeGPULayoutInterface
   }
 };
 
+struct TestXeGPUCoalesceGatherScatter
+    : public PassWrapper<TestXeGPUCoalesceGatherScatter, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUCoalesceGatherScatter)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-coalesce-gather-scatter";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the XeGPU coalesce-gather-scatter analysis + apply APIs.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+  }
+
+  TestXeGPUCoalesceGatherScatter() = default;
+  TestXeGPUCoalesceGatherScatter(const TestXeGPUCoalesceGatherScatter &pass)
+      : PassWrapper(pass) {}
+
+  Option<unsigned> maxChunkSize{
+      *this, "max-chunk-size",
+      llvm::cl::desc("Upper bound on the produced lane_data FCD."),
+      llvm::cl::init(8)};
+
+  Option<bool> analyzeOnly{
+      *this, "analyze-only",
+      llvm::cl::desc("Only run the analysis (stamp xegpu.coalesce_hint "
+                     "attributes); do not apply."),
+      llvm::cl::init(false)};
+
+  void runOnOperation() override {
+    xegpu::CoalesceGatherScatterAnalysisOptions options;
+    options.maxChunkSize = maxChunkSize;
+    xegpu::runCoalesceGatherScatterAnalysis(getOperation(), options);
+    if (!analyzeOnly)
+      xegpu::applyCoalesceGatherScatterHints(getOperation());
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -509,6 +551,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();
+  PassRegistration<TestXeGPUCoalesceGatherScatter>();
 }
 } // namespace test
 } // namespace mlir

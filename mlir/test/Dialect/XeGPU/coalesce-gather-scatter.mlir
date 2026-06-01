@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file -xegpu-coalesce-gather-scatter %s | FileCheck %s
-// RUN: mlir-opt -split-input-file -xegpu-coalesce-gather-scatter="max-chunk-size=4" %s | FileCheck --check-prefix=CHECK4 %s
+// RUN: mlir-opt -split-input-file -test-xegpu-coalesce-gather-scatter %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -test-xegpu-coalesce-gather-scatter="max-chunk-size=4" %s | FileCheck --check-prefix=CHECK4 %s
 
 // -----
 // vector.step offsets -> stride 1, fully coalescible.
