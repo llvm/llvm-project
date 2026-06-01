@@ -2643,8 +2643,10 @@ def LLVM_ModuleFlagsOp
   let summary = "Information about module properties";
   let description = [{
     Represents the equivalent in MLIR for LLVM's `llvm.module.flags` metadata,
-    which requires a list of metadata triplets. Each triplet entry is described
-    by a `ModuleFlagAttr`.
+    which requires a list of metadata triplets (combining kind, name, value),
+    either specified directly by a `ModuleFlagAttr` or defined by an attribute
+    implementing `ModuleFlagAttrInterface` (which is used to wrap the details
+    of metadata combining, provided other verifications, etc.)
 
     Example:
     ```mlir

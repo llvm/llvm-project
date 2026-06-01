@@ -100,6 +100,11 @@ bool isValidLoadStoreImpl(Type type, ptr::AtomicOrdering ordering,
                           std::optional<int64_t> alignment,
                           const ::mlir::DataLayout *dataLayout,
                           function_ref<InFlightDiagnostic()> emitError);
+
+/// Verifies that a module flag value can be exported to LLVM IR.
+LogicalResult
+verifyModuleFlagValue(StringAttr key, Attribute value,
+                      function_ref<InFlightDiagnostic()> emitError);
 } // namespace detail
 } // namespace LLVM
 } // namespace mlir

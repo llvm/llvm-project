@@ -544,10 +544,9 @@ FailureOr<::mlir::Attribute> TargetAttr::query(DataLayoutEntryKey key) {
 // ModuleFlagAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult
-ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
-                       Attribute value) {
+LogicalResult LLVM::detail::verifyModuleFlagValue(
+    StringAttr key, Attribute value,
+    function_ref<InFlightDiagnostic()> emitError) {
   if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
     auto arrayAttr = dyn_cast<ArrayAttr>(value);
     if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
@@ -565,7 +564,7 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return success();
   }
 
-  if (isa<IntegerAttr, StringAttr>(value))
+  if (isa<IntegerAttr, StringAttr, IntrinsicIntegerAttrInterface>(value))
     return success();
 
   // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
@@ -578,7 +577,24 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
         llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
       return success();
 
-  return emitError() << "only integer, string, and string-array values are "
-                        "currently supported for unknown key '"
-                     << key << "'";
+  return emitError()
+         << "only integer, integer-like dialect attributes, string, "
+            "and string-array values are currently supported for "
+            "unknown key '"
+         << key << "'";
 }
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  return LLVM::detail::verifyModuleFlagValue(key, value, emitError);
+}
+
+ModFlagBehavior ModuleFlagAttr::getModuleFlagBehavior() const {
+  return getBehavior();
+}
+
+StringAttr ModuleFlagAttr::getModuleFlagKey() const { return getKey(); }
+
+Attribute ModuleFlagAttr::getModuleFlagValue() const { return getValue(); }
