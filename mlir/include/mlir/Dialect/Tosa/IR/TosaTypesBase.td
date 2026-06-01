@@ -109,25 +109,39 @@ def Tosa_MXFPValue
 def Tosa_MXFPScale
     : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
 
-def Tosa_BlockScaled : Tosa_Type<"BlockScaled", "block_scaled"> {
+def Tosa_BlockScaled
+    : Tosa_Type<"BlockScaled", "block_scaled",
+                [DeclareTypeInterfaceMethods<
+                    DenseElementTypeInterface, ["getDenseElementBitSize",
+                                                "convertToAttribute",
+                                                "convertFromAttribute"]>]> {
   let summary = "Block scaled tensor element type.";
 
   let description = [{
     This does not specify an implementation type. A tensor of this type is a 
     tensor which has block-scaled quantization applied.
 
-    This compound type is made up of 3 components:
+    This compound type is made up of 3 concrete components and 1 optional:
     `value_type` - The type of the data values in each block.
     `scale_type` - The type of the scale value associated with each block.
     `block_shape` - The size and axis of each block. Currently only supports
       specifying the block size along the innermost dimension.
+    `scale_values` - Optional array of per-block scale values. If not provided,
+      the type is assumed to be dynamically quantized at runtime.
   }];
 
   let parameters = (ins Tosa_MXFPValue:$value_type, Tosa_MXFPScale:$scale_type,
-      EnumParameter<Tosa_BlockShape>:$block_shape);
+      EnumParameter<Tosa_BlockShape>:$block_shape,
+      OptionalArrayRefParameter<"Attribute">:$scale_values);
 
   let assemblyFormat =
-      "`<` $value_type```:```$scale_type```:```$block_shape `>`";
+      "`<` $value_type```:```$scale_type```:```$block_shape "
+      "(`,` `{` custom<ScaleValues>($scale_values, ref($scale_type))^ `}`)? "
+      "`>`";
+
+  let extraClassDeclaration = [{
+    bool hasScaleValues() const { return !getScaleValues().empty(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

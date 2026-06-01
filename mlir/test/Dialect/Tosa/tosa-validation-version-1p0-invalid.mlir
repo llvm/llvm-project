@@ -174,6 +174,24 @@ func.func @test_const_fp6e3m2(%arg0 : index) -> tensor<4xf6E3M2FN> {
 
 // -----
 
+func.func @test_const_block_scaled_types() -> (tensor<1x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>) {
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %0 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0.0 : f4E2M1FN>}> : () -> tensor<1x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %1 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0.0 : f6E2M3FN>}> : () -> tensor<1x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %2 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0.0 : f6E3M2FN>}> : () -> tensor<1x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %3 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<1x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %4 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0.0 : f8E5M2>}> : () -> tensor<1x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
+  // expected-error@+1 {{'tosa.const' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
+  %5 = "tosa.const"() <{values = dense<tensor<1x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32, {1.0}>> : 0 : i8>}> : () -> tensor<1x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0, %1, %2, %3, %4, %5 : tensor<1x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<1x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
 func.func @test_cast_from_block_scaled(%arg0: tensor<4x32xf8E5M2>, %arg1: tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32> {
   // expected-error@+1 {{'tosa.cast_from_block_scaled' op illegal: requires specification version compatible with 1.1.draft (got 1.0) and requires any of [mxfp] profiles/extensions to be specified in the target environment}}
   %0 = tosa.cast_from_block_scaled %arg0, %arg1 {block_size = #tosa.block_size<BLOCK_SIZE_32> : i32} : (tensor<4x32xf8E5M2>, tensor<4x1xf8E8M0FNU>) -> tensor<4x32xf32>

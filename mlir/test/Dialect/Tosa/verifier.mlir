@@ -2115,3 +2115,72 @@ func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
   %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127, 245]>} : () -> tensor<2x!tosa.mxint8>
   return %0 : tensor<2x!tosa.mxint8>
 }
+
+// -----
+
+func.func @test_block_scaled_const_splat_ui8() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> : 0 : ui8>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_const_splat_fp64() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> : 0.0>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_const_integer_scale_value() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+2 {{unexpected decimal integer literal for a floating point value}}
+  // expected-note@+1 {{add a trailing dot to make the literal a float}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {1 : i32, 2 : i32}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_const_negative_scale_value() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{scale value must be non-negative, got -1.000000e+00}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0 : f8E8M0FNU, -1.0 : f8E8M0FNU}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_const_scale_value_non_float_explicit_type() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{parsed attribute type 'i32' does not match expected scale type 'f8E8M0FNU'}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {1.0 : i32}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+!mxint8 = !tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>
+!mxint8_scale = !tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32, {1.0, 2.0, 4.0}>
+
+func.func @test_block_scaled_const_invalid_num_scales() -> tensor<2x32x!mxint8> {
+  // expected-error@+1 {{tensor type 'tensor<2x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32, {1.000000e+00, 2.000000e+00, 4.000000e+00}>>' has 2 blocks but got 3 scale values}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!mxint8_scale> : 0 : i8>}> : () -> tensor<2x32x!mxint8>
+  return %0 : tensor<2x32x!mxint8>
+}
+
+// -----
+
+func.func @test_block_scaled_const_invalid_num_scales_wide_inner_dim() -> tensor<2x64x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>> {
+  // expected-error@+1 {{tensor type 'tensor<2x64x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32, {1.000000e+00, 2.000000e+00}>>' has 4 blocks but got 2 scale values}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x64x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32, {1.0, 2.0}>> : 0 : i8>}> : () -> tensor<2x64x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
+  return %0 : tensor<2x64x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
+}
+
+// -----
+
+func.func @test_block_scaled_const_cast_scale_values_propagate() -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.0, 4.0}>> {
+  // expected-error@+2 {{tensor type 'tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.000000e+00, 4.000000e+00}>>' does not support scale values for this operation}}
+  // expected-error@+1 {{'tosa.const' op result #0 must be tosa-conformant tensor of number values, but got 'tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.000000e+00, 4.000000e+00}>>'}}
+  %0 = "tosa.const"() <{values = dense<tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.0, 4.0}>> : 0.0 : f8E4M3FN>}> : () -> tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.0, 4.0}>>
+  return %0 : tensor<2x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32, {2.0, 4.0}>>
+}
