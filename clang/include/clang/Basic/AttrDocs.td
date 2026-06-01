@@ -10055,3 +10055,38 @@ different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
   }];
 }
+
+def AliasDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``alias`` attribute causes the declaration to be emitted as an alias to
+another symbol, which must be defined in the same translation unit.
+
+The attribute can be applied to both functions and global variables. The 
+attribute must be placed on a declaration, as opposed to a definition.
+
+.. code-block:: c
+
+  void __impl(void) { /* ... */ }
+  void foo(void) __attribute__((alias("__impl")));
+
+In this example, ``foo`` becomes an alias for ``__impl``. 
+
+Note that the aliasee is specified as a string representing the name of the 
+symbol as it appears in the object file. If the symbols are subject to 
+name mangling (as in C++), the aliasee string must match the mangled name. 
+If the aliasee is not found, Clang will emit a diagnostic suggesting the 
+correct mangled name to use.
+
+Clang enforces compatibility between the alias and its target: it emits an 
+error if a function alias points to a variable (or vice versa), and issues 
+a warning if a function alias points to a function with a different 
+signature. For variables, while Clang allows aliasing ABI-compatible types 
+(such as an ``enum`` and its underlying integer type), the alias and the 
+target must have the same size and alignment to avoid undefined behavior.
+
+This attribute requires support from the target's assembler and object file 
+format. Notably, it is not supported on Apple (Darwin) platforms or in 
+CUDA versions prior to 10.0.
+  }];
+}

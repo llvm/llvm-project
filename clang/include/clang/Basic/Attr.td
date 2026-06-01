@@ -868,7 +868,7 @@ def Alias : Attr {
   let Spellings = [GCC<"alias">];
   let Args = [StringArgument<"Aliasee">];
   let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
-  let Documentation = [Undocumented];
+  let Documentation = [AliasDocs];
 }
 
 def BuiltinAlias : Attr {
