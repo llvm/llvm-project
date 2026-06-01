@@ -1,4 +1,4 @@
-//===- StaticMemoryPlannerAnalysis.cpp - Analysis for static memory -------===//
+//===- StaticMemoryPlannerAnalysis.cpp - Static memory planning -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Discovers same-block memref.alloc/memref.dealloc pairs and analyzes their
-// lifetime relationships to identify opportunities for memory reuse.
-//
-// This pass performs basic structural analysis without computing actual memory
-// layouts. It reports which allocations are eligible for static planning and
-// whether pairs of allocations have non-overlapping lifetimes (can reuse).
+// Transforms memref.alloc/memref.dealloc pairs into a single arena allocation
+// with subviews. Uses simple sequential offset assignment where each allocation
+// gets its own space without overlap (baseline algorithm for e2e testing).
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "static-memory-planner-analysis"
+#define DEBUG_TYPE "static-memory-planner"
 
 namespace mlir {
 namespace bufferization {
@@ -31,18 +29,18 @@ namespace bufferization {
 } // namespace bufferization
 } // namespace mlir
 
-using namespace mlir;
-
 namespace {
 
 //===----------------------------------------------------------------------===//
 // Data structures
 //===----------------------------------------------------------------------===//
 
-/// A candidate allocation with its matching deallocation.
+/// A candidate allocation with its matching deallocation and assigned offset.
 struct AllocationCandidate {
-  memref::AllocOp alloc;
-  memref::DeallocOp dealloc;
+  mlir::memref::AllocOp alloc;
+  mlir::memref::DeallocOp dealloc;
+  int64_t offset = 0;      // Offset in elements from arena start
+  int64_t sizeInElements = 0; // Size in elements
 };
 
 //===----------------------------------------------------------------------===//
@@ -51,10 +49,10 @@ struct AllocationCandidate {
 
 /// Finds the unique dealloc operation for a given alloc value.
 /// Returns nullptr if there are zero or multiple deallocs.
-static memref::DeallocOp findUniqueDealloc(Value allocValue) {
-  memref::DeallocOp deallocOp = nullptr;
-  for (Operation *user : allocValue.getUsers()) {
-    if (auto dealloc = dyn_cast<memref::DeallocOp>(user)) {
+static mlir::memref::DeallocOp findUniqueDealloc(mlir::Value allocValue) {
+  mlir::memref::DeallocOp deallocOp = nullptr;
+  for (mlir::Operation *user : allocValue.getUsers()) {
+    if (auto dealloc = mlir::dyn_cast<mlir::memref::DeallocOp>(user)) {
       if (deallocOp)
         return nullptr; // Multiple deallocs found
       deallocOp = dealloc;
@@ -63,29 +61,12 @@ static memref::DeallocOp findUniqueDealloc(Value allocValue) {
   return deallocOp;
 }
 
-/// Checks if two allocation candidates have non-overlapping lifetimes.
-/// Returns true if the first's dealloc is strictly before the second's alloc,
-/// or vice versa.
-static bool canReuseMemory(const AllocationCandidate &first,
-                           const AllocationCandidate &second) {
-  Operation *firstDealloc = first.dealloc;
-  Operation *firstAlloc = first.alloc;
-  Operation *secondDealloc = second.dealloc;
-  Operation *secondAlloc = second.alloc;
-
-  // Check if both are in the same block
-  if (firstAlloc->getBlock() != secondAlloc->getBlock())
-    return false;
-
-  // Check if first ends before second starts
-  if (firstDealloc->isBeforeInBlock(secondAlloc))
-    return true;
-
-  // Check if second ends before first starts
-  if (secondDealloc->isBeforeInBlock(firstAlloc))
-    return true;
-
-  return false;
+/// Compute the number of elements in a static-shape memref.
+static int64_t computeSizeInElements(mlir::MemRefType memrefType) {
+  int64_t size = 1;
+  for (int64_t dim : memrefType.getShape())
+    size *= dim;
+  return size;
 }
 
 //===----------------------------------------------------------------------===//
@@ -93,67 +74,97 @@ static bool canReuseMemory(const AllocationCandidate &first,
 //===----------------------------------------------------------------------===//
 
 struct StaticMemoryPlannerAnalysisPass
-    : public bufferization::impl::StaticMemoryPlannerAnalysisPassBase<
+    : public mlir::bufferization::impl::StaticMemoryPlannerAnalysisPassBase<
           StaticMemoryPlannerAnalysisPass> {
 public:
   StaticMemoryPlannerAnalysisPass() = default;
 
   void runOnOperation() override {
-    Operation *op = getOperation();
+    mlir::Operation *op = getOperation();
 
-    // Collect eligible allocation candidates
-    SmallVector<AllocationCandidate> candidates;
+    // Step 1: Collect eligible allocation candidates
+    llvm::SmallVector<AllocationCandidate> candidates;
 
-    op->walk([&](memref::AllocOp allocOp) {
-      MemRefType memrefType = allocOp.getType();
+    op->walk([&](mlir::memref::AllocOp allocOp) {
+      mlir::MemRefType memrefType = allocOp.getType();
 
       // Skip dynamic shapes
       if (!memrefType.hasStaticShape()) {
         ++numSkipDynamic;
-        allocOp.emitRemark("static-memory-planner: skip: dynamic shape");
         return;
       }
 
       // Find unique dealloc in the same block
-      memref::DeallocOp deallocOp = findUniqueDealloc(allocOp.getResult());
+      mlir::memref::DeallocOp deallocOp = findUniqueDealloc(allocOp.getResult());
       if (!deallocOp) {
         ++numSkipNoDealloc;
-        allocOp.emitRemark(
-            "static-memory-planner: skip: no unique dealloc");
         return;
       }
 
       if (deallocOp->getBlock() != allocOp->getBlock()) {
         ++numSkipNoDealloc;
-        allocOp.emitRemark(
-            "static-memory-planner: skip: dealloc in different block");
         return;
       }
 
       // This allocation is eligible
       ++numEligible;
-      allocOp.emitRemark("static-memory-planner: eligible");
-      candidates.push_back({allocOp, deallocOp});
+      AllocationCandidate candidate;
+      candidate.alloc = allocOp;
+      candidate.dealloc = deallocOp;
+      candidate.sizeInElements = computeSizeInElements(memrefType);
+      candidates.push_back(candidate);
     });
 
-    // Analyze reuse opportunities between pairs of candidates
-    unsigned numReusable = 0;
-    for (size_t i = 0; i < candidates.size(); ++i) {
-      for (size_t j = i + 1; j < candidates.size(); ++j) {
-        if (canReuseMemory(candidates[i], candidates[j])) {
-          ++numReusable;
-          LLVM_DEBUG(llvm::dbgs()
-                     << "[static-memory-planner] reuse opportunity: alloc "
-                     << i << " and alloc " << j << "\n");
-        }
-      }
+    if (candidates.empty())
+      return;
+
+    // Step 2: Compute simple sequential offsets (no overlap optimization)
+    int64_t totalSize = 0;
+    for (auto &candidate : candidates) {
+      candidate.offset = totalSize;
+      totalSize += candidate.sizeInElements;
+      LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] offset="
+                              << candidate.offset
+                              << " size=" << candidate.sizeInElements << "\n");
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] summary: eligible="
-                            << (unsigned)numEligible << " skip-dynamic="
-                            << (unsigned)numSkipDynamic << " skip-no-dealloc="
-                            << (unsigned)numSkipNoDealloc << " reusable-pairs="
-                            << numReusable << "\n");
+    // Step 3: Find the first allocation's location to place arena
+    mlir::Operation *firstAlloc = candidates.front().alloc;
+    mlir::OpBuilder builder(firstAlloc);
+
+    // Get element type from first allocation (assume all same type for now)
+    mlir::Type elementType = candidates.front().alloc.getType().getElementType();
+    
+    // Step 4: Create arena allocation
+    auto arenaType = mlir::MemRefType::get({totalSize}, elementType);
+    auto arenaAlloc = mlir::memref::AllocOp::create(builder, firstAlloc->getLoc(), arenaType);
+
+    LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] created arena: size="
+                            << totalSize << " elements\n");
+
+    // Step 5: Replace each alloc with a subview and remove deallocs
+    for (auto &candidate : candidates) {
+      mlir::OpBuilder subviewBuilder(candidate.alloc);
+      
+      // Create subview into arena
+      llvm::SmallVector<mlir::OpFoldResult> offsets, sizes, strides;
+      
+      // Single offset into flat arena
+      offsets.push_back(subviewBuilder.getIndexAttr(candidate.offset));
+      sizes.push_back(subviewBuilder.getIndexAttr(candidate.sizeInElements));
+      strides.push_back(subviewBuilder.getIndexAttr(1));
+      
+      auto subview = mlir::memref::SubViewOp::create(
+          subviewBuilder, candidate.alloc.getLoc(), arenaAlloc.getResult(),
+          offsets, sizes, strides);
+
+      // Replace all uses of the original alloc
+      candidate.alloc.getResult().replaceAllUsesWith(subview.getResult());
+      
+      // Remove the original alloc and dealloc
+      candidate.alloc.erase();
+      candidate.dealloc.erase();
+    }
   }
 };
 
