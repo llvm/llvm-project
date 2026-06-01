@@ -10,7 +10,7 @@ This article is intended to take someone in the state of “I want to write docu
 
 LLVM documentation is written in [Markedly Structured Text (MyST)][myst] and [reStructuredText (reST)][reStructuredText].
 MyST is a Markdown flavor that adds Sphinx documentation extensions.
-MyST is preferred for new docs, and migrating old docs from reST to MyST is an open, ongoing project.
+Markdown is preferred for new docs, and migrating old docs from reStructuredText to Markdown is an open, ongoing project.
 [Sphinx], a documentation generator originally written for Python documentation, generates the LLVM HTML documentation from MyST and reST.
 
 See the {ref}`migration <markdown_migration_guidelines>` section for more information on how to migrate existing docs.
