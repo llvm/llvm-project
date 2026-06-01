@@ -17,6 +17,8 @@ void positiveConstRefBinding(std::optional<std::string> opt,
   const std::string &ref = opt.value_or(fallback);
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
   // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:32: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-FIXES-DEFAULT: const std::string &ref = (opt ? *opt : fallback);
+  // CHECK-FIXES-AGGRESSIVE: const std::string &ref = (opt ? *opt : fallback);
 }
 
 void positiveConstRefParam(std::optional<std::string> opt,
@@ -24,6 +26,8 @@ void positiveConstRefParam(std::optional<std::string> opt,
   consumeRef(opt.value_or(fallback));
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
   // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-FIXES-DEFAULT: consumeRef((opt ? *opt : fallback));
+  // CHECK-FIXES-AGGRESSIVE: consumeRef((opt ? *opt : fallback));
 }
 
 void positiveConstMemberCall(std::optional<std::string> opt,
@@ -31,6 +35,8 @@ void positiveConstMemberCall(std::optional<std::string> opt,
   auto len = opt.value_or(fallback).size();
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
   // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
+  // CHECK-FIXES-DEFAULT: auto len = (opt ? *opt : fallback).size();
+  // CHECK-FIXES-AGGRESSIVE: auto len = (opt ? *opt : fallback).size();
 }
 
 // Ownership-taking contexts: only warn in aggressive mode.
@@ -74,12 +80,11 @@ void positiveSideEffectFallback(std::optional<std::string> opt) {
   // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:27: note: the fallback is always evaluated
 }
 
-// Constructing a temporary with a non-trivial destructor is treated as a side
-// effect (CXXBindTemporaryExpr), so the note fires here too.
+// Constructing a temporary with a non-trivial destructor is not treated as a
+// definite side effect, so no note fires here.
 void positiveSideEffectTemporary(std::optional<std::string> opt) {
   auto val = opt.value_or(std::string("fallback"));
   // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'
-  // CHECK-MESSAGES-AGGRESSIVE: :[[@LINE-2]]:27: note: the fallback is always evaluated
 }
 
 // Template instantiation (aggressive mode).

@@ -12,6 +12,7 @@
 #include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -51,6 +52,31 @@ std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
             "()' with a separate fallback")
         .str();
   return "consider avoiding the copy";
+}
+
+std::optional<FixItHint>
+buildFixIt(const CXXMemberCallExpr *Call, const Expr *ObjExpr,
+           const Expr *FallbackArg, const CXXRecordDecl *OptionalClass,
+           const ASTContext &Ctx, const SourceManager &SM,
+           const LangOptions &LO) {
+  if (!ObjExpr || !ObjExpr->isLValue())
+    return std::nullopt;
+  if (FallbackArg->HasSideEffects(Ctx))
+    return std::nullopt;
+  if (!hasOperatorStar(OptionalClass))
+    return std::nullopt;
+
+  StringRef ObjText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(ObjExpr->getSourceRange()), SM, LO);
+  StringRef ArgText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(FallbackArg->getSourceRange()), SM, LO);
+
+  if (ObjText.empty() || ArgText.empty())
+    return std::nullopt;
+
+  std::string Replacement =
+      ("(" + ObjText + " ? *" + ObjText + " : " + ArgText + ")").str();
+  return FixItHint::CreateReplacement(Call->getSourceRange(), Replacement);
 }
 
 } // namespace
@@ -128,12 +154,23 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const CXXMethodDecl *Method = Call->getMethodDecl();
-
-  diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
-      << Method->getName() << ValueType << buildSuggestion(Method->getParent());
-
+  const CXXRecordDecl *OptionalClass = Method->getParent();
   const Expr *FallbackArg = Call->getArg(0)->IgnoreImplicit();
-  if (FallbackArg->HasSideEffects(Ctx))
+  const bool HasSideEffects = FallbackArg->HasSideEffects(Ctx);
+
+  {
+    auto Diag = diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
+                << Method->getName() << ValueType
+                << buildSuggestion(OptionalClass);
+
+    if (!HasSideEffects) {
+      if (auto Fix = buildFixIt(Call, ObjExpr, FallbackArg, OptionalClass, Ctx,
+                                *Result.SourceManager, Ctx.getLangOpts()))
+        Diag << *Fix;
+    }
+  }
+
+  if (HasSideEffects)
     diag(FallbackArg->getExprLoc(),
          "the fallback is always evaluated; a conditional rewrite would "
          "change evaluation semantics",
