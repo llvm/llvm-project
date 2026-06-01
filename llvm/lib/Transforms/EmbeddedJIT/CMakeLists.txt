@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMEmbeddedJIT
+  EJitPassOptions.cpp
   EJitRegisterBitcode.cpp
   EJitRegisterPeriod.cpp
   EJitWrapperGen.cpp

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/EmbeddedJIT/EJitPasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
@@ -28,6 +29,8 @@
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+extern cl::opt<bool> EJitNoGlobalCtors;
 
 static void
 generateRegistryTablePeriod(
@@ -112,9 +115,10 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     Builder.CreateCall(FnRegSV, {VN, VA});
   }
 
-  appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
+  if (!EJitNoGlobalCtors)
+    appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
-  // Also build the static registry table for bare-metal fallback.
+  // Always build the static registry table for bare-metal / testing fallback.
   generateRegistryTablePeriod(M, PeriodArrays, StaticVars);
 
   return PreservedAnalyses::none();

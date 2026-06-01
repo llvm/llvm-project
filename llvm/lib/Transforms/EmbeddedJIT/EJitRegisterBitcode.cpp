@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/EmbeddedJIT/EJitPasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,6 +36,8 @@
 
 using namespace llvm;
 using namespace llvm::ejit;
+
+extern cl::opt<bool> EJitNoGlobalCtors;
 
 #define DEBUG_TYPE "ejit-register-bitcode"
 
@@ -400,9 +403,10 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
   // can resolve them without manual ejit_register_symbol calls.
   generateSymbolRegisters(M, ClosureFuncs, AutoReg);
 
-  appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
+  if (!EJitNoGlobalCtors)
+    appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
-  // Also build the static registry table for bare-metal fallback.
+  // Always build the static registry table for bare-metal / testing fallback.
   generateRegistryTable(M, EntryFuncs, ClosureFuncs, BitcodeGV);
 }
 
