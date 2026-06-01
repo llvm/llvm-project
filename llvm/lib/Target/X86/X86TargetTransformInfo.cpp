@@ -1641,7 +1641,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
-  if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
+  if (LT.second.isVectorOf(MVT::bf16))
     LT.second = LT.second.changeVectorElementType(MVT::f16);
 
   // Subvector extractions are free if they start at the beginning of a
@@ -3191,7 +3191,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // BWI).
   if (!ST->hasAVX512() || (!ST->hasBWI() && DstTy.getScalarSizeInBits() < 32)) {
     if (I && Opcode == Instruction::CastOps::SExt &&
-        SrcTy.isFixedLengthVector() && SrcTy.getScalarType() == MVT::i1) {
+        SrcTy.isFixedLengthVectorOf(MVT::i1)) {
       if (auto *CmpI = dyn_cast<CmpInst>(I->getOperand(0))) {
         Type *CmpTy = CmpI->getOperand(0)->getType();
         if (CmpTy->getScalarSizeInBits() == DstTy.getScalarSizeInBits())
@@ -6399,7 +6399,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   // and that there's at most one variable index.
   auto getIndexSizeInBits = [](const Value *Ptr, const DataLayout &DL) {
     unsigned IndexSize = DL.getPointerSizeInBits();
-    const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
     if (IndexSize < 64 || !GEP)
       return IndexSize;
 

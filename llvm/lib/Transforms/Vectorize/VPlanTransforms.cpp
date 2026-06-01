@@ -251,8 +251,16 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   return true;
 }
 
-/// Collect either replicated Loads or Stores grouped by their address SCEV, in
-/// a deep-traversal of the vector loop region in \p Plan.
+/// Get the value type of the replicate load or store. \p IsLoad indicates
+/// whether it is a load.
+static Type *getLoadStoreValueType(VPReplicateRecipe *R, bool IsLoad) {
+  VPTypeAnalysis TypeInfo(*R->getParent()->getPlan());
+  return TypeInfo.inferScalarType(IsLoad ? R : R->getOperand(0));
+}
+
+/// Collect either replicated Loads or Stores grouped by their address SCEV and
+/// their load-store type, in a deep-traversal of the vector loop region in \p
+/// Plan.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
@@ -261,8 +269,9 @@ collectGroupedReplicateMemOps(
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
-  SmallDenseMap<const SCEV *, SmallVector<VPReplicateRecipe *, 4>>
-      RecipesByAddress;
+  SmallDenseMap<std::pair<const SCEV *, const Type *>,
+                SmallVector<VPReplicateRecipe *, 4>>
+      RecipesByAddressAndType;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
@@ -272,12 +281,13 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
+      const Type *LoadStoreTy = getLoadStoreValueType(RepR, IsLoad);
       const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
-        RecipesByAddress[AddrSCEV].push_back(RepR);
+        RecipesByAddressAndType[{AddrSCEV, LoadStoreTy}].push_back(RepR);
     }
   }
-  auto Groups = to_vector(RecipesByAddress.values());
+  auto Groups = to_vector(RecipesByAddressAndType.values());
   VPDominatorTree VPDT(Plan);
   for (auto &Group : Groups) {
     // Sort mem ops by dominance order, with earliest (most dominating) first.
@@ -707,8 +717,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   if (!LoopRegion)
     return;
 
-  auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   if (!WideCanIV)
     return;
 
@@ -1760,7 +1770,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       // If Phi has a second user (besides IVInc's defining recipe), it must
       // be Inc = Phi + Y for the fold to apply.
       auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
-          vputils::findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+          findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
       if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
         Def->replaceAllUsesWith(IVInc);
         if (Inc)
@@ -2879,8 +2889,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
 void VPlanTransforms::addActiveLaneMask(VPlan &Plan,
                                         bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanonicalIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   assert(WideCanonicalIV &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
@@ -3388,7 +3398,7 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  if (auto *CanIVInc = vputils::findUserOf(
+  if (auto *CanIVInc = findUserOf(
           CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
     cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
     CanIVInc->eraseFromParent();
@@ -4730,14 +4740,10 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
                                      const Loop *L) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
-  constexpr bool IsLoad = (Opcode == Instruction::Load);
-  VPTypeAnalysis TypeInfo(Plan);
+  [[maybe_unused]] constexpr bool IsLoad = (Opcode == Instruction::Load);
 
   // For each address, collect operations with the same or complementary masks.
   SmallVector<SmallVector<VPReplicateRecipe *, 4>> AllGroups;
-  auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
-    return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
-  };
   auto Groups = collectGroupedReplicateMemOps<Opcode>(
       Plan, PSE, L,
       [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
@@ -4745,13 +4751,16 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     if (Recipes.size() < 2)
       continue;
 
+    assert(all_equal(
+               map_range(Recipes, bind_back<getLoadStoreValueType>(IsLoad))) &&
+           "Expected all recipes in group to have the same load-store type");
+
     // Collect groups with the same or complementary masks.
     for (VPReplicateRecipe *&RecipeI : Recipes) {
       if (!RecipeI)
         continue;
 
       VPValue *MaskI = RecipeI->getMask();
-      Type *TypeI = GetLoadStoreValueType(RecipeI);
       SmallVector<VPReplicateRecipe *, 4> Group;
       Group.push_back(RecipeI);
       RecipeI = nullptr;
@@ -4763,15 +4772,12 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
           continue;
 
         VPValue *MaskJ = RecipeJ->getMask();
-        Type *TypeJ = GetLoadStoreValueType(RecipeJ);
-        if (TypeI == TypeJ) {
-          // Check if any operation in the group has a complementary mask with
-          // another, that is M1 == NOT(M2) or M2 == NOT(M1).
-          HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
-                                  match(MaskJ, m_Not(m_Specific(MaskI)));
-          Group.push_back(RecipeJ);
-          RecipeJ = nullptr;
-        }
+        // Check if any operation in the group has a complementary mask with
+        // another, that is M1 == NOT(M2) or M2 == NOT(M1).
+        HasComplementaryMask |= match(MaskI, m_Not(m_Specific(MaskJ))) ||
+                                match(MaskJ, m_Not(m_Specific(MaskI)));
+        Group.push_back(RecipeJ);
+        RecipeJ = nullptr;
       }
 
       if (HasComplementaryMask) {
@@ -5281,6 +5287,30 @@ void VPlanTransforms::materializeAliasMaskCheckBlock(
   Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
 }
 
+void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
+                                                  ScalarEvolution &SE) {
+  auto *Entry = Plan.getEntry();
+  VPBuilder Builder(Entry, Entry->begin());
+  VPSCEVExpander Expander(Builder, SE);
+
+  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
+  // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
+  // late expansion.
+  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
+    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpSCEV)
+      continue;
+    Builder.setInsertPoint(ExpSCEV);
+    VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
+    if (!Expanded)
+      continue;
+    ExpSCEV->replaceAllUsesWith(Expanded);
+    if (Plan.getTripCount() == ExpSCEV)
+      Plan.resetTripCount(Expanded);
+    ExpSCEV->eraseFromParent();
+  }
+}
+
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
@@ -5288,16 +5318,15 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
   DenseMap<const SCEV *, Value *> ExpandedSCEVs;
+  // Expand remaining VPExpandSCEVRecipes to IR instructions using SCEVExpander.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    if (isa<VPIRInstruction, VPIRPhi>(&R))
-      continue;
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV)
-      break;
+      continue;
     const SCEV *Expr = ExpSCEV->getSCEV();
     Value *Res =
         Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
-    ExpandedSCEVs[ExpSCEV->getSCEV()] = Res;
+    ExpandedSCEVs[Expr] = Res;
     VPValue *Exp = Plan.getOrAddLiveIn(Res);
     ExpSCEV->replaceAllUsesWith(Exp);
     if (Plan.getTripCount() == ExpSCEV)
@@ -5305,8 +5334,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
     ExpSCEV->eraseFromParent();
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
-         "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "before any VPIRInstructions");
+         "all VPExpandSCEVRecipes must have been expanded");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();
@@ -5708,7 +5736,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
     auto *RecurSplice =
-        vputils::findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
+        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
     assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
@@ -6272,9 +6300,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
-      WidenRecipe,
-      m_Select(m_VPValue(Cond), m_Specific(WidenRecipe), m_Specific(RdxPhi))));
+  VPValue *ExitValue = cast_or_null<VPInstruction>(
+      findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
+                                       m_Specific(RdxPhi))));
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
   assert((!ExitValue || IsLastInChain) &&

@@ -52,6 +52,23 @@ define <16 x i8> @combine_vpshrd_vpshufb(<16 x i8> %x, <16 x i8> %y) {
   ret <16 x i8> %r
 }
 
+define <8 x i32> @combine_vpshld_v8i32_shuffle(<8 x i32> %a, <8 x i32> %b) {
+; VLX-LABEL: combine_vpshld_v8i32_shuffle:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpshldq $32, %ymm0, %ymm1, %ymm0
+; VLX-NEXT:    ret{{[l|q]}}
+;
+; NOVLX-LABEL: combine_vpshld_v8i32_shuffle:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; NOVLX-NEXT:    vpshldq $32, %zmm0, %zmm1, %zmm0
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; NOVLX-NEXT:    ret{{[l|q]}}
+  %r = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 8, i32 3, i32 10, i32 5, i32 12, i32 7, i32 14>
+  ret <8 x i32> %r
+}
+
 define <8 x i8> @PR145276(<8 x i8> %a0, <8 x i8> %a1) {
 ; VLX-LABEL: PR145276:
 ; VLX:       # %bb.0:
