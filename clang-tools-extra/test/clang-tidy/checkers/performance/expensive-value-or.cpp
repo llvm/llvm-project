@@ -1,22 +1,9 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
 // RUN:   -config='{CheckOptions: {performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional"}}'
 
+#include <optional>
 #include <string>
 #include <utility>
-
-namespace std {
-template <typename T> class optional {
-  T val;
-  bool has;
-
-public:
-  optional();
-  optional(const optional &);
-  optional(optional &&);
-  ~optional();
-  T value_or(T default_value) const;
-};
-} // namespace std
 
 void positiveNonTriviallyCopyable(std::optional<std::string> opt) {
   auto val = opt.value_or("default");

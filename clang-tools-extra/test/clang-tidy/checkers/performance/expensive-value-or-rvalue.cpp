@@ -1,21 +1,8 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
 // RUN:   -config='{CheckOptions: {performance-expensive-value-or.WarnOnRvalueOptional: true}}'
 
+#include <optional>
 #include <string>
-
-namespace std {
-template <typename T> class optional {
-  T val;
-  bool has;
-
-public:
-  optional();
-  optional(const optional &);
-  optional(optional &&);
-  ~optional();
-  T value_or(T default_value) const;
-};
-} // namespace std
 
 std::optional<std::string> getOpt();
 void positiveRvalueOptional() {

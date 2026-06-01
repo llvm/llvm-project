@@ -1,0 +1,29 @@
+#ifndef _CLANG_TIDY_TEST_STD_OPTIONAL_H
+#define _CLANG_TIDY_TEST_STD_OPTIONAL_H
+
+#include <type_traits>
+
+namespace std {
+
+template <typename T> class optional {
+
+// Internal structure of std::optional is not modeled here. If checks need
+// to reason about layout or size of optional itself, add members to match
+// the real implementation for greater precision.
+
+public:
+  optional();
+  optional(const optional &);
+  optional(optional &&);
+  ~optional();
+
+  template <class U = remove_cv_t<T>>
+  constexpr T value_or(U &&default_value) const &;
+
+  template <class U = remove_cv_t<T>>
+  constexpr T value_or(U &&default_value) &&;
+};
+
+} // namespace std
+
+#endif // _CLANG_TIDY_TEST_STD_OPTIONAL_H
