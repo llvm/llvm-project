@@ -123,6 +123,11 @@ class LitConfig:
         Interface for setting maximum time to spend executing
         a single test
         """
+        if hasattr(self, "_maxIndividualTestTime"):
+            raise AttributeError(
+                "lit_config.maxIndividualTestTime is read-only. "
+                "Use config.maxIndividualTestTime instead."
+            )
         if value is None:
             self._maxIndividualTestTime = None
             return

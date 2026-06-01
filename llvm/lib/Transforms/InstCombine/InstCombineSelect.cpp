@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <optional>
@@ -1506,7 +1507,8 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!ICI->isEquality() || !match(ICI->getOperand(1), m_Zero()))
+  if (!isPowerOf2_32(BitWidth) || !ICI->isEquality() ||
+      !match(ICI->getOperand(1), m_Zero()))
     return nullptr;
 
   if (ICI->getPredicate() == ICmpInst::ICMP_NE)
@@ -1787,6 +1789,17 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     }
 
     return replaceInstUsesWith(Sel, FalseVal);
+  }
+
+  Constant *CmpC;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
   }
 
   return nullptr;
