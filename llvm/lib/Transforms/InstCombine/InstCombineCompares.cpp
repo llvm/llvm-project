@@ -8681,6 +8681,89 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
+/// Return true if V is always non-negative (i.e., never strictly negative).
+/// Recognises:
+///   1. llvm.fabs(x) - always >= 0
+///   2. Abs-like select patterns - select(fcmp P x, 0), x, fneg(x)) where P
+///      guarantees the true arm is non-negative, and variants thereof.
+///
+/// -0.0 and NaN are allowed: oeq/une compare treats +0 == -0, and NaN
+/// propagates identically on both sides of the surrounding transformation.
+static bool isFPAbsLike(Value *V) {
+  // fabs intrinsic is always non-negative.
+  if (match(V, m_FAbs(m_Value())))
+    return true;
+
+  // Abs-select pattern: (cond ? x : fneg(x)) or (cond ? fneg(x) : x) where
+  // the condition on x with respect to zero ensures the chosen arm is >= 0.
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(V, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  for (bool Swap : {false, true}) {
+    Value *PosArm = Swap ? FalseVal : TrueVal;
+    Value *NegArm = Swap ? TrueVal : FalseVal;
+
+    // Condition must compare PosArm against zero.
+    CmpPredicate Pred;
+    if (!match(Cond, m_FCmp(Pred, m_Specific(PosArm), m_AnyZeroFP())))
+      continue;
+    // The other arm must be the negation of PosArm.
+    if (!match(NegArm, m_FNeg(m_Specific(PosArm))))
+      continue;
+
+    // When Swap=false the condition is TRUE - we pick PosArm - EffPred = Pred.
+    // When Swap=true  the condition is FALSE - we pick PosArm EffPred =
+    // !Pred.
+    FCmpInst::Predicate EffPred =
+        Swap ? FCmpInst::getInversePredicate(Pred) : (FCmpInst::Predicate)Pred;
+
+    // EffPred must imply PosArm >= 0 when it holds (OGE/OGT/UGE/UGT on zero).
+    if (EffPred == FCmpInst::FCMP_OGE || EffPred == FCmpInst::FCMP_OGT ||
+        EffPred == FCmpInst::FCMP_UGE || EffPred == FCmpInst::FCMP_UGT)
+      return true;
+  }
+  return false;
+}
+
+/// Fold: fcmp oeq/une (fadd A, B), 0.0 where A and B are both non-negative.
+///   oeq -> (fcmp oeq A, 0.0) and (fcmp oeq B, 0.0)
+///   une -> (fcmp une A, 0.0) or  (fcmp une B, 0.0)
+///
+/// If both addends are non-negative (e.g. fabs(x) or abs-like selects), their
+/// sum equals zero iff both are zero. NaN propagates symmetrically on both
+/// sides, so the transformation is always sound for oeq and une.
+static Instruction *foldFAbsSumFCmpZero(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  CmpInst::Predicate Pred = I.getPredicate();
+
+  if (Pred != FCmpInst::FCMP_OEQ && Pred != FCmpInst::FCMP_UNE)
+    return nullptr;
+
+  if (!match(Op1, m_AnyZeroFP()))
+    return nullptr;
+
+  Value *A, *B;
+  if (!match(Op0, m_FAdd(m_Value(A), m_Value(B))))
+    return nullptr;
+
+  if (!isFPAbsLike(A) || !isFPAbsLike(B))
+    return nullptr;
+
+  // (|A| + |B|) oeq 0 → (A oeq 0) ∧ (B oeq 0)
+  // (|A| + |B|) une 0 → (A une 0) ∨ (B une 0)
+  // Subsequent folds (foldFabsWithFcmpZero / select-equality) will further
+  // simplify fabs(x) oeq 0 → x oeq 0 and select(_, x, -x) oeq 0 → x oeq 0.
+  Type *Ty = A->getType();
+  Constant *Zero = ConstantFP::getZero(Ty);
+  Value *CmpA = IC.Builder.CreateFCmp(Pred, A, Zero);
+  Value *CmpB = IC.Builder.CreateFCmp(Pred, B, Zero);
+
+  if (Pred == FCmpInst::FCMP_OEQ)
+    return BinaryOperator::CreateAnd(CmpA, CmpB);
+  return BinaryOperator::CreateOr(CmpA, CmpB);
+}
+
 /// Optimize sqrt(X) compared with zero.
 static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -9219,6 +9302,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldFAbsSumFCmpZero(I, *this))
     return R;
 
   if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
