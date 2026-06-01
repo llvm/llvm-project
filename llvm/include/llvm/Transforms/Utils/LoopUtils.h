@@ -473,7 +473,8 @@ LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
 /// kind.
 LLVM_ABI constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
 /// Returns the llvm.vector.reduce min/max intrinsic that corresponds to the
-/// intrinsic op.
+/// intrinsic op, or Intrinsic::not_intrinsic if \p IID is not a min/max op with
+/// an equivalent reduction.
 LLVM_ABI Intrinsic::ID getMinMaxReductionIntrinsicID(Intrinsic::ID IID);
 
 /// Returns the arithmetic instruction opcode used when expanding a reduction.

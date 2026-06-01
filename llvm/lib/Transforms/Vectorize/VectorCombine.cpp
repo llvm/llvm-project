@@ -4078,6 +4078,13 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return MadeChanges;
 }
 
+static Intrinsic::ID getMinMaxReductionOp(Value *V) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II || !getMinMaxReductionIntrinsicID(II->getIntrinsicID()))
+    return Intrinsic::not_intrinsic;
+  return II->getIntrinsicID();
+}
+
 /// Try to fold a chain of shuffles and ops feeding extractelement(..., 0)
 /// into llvm.vector.reduce.*, by tracking which lanes contribute to the
 /// extracted lane and reducing the widest vector whose lanes each contribute
@@ -4114,8 +4121,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     if (!getReductionForBinop(BO->getOpcode()))
       return false;
     CommonBinOp = BO->getOpcode();
-  } else if (auto *MMI = dyn_cast<MinMaxIntrinsic>(VecOpEE)) {
-    CommonCallOp = MMI->getIntrinsicID();
+  } else if (Intrinsic::ID MinMaxID = getMinMaxReductionOp(VecOpEE)) {
+    CommonCallOp = MinMaxID;
   } else {
     return false;
   }
@@ -4129,8 +4136,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   auto IsChainNode = [&](Value *V) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       return CommonBinOp && BO->getOpcode() == *CommonBinOp;
-    if (auto *MMI = dyn_cast<MinMaxIntrinsic>(V))
-      return CommonCallOp && MMI->getIntrinsicID() == *CommonCallOp;
+    if (Intrinsic::ID MinMaxID = getMinMaxReductionOp(V))
+      return CommonCallOp && MinMaxID == *CommonCallOp;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
       return isa<PoisonValue>(SVI->getOperand(1));
     return false;
@@ -4275,7 +4282,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   }
   if (!Cut) {
     for (Value *V : Nodes) {
-      if (!isa<BinaryOperator>(V) && !isa<MinMaxIntrinsic>(V))
+      if (!isa<BinaryOperator>(V) && !getMinMaxReductionOp(V))
         continue;
       auto It = Demands.find(V);
       if (It == Demands.end() || !It->second.Lanes.isAllOnes())
