@@ -4724,39 +4724,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
-  case Intrinsic::nvvm_atomic_add_gen_f_cta:
-  case Intrinsic::nvvm_atomic_add_gen_f_sys:
-  case Intrinsic::nvvm_atomic_add_gen_i_cta:
-  case Intrinsic::nvvm_atomic_add_gen_i_sys:
-  case Intrinsic::nvvm_atomic_and_gen_i_cta:
-  case Intrinsic::nvvm_atomic_and_gen_i_sys:
-  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-  case Intrinsic::nvvm_atomic_max_gen_i_cta:
-  case Intrinsic::nvvm_atomic_max_gen_i_sys:
-  case Intrinsic::nvvm_atomic_min_gen_i_cta:
-  case Intrinsic::nvvm_atomic_min_gen_i_sys:
-  case Intrinsic::nvvm_atomic_or_gen_i_cta:
-  case Intrinsic::nvvm_atomic_or_gen_i_sys:
-  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-  case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
-    auto &DL = I.getDataLayout();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
-    Info.align.reset();
-    Infos.push_back(Info);
-    return;
-  }
-
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
