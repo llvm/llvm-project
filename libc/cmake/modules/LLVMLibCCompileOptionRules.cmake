@@ -299,6 +299,8 @@ function(_get_common_compile_options output_var flags)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       # Silence this warning because _Complex is a part of C99.
       list(APPEND compile_options "-fext-numeric-literals")
+      # Silience stringop-overflow warnings from gcc.
+      list(APPEND compile_options "-Wno-stringop-overflow")
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")
