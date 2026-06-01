@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
@@ -367,9 +368,61 @@ struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
   }
 };
 
+struct ConsecutiveConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
+  using OpRewritePattern<tosa::ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ConcatOp op,
+                                PatternRewriter &rewriter) const override {
+    // Rewrite consecutive concats on the same axis into a single op.
+    // Keep track of the operands so we are able to construct a new concat
+    // later. Conservatively assume that we double the number of operands when
+    // canonicalizing
+    SmallVector<Value, 8> concatOperands;
+    concatOperands.reserve(2 * op.getNumOperands());
+
+    int32_t maxNumOperands = 0;
+    if (auto targetEnvAttr = tosa::lookupTargetEnv(op))
+      maxNumOperands =
+          getTosaLevelFromEnum(targetEnvAttr.getLevel()).MAX_TENSOR_LIST_SIZE;
+
+    // Find all operands that are foldable concats
+    bool foundRewritableConcat = false;
+    for (Value operand : op.getOperands()) {
+      concatOperands.emplace_back(operand);
+
+      auto producer = operand.getDefiningOp<tosa::ConcatOp>();
+      if (!producer)
+        continue;
+
+      // Not rewritable if axes are not the same
+      if (op.getAxis() != producer.getAxis())
+        continue;
+
+      // Replace the original operand with all incoming operands
+      foundRewritableConcat = true;
+      concatOperands.pop_back();
+      llvm::append_range(concatOperands, producer->getOperands());
+    }
+
+    if (!foundRewritableConcat)
+      return rewriter.notifyMatchFailure(op,
+                                         "No rewritable concat operand found.");
+
+    if (maxNumOperands > 0 &&
+        concatOperands.size() > static_cast<size_t>(maxNumOperands))
+      return rewriter.notifyMatchFailure(
+          op, "Rewriting would exceed the maximum number of operands for the "
+              "target environment level.");
+
+    rewriter.replaceOpWithNewOp<tosa::ConcatOp>(
+        op, op.getType(), concatOperands, op.getAxisAttr());
+    return success();
+  }
+};
+
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<ConcatOptimization>(context);
+  results.add<ConcatOptimization, ConsecutiveConcatOptimization>(context);
 }
 
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
@@ -2221,40 +2274,6 @@ OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {
     return foldToInputIfTypeMatches(getType(), input);
 
   return {};
-}
-
-OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  // Fold consecutive concats on the same axis into a single op.
-  // Keep track of the operands so we are able to construct a new concat
-  // later. Conservatively assume that we double the number of operands when
-  // folding
-  SmallVector<Value, 8> concatOperands;
-  concatOperands.reserve(2 * getNumOperands());
-
-  // Find all operands that are foldable concats
-  bool foundFoldableConcat = false;
-  for (Value operand : getOperands()) {
-    concatOperands.emplace_back(operand);
-
-    auto producer = operand.getDefiningOp<ConcatOp>();
-    if (!producer)
-      continue;
-
-    // Not foldable if axes are not the same
-    if (getAxis() != producer.getAxis())
-      continue;
-
-    // Replace the original operand with all incoming operands
-    foundFoldableConcat = true;
-    concatOperands.pop_back();
-    llvm::append_range(concatOperands, producer->getOperands());
-  }
-
-  if (!foundFoldableConcat)
-    return {};
-
-  getOperation()->setOperands(concatOperands);
-  return getResult();
 }
 
 OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
