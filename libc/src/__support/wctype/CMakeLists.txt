@@ -49,3 +49,21 @@ add_object_library(
     libc.src.__support.CPP.limits
     libc.src.__support.libc_assert
 )
+
+add_object_library(
+  wctype_conversion_utils
+  HDRS
+    wctype_conversion_utils.h
+  SRCS
+    wctype_conversion_utils.cpp
+  COMPILE_OPTIONS
+    "-DLIBC_ENABLE_CONSTEXPR=1"
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    .lower_to_upper
+    .upper_to_lower
+)
+

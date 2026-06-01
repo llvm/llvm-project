@@ -17,17 +17,15 @@
 #include "orc-rt/Service.h"
 #include "orc-rt/sps-ci/NativeDylibManagerSPSCI.h"
 
-#include <mutex>
-#include <unordered_map>
-
 namespace orc_rt {
 
 class Session;
 
-/// Dylib loading / unloading / symbol lookup service.
+/// Dylib loading / symbol lookup service.
 ///
-/// Any dynamic libraries loaded through this service that are not manually
-/// unloaded will be automatically unloaded at shutdown time in LIFO order.
+/// Libraries loaded through this service are automatically unloaded in LIFO
+/// order at session shutdown via Session::addOnShutdown callbacks registered
+/// from load().
 class NativeDylibManager : public Service {
 public:
   /// Create a NativeDylibManager, adding associated symbols to the given
@@ -53,15 +51,10 @@ public:
 
   /// Load the given library.
   ///
-  /// Returns an Expected handle.
+  /// Returns an Expected handle. On success, registers a Session shutdown
+  /// callback to unload the library.
   using OnLoadCompleteFn = move_only_function<void(Expected<void *>)>;
   void load(OnLoadCompleteFn &&OnComplete, std::string Path);
-
-  /// Unload the given library handle.
-  ///
-  /// Returns an error on failure.
-  using OnUnloadCompleteFn = move_only_function<void(Error)>;
-  void unload(OnUnloadCompleteFn &&OnComplete, void *Handle);
 
   /// Lookup addresses of the given symbols.
   ///
@@ -79,14 +72,6 @@ private:
   NativeDylibManager(Session &S) : S(S) {}
 
   Session &S;
-
-  struct LoadInfo {
-    size_t Ordinal = 0;
-    size_t RefCount = 0;
-  };
-
-  std::mutex M;
-  std::unordered_map<void *, LoadInfo> LoadInfos;
 };
 
 } // namespace orc_rt
