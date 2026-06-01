@@ -46,8 +46,6 @@ enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
 // For --build-id.
 enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 
-enum class ThreadModel { Single, Cooperative, SharedMemory };
-
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
 // and such fields have the same name as the corresponding options.
@@ -68,7 +66,6 @@ struct Config {
   bool gcSections;
   llvm::StringSet<> keepSections;
   bool cooperativeMultithreading;
-  bool libcallThreadContext;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;
@@ -138,8 +135,7 @@ struct Config {
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 
-  ThreadModel threadModel = ThreadModel::Single;
-  bool isMultithreaded() const { return threadModel != ThreadModel::Single; }
+  bool isMultithreaded() const { return sharedMemory || cooperativeMultithreading; }
 };
 
 // The Ctx object hold all other (non-configuration) global state.

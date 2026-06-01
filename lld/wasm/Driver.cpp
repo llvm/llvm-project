@@ -757,11 +757,6 @@ static void setConfigs() {
     ctx.arg.memoryExport = memoryName;
   }
 
-  if (ctx.arg.cooperativeMultithreading) {
-    ctx.arg.threadModel = ThreadModel::Cooperative;
-    ctx.arg.libcallThreadContext = true;
-  } else if (ctx.arg.sharedMemory)
-    ctx.arg.threadModel = ThreadModel::SharedMemory;
 }
 
 // Some command line options or some combinations of them are not allowed.

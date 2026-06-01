@@ -431,7 +431,7 @@ void Writer::layoutMemory() {
   }
 
   // Make space for the memory initialization flag
-  if (ctx.arg.threadModel == ThreadModel::SharedMemory &&
+  if (ctx.arg.sharedMemory &&
       hasPassiveInitializedSegments()) {
     memoryPtr = alignTo(memoryPtr, 4);
     ctx.sym.initMemoryFlag = symtab->addSyntheticDataSymbol(
@@ -520,7 +520,7 @@ void Writer::layoutMemory() {
 
   // If no maxMemory config was supplied but we are building with
   // shared memory, we need to pick a sensible upper limit.
-  if (ctx.arg.threadModel == ThreadModel::SharedMemory && maxMemory == 0) {
+  if (ctx.arg.sharedMemory && maxMemory == 0) {
     if (ctx.isPic)
       maxMemory = maxMemorySetting;
     else
@@ -1063,8 +1063,8 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // threads. In the non-shared memory case, we use passive segments only for
   // TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all.
-  bool needsPassiveInit = ctx.arg.threadModel == ThreadModel::SharedMemory ||
-                          (ctx.arg.threadModel == ThreadModel::Cooperative &&
+  bool needsPassiveInit = ctx.arg.sharedMemory ||
+                          (ctx.arg.cooperativeMultithreading &&
                            (s->isTLS() || s->name.starts_with(".bss")));
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
@@ -1256,7 +1256,7 @@ void Writer::createInitMemoryFunction() {
   assert(ctx.sym.initMemory);
   assert(hasPassiveInitializedSegments());
   uint64_t flagAddress;
-  if (ctx.arg.threadModel == ThreadModel::SharedMemory) {
+  if (ctx.arg.sharedMemory) {
     assert(ctx.sym.initMemoryFlag);
     flagAddress = ctx.sym.initMemoryFlag->getVA();
   }
@@ -1324,7 +1324,7 @@ void Writer::createInitMemoryFunction() {
       }
     };
 
-    if (ctx.arg.threadModel == ThreadModel::SharedMemory) {
+    if (ctx.arg.sharedMemory) {
       // With PIC code we cache the flag address in local 0
       if (ctx.isPic) {
         writeUleb128(os, 1, "num local decls");
@@ -1419,7 +1419,7 @@ void Writer::createInitMemoryFunction() {
       }
     }
 
-    if (ctx.arg.threadModel == ThreadModel::SharedMemory) {
+    if (ctx.arg.sharedMemory) {
       // Set flag to 2 to mark end of initialization
       writeGetFlagAddress();
       writeI32Const(os, 2, "flag value");

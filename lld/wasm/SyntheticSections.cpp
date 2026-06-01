@@ -266,11 +266,11 @@ void ImportSection::writeBody() {
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
     if (out.memorySec->maxMemoryPages != 0 ||
-        ctx.arg.threadModel == ThreadModel::SharedMemory) {
+        ctx.arg.sharedMemory) {
       import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       import.Memory.Maximum = out.memorySec->maxMemoryPages;
     }
-    if (ctx.arg.threadModel == ThreadModel::SharedMemory)
+    if (ctx.arg.sharedMemory)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (is64)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
@@ -408,12 +408,12 @@ void MemorySection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
   bool hasMax =
-      maxMemoryPages != 0 || ctx.arg.threadModel == ThreadModel::SharedMemory;
+      maxMemoryPages != 0 || ctx.arg.sharedMemory;
   writeUleb128(os, 1, "memory count");
   unsigned flags = 0;
   if (hasMax)
     flags |= WASM_LIMITS_FLAG_HAS_MAX;
-  if (ctx.arg.threadModel == ThreadModel::SharedMemory)
+  if (ctx.arg.sharedMemory)
     flags |= WASM_LIMITS_FLAG_IS_SHARED;
   if (ctx.arg.is64.value_or(false))
     flags |= WASM_LIMITS_FLAG_IS_64;
