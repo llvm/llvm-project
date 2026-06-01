@@ -663,8 +663,6 @@ public:
       llvm::function_ref<void(IRBuilder<> &, CallInst *,
                               SmallVectorImpl<Value *> &)> EmitExtraArgs) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *FloatTy = IRB.getFloatTy();
-
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
@@ -678,7 +676,7 @@ public:
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
-      Value *UndefF = UndefValue::get(FloatTy);
+      Value *UndefF = UndefValue::get(IRB.getFloatTy());
       Value *UndefI = UndefValue::get(IRB.getInt32Ty());
       // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
       SmallVector<Value *, 17> Args{Handle, Sampler, UndefF, UndefF, UndefF,
@@ -722,8 +720,7 @@ public:
                    SmallVectorImpl<Value *> &Args) {
           Value *DDX = CI->getArgOperand(3);
           Value *DDY = CI->getArgOperand(4);
-          Type *FloatTy = IRB.getFloatTy();
-          Value *UndefF = UndefValue::get(FloatTy);
+          Value *UndefF = UndefValue::get(IRB.getFloatTy());
           // DDX0..2
           size_t DDXStart = Args.size();
           Args.append(3, UndefF);
