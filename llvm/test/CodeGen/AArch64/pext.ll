@@ -5,11 +5,10 @@
 define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 ; BITPERM-LABEL: pext_i8:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    and w8, w0, #0xff
-; BITPERM-NEXT:    and w9, w1, #0xff
+; BITPERM-NEXT:    and w8, w1, #0xff
+; BITPERM-NEXT:    fmov s1, w0
 ; BITPERM-NEXT:    fmov s0, w8
-; BITPERM-NEXT:    fmov s1, w9
-; BITPERM-NEXT:    bext z0.s, z0.s, z1.s
+; BITPERM-NEXT:    bext z0.s, z1.s, z0.s
 ; BITPERM-NEXT:    fmov w0, s0
 ; BITPERM-NEXT:    ret
 ;
@@ -60,11 +59,10 @@ define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
 ; BITPERM-LABEL: pext_i16:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    and w8, w0, #0xffff
-; BITPERM-NEXT:    and w9, w1, #0xffff
+; BITPERM-NEXT:    and w8, w1, #0xffff
+; BITPERM-NEXT:    fmov s1, w0
 ; BITPERM-NEXT:    fmov s0, w8
-; BITPERM-NEXT:    fmov s1, w9
-; BITPERM-NEXT:    bext z0.s, z0.s, z1.s
+; BITPERM-NEXT:    bext z0.s, z1.s, z0.s
 ; BITPERM-NEXT:    fmov w0, s0
 ; BITPERM-NEXT:    ret
 ;
