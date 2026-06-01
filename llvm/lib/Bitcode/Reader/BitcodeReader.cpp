@@ -7237,6 +7237,7 @@ Error BitcodeReader::materializeModule() {
   UpgradeNVVMAnnotations(*TheModule);
 
   UpgradeARCRuntime(*TheModule);
+  UpgradeCFIFunctions(*TheModule);
 
   copyModuleAttrToFunctions(*TheModule);
 

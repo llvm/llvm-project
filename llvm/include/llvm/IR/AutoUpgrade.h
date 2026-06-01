@@ -71,6 +71,9 @@ namespace llvm {
   /// old retain release marker to new module flag format.
   LLVM_ABI void UpgradeARCRuntime(Module &M);
 
+  /// Add GUID field of the CFI metadata.
+  LLVM_ABI void UpgradeCFIFunctions(Module &M);
+
   LLVM_ABI void UpgradeSectionAttributes(Module &M);
 
   /// Correct any IR that is relying on old function attribute behavior.

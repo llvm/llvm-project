@@ -6045,6 +6045,30 @@ static bool upgradeRetainReleaseMarker(Module &M) {
   return Changed;
 }
 
+void llvm::UpgradeCFIFunctions(Module &M) {
+  if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions")) {
+    LLVMContext &C = M.getContext();
+    for (unsigned I = 0, E = CfiFunctionsMD->getNumOperands(); I != E; ++I) {
+      MDNode *FuncMD = CfiFunctionsMD->getOperand(I);
+      if (FuncMD->getNumOperands() >= 3 &&
+          isa<ConstantAsMetadata>(FuncMD->getOperand(2)))
+        continue;
+
+      auto *Name = cast<MDString>(FuncMD->getOperand(0));
+      StringRef FunctionName = Name->getString();
+      const GlobalValue::GUID GUID =
+          GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(FunctionName));
+
+      SmallVector<Metadata *, 4> Ops(FuncMD->op_begin(), FuncMD->op_end());
+      Ops.insert(Ops.begin() + 2, ConstantAsMetadata::get(ConstantInt::get(
+                                      Type::getInt64Ty(C), GUID)));
+
+      CfiFunctionsMD->setOperand(I, MDTuple::get(C, Ops));
+    }
+  }
+}
+
 void llvm::UpgradeARCRuntime(Module &M) {
   // This lambda converts normal function calls to ARC runtime functions to
   // intrinsic calls.
