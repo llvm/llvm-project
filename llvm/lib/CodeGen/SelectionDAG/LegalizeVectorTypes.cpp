@@ -3512,6 +3512,17 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   SDValue EVL = N->getOperand(2);
   SDLoc DL(N);
 
+  // The stack round-trip uses a byte stride, so a sub-byte element (e.g. i1)
+  // would get stride 0 and alias every lane. Widen to a byte integer, reverse,
+  // then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, VT, Val);
+  }
+
   // Fallback to VP_STRIDED_STORE to stack followed by VP_LOAD.
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3546,6 +3557,10 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
@@ -3564,6 +3579,18 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
   // SelectionDAGBuilder. Promote EVL1 here if needed.
   if (getTypeAction(EVL1.getValueType()) == TargetLowering::TypePromoteInteger)
     EVL1 = ZExtPromotedInteger(EVL1);
+
+  // The stack splice addresses elements by byte offset/stride, which breaks for
+  // a sub-byte element (e.g. i1): getVectorElementPointer asserts and the
+  // stride is 0. Widen to a byte integer, splice, then truncate back.
+  EVT OrigVT = VT;
+  if (!VT.getVectorElementType().isByteSized()) {
+    EVT WideEltVT = VT.getVectorElementType().changeTypeToInteger();
+    WideEltVT = WideEltVT.getRoundIntegerType(*DAG.getContext());
+    VT = VT.changeVectorElementType(*DAG.getContext(), WideEltVT);
+    V1 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V1);
+    V2 = DAG.getNode(ISD::ANY_EXTEND, DL, VT, V2);
+  }
 
   Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
 
@@ -3613,8 +3640,12 @@ void DAGTypeLegalizer::SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo,
     Load = DAG.getLoadVP(VT, DL, StoreV2, StackPtr2, Mask, EVL2, LoadMMO);
   }
 
+  // Truncate back if we widened above.
+  if (OrigVT != VT)
+    Load = DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Load);
+
   EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(OrigVT);
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
                    DAG.getVectorIdxConstant(0, DL));
   Hi =

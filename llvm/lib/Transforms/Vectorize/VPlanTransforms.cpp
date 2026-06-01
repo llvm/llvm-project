@@ -717,8 +717,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   if (!LoopRegion)
     return;
 
-  auto *WideCanIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   if (!WideCanIV)
     return;
 
@@ -1340,6 +1340,137 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   return nullptr;
 }
 
+/// Try to simplify logical and bitwise recipes in \p Def.
+static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def,
+                                  VPTypeAnalysis &TypeInfo, VPBuilder &Builder,
+                                  bool CanCreateNewRecipe) {
+  VPlan *Plan = Def->getParent()->getPlan();
+
+  // Simplify (X && Y) | (X && !Y) -> X.
+  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
+  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
+  // recipes to be visited during simplification.
+  VPValue *X, *Y, *Z;
+  if (match(Def,
+            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
+    Def->replaceAllUsesWith(X);
+    Def->eraseFromParent();
+    return true;
+  }
+
+  // x | AllOnes -> AllOnes
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
+    Def->replaceAllUsesWith(
+        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
+    return true;
+  }
+
+  // x | 0 -> x
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt()))) {
+    Def->replaceAllUsesWith(X);
+    return true;
+  }
+
+  // x | !x -> AllOnes
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X))))) {
+    Def->replaceAllUsesWith(
+        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
+    return true;
+  }
+
+  // x & 0 -> 0
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt()))) {
+    Def->replaceAllUsesWith(Plan->getZero(TypeInfo.inferScalarType(Def)));
+    return true;
+  }
+
+  // x & AllOnes -> x
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes()))) {
+    Def->replaceAllUsesWith(X);
+    return true;
+  }
+
+  // x && false -> false
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False()))) {
+    Def->replaceAllUsesWith(Plan->getFalse());
+    return true;
+  }
+
+  // x && true -> x
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True()))) {
+    Def->replaceAllUsesWith(X);
+    return true;
+  }
+
+  // (x && y) | (x && z) -> x && (y | z)
+  if (CanCreateNewRecipe &&
+      match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
+      // Simplify only if one of the operands has one use to avoid creating an
+      // extra recipe.
+      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
+       !Def->getOperand(1)->hasMoreThanOneUniqueUser())) {
+    Def->replaceAllUsesWith(
+        Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
+    return true;
+  }
+
+  // x && (x && y) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue())))) {
+    Def->replaceAllUsesWith(Def->getOperand(1));
+    return true;
+  }
+
+  // x && (y && x) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X))))) {
+    Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
+    return true;
+  }
+
+  // x && !x -> 0
+  if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X))))) {
+    Def->replaceAllUsesWith(Plan->getFalse());
+    return true;
+  }
+
+  if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X)))) {
+    Def->replaceAllUsesWith(X);
+    return true;
+  }
+
+  // select c, false, true -> not c
+  VPValue *C;
+  if (CanCreateNewRecipe &&
+      match(Def, m_Select(m_VPValue(C), m_False(), m_True()))) {
+    Def->replaceAllUsesWith(Builder.createNot(C));
+    return true;
+  }
+
+  // select !c, x, y -> select c, y, x
+  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
+    Def->setOperand(0, C);
+    Def->setOperand(1, Y);
+    Def->setOperand(2, X);
+    return true;
+  }
+
+  // select x, (i1 y | z), y -> y | (x && z)
+  if (CanCreateNewRecipe &&
+      match(Def, m_Select(m_VPValue(X),
+                          m_OneUse(m_c_BinaryOr(m_VPValue(Y), m_VPValue(Z))),
+                          m_Deferred(Y))) &&
+      TypeInfo.inferScalarType(Y)->isIntegerTy(1)) {
+    Def->replaceAllUsesWith(
+        Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
+    return true;
+  }
+
+  return false;
+}
+
 /// Try to simplify VPSingleDefRecipe \p Def.
 static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = Def->getParent()->getPlan();
@@ -1410,101 +1541,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 #endif
   }
 
-  // Simplify (X && Y) | (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
-  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
-  // recipes to be visited during simplification.
-  VPValue *X, *Y, *Z;
-  if (match(Def,
-            m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                         m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
-    Def->replaceAllUsesWith(X);
-    Def->eraseFromParent();
+  if (simplifyLogicalRecipe(Def, TypeInfo, Builder, CanCreateNewRecipe))
     return;
-  }
 
-  // x | AllOnes -> AllOnes
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
-    return Def->replaceAllUsesWith(
-        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
-
-  // x | 0 -> x
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
-    return Def->replaceAllUsesWith(X);
-
-  // x | !x -> AllOnes
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Def->replaceAllUsesWith(
-        Plan->getAllOnesValue(TypeInfo.inferScalarType(Def)));
-
-  // x & 0 -> 0
-  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
-    return Def->replaceAllUsesWith(
-        Plan->getZero(TypeInfo.inferScalarType(Def)));
-
-  // x & AllOnes -> x
-  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
-    return Def->replaceAllUsesWith(X);
-
-  // x && false -> false
-  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
-    return Def->replaceAllUsesWith(Plan->getFalse());
-
-  // x && true -> x
-  if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
-    return Def->replaceAllUsesWith(X);
-
-  // (x && y) | (x && z) -> x && (y | z)
-  if (CanCreateNewRecipe &&
-      match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
-      // Simplify only if one of the operands has one use to avoid creating an
-      // extra recipe.
-      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
-       !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
-    return Def->replaceAllUsesWith(
-        Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
-
-  // x && (x && y) -> x && y
-  if (match(Def, m_LogicalAnd(m_VPValue(X),
-                              m_LogicalAnd(m_Deferred(X), m_VPValue()))))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
-
-  // x && (y && x) -> x && y
-  if (match(Def, m_LogicalAnd(m_VPValue(X),
-                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X)))))
-    return Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
-
-  // x && !x -> 0
-  if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Def->replaceAllUsesWith(Plan->getFalse());
-
-  if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
-    return Def->replaceAllUsesWith(X);
-
-  // select c, false, true -> not c
-  VPValue *C;
-  if (CanCreateNewRecipe &&
-      match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
-    return Def->replaceAllUsesWith(Builder.createNot(C));
-
-  // select !c, x, y -> select c, y, x
-  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
-    Def->setOperand(0, C);
-    Def->setOperand(1, Y);
-    Def->setOperand(2, X);
-    return;
-  }
-
-  // select x, (i1 y | z), y -> y | (x && z)
-  if (CanCreateNewRecipe &&
-      match(Def, m_Select(m_VPValue(X),
-                          m_OneUse(m_c_BinaryOr(m_VPValue(Y), m_VPValue(Z))),
-                          m_Deferred(Y))) &&
-      TypeInfo.inferScalarType(Y)->isIntegerTy(1))
-    return Def->replaceAllUsesWith(
-        Builder.createOr(Y, Builder.createLogicalAnd(X, Z)));
-
+  VPValue *X, *Y, *C;
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 
@@ -1770,7 +1810,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       // If Phi has a second user (besides IVInc's defining recipe), it must
       // be Inc = Phi + Y for the fold to apply.
       auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
-          vputils::findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+          findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
       if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
         Def->replaceAllUsesWith(IVInc);
         if (Inc)
@@ -2889,8 +2929,8 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
 void VPlanTransforms::addActiveLaneMask(VPlan &Plan,
                                         bool UseActiveLaneMaskForControlFlow) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanonicalIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   assert(WideCanonicalIV &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
@@ -3398,7 +3438,7 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  if (auto *CanIVInc = vputils::findUserOf(
+  if (auto *CanIVInc = findUserOf(
           CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
     cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
     CanIVInc->eraseFromParent();
@@ -5736,7 +5776,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
     auto *RecurSplice =
-        vputils::findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
+        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(FOR);
     assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
@@ -6300,9 +6340,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
-      WidenRecipe,
-      m_Select(m_VPValue(Cond), m_Specific(WidenRecipe), m_Specific(RdxPhi))));
+  VPValue *ExitValue = cast_or_null<VPInstruction>(
+      findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
+                                       m_Specific(RdxPhi))));
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
   assert((!ExitValue || IsLastInChain) &&

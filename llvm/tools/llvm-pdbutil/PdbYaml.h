@@ -22,7 +22,6 @@
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLSymbols.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
-#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -110,10 +109,6 @@ struct PdbTpiStream {
   std::vector<CodeViewYAML::LeafRecord> Records;
 };
 
-struct PdbDXContainerStream {
-  DXContainerYAML::Object DXC;
-};
-
 struct PdbPublicsStream {
   std::vector<CodeViewYAML::SymbolRecord> PubSyms;
 };
@@ -128,7 +123,6 @@ struct PdbObject {
   std::optional<PdbDbiStream> DbiStream;
   std::optional<PdbTpiStream> TpiStream;
   std::optional<PdbTpiStream> IpiStream;
-  std::optional<PdbDXContainerStream> DXContainerStream;
   std::optional<PdbPublicsStream> PublicsStream;
 
   std::optional<std::vector<StringRef>> StringTable;
@@ -151,6 +145,5 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbPublicsStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::NamedStreamMapping)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbModiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiModuleInfo)
-LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDXContainerStream)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H
