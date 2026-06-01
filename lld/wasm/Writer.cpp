@@ -1664,17 +1664,9 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
+      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+      writeUleb128(os, 0, "local index");
       writeSetTLSBase(ctx, os);
-      /*
-      // In cooperative threading mode the runtime is responsible for calling
-      // __wasm_set_tls_base separately; __wasm_init_tls only copies the TLS
-      // template data.
-      if (!ctx.arg.libcallThreadContext) {
-        writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
-        writeUleb128(os, 0, "local index");
-        writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
-        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
-      }*/
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
       // op.
