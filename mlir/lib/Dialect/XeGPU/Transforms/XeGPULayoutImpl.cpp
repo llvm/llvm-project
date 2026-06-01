@@ -854,10 +854,12 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
                                   int64_t maxReduceVectorSize) {
   int srcRank = srcShape.size();
   SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
-  llvm::dbgs() << "[DEBUG computeReductionLaneLayoutAndData] srcRank=" << srcRank
-               << " srcShape.size()=" << srcShape.size() << " srcShape=[";
+  llvm::dbgs() << "[DEBUG computeReductionLaneLayoutAndData] srcRank="
+               << srcRank << " srcShape.size()=" << srcShape.size()
+               << " srcShape=[";
   for (size_t i = 0; i < srcShape.size(); ++i) {
-    if (i > 0) llvm::dbgs() << ", ";
+    if (i > 0)
+      llvm::dbgs() << ", ";
     llvm::dbgs() << srcShape[i];
   }
   llvm::dbgs() << "]\n";
@@ -1040,10 +1042,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     xegpu::SliceAttr consumerSliceLayout =
         dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    auto reductionDimsOverrideConsumer = consumerSliceLayout? 
-          SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef()): reductionDims;
+    auto reductionDimsOverrideConsumer =
+        consumerSliceLayout
+            ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
+            : reductionDims;
     auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDimsOverrideConsumer, subgroupSize, maxReduceVectorSize);
+        srcShape, reductionDimsOverrideConsumer, subgroupSize,
+        maxReduceVectorSize);
     // inst_data is the per-instruction data, i.e. the element-wise product of
     // lane_layout and lane_data.
     SmallVector<int64_t> instData(srcRank);
@@ -1063,10 +1068,13 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
            "dimensions are unit dimensions");
     xegpu::SliceAttr consumerSliceLayout =
         dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    auto reductionDimsOverrideConsumer = consumerSliceLayout? 
-          SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef()): reductionDims;
+    auto reductionDimsOverrideConsumer =
+        consumerSliceLayout
+            ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
+            : reductionDims;
     auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDimsOverrideConsumer, subgroupSize, maxReduceVectorSize);
+        srcShape, reductionDimsOverrideConsumer, subgroupSize,
+        maxReduceVectorSize);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
   }
@@ -1294,8 +1302,8 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 ///   lane_data={1,min(consumer, maxLaneLoadSize)}
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
-    xegpu::DistributeLayoutAttr consumerLayout, bool isChunkedLoad,
-    int maxChunkSize, ArrayRef<int64_t> resShape, int subgroupSize) {
+    xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
+    ArrayRef<int64_t> resShape, int subgroupSize) {
 
   if (layoutKind == xegpu::LayoutKind::Subgroup)
     return consumerLayout;
@@ -1309,31 +1317,16 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int> laneLayout(resShape.size(), 1);
   SmallVector<int> laneData(resShape.size(), 1);
 
-  if (!isChunkedLoad) {
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData.back() = std::min(static_cast<int>(consumerInstData.back()),
-                                 maxChunkSize * subgroupSize);
-      return xegpu::LayoutAttr::get(context, instData);
-    } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneData.back() =
-          std::min(static_cast<int>(consumerLaneData.back()), maxChunkSize);
-      laneLayout.back() = std::min(static_cast<int64_t>(subgroupSize),
-                                   resShape.back() / laneData.back());
-      return xegpu::LayoutAttr::get(context, laneLayout, laneData);
-    }
-  } else {
-    assert(resShape.size() == 2 && "Chunked Store must access 2D tensor tile.");
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[0] = subgroupSize;
-      instData[1] =
-          std::min(static_cast<int>(consumerInstData[1]), maxChunkSize);
-      return xegpu::LayoutAttr::get(context, instData);
-    } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[0] = subgroupSize;
-      laneData[1] =
-          std::min(static_cast<int>(consumerLaneData[1]), maxChunkSize);
-      return xegpu::LayoutAttr::get(context, laneLayout, laneData);
-    }
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    instData.back() = std::min(static_cast<int>(consumerInstData.back()),
+                               maxChunkSize * subgroupSize);
+    return xegpu::LayoutAttr::get(context, instData);
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    laneData.back() =
+        std::min(static_cast<int>(consumerLaneData.back()), maxChunkSize);
+    laneLayout.back() = std::min(static_cast<int64_t>(subgroupSize),
+                                 resShape.back() / laneData.back());
+    return xegpu::LayoutAttr::get(context, laneLayout, laneData);
   }
   return nullptr;
 }
@@ -1354,15 +1347,14 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      (chunkSize > 1), maxChunkSize, resShape,
-                                      subgroupSize);
+                                      maxChunkSize, resShape, subgroupSize);
 }
 
 /// Sets up the anchor layout for load matrix operation.
 /// TODO: enhance load matrix to indicate lowering to chunked load or not.
 xegpu::DistributeLayoutAttr
 xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType resVecTy,
+                                   VectorType resVecTy, int chunkSize,
                                    xegpu::DistributeLayoutAttr consumerLayout,
                                    const xegpu::uArch::uArch *uArch) {
 
@@ -1374,10 +1366,10 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneLoadSize(elemBitWidth), chunkSize);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      false, maxChunkSize, resShape,
-                                      subgroupSize);
+                                      maxChunkSize, resShape, subgroupSize);
 }
 
 /// Sets up the anchor layout for store scatter and store matrix operation.
@@ -1393,9 +1385,8 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 ///   lane_data={1,min(srcVec, maxLaneStoreSize)}
 static xegpu::DistributeLayoutAttr
 setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
-                              mlir::MLIRContext *context, bool isChunkedStore,
-                              int maxChunkSize, ArrayRef<int64_t> srcShape,
-                              int subgroupSize) {
+                              mlir::MLIRContext *context, int maxChunkSize,
+                              ArrayRef<int64_t> srcShape, int subgroupSize) {
 
   int srcShapeSize = srcShape.size();
   SmallVector<int> instData(srcShapeSize, 1);
@@ -1407,28 +1398,16 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
            "subgroup layout assignment not supported for storeScatter.");
     return nullptr;
   }
-
-  if (!isChunkedStore) {
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
-      return xegpu::LayoutAttr::get(context, instData);
-    } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
-      return xegpu::LayoutAttr::get(context, laneLayout, laneData);
-    }
-  } else {
-    assert(srcShapeSize == 2 && "Chunked Store must access 2D tensor tile.");
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[0] = subgroupSize;
-      instData[1] = std::min(static_cast<int>(srcShape[1]), maxChunkSize);
-      return xegpu::LayoutAttr::get(context, instData);
-    } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[0] = subgroupSize;
-      laneData[1] = std::min(static_cast<int>(srcShape[1]), maxChunkSize);
-      return xegpu::LayoutAttr::get(context, laneLayout, laneData);
-    }
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    laneLayout[srcShapeSize - 1] =
+        std::min(subgroupSize, static_cast<int>(srcShape.back()));
+    laneData[srcShapeSize - 1] =
+        std::min(maxChunkSize, static_cast<int>(srcShape.back()));
+    return xegpu::LayoutAttr::get(context, instData);
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    laneLayout[srcShapeSize - 1] =
+        std::min(subgroupSize, static_cast<int>(srcShape.back()));
+    return xegpu::LayoutAttr::get(context, laneLayout, laneData);
   }
   return nullptr;
 }
@@ -1447,15 +1426,16 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
-  return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
-                                       maxChunkSize, srcShape, subgroupSize);
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneStoreSize(elemBitWidth), chunkSize);
+  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
+                                       srcShape, subgroupSize);
 }
 
 /// Sets up the anchor layout for a store matrix operation.
 xegpu::DistributeLayoutAttr
 xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy,
+                                    VectorType srcVecTy, int chunkSize,
                                     const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
@@ -1466,9 +1446,10 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+  int maxChunkSize =
+      std::min(uArchInstruction->getMaxLaneStoreSize(elemBitWidth), chunkSize);
 
-  return setupGenericStoreAnchorLayout(layoutKind, context, false, maxChunkSize,
+  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
                                        srcShape, subgroupSize);
 }
 

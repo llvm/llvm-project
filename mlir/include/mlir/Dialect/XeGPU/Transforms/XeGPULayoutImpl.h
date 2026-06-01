@@ -216,7 +216,7 @@ setupLoadGatherAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
 /// Sets up the anchor layout for load matrix operation.
 DistributeLayoutAttr
 setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            DistributeLayoutAttr consumerLayout,
+                            int chunkSize, DistributeLayoutAttr consumerLayout,
                             const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
@@ -228,6 +228,7 @@ DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
 /// Sets up the anchor layout for a store matrix operation.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
+                                                  int chunkSize,
                                                   const uArch::uArch *uArch);
 
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
