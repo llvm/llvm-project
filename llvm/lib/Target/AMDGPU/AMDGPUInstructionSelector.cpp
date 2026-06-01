@@ -2470,6 +2470,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectGlobalLoadLds(I);
   case Intrinsic::amdgcn_tensor_load_to_lds:
   case Intrinsic::amdgcn_tensor_store_from_lds:
+  case Intrinsic::amdgcn_tensor_load_async_to_lds:
+  case Intrinsic::amdgcn_tensor_store_async_from_lds:
     return selectTensorLoadStore(I, IntrinsicID);
   case Intrinsic::amdgcn_asyncmark:
   case Intrinsic::amdgcn_wait_asyncmark:
@@ -3872,7 +3874,27 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
 bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
                                                       Intrinsic::ID IID) const {
-  bool IsLoad = IID == Intrinsic::amdgcn_tensor_load_to_lds;
+  bool IsLoad, IsAsync;
+  switch (IID) {
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+    IsLoad = true;
+    IsAsync = false;
+    break;
+  case Intrinsic::amdgcn_tensor_store_from_lds:
+    IsLoad = false;
+    IsAsync = false;
+    break;
+  case Intrinsic::amdgcn_tensor_load_async_to_lds:
+    IsLoad = true;
+    IsAsync = true;
+    break;
+  case Intrinsic::amdgcn_tensor_store_async_from_lds:
+    IsLoad = false;
+    IsAsync = true;
+    break;
+  default:
+    llvm_unreachable("not a tensor load/store intrinsic");
+  }
   unsigned Opc =
       IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_d4 : AMDGPU::TENSOR_STORE_FROM_LDS_d4;
   int NumGroups = 4;
@@ -3904,8 +3926,9 @@ bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
         .add(MI.getOperand(4)); // D# group 3
   }
 
-  MIB.addImm(0)               // r128
-      .add(MI.getOperand(6)); // cpol
+  MIB.addImm(0)                 // r128
+      .add(MI.getOperand(6))    // cpol
+      .addImm(IsAsync ? 1 : 0); // IsAsync
 
   MI.eraseFromParent();
   return true;

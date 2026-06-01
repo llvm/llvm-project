@@ -76,3 +76,69 @@ void test_amdgcn_tensor_store_from_lds_d5(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8
 {
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, sg4, 0);
 }
+
+//=======================================================================
+// Async tensor load/store builtins. They lower to the same machine
+// instructions as the sync variants but are tracked by the asyncmark
+// mechanism.
+//========================================================================
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_load_async_to_lds_d4(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.async.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> zeroinitializer, i32 0)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_load_async_to_lds_d4(v4u sg0, v8i sg1, v4i sg2, v4i sg3)
+{
+  __builtin_amdgcn_tensor_load_async_to_lds(sg0, sg1, sg2, sg3, v8i_zeros, 0);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_load_async_to_lds_d2(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.async.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 27)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_load_async_to_lds_d2(v4u sg0, v8i sg1)
+{
+  __builtin_amdgcn_tensor_load_async_to_lds(sg0, sg1, v4i_zeros, v4i_zeros, v8i_zeros, 27);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_store_async_from_lds_d4(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.async.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> zeroinitializer, i32 22)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_store_async_from_lds_d4(v4u sg0, v8i sg1, v4i sg2, v4i sg3)
+{
+  __builtin_amdgcn_tensor_store_async_from_lds(sg0, sg1, sg2, sg3, v8i_zeros, 22);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_store_async_from_lds_d2(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.async.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_store_async_from_lds_d2(v4u sg0, v8i sg1)
+{
+  __builtin_amdgcn_tensor_store_async_from_lds(sg0, sg1, v4i_zeros, v4i_zeros, v8i_zeros, 0);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_load_async_to_lds_d5(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.load.async.to.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> [[SG4:%.*]], i32 0)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_load_async_to_lds_d5(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
+{
+  __builtin_amdgcn_tensor_load_async_to_lds(sg0, sg1, sg2, sg3, sg4, 0);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_tensor_store_async_from_lds_d5(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    tail call void @llvm.amdgcn.tensor.store.async.from.lds(<4 x i32> [[SG0:%.*]], <8 x i32> [[SG1:%.*]], <4 x i32> [[SG2:%.*]], <4 x i32> [[SG3:%.*]], <8 x i32> [[SG4:%.*]], i32 0)
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_tensor_store_async_from_lds_d5(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4)
+{
+  __builtin_amdgcn_tensor_store_async_from_lds(sg0, sg1, sg2, sg3, sg4, 0);
+}

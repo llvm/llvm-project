@@ -4222,6 +4222,8 @@ class AMDGPUTensorLoadStore:
 
 def int_amdgcn_tensor_load_to_lds    : ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
 def int_amdgcn_tensor_store_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_load_async_to_lds : ClangBuiltin<"__builtin_amdgcn_tensor_load_async_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_async_from_lds : ClangBuiltin<"__builtin_amdgcn_tensor_store_async_from_lds">, AMDGPUTensorLoadStore;
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

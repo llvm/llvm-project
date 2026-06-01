@@ -189,6 +189,8 @@ void test_amdgcn_tensor_load_store(v4u sg0, v8i sg1, v4i sg2, v4i sg3, v8i sg4, 
 {
   __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds' must be a constant integer}}
   __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds' must be a constant integer}}
+  __builtin_amdgcn_tensor_load_async_to_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_async_to_lds' must be a constant integer}}
+  __builtin_amdgcn_tensor_store_async_from_lds(sg0, sg1, sg2, sg3, sg4, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_async_from_lds' must be a constant integer}}
 }
 
 void test_prefetch(generic void *fptr, global void *gptr, int cpol) {
