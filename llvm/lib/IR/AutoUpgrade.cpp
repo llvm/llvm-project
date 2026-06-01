@@ -1669,6 +1669,21 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .StartsWith("inc.32.p", true)
                      .StartsWith("dec.32.p", true)
                      .Default(false);
+      else if (Name.consume_front("atomic."))
+        // nvvm.atomic.{add,exch,max,min,inc,dec,and,or,xor}.gen.{i,f}.{cta,sys}
+        // nvvm.atomic.cas.gen.i.{cta,sys}
+        Expand = StringSwitch<bool>(Name)
+                     .StartsWith("add.gen.", true)
+                     .StartsWith("exch.gen.", true)
+                     .StartsWith("max.gen.", true)
+                     .StartsWith("min.gen.", true)
+                     .StartsWith("inc.gen.", true)
+                     .StartsWith("dec.gen.", true)
+                     .StartsWith("and.gen.", true)
+                     .StartsWith("or.gen.", true)
+                     .StartsWith("xor.gen.", true)
+                     .StartsWith("cas.gen.", true)
+                     .Default(false);
       else if (Name.consume_front("bitcast."))
         // nvvm.bitcast.{f2i,i2f,ll2d,d2ll}
         Expand =
@@ -2740,6 +2755,40 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
         Op, Ptr, Val, MaybeAlign(), AtomicOrdering::Monotonic,
         CI->getContext().getOrInsertSyncScopeID("device"));
     // See comment above.
+  } else if (Name.starts_with("atomic.") && Name.contains(".gen.")) {
+    // nvvm.atomic.{op}.gen.{i,f}.{cta,sys} -> atomicrmw / cmpxchg.
+    StringRef Op = Name.substr(StringRef("atomic.").size());
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Val = CI->getArgOperand(1);
+    SyncScope::ID SSID = CI->getContext().getOrInsertSyncScopeID(
+        Op.contains(".cta.") ? "block" : "");
+    if (Op.starts_with("cas.")) {
+      Value *New = CI->getArgOperand(2);
+      Value *Pair = Builder.CreateAtomicCmpXchg(
+          Ptr, Val, New, MaybeAlign(), AtomicOrdering::Monotonic,
+          AtomicOrdering::Monotonic, SSID);
+      Rep = Builder.CreateExtractValue(Pair, 0);
+    } else {
+      // Note we don't upgrade anything to AtomicRMWInst::UMin/UMax.  This is
+      // because we were actually missing those intrinsics!
+      AtomicRMWInst::BinOp BinOp =
+          StringSwitch<AtomicRMWInst::BinOp>(Op)
+              .StartsWith("add.gen.f", AtomicRMWInst::FAdd)
+              .StartsWith("add.gen.i", AtomicRMWInst::Add)
+              .StartsWith("exch.", AtomicRMWInst::Xchg)
+              .StartsWith("max.", AtomicRMWInst::Max)
+              .StartsWith("min.", AtomicRMWInst::Min)
+              .StartsWith("inc.", AtomicRMWInst::UIncWrap)
+              .StartsWith("dec.", AtomicRMWInst::UDecWrap)
+              .StartsWith("and.", AtomicRMWInst::And)
+              .StartsWith("or.", AtomicRMWInst::Or)
+              .StartsWith("xor.", AtomicRMWInst::Xor)
+              .Default(AtomicRMWInst::BAD_BINOP);
+      assert(BinOp != AtomicRMWInst::BAD_BINOP &&
+             "unexpected nvvm scoped atomic intrinsic");
+      Rep = Builder.CreateAtomicRMW(BinOp, Ptr, Val, MaybeAlign(),
+                                    AtomicOrdering::Monotonic, SSID);
+    }
   } else if (Name == "clz.ll") {
     // llvm.nvvm.clz.ll returns an i32, but llvm.ctlz.i64 returns an i64.
     Value *Arg = CI->getArgOperand(0);
