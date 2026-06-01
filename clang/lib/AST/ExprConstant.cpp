@@ -48,10 +48,10 @@
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/AST/Reflection.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -10953,15 +10953,15 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class ReflectionEvaluator
-  : public ExprEvaluatorBase<ReflectionEvaluator> {
+class ReflectionEvaluator : public ExprEvaluatorBase<ReflectionEvaluator> {
 
   using BaseType = ExprEvaluatorBase<ReflectionEvaluator>;
 
   APValue &Result;
+
 public:
   ReflectionEvaluator(EvalInfo &E, APValue &Result)
-    : ExprEvaluatorBaseTy(E), Result(Result) {}
+      : ExprEvaluatorBaseTy(E), Result(Result) {}
 
   bool Success(const APValue &V, const Expr *E) {
     Result = V;
@@ -10974,14 +10974,14 @@ public:
 
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   switch (E->getKind()) {
-    case ReflectionKind::Null: {
-      APValue Result(ReflectionKind::Null, /*Operand=*/nullptr);
-      return Success(Result, E);
-    }
-    case ReflectionKind::Type: {
-      APValue Result(ReflectionKind::Type, E->getOpaqueValue());
-      return Success(Result, E);
-    }
+  case ReflectionKind::Null: {
+    APValue Result(ReflectionKind::Null, /*Operand=*/nullptr);
+    return Success(Result, E);
+  }
+  case ReflectionKind::Type: {
+    APValue Result(ReflectionKind::Type, E->getOpaqueValue());
+    return Success(Result, E);
+  }
   }
   llvm_unreachable("invalid reflection");
 }

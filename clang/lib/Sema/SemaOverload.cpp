@@ -9806,7 +9806,7 @@ public:
       if (CandidateTypes[ArgIdx].hasReflectionType()) {
         CanQualType InfoTy = S.Context.getCanonicalType(S.Context.MetaInfoTy);
         if (AddedTypes.insert(InfoTy).second) {
-          QualType ParamTypes[2] = { InfoTy, InfoTy };
+          QualType ParamTypes[2] = {InfoTy, InfoTy};
           S.AddBuiltinCandidate(ParamTypes, Args, CandidateSet);
         }
       }

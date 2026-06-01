@@ -16,7 +16,6 @@
 #include "../ExprConstShared.h"
 #include "BitcastBuffer.h"
 #include "Boolean.h"
-#include "Reflect.h"
 #include "Char.h"
 #include "DynamicAllocator.h"
 #include "FixedPoint.h"
@@ -30,6 +29,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "Reflect.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -4038,7 +4038,8 @@ inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   return CheckDestructor(S, OpPC, Ptr);
 }
 
-inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind, const void *Operand) {
+inline bool ReflectValue(InterpState &S, CodePtr OpPC, ReflectionKind Kind,
+                         const void *Operand) {
   S.Stk.push<Reflect>(Kind, Operand);
   return true;
 }

@@ -5516,7 +5516,7 @@ private:
   operand_type Operand;
 
   CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
-                TypeSourceInfo *TSI);
+                 TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:

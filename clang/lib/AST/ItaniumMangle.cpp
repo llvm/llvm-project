@@ -1284,12 +1284,14 @@ void CXXNameMangler::mangleReflection(ReflectionKind Kind,
   //              ::= vr <variable name>                 # variable
   //              ::= sb <sb name>                       # structured binding
   //              ::= fn <function encoding>             # function
-  //              ::= pa [ <nonnegative number> ] _ <encoding>  # function parameter
+  //              ::= pa [ <nonnegative number> ] _ <encoding>  # function
+  //                                                              parameter
   //              ::= en <prefix> <unqualified-name>     # enumerator
   //              ::= an [ <nonnegative number> ] _      # annotation
   //              ::= ta <alias prefix>                  # type alias
   //              ::= ty <type>                          # type
-  //              ::= dm <prefix> <unqualified-name>     # non-static data member
+  //              ::= dm <prefix> <unqualified-name>     # non-static data
+  //                                                       member
   //              ::= un <prefix> [ <nonnegative number> ] _ # unnamed bit-field
   //              ::= ct [ <prefix> ] <unqualified-name> # class template
   //              ::= ft [ <prefix> ] <unqualified-name> # function template
@@ -1299,10 +1301,12 @@ void CXXNameMangler::mangleReflection(ReflectionKind Kind,
   //              ::= na [ <prefix> ] <unqualified-name> # namespace alias
   //              ::= ns [ <prefix> ] <unqualified-name> # namespace
   //              ::= ng                                 # ^^::
-  //              ::= ba [ <nonnegative number> ] _ <type> # direct base class relationship
+  //              ::= ba [ <nonnegative number> ] _ <type> # direct base class
+  //                                                         relationship
   //              ::= ds <type> _ [ <unqualified-name> ] _
   //                  [ <alignment number> ] _ [ <bit-width number> ] _
-  //                  [ n ]                              # data member description
+  //                  [ n ]                              # data member
+  //                  description
 
   Out << "LDm";
   switch (Kind) {

@@ -703,8 +703,8 @@ struct ImportReflection : ASTImporterOptionSpecificTestBase {
 };
 
 TEST_P(ImportReflection, ImportMetaInfoBuiltinType) {
-  Decl *FromTU = getTuDecl("using declToImport = decltype(^^int);",
-                           Lang_CXX26, "input.cc");
+  Decl *FromTU = getTuDecl("using declToImport = decltype(^^int);", Lang_CXX26,
+                           "input.cc");
   auto *FromTA = FirstDeclMatcher<TypeAliasDecl>().match(
       FromTU, typeAliasDecl(hasName("declToImport")));
   ASSERT_TRUE(FromTA);

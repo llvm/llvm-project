@@ -383,7 +383,8 @@ APValue::APValue(const APValue &RHS)
     setAddrLabelDiff(RHS.getAddrLabelDiffLHS(), RHS.getAddrLabelDiffRHS());
     break;
   case Reflection:
-    MakeReflection(RHS.getReflectionOperandKind(), RHS.getReflectionOpaqueOperand());
+    MakeReflection(RHS.getReflectionOperandKind(),
+                   RHS.getReflectionOpaqueOperand());
     break;
   }
 }
@@ -514,7 +515,8 @@ static bool isTypeAliasAsReflectionName(QualType QT) {
 }
 
 /// Unwrap reflected type for profiling
-static void unwrapReflectedTypeForProfile(llvm::FoldingSetNodeID &ID, QualType QT) {
+static void unwrapReflectedTypeForProfile(llvm::FoldingSetNodeID &ID,
+                                          QualType QT) {
   // TODO(Reflection)
 
   if (isTypeAliasAsReflectionName(QT)) {
@@ -527,7 +529,6 @@ static void unwrapReflectedTypeForProfile(llvm::FoldingSetNodeID &ID, QualType Q
 
   ID.AddBoolean(false);
   QT.getCanonicalType().Profile(ID);
-
 }
 
 static void profileReflection(llvm::FoldingSetNodeID &ID, APValue V) {
@@ -1036,11 +1037,11 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     Out << "&&" << getAddrLabelDiffRHS()->getLabel()->getName();
     return;
   case APValue::Reflection:
-    switch(getReflectionOperandKind()){
+    switch (getReflectionOperandKind()) {
     case ReflectionKind::Null:
       Out << "std::meta::info{}";
       break;
-    case ReflectionKind::Type:{
+    case ReflectionKind::Type: {
       const auto *TInfo =
           static_cast<const TypeSourceInfo *>(getReflectionOpaqueOperand());
       Out << "^^" << TInfo->getType().stream(Policy);

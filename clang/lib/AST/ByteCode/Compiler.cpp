@@ -4284,12 +4284,12 @@ bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
     return true;
 
   switch (E->getKind()) {
-    case ReflectionKind::Type: {
-      APValue Result(ReflectionKind::Type, E->getOpaqueValue());
-      return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
-    }
-    case ReflectionKind::Null:
-      llvm_unreachable("A null reflection should not reach here");
+  case ReflectionKind::Type: {
+    APValue Result(ReflectionKind::Type, E->getOpaqueValue());
+    return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
+  }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
   }
 
   return false;
