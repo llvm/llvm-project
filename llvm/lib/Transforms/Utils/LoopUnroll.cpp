@@ -110,9 +110,9 @@ UnrollVerifyLoopInfo("unroll-verify-loopinfo", cl::Hidden,
 #endif
                     );
 
-static cl::opt<bool> UnrollParallelReductions(
-    "unroll-parallel-reductions", cl::init(false), cl::Hidden,
-    cl::desc("Allow unrolling to parallelize reductions."));
+static cl::opt<bool> UnrollAddParallelReductions(
+    "unroll-add-parallel-reductions", cl::init(false), cl::Hidden,
+    cl::desc("Allow unrolling to add parallel reduction phis."));
 
 /// Check if unrolling created a situation where we need to insert phi nodes to
 /// preserve LCSSA form.
@@ -1061,8 +1061,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // to not exit.
   DenseMap<PHINode *, RecurrenceDescriptor> Reductions;
   bool CanAddAdditionalAccumulators =
-      (UnrollParallelReductions.getNumOccurrences() > 0
-           ? UnrollParallelReductions
+      (UnrollAddParallelReductions.getNumOccurrences() > 0
+           ? UnrollAddParallelReductions
            : ULO.AddAdditionalAccumulators) &&
       !CompletelyUnroll && L->getNumBlocks() == 1 &&
       (ULO.Runtime ||
@@ -1715,8 +1715,8 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   if (RdxDesc.hasUsesOutsideReductionChain())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
-  // Skip unsupported reductions. Min/max (integer and FP) are supported.
-  // TODO: Handle additional reductions.
+  // Skip unsupported reductions.
+  // TODO: Handle any-of and find-last reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
       RecurrenceDescriptor::isFindRecurrenceKind(RK))
     return std::nullopt;
