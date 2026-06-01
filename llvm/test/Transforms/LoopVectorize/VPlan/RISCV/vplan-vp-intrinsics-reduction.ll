@@ -43,9 +43,9 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
-; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
-; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
+; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[EVL_PHI]]>
+; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>, ir<1>
+; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load ir<[[GEP1]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call llvm.vp.merge(ir<true>, ir<[[ADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[CAST2:%[0-9]+]]> = zext vp<[[EVL]]> to i64
@@ -80,14 +80,14 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT:   vector.body:
 ; IF-EVL-INLOOP-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
-; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi (add) vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
+; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi (add) ir<[[RDX_START:%.+]]>, ir<[[RDX_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
-; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
-; IF-EVL-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
+; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[EVL_PHI]]>
+; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>, ir<1>
+; IF-EVL-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load ir<[[GEP1]]>, vp<[[EVL]]>
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + vp.reduce.add (ir<[[LD1]]>, vp<[[EVL]]>)
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[CAST2:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-INLOOP-NEXT:    EMIT vp<[[IV_NEXT]]> = add vp<[[CAST2]]>, vp<[[EVL_PHI]]>
