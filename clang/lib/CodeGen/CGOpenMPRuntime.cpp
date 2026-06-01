@@ -1849,6 +1849,9 @@ void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
       CGM.EmitVTable(CXXRecord);
       CodeGenVTables VTables = CGM.getVTables();
       llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+      // Must set VTables to weak since we're emitting them in multiple TUs now
+      if(!VTablesAddr->hasWeakLinkage())
+        VTablesAddr->setLinkage(llvm::GlobalValue::WeakODRLinkage);
       assert(VTablesAddr && "Expected non-null VTable address");
       CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
       // Emit VTable for all the fields containing dynamic CXXRecord
