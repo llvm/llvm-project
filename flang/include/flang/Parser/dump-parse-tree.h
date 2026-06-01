@@ -171,6 +171,7 @@ public:
   NODE(parser, AssumedImpliedSpec)
   NODE(parser, AssumedRankSpec)
   NODE(parser, AssumedShapeSpec)
+  NODE(parser, AssumedShapeBoundsSpec)
   NODE(parser, AssumedSizeSpec)
   NODE(parser, Asynchronous)
   NODE(parser, AsynchronousStmt)
