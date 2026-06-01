@@ -2968,10 +2968,9 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   const unsigned LocalSizeElemPtrIdx =
       HasVarArgs ? (BaseArgIdx + 6 + (HasEvents ? 3 : 0)) : IncorrectIdx;
 
-  assert((BaseArgIdx + 4 + (HasEvents ? 3 : 0) +
-          (HasVarArgs ? 2 : 0)) /* Last Argument Index */
-             < NumArgs &&
-         "Incorrect number arguments");
+  [[maybe_unused]] const unsigned LastArgIdx =
+      (BaseArgIdx + 4 + (HasEvents ? 3 : 0) + (HasVarArgs ? 2 : 0));
+  assert(LastArgIdx < NumArgs && "Incorrect number arguments");
 
   // 2. Process all arguments which requered preparation.
   // 2.1 Events - use Call arguments, or use dummy nulls in case of absence of
