@@ -175,14 +175,14 @@ std::string CUIDOptions::getCUID(StringRef InputFile,
   }
   return CUID;
 }
-Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
+Driver::Driver(StringRef DriverExecutable, StringRef TargetTriple,
                DiagnosticsEngine &Diags, std::string Title,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
     : Diags(Diags), VFS(std::move(VFS)), Mode(GCCMode),
       SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       Offload(OffloadHostDevice), CXX20HeaderType(HeaderMode_None),
       ModulesModeCXX20(false), LTOMode(LTOK_None),
-      ClangExecutable(ClangExecutable), SysRoot(DEFAULT_SYSROOT),
+      DriverExecutable(DriverExecutable), SysRoot(DEFAULT_SYSROOT),
       DriverTitle(Title), CCCPrintBindings(false), CCPrintOptions(false),
       CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
@@ -193,8 +193,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
 
-  Name = std::string(llvm::sys::path::filename(ClangExecutable));
-  Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
+  Name = std::string(llvm::sys::path::filename(DriverExecutable));
+  Dir = std::string(llvm::sys::path::parent_path(DriverExecutable));
 
   if ((!SysRoot.empty()) && llvm::sys::path::is_relative(SysRoot)) {
     // Prepend InstalledDir if SysRoot is relative
@@ -222,7 +222,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 #endif
 
   // Compute the path to the resource directory.
-  ResourceDir = GetResourcesPath(ClangExecutable);
+  ResourceDir = GetResourcesPath(DriverExecutable);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -1488,7 +1488,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // We look for the driver mode option early, because the mode can affect
   // how other options are parsed.
 
-  auto DriverMode = getDriverMode(ClangExecutable, ArgList.slice(1));
+  auto DriverMode = getDriverMode(DriverExecutable, ArgList.slice(1));
   if (!DriverMode.empty())
     setDriverMode(DriverMode);
 
