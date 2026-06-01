@@ -6746,13 +6746,7 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent,
-                      const Attr *attr) {
-    ID.AddInteger(attrKind);
-    ID.AddPointer(modified.getAsOpaquePtr());
-    ID.AddPointer(equivalent.getAsOpaquePtr());
-    ID.AddPointer(attr);
-  }
+                      QualType modified, QualType equivalent, const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;

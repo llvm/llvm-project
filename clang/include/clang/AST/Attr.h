@@ -81,6 +81,8 @@ public:
     return ::operator delete(Ptr, C, Alignment);
   }
 
+  virtual ~Attr() = default;
+
 protected:
   Attr(ASTContext &Context, const AttributeCommonInfo &CommonInfo,
        attr::Kind AK, bool IsLateParsed)
@@ -120,6 +122,16 @@ public:
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
 
   static StringRef getDocumentation(attr::Kind);
+
+  // Contribute Attr-specific content to a FoldingSetNodeID for callers like
+  // AttributedType::Profile that dedupe nodes by Attr identity. The default
+  // is empty: AttributedType::Profile already hashes attrKind (and
+  // asserts attr->getKind() == attrKind), so a no-op default makes stateless
+  // Attrs (nullability, ARC ownership, calling conventions, ...) dedupe by
+  // (kind, modified, equivalent) — pointer identity of the Attr is ignored.
+  // Override this in subclasses whose arguments meaningfully distinguish
+  // the wrapped type (e.g. SwiftAttrAttr hashes its string payload).
+  virtual void Profile(llvm::FoldingSetNodeID &ID) const {}
 };
 
 class TypeAttr : public Attr {

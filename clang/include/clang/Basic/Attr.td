@@ -3196,6 +3196,11 @@ def SwiftAttr : DeclOrTypeAttr {
   let Args = [StringArgument<"Attribute">];
   let Documentation = [SwiftAttrDocs];
   let PragmaAttributeSupport = 1;
+  let AdditionalMembers = [{
+    void Profile(llvm::FoldingSetNodeID &ID) const override {
+      ID.AddString(getAttribute());
+    }
+  }];
 }
 
 def SwiftBridge : InheritableAttr {

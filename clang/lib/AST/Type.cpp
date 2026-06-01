@@ -5338,6 +5338,17 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   return std::nullopt;
 }
 
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
+                             QualType modified, QualType equivalent,
+                             const Attr *attr) {
+
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID);
+}
+
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
   if (!isIntegralType(Ctx) || isEnumeralType())
     return false;
