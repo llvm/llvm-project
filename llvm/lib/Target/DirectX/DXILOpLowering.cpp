@@ -660,7 +660,6 @@ public:
   /// coordinates and offsets, build the DXIL arg list, and replace uses.
   [[nodiscard]] bool lowerSampleOp(
       Function &F, OpCode Op, unsigned CoordsIdx, unsigned OffsetsIdx,
-      unsigned ClampIdx,
       llvm::function_ref<void(IRBuilder<> &, CallInst *,
                               SmallVectorImpl<Value *> &)> EmitExtraArgs) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -675,8 +674,6 @@ public:
           createTmpHandleCast(CI->getArgOperand(1), OpBuilder.getHandleType());
       Value *Coords = CI->getArgOperand(CoordsIdx);
       Value *Offsets = CI->getArgOperand(OffsetsIdx);
-      Value *Clamp = ClampIdx < CI->arg_size() ? CI->getArgOperand(ClampIdx)
-                                               : UndefValue::get(FloatTy);
 
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
@@ -691,11 +688,8 @@ public:
       extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
       extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
 
-      // Emit op-specific arguments (e.g. Bias or DDX/DDY).
+      // Emit op-specific trailing arguments (e.g. Bias+Clamp, DDX+DDY+Clamp).
       EmitExtraArgs(IRB, CI, Args);
-
-      // The clamp is always the last argument.
-      Args.push_back(Clamp);
 
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(Op, Args, CI->getName(), NewRetTy);
@@ -711,18 +705,21 @@ public:
   [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
     return lowerSampleOp(
         F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
-        /*ClampIdx=*/HasClamp ? 5 : ~0u,
-        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
           // Bias is operand 3.
           Args.push_back(CI->getArgOperand(3));
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(5)
+                                  : UndefValue::get(IRB.getFloatTy()));
         });
   }
 
   [[nodiscard]] bool lowerSampleGrad(Function &F, bool HasClamp) {
     return lowerSampleOp(
         F, OpCode::SampleGrad, /*CoordsIdx=*/2, /*OffsetsIdx=*/5,
-        /*ClampIdx=*/HasClamp ? 6 : ~0u,
-        [](IRBuilder<> &IRB, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
           Value *DDX = CI->getArgOperand(3);
           Value *DDY = CI->getArgOperand(4);
           Type *FloatTy = IRB.getFloatTy();
@@ -735,6 +732,8 @@ public:
           size_t DDYStart = Args.size();
           Args.append(3, UndefF);
           extractElementsIntoArgs(IRB, Args, DDYStart, DDY, 3);
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(6) : UndefF);
         });
   }
 
