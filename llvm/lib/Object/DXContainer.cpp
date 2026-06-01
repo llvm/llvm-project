@@ -21,7 +21,7 @@ static Error parseFailed(const Twine &Msg) {
 }
 
 static bool readIsOutOfBounds(StringRef Buffer, const char *Src, size_t Size) {
-  return Src < Buffer.begin() || Src + Size > Buffer.end();
+  return !Src || Src < Buffer.begin() || Src + Size > Buffer.end();
 }
 
 template <typename T>
