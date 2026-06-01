@@ -6895,7 +6895,7 @@ static Function *findVectorVariant(CallInst *CI, ArrayRef<VPValue *> Args,
 namespace {
 /// The outcome of choosing how to widen a call at a given VF.
 struct CallWideningDecision {
-  using KindTy = VPCostContext::CallWideningKind;
+  enum class KindTy { Scalarize, Intrinsic, VectorVariant };
   CallWideningDecision(KindTy Kind, Function *Variant = nullptr)
       : Kind(Kind), Variant(Variant) {}
   KindTy Kind;
@@ -7007,17 +7007,6 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
         Replacement = RecipeBuilder.handleReplication(VPI, Range);
         break;
       }
-
-      assert(all_of(Range,
-                    [&](ElementCount VF) {
-                      Intrinsic::ID IID =
-                          getVectorIntrinsicIDForCall(CI, &CostCtx.TLI);
-                      if (IID && VPCostContext::isFreeScalarIntrinsic(IID))
-                        return true;
-                      auto Legacy = CostCtx.getLegacyCallKind(CI, VF);
-                      return !Legacy || *Legacy == Decision.Kind;
-                    }) &&
-             "VPlan call widening decision must match legacy decision");
 
       Replacement->insertBefore(VPI);
       VPI->replaceAllUsesWith(Replacement);
