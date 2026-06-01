@@ -29,7 +29,7 @@ bool Context::initGlobalValues() {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
-                              MemAllocKind::Global, /*IsGlobalValue=*/true);
+                              MemAllocKind::Global, /*IsIRGlobalValue=*/true);
       if (!FuncObj)
         return false;
       ValidFuncTargets.try_emplace(FuncObj->getAddress(),
@@ -52,13 +52,13 @@ bool Context::initGlobalValues() {
 
   for (GlobalVariable &GV : M.globals()) {
     Type *ValueTy = GV.getValueType();
-    uint64_t const Size = getEffectiveTypeAllocSize(ValueTy);
+    const uint64_t Size = getEffectiveTypeAllocSize(ValueTy);
     Align Alignment = GV.getPointerAlignment(DL);
     auto InitKind =
         GV.hasInitializer() ? MemInitKind::Zeroed : MemInitKind::Uninitialized;
-    auto const Obj =
+    const auto Obj =
         allocate(Size, Alignment.value(), GV.getName(), GV.getAddressSpace(),
-                 InitKind, MemAllocKind::Global, /*IsGlobalValue=*/true);
+                 InitKind, MemAllocKind::Global, /*IsIRGlobalValue=*/true);
 
     if (!Obj)
       return false;
@@ -569,7 +569,7 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
 IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
                   MemInitKind InitKind, MemAllocKind AllocKind,
-                  bool IsGlobalValue) {
+                  bool IsIRGlobalValue) {
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
@@ -577,7 +577,7 @@ Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
   auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
-      AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsGlobalValue);
+      AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;
   AllocationBase = AlignedAddr + AllocateSize;
   UsedMem += AllocateSize;

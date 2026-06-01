@@ -324,7 +324,7 @@ public:
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
                                             MemAllocKind AllocKind,
-                                            bool IsGlobalValue = false);
+                                            bool IsIRGlobalValue = false);
   bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
