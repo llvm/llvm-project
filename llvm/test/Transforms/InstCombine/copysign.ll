@@ -2,9 +2,18 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare float @llvm.fabs.f32(float)
+declare float @llvm.floor.f32(float)
+declare float @llvm.trunc.f32(float)
 declare float @llvm.copysign.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
+declare double @llvm.fabs.f64(double)
+declare double @llvm.floor.f64(double)
+declare double @llvm.trunc.f64(double)
+declare double @llvm.copysign.f64(double, double)
 declare <3 x double> @llvm.copysign.v3f64(<3 x double>, <3 x double>)
+declare <3 x double> @llvm.fabs.v3f64(<3 x double>)
+declare <3 x double> @llvm.floor.v3f64(<3 x double>)
+declare <3 x double> @llvm.trunc.v3f64(<3 x double>)
 
 define float @positive_sign_arg(float %x) {
 ; CHECK-LABEL: @positive_sign_arg(
@@ -284,4 +293,65 @@ define <2 x bfloat> @copysign_simplify_demanded_bits_sign_bitcast_not_int_vec(<2
   %cast.sign = bitcast <2 x half> %sign to <2 x bfloat>
   %result = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> %mag, <2 x bfloat> %cast.sign)
   ret <2 x bfloat> %result
+}
+
+; copysign(floor(fabs(X)), X) --> trunc(X)
+
+define double @copysign_floor_fabs_to_trunc_f64(double %x) {
+; CHECK-LABEL: @copysign_floor_fabs_to_trunc_f64(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.trunc.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %abs = call double @llvm.fabs.f64(double %x)
+  %fl = call double @llvm.floor.f64(double %abs)
+  %result = call double @llvm.copysign.f64(double %fl, double %x)
+  ret double %result
+}
+
+define float @copysign_floor_fabs_to_trunc_f32(float %x) {
+; CHECK-LABEL: @copysign_floor_fabs_to_trunc_f32(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %abs = call float @llvm.fabs.f32(float %x)
+  %fl = call float @llvm.floor.f32(float %abs)
+  %result = call float @llvm.copysign.f32(float %fl, float %x)
+  ret float %result
+}
+
+define <3 x double> @copysign_floor_fabs_to_trunc_vec(<3 x double> %x) {
+; CHECK-LABEL: @copysign_floor_fabs_to_trunc_vec(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <3 x double> @llvm.trunc.v3f64(<3 x double> [[X:%.*]])
+; CHECK-NEXT:    ret <3 x double> [[RESULT]]
+;
+  %abs = call <3 x double> @llvm.fabs.v3f64(<3 x double> %x)
+  %fl = call <3 x double> @llvm.floor.v3f64(<3 x double> %abs)
+  %result = call <3 x double> @llvm.copysign.v3f64(<3 x double> %fl, <3 x double> %x)
+  ret <3 x double> %result
+}
+
+; FMF flags from copysign propagate to the resulting trunc.
+define double @copysign_floor_fabs_to_trunc_fmf(double %x) {
+; CHECK-LABEL: @copysign_floor_fabs_to_trunc_fmf(
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf double @llvm.trunc.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %abs = call double @llvm.fabs.f64(double %x)
+  %fl = call double @llvm.floor.f64(double %abs)
+  %result = call nnan ninf double @llvm.copysign.f64(double %fl, double %x)
+  ret double %result
+}
+
+; Negative test: sign argument differs from fabs argument -- must not fold.
+define double @copysign_floor_fabs_no_fold_different_sign(double %x, double %y) {
+; CHECK-LABEL: @copysign_floor_fabs_no_fold_different_sign(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[FL:%.*]] = call double @llvm.floor.f64(double [[ABS]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.copysign.f64(double [[FL]], double [[Y:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %abs = call double @llvm.fabs.f64(double %x)
+  %fl = call double @llvm.floor.f64(double %abs)
+  %result = call double @llvm.copysign.f64(double %fl, double %y)
+  ret double %result
 }

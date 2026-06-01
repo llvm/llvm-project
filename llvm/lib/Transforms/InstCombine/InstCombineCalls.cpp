@@ -3116,6 +3116,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    // copysign(floor(fabs(X)), X) --> trunc(X)
+    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Specific(Sign))))) {
+      Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
+      return replaceInstUsesWith(*II, Trunc);
+    }
+
     Type *SignEltTy = Sign->getType()->getScalarType();
 
     Value *CastSrc;
