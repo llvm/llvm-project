@@ -8,7 +8,7 @@
 ; Each funclet generates ~2 prolog ops (push rbp + stack alloc), plus the
 ; main function has ~3 (push rbp + stack alloc + set frame). The total across
 ; all funclets (~33) exceeds the 31-op V3 limit, but each individual funclet
-; is well within limits. The V3 pass must not report_fatal_error for this case.
+; is well within limits. The V3 pass should handle this without errors.
 
 declare i32 @c(i32) local_unnamed_addr
 declare void @cleanup_helper(i32) local_unnamed_addr

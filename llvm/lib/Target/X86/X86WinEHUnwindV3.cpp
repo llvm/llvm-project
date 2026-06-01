@@ -155,7 +155,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
       return false;
     const auto &STI = MF.getSubtarget<X86Subtarget>();
     if (STI.hasEGPR())
-      report_fatal_error(
+      reportFatalUsageError(
           "EGPR (R16-R31) requires V3 unwind info on Windows x64.");
     return false;
   }
@@ -169,17 +169,17 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     FuncletInfo Info = analyzeFunclet(MF, Iter);
 
     if (Info.PrologOpCount > MaxV3PrologOps) {
-      report_fatal_error("function '" + MF.getName() +
-                         "' requires more than 31 V3 prolog operations; "
-                         "sub-fragment splitting for prolog overflow is not "
-                         "yet implemented");
+      reportFatalUsageError("function '" + MF.getName() +
+                            "' requires more than 31 V3 prolog operations; "
+                            "sub-fragment splitting for prolog overflow is "
+                            "not yet implemented");
     }
 
     if (Info.MaxEpilogOpCount > MaxV3EpilogOps) {
-      report_fatal_error("function '" + MF.getName() +
-                         "' has an epilog with more than 31 V3 operations; "
-                         "sub-fragment splitting for epilog op overflow is "
-                         "not yet implemented");
+      reportFatalUsageError("function '" + MF.getName() +
+                            "' has an epilog with more than 31 V3 operations; "
+                            "sub-fragment splitting for epilog op overflow is "
+                            "not yet implemented");
     }
 
     if (Info.EpilogCount > MaxV3Epilogs) {

@@ -119,9 +119,12 @@ static void EmitAbsDifference16(MCStreamer &Streamer, const MCSymbol *LHS,
   if (Diff->evaluateAsAbsolute(
           Value, static_cast<MCObjectStreamer &>(Streamer).getAssembler())) {
     if (Value < 0 || Value > UINT16_MAX)
-      report_fatal_error(
+      Context.reportError(
+          SMLoc(),
           "Label difference out of 16-bit unsigned range for V3 unwind info");
   }
+  // Always emit a 2-byte value so subsequent emission stays in sync; if a
+  // diagnostic was reported, the object file will be discarded by the caller.
   Streamer.emitValue(Diff, 2);
 }
 
@@ -134,8 +137,14 @@ static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
   default:
     llvm_unreachable("Unsupported unwind code");
   case Win64EH::UOP_Push2:
-    report_fatal_error("UOP_Push2 (PUSH2 with two registers) requires "
-                       "V3 unwind info. Use `.seh_unwindversion 3`.");
+    // Reachable from hand-written .s if a UOP_Push2 ends up in a V1/V2
+    // frame (e.g. via a per-function `.seh_unwindversion` downgrade after
+    // `.seh_push2regs`). Emit a recoverable diagnostic and skip the op so
+    // the assembler doesn't keep writing malformed bytes.
+    streamer.getContext().reportError(
+        SMLoc(), "UOP_Push2 (PUSH2 with two registers) requires V3 unwind "
+                 "info. Use `.seh_unwindversion 3`.");
+    return;
   case Win64EH::UOP_PushNonVol:
     EmitAbsDifference(streamer, inst.Label, begin);
     b2 |= (inst.Register & 0x0F) << 4;
@@ -427,9 +436,10 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
   SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 16> PrologIpLabels;
   unsigned PrologOpCount = Info->Instructions.size();
   if (PrologOpCount > 31) {
-    report_fatal_error("Too many prolog unwind codes for V3 encoding. Maximum "
-                       "is 31. This function has " +
-                       Twine(PrologOpCount));
+    reportFatalUsageError(
+        "Too many prolog unwind codes for V3 encoding. Maximum "
+        "is 31. This function has " +
+        Twine(PrologOpCount));
   }
   for (auto It = Info->Instructions.rbegin(); It != Info->Instructions.rend();
        ++It)
@@ -445,9 +455,9 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
         GetOptionalAbsDifference(Asm, Info->PrologEnd, Info->Begin);
     if (MaybePrologSize) {
       if (*MaybePrologSize < 0)
-        report_fatal_error("Negative SizeOfProlog in V3 unwind info");
+        reportFatalUsageError("Negative SizeOfProlog in V3 unwind info");
       if (*MaybePrologSize > UINT16_MAX)
-        report_fatal_error(
+        reportFatalUsageError(
             "SizeOfProlog exceeds 16-bit range for V3 unwind info");
       NeedsLargeProlog = (*MaybePrologSize > 255);
     } else {
@@ -460,9 +470,9 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
     auto MaybeOffset = GetOptionalAbsDifference(Asm, InstLabel, BeginLabel);
     if (MaybeOffset) {
       if (*MaybeOffset < 0)
-        report_fatal_error("Negative prolog IP offset in V3 unwind info");
+        reportFatalUsageError("Negative prolog IP offset in V3 unwind info");
       if (*MaybeOffset > UINT16_MAX)
-        report_fatal_error(
+        reportFatalUsageError(
             "Prolog IP offset exceeds 16-bit range for V3 unwind info");
       NeedsLargeProlog = (*MaybeOffset > 255);
     } else {
@@ -489,7 +499,7 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
     EI.Epilog = &Epilog;
     EI.NumberOfOps = Epilog.Instructions.size();
     if (EI.NumberOfOps > 31)
-      report_fatal_error(
+      reportFatalUsageError(
           "Too many epilog unwind codes for V3 encoding. Maximum "
           "is 31. This epilog has " +
           Twine(EI.NumberOfOps));
@@ -503,11 +513,12 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
         GetOptionalAbsDifference(Asm, Epilog.End, Epilog.Start);
     if (MaybeLastInstOfs) {
       if (*MaybeLastInstOfs < 0)
-        report_fatal_error(
+        reportFatalUsageError(
             "Negative IpOffsetOfLastInstruction in V3 unwind info");
       if (*MaybeLastInstOfs > UINT16_MAX)
-        report_fatal_error("IpOffsetOfLastInstruction exceeds 16-bit range for "
-                           "V3 unwind info");
+        reportFatalUsageError(
+            "IpOffsetOfLastInstruction exceeds 16-bit range for "
+            "V3 unwind info");
       EI.NeedsLarge = (*MaybeLastInstOfs > 255);
     } else {
       EI.NeedsLarge = true; // Can't measure -> be conservative
@@ -521,9 +532,9 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
           GetOptionalAbsDifference(Asm, EpiInst.Label, Epilog.Start);
       if (MaybeOffset) {
         if (*MaybeOffset < 0)
-          report_fatal_error("Negative epilog IP offset in V3 unwind info");
+          reportFatalUsageError("Negative epilog IP offset in V3 unwind info");
         if (*MaybeOffset > UINT16_MAX)
-          report_fatal_error(
+          reportFatalUsageError(
               "Epilog IP offset exceeds 16-bit range for V3 unwind info");
         EI.NeedsLarge = (*MaybeOffset > 255);
       } else {
@@ -547,9 +558,9 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
     EpilogInfos.push_back(std::move(EI));
   }
   if (EpilogInfos.size() > 7)
-    report_fatal_error("Too many epilogs for V3 encoding. Maximum is 7."
-                       " This function has " +
-                       Twine(EpilogInfos.size()));
+    reportFatalUsageError("Too many epilogs for V3 encoding. Maximum is 7."
+                          " This function has " +
+                          Twine(EpilogInfos.size()));
 
   // --- Inheritance decisions ---
   // An epilog can use the inherited (3-byte) descriptor when FirstOp,
@@ -589,9 +600,9 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
   unsigned TotalPayloadBytes =
       LargeHeaderBytes + PrologIpBytes + EpilogDescBytes + WODPoolBytes;
   if (TotalPayloadBytes > 255 * 2) {
-    report_fatal_error("Too much unwind info for V3 encoding. Maximum is "
-                       "510 bytes. This function has " +
-                       Twine(TotalPayloadBytes));
+    reportFatalUsageError("Too much unwind info for V3 encoding. Maximum is "
+                          "510 bytes. This function has " +
+                          Twine(TotalPayloadBytes));
   }
   uint8_t PayloadWords = (TotalPayloadBytes + 1) / 2;
 
@@ -701,7 +712,7 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
       if (EpilogOffsetExpr->evaluateAsAbsolute(OffsetValue,
                                                OS->getAssembler())) {
         if (OffsetValue < INT16_MIN || OffsetValue > INT16_MAX)
-          report_fatal_error(
+          reportFatalUsageError(
               "Epilog offset out of signed 16-bit range for V3 encoding");
       }
       OS->ensureHeadroom(2);
@@ -782,6 +793,22 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   if (info->Version == 3) {
     EmitUnwindInfoV3(streamer, info);
     return;
+  }
+
+  // UOP_Push2 is V3-only and cannot be encoded in V1/V2. Detect this early
+  // (before counting codes) so the error is reported cleanly. This is
+  // reachable from hand-written .s if `.seh_push2regs` is followed by a
+  // per-function `.seh_unwindversion 1` or `2` downgrade.
+  for (const auto &Inst : info->Instructions) {
+    if (Inst.Operation == Win64EH::UOP_Push2) {
+      streamer.getContext().reportError(
+          SMLoc(), "UOP_Push2 (PUSH2 with two registers) requires V3 unwind "
+                   "info. Use `.seh_unwindversion 3`.");
+      // Mark the frame as emitted (with no UNWIND_INFO) and bail so we don't
+      // emit malformed bytes or hit a downstream assertion.
+      info->Symbol = streamer.getContext().createTempSymbol();
+      return;
+    }
   }
 
   MCContext &context = streamer.getContext();

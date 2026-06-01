@@ -48,3 +48,25 @@ push2_trailing_junk:
     .seh_endprologue
     retq
     .seh_endproc
+
+// Test: UOP_Push2 recorded under V3 then frame downgraded to V2 — the
+// directive-level check passes (since the frame is already V3), so the
+// error must come from the unwind-info emitter as a recoverable diagnostic
+// rather than a fatal crash.
+.seh_unwindversion 3
+push2_downgrade_v2:
+    .seh_proc push2_downgrade_v2
+    .seh_push2regs %r12, %r13
+    push2   %r13, %r12
+    .seh_stackalloc 32
+    subq    $32, %rsp
+    .seh_endprologue
+    // Downgrade this frame to V2; UOP_Push2 cannot be encoded for V1/V2.
+    .seh_unwindversion 2
+    nop
+    .seh_startepilogue
+    .seh_unwindv2start
+    .seh_endepilogue
+    retq
+    .seh_endproc
+// CHECK: error: UOP_Push2 (PUSH2 with two registers) requires V3 unwind info
