@@ -2717,29 +2717,44 @@ static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
     switch (IntrinsicID) {
     case Intrinsic::nvvm_st_async_scope_sys_space_global:
       switch (ValueVT.SimpleTy) {
-      case MVT::i8:  return NVPTXISD::ST_ASYNC_SYS_B8;
-      case MVT::i16: return NVPTXISD::ST_ASYNC_SYS_B16;
-      case MVT::i32: return NVPTXISD::ST_ASYNC_SYS_B32;
-      case MVT::i64: return NVPTXISD::ST_ASYNC_SYS_B64;
-      default: break;
+      case MVT::i8:
+        return NVPTXISD::ST_ASYNC_SYS_B8;
+      case MVT::i16:
+        return NVPTXISD::ST_ASYNC_SYS_B16;
+      case MVT::i32:
+        return NVPTXISD::ST_ASYNC_SYS_B32;
+      case MVT::i64:
+        return NVPTXISD::ST_ASYNC_SYS_B64;
+      default:
+        break;
       }
       break;
     case Intrinsic::nvvm_st_async_scope_gpu_space_global:
       switch (ValueVT.SimpleTy) {
-      case MVT::i8:  return NVPTXISD::ST_ASYNC_GPU_B8;
-      case MVT::i16: return NVPTXISD::ST_ASYNC_GPU_B16;
-      case MVT::i32: return NVPTXISD::ST_ASYNC_GPU_B32;
-      case MVT::i64: return NVPTXISD::ST_ASYNC_GPU_B64;
-      default: break;
+      case MVT::i8:
+        return NVPTXISD::ST_ASYNC_GPU_B8;
+      case MVT::i16:
+        return NVPTXISD::ST_ASYNC_GPU_B16;
+      case MVT::i32:
+        return NVPTXISD::ST_ASYNC_GPU_B32;
+      case MVT::i64:
+        return NVPTXISD::ST_ASYNC_GPU_B64;
+      default:
+        break;
       }
       break;
     case Intrinsic::nvvm_st_async_mmio_scope_sys_space_global:
       switch (ValueVT.SimpleTy) {
-      case MVT::i8:  return NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
-      case MVT::i16: return NVPTXISD::ST_ASYNC_MMIO_SYS_B16;
-      case MVT::i32: return NVPTXISD::ST_ASYNC_MMIO_SYS_B32;
-      case MVT::i64: return NVPTXISD::ST_ASYNC_MMIO_SYS_B64;
-      default: break;
+      case MVT::i8:
+        return NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
+      case MVT::i16:
+        return NVPTXISD::ST_ASYNC_MMIO_SYS_B16;
+      case MVT::i32:
+        return NVPTXISD::ST_ASYNC_MMIO_SYS_B32;
+      case MVT::i64:
+        return NVPTXISD::ST_ASYNC_MMIO_SYS_B64;
+      default:
+        break;
       }
       break;
     }
