@@ -60,6 +60,7 @@
 ;;
 ;;     const size_t gs[] = {1,2,4};
 ;;
+; TODO: Fix int8 type came from clang in case of NULL events passed in opencl's enqueue_kernel.
 ;;     // enqueue empty kernel
 ; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrInt8]] %[[#nullPtrInt8]] %[[#InvokeKernel1]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue,
