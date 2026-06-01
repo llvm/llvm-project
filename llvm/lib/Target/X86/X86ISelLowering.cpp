@@ -12923,14 +12923,14 @@ static int matchShuffleAsVSHLD(MVT &ShiftVT, SDValue &V1, SDValue &V2,
       if (isShuffleEquivalent(Mask, FunnelMask)) {
         MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
         ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
-        return Shift * 8;
+        return Shift * ScalarSizeInBits;
       }
       ShuffleVectorSDNode::commuteMask(FunnelMask);
       if (isShuffleEquivalent(Mask, FunnelMask)) {
         MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
         ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
         std::swap(V1, V2);
-        return Shift * 8;
+        return Shift * ScalarSizeInBits;
       }
     }
   }
