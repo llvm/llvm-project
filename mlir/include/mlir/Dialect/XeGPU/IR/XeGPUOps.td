@@ -1204,12 +1204,18 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : 1D or 2D statically shape memref, representing the raw SLM buffer. The provided memref must be contiguous.
+     - `source` : 1D or 2D statically shaped memref, representing the raw SLM buffer. The provided memref must be contiguous.
 
     Results:
-     - `mem_desc` : the memory descriptor.
+     - `mem_desc` : the memory descriptor (1D or higher).
 
-    Example:
+    Example (1D):
+    ```mlir
+      %mdesc = xegpu.create_mem_desc %mref
+        : memref<128xi8, 3> -> !xegpu.mem_desc<64xf16>
+    ```
+
+    Example (2D with layout):
     ```mlir
       %mdesc = xegpu.create_mem_desc %mref
         : memref<4096xi8, 3>
@@ -1237,15 +1243,15 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
   }];
 
   let description = [{
-    This operation loads an nD block of data from shared local memory (SLM) as specified
-    by the provided nD `mem_desc`. Memory descriptors of any rank are supported.
+    This operation loads a block of data from shared local memory (SLM) as specified
+    by the provided `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
 
     Arguments:
      - `mem_desc`: the memory descriptor identifying the SLM region.
-     - `offsets`: the coordinates within the matrix to read from.
+     - `offsets`: the coordinates within the memory descriptor to read from.
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
         to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
         across all lanes. Only used on subgroup and lane level.
@@ -1254,9 +1260,14 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
         Only valid at workgroup and subgroup levels.
 
     Results:
-     - `res`: the matrix elements loaded from SLM.
+     - `res`: the elements loaded from SLM.
 
-    Example (Workgroup level):
+    Example (1D):
+    ```mlir
+        %1 = xegpu.load_matrix %0[%c0] : !xegpu.mem_desc<64xf16>, index -> vector<16xf16>
+    ```
+
+    Example (Workgroup level, 2D):
     ```mlir
         %c0 = arith.constant 0 : index
         %1 = xegpu.load_matrix %0[%c0, %c0] <{
@@ -1308,23 +1319,28 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let assemblyFormat = [{ $data `,` $mem_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
                           prop-dict attr-dict `` `:` type(operands)}];
   let description = [{
-    This operation stores an nD `data` fragment into the shared local memory region
-    specified by an nD `mem_desc`. Memory descriptors of any rank are supported.
+    This operation stores a `data` fragment into the shared local memory region
+    specified by a `mem_desc`. Memory descriptors of any rank (1D or higher) are supported.
 
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
 
     Arguments:
      - `mem_desc`: the memory descriptor specifying the SLM region.
-     - `offsets`: the coordinates within the matrix where the data will be written.
-     - `data`: the values to be stored in the matrix.
+     - `offsets`: the coordinates within the memory descriptor where the data will be written.
+     - `data`: the values to be stored.
      - `subgroup_block_io`: [optional] An attribute indicating that the operation can be lowered
-        to a subgroup block load. When this attribute is present, the offsets are subgroup-uniform
+        to a subgroup block store. When this attribute is present, the offsets are subgroup-uniform
         across all lanes. Only used on subgroup and lane level.
-     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
+     - `layout`: [optional] Describes the expected layout of the `mem_desc` operand as well as
         the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
 
-    Example (Workgroup level):
+    Example (1D):
+    ```mlir
+        xegpu.store_matrix %1, %0[%c0] : vector<16xf16>, !xegpu.mem_desc<64xf16>, index
+    ```
+
+    Example (Workgroup level, 2D):
     ```mlir
         %c0 = arith.constant 0 : index
         xegpu.store_matrix %1, %0[%c0, %c0] <{

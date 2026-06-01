@@ -784,7 +784,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
 
     auto ParseAllowDisallowFile =
         [&](const std::string &FilePath) -> Expected<StringSet<>> {
-      auto BufOrErr = MemoryBuffer::getFile(FilePath);
+      auto BufOrErr = MemoryBuffer::getFile(FilePath, /*IsText=*/true);
       if (!BufOrErr)
         return make_error<StringError>(
             Twine("cannot open allow/disallow file '") + FilePath +
@@ -1040,6 +1040,33 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
           WithColor::error() << toString(std::move(E)) << '\n';
           return EXIT_FAILURE;
         }
+      }
+    }
+
+    // Bump the .dSYM bundle directory's mtime so macOS Spotlight reimports
+    // the (possibly new) UUID. Rewriting the inner DWARF file alone leaves
+    // the bundle directory mtime frozen, and Spotlight keeps serving the
+    // previous build's UUID, falling through to slow dsymForUUID lookups.
+    {
+      StringRef DWARFFile = OutputLocationOrErr->DWARFFile;
+      // Walk components from the right: the innermost match is the bundle
+      // itself, even when a parent directory is also named *.dSYM.
+      StringRef BundlePath;
+      for (auto I = sys::path::rbegin(DWARFFile),
+                E = sys::path::rend(DWARFFile);
+           I != E; ++I) {
+        StringRef Component = *I;
+        if (sys::path::extension(Component) == ".dSYM") {
+          BundlePath = DWARFFile.substr(0, Component.end() - DWARFFile.begin());
+          break;
+        }
+      }
+      if (!BundlePath.empty()) {
+        auto Now = std::chrono::system_clock::now();
+        if (auto EC =
+                sys::fs::setLastAccessAndModificationTime(BundlePath, Now))
+          WithColor::warning() << "could not update mtime of " << BundlePath
+                               << ": " << EC.message() << '\n';
       }
     }
   }

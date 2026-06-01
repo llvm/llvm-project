@@ -398,6 +398,67 @@ int test_builtin_popcountg(unsigned x) {
 // OGCG-LABEL: _Z22test_builtin_popcountgj
 // OGCG:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
 
+unsigned test_builtin_popcountg_u8(unsigned char x) {
+  return __builtin_popcountg(x);
+}
+
+// CIR-LABEL: _Z25test_builtin_popcountg_u8h
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u8i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u8i -> !s32i
+// CIR:         {{%.+}} = cir.cast integral {{.*}} : !s32i -> !u32i
+
+// LLVM-LABEL: _Z25test_builtin_popcountg_u8h
+// LLVM:         %{{.+}} = call i8 @llvm.ctpop.i8(i8 %{{.+}})
+
+// OGCG-LABEL: _Z25test_builtin_popcountg_u8h
+// OGCG:         %{{.+}} = call i8 @llvm.ctpop.i8(i8 %{{.+}})
+
+#if defined(__SIZEOF_INT128__) && __SIZEOF_INT128__ == 16
+using u128 = unsigned __int128;
+
+int test_builtin_popcountg_u128(u128 x) {
+  return __builtin_popcountg(x);
+}
+
+// CIR-LABEL: _Z27test_builtin_popcountg_u128o
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z27test_builtin_popcountg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.ctpop.i128(i128 %{{.+}})
+
+// OGCG-LABEL: _Z27test_builtin_popcountg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.ctpop.i128(i128 %{{.+}})
+
+int test_builtin_clzg_u128(u128 x) {
+  return __builtin_clzg(x, 0);
+}
+
+// CIR-LABEL: _Z22test_builtin_clzg_u128o
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z22test_builtin_clzg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.ctlz.i128(i128 %{{.+}}, i1 true)
+
+// OGCG-LABEL: _Z22test_builtin_clzg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.ctlz.i128(i128 %{{.+}}, i1 true)
+
+int test_builtin_ctzg_u128(u128 x) {
+  return __builtin_ctzg(x, 0);
+}
+
+// CIR-LABEL: _Z22test_builtin_ctzg_u128o
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u128i
+// CIR:         {{%.+}} = cir.cast integral [[TMP]] : !u128i -> !s32i
+
+// LLVM-LABEL: _Z22test_builtin_ctzg_u128o
+// LLVM:         %{{.+}} = call i128 @llvm.cttz.i128(i128 %{{.+}}, i1 true)
+
+// OGCG-LABEL: _Z22test_builtin_ctzg_u128o
+// OGCG:         %{{.+}} = call i128 @llvm.cttz.i128(i128 %{{.+}}, i1 true)
+#endif
+
 unsigned char test_builtin_bitreverse8(unsigned char x) {
   return __builtin_bitreverse8(x);
 }

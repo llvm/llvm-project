@@ -107,7 +107,8 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
           !assumptionExpr->HasSideEffects(getContext())) {
         mlir::Value assumptionValue = emitCheckedArgForAssume(assumptionExpr);
         cir::AssumeOp::create(builder, getLoc(s.getSourceRange()),
-                              assumptionValue);
+                              assumptionValue, cir::AssumeBundleKind::None,
+                              mlir::ValueRange{});
       }
     } break;
     }
@@ -802,7 +803,7 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   // If the substmt is default stmt or case stmt, try to handle the special case
   // to make it into the simple form. e.g.
   //
-  //  swtich () {
+  //  switch () {
   //    case 1:
   //    default:
   //      ...
@@ -913,11 +914,6 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
       return mlir::failure();
 
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -933,6 +929,7 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
           // https://en.cppreference.com/w/cpp/language/for
           // In C++ the scope of the init-statement and the scope of
           // statement are one and the same.
+          RunCleanupsScope bodyScope(*this);
           bool useCurrentScope = true;
           if (emitStmt(s.getLoopVarStmt(), useCurrentScope).failed())
             loopRes = mlir::failure();
@@ -981,11 +978,6 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
       if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
         return mlir::failure();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // In the classic codegen, if there are any cleanups between here and the
-    // loop-exit scope, a block is created to stage the loop exit. We probably
-    // already do the right thing because of ScopeOp, but we need more testing
-    // to be sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     forOp = builder.createFor(
         getLoc(s.getSourceRange()),
@@ -1012,6 +1004,7 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the for loop body is nested within the scope of the
           // for loop's init-statement and condition.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1049,11 +1042,6 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
   auto doStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     doWhileOp = builder.createDoWhile(
         getLoc(s.getSourceRange()),
@@ -1070,6 +1058,7 @@ mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the do-while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1100,11 +1089,6 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
   auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
     assert(!cir::MissingFeatures::loopInfoStack());
-    // From LLVM: if there are any cleanups between here and the loop-exit
-    // scope, create a block to stage a loop exit along.
-    // We probably already do the right thing because of ScopeOp, but make
-    // sure we handle all cases.
-    assert(!cir::MissingFeatures::loopSpecificCleanupHandling());
 
     whileOp = builder.createWhile(
         getLoc(s.getSourceRange()),
@@ -1126,6 +1110,7 @@ mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
         /*bodyBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           // The scope of the while loop body is a nested scope.
+          RunCleanupsScope bodyScope(*this);
           if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
             loopRes = mlir::failure();
           emitStopPoint(&s);
@@ -1164,10 +1149,35 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
 
   auto *compoundStmt = cast<CompoundStmt>(s);
 
-  mlir::Block *swtichBlock = builder.getBlock();
-  for (auto *c : compoundStmt->body()) {
+  ArrayRef<Stmt *> body{compoundStmt->body_begin(), compoundStmt->body_end()};
+
+  mlir::Block *switchBlock = builder.getBlock();
+
+  // Any statements appearing before the first case statement are 'unassociated'
+  // with anything. So we have to create them FIRST in their own block. After
+  // that, the 'case' regions will take care of future ones.
+  if (!body.empty() && !isa<SwitchCase>(body.front())) {
+    builder.setInsertionPointToEnd(switchBlock);
+    while (!body.empty() && !isa<SwitchCase>(body.front())) {
+
+      auto *c = body.front();
+      if (mlir::failed(emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
+        return mlir::failure();
+
+      body = body.drop_front();
+    }
+
+    // Now that we've emitted ALL of the statements, we can create a new block
+    // for the actual case statements/etc to appear.
+    mlir::Block *lastBlock = builder.getBlock();
+    switchBlock = builder.createBlock(switchBlock->getParent());
+    builder.setInsertionPointToEnd(lastBlock);
+    cir::BrOp::create(builder, getLoc(s->getSourceRange()), switchBlock);
+  }
+
+  for (auto *c : body) {
     if (auto *switchCase = dyn_cast<SwitchCase>(c)) {
-      builder.setInsertionPointToEnd(swtichBlock);
+      builder.setInsertionPointToEnd(switchBlock);
       // Reset insert point automatically, so that we can attach following
       // random stmt to the region of previous built case op to try to make
       // the being generated `cir.switch` to be in simple form.

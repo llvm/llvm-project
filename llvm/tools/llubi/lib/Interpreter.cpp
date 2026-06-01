@@ -907,8 +907,7 @@ public:
   AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
-    const FastMathFlags FMF =
-        isa<FPMathOperator>(CB) ? CB.getFastMathFlags() : FastMathFlags();
+    const FastMathFlags FMF = CB.getFastMathFlagsOrNone();
 
     switch (IID) {
     case Intrinsic::assume:
@@ -2191,9 +2190,9 @@ public:
 
   void visitLShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.lshr(RHS);
     });
@@ -2201,9 +2200,9 @@ public:
 
   void visitAShr(BinaryOperator &I) {
     visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                      ? LHS.countr_zero() + 1
-                      : LHS.getBitWidth()))
+      if (RHS.uge(LHS.getBitWidth()) ||
+          (cast<PossiblyExactOperator>(I).isExact() &&
+           RHS.ugt(LHS.countr_zero())))
         return AnyValue::poison();
       return LHS.ashr(RHS);
     });

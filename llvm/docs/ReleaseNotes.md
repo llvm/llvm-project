@@ -80,6 +80,13 @@ Makes programs 10x faster by doing Special New Thing.
 * The standard textual output for floating-point literals is changed to take
   advantage of the new floating-point literals formats.
 
+* The resume/destroy functions emitted for the switch-resume ABI (C++20
+  coroutines) now use `CallingConv::C` instead of `CallingConv::Fast`. This
+  stabilizes the coroutine ABI across LLVM versions and aligns it with other
+  vendors. The change is observationally identical on targets where `fastcc`
+  and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
+  break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -127,6 +134,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
+
+* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
+  references into the container, not just the iterator for the erased element.
+  Use the new ``remove_if`` member to erase matching elements in a single pass
+  instead of erasing while iterating.
 
 ### Changes to building LLVM
 
@@ -219,6 +231,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
 * Adds experimental assembler support for the `Xqccmt` (Qualcomm 16-bit Table Jump) vendor extension.
+* `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
+* Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 
 ### Changes to the WebAssembly Backend
 

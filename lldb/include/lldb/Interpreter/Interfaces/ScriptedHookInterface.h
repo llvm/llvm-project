@@ -29,8 +29,7 @@ public:
 
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
-                     lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) = 0;
+                     lldb::TargetSP target_sp) = 0;
 
   /// Check which hook callback methods the Python class implements.
   /// Called after CreatePluginObject to determine the trigger mask.
