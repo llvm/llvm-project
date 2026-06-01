@@ -29,17 +29,19 @@ class L0DeviceTy;
 struct L0LaunchEnvTy;
 
 /// Abstract queue that supports asynchronous command submission.
-struct AsyncQueueTy {
+class L0QueueTy {
+protected:
   /// Device owning this queue.
   L0DeviceTy &Device;
   /// Underlying immediate command list.
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
-  bool IsInorder;
+  bool CreateQueueInOrder;
 
-  AsyncQueueTy(L0DeviceTy &Device, bool IsInorder = true)
-      : Device(Device), IsInorder(IsInorder) {}
-  virtual ~AsyncQueueTy() {}
+public:
+  L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
+      : Device(Device), CreateQueueInOrder(IsInorder) {}
+  virtual ~L0QueueTy() {}
 
   /// Clear data.
   void reset() { resetImpl(); }
@@ -104,7 +106,7 @@ struct AsyncQueueTy {
   }
 };
 
-class L0AsyncQueueTy : public AsyncQueueTy {
+class L0AsyncQueueTy : public L0QueueTy {
 protected:
   /// List of events attached to submitted commands.
   llvm::SmallVector<ze_event_handle_t> WaitEvents;
@@ -120,8 +122,7 @@ protected:
   void processCopyQueues();
 
 public:
-  L0AsyncQueueTy(L0DeviceTy &Device)
-      : AsyncQueueTy(Device, /*IsInorder*/ false) {}
+  L0AsyncQueueTy(L0DeviceTy &Device) : L0QueueTy(Device, /*IsInorder*/ false) {}
   virtual ~L0AsyncQueueTy() {}
 
   L0AsyncQueueTy(const L0AsyncQueueTy &) = delete;
@@ -158,9 +159,9 @@ public:
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
 };
 
-class L0InorderQueueTy : public AsyncQueueTy {
+class L0InorderQueueTy : public L0QueueTy {
 public:
-  L0InorderQueueTy(L0DeviceTy &Device) : AsyncQueueTy(Device) {}
+  L0InorderQueueTy(L0DeviceTy &Device) : L0QueueTy(Device) {}
   virtual ~L0InorderQueueTy() {}
 
   L0InorderQueueTy(const L0InorderQueueTy &) = delete;
@@ -195,14 +196,14 @@ public:
 /// Simple cache for queue objects.
 class L0QueueCacheTy {
   L0DeviceTy &Device;
-  llvm::SmallVector<AsyncQueueTy *> Queues;
+  llvm::SmallVector<L0QueueTy *> Queues;
   std::mutex Mtx;
   CommandModeTy CachedCmdMode = CommandModeTy::InOrder;
 
 public:
   L0QueueCacheTy(L0DeviceTy &Device) : Device(Device) {}
-  Expected<AsyncQueueTy *> getQueue();
-  void releaseQueue(AsyncQueueTy *Queue);
+  Expected<L0QueueTy *> getQueue();
+  void releaseQueue(L0QueueTy *Queue);
   Error deinit();
   void setCommandMode(CommandModeTy CmdMode) { CachedCmdMode = CmdMode; }
 };
