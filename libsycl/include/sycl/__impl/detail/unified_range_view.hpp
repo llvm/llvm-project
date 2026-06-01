@@ -16,6 +16,7 @@
 #define _LIBSYCL___IMPL_DETAIL_UNIFIED_RANGE_VIEW_HPP
 
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/index_space_classes.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -32,7 +33,9 @@ struct UnifiedRangeView {
   UnifiedRangeView &operator=(UnifiedRangeView &&Desc) = default;
   ~UnifiedRangeView() = default;
 
-  // TODO: ctors with sycl::range and nd::range will be added later.
+  template <int Dims>
+  UnifiedRangeView(sycl::range<Dims> &N)
+      : MGlobalSize(&(N[0])), MDims(size_t(Dims)) {}
 
   UnifiedRangeView(const size_t *GlobalSize, const size_t *LocalSize,
                    const size_t *Offset, size_t Dims)
