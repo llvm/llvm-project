@@ -33,7 +33,7 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 /// or stream functionality but are not backed by any host OS file.
 class File : public IOObject {
 public:
-  static int kInvalidDescriptor;
+  static constexpr int kInvalidDescriptor = -1;
   static FILE *kInvalidStream;
 
   // NB this enum is used in the lldb platform gdb-remote packet

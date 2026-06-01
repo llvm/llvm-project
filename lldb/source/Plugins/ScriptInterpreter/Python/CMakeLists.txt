@@ -48,6 +48,8 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
   add_lldb_library(lldbPluginScriptInterpreterPython SHARED
     ${python_plugin_sources}
+    LINK_COMPONENTS
+      Support
     LINK_LIBS
       liblldb
       ${Python3_LIBRARIES}
@@ -78,6 +80,14 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
 
   target_link_directories(lldbPluginScriptInterpreterPython PRIVATE ${PYTHON_SABI_LIBRARY_DIRS})
   target_link_directories(lldbStaticScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+  if(WIN32 AND NOT MINGW)
+    # Windows doesn't have "lib" as CMAKE_SHARED_LIBRARY_PREFIX. To be
+    # consistent with Unix, the output is still prefixed with "lib".
+    set_target_properties(lldbPluginScriptInterpreterPython
+      PROPERTIES
+      OUTPUT_NAME liblldbPluginScriptInterpreterPython
+    )
+  endif()
 else()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${python_plugin_sources}

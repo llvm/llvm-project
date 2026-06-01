@@ -157,6 +157,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  endif()
 
   if (NOT WIN32)
   add_dependencies(${swig_target} lldb-python-wrapper)
