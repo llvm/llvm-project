@@ -1904,3 +1904,40 @@ void callStdTieTemplateTests() {
   stdTieReinitInTemplate<std::string>();
   stdTiePartialReinitInTemplate<std::string>();
 }
+
+void stdTieParenthesized() {
+  // Parenthesized std::tie on the LHS still reinitializes captured variables.
+  std::string a, b;
+  std::move(a);
+  std::move(b);
+  (std::tie(a, b)) = makeStringPair("x", "y"); // no-warning: both reinitialized
+  a.size();
+  b.size();
+}
+
+void stdTieParenthesizedWithIgnore() {
+  // Parenthesized std::tie with std::ignore still reinitializes named variables.
+  std::string a;
+  std::move(a);
+  (std::tie(a, std::ignore)) = makeStringPair("x", "y"); // no-warning: a reinitialized
+  a.size();
+}
+
+void stdTieParenthesizedIgnoreFlipped() {
+  // std::ignore in first position inside parenthesized std::tie.
+  std::string a;
+  std::move(a);
+  (std::tie(std::ignore, a)) = makeStringPair("x", "y"); // no-warning: a reinitialized
+  a.size();
+}
+
+void stdTieParenthesizedPartialReinit() {
+  // Parenthesized std::tie only reinitializes variables named in the call.
+  std::string a, b;
+  std::move(a);
+  (std::tie(b)) = std::make_tuple(std::string("y")); // reinitializes b, not a
+  b.size(); // no-warning: b was reinitialized
+  a.size();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-5]]:3: note: move occurred here
+}
