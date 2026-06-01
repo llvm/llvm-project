@@ -18,14 +18,12 @@ body: |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   liveins: $vgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $vgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_LSHLREV_B32_e64 32, $vgpr3, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
@@ -54,11 +52,10 @@ body: |
     ; GCN-LABEL: name: drain_call
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr0_sgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr30_sgpr31 = SI_CALL killed $sgpr0_sgpr1, 0, csr_amdgpu
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: SI_RETURN implicit $vgpr2
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -84,7 +81,6 @@ body: |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   liveins: $vgpr3
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
@@ -112,7 +108,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_TRAP 0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -134,7 +129,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_GETREG_B32 1, implicit $mode
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -156,7 +150,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_B32 $sgpr0, 1, implicit-def $mode, implicit $mode
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -178,7 +171,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_B32_mode $sgpr0, 1, implicit-def $mode, implicit $mode
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -200,7 +192,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 1, implicit-def $mode, implicit $mode
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -222,7 +213,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SETREG_IMM32_B32_mode 0, 1, implicit-def $mode, implicit $mode
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -244,7 +234,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SENDMSG 1, implicit $exec, implicit $m0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -266,7 +255,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_SENDMSGHALT 1, implicit $exec, implicit $m0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -288,7 +276,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_SENDMSG_RTN_B32 1
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -310,7 +297,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0_sgpr1 = S_SENDMSG_RTN_B64 1
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -332,7 +318,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_WAIT 1
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -354,7 +339,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_M0 implicit $m0
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -376,7 +360,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_IMM 1
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -398,7 +381,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_ISFIRST_M0 implicit $m0, implicit-def $scc, implicit $scc
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
@@ -420,7 +402,6 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_BARRIER_SIGNAL_ISFIRST_IMM 1, implicit-def $scc, implicit $scc
-    ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
