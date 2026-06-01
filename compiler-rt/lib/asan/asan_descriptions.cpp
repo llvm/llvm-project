@@ -38,16 +38,16 @@ AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
 
 // Writes a color-free, single-line description of a heap allocation or
 // deallocation stack, e.g. "freed by thread T1 here:".
-static void DescribeAllocStack(const char *verb, AsanThreadContext *thread,
-                               InternalScopedString *s) {
+static void DescribeAllocStack(const char* verb, AsanThreadContext* thread,
+                               InternalScopedString* s) {
   s->AppendF("%s by thread %s here:", verb,
              AsanThreadIdAndName(thread).c_str());
 }
 
 // Prints the description produced by DescribeAllocStack (decorated and followed
 // by a newline) and then the given stack trace.
-static void PrintAllocStack(const char *verb, AsanThreadContext *thread,
-                            const StackTrace &stack) {
+static void PrintAllocStack(const char* verb, AsanThreadContext* thread,
+                            const StackTrace& stack) {
   Decorator d;
   InternalScopedString s;
   DescribeAllocStack(verb, thread, &s);
