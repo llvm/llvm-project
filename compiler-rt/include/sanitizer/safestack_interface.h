@@ -20,13 +20,13 @@ extern "C" {
 #endif
 
 /// Returns the current unsafe stack pointer of the current thread.
-void SANITIZER_CDECL *__safestack_get_unsafe_stack_ptr(void);
+const void * SANITIZER_CDECL __safestack_get_unsafe_stack_ptr(void);
 
 /// Returns a pointer to the bottom of the unsafe stack of the current thread.
-void SANITIZER_CDECL *__safestack_get_unsafe_stack_bottom(void);
+const void * SANITIZER_CDECL __safestack_get_unsafe_stack_bottom(void);
 
 /// Returns a pointer to the top of the unsafe stack of the current thread.
-void SANITIZER_CDECL *__safestack_get_unsafe_stack_top(void);
+const void * SANITIZER_CDECL __safestack_get_unsafe_stack_top(void);
 
 #ifdef __cplusplus
 } // extern "C"

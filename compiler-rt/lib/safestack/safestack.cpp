@@ -339,34 +339,34 @@ __attribute__((section(".preinit_array"),
 }
 #endif
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
 __safestack_get_unsafe_stack_bottom() {
   return unsafe_stack_start;
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
 __safestack_get_unsafe_stack_top() {
   return (char*)unsafe_stack_start + unsafe_stack_size;
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void*
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
 __safestack_get_unsafe_stack_ptr() {
   return __safestack_unsafe_stack_ptr;
 }
 
 // Compatibility aliases
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_bottom() {
-  return __safestack_get_unsafe_stack_bottom();
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_top() {
-  return __safestack_get_unsafe_stack_top();
+  return const_cast<void*>(__safestack_get_unsafe_stack_top());
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_start() {
-  return __safestack_get_unsafe_stack_bottom();
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_ptr() {
-  return __safestack_get_unsafe_stack_ptr();
+  return const_cast<void*>(__safestack_get_unsafe_stack_ptr());
 }
