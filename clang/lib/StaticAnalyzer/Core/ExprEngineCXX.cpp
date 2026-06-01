@@ -1215,7 +1215,7 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  const LocationContext *LCtx = Pred->getLocationContext();
+  const StackFrame *SF = Pred->getStackFrame();
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
@@ -1224,7 +1224,7 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
   for (ExplodedNode *N : CheckerPreStmt) {
     ProgramStateRef State = N->getState();
     for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-      SVal AssumedVal = State->getSVal(Attr->getAssumption(), LCtx);
+      SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
       // This code ignores assumptions that evaluate to UndefinedVal.
       // Perhaps there should be a checker that reports this situation.
       if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
