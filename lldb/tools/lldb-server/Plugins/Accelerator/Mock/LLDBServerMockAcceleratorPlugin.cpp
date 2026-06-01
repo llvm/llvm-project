@@ -38,6 +38,13 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
   if (args.breakpoint.identifier == kBreakpointIDInitialize) {
     response.disable_bp = true;
     response.auto_resume_native = false;
+
+    AcceleratorActions actions(GetPluginName(), kBreakpointIDExit);
+    AcceleratorBreakpointInfo bp;
+    bp.identifier = kBreakpointIDExit;
+    bp.by_name = AcceleratorBreakpointByName{std::nullopt, "exit"};
+    actions.breakpoints.push_back(std::move(bp));
+    response.actions = std::move(actions);
   }
   return response;
 }

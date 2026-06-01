@@ -85,18 +85,22 @@ bool fromJSON(const llvm::json::Value &value,
               AcceleratorBreakpointHitArgs &data, llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorBreakpointHitArgs &data);
 
-/// Response from the plugin when a breakpoint is hit.
-struct AcceleratorBreakpointHitResponse {
-  /// Set to true if this breakpoint should be disabled.
-  bool disable_bp = false;
-  /// Set to true if the native process should automatically resume.
-  bool auto_resume_native = true;
-};
-
-bool fromJSON(const llvm::json::Value &value,
-              AcceleratorBreakpointHitResponse &data, llvm::json::Path path);
-llvm::json::Value toJSON(const AcceleratorBreakpointHitResponse &data);
-
+/// Actions to be performed in the native process on behalf of an accelerator
+/// plugin. AcceleratorActions are returned in the following contexts:
+///
+/// - Initialization: in response to the "jAcceleratorPluginInitialize" packet,
+///   each plugin returns an AcceleratorActions describing initial breakpoints
+///   and other setup needed in the native process.
+///
+/// - Breakpoint hits: when a native breakpoint requested by a plugin is hit,
+///   the AcceleratorBreakpointHitResponse contains an AcceleratorActions that
+///   can request additional breakpoints or other actions.
+///
+/// In future patches, AcceleratorActions will also be returned:
+/// - When the native process stops (via NativeProcessIsStopping), allowing
+///   plugins to react to arbitrary stop events.
+/// - Via accelerator stop reply packets, enabling plugins to inject actions
+///   into the native process asynchronously.
 struct AcceleratorActions {
   AcceleratorActions() = default;
   AcceleratorActions(llvm::StringRef plugin_name, int64_t action_id)
@@ -114,8 +118,23 @@ struct AcceleratorActions {
 
 bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,
               llvm::json::Path path);
-
 llvm::json::Value toJSON(const AcceleratorActions &data);
+
+/// Response from the plugin when a breakpoint is hit.
+struct AcceleratorBreakpointHitResponse {
+  /// Set to true if this breakpoint should be disabled.
+  bool disable_bp = false;
+  /// Set to true if the native process should automatically resume after
+  /// the breakpoint is hit. When false, the native process will stop and
+  /// wait for user interaction.
+  bool auto_resume_native = true;
+  /// Optional new actions to perform (e.g. set additional breakpoints).
+  std::optional<AcceleratorActions> actions;
+};
+
+bool fromJSON(const llvm::json::Value &value,
+              AcceleratorBreakpointHitResponse &data, llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorBreakpointHitResponse &data);
 
 } // namespace lldb_private
 

@@ -86,20 +86,6 @@ AcceleratorBreakpointHitArgs::GetSymbolValue(StringRef symbol_name) const {
   return std::nullopt;
 }
 
-bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
-              Path path) {
-  ObjectMapper o(value, path);
-  return o && o.map("disable_bp", data.disable_bp) &&
-         o.map("auto_resume_native", data.auto_resume_native);
-}
-
-json::Value toJSON(const AcceleratorBreakpointHitResponse &data) {
-  return Object{
-      {"disable_bp", data.disable_bp},
-      {"auto_resume_native", data.auto_resume_native},
-  };
-}
-
 bool fromJSON(const Value &value, AcceleratorActions &data, Path path) {
   ObjectMapper o(value, path);
   return o && o.map("plugin_name", data.plugin_name) &&
@@ -115,6 +101,24 @@ json::Value toJSON(const AcceleratorActions &data) {
       {"identifier", data.identifier},
       {"breakpoints", data.breakpoints},
   };
+}
+
+bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("disable_bp", data.disable_bp) &&
+         o.map("auto_resume_native", data.auto_resume_native) &&
+         o.mapOptional("actions", data.actions);
+}
+
+json::Value toJSON(const AcceleratorBreakpointHitResponse &data) {
+  Object obj{
+      {"disable_bp", data.disable_bp},
+      {"auto_resume_native", data.auto_resume_native},
+  };
+  if (data.actions)
+    obj["actions"] = *data.actions;
+  return obj;
 }
 
 } // namespace lldb_private

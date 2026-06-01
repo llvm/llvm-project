@@ -25,6 +25,7 @@ public:
 
 private:
   static constexpr int64_t kBreakpointIDInitialize = 1;
+  static constexpr int64_t kBreakpointIDExit = 2;
 };
 
 } // namespace lldb_server

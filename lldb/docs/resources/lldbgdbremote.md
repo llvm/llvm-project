@@ -168,14 +168,15 @@ In future patches, each `accelerator_action` will include additional fields
 such as connection info for secondary debug sessions and synchronization
 options.
 
-**Priority To Implement:** Low. Only needed for hardware accelerator
-debugging support.
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
 
 ## jAcceleratorPluginBreakpointHit
 
 Sent by the client when a breakpoint requested by an accelerator plugin
-(via `jAcceleratorPluginInitialize`) is hit in the native process. This
-packet requires the `accelerator-plugins+` feature from `qSupported`.
+is hit in the native process. Breakpoints can originate from any response
+that contains `AcceleratorActions`. This packet requires the
+`accelerator-plugins+` feature from `qSupported`.
 
 ```
 LLDB SENDS:    jAcceleratorPluginBreakpointHit:<json>
@@ -194,17 +195,18 @@ The response JSON has the following fields:
 
 | Key                  | Type | Description |
 |----------------------|------|-------------|
-| `disable_bp`         | bool | If true, the client should disable this breakpoint. |
-| `auto_resume_native` | bool | If true, the native process should automatically resume after handling the hit. |
+| `disable_bp`         | bool   | If true, the client should disable this breakpoint. |
+| `auto_resume_native` | bool   | If true, the native process should automatically resume after handling the hit. |
+| `actions`            | object | Optional `AcceleratorActions` containing new breakpoints to set and other actions to perform. |
 
 Example:
 ```
 LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
-STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false}
+STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
 ```
 
-**Priority To Implement:** Low. Only needed for hardware accelerator
-debugging support.
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
 
 ## jGetDyldProcessState
 

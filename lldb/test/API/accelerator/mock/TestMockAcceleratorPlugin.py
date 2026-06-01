@@ -110,3 +110,13 @@ class MockAcceleratorPluginTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertTrue(response["disable_bp"])
         self.assertIn("auto_resume_native", response)
         self.assertFalse(response["auto_resume_native"])
+
+        # Verify that the response includes new actions with a breakpoint.
+        self.assertIn("actions", response)
+        actions = response["actions"]
+        self.assertEqual(actions["plugin_name"], "mock")
+        self.assertIn("breakpoints", actions)
+        new_bps = actions["breakpoints"]
+        self.assertGreater(len(new_bps), 0)
+        self.assertEqual(new_bps[0]["identifier"], 2)
+        self.assertEqual(new_bps[0]["by_name"]["function_name"], "exit")
