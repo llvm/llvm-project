@@ -83,8 +83,7 @@ unsigned allocateExecSyncID(T &NextAvailableIDTracker,
 }
 
 // Main utility function for special LDS variables lowering.
-static bool lowerExecSyncGlobalVariables(Module &M,
-                                         GVUsesInfoTy &GVUsesInfo) {
+static bool lowerExecSyncGlobalVariables(Module &M, GVUsesInfoTy &GVUsesInfo) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
