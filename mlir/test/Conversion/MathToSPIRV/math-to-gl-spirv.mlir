@@ -62,6 +62,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %22 = math.acosh %arg0 : f32
   // CHECK: spirv.GL.Atanh %{{.*}}: f32
   %23 = math.atanh %arg0 : f32
+  // CHECK: spirv.GL.Trunc %{{.*}}: f32
+  %24 = math.trunc %arg0 : f32
   return
 }
 
@@ -117,6 +119,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %19 = math.acosh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Atanh %{{.*}}: vector<3xf32>
   %20 = math.atanh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Trunc %{{.*}}: vector<3xf32>
+  %21 = math.trunc %arg0 : vector<3xf32>
   return
 }
 
