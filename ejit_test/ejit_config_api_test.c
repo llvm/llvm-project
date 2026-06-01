@@ -112,13 +112,10 @@ int main(int argc, char **argv) {
   ejit_compile_mode_t m = ejit_get_compile_mode();
   T(m == EJIT_COMPILE_SYNC, "get_compile_mode = %d (SYNC)", m);
 
-  ejit_set_compile_mode(EJIT_COMPILE_ASYNC);
-  m = ejit_get_compile_mode();
-  T(m == EJIT_COMPILE_ASYNC, "get_compile_mode = %d (ASYNC after set)", m);
-
+  // Only sync mode is supported. Async is excluded in bare-metal builds.
   ejit_set_compile_mode(EJIT_COMPILE_SYNC);
   m = ejit_get_compile_mode();
-  T(m == EJIT_COMPILE_SYNC, "get_compile_mode = %d (SYNC restored)", m);
+  T(m == EJIT_COMPILE_SYNC, "get_compile_mode = %d (SYNC after set)", m);
 
   //===-- 3. get_stats (before any JIT) -------------------------------------===//
   printf("\n--- 3. get_stats (empty) ---\n");
