@@ -111,7 +111,7 @@ protected:
         : time_point(std::move(tp)), callback(std::move(cb)), sequence(seq) {}
 
     bool operator<(const CallbackEntry &other) const {
-      return std::tie(time_point, sequence) >
+      return std::tie(time_point, sequence) > // > for Min-priority queue
              std::tie(other.time_point, other.sequence);
     }
 
