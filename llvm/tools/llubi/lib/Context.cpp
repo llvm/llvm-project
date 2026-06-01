@@ -500,8 +500,12 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
         }
     }
     unsigned BitWidth = Ty->getByteBitWidth();
-    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
-                  /*ImplicitClearHighBits=*/true);
+    if (BitWidth & 7) {
+      if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
+               .AreHighBitsZExtd(BitWidth & 7))
+        return ByteValue::poison(BitWidth, DL.isLittleEndian());
+    }
+    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian());
     return AnyValue(std::move(Res));
   }
 

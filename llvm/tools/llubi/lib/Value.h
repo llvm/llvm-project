@@ -345,6 +345,8 @@ public:
       return Ty->isFloatingPointTy();
     case StorageKind::Pointer:
       return Ty->isPointerTy();
+    case StorageKind::Byte:
+      return Ty->isByteTy();
     // We don't check elements recursively.
     case StorageKind::Aggregate:
       return Ty->isAggregateType() || Ty->isVectorTy();

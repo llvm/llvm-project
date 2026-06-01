@@ -154,6 +154,8 @@ define void @main() {
   %bytes_non_pow2 = load b28, ptr %alloc_byte
   store b28 u0xEADBEEF, ptr %alloc_byte
   %bytes_zextd = load b32, ptr %alloc_byte
+  store b8 255, ptr %alloc_byte
+  %bytes_zextd_poison = load b7, ptr %alloc_byte
 
   ret void
 }
@@ -271,11 +273,13 @@ define void @main() {
 ; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte, align 1
 ; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0x9A [alloc_byte + 2]
 ; CHECK-NEXT:   store b8 poison, ptr %gep_third_byte, align 1
-; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 7F 00000000(00100110) !! ?? 
+; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x?? 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
-; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 DE AD BE EF 
-; CHECK-NEXT:   %bytes_non_pow2 = load b28, ptr %alloc_byte, align 4 => b28 1110 AD BE EF 
+; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xDE 0xAD 0xBE 0xEF 
+; CHECK-NEXT:   %bytes_non_pow2 = load b28, ptr %alloc_byte, align 4 => b28 !!!! 0x!! 0x!! 0x!! 
 ; CHECK-NEXT:   store b28 -22167825, ptr %alloc_byte, align 4
-; CHECK-NEXT:   %bytes_zextd = load b32, ptr %alloc_byte, align 4 => b32 0E AD BE EF 
+; CHECK-NEXT:   %bytes_zextd = load b32, ptr %alloc_byte, align 4 => b32 0x0E 0xAD 0xBE 0xEF 
+; CHECK-NEXT:   store b8 -1, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %bytes_zextd_poison = load b7, ptr %alloc_byte, align 1 => b7 !!!!!!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

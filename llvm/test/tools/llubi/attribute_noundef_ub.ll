@@ -13,5 +13,5 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @callee({{i|b}}32 poison) at @main <stdin>:10
-; CHECK-NEXT: Immediate UB detected: The value {{poison|b32 !! !! !! !!}} violates noundef attribute.
+; CHECK-NEXT: Immediate UB detected: The value {{poison|b32 0x!! 0x!! 0x!! 0x!!}} violates noundef attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
