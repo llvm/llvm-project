@@ -36,11 +36,11 @@ protected:
   /// Underlying immediate command list.
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
-  bool IsInorder;
+  bool CreateQueueInOrder;
 
 public:
   L0QueueTy(L0DeviceTy &Device, bool IsInorder = true)
-      : Device(Device), IsInorder(IsInorder) {}
+      : Device(Device), CreateQueueInOrder(IsInorder) {}
   virtual ~L0QueueTy() {}
 
   /// Clear data.

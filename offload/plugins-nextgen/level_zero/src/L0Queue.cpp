@@ -21,7 +21,7 @@ namespace llvm::omp::target::plugin {
 /// common methods
 
 Error L0QueueTy::init() {
-  auto CmdListOrErr = Device.getCmdListManager(IsInorder);
+  auto CmdListOrErr = Device.getCmdListManager(CreateQueueInOrder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
