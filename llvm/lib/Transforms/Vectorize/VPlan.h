@@ -3480,7 +3480,16 @@ public:
   VPExpressionRecipe(VPWidenCastRecipe *Ext, VPWidenRecipe *Neg,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
-                           {Ext, Neg, Red}) {}
+                           {Ext, Neg, Red}) {
+    assert((Red->getRecurrenceKind() == RecurKind::Add ||
+            Red->getRecurrenceKind() == RecurKind::FAdd) &&
+           "Expected an add reduction");
+    if (Neg->getOpcode() == Instruction::Sub) {
+      [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(1));
+      assert(SubConst && SubConst->isZero() && "Expected a negating sub");
+    } else
+      assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
+  }
   VPExpressionRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::MulAccReduction, {Mul, Red}) {}
   VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
