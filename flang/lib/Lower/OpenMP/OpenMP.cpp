@@ -1881,6 +1881,7 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processDefaultMap(stmtCtx, defaultMaps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
+  cp.processDynGroupprivate(stmtCtx, clauseOps);
   cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrObjects);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter)) {
     // Only process host_eval if compiling for the host device.
@@ -1893,7 +1894,6 @@ genTargetClauses(lower::AbstractConverter &converter,
                 &mapObjects);
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
-
   cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
 
@@ -2026,6 +2026,9 @@ static void genTeamsClauses(lower::AbstractConverter &converter,
                             llvm::SmallVectorImpl<Object> &reductionObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
+  // TODO: Only evaluate it here if it's not host-evaluated, like num_teams and
+  // thread_limit.
+  cp.processDynGroupprivate(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_teams, clauseOps);
 
   HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter);
@@ -2035,6 +2038,7 @@ static void genTeamsClauses(lower::AbstractConverter &converter,
   }
 
   cp.processReduction(loc, clauseOps, reductionObjects);
+  cp.processDynGroupprivate(stmtCtx, clauseOps);
   // TODO Support delayed privatization.
 }
 
@@ -4841,7 +4845,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Untied>(clause.u) &&
         !std::holds_alternative<clause::TaskReduction>(clause.u) &&
         !std::holds_alternative<clause::Detach>(clause.u) &&
-        !std::holds_alternative<clause::Device>(clause.u)) {
+        !std::holds_alternative<clause::Device>(clause.u) &&
+        !std::holds_alternative<clause::DynGroupprivate>(clause.u)) {
       const common::LangOptions &options = semaCtx.langOptions();
       if (!options.OpenMPSimd) {
         std::string name =
