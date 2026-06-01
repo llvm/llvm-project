@@ -309,8 +309,8 @@ struct IndexSwitchOpConversion final : SCFToSPIRVPattern<scf::IndexSwitchOp> {
 
     // Compute return types.
     SmallVector<Type, 8> returnTypes;
-    for (auto result : switchOp.getResults()) {
-      auto convertedType = typeConverter.convertType(result.getType());
+    for (Value result : switchOp.getResults()) {
+      Type convertedType = typeConverter.convertType(result.getType());
       if (!convertedType)
         return rewriter.notifyMatchFailure(
             loc,
