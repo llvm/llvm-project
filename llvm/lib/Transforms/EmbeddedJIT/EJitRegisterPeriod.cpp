@@ -30,7 +30,7 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
-extern cl::opt<bool> EJitNoGlobalCtors;
+extern cl::opt<bool> EnableEJitGlobalCtors;
 
 static void
 generateRegistryTablePeriod(
@@ -115,7 +115,7 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     Builder.CreateCall(FnRegSV, {VN, VA});
   }
 
-  if (!EJitNoGlobalCtors)
+  if (EnableEJitGlobalCtors)
     appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
   // Always build the static registry table for bare-metal / testing fallback.

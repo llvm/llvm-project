@@ -37,7 +37,7 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
-extern cl::opt<bool> EJitNoGlobalCtors;
+extern cl::opt<bool> EnableEJitGlobalCtors;
 
 #define DEBUG_TYPE "ejit-register-bitcode"
 
@@ -403,7 +403,7 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
   // can resolve them without manual ejit_register_symbol calls.
   generateSymbolRegisters(M, ClosureFuncs, AutoReg);
 
-  if (!EJitNoGlobalCtors)
+  if (EnableEJitGlobalCtors)
     appendToGlobalCtors(M, AutoReg, EJIT_CTOR_PRIORITY);
 
   // Always build the static registry table for bare-metal / testing fallback.

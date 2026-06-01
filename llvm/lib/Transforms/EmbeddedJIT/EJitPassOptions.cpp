@@ -9,7 +9,7 @@
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
-cl::opt<bool> EJitNoGlobalCtors(
-    "ejit-no-global-ctors", cl::init(false), cl::Hidden,
-    cl::desc("Skip llvm.global_ctors; only generate static registry tables "
-             "(for bare-metal / testing)"));
+cl::opt<bool> EnableEJitGlobalCtors(
+    "enable-ejit-global-ctors", cl::init(true), cl::Hidden,
+    cl::desc("Generate llvm.global_ctors for auto-registration "
+             "(disable for bare-metal / testing)"));
