@@ -19972,7 +19972,8 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   EVT LegalIntVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntVT);
   unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
   unsigned IntToFPOp = N->getOpcode(); // UINT_TO_FP or SINT_TO_FP
-  if (TLI.isOperationLegal(FPToIntOp, LegalIntVT) &&
+  if (!TLI.isOperationLegal(ISD::FTRUNC, VT) &&
+      TLI.isOperationLegal(FPToIntOp, LegalIntVT) &&
       TLI.isOperationLegal(IntToFPOp, VT))
     return SDValue();
 
