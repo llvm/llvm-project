@@ -18,15 +18,13 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32-S128"
 ;  A[5*i]            |               | A[750000000]
 ;  A[8*i + 750000000]| A[750000000]  |
 ;
-; FIXME: DependenceAnalysis currently fails to detect this dependency due to
-; mishandling of overflow.
 ;
 define void @exactsiv_mul_overflow(ptr %A) {
 ; CHECK-LABEL: 'exactsiv_mul_overflow'
 ; CHECK-NEXT:  Src: store i8 0, ptr %src.ptr, align 1 --> Dst: store i8 0, ptr %src.ptr, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 0, ptr %src.ptr, align 1 --> Dst: store i8 1, ptr %dst.ptr, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 1, ptr %dst.ptr, align 1 --> Dst: store i8 1, ptr %dst.ptr, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;
