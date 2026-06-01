@@ -2973,7 +2973,6 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
              < NumArgs &&
          "Incorrect number arguments");
 
-  
   // 2. Process all arguments which requered preparation.
   // 2.1 Events - use Call arguments, or use dummy nulls in case of absence of
   // events
