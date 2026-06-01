@@ -72,7 +72,6 @@ class SlotIndexes;
 class StringRef;
 class TargetRegisterClass;
 class TargetSubtargetInfo;
-struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
@@ -316,11 +315,6 @@ class LLVM_ABI MachineFunction {
 
   // Keep track of the function section.
   MCSection *Section = nullptr;
-
-  // Catchpad unwind destination info for wasm EH.
-  // Keeps track of Wasm exception handling related data. This will be null for
-  // functions that aren't using a wasm EH personality.
-  WasmEHFuncInfo *WasmEHInfo = nullptr;
 
   // Keeps track of Windows exception handling related data. This will be null
   // for functions that aren't using a funclet-based EH personality.
@@ -826,12 +820,6 @@ public:
   MachineConstantPool *getConstantPool() { return ConstantPool; }
   const MachineConstantPool *getConstantPool() const { return ConstantPool; }
 
-  /// getWasmEHFuncInfo - Return information about how the current function uses
-  /// Wasm exception handling. Returns null for functions that don't use wasm
-  /// exception handling.
-  const WasmEHFuncInfo *getWasmEHFuncInfo() const { return WasmEHInfo; }
-  WasmEHFuncInfo *getWasmEHFuncInfo() { return WasmEHInfo; }
-
   /// getWinEHFuncInfo - Return information about how the current function uses
   /// Windows exception handling. Returns null for functions that don't use
   /// funclets for exception handling.
@@ -1172,7 +1160,7 @@ public:
                                           int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
         MMO, Offset,
-        !Size.hasValue() ? LLT()
+        !Size.isPrecise() ? LLT()
         : Size.isScalable()
             ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
@@ -1273,6 +1261,10 @@ public:
   }
 
   [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
+
+  /// Replace all references to register \param From with register \param To in
+  /// frame instructions. Note that .cfi_escape instructions will be left as-is.
+  void replaceFrameInstRegister(MCRegister From, MCRegister To);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used

@@ -1,27 +1,11 @@
 import argparse
-from typing import TypedDict, Union, Optional, TextIO, NotRequired
+from typing import Any, Dict, TypedDict, Union, Optional, TextIO
 from dataclasses import dataclass
 import json
+import re
 
 
-PropertyDef = TypedDict(
-    "PropertyDef",
-    {
-        "!superclasses": list[str],
-        "Name": str,
-        "Path": str,
-        "Type": str,
-        "Description": NotRequired[str],
-        "HasDefaultUnsignedValue": NotRequired[int],
-        "HasDefaultBooleanValue": NotRequired[int],
-        "DefaultUnsignedValue": NotRequired[int],
-        "HasDefaultStringValue": NotRequired[int],
-        "DefaultStringValue": NotRequired[str],
-        "HasDefaultEnumValue": NotRequired[int],
-        "DefaultEnumValue": NotRequired[str],
-        "EnumValues": NotRequired[str],
-    },
-)
+PropertyDef = Dict[str, Any]
 
 
 class Property:
@@ -76,6 +60,14 @@ def append_property(tree: PropertyTree, prop: Property):
     subtree.items[prop.name] = prop
 
 
+def wrap_inline_code(text: str):
+    n_backticks = max([len(s) for s in re.findall("`+", text)], default=0)
+    fence = "`" * (n_backticks + 1)
+    if text.startswith("`") or text.endswith("`"):
+        text = f" {text} "
+    return f"{fence}{text}{fence}"
+
+
 def print_property(f: TextIO, path: str, property: Property):
     # Invoke lldbsetting directive (lldb/docs/_ext/lldb_setting.py)
     f.write(f"```{{lldbsetting}} {path}\n")
@@ -83,7 +75,7 @@ def print_property(f: TextIO, path: str, property: Property):
     f.write(property.description)
     f.write("\n\n")
     if property.default:
-        f.write(f":default: {property.default}\n")
+        f.write(f":default: {wrap_inline_code(property.default)}\n")
     # FIXME: add enumerations (":enum {name}: {description}")
     f.write("```\n")
 
@@ -136,7 +128,7 @@ def main():
 
     root = PropertyTree(items={})
     for input in args.inputs:
-        with open(input) as f:
+        with open(input, encoding="utf-8") as f:
             properties: dict[str, PropertyDef] = json.load(f)
         for key, prop in properties.items():
             if key.startswith("!"):
@@ -145,7 +137,7 @@ def main():
                 continue  # not a property
             append_property(root, Property(prop))
 
-    with open(args.output, "w") as f:
+    with open(args.output, "w", encoding="utf-8") as f:
         f.write(HEADER)
         print_tree(f, 0, "", "", root)
 

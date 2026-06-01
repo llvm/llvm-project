@@ -81,6 +81,10 @@ DwarfCompileUnit::DwarfCompileUnit(unsigned UID, const DICompileUnit *Node,
     : DwarfUnit(GetCompileUnitType(Kind, DW), Node, A, DW, DWU, UID) {
   insertDIE(Node, &getUnitDie());
   MacroLabelBegin = Asm->createTempSymbol("cu_macro_begin");
+  assert(CUNode);
+  for (auto *GVE : CUNode->getGlobalVariables())
+    if (auto *GV = GVE->getVariable())
+      GlobalVarScopes.insert(GV->getScope());
 }
 
 /// addLabelAddress - Add a dwarf label attribute data and value using
@@ -274,7 +278,7 @@ void DwarfCompileUnit::addLocationAttribute(
       // 16-bit platforms like MSP430 and AVR take this path, so sink this
       // assert to platforms that use it.
       auto GetPointerSizedFormAndOp = [this]() {
-        unsigned PointerSize = Asm->MAI->getCodePointerSize();
+        unsigned PointerSize = Asm->MAI.getCodePointerSize();
         assert((PointerSize == 4 || PointerSize == 8) &&
                "Add support for other sizes if necessary");
         struct FormAndOp {
@@ -340,7 +344,7 @@ void DwarfCompileUnit::addLocationAttribute(
         // Base register
         Register BaseReg = Asm->getObjFileLowering().getStaticBase();
         unsigned DwarfBaseReg =
-            Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
+            Asm->TM.getMCRegisterInfo().getDwarfRegNum(BaseReg, false);
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + DwarfBaseReg);
         // Offset from base register
         addSInt(*Loc, dwarf::DW_FORM_sdata, 0);
@@ -1222,6 +1226,10 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
   return ScopeDIE;
 }
 
+bool DwarfCompileUnit::hasGlobalVariableInScope(const DILocalScope *ScopeNode) {
+  return GlobalVarScopes.contains(ScopeNode);
+}
+
 DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
                                                  DIE &ScopeDIE) {
   DIE *ObjectPointer = nullptr;
@@ -1252,6 +1260,12 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   auto skipLexicalScope = [this](LexicalScope *S) -> bool {
     if (isa<DISubprogram>(S->getScopeNode()))
       return false;
+    // Don't skip abstract lexical blocks that are scope targets for global
+    // variables (e.g., function-scope statics). Those globals are emitted
+    // later in endModule() and need to find the block via
+    // getOrCreateContextDIE().
+    if (S->isAbstractScope() && hasGlobalVariableInScope(S->getScopeNode()))
+      return false;
     auto Vars = DU->getScopeVariables().lookup(S);
     if (!Vars.Args.empty() || !Vars.Locals.empty())
       return false;
@@ -1259,8 +1273,9 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
            DD->getLocalDeclsForScope(S->getScopeNode()).empty();
   };
   for (LexicalScope *LS : Scope->getChildren()) {
-    // If the lexical block doesn't have non-scope children, skip
-    // its emission and put its children directly to the parent scope.
+    // If the lexical block doesn't have non-scope children or global
+    // variables scoped to it, skip its emission and put its children directly
+    // to the parent scope.
     if (skipLexicalScope(LS))
       createAndAddScopeChildren(LS, ScopeDIE);
     else

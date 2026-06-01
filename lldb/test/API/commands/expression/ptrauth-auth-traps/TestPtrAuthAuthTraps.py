@@ -8,12 +8,14 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test import configuration
+from lldbsuite.test.lldbarm64e import Arm64eTestBase
 
 
-class TestPtrAuthAuthTraps(TestBase):
+class TestPtrAuthAuthTraps(Arm64eTestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
-    @skipUnlessArm64eSupported
     def test_static_function_pointer(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -30,7 +32,6 @@ class TestPtrAuthAuthTraps(TestBase):
             substrs=["execution was interrupted"],
         )
 
-    @skipUnlessArm64eSupported
     def test_indirect_call_through_caller(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

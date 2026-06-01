@@ -460,6 +460,9 @@ and would be detrimental to printing out code.  Also many other projects have
 standardized on 80 columns, so some people have already configured their editors
 for it (vs something else, like 90 columns).
 
+However, documentation files are not source code files, and instead of fitting into 80 columns, they must be formatted to one sentence per line.
+This way a change in the middle of a paragraph doesn't cause unnecessary changes in subsequent lines, making it easier for reviewers to see what has changed when documentation is updated.
+
 Whitespace
 ^^^^^^^^^^
 

@@ -31,7 +31,7 @@ def NeoverseV1Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2Unsupported.F,
                                                     SMEUnsupported.F,
                                                     [HasMTE, HasCPA,
-                                                    HasCSSC]);
+                                                    HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1506,7 +1506,7 @@ def : InstRW<[V1Write_2c_1V01],
                         "^[SU](MAX|MIN)_Z(I|P[mZ]Z)_[BHSD]",
                         "^[SU]Q(ADD|SUB)_Z(I|ZZ)_[BHSD]",
                         "^SUBR_Z(I|P[mZ]Z)_[BHSD]",
-                        "^(AND|EOR|ORR)_ZI$",
+                        "^(AND|EOR|ORR)_ZI",
                         "^(AND|BIC|EOR|EOR(BT|TB)?|ORR)_ZP?ZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]$",
                         "^(AND|BIC|EOR|NOT|ORR)_ZPmZ_[BHSD]")>;

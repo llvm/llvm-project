@@ -2834,8 +2834,12 @@ private:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -2975,8 +2979,12 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      return false;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3126,8 +3134,12 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
     case MCCFIInstruction::OpNegateRAState:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
+      reportFatalUsageError("unsupported CFI opcode");
+    case MCCFIInstruction::OpLLVMRegisterPair:
+    case MCCFIInstruction::OpLLVMVectorRegisters:
+    case MCCFIInstruction::OpLLVMVectorOffset:
+    case MCCFIInstruction::OpLLVMVectorRegisterMask:
+      reportFatalInternalError("saw LLVM-specific pseudo-CFI opcode");
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
       break;

@@ -171,6 +171,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::Call:
   case Instruction::Opcode::GetElementPtr:
   case Instruction::Opcode::Switch:
+  case Instruction::Opcode::Pack:
     return ResultReason::Unimplemented;
   case Instruction::Opcode::VAArg:
   case Instruction::Opcode::Freeze:

@@ -16,9 +16,9 @@ body:             |
     ; CHECK: [[CLZv8i8_:%[0-9]+]]:fpr64 = CLZv8i8 [[COPY]]
     ; CHECK: $d0 = COPY [[CLZv8i8_]]
     ; CHECK: RET_ReallyLR implicit $d0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %1:fpr(<8 x s8>) = G_CTLZ %0(<8 x s8>)
-    $d0 = COPY %1(<8 x s8>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %1:fpr(<8 x i8>) = G_CTLZ %0(<8 x i8>)
+    $d0 = COPY %1(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -39,9 +39,9 @@ body:             |
     ; CHECK-NEXT: [[CLZv4i16_:%[0-9]+]]:fpr64 = CLZv4i16 [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[CLZv4i16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<4 x s16>) = G_CTLZ %0(<4 x s16>)
-    $d0 = COPY %1(<4 x s16>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<4 x i16>) = G_CTLZ %0(<4 x i16>)
+    $d0 = COPY %1(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -62,9 +62,9 @@ body:             |
     ; CHECK-NEXT: [[CLZv2i32_:%[0-9]+]]:fpr64 = CLZv2i32 [[COPY]]
     ; CHECK-NEXT: $d0 = COPY [[CLZv2i32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<2 x s32>) = COPY $d0
-    %1:fpr(<2 x s32>) = G_CTLZ %0(<2 x s32>)
-    $d0 = COPY %1(<2 x s32>)
+    %0:fpr(<2 x i32>) = COPY $d0
+    %1:fpr(<2 x i32>) = G_CTLZ %0(<2 x i32>)
+    $d0 = COPY %1(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -86,10 +86,10 @@ body:             |
     ; CHECK-NEXT: [[CLZXr:%[0-9]+]]:gpr64 = CLZXr [[COPY1]]
     ; CHECK-NEXT: $d0 = COPY [[CLZXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(s64) = COPY $d0
-    %2:gpr(s64) = COPY %0(s64)
-    %1:gpr(s64) = G_CTLZ %2(s64)
-    $d0 = COPY %1(s64)
+    %0:fpr(i64) = COPY $d0
+    %2:gpr(i64) = COPY %0(i64)
+    %1:gpr(i64) = G_CTLZ %2(i64)
+    $d0 = COPY %1(i64)
     RET_ReallyLR implicit $d0
 
 ...
@@ -110,10 +110,10 @@ body:             |
     ; CHECK-NEXT: [[CLZWr:%[0-9]+]]:gpr32 = CLZWr [[COPY1]]
     ; CHECK-NEXT: $s0 = COPY [[CLZWr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %0:fpr(s32) = COPY $s0
-    %2:gpr(s32) = COPY %0(s32)
-    %1:gpr(s32) = G_CTLZ %2(s32)
-    $s0 = COPY %1(s32)
+    %0:fpr(i32) = COPY $s0
+    %2:gpr(i32) = COPY %0(i32)
+    %1:gpr(i32) = G_CTLZ %2(i32)
+    $s0 = COPY %1(i32)
     RET_ReallyLR implicit $s0
 
 ...
@@ -134,9 +134,9 @@ body:             |
     ; CHECK-NEXT: [[CLZv16i8_:%[0-9]+]]:fpr128 = CLZv16i8 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[CLZv16i8_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<16 x s8>) = COPY $q0
-    %1:fpr(<16 x s8>) = G_CTLZ %0(<16 x s8>)
-    $q0 = COPY %1(<16 x s8>)
+    %0:fpr(<16 x i8>) = COPY $q0
+    %1:fpr(<16 x i8>) = G_CTLZ %0(<16 x i8>)
+    $q0 = COPY %1(<16 x i8>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -157,9 +157,9 @@ body:             |
     ; CHECK-NEXT: [[CLZv8i16_:%[0-9]+]]:fpr128 = CLZv8i16 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[CLZv8i16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s16>) = COPY $q0
-    %1:fpr(<8 x s16>) = G_CTLZ %0(<8 x s16>)
-    $q0 = COPY %1(<8 x s16>)
+    %0:fpr(<8 x i16>) = COPY $q0
+    %1:fpr(<8 x i16>) = G_CTLZ %0(<8 x i16>)
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -180,9 +180,9 @@ body:             |
     ; CHECK-NEXT: [[CLZv4i32_:%[0-9]+]]:fpr128 = CLZv4i32 [[COPY]]
     ; CHECK-NEXT: $q0 = COPY [[CLZv4i32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s32>) = COPY $q0
-    %1:fpr(<4 x s32>) = G_CTLZ %0(<4 x s32>)
-    $q0 = COPY %1(<4 x s32>)
+    %0:fpr(<4 x i32>) = COPY $q0
+    %1:fpr(<4 x i32>) = G_CTLZ %0(<4 x i32>)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...

@@ -21,7 +21,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -913,15 +913,18 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     // (like wbinvl1)
     if (VDataIdx == -1)
       return -1;
-    // For MUBUF/MTBUF instructions this hazard only exists if the
-    // instruction is not using a register in the soffset field.
-    const MachineOperand *SOffset =
-        TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-    // If we have no soffset operand, then assume this field has been
-    // hardcoded to zero.
-    if (AMDGPU::getRegBitWidth(VDataRCID) > 64 &&
-        (!SOffset || !SOffset->isReg()))
-      return VDataIdx;
+    if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
+      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
+      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
+      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
+      // if soffset is not an SGPR.
+      if (ST.hasGFX940Insts())
+        return VDataIdx;
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (!SOffset || !SOffset->isReg())
+        return VDataIdx;
+    }
   }
 
   // MIMG instructions create a hazard if they don't use a 256-bit T# and
@@ -949,25 +952,59 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
 
 int GCNHazardRecognizer::checkVALUHazardsHelper(
     const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
-  // Helper to check for the hazard where VMEM instructions that store more than
-  // 8 bytes can have there store data over written by the next instruction.
+  // Helper to check for the hazard where VMEM instructions that store more
+  // than 8 bytes can have their store data overwritten by the next
+  // instruction. On gfx940-family the window depends on the producer's
+  // SOFFSET shape:
+  //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
+  //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
+  //     store: 2 wait states.
+  // Pre-gfx940 keeps a single 1-wait-state window. The 1-cycle sgpr-SOFFSET
+  // window was measured on gfx950 (MI350X); the same gate is applied to the
+  // rest of the gfx940 family to match the existing rule's granularity.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
-  const int VALUWaitStates = ST.hasGFX940Insts() ? 2 : 1;
   int WaitStatesNeeded = 0;
-
   if (!TRI->isVectorRegister(MRI, Def.getReg()))
     return WaitStatesNeeded;
-  Register Reg = Def.getReg();
-  auto IsHazardFn = [this, Reg, TRI](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    return DataIdx >= 0 &&
-           TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+  const Register Reg = Def.getReg();
+
+  const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
+
+  // Per-producer required wait-state window. On pre-gfx940 every producer
+  // uses 1; on gfx940-family MUBUF/MTBUF stores with an SGPR SOFFSET use 1
+  // and everything else (literal/absent SOFFSET, FLAT) uses 2.
+  auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
+    if (!ST.hasGFX940Insts())
+      return 1;
+    if (TII->isBUF(MI)) {
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (SOffset && SOffset->isReg())
+        return 1;
+    }
+    return 2;
   };
 
-  int WaitStatesNeededForDef =
-    VALUWaitStates - getWaitStatesSince(IsHazardFn, VALUWaitStates);
-  WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+  // For each hazard producer reached, accumulate the wait states still
+  // needed using that producer's own window. The predicate always returns
+  // false so the walk runs to MaxWaitStates.
+  int Distance = 0;
+  auto Counter = [&](const MachineInstr &MI) {
+    int DataIdx = createsVALUHazard(MI);
+    if (DataIdx >= 0 &&
+        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
+      int Need = WindowFor(MI) - Distance;
+      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
+    }
+    // Mirror getWaitStatesSince's accounting, which does not count inline asm
+    // towards the wait-state distance.
+    if (!MI.isInlineAsm())
+      Distance += SIInstrInfo::getNumWaitStates(MI);
+    return false;
+  };
+  getWaitStatesSince(Counter, MaxWaitStates);
 
   return WaitStatesNeeded;
 }

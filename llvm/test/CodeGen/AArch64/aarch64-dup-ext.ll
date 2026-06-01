@@ -308,7 +308,7 @@ define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
 ; CHECK-GI-NEXT:    sbfx w8, w8, #8, #8
 ; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-GI-NEXT:    dup v1.4h, w8
-; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    zip1 v1.4h, v1.4h, v1.4h
 ; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    ret
 entry:

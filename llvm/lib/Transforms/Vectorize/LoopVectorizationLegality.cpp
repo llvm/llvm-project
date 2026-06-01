@@ -15,6 +15,7 @@
 //
 
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "LoopVectorizationPlanner.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -33,6 +34,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace LoopVectorizationUtils;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -78,7 +80,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
             clEnumValN(
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
-                "cost is inconclusive.")));
+                "cost is inconclusive."),
+            clEnumValN(
+                LoopVectorizeHints::SK_AlwaysScalable, "always",
+                "Scalable vectorization is available and always favored when "
+                "feasible")));
 
 static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
@@ -162,19 +168,9 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
 }
 
 void LoopVectorizeHints::setAlreadyVectorized() {
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-
-  MDNode *IsVectorizedMD = MDNode::get(
-      Context,
-      {MDString::get(Context, "llvm.loop.isvectorized"),
-       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
-  MDNode *LoopID = TheLoop->getLoopID();
-  MDNode *NewLoopID =
-      makePostTransformationMetadata(Context, LoopID,
-                                     {Twine(Prefix(), "vectorize.").str(),
-                                      Twine(Prefix(), "interleave.").str()},
-                                     {IsVectorizedMD});
-  TheLoop->setLoopID(NewLoopID);
+  TheLoop->addIntLoopAttribute("llvm.loop.isvectorized", 1,
+                               {Twine(Prefix(), "vectorize.").str(),
+                                Twine(Prefix(), "interleave.").str()});
 
   // Update internal cache.
   IsVectorized.Value = 1;
@@ -220,9 +216,8 @@ bool LoopVectorizeHints::allowVectorization(
     // vectorize.disable to be used without disabling the pass and errors
     // to differentiate between disabled vectorization and a width of 1.
     ORE.emit([&]() {
-      return OptimizationRemarkAnalysis(vectorizeAnalysisPassName(),
-                                        "AllDisabled", L->getStartLoc(),
-                                        L->getHeader())
+      return OptimizationRemarkAnalysis(LV_NAME, "AllDisabled",
+                                        L->getStartLoc(), L->getHeader())
              << "loop not vectorized: vectorization and interleaving are "
                 "explicitly disabled, or the loop has already been "
                 "vectorized";
@@ -256,16 +251,6 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
     }
     return R;
   });
-}
-
-const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
-  if (getWidth() == ElementCount::getFixed(1))
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Disabled)
-    return LV_NAME;
-  if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
-    return LV_NAME;
-  return OptimizationRemarkAnalysis::AlwaysPrint;
 }
 
 bool LoopVectorizeHints::allowReordering() const {
@@ -472,15 +457,27 @@ static bool storeToSameAddress(ScalarEvolution *SE, StoreInst *A,
   return SE->getSCEV(APtr) == SE->getSCEV(BPtr);
 }
 
+void LoopVectorizationLegality::collectUnitStridePredicates() const {
+  if (!AllowRuntimeSCEVChecks || !TheLoop->isInnermost())
+    return;
+
+  for (BasicBlock *BB : TheLoop->blocks())
+    for (Instruction &I : *BB)
+      if (Value *Ptr = getLoadStorePointerOperand(&I))
+        isConsecutivePtr(getLoadStoreType(&I), Ptr);
+}
+
 int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 Value *Ptr) const {
   // FIXME: Currently, the set of symbolic strides is sometimes queried before
   // it's collected.  This happens from canVectorizeWithIfConvert, when the
   // pointer is checked to reference consecutive elements suitable for a
   // masked access.
-  const auto &Strides =
-    LAI ? LAI->getSymbolicStrides() : DenseMap<Value *, const SCEV *>();
-
+  // Stride versioning requires adding a SCEV equality predicate; only consult
+  // the symbolic strides when runtime SCEV checks are permitted.
+  const auto &Strides = LAI && AllowRuntimeSCEVChecks
+                            ? LAI->getSymbolicStrides()
+                            : DenseMap<Value *, const SCEV *>();
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides,
                             AllowRuntimeSCEVChecks, false)
                    .value_or(0);
@@ -585,12 +582,13 @@ public:
 
 } // namespace
 
-bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
+bool LoopVectorizationLegality::isUniform(
+    Value *V, std::optional<ElementCount> VF) const {
   if (isInvariant(V))
     return true;
-  if (VF.isScalable())
+  if (!VF || VF->isScalable())
     return false;
-  if (VF.isScalar())
+  if (VF->isScalar())
     return true;
 
   // Since we rely on SCEV for uniformity, if the type is not SCEVable, it is
@@ -602,7 +600,7 @@ bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
 
   // Rewrite AddRecs in TheLoop to step by VF and check if the expression for
   // lane 0 matches the expressions for all other lanes.
-  unsigned FixedVF = VF.getKnownMinValue();
+  unsigned FixedVF = VF->getKnownMinValue();
   const SCEV *FirstLaneExpr =
       SCEVAddRecForUniformityRewriter::rewrite(S, *SE, FixedVF, 0, TheLoop);
   if (isa<SCEVCouldNotCompute>(FirstLaneExpr))
@@ -618,8 +616,8 @@ bool LoopVectorizationLegality::isUniform(Value *V, ElementCount VF) const {
   });
 }
 
-bool LoopVectorizationLegality::isUniformMemOp(Instruction &I,
-                                               ElementCount VF) const {
+bool LoopVectorizationLegality::isUniformMemOp(
+    Instruction &I, std::optional<ElementCount> VF) const {
   Value *Ptr = getLoadStorePointerOperand(&I);
   if (!Ptr)
     return false;
@@ -642,7 +640,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     // not supported yet.
     Instruction *Term = BB->getTerminator();
     if (!isa<UncondBrInst, CondBrInst>(Term)) {
-      reportVectorizationFailure("Unsupported basic block terminator",
+      reportVectorizationFailure(
+          "Unsupported basic block terminator",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -661,7 +660,8 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
     if (Br && !TheLoop->isLoopInvariant(Br->getCondition()) &&
         !LI->isLoopHeader(Br->getSuccessor(0)) &&
         !LI->isLoopHeader(Br->getSuccessor(1))) {
-      reportVectorizationFailure("Unsupported conditional branch",
+      reportVectorizationFailure(
+          "Unsupported conditional branch",
           "loop control flow is not understood by vectorizer",
           "CFGNotUnderstood", ORE, TheLoop);
       if (DoExtraAnalysis)
@@ -675,9 +675,10 @@ bool LoopVectorizationLegality::canVectorizeOuterLoop() {
   // simple outer loops scenarios with uniform nested loops.
   if (!isUniformLoopNest(TheLoop /*loop nest*/,
                          TheLoop /*context outer loop*/)) {
-    reportVectorizationFailure("Outer loop contains divergent loops",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Outer loop contains divergent loops",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1233,8 +1234,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(Hints->vectorizeAnalysisPassName(),
-                                        "loop not vectorized: ", *LAR);
+      return OptimizationRemarkAnalysis(LV_NAME, "loop not vectorized: ", *LAR);
     });
   }
 
@@ -1634,9 +1634,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
   // We must have a loop in canonical form. Loops with indirectbr in them cannot
   // be canonicalized.
   if (!Lp->getLoopPreheader()) {
-    reportVectorizationFailure("Loop doesn't have a legal pre-header",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "Loop doesn't have a legal pre-header",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -1645,9 +1646,10 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
 
   // We must have a single backedge.
   if (Lp->getNumBackEdges() != 1) {
-    reportVectorizationFailure("The loop must have a single backedge",
-        "loop control flow is not understood by vectorizer",
-        "CFGNotUnderstood", ORE, TheLoop);
+    reportVectorizationFailure(
+        "The loop must have a single backedge",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
     if (DoExtraAnalysis)
       Result = false;
     else
@@ -2041,7 +2043,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   if (PSE.getPredicate().getComplexity() > SCEVThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Vectorization not profitable "
                          "due to SCEVThreshold");
-    reportVectorizationFailure("Too many SCEV checks needed",
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
         "Too many SCEV assumptions need to be made and checked at runtime",
         "TooManySCEVRunTimeChecks", ORE, TheLoop);
     if (DoExtraAnalysis)

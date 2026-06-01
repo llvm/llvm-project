@@ -988,7 +988,7 @@ def NegSubInlineIntConst16 : ImmLeaf<i16, [{
 }], NegateImm>;
 
 def ShiftAmt32Imm : ImmLeaf <i32, [{
-  return Imm < 32;
+  return static_cast<uint32_t>(Imm) < 32;
 }]>;
 
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
@@ -1254,6 +1254,7 @@ def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
+def lds : NamedBitOperand<"lds", "LDS", 1>;
 
 def omod : CustomOperand<1, "OModSI">;
 def omod0 : DefaultOperand<omod, 0>;
@@ -3094,6 +3095,7 @@ def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
 def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
 def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
 def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
@@ -3541,7 +3543,7 @@ def FP4FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
-  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
+  let Fields = ["BaseVOP", "VOPDOp"];
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3562,6 +3564,30 @@ def VOPDPairs : GenericTable {
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
+}
+
+def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, $op, lo16, (i16 (IMPLICIT_DEF)), hi16)>;
+
+def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+// Instructions eligible to be the first (X) instruction in Dual Issue VALU
+// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
+// table; no helper is generated.
+def VOPDXTable : GenericTable {
+  let FilterClass = "VOPDX";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
+}
+
+// Instructions eligible to be the second (Y) instruction in Dual Issue VALU
+// (VOPD) encoding. Consumed by buildVOPDXYLookup() to build a direct lookup
+// table; no helper is generated.
+def VOPDYTable : GenericTable {
+  let FilterClass = "VOPDY";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDOp", "Subtarget", "VOPD3"];
 }
 
 include "SIInstructions.td"

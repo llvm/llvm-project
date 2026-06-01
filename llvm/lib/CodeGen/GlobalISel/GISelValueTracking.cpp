@@ -441,6 +441,30 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                             MI.getFlag(MachineInstr::MIFlag::IsExact));
     break;
   }
+  case TargetOpcode::G_UREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
+    break;
+  }
+  case TargetOpcode::G_SREM: {
+    KnownBits LHSKnown(Known.getBitWidth());
+    KnownBits RHSKnown(Known.getBitWidth());
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), LHSKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), RHSKnown, DemandedElts,
+                         Depth + 1);
+
+    Known = KnownBits::srem(LHSKnown, RHSKnown);
+    break;
+  }
   case TargetOpcode::G_SELECT: {
     computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
                         Known, DemandedElts, Depth + 1);
@@ -582,6 +606,23 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     Known.Zero = Known.Zero.rotr(Amt);
     Known.One = Known.One.rotr(Amt);
+    break;
+  }
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(3).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+
+    const APInt Amt = *MaybeAmtOp;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = Opcode == TargetOpcode::G_FSHL
+                ? KnownBits::fshl(Known, Known2, Amt)
+                : KnownBits::fshr(Known, Known2, Amt);
     break;
   }
   case TargetOpcode::G_INTTOPTR:
@@ -764,7 +805,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -775,7 +816,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
+  case TargetOpcode::G_CTLZ_ZERO_POISON: {
     KnownBits SrcOpKnown;
     computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
                          Depth + 1);
@@ -1379,7 +1420,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FPOWI: {
-    if ((InterestedClasses & fcNegative) == fcNone)
+    if ((InterestedClasses & (fcNan | fcInf | fcNegative)) == fcNone)
       break;
 
     Register Exp = MI.getOperand(2).getReg();
@@ -1387,10 +1428,22 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownBits ExponentKnownBits = getKnownBits(
         Exp, ExpTy.isVector() ? DemandedElts : APInt(1, 1), Depth + 1);
 
-    Register Val = MI.getOperand(1).getReg();
+    FPClassTest InterestedSrcs = fcNone;
+    if (InterestedClasses & fcNan)
+      InterestedSrcs |= fcNan;
+    if (!ExponentKnownBits.isZero()) {
+      if (InterestedClasses & fcInf)
+        InterestedSrcs |= fcFinite | fcInf;
+      if ((InterestedClasses & fcNegative) && !ExponentKnownBits.isEven())
+        InterestedSrcs |= fcNegative;
+    }
+
     KnownFPClass KnownSrc;
-    if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven())
-      computeKnownFPClass(Val, DemandedElts, fcNegative, KnownSrc, Depth + 1);
+    if (InterestedSrcs != fcNone) {
+      Register Val = MI.getOperand(1).getReg();
+      computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc,
+                          Depth + 1);
+    }
 
     Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
     break;
@@ -1790,9 +1843,9 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       assert(DemandedElts == APInt(1, 1));
       DemandedLHS = DemandedRHS = DemandedElts;
     } else {
-      if (!llvm::getShuffleDemandedElts(DstTy.getNumElements(), Shuf.getMask(),
-                                        DemandedElts, DemandedLHS,
-                                        DemandedRHS)) {
+      unsigned NumElts = MRI.getType(Shuf.getSrc1Reg()).getNumElements();
+      if (!llvm::getShuffleDemandedElts(NumElts, Shuf.getMask(), DemandedElts,
+                                        DemandedLHS, DemandedRHS)) {
         Known.resetAll();
         return;
       }
@@ -2168,6 +2221,14 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         return Tmp - MaxShAmt;
     }
     break;
+  }
+  case TargetOpcode::G_SREM: {
+    // The sign bit is the LHS's sign bit, except when the result of the
+    // remainder is zero. The magnitude of the result should be less than or
+    // equal to the magnitude of the LHS. Therefore, the result should have
+    // at least as many sign bits as the left hand side.
+    Register Src = MI.getOperand(1).getReg();
+    return computeNumSignBits(Src, DemandedElts, Depth + 1);
   }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();

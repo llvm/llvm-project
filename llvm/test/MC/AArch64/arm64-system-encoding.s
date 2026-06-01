@@ -165,8 +165,6 @@ foo:
   msr TCR2_EL12, x3
   msr TCR2_EL2, x3
   msr S3_2_C11_C6_4, x1
-  msr  S0_0_C0_C0_0, x0
-  msr  S1_2_C3_C4_5, x2
 ; CHECK: msr ACTLR_EL1, x3              ; encoding: [0x23,0x10,0x18,0xd5]
 ; CHECK: msr ACTLR_EL12, x3             ; encoding: [0x23,0x10,0x1d,0xd5]
 ; CHECK: msr ACTLR_EL2, x3              ; encoding: [0x23,0x10,0x1c,0xd5]
@@ -274,8 +272,15 @@ foo:
 ; CHECK: msr TCR2_EL12, x3              ; encoding: [0x63,0x20,0x1d,0xd5]
 ; CHECK: msr TCR2_EL2, x3               ; encoding: [0x63,0x20,0x1c,0xd5]
 ; CHECK: msr  S3_2_C11_C6_4, x1         ; encoding: [0x81,0xb6,0x1a,0xd5]
-; CHECK: msr  S0_0_C0_C0_0, x0          ; encoding: [0x00,0x00,0x00,0xd5]
-; CHECK: msr  S1_2_C3_C4_5, x2          ; encoding: [0xa2,0x34,0x0a,0xd5]
+
+// Invalid System register encodings
+  msr S0_0_C0_C0_0, x0
+  msr S1_2_C3_C4_5, x2
+  msr S4_2_C3_C4_5, x2
+; CHECK-ERRORS: :[[@LINE-3]]:7: error: expected writable system register or pstate
+; CHECK-ERRORS: :[[@LINE-3]]:7: error: expected writable system register or pstate
+; CHECK-ERRORS: :[[@LINE-3]]:7: error: expected writable system register or pstate
+
 
 // Readonly system registers: writing to them gives an error
   msr CURRENTEL, x3
@@ -764,3 +769,12 @@ foo:
 ; CHECK: mrs	x0, AFSR1_EL1           ; encoding: [0x20,0x51,0x38,0xd5]
 ; CHECK: mrs	x0, AFSR0_EL1           ; encoding: [0x00,0x51,0x38,0xd5]
 ; CHECK: mrs	x0, REVIDR_EL1          ; encoding: [0xc0,0x00,0x38,0xd5]
+
+// Invalid System register encodings
+  mrs x3, S0_0_C0_C0_0
+  mrs x3, S1_2_C3_C4_5
+  mrs x3, S4_2_C3_C4_5
+; CHECK-ERRORS: :[[@LINE-3]]:11: error: expected readable system register
+; CHECK-ERRORS: :[[@LINE-3]]:11: error: expected readable system register
+; CHECK-ERRORS: :[[@LINE-3]]:11: error: expected readable system register
+

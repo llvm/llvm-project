@@ -349,7 +349,7 @@ func.func @sub16_(%arg0: !fir.ref<f32> {fir.bindc_name = "h16"}) attributes {fir
   return
 }
 fir.global linkonce @_QQclXc8657e47c19bb9e89730387c9d99c2da constant : !fir.char<1,38> {
-  %0 = fir.string_lit "/local/home/vclement/lorado/dummy.cuf\00"(38) : !fir.char<1,38>
+  %0 = fir.string_lit "/path/to/source/test/dummy_module.cuf\00"(38) : !fir.char<1,38>
   fir.has_value %0 : !fir.char<1,38>
 }
 fir.global @_QMdevice_dataEd16 {data_attr = #cuf.cuda<constant>} : f32 {
@@ -360,3 +360,70 @@ func.func private @_FortranACUFGetDeviceAddress(!fir.llvm_ptr<i8>, !fir.ref<i8>,
 
 // CHECK-LABEL: llvm.func @sub16_
 // CHECK: llvm.mlir.addressof @_QMdevice_dataEd16 : !llvm.ptr<4>
+
+// -----
+
+// Test that a host-side fir.address_of referencing a fir.global with CUF
+// shared data_attr produces an addrspacecast from ptr<3> to ptr.
+
+fir.global @_QMmodEsval {data_attr = #cuf.cuda<shared>} : i32 {
+  %0 = fir.zero_bits i32
+  fir.has_value %0 : i32
+}
+func.func @_QQhost_shared() {
+  %0 = fir.address_of(@_QMmodEsval) : !fir.ref<i32>
+  return
+}
+
+// CHECK: llvm.mlir.global external @_QMmodEsval() {addr_space = 3 : i32} : i32
+// CHECK-LABEL: llvm.func @_QQhost_shared()
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @_QMmodEsval : !llvm.ptr<3>
+// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDR]] : !llvm.ptr<3> to !llvm.ptr
+
+// -----
+
+// Test that fir.address_of inside gpu.module referencing a managed fir.global
+// produces an addressof with ptr<1> and an addrspacecast.
+
+module {
+  func.func @_QMkernelsPuse_managed() {
+    %0 = fir.address_of(@_QMmodEmval) : !fir.ref<i32>
+    return
+  }
+  fir.global @_QMmodEmval {data_attr = #cuf.cuda<managed>} : i32 {
+    %0 = fir.zero_bits i32
+    fir.has_value %0 : i32
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QMkernelsPuse_managed()
+// CHECK: %{{.*}} = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr
+// CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 0 : i32} : i32
+
+// -----
+
+// Test that a rebox whose result is passed to gpu.launch_func gets a managed
+// descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestmePmykernel(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: i32) kernel {
+      gpu.return
+    }
+  }
+  func.func @_QQmain() {
+    %c1 = arith.constant 1 : index
+    %c32 = arith.constant 32 : index
+    %c0_i32 = arith.constant 0 : i32
+    %c32_i32 = arith.constant 32 : i32
+    %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel blocks in (%c1, %c1, %c1) threads in (%c32, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%2 : !fir.box<!fir.array<?x?xi32>>, %c32_i32 : i32)
+    return
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel

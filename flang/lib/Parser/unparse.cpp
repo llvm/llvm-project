@@ -152,6 +152,12 @@ public:
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
   }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
+  }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
   }
@@ -1498,6 +1504,7 @@ public:
       FMT(G);
       FMT(L);
       FMT(A);
+      FMT(AT);
       FMT(D);
 #undef FMT
     }
@@ -1739,6 +1746,27 @@ public:
   void Unparse(const ActualArg::PercentVal &x) {
     Word("%VAL("), Walk(x.v), Put(')');
   }
+  void UnparseConditionalArgBody(const ConditionalArg &x) {
+    Walk(std::get<ScalarLogicalExpr>(x.t));
+    Put(" ? ");
+    Walk(std::get<ConditionalArg::Consequent>(x.t));
+    Put(" : ");
+    Walk(std::get<common::Indirection<ConditionalArgTail>>(x.t));
+  }
+  void Unparse(const ConditionalArg &x) { // F2023 R1526
+    Put("( ");
+    UnparseConditionalArgBody(x);
+    Put(" )");
+  }
+  void Unparse(const ConditionalArgTail &x) {
+    common::visit(
+        common::visitors{
+            [&](const ConditionalArg &y) { UnparseConditionalArgBody(y); },
+            [&](const ConditionalArg::Consequent &y) { Walk(y); },
+        },
+        x.u);
+  }
+  void Post(const ConditionalArgNil &) { Word(".NIL."); } // part of F2023 R1527
   void Before(const AltReturnSpec &) { // R1525
     Put('*');
   }
@@ -1748,6 +1776,7 @@ public:
   void Post(const PrefixSpec::Non_Recursive) { Word("NON_RECURSIVE"); }
   void Post(const PrefixSpec::Pure) { Word("PURE"); }
   void Post(const PrefixSpec::Recursive) { Word("RECURSIVE"); }
+  void Post(const PrefixSpec::Simple) { Word("SIMPLE"); }
   void Unparse(const PrefixSpec::Attributes &x) {
     Word("ATTRIBUTES("), Walk(x.v), Word(")");
   }
@@ -1886,6 +1915,14 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
+            [&](const CompilerDirective::InlineAlways &inlineAlways) {
+              Word("!DIR$ INLINEALWAYS");
+              if (inlineAlways.v.has_value()) {
+                Word(" ");
+                Word(inlineAlways.v->ToString());
+              }
+            },
+            [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2171,12 +2208,13 @@ public:
   void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags.test(OmpDirectiveSpecification::Flag::ExplicitBegin)) {
+      Word("BEGIN ");
+    }
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpBeginLoopDirective &x) {
-    Unparse(static_cast<const OmpBeginDirective &>(x));
   }
   void Unparse(const OmpBeginSectionsDirective &x) {
     Unparse(static_cast<const OmpBeginDirective &>(x));
@@ -2282,9 +2320,6 @@ public:
     Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
-  }
-  void Unparse(const OmpEndLoopDirective &x) {
-    Unparse(static_cast<const OmpEndDirective &>(x));
   }
   void Unparse(const OmpEndSectionsDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
@@ -2607,7 +2642,7 @@ public:
   void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPAssumeConstruct &x) {
+  void Unparse(const OmpAssumeDirective &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPAtomicConstruct &x) {
@@ -2630,35 +2665,35 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPDeclarativeAssumes &x) {
+  void Unparse(const OmpAssumesDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareMapperConstruct &x) {
+  void Unparse(const OmpDeclareMapperDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareReductionConstruct &x) {
+  void Unparse(const OmpDeclareReductionDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &x) {
+  void Unparse(const OmpDeclareSimdDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareTargetConstruct &x) {
+  void Unparse(const OmpDeclareTargetDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2689,7 +2724,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPGroupprivate &x) {
+  void Unparse(const OmpGroupprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2713,14 +2748,14 @@ public:
   void Unparse(const OpenMPMisplacedEndDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
   }
-  void Unparse(const OpenMPRequiresConstruct &x) {
+  void Unparse(const OmpRequiresDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPSectionConstruct &x) {
+  void Unparse(const OmpSectionDirective &x) {
     if (auto &&dirSpec{
             std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();
@@ -2743,7 +2778,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPThreadprivate &x) {
+  void Unparse(const OmpThreadprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);

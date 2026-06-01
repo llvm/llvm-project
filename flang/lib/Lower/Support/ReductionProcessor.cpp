@@ -46,7 +46,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template bool ReductionProcessor::processReductionArguments<
     fir::DeclareReductionOp, llvm::SmallVector<fir::ReduceOperationEnum>>(
@@ -55,7 +56,8 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template mlir::omp::DeclareReductionOp
 ReductionProcessor::createDeclareReduction<mlir::omp::DeclareReductionOp>(
@@ -192,9 +194,23 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
   case ReductionIdentifier::NEQV:
     reductionName = "neqv_reduction";
     break;
-  default:
-    reductionName = "other_reduction";
+  case ReductionIdentifier::MAX:
+    reductionName = "max_reduction";
     break;
+  case ReductionIdentifier::MIN:
+    reductionName = "min_reduction";
+    break;
+  case ReductionIdentifier::IAND:
+    reductionName = "iand_reduction";
+    break;
+  case ReductionIdentifier::IOR:
+    reductionName = "ior_reduction";
+    break;
+  case ReductionIdentifier::IEOR:
+    reductionName = "ieor_reduction";
+    break;
+  default:
+    llvm_unreachable("unsupported reduction identifier");
   }
 
   return getReductionName(reductionName, kindMap, ty, isByRef);
@@ -487,7 +503,7 @@ template <typename OpType>
 static void createReductionAllocAndInitRegions(
     AbstractConverter &converter, mlir::Location loc, OpType &reductionDecl,
     ReductionProcessor::GenInitValueCBTy genInitValueCB, mlir::Type type,
-    bool isByRef) {
+    bool isByRef, const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto yield = [&](mlir::Value ret) { genYield<OpType>(builder, loc, ret); };
 
@@ -509,13 +525,16 @@ static void createReductionAllocAndInitRegions(
   mlir::Type ty = fir::unwrapRefType(type);
   builder.setInsertionPointToEnd(initBlock);
   mlir::Value initValue =
-      genInitValueCB(builder, loc, ty, initBlock->getArgument(0));
+      isByRef ? genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               initBlock->getArgument(1))
+              : genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               mlir::Value{});
   if (isByRef) {
     populateByRefInitAndCleanupRegions(
         converter, loc, type, initValue, initBlock,
         reductionDecl.getInitializerAllocArg(),
         reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
-        DeclOperationKind::Reduction, /*sym=*/nullptr,
+        DeclOperationKind::Reduction, sym,
         /*cannotHaveLowerBounds=*/false,
         /*isDoConcurrent*/ std::is_same_v<OpType, fir::DeclareReductionOp>);
   }
@@ -544,7 +563,8 @@ template <typename DeclareRedType>
 DeclareRedType ReductionProcessor::createDeclareReductionHelper(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     mlir::Type type, mlir::Location loc, bool isByRef,
-    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB) {
+    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
+    const semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
@@ -578,7 +598,7 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type,
                                 boxedTyAttr);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
-                                     isByRef);
+                                     isByRef, sym);
   builder.createBlock(&decl.getReductionRegion(),
                       decl.getReductionRegion().end(), {type, type},
                       {loc, loc});
@@ -607,7 +627,8 @@ OpType ReductionProcessor::createDeclareReduction(
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
     bool isByRef) {
   auto genInitValueCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Type type, mlir::Value val) {
+                            mlir::Type type, mlir::Value /*moldArg*/,
+                            mlir::Value /*privArg*/) {
     mlir::Type ty = fir::unwrapRefType(type);
     mlir::Value initValue = ReductionProcessor::getReductionInitValue(
         loc, unwrapSeqOrBoxedType(ty), redId, builder);
@@ -627,11 +648,11 @@ OpType ReductionProcessor::createDeclareReduction(
 bool ReductionProcessor::doReductionByRef(mlir::Type reductionType) {
   if (forceByrefReduction)
     return true;
-
-  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)) &&
-      !fir::isa_derived(fir::unwrapRefType(reductionType)))
+  // Non-trivial, non-derived types (e.g., boxes, arrays) must be by-ref.
+  // Derived types must also be by-ref because user-defined combiners
+  // operate on components via side-effects, not by producing a whole value.
+  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)))
     return true;
-
   return false;
 }
 
@@ -653,7 +674,8 @@ bool ReductionProcessor::processReductionArguments(
     llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols) {
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   if constexpr (std::is_same_v<RedOperatorListTy,
@@ -696,6 +718,21 @@ bool ReductionProcessor::processReductionArguments(
   }
 
   for (const semantics::Symbol *symbol : reductionSymbols) {
+    // If a cached reduction variable exists for this symbol, reuse it.
+    // This ensures that composite constructs (e.g. DO SIMD) where both
+    // the outer wrapper (wsloop) and inner wrapper (simd) process the same
+    // reduction clause share the same SSA value, enabling genLoopVars()'s
+    // IRMapping to correctly remap inner wrapper operands to outer wrapper
+    // block arguments.
+    if (reductionVarCache) {
+      auto it = reductionVarCache->find(symbol);
+      if (it != reductionVarCache->end()) {
+        reductionVars.push_back(it->second);
+        reduceVarByRef.push_back(doReductionByRef(it->second));
+        continue;
+      }
+    }
+
     mlir::Value symVal = converter.getSymbolAddress(*symbol);
 
     if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
@@ -748,7 +785,12 @@ bool ReductionProcessor::processReductionArguments(
 
     reductionVars.push_back(
         builder.createConvert(currentLocation, refTy, symVal));
-    reduceVarByRef.push_back(doReductionByRef(symVal));
+    reduceVarByRef.push_back(doReductionByRef(reductionVars.back()));
+
+    // Cache the final SSA value for this symbol so that subsequent calls
+    // (e.g. for the inner wrapper in a composite construct) reuse it.
+    if (reductionVarCache)
+      reductionVarCache->try_emplace(symbol, reductionVars.back());
   }
 
   unsigned idx = 0;
@@ -783,6 +825,16 @@ bool ReductionProcessor::processReductionArguments(
         }
 
         reductionName = getReductionName(redId, kindMap, redType, isByRef);
+        // If a user-defined declare reduction already exists for this
+        // operator+type, reuse it instead of generating a new one
+        // (which would fail for non-predefined types like derived types).
+        mlir::ModuleOp module = builder.getModule();
+        if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
+          ++idx;
+          continue;
+        }
       } else if (const auto *reductionIntrinsic =
                      std::get_if<omp::clause::ProcedureDesignator>(
                          &redOperator.u)) {

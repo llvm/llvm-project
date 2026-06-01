@@ -7,23 +7,26 @@ target triple = "aarch64--"
 define float @test_fmuladd(float %x, float %y, float %z) {
   ; FPFAST-LABEL: name: test_fmuladd
   ; FPFAST: bb.1 (%ir-block.0):
-  ; FPFAST:   liveins: $s0, $s1, $s2
-  ; FPFAST:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; FPFAST:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
-  ; FPFAST:   [[COPY2:%[0-9]+]]:_(s32) = COPY $s2
-  ; FPFAST:   [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
-  ; FPFAST:   $s0 = COPY [[FMA]](s32)
-  ; FPFAST:   RET_ReallyLR implicit $s0
+  ; FPFAST-NEXT:   liveins: $s0, $s1, $s2
+  ; FPFAST-NEXT: {{  $}}
+  ; FPFAST-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; FPFAST-NEXT:   [[COPY1:%[0-9]+]]:_(f32) = COPY $s1
+  ; FPFAST-NEXT:   [[COPY2:%[0-9]+]]:_(f32) = COPY $s2
+  ; FPFAST-NEXT:   [[FMA:%[0-9]+]]:_(f32) = G_FMA [[COPY]], [[COPY1]], [[COPY2]]
+  ; FPFAST-NEXT:   $s0 = COPY [[FMA]](f32)
+  ; FPFAST-NEXT:   RET_ReallyLR implicit $s0
+  ;
   ; FPOFF-LABEL: name: test_fmuladd
   ; FPOFF: bb.1 (%ir-block.0):
-  ; FPOFF:   liveins: $s0, $s1, $s2
-  ; FPOFF:   [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-  ; FPOFF:   [[COPY1:%[0-9]+]]:_(s32) = COPY $s1
-  ; FPOFF:   [[COPY2:%[0-9]+]]:_(s32) = COPY $s2
-  ; FPOFF:   [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[COPY1]]
-  ; FPOFF:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[FMUL]], [[COPY2]]
-  ; FPOFF:   $s0 = COPY [[FADD]](s32)
-  ; FPOFF:   RET_ReallyLR implicit $s0
+  ; FPOFF-NEXT:   liveins: $s0, $s1, $s2
+  ; FPOFF-NEXT: {{  $}}
+  ; FPOFF-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; FPOFF-NEXT:   [[COPY1:%[0-9]+]]:_(f32) = COPY $s1
+  ; FPOFF-NEXT:   [[COPY2:%[0-9]+]]:_(f32) = COPY $s2
+  ; FPOFF-NEXT:   [[FMUL:%[0-9]+]]:_(f32) = G_FMUL [[COPY]], [[COPY1]]
+  ; FPOFF-NEXT:   [[FADD:%[0-9]+]]:_(f32) = G_FADD [[FMUL]], [[COPY2]]
+  ; FPOFF-NEXT:   $s0 = COPY [[FADD]](f32)
+  ; FPOFF-NEXT:   RET_ReallyLR implicit $s0
   %res = call float @llvm.fmuladd.f32(float %x, float %y, float %z)
   ret float %res
 }

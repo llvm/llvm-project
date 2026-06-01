@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_ 3.8 or later.
+* `Python <http://www.python.org/>`_ 3.8 or later (3.11 or later on Windows).
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -62,7 +62,7 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. 3.8 or later (3.11 or later on Windows).   | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
@@ -112,9 +112,9 @@ Please follow the steps below if you only want to **build** lldb.
    ``dirname`` are available from your terminal.
 3. Install `make <https://sourceforge.net/projects/ezwinports/files/>`_ and
    verify that it's in your ``PATH``.
-4. Install `Python 3 <https://www.python.org/downloads/windows/>`_. Either using
-   the "Windows Installer" or "Python Install Manager". Make sure ``python`` is
-   added to your ``PATH``.
+4. Install `Python 3.11 <https://www.python.org/downloads/windows/>`_ or later.
+   Either using the "Windows Installer" or "Python Install Manager". Make sure
+   ``python`` is added to your ``PATH``.
 
    .. note::
       Building LLDB in debug mode requires a debug version of Python (because
@@ -217,18 +217,17 @@ checked out above, but now we will have multiple build-trees:
   single one in ``/path/to/llvm-build``
 
 Run CMake with ``-B`` pointing to a new directory for the provided
-build-tree\ :sup:`1` and the positional argument pointing to the ``llvm``
-directory in the source-tree.\ :sup:`2` Note that we leave out LLDB here and only include
-Clang. Then we build the ``ALL`` target with ninja:
+build-tree and the positional argument pointing to the ``llvm``
+directory in the source-tree.\ :sup:`1` Note that we leave out LLDB here and only include
+Clang. Then we build the ``ALL`` target:
 
 ::
 
   $ cmake -B /path/to/llvm-build -G Ninja \
           -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_ENABLE_PROJECTS=clang \
-          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
-  $ ninja
+  $ cmake --build /path/to/llvm-build
 
 Now run CMake a second time with ``-B`` pointing to a new directory for the
 main build-tree and the positional argument pointing to the ``lldb`` directory
@@ -240,19 +239,16 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  $ ninja lldb lldb-server
+  $ cmake --build /path/to/lldb-build -t lldb lldb-server
 
 If you do not require or cannot build ``lldb-server`` on your platform, simply
 remove it from the Ninja command.
 
 .. note::
 
-   #. The ``-B`` argument was undocumented for a while and is only officially
-      supported since `CMake version 3.14
-      <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
    #. If you want to have a standalone LLDB build with tests enabled, you also
       need to pass in ``-DLLVM_ENABLE_RUNTIME='libcxx;libcxxabi;libunwind'`` to your CMake invocation when configuring your LLVM standalone build.
 

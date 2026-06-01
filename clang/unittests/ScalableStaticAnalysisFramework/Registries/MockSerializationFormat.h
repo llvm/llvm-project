@@ -65,15 +65,11 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
-
-  static char ID;
 };
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::MockSerializationFormat::FormatInfo>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(
+    llvm::Registry<clang::ssaf::MockSerializationFormat::FormatInfo>)
 
 #endif // LLVM_CLANG_UNITTESTS_SCALABLESTATICANALYSISFRAMEWORK_REGISTRIES_MOCKSERIALIZATIONFORMAT_H

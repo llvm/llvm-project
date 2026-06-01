@@ -1894,14 +1894,14 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/16, /*Signed=*/false);
   QualType Int32QTy =
       Ctx.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false);
-  ImplicitParamDecl ParallelLevelArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                                     /*Id=*/nullptr, Int16QTy,
-                                     ImplicitParamKind::Other);
-  ImplicitParamDecl WrapperArg(Ctx, /*DC=*/nullptr, D.getBeginLoc(),
-                               /*Id=*/nullptr, Int32QTy,
-                               ImplicitParamKind::Other);
-  WrapperArgs.emplace_back(&ParallelLevelArg);
-  WrapperArgs.emplace_back(&WrapperArg);
+  auto *ParallelLevelArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int16QTy, ImplicitParamKind::Other);
+  auto *WrapperArg = ImplicitParamDecl::Create(
+      Ctx, /*DC=*/nullptr, D.getBeginLoc(),
+      /*Id=*/nullptr, Int32QTy, ImplicitParamKind::Other);
+  WrapperArgs.emplace_back(ParallelLevelArg);
+  WrapperArgs.emplace_back(WrapperArg);
 
   const CGFunctionInfo &CGFI =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, WrapperArgs);
@@ -1935,7 +1935,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   // Get the array of arguments.
   SmallVector<llvm::Value *, 8> Args;
 
-  Args.emplace_back(CGF.GetAddrOfLocalVar(&WrapperArg).emitRawPointer(CGF));
+  Args.emplace_back(CGF.GetAddrOfLocalVar(WrapperArg).emitRawPointer(CGF));
   Args.emplace_back(ZeroAddr.emitRawPointer(CGF));
 
   CGBuilderTy &Bld = CGF.Builder;
@@ -2304,16 +2304,22 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
+      case OffloadArch::SM_100f:
       case OffloadArch::SM_101:
       case OffloadArch::SM_101a:
+      case OffloadArch::SM_101f:
       case OffloadArch::SM_103:
       case OffloadArch::SM_103a:
+      case OffloadArch::SM_103f:
       case OffloadArch::SM_110:
       case OffloadArch::SM_110a:
+      case OffloadArch::SM_110f:
       case OffloadArch::SM_120:
       case OffloadArch::SM_120a:
+      case OffloadArch::SM_120f:
       case OffloadArch::SM_121:
       case OffloadArch::SM_121a:
+      case OffloadArch::SM_121f:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2379,8 +2385,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::Unused:
       case OffloadArch::Unknown:
         break;
-      case OffloadArch::LAST:
-        llvm_unreachable("Unexpected GPU arch.");
       }
     }
   }

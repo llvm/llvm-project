@@ -72,6 +72,7 @@
 #include "ReturnConstRefFromParameterCheck.h"
 #include "SharedPtrArrayMismatchCheck.h"
 #include "SignalHandlerCheck.h"
+#include "SignedBitwiseCheck.h"
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
@@ -103,6 +104,7 @@
 #include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
+#include "UnhandledCodePathsCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
@@ -247,6 +249,7 @@ public:
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
         "bugprone-shared-ptr-array-mismatch");
     CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");
+    CheckFactories.registerCheck<SignedBitwiseCheck>("bugprone-signed-bitwise");
     CheckFactories.registerCheck<SignedCharMisuseCheck>(
         "bugprone-signed-char-misuse");
     CheckFactories.registerCheck<SizeofContainerCheck>(
@@ -305,6 +308,8 @@ public:
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
+    CheckFactories.registerCheck<UnhandledCodePathsCheck>(
+        "bugprone-unhandled-code-paths");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
         "bugprone-unhandled-self-assignment");
     CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(

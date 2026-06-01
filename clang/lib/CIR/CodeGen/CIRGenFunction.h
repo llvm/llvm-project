@@ -94,22 +94,25 @@ public:
 
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
-  /// An entry in the lifetime-extended cleanup stack. Each entry represents a
-  /// cleanup that was deferred past a full-expression boundary (e.g.,
-  /// destroying a temporary bound to a local reference). When the enclosing
-  /// scope exits, these entries are promoted to the EH scope stack.
+  /// A cleanup entry that will be promoted onto the EH scope stack at a later
+  /// point. Used by both the lifetime-extended cleanup stack (promoted when
+  /// the enclosing scope exits) and the deferred conditional cleanup stack
+  /// (promoted at the enclosing full-expression level).
   ///
-  /// Currently only DestroyObject cleanups are lifetime-extended. When other
-  /// cleanup types are needed (e.g., CallLifetimeEnd), this struct can be
-  /// extended with a std::variant of cleanup data types.
-  struct LifetimeExtendedCleanupEntry {
+  /// Currently only DestroyObject cleanups use this. When other cleanup types
+  /// are needed (e.g., CallLifetimeEnd), this struct can be extended with a
+  /// std::variant of cleanup data types.
+  struct PendingCleanupEntry {
     CleanupKind kind;
     Address addr;
     QualType type;
     Destroyer *destroyer;
+    Address activeFlag = Address::invalid();
   };
 
-  llvm::SmallVector<LifetimeExtendedCleanupEntry> lifetimeExtendedCleanupStack;
+  llvm::SmallVector<PendingCleanupEntry> lifetimeExtendedCleanupStack;
+
+  llvm::SmallVector<PendingCleanupEntry> deferredConditionalCleanupStack;
 
   /// A cleanup that was pushed to the EH stack but whose deactivation is
   /// deferred until the enclosing CleanupDeactivationScope exits. Used to
@@ -153,6 +156,11 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// If a ParmVarDecl had the pass_object_size attribute, this will contain a
+  /// mapping from said ParmVarDecl to its implicit "object_size" parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *>
+      sizeArguments;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
@@ -181,6 +189,10 @@ public:
   /// The values of function arguments to use when evaluating
   /// CXXInheritedCtorInitExprs within this context.
   CallArgList cxxInheritedCtorInitExprArgs;
+
+  /// The current array initialization index when evaluating an
+  /// ArrayInitIndexExpr within an ArrayInitLoopExpr.
+  mlir::Value arrayInitIndex = nullptr;
 
   // Holds the Decl for the current outermost non-closure context
   const clang::Decl *curFuncDecl = nullptr;
@@ -539,6 +551,12 @@ public:
 
   bool isLValueSuitableForInlineAtomic(LValue lv);
 
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc,
+                        AggValueSlot slot = AggValueSlot::ignored());
+  RValue emitAtomicLoad(LValue lvalue, SourceLocation loc, cir::MemOrder order,
+                        bool isVolatile = false,
+                        AggValueSlot slot = AggValueSlot::ignored());
+
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
@@ -885,6 +903,33 @@ public:
         : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
   };
 
+  /// The scope of an ArrayInitLoopExpr. Within this scope, the value of the
+  /// current loop index is overridden. In order to encourage re-use of existing
+  /// array initialization, this uses a flag to determine if it is a 'no-op' or
+  /// not.
+  class ArrayInitLoopExprScope {
+  public:
+    ArrayInitLoopExprScope(CIRGenFunction &cgf, bool setIdx, mlir::Value index)
+        : cgf(cgf),
+          oldArrayInitIndex(setIdx
+                                ? std::optional<mlir::Value>(cgf.arrayInitIndex)
+                                : std::nullopt) {
+      if (setIdx)
+        cgf.arrayInitIndex = index;
+    }
+    ~ArrayInitLoopExprScope() {
+      if (oldArrayInitIndex.has_value())
+        cgf.arrayInitIndex = *oldArrayInitIndex;
+    }
+
+  private:
+    CIRGenFunction &cgf;
+    std::optional<mlir::Value> oldArrayInitIndex;
+  };
+
+  /// Get the index of the current ArrayInitLoopExpr, if any.
+  mlir::Value getArrayInitIndex() { return arrayInitIndex; }
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -990,10 +1035,10 @@ public:
                                                 const CXXRecordDecl *baseRD,
                                                 bool isVirtual);
 
+  /// Return a CIR constant for an undefined value of \p cirTy.
+  mlir::Value getUndefConstant(mlir::Location loc, mlir::Type cirTy);
+
   /// Get an appropriate 'undef' rvalue for the given type.
-  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
-  /// void types so it just returns RValue::get(nullptr) but it'll need
-  /// addressed later.
   RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -1055,17 +1100,35 @@ public:
   void deactivateCleanupBlock(EHScopeStack::stable_iterator cleanup,
                               mlir::Operation *dominatingIP);
 
+  /// Create an active flag variable for use with conditional cleanups. The
+  /// flag is initialized to false before the outermost conditional and set to
+  /// true at the current insertion point (inside the conditional branch).
+  Address createCleanupActiveFlag();
+
+  /// Set up the last cleanup that was pushed as a conditional
+  /// full-expression cleanup.
+  void initFullExprCleanup();
+  void initFullExprCleanupWithFlag(Address activeFlag);
+
+  /// Promote a single pending cleanup entry onto the EH scope stack. If the
+  /// entry has a valid activeFlag, the cleanup is configured as conditional.
+  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
+  void pushPendingCleanupToEHStack(const PendingCleanupEntry &entry);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... a) {
-    // If we're not in a conditional branch, or if none of the
-    // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
       return ehStack.pushCleanup<T>(kind, a...);
 
-    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+    // Defer the cleanup until the FullExprCleanupScope exits. We can't push
+    // to the EH stack now because the ternary's inner LexicalScope would pop
+    // it prematurely.
+    Address activeFlag = createCleanupActiveFlag();
+    deferredConditionalCleanupStack.push_back(
+        PendingCleanupEntry{kind, a..., activeFlag});
   }
 
   /// Push a cleanup and record it for deferred deactivation. The cleanup will
@@ -1098,6 +1161,7 @@ public:
   class RunCleanupsScope {
     EHScopeStack::stable_iterator cleanupStackDepth, oldCleanupStackDepth;
     size_t lifetimeExtendedCleanupStackSize;
+    CleanupDeactivationScope deactivateCleanups;
 
   protected:
     bool performCleanup;
@@ -1113,7 +1177,7 @@ public:
   public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
-        : performCleanup(true), cgf(cgf) {
+        : deactivateCleanups(cgf), performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
       lifetimeExtendedCleanupStackSize =
           cgf.lifetimeExtendedCleanupStack.size();
@@ -1134,6 +1198,7 @@ public:
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
       cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize,
                            valuesToReload);
       performCleanup = false;
@@ -1149,6 +1214,28 @@ public:
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
   EHScopeStack::stable_iterator currentCleanupStackDepth = ehStack.stable_end();
+
+  class FullExprCleanupScope {
+    CIRGenFunction &cgf;
+    RunCleanupsScope cleanups;
+    cir::CleanupScopeOp scope;
+    size_t deferredCleanupStackSize;
+    bool exited = false;
+
+  public:
+    FullExprCleanupScope(CIRGenFunction &cgf, const Expr *subExpr);
+
+    void exit(ArrayRef<mlir::Value *> valuesToReload = {});
+
+    ~FullExprCleanupScope() {
+      if (!exited)
+        exit();
+    }
+
+  private:
+    FullExprCleanupScope(const FullExprCleanupScope &) = delete;
+    void operator=(const FullExprCleanupScope &) = delete;
+  };
 
 public:
   /// Represents a scope, including function bodies, compound statements, and
@@ -1324,6 +1411,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind, Address addr,
+                             QualType type);
+
   void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
                    QualType type);
 
@@ -1334,12 +1424,13 @@ public:
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
 
-  /// Promote a single lifetime-extended cleanup entry onto the EH scope stack.
-  /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
-  void pushLifetimeExtendedCleanupToEHStack(
-      const LifetimeExtendedCleanupEntry &entry);
-
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
+
+  void pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
+                                        Address arrayEndPointer,
+                                        QualType elementType,
+                                        CharUnits elementAlign,
+                                        Destroyer *destroyer);
 
   /// Start generating a thunk function.
   void startThunk(cir::FuncOp fn, GlobalDecl gd,
@@ -1447,6 +1538,7 @@ public:
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+  LValue emitInitListLValue(const InitListExpr *e);
 
   LValue emitExtVectorElementExpr(const ExtVectorElementExpr *e);
 
@@ -1475,6 +1567,10 @@ public:
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
+
+  RValue emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                AggValueSlot slot = AggValueSlot::ignored());
+  LValue emitPseudoObjectLValue(const PseudoObjectExpr *E);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -1528,6 +1624,25 @@ public:
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
+
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
+  /// return type matches the type of the first argument. The intrinsic name is
+  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
+  /// into \p intrinName by the caller.
+  template <unsigned N>
+  [[maybe_unused]] RValue
+  emitBuiltinWithOneOverloadedType(const CallExpr *e,
+                                   llvm::StringRef intrinName) {
+    static_assert(N, "expect non-empty argument");
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    SmallVector<mlir::Value, N> args;
+    for (unsigned i = 0; i < N; ++i)
+      args.push_back(emitScalarExpr(e->getArg(i)));
+    const auto call = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(intrinName),
+        cirTy, args);
+    return RValue::get(call->getResult(0));
+  }
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
@@ -1594,6 +1709,8 @@ public:
   cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
   cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
                                        mlir::Value coroframeAddr);
+
+  cir::CallOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
@@ -1615,8 +1732,8 @@ public:
   void emitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                   mlir::Value numElements, Address arrayBase,
                                   const CXXConstructExpr *e,
-                                  bool newPointerIsChecked,
-                                  bool zeroInitialize);
+                                  bool newPointerIsChecked, bool zeroInitialize,
+                                  Address endOfInit);
   void emitCXXConstructorCall(const clang::CXXConstructorDecl *d,
                               clang::CXXCtorType type, bool forVirtualBase,
                               bool delegating, AggValueSlot thisAVS,
@@ -1706,6 +1823,8 @@ public:
     virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
     virtual ~cxxTryBodyEmitter() = default;
   };
+
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
@@ -1925,6 +2044,13 @@ public:
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
                                                    const CallExpr *expr);
 
+  /// Emit a call to an NVPTX builtin function.
+  std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
+  /// Emit a device-side printf call for NVPTX targets.
+  mlir::Value emitNVPTXDevicePrintfCallExpr(const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -1965,8 +2091,7 @@ public:
 
   void emitStaticVarDecl(const VarDecl &d, cir::GlobalLinkageKind linkage);
 
-  /// Emit a guarded initializer for a static local variable or a static
-  /// data member of a class template instantiation.
+  /// Emit a guarded initializer for a static local variable.
   void emitCXXGuardedInit(const VarDecl &varDecl, cir::GlobalOp globalOp,
                           bool performInit);
 
@@ -1978,9 +2103,11 @@ public:
                          bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);
+
   /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
+  /// lvalue, where both are guaranteed to the have the same type, and that
+  /// type is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
@@ -2178,11 +2305,22 @@ public:
                            mlir::Value arraySize = nullptr,
                            Address *alloca = nullptr,
                            mlir::OpBuilder::InsertPoint ip = {});
+  Address createTempAlloca(mlir::Type ty,
+                           mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                           CharUnits align, mlir::Location loc,
+                           const Twine &name = "tmp",
+                           mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
   Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
                                       mlir::Location loc,
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address
+  maybeCastStackAddressSpace(Address alloca,
+                             mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
+                             mlir::Value arraySize);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
@@ -2195,6 +2333,8 @@ public:
   Address createMemTemp(QualType t, CharUnits align, mlir::Location loc,
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
+  Address createMemTempWithoutCast(QualType t, mlir::Location loc,
+                                   const Twine &name = "tmp");
 
   mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
     if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
