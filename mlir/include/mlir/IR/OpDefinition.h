@@ -2168,10 +2168,6 @@ struct DenseMapInfo<T,
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return T::getFromOpaquePointer(pointer);
   }
-  static inline T getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(T val) {
     return hash_value(val.getAsOpaquePointer());
   }

@@ -68,8 +68,8 @@ static_library("Host") {
     sources += [
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
-      "windows/FileWindows.cpp",
       "windows/FileSystem.cpp",
+      "windows/FileWindows.cpp",
       "windows/Host.cpp",
       "windows/HostInfoWindows.cpp",
       "windows/HostProcessWindows.cpp",

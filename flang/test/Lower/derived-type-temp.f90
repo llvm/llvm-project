@@ -15,5 +15,7 @@ end
 
 ! CHECK: %[[ALLOC:.*]] =  fir.alloca !fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}> {bindc_name = "x", uniq_name = "_QFEx"}
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOC]] {{.*}}
-! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QFTt1.DerivedInit) : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
-! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>, !fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>
+! CHECK: %[[COOR:.*]] = fir.coordinate_of %[[x]]#0, i : (!fir.ref<!fir.type<_QFTt1{i:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.heap<i32>
+! CHECK: %[[EMBOX:.*]] = fir.embox %[[ZERO]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
+! CHECK: fir.store %[[EMBOX]] to %[[COOR]] : !fir.ref<!fir.box<!fir.heap<i32>>>
