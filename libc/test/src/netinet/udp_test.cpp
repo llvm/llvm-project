@@ -17,7 +17,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcNetinetUdpTest, StructUdphdrLayout) {
-  EXPECT_EQ(sizeof(struct udphdr), size_t(8));
+  EXPECT_EQ(sizeof(struct udphdr), static_cast<size_t>(8));
 
   struct udphdr header;
 
