@@ -124,6 +124,7 @@ static bool isPrivilegedTPAccess(const MCInst &Inst) {
 // perform memory accesses.
 static bool isFakeMemAccess(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
+  case AArch64::CLREX:
   case AArch64::DMB:
   case AArch64::DSB:
   case AArch64::ISB:
@@ -576,8 +577,10 @@ void AArch64MCLFIRewriter::rewriteLoadStoreBase(const MCInst &Inst,
   unsigned Opcode = Inst.getOpcode();
   const AArch64::MemInfoEntry *Info = AArch64::lookupMemInfoByOpcode(Opcode);
 
-  if (!Info)
-    return error(Inst, "unknown addressing mode for memory instruction in LFI");
+  if (!Info) {
+    warning(Inst, "unknown addressing mode for memory instruction in LFI");
+    return emitInst(Inst, Out, STI);
+  }
 
   if (Info->IsLiteral)
     return error(Inst, "PC-relative literal loads are not supported in LFI");
