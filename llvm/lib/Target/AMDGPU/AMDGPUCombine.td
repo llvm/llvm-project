@@ -236,9 +236,7 @@ def AMDGPUPreLegalizerCombiner: GICombiner<
   "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, combine_fmul_with_select_to_fldexp, clamp_i64_to_i16,
    foldable_fneg, combine_shuffle_vector, combine_shuffle_vector_to_build_vector,
-   binop_s64_with_s32_mask_combines, combine_or_s64_s32, smax_to_minmax3, 
-   smin_to_minmax3, umax_to_minmax3, umin_to_minmax3, fmax_to_minmax3, 
-   fmin_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+   binop_s64_with_s32_mask_combines, combine_or_s64_s32]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -258,5 +256,7 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load]> {
+   d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3, 
+   umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmax_ieee_to_minmax3, 
+   fmin_ieee_to_minmax3]> {
 }

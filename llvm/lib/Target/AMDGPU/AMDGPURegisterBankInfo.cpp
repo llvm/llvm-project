@@ -3972,26 +3972,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return getInvalidInstructionMapping();
-  case AMDGPU::G_AMDGPU_SMAX3:
-  case AMDGPU::G_AMDGPU_SMIN3:
-  case AMDGPU::G_AMDGPU_UMAX3:
-  case AMDGPU::G_AMDGPU_UMIN3:
-  case AMDGPU::G_AMDGPU_FMAX3:
-  case AMDGPU::G_AMDGPU_FMIN3: {
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    assert(Size == 32);
-    auto op1 = getRegBankID(MI.getOperand(1).getReg(), MRI,
-                               AMDGPU::VCCRegBankID);
-    auto op2 = getRegBankID(MI.getOperand(2).getReg(), MRI,
-                               AMDGPU::VCCRegBankID);
-    auto op3 = getRegBankID(MI.getOperand(3).getReg(), MRI,
-                               AMDGPU::VCCRegBankID);
-    OpdsMapping[0] = AMDGPU::getValueMapping(op1, Size);
-    OpdsMapping[1] = AMDGPU::getValueMapping(op1, Size);
-    OpdsMapping[2] = AMDGPU::getValueMapping(op2, Size);
-    OpdsMapping[3] = AMDGPU::getValueMapping(op3, Size);
-    break;
-  }
 
   case AMDGPU::G_AND:
   case AMDGPU::G_OR:

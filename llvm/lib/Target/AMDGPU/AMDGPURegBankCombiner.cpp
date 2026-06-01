@@ -74,6 +74,11 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct MinMaxToMinMax3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
@@ -92,6 +97,9 @@ public:
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
+  bool matchMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
+  void applyMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -479,6 +487,62 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   }
 
   return false;
+}
+
+void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
+  MI.eraseFromParent();
+  return;
+}
+
+bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
+    MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const {
+  Register dst = MI.getOperand(0).getReg();
+  Register src1 = MI.getOperand(1).getReg();
+  Register src2 = MI.getOperand(2).getReg();
+  // if the register is SGPR, don't optimize it.
+  if (!(isVgprRegBank(dst) && isVgprRegBank(src1) && isVgprRegBank(src2))) {
+    return false;
+  }
+
+  LLT t = MRI.getType(dst);
+  if (t == LLT::scalar(16)) {
+    if (!STI.hasMin3Max3_16()) {
+      return false;
+    }
+  } else if (t != LLT::scalar(32)) {
+    if (!(t.isVector() && t.getScalarSizeInBits() == 32))
+      return false;
+  }
+
+  Register R0, R1, R2;
+  unsigned opc = MI.getOpcode();
+  auto matchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI, unsigned op,
+                       Register &r0, Register &r1, Register &r2) {
+    auto p1 = m_BinOp(op, m_OneNonDBGUse(m_BinOp(op, m_Reg(r0), m_Reg(r1))),
+                      m_Reg(r2));
+    auto p2 = m_BinOp(op, m_Reg(r0),
+                      m_OneNonDBGUse(m_BinOp(op, m_Reg(r1), m_Reg(r2))));
+
+    return mi_match(MI, MRI, m_any_of(p1, p2));
+  };
+  if (!matchMinOrMax3(MI, MRI, opc, R0, R1, R2)) {
+    return false;
+  }
+
+  llvm::SmallDenseMap<uint16_t, uint16_t, 8> mp = {
+      {AMDGPU::G_SMAX, AMDGPU::G_AMDGPU_SMAX3},
+      {AMDGPU::G_SMIN, AMDGPU::G_AMDGPU_SMIN3},
+      {AMDGPU::G_UMAX, AMDGPU::G_AMDGPU_UMAX3},
+      {AMDGPU::G_UMIN, AMDGPU::G_AMDGPU_UMIN3},
+      {AMDGPU::G_FMAXNUM, AMDGPU::G_AMDGPU_FMAX3},
+      {AMDGPU::G_FMAXNUM_IEEE, AMDGPU::G_AMDGPU_FMAX3},
+      {AMDGPU::G_FMINNUM, AMDGPU::G_AMDGPU_FMIN3},
+      {AMDGPU::G_FMINNUM_IEEE, AMDGPU::G_AMDGPU_FMIN3}};
+  MatchInfo = {mp.at(opc), R0, R1, R2};
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::applyD16Load(
