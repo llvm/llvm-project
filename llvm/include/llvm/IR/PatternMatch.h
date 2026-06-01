@@ -195,7 +195,8 @@ template <typename SPTy> struct containsvectorelement_match {
 /// Match a vector constant where at least one of its elements matches the
 /// subpattern. Any bindings in the subpattern will be bound to the first match.
 template <typename SPTy>
-inline containsvectorelement_match<SPTy> m_ContainsVectorElement(const SPTy &SubPattern) {
+inline containsvectorelement_match<SPTy>
+m_ContainsVectorElement(const SPTy &SubPattern) {
   return SubPattern;
 }
 

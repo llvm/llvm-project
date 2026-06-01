@@ -305,7 +305,8 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
-bool Constant::containsVectorElement(function_ref<bool(Constant *)> PredFn) const {
+bool Constant::containsVectorElement(
+    function_ref<bool(Constant *)> PredFn) const {
   if (!getType()->isVectorTy())
     return false;
 

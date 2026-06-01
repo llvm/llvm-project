@@ -7817,7 +7817,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
             match(C, m_ContainsVectorElement(
                          m_CombineAnd(m_UndefValue(), m_Unless(m_Poison())))))
           return false;
-        if (includesPoison(Kind) && match(C, m_ContainsVectorElement(m_Poison())))
+        if (includesPoison(Kind) &&
+            match(C, m_ContainsVectorElement(m_Poison())))
           return false;
         return !match(C, m_ConstantExpr());
       }
@@ -8878,8 +8879,9 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     // purpose of identifying min/max. Disregard vector constants with undefined
     // elements because those can not be back-propagated for analysis.
     Value *OutputZeroVal = nullptr;
-    if (match(TrueVal, m_CombineAnd(m_AnyZeroFP(), m_Unless(m_ContainsVectorElement(
-                                                       m_UndefValue())))) &&
+    if (match(TrueVal,
+              m_CombineAnd(m_AnyZeroFP(), m_Unless(m_ContainsVectorElement(
+                                              m_UndefValue())))) &&
         !match(FalseVal, m_AnyZeroFP()))
       OutputZeroVal = TrueVal;
     else if (match(FalseVal,
