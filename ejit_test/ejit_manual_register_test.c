@@ -31,7 +31,7 @@ struct CellCfg g_cellCfg[4] = {
 //===-- EJIT entry ---------------------------------------------------------===//
 
 __attribute__((ejit_entry))
-uint32_t jit_check_cell_type(uint8_t cellIndex) {
+uint32_t jit_check_cell_type(__attribute__((ejit_period_arr_ind("cell"))) uint8_t cellIndex) {
   if (g_cellCfg[cellIndex].cellType == 1)
     return 10;
   else if (g_cellCfg[cellIndex].cellType == 2)
