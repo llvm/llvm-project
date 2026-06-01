@@ -121,13 +121,11 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   assert(ArgData && "At least one argument must exist");
   assert(ArgSize && "Arguments size must be greater than 0");
 
-  // ol_kernel_launch_prop_t Props[2];
-  // Props[0].type = OL_KERNEL_LAUNCH_PROP_TYPE_SIZE;
-  // Props[0].data = &ArgSize;
-  // Props[1] = OL_KERNEL_LAUNCH_PROP_END;
+  void *ArgPtrs[] = {ArgData};
+  size_t ArgSizes[] = {ArgSize};
   auto Result =
-      olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel, &ArgData,
-                     ArgSize, &MCurrentSubmitInfo.Range /*, Props*/);
+      olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
+                     &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
   // Clean up current kernel submit data to prepare structures for next
   // submission.
   MCurrentSubmitInfo.DepEvents.clear();
@@ -139,7 +137,8 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                               formatCodeString(Result));
 
   ol_event_handle_t NewEvent{};
-  callAndThrow(olCreateEvent, MOffloadQueue, &NewEvent);
+  ol_event_flags_t Flags{};
+  callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
 
   MCurrentSubmitInfo.LastEvent =
       EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
