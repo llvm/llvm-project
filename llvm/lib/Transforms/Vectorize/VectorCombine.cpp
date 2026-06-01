@@ -4029,7 +4029,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       case Intrinsic::umin:
       case Intrinsic::umax:
       case Intrinsic::smin:
-      case Intrinsic::smax: {
+      case Intrinsic::smax:
+      case Intrinsic::maximum:
+      case Intrinsic::minimum: {
         auto *Op0 = II->getOperand(0);
         auto *Op1 = II->getOperand(1);
         PrevVecV[0] = Op0;
