@@ -138,9 +138,7 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                  // all variables passed to std::tie because the tuple
                  // assignment writes back through the stored references.
                  // ignoringImplicit strips the MaterializeTemporaryExpr that
-                 // Clang inserts when calling operator= on the prvalue tuple;
-                 // ignoringParenImpCasts additionally handles parenthesized
-                 // forms such as (std::tie(a, b)) = expr.
+                 // Clang inserts when calling operator= on the prvalue tuple.
                  binaryOperation(
                      hasOperatorName("="),
                      hasLHS(ignoringImplicit(ignoringParenImpCasts(
