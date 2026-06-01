@@ -20,6 +20,7 @@
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -678,6 +679,20 @@ void copyFirstPrivateSymbol(lower::AbstractConverter &converter,
     converter.copyHostAssociateVar(*sym, copyAssignIP);
 }
 
+static bool isDynamicallySizedBoxArrayType(mlir::Type type) {
+  auto boxType = mlir::dyn_cast<fir::BaseBoxType>(type);
+  if (!boxType)
+    return false;
+  auto seqType = mlir::dyn_cast<fir::SequenceType>(boxType.getEleTy());
+  return seqType && (seqType.hasUnknownShape() || seqType.hasDynamicExtents());
+}
+
+static bool isGpuModule(fir::FirOpBuilder &builder) {
+  auto offloadMod =
+      llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
+  return offloadMod && offloadMod.getIsGPU();
+}
+
 template <typename OpType, typename OperandsStructType>
 void privatizeSymbol(
     lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
@@ -685,7 +700,8 @@ void privatizeSymbol(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
-    std::optional<llvm::omp::Directive> dir) {
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays) {
   constexpr bool isDoConcurrent =
       std::is_same_v<OpType, fir::LocalitySpecifierOp>;
   mlir::OpBuilder::InsertPoint dcIP;
@@ -757,13 +773,19 @@ void privatizeSymbol(
   }
 
   mlir::Type argType = privVal.getType();
+  bool forceHeapAllocation = forceHeapAllocationForPrivateDynamicArrays &&
+                             isGpuModule(firOpBuilder) &&
+                             isDynamicallySizedBoxArrayType(allocType);
 
   OpType privatizerOp = [&]() {
     auto moduleOp = firOpBuilder.getModule();
-    auto uniquePrivatizerName = fir::getTypeAsString(
-        allocType, converter.getKindMap(),
+    std::string privatizerPrefix =
         converter.mangleName(*sym) +
-            (emitCopyRegion ? "_firstprivate" : "_private"));
+        (emitCopyRegion ? "_firstprivate" : "_private");
+    if (forceHeapAllocation)
+      privatizerPrefix += "_heap";
+    auto uniquePrivatizerName = fir::getTypeAsString(
+        allocType, converter.getKindMap(), privatizerPrefix);
 
     if (auto existingPrivatizer =
             moduleOp.lookupSymbol<OpType>(uniquePrivatizerName))
@@ -825,7 +847,8 @@ void privatizeSymbol(
           result.getDeallocRegion(),
           emitCopyRegion ? DeclOperationKind::FirstPrivateOrLocalInit
                          : DeclOperationKind::PrivateOrLocal,
-          symToPrivatize, cannotHaveNonDefaultLowerBounds, isDoConcurrent);
+          symToPrivatize, cannotHaveNonDefaultLowerBounds, isDoConcurrent,
+          forceHeapAllocation);
       // TODO: currently there are false positives from dead uses of the mold
       // arg
       if (result.initReadsFromMold())
@@ -896,7 +919,8 @@ privatizeSymbol<mlir::omp::PrivateClauseOp, mlir::omp::PrivateClauseOps>(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     mlir::omp::PrivateClauseOps *clauseOps,
-    std::optional<llvm::omp::Directive> dir);
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays);
 
 template void
 privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
@@ -906,6 +930,7 @@ privatizeSymbol<fir::LocalitySpecifierOp, fir::LocalitySpecifierOperands>(
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize,
     fir::LocalitySpecifierOperands *clauseOps,
-    std::optional<llvm::omp::Directive> dir);
+    std::optional<llvm::omp::Directive> dir,
+    bool forceHeapAllocationForPrivateDynamicArrays);
 
 } // end namespace Fortran::lower

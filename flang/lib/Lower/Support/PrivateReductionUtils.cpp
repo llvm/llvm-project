@@ -323,13 +323,14 @@ public:
       mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
       mlir::Block *initBlock, mlir::Region &cleanupRegion,
       DeclOperationKind kind, const Fortran::semantics::Symbol *sym,
-      bool cannotHaveLowerBounds, bool isDoConcurrent)
+      bool cannotHaveLowerBounds, bool isDoConcurrent, bool forceHeapAllocation)
       : converter{converter}, builder{converter.getFirOpBuilder()}, loc{loc},
         argType{argType}, scalarInitValue{scalarInitValue},
         allocatedPrivVarArg{allocatedPrivVarArg}, moldArg{moldArg},
         initBlock{initBlock}, cleanupRegion{cleanupRegion}, kind{kind},
         sym{sym}, cannotHaveNonDefaultLowerBounds{cannotHaveLowerBounds},
-        isDoConcurrent{isDoConcurrent} {
+        isDoConcurrent{isDoConcurrent},
+        forceHeapAllocation{forceHeapAllocation} {
     valType = fir::unwrapRefType(argType);
   }
 
@@ -376,6 +377,7 @@ private:
   bool cannotHaveNonDefaultLowerBounds;
 
   bool isDoConcurrent;
+  bool forceHeapAllocation;
 
   void createYield(mlir::Value ret) {
     if (isDoConcurrent)
@@ -520,6 +522,8 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
   // On the GPU, always allocate on the stack unless the user explicitly
   // specifies otherwise since heap allocatins are very expensive.
   bool isGPU = offloadMod && offloadMod.getIsGPU();
+  if (isGPU && forceHeapAllocation)
+    return false;
   if (isGPU && enableGPUHeapAlloc) {
     // Check if it is adjustable array
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy())) {
@@ -777,11 +781,11 @@ void Fortran::lower::populateByRefInitAndCleanupRegions(
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym, bool cannotHaveLowerBounds,
-    bool isDoConcurrent) {
+    bool isDoConcurrent, bool forceHeapAllocation) {
   PopulateInitAndCleanupRegionsHelper helper(
       converter, loc, argType, scalarInitValue, allocatedPrivVarArg, moldArg,
       initBlock, cleanupRegion, kind, sym, cannotHaveLowerBounds,
-      isDoConcurrent);
+      isDoConcurrent, forceHeapAllocation);
   helper.populateByRefInitAndCleanupRegions();
 
   // Often we load moldArg to check something (e.g. length parameters, shape)

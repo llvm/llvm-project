@@ -58,7 +58,8 @@ void populateByRefInitAndCleanupRegions(
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
     const Fortran::semantics::Symbol *sym = nullptr,
-    bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false);
+    bool cannotHaveNonDefaultLowerBounds = false, bool isDoConcurrent = false,
+    bool forceHeapAllocation = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 /// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
