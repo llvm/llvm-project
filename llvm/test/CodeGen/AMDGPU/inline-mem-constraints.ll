@@ -2,8 +2,8 @@
 
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=VI %s
 
-define amdgpu_kernel void @flat_load_v(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_v:
+define amdgpu_kernel void @flat_load(ptr %ptr) {
+; VI-LABEL: flat_load:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -12,12 +12,12 @@ define amdgpu_kernel void @flat_load_v(ptr addrspace(0) %ptr) {
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
 entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(0) elementtype(i32) %ptr)
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr elementtype(i32) %ptr)
   ret void
 }
 
-define amdgpu_kernel void @flat_load_v_m_constraint(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_v_m_constraint:
+define amdgpu_kernel void @flat_load_as1(ptr addrspace(1) %ptr) {
+; VI-LABEL: flat_load_as1:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -26,12 +26,68 @@ define amdgpu_kernel void @flat_load_v_m_constraint(ptr addrspace(0) %ptr) {
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
 entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(0) elementtype(i32) %ptr)
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(1) elementtype(i32) %ptr)
   ret void
 }
 
-define amdgpu_kernel void @flat_load_v_with_offset(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_v_with_offset:
+define amdgpu_kernel void @flat_load_as4(ptr addrspace(4) %ptr) {
+; VI-LABEL: flat_load_as4:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, s[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+entry:
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr addrspace(4) elementtype(i32) %ptr)
+  ret void
+}
+
+define amdgpu_kernel void @flat_load_m_constraint(ptr %ptr) {
+; VI-LABEL: flat_load_m_constraint:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, s[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+entry:
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr elementtype(i32) %ptr)
+  ret void
+}
+
+define amdgpu_kernel void @flat_load_m_constraint_as1(ptr addrspace(1) %ptr) {
+; VI-LABEL: flat_load_m_constraint_as1:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, s[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+entry:
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(1) elementtype(i32) %ptr)
+  ret void
+}
+
+define amdgpu_kernel void @flat_load_m_constraint_as4(ptr addrspace(4) %ptr) {
+; VI-LABEL: flat_load_m_constraint_as4:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, s[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+entry:
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*m"(ptr addrspace(4) elementtype(i32) %ptr)
+  ret void
+}
+
+define amdgpu_kernel void @flat_load_with_offset(ptr %ptr) {
+; VI-LABEL: flat_load_with_offset:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -40,174 +96,146 @@ define amdgpu_kernel void @flat_load_v_with_offset(ptr addrspace(0) %ptr) {
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
 entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1 offset:4095", "=v,*^RF"(ptr addrspace(0) elementtype(i32) %ptr)
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1 offset:4095", "=v,*^RF"(ptr elementtype(i32) %ptr)
   ret void
 }
 
-define amdgpu_kernel void @flat_load_s(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_s:
+define amdgpu_kernel void @flat_load_from_v(ptr %ptr) {
+; VI-LABEL: flat_load_from_v:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword s0, s[0:1]
+; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
 entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=s,*^RF"(ptr addrspace(0) elementtype(i32) %ptr)
+  %addr = load ptr, ptr %ptr
+  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr elementtype(i32) %addr)
   ret void
 }
 
-define amdgpu_kernel void @flat_load_s_m_constraint(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_s_m_constraint:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword s0, s[0:1]
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1", "=s,*m"(ptr addrspace(0) elementtype(i32) %ptr)
-  ret void
-}
 
-define amdgpu_kernel void @flat_load_s_with_offset(ptr addrspace(0) %ptr) {
-; VI-LABEL: flat_load_s_with_offset:
-; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_load_dword s0, s[0:1] offset:4095
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-entry:
-  %a = tail call i32 asm sideeffect "flat_load_dword $0, $1 offset:4095", "=s,*^RF"(ptr addrspace(0) elementtype(i32) %ptr)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_imm(ptr addrspace(0) %out) {
-; VI-LABEL: flat_store_imm:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], 63
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*^RF,I"(ptr addrspace(0) elementtype(i32) %out, i32 63)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_imm_m_constraint(ptr addrspace(0) %out) {
-; VI-LABEL: flat_store_imm_m_constraint:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], 63
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*m,I"(ptr addrspace(0) elementtype(i32) %out, i32 63)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_imm_with_offset(ptr addrspace(0) %out) {
-; VI-LABEL: flat_store_imm_with_offset:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], 63 offset:4095
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1 offset:4095", "=*^RF,I"(ptr addrspace(0) elementtype(i32) %out, i32 63)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_v(ptr addrspace(0) %out, i32 %in) {
+define amdgpu_kernel void @flat_store_v(ptr %in, ptr %in2) {
 ; VI-LABEL: flat_store_v:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; VI-NEXT:    flat_load_dword v2, v[2:3]
+; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+  %addr = load ptr, ptr %in
+  %data = load i32, ptr %in2
+  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr elementtype(i32) %addr, i32 %data)
+  ret void
+}
+
+define amdgpu_kernel void @flat_store_v_as1(ptr addrspace(1) %in, ptr addrspace(1) %in2) {
+; VI-LABEL: flat_store_v_as1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    flat_store_dword s[0:1], v0
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
+  %addr = load ptr addrspace(1), ptr addrspace(1) %in
+  %data = load i32, ptr addrspace(1) %in2
+  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(1) elementtype(i32) %addr, i32 %data)
   ret void
 }
 
-define amdgpu_kernel void @flat_store_v_m_constraint(ptr addrspace(0) %out, i32 %in) {
+define amdgpu_kernel void @flat_store_v_as4(ptr addrspace(4) %in, ptr addrspace(4) %in2) {
+; VI-LABEL: flat_store_v_as4:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_store_dword s[0:1], v0
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+  %addr = load ptr addrspace(4), ptr addrspace(4) %in
+  %data = load i32, ptr addrspace(4) %in2
+  call void asm "flat_store_dword $0, $1", "=*^RF,v"(ptr addrspace(4) elementtype(i32) %addr, i32 %data)
+  ret void
+}
+
+define amdgpu_kernel void @flat_store_v_m_constraint(ptr %in, ptr %in2) {
 ; VI-LABEL: flat_store_v_m_constraint:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s3
+; VI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; VI-NEXT:    flat_load_dword v2, v[2:3]
+; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_endpgm
+  %addr = load ptr, ptr %in
+  %data = load i32, ptr %in2
+  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr elementtype(i32) %addr, i32 %data)
+  ret void
+}
+
+define amdgpu_kernel void @flat_store_v_m_constraint_as1(ptr addrspace(1) %in, ptr addrspace(1) %in2) {
+; VI-LABEL: flat_store_v_m_constraint_as1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    flat_store_dword s[0:1], v0
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
+  %addr = load ptr addrspace(1), ptr addrspace(1) %in
+  %data = load i32, ptr addrspace(1) %in2
+  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(1) elementtype(i32) %addr, i32 %data)
   ret void
 }
 
-define amdgpu_kernel void @flat_store_v_with_offset(ptr addrspace(0) %out, i32 %in) {
-; VI-LABEL: flat_store_v_with_offset:
+define amdgpu_kernel void @flat_store_v_m_constraint_as4(ptr addrspace(4) %in, ptr addrspace(4) %in2) {
+; VI-LABEL: flat_store_v_m_constraint_as4:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], v0 offset:4095
+; VI-NEXT:    flat_store_dword s[0:1], v0
 ; VI-NEXT:    ;;#ASMEND
 ; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1 offset:4095", "=*^RF,v"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_s(ptr addrspace(0) %out, i32 %in) {
-; VI-LABEL: flat_store_s:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], s2
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*^RF,s"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_s_m_constraint(ptr addrspace(0) %out, i32 %in) {
-; VI-LABEL: flat_store_s_m_constraint:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], s2
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1", "=*m,s"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
-  ret void
-}
-
-define amdgpu_kernel void @flat_store_s_with_offset(ptr addrspace(0) %out, i32 %in) {
-; VI-LABEL: flat_store_s_with_offset:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    ;;#ASMSTART
-; VI-NEXT:    flat_store_dword s[0:1], s2 offset:4095
-; VI-NEXT:    ;;#ASMEND
-; VI-NEXT:    s_endpgm
-  call void asm "flat_store_dword $0, $1 offset:4095", "=*^RF,s"(ptr addrspace(0) elementtype(i32) %out, i32 %in)
+  %addr = load ptr addrspace(4), ptr addrspace(4) %in
+  %data = load i32, ptr addrspace(4) %in2
+  call void asm "flat_store_dword $0, $1", "=*m,v"(ptr addrspace(4) elementtype(i32) %addr, i32 %data)
   ret void
 }
