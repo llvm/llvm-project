@@ -1337,11 +1337,11 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
     return nullptr;
 
   // Example shuffle mask: {1, 0, 3, 2}
-  for (int I = 0; I < static_cast<int>(Mask.size()); I += 2)
+  for (int I = 0, E = Mask.size(); I != E; I += 2)
     if (Mask[I] != I + 1 || Mask[I + 1] != I)
       return nullptr;
 
-  LLVM_DEBUG(dbgs() << "IC: Folding Vn2im CmpEq using V2nim CmpEq pattern"
+  LLVM_DEBUG(dbgs() << "IC: Folding <2X x I> icmp_eq to <X x 2I> icmp_eq pattern"
                     << '\n');
 
   // Perform folding
@@ -1419,7 +1419,7 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
   // For little endian,
   // example lower shuffle mask: {0, 0, 2, 2},
   // example upper shuffle mask: {1, 1, 3, 3}
-  for (int I = 0; I < static_cast<int>(MaskLower.size()); I += 2) {
+  for (int I = 0, E = MaskLower.size(); I != E; I += 2) {
     int LowerIdx = IsBigEndian ? I + 1 : I;
     int UpperIdx = IsBigEndian ? I : I + 1;
     if (MaskLower[I] != LowerIdx || MaskLower[I + 1] != LowerIdx ||
@@ -1459,7 +1459,7 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
 
     // For little endian,
     // example MSB flip lower mask: {0x80000000, 0, 0x80000000, 0}
-    for (int I = 0; I < static_cast<int>(OldElementCount); I += 2) {
+    for (int I = 0; I != static_cast<int>(OldElementCount); I += 2) {
       int LowerIdx = IsBigEndian ? I + 1 : I;
       int UpperIdx = IsBigEndian ? I : I + 1;
       if (MsbFlipLower->getAggregateElement(LowerIdx) != MsbFlip ||
@@ -1468,7 +1468,7 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
     }
   }
 
-  LLVM_DEBUG(dbgs() << "IC: Folding Vn2im CmpGt using V2nim CmpGt pattern"
+ LLVM_DEBUG(dbgs() << "IC: Folding <2X x I> icmp_gt to <X x 2I> icmp_gt pattern"
                     << '\n');
 
   // Perform folding
