@@ -131,11 +131,7 @@ void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
 
 void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call");
-  if (!Call)
-    return;
-
   const Expr *ObjExpr = Call->getImplicitObjectArgument();
-
   const ASTContext &Ctx = *Result.Context;
   const QualType ValueType = Call->getType().getCanonicalType();
 
