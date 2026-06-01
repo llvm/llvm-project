@@ -2250,10 +2250,9 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
 
 /// Returns true when \p RD will already be in AGPR-form after the rewrite, so
 /// no bridge copy is needed at this reaching definition.
-static bool isReachingDefAGPRForm(MachineInstr *RD,
-                                  const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
-                                  const DenseSet<Register> &CandSrc2Regs,
-                                  const SIInstrInfo &TII) {
+static bool isReachingDefAGPRForm(
+    MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
+    const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
     return RewriteSet.contains(RD);
   if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
