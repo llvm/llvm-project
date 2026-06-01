@@ -286,7 +286,7 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
   /// Mutex used for parallel processing of DWP type units.
-  mutable std::recursive_mutex DWPUnitsMutex;
+  mutable std::mutex DWPUnitsMutex;
 
 public:
   static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
@@ -295,7 +295,7 @@ public:
       std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
 
   /// Returns the mutex guarding concurrent access to DWP units.
-  std::recursive_mutex &getUnitsMutex() { return DWPUnitsMutex; }
+  std::mutex &getUnitsMutex() { return DWPUnitsMutex; }
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being

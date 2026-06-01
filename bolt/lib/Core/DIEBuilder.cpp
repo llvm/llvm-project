@@ -396,7 +396,7 @@ void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
   if (DwarfContext->isDWP()) {
-    std::unique_lock<std::recursive_mutex> LockGuard(BC.getUnitsMutex());
+    std::unique_lock<std::mutex> LockGuard(BC.getUnitsMutex());
     buildDWPTypeUnitsForUnit(U);
   } else {
     buildTypeUnits(nullptr, false);
