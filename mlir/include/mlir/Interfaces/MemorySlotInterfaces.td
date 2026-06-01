@@ -238,8 +238,9 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         Indicates whether the promoted operation needs to visit the SSA values
         that replace the memory slot.
 
-        If true, `visitReplacedValues` will be called after computing the
-        slot's reaching definitions but before removing its blocking uses.
+        If true, `visitReplacedValues` will be called once for this operation
+        after all reaching definitions have been computed but before any
+        blocking uses are removed.
 
         This should only return true if the intended transformation applies
         to all replaced values. Replaced values must not be deleted.
@@ -249,11 +250,12 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     InterfaceMethod<[{
         Transforms the IR using the SSA values replacing the memory slot.
 
-        Called after computing reaching definitions but before removing
-        blocking uses, provided `requiresReplacedValues` returns true.
-        The `mutatedDefs` reference the original IR. Any new uses of a load
-        result created here will be automatically redirected when the
-        framework replaces that load with its reaching definition.
+        Called after all reaching definitions for the slot have been computed
+        but before any blocking uses are removed, provided
+        `requiresReplacedValues` returns true. `mutatedDefs` contains the
+        replacing values. Any new uses of a load result created here will be
+        automatically redirected to its reaching definition when the load is
+        replaced.
 
         The builder is positioned after the promotable operation.
         No operations may be deleted during this transformation.

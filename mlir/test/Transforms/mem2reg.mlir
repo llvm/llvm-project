@@ -405,12 +405,9 @@ func.func @promotable_through_partial_alias(%x: f32) -> f32 {
 // -----
 
 // `test.slot_tracker` tests `PromotableOpInterface::visitReplacedValues`.
-// The framework calls it with (store, stored-value) pairs computed during
-// promotion. The implementation emits a `test.tracked_value` after each store.
+// It emits a `test.tracked_value` after each store to the slot.
 
-// Basic case: two unconditional stores followed by a load. Each store emits
-// a `tracked_value` at its position. The load is replaced by the last
-// reaching definition.
+// Basic case: two unconditional stores followed by a load.
 
 // CHECK-LABEL: func.func @tracker_basic
 // CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32) -> i32
@@ -432,11 +429,8 @@ func.func @tracker_basic(%a: i32, %b: i32) -> i32 {
 
 // -----
 
-// Regression test for use-of-deleted-SSA-value bug (similar to the
-// `dbg.declare` reproducer in `mem2reg-dbginfo.mlir`). A value loaded from
-// the slot is stored back to it. `visitReplacedValues` must run before
-// `replaceAllUsesWith` so the new `tracked_value` references the live load
-// result, which is then redirected to the original store's value.
+// Regression test for use-of-deleted-SSA-value bug. A value loaded from
+// the slot is stored back to it.
 
 // CHECK-LABEL: func.func @tracker_load_stored_back
 // CHECK-SAME: (%[[A:.*]]: i32)
@@ -458,9 +452,7 @@ func.func @tracker_load_stored_back(%a: i32) {
 
 // -----
 
-// CFG case: stores in different blocks merged at a load. Each store emits
-// a `tracked_value` in its block. The load is replaced by the merge-point
-// block argument.
+// CFG case: stores in different blocks merged at a load.
 
 // CHECK-LABEL: func.func @tracker_blocks
 // CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[COND:.*]]: i1) -> i32
@@ -494,11 +486,7 @@ func.func @tracker_blocks(%a: i32, %b: i32, %cond: i1) -> i32 {
 
 // -----
 
-// Same shape as `@tracker_basic`, but the tracker is placed last (i.e. all
-// stores and the load dominate it). The framework should still find it
-// among the slot's blocking uses, hand it the same (store, value) pairs,
-// and emit `tracked_value` ops at the original store positions, regardless
-// of where the tracker itself sits.
+// Same as `@tracker_basic`, but the tracker is placed last.
 
 // CHECK-LABEL: func.func @tracker_at_end
 // CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32) -> i32
@@ -520,9 +508,7 @@ func.func @tracker_at_end(%a: i32, %b: i32) -> i32 {
 
 // -----
 
-// Nested-region case: an outer store and a conditional inner store. The
-// tracker in the outer region receives both stores, emitting a
-// `tracked_value` after each store's position.
+// Nested-region case: an outer store and a conditional inner store.
 
 // CHECK-LABEL: func.func @tracker_nested_region
 // CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[COND:.*]]: i1)
@@ -539,5 +525,30 @@ func.func @tracker_nested_region(%a: i32, %b: i32, %cond: i1) {
   scf.if %cond {
     memref.store %b, %slot[] : memref<i32>
   }
+  return
+}
+
+// -----
+
+// Inverse of `@tracker_nested_region`: the tracker lives *inside* the
+// nested region.
+
+// CHECK-LABEL: func.func @tracker_inside_nested_region
+// CHECK-SAME: (%[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: i32, %[[COND:.*]]: i1)
+// CHECK-NOT: test.multi_slot_alloca
+// CHECK-NOT: test.slot_tracker
+// CHECK-NOT: memref.store
+// CHECK: test.tracked_value %[[A]], "n" : i32
+// CHECK: scf.if %[[COND]]
+// CHECK:   test.tracked_value %[[B]], "n" : i32
+// CHECK: test.tracked_value %[[C]], "n" : i32
+func.func @tracker_inside_nested_region(%a: i32, %b: i32, %c: i32, %cond: i1) {
+  %slot = test.multi_slot_alloca : () -> memref<i32>
+  memref.store %a, %slot[] : memref<i32>
+  scf.if %cond {
+    test.slot_tracker %slot, "n" : memref<i32>
+    memref.store %b, %slot[] : memref<i32>
+  }
+  memref.store %c, %slot[] : memref<i32>
   return
 }

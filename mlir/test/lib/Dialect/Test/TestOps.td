@@ -3970,9 +3970,7 @@ def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
 }
 
 // Records the value last stored to a memref slot to test
-// `PromotableOpInterface::visitReplacedValues`. When promoted, it emits a
-// `test.tracked_value` after every `memref.store` of the reaching
-// definitions (similar to `llvm.intr.dbg.declare` and `dbg.value`).
+// `PromotableOpInterface::visitReplacedValues`.
 def TestSlotTracker : TEST_Op<"slot_tracker",
     [DeclareOpInterfaceMethods<PromotableOpInterface,
                                ["canUsesBeRemoved",
@@ -3985,7 +3983,6 @@ def TestSlotTracker : TEST_Op<"slot_tracker",
 }
 
 // Marker emitted by `test.slot_tracker` at each reaching-definition store.
-// Carries the stored value and the tracker's name.
 def TestTrackedValue : TEST_Op<"tracked_value"> {
   let arguments = (ins AnyType:$value, StrAttr:$name);
   let assemblyFormat =
