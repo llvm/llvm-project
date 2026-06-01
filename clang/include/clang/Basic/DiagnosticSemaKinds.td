@@ -10964,11 +10964,11 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_use_after_scope : Warning<
-   "object whose reference is captured does not live long enough">,
+   "%0 does not live long enough">,
    InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
 def warn_lifetime_safety_use_after_scope_moved : Warning<
-   "object whose reference is captured may not live long enough. "
-   "This could be false positive as the storage may have been moved later">,
+   "%0 may not live long enough. "
+   "This could be a false positive as the storage may have been moved later">,
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
@@ -10999,21 +10999,21 @@ def warn_lifetime_safety_invalidated_global
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
-    : Warning<"address of stack memory escapes to a field">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_field_moved
-    : Warning<"address of stack memory escapes to a field. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"address of stack memory escapes to global or static storage">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"address of stack memory escapes to global or static storage. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
@@ -14236,7 +14236,7 @@ def note_amdgcn_unguarded_builtin_silence
   : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
          "this warning">;
 
-def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
 
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "

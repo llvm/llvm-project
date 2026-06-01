@@ -188,3 +188,13 @@ namespace InvalidCallExpr {
     return true;
   }
 }
+
+namespace InvalidUnaryOperator {
+  typedef struct {} S;
+  void foo() {
+    S *s = (S *)malloc(sizeof(*s)); // both-error {{use of undeclared identifier 'malloc'}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}

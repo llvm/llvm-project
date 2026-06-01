@@ -288,6 +288,23 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
     return CheckScalarType(
         computeScalarTypeForInstruction(VPI->getOpcode(), Ops));
   }
+  case VPRecipeBase::VPReplicateSC: {
+    auto *RepR = cast<VPReplicateRecipe>(&R);
+    SmallVector<VPValue *, 4> Ops(RepR->operands());
+    if (RepR->isPredicated())
+      Ops.pop_back();
+    return CheckScalarType(
+        VPReplicateRecipe::computeScalarType(RepR->getUnderlyingInstr(), Ops));
+  }
+  case VPRecipeBase::VPWidenSC: {
+    SmallVector<VPValue *, 4> Ops(R.operands());
+    return CheckScalarType(computeScalarTypeForInstruction(
+        cast<VPWidenRecipe>(&R)->getOpcode(), Ops));
+  }
+  case VPRecipeBase::VPExpressionSC:
+    return CheckScalarType(cast<VPExpressionRecipe>(&R)
+                               ->getOperandOfResultType()
+                               ->getScalarType());
   default:
     return true;
   }

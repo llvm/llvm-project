@@ -2000,6 +2000,8 @@ libc_support_library(
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
+        "src/__support/FPUtil/arm/FEnvImpl.h",
+        "src/__support/FPUtil/riscv/FEnvImpl.h",
     ],
     deps = [
         ":__support_cpp_bit",
@@ -3105,6 +3107,7 @@ cc_library(
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
         ":__support_macros_properties_types",
+        ":__support_math_extras",
         ":__support_number_pair",
         ":__support_range_reduction",
         ":__support_range_reduction_double",

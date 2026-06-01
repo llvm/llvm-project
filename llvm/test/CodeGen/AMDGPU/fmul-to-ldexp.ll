@@ -6090,7 +6090,7 @@ define half @v_contract_mul_add_f16_select_64_1(i32 %arg, half %x, half %y) {
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_f16_select_64_1:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 1.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x3c00
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x5400, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v1.l, v0.l, v2.l
@@ -6172,7 +6172,7 @@ define half @v_contract_mul_add_f16_select_1_64(i32 %arg, half %x, half %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x5400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 1.0, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x3c00, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v1.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6503,7 +6503,7 @@ define half @v_contract_mul_add_f16_select_128_4(i32 %arg, half %x, half %y) {
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_f16_select_128_4:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x4400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x5800, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v1.l, v0.l, v2.l
@@ -6590,9 +6590,9 @@ define half @v_contract_mul_add_f16_select_2_4(i32 %arg, half %x, half %y) {
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_f16_select_2_4:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x4400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 2.0, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x4000, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v1.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6678,7 +6678,7 @@ define half @v_contract_mul_add_f16_select_4_128(i32 %arg, half %x, half %y) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x5800
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 4.0, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x4400, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_fma_f16 v0.l, v1.l, v0.l, v2.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -6769,7 +6769,7 @@ define <2 x half> @v_mul_v2f16_select_64_1(<2 x i32> %arg, <2 x half> %x) {
 ; GFX11-SDAG-TRUE16-LABEL: v_mul_v2f16_select_64_1:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 1.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x3c00
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.l, 0x5400, vcc_lo
@@ -6876,8 +6876,8 @@ define <2 x half> @v_mul_v2f16_select_1_64(<2 x i32> %arg, <2 x half> %x) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0x5400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.l, 1.0, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 1.0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.l, 0x3c00, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0x3c00, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_mul_f16 v0, v2, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7447,7 +7447,7 @@ define <2 x half> @v_contract_mul_add_v2f16_select_64_1(<2 x i32> %arg, <2 x hal
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_v2f16_select_64_1:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 1.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x3c00
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0x5400, vcc_lo
@@ -7559,8 +7559,8 @@ define <2 x half> @v_contract_mul_add_v2f16_select_1_64(<2 x i32> %arg, <2 x hal
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x5400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 1.0, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 1.0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0x3c00, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 0x3c00, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, v2, v0, v3
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8019,7 +8019,7 @@ define <2 x half> @v_contract_mul_add_v2f16_select_128_4(<2 x i32> %arg, <2 x ha
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_v2f16_select_128_4:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x4400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0x5800, vcc_lo
@@ -8139,11 +8139,11 @@ define <2 x half> @v_contract_mul_add_v2f16_select_2_4(<2 x i32> %arg, <2 x half
 ; GFX11-SDAG-TRUE16-LABEL: v_contract_mul_add_v2f16_select_2_4:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 4.0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x4400
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 2.0, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 2.0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0x4000, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 0x4000, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, v2, v0, v3
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -8259,8 +8259,8 @@ define <2 x half> @v_contract_mul_add_v2f16_select_4_128(<2 x i32> %arg, <2 x ha
 ; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v4.l, 0x5800
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 4.0, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 4.0, s0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, v4.l, 0x4400, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, v4.l, 0x4400, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_pk_fma_f16 v0, v2, v0, v3
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

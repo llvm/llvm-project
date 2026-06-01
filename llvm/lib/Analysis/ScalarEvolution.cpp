@@ -3718,6 +3718,26 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         }
       }
 
+      // ((N - M) + (M * A)) / N --> ((N - 1) + (M * A)) / N
+      // This is an idiom for rounding A up to the next multiple of N, where A
+      // is aready known to be a multiple of M. In this case, instcombine can
+      // see that some low bits of the added constant are unused, so can clear
+      // them, but we want to canonicalise to set the low bits. This makes the
+      // pattern easier to match, without needing to check for known bits in
+      // A*M.
+      const APInt &N = RHSC->getAPInt();
+      const APInt *NMinusM, *M;
+      const SCEV *A;
+      if (match(LHS, m_scev_Add(m_scev_APInt(NMinusM),
+                                m_scev_Mul(m_scev_APInt(M), m_SCEV(A))))) {
+        if (N.isPowerOf2() && M->isPowerOf2() && M->ult(N) &&
+            *NMinusM == N - *M) {
+          return getUDivExpr(
+              getAddExpr(getConstant(N - 1), getMulExpr(getConstant(*M), A)),
+              RHS);
+        }
+      }
+
       // Fold if both operands are constant.
       if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS))
         return getConstant(LHSC->getAPInt().udiv(RHSC->getAPInt()));

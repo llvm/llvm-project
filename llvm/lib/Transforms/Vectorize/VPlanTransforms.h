@@ -463,10 +463,15 @@ struct VPlanTransforms {
   static void materializeAliasMaskCheckBlock(
       VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
 
-  /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
-  /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
-  /// value. A mapping from SCEV expressions to their expanded IR value is
-  /// returned.
+  /// Try to expand VPExpandSCEVRecipes in \p Plan's entry block to
+  /// VPInstructions. Recipes that cannot be expanded (like casts, min/max) are
+  /// kept for later IR-level expansion.
+  static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE);
+
+  /// Expand remaining VPExpandSCEVRecipes in \p Plan's entry block using
+  /// SCEVExpander. Each VPExpandSCEVRecipe is replaced with a live-in wrapping
+  /// the expanded IR value. A mapping from SCEV expressions to their expanded
+  /// IR value is returned.
   static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
                                                      ScalarEvolution &SE);
 

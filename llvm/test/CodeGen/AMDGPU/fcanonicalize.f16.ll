@@ -706,7 +706,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 1.0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3c00
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
@@ -2785,7 +2785,7 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 2.0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0x4000
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_test_canonicalize_reg_k_v2f16:
@@ -2830,7 +2830,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 2.0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x4000
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_test_canonicalize_k_reg_v2f16:

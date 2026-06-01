@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -336,7 +337,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
@@ -1660,6 +1661,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
