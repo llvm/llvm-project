@@ -379,6 +379,7 @@ if (NOT MSVC)
   set(i386_SOURCES
     ${GENERIC_SOURCES}
     ${x86_ARCH_SOURCES}
+    ${GENERIC_TF_SOURCES}
     i386/ashldi3.S
     i386/ashrdi3.S
     i386/divdi3.S
@@ -1086,9 +1087,9 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
-      # For RISCV32 and 32-bit SPARC, we must force enable int128 for compiling long
-      # double routines.
-      if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$"
+      # For RISCV32, 32-bit SPARC and i386, we must force enable int128 for
+      # compiling long double routines.
+      if (COMPILER_RT_ENABLE_SOFTWARE_INT128 OR ("${arch}" MATCHES "riscv32|sparc$|i386"
         AND NOT CMAKE_COMPILER_IS_GNUCC))
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
