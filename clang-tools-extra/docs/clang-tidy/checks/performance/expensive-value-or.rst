@@ -54,11 +54,3 @@ Options
 
        CheckOptions:
          performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::boost::optional;::myproject::.*Optional"
-
-.. option:: WarnOnRvalueOptional
-
-   When `false` (default), the check does not warn when ``value_or`` is called
-   on an rvalue optional (e.g., a function return value). The rationale is that
-   rvalue overloads of ``value_or`` may move instead of copy, and replacing the
-   call would require materializing the temporary into a named variable to check
-   it before dereferencing. Set to `true` to warn in all cases.

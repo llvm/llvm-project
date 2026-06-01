@@ -99,6 +99,12 @@ void negativeRvalueOptional() {
   auto val = getOpt().value_or("default");
 }
 
+std::optional<LargeStruct> getLargeOpt();
+void positiveRvalueNoMoveAdvantage() {
+  auto val = getLargeOpt().value_or(LargeStruct{});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: 'value_or' copies expensive type 'LargeStruct'
+}
+
 namespace absl {
 template <typename T> class optional {
 public:

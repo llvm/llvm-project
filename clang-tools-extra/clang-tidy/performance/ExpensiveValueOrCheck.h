@@ -31,7 +31,6 @@ public:
 
 private:
   const unsigned SizeThreshold;
-  const bool WarnOnRvalueOptional;
   const std::vector<StringRef> OptionalTypes;
 };
 

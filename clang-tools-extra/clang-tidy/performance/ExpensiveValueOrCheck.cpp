@@ -21,14 +21,12 @@ ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       SizeThreshold(Options.get("SizeThreshold", 16U)),
-      WarnOnRvalueOptional(Options.get("WarnOnRvalueOptional", false)),
       OptionalTypes(utils::options::parseStringList(
           Options.get("OptionalTypes",
                       "::std::optional;::absl::optional;::boost::optional"))) {}
 
 void ExpensiveValueOrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SizeThreshold", SizeThreshold);
-  Options.store(Opts, "WarnOnRvalueOptional", WarnOnRvalueOptional);
   Options.store(Opts, "OptionalTypes",
                 utils::options::serializeStringList(OptionalTypes));
 }
@@ -51,14 +49,17 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const Expr *ObjExpr = Call->getImplicitObjectArgument();
-  if (!WarnOnRvalueOptional && ObjExpr && !ObjExpr->isLValue())
-    return;
 
   const ASTContext &Ctx = *Result.Context;
   const QualType ValueType = Call->getType().getCanonicalType();
+
+  // Rvalue optional uses && overload which moves. Suppress if move is cheap.
+  if (ObjExpr && !ObjExpr->isLValue() &&
+      utils::type_traits::hasNonTrivialMoveConstructor(ValueType))
+    return;
+
   const bool IsExpensiveType =
       utils::type_traits::isExpensiveToCopy(ValueType, Ctx).value_or(false);
-
   const int64_t ValueSize = Ctx.getTypeSizeInChars(ValueType).getQuantity();
   const bool IsExpensive =
       IsExpensiveType || ValueSize > static_cast<int64_t>(SizeThreshold);
