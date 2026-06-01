@@ -128,9 +128,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   UP.UnrollVectorizedLoop = true;
 
   // Enable runtime unrolling for loops whose trip count is not known at
-  // compile time.  Use a reduced PartialThreshold to limit code-size growth.
+  // compile time.
   UP.Runtime = true;
-  UP.PartialThreshold = UP.Threshold / 4;
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
@@ -355,6 +354,15 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
          : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
          : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
                                                        : 1;
+}
+
+bool GCNTTIImpl::preferSLPInstCountCheck() const {
+  // The integer inst-count heuristic causes regressions on gfx94x and gfx950
+  // because 2-element vector trees that pass the scalar/vector instruction
+  // count comparison still widen scalar moves (e.g. v_mov_b32 to v_mov_b64)
+  // after codegen, increasing register pressure and throughput cost without
+  // reducing the total instruction count.
+  return !ST->hasGFX940Insts() && !ST->hasGFX950Insts();
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,

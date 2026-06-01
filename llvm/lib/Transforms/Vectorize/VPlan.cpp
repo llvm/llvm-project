@@ -333,40 +333,18 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {0})) {
-    Value *IRV = Def->getLiveInIRValue();
-    Value *B = GetBroadcastInstrs(IRV);
-    set(Def, B);
-    return B;
-  }
-
   Value *ScalarValue = get(Def, VPLane(0));
-  // If we aren't vectorizing, we can just copy the scalar map values over
-  // to the vector map.
-  if (VF.isScalar()) {
-    set(Def, ScalarValue);
-    return ScalarValue;
-  }
-
-  bool IsSingleScalar = vputils::isSingleScalar(Def);
-  VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-
-  // We need to construct the vector value for a single-scalar value by
-  // broadcasting the scalar to all lanes.
-  // TODO: Replace by introducing Broadcast VPInstructions.
-  assert(IsSingleScalar && "must be a single-scalar at this point");
-  // Set the insert point after the last scalarized instruction or after the
-  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-  // will directly follow the scalar definitions.
-  auto OldIP = Builder.saveIP();
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
-  auto NewIP = isa<PHINode>(LastInst)
-                   ? LastInst->getParent()->getFirstNonPHIIt()
-                   : std::next(BasicBlock::iterator(LastInst));
-  Builder.SetInsertPoint(&*NewIP);
+  VPLane LastLane = VPLane::getLastLaneForVF(VF);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
+    // Set the insert point after the last scalarized instruction or after the
+    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+    // will directly follow the scalar definitions.
+    Builder.SetInsertPoint(isa<PHINode>(LastInst)
+                               ? LastInst->getParent()->getFirstNonPHIIt()
+                               : std::next(BasicBlock::iterator(LastInst)));
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
-  Builder.restoreIP(OldIP);
   return VectorValue;
 }
 
@@ -907,23 +885,15 @@ VPlan::VPlan(Loop *L, Type *IdxTy)
 VPlan::~VPlan() {
   VPSymbolicValue DummyValue(nullptr);
 
-  for (auto *VPB : CreatedBlocks) {
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-      // Replace all operands of recipes and all VPValues defined in VPBB with
-      // DummyValue so the block can be deleted.
-      for (VPRecipeBase &R : *VPBB) {
-        for (auto *Def : R.definedValues())
-          Def->replaceAllUsesWith(&DummyValue);
+  // Redirect all recipe operands to DummyValue before deleting blocks.
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(CreatedBlocks))
+    for (VPRecipeBase &R : *VPBB)
+      for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+        R.setOperand(I, &DummyValue);
 
-        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-          R.setOperand(I, &DummyValue);
-      }
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
-      CanIV->replaceAllUsesWith(&DummyValue);
-    }
-
+  for (auto *VPB : CreatedBlocks)
     delete VPB;
-  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;

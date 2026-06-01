@@ -36,6 +36,11 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
 
+/// Given the name of an identifier, attempt to find an enumeration value.
+/// If found, return a ValueObject with a const scalar value of the enum.
+lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
+                                    ExecutionContextScope &ctx_scope);
+
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,

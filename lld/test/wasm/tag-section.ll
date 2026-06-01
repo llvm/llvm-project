@@ -4,7 +4,7 @@
 ; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section1.ll -o %t1.o
 ; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section2.ll -o %t2.o
 ; RUN: llc -filetype=obj -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling %s -o %t.o
-; RUN: wasm-ld -o %t.wasm %t.o %t1.o %t2.o %t_tags.o
+; RUN: wasm-ld --export=my_global -o %t.wasm %t.o %t1.o %t2.o %t_tags.o
 ; RUN: wasm-ld --export-all -o %t-export-all.wasm %t.o %t1.o %t2.o %t_tags.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s --check-prefix=NOPIC
 ; RUN: obj2yaml %t-export-all.wasm | FileCheck %s --check-prefix=NOPIC-EXPORT-ALL
@@ -18,6 +18,8 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-emscripten"
+
+@my_global = global i32 42
 
 declare void @foo(ptr)
 declare void @bar(ptr)

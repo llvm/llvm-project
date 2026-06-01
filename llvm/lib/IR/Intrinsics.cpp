@@ -940,11 +940,15 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   IITDescriptor D = Infos.consume_front();
 
-  auto PrintMsg = [&OS, &Position, Ty](bool IsValid,
-                                       const Twine &Expected) -> bool {
+  auto PrintMsg = [&OS, &Position,
+                   Ty](bool IsValid, const Twine &Expected,
+                       std::optional<unsigned> OIdx = std::nullopt) -> bool {
     if (IsValid)
       return false;
-    OS << Position << " type expected " << Expected << ", but got " << *Ty;
+    OS << Position << " type";
+    if (OIdx)
+      OS << " (overload type " << *OIdx << ")";
+    OS << " expected " << Expected << ", but got " << *Ty;
     return true;
   };
 
@@ -1025,17 +1029,22 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return false;
   }
 
-  case IITDescriptor::Overloaded:
-    // If this is the second occurrence of an argument,
-    // verify that the later instance matches the previous instance.
-    if (D.getOverloadIndex() < OverloadTys.size())
-      return Ty != OverloadTys[D.getOverloadIndex()];
+  case IITDescriptor::Overloaded: {
+    unsigned OIdx = D.getOverloadIndex();
+    if (D.getOverloadKind() == IITDescriptor::AK_MatchType) {
+      // This is a dependent type instance, check it similarly to other
+      // dependent types.
+      if (OIdx >= OverloadTys.size())
+        return IsDeferredCheck || DeferCheck(Ty);
 
-    if (D.getOverloadIndex() > OverloadTys.size() ||
-        D.getOverloadKind() == IITDescriptor::AK_MatchType)
-      return IsDeferredCheck || DeferCheck(Ty);
+      if (Ty == OverloadTys[OIdx])
+        return false;
+      OS << Position << " type (matching overload type " << OIdx
+         << ") expected " << *OverloadTys[OIdx] << ", but got " << *Ty;
+      return true;
+    }
 
-    assert(D.getOverloadIndex() == OverloadTys.size() && !IsDeferredCheck &&
+    assert(OIdx == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
@@ -1043,17 +1052,19 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     case IITDescriptor::AK_Any:
       return false; // Success
     case IITDescriptor::AK_AnyInteger:
-      return !Ty->isIntOrIntVectorTy();
+      return PrintMsg(Ty->isIntOrIntVectorTy(), "any integer or integer vector",
+                      OIdx);
     case IITDescriptor::AK_AnyFloat:
-      return !Ty->isFPOrFPVectorTy();
+      return PrintMsg(Ty->isFPOrFPVectorTy(), "any fp or fp vector", OIdx);
     case IITDescriptor::AK_AnyVector:
-      return !isa<VectorType>(Ty);
+      return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
     case IITDescriptor::AK_AnyPointer:
-      return !isa<PointerType>(Ty);
+      return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
     default:
       break;
     }
     llvm_unreachable("all argument kinds not covered");
+  }
 
   case IITDescriptor::Extend: {
     // If this is a forward reference, defer the check for later.

@@ -63,9 +63,9 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
   return ignoreTransparentExprs(E);
 }
 
-EnvironmentEntry::EnvironmentEntry(const Expr *E, const LocationContext *L)
-    : std::pair<const Expr *, const StackFrame *>(
-          ignoreTransparentExprs(E), L ? L->getStackFrame() : nullptr) {}
+EnvironmentEntry::EnvironmentEntry(const Expr *E, const StackFrame *SF)
+    : std::pair<const Expr *, const StackFrame *>(ignoreTransparentExprs(E),
+                                                  SF) {}
 
 SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
   const SVal* X = ExprBindings.lookup(E);
@@ -79,7 +79,7 @@ SVal Environment::lookupExpr(const EnvironmentEntry &E) const {
 SVal Environment::getSVal(const EnvironmentEntry &Entry,
                           SValBuilder& svalBuilder) const {
   const Expr *Ex = Entry.getExpr();
-  const LocationContext *LCtx = Entry.getLocationContext();
+  const StackFrame *SF = Entry.getStackFrame();
 
   switch (Ex->getStmtClass()) {
   case Stmt::CXXBindTemporaryExprClass:
@@ -108,7 +108,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
 
   // Handle all other Expr* using a lookup.
   default:
-    return lookupExpr(EnvironmentEntry(Ex, LCtx));
+    return lookupExpr(EnvironmentEntry(Ex, SF));
   }
 }
 
@@ -174,7 +174,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
     const EnvironmentEntry &BlkExpr = I.getKey();
     SVal X = I.getData();
 
-    if (SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getLocationContext())) {
+    if (SymReaper.isLive(BlkExpr.getExpr(), BlkExpr.getStackFrame())) {
       // Copy the binding to the new map.
       EBMapRef = EBMapRef.add(BlkExpr, X);
 
@@ -188,7 +188,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
 }
 
 void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
-                            const LocationContext *LCtx, const char *NL,
+                            const StackFrame *SF, const char *NL,
                             unsigned int Space, bool IsDot) const {
   Indent(Out, Space, IsDot) << "\"environment\": ";
 
@@ -198,28 +198,27 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
   }
 
   ++Space;
-  if (!LCtx) {
-    // Find the freshest location context.
-    llvm::SmallPtrSet<const LocationContext *, 16> FoundContexts;
+  if (!SF) {
+    // Find the freshest stack frame.
+    llvm::SmallPtrSet<const StackFrame *, 16> FoundStackFrames;
     for (const auto &I : *this) {
-      const LocationContext *LC = I.first.getLocationContext();
-      if (FoundContexts.count(LC) == 0) {
-        // This context is fresher than all other contexts so far.
-        LCtx = LC;
-        for (const LocationContext *LCI = LC; LCI; LCI = LCI->getParent())
-          FoundContexts.insert(LCI);
+      const StackFrame *CurrentSF = I.first.getStackFrame();
+      if (FoundStackFrames.count(CurrentSF) == 0) {
+        // This stack frame is fresher than all other stack frames so far.
+        SF = CurrentSF;
+        for (const StackFrame *SFI = CurrentSF; SFI; SFI = SFI->getParent())
+          FoundStackFrames.insert(SFI);
       }
     }
   }
 
-  assert(LCtx);
+  assert(SF);
 
-  Out << "{ \"pointer\": \"" << (const void *)LCtx->getStackFrame()
-      << "\", \"items\": [" << NL;
+  Out << "{ \"pointer\": \"" << (const void *)SF << "\", \"items\": [" << NL;
   PrintingPolicy PP = Ctx.getPrintingPolicy();
 
-  LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
-    // LCtx items begin
+  SF->printJson(Out, NL, Space, IsDot, [&](const StackFrame *SF) {
+    // SF items begin
     bool HasItem = false;
     unsigned int InnerSpace = Space + 1;
 
@@ -227,7 +226,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
     BindingsTy::iterator LastI = ExprBindings.end();
     for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
          ++I) {
-      if (I->first.getLocationContext() != LC)
+      if (I->first.getStackFrame() != SF)
         continue;
 
       if (!HasItem) {
@@ -244,7 +243,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
     for (BindingsTy::iterator I = ExprBindings.begin(); I != ExprBindings.end();
          ++I) {
-      if (I->first.getLocationContext() != LC)
+      if (I->first.getStackFrame() != SF)
         continue;
 
       const Expr *Ex = I->first.getExpr();

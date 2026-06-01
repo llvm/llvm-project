@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +314,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type"> {
+def fir_RecordType : FIR_Type<"Record", "type", [MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{

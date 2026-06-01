@@ -140,8 +140,14 @@ public:
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
+  void LRE_WillShrinkVirtReg(Register) override;
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
+
+private:
+  // Vregs unassigned from the matrix during LRE_WillShrinkVirtReg, pending
+  // re-assignment after the interval is shrunk/split.
+  DenseMap<Register, MCRegister> PendingReassignments;
 };
 
 class InlineSpiller : public Spiller {
@@ -1099,12 +1105,32 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (CopyMI) {
     SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
     if (!MRI.isSSA()) {
-      Register DstReg = CopyMI->getOperand(0).getReg();
-      LiveInterval &LI = LIS.getInterval(DstReg);
+      Register CopyDstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &LI = LIS.getInterval(CopyDstReg);
+
+      // The addSegment below extends CopyDstReg's LiveInterval with a new
+      // segment for the copy. If CopyDstReg is already assigned in the
+      // LiveRegMatrix, we must unassign before the modification and reassign
+      // after, so the matrix stays consistent with the updated interval.
+      // This can happen when the fold target creates a copy
+      // to preserve a source operand, defining a vreg that was already
+      // allocated to a physreg.
+      bool NeedMatrixReassign =
+          Matrix && CopyDstReg.isVirtual() && VRM.hasPhys(CopyDstReg);
+      MCRegister PhysReg;
+      if (NeedMatrixReassign) {
+        PhysReg = VRM.getPhys(CopyDstReg);
+        Matrix->unassign(LI);
+      }
+
       VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
       LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
-      Register OrigReg = VRM.getOriginal(DstReg);
-      if (OrigReg != DstReg && LIS.hasInterval(OrigReg)) {
+
+      if (NeedMatrixReassign)
+        Matrix->assign(LI, PhysReg);
+
+      Register OrigReg = VRM.getOriginal(CopyDstReg);
+      if (OrigReg != CopyDstReg && LIS.hasInterval(OrigReg)) {
         // Extend the original LI to cover the same range so that the
         // sub-interval invariant holds: the original must be live wherever
         // any of its children are live.  Without this, reMaterializeFor()
@@ -1840,12 +1866,36 @@ void HoistSpillHelper::hoistAllSpills() {
     }
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
+
+  // Flush vregs that were unassigned from the matrix during shrinking but
+  // were not split (so LRE_DidCloneVirtReg never re-assigned them).
+  for (auto &[VReg, PhysReg] : PendingReassignments) {
+    assert(Matrix && LIS.hasInterval(VReg) &&
+           "Pending reassignment without matrix or live interval");
+    Matrix->assign(LIS.getInterval(VReg), PhysReg);
+  }
+  PendingReassignments.clear();
+}
+
+/// Called when a virtual register's live interval is about to be shrunk.
+/// Unassign from the matrix so the shrunk interval can be re-assigned by a
+/// later LRE_DidCloneVirtReg or by hoistAllSpills' flush, and stash the
+/// physreg in PendingReassignments since the unassign clears VRM.
+void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
+  if (!Matrix || !VRM.hasPhys(VirtReg) || !LIS.hasInterval(VirtReg))
+    return;
+
+  MCRegister PhysReg = VRM.getPhys(VirtReg);
+  LiveInterval &LI = LIS.getInterval(VirtReg);
+  Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+  PendingReassignments[VirtReg] = PhysReg;
 }
 
 /// Called before a virtual register is erased from LiveIntervals.
 /// Forcibly remove the register from LiveRegMatrix before it's deleted,
 /// preventing dangling pointers.
 bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
+  PendingReassignments.erase(VirtReg);
   if (Matrix && VRM.hasPhys(VirtReg)) {
     const LiveInterval &LI = LIS.getInterval(VirtReg);
     Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
@@ -1856,12 +1906,40 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
-  if (VRM.hasPhys(Old))
-    VRM.assignVirt2Phys(New, VRM.getPhys(Old));
-  else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT)
+  // New is freshly created by LiveRangeEdit::eliminateDeadDefs and its interval
+  // is guaranteed to exist on every path below.
+  assert(LIS.hasInterval(New) && "Cloned vreg without live interval");
+
+  auto PendingIt = PendingReassignments.find(Old);
+  if (PendingIt != PendingReassignments.end()) {
+    // Old was already unassigned in LRE_WillShrinkVirtReg, which only
+    // enrolls vregs when Matrix is non-null and the interval exists.
+    assert(Matrix && LIS.hasInterval(Old) &&
+           "Pending reassignment without matrix or live interval");
+    MCRegister PhysReg = PendingIt->second;
+    PendingReassignments.erase(PendingIt);
+
+    // Reassign both Old (with its shrunk interval) and New to the matrix.
+    Matrix->assign(LIS.getInterval(Old), PhysReg);
+    Matrix->assign(LIS.getInterval(New), PhysReg);
+  } else if (VRM.hasPhys(Old)) {
+    MCRegister PhysReg = VRM.getPhys(Old);
+    if (Matrix) {
+      if (LIS.hasInterval(Old)) {
+        const LiveInterval &LI = LIS.getInterval(Old);
+        // Drop stale pre-clone segments before reassigning Old's current LI.
+        Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+        Matrix->assign(LI, PhysReg);
+      }
+      Matrix->assign(LIS.getInterval(New), PhysReg);
+    } else {
+      VRM.assignVirt2Phys(New, PhysReg);
+    }
+  } else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
-  else
+  } else {
     llvm_unreachable("VReg should be assigned either physreg or stackslot");
+  }
   if (VRM.hasShape(Old))
     VRM.assignVirt2Shape(New, VRM.getShape(Old));
 }

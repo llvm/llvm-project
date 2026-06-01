@@ -2352,6 +2352,7 @@ include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
 include "RISCVInstrInfoZvzip.td"
 include "RISCVInstrInfoZvvm.td"
+include "RISCVInstrInfoZvbdota.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"
@@ -2367,6 +2368,9 @@ include "RISCVInstrInfoZicfiss.td"
 
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
+
+// CHERI
+include "RISCVInstrInfoY.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
