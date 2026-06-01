@@ -1941,9 +1941,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     // The destruction of the reference temporary is done in the dtor
     // region of the global object it is associated with.
     const auto *extendingDecl = cast<VarDecl>(m->getExtendingDecl());
-    cir::GlobalOp extendingGlobalOp =
-        cgm.getOrCreateCIRGlobal(extendingDecl, /*ty=*/nullptr,
-                                 NotForDefinition);
+    cir::GlobalOp extendingGlobalOp = cgm.getOrCreateCIRGlobal(
+        extendingDecl, /*ty=*/nullptr, NotForDefinition);
 
     CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
