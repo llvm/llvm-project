@@ -52,7 +52,10 @@ class VmemGpuReserveTracker {
   static VmemGpuReserveTracker& Get();
 
   void OnReserve(uptr ptr, uptr size);
-  FreeResult OnFree(uptr ptr, uptr size);
+  // CheckFree validates without updating state; call MarkFreed only after the
+  // real hsa_amd_vmem_address_free succeeds.
+  FreeResult CheckFree(uptr ptr, uptr size);
+  void MarkFreed(uptr ptr, uptr size);
 
  private:
   struct VmemGpuReservation {

@@ -272,21 +272,31 @@ void VmemGpuReserveTracker::OnReserve(uptr ptr, uptr size) {
   reservations_.push_back(entry);
 }
 
-VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::OnFree(uptr ptr,
-                                                                uptr size) {
+VmemGpuReserveTracker::FreeResult VmemGpuReserveTracker::CheckFree(uptr ptr,
+                                                                   uptr size) {
   SpinMutexLock l(&mu_);
   for (uptr i = 0; i < reservations_.size(); ++i) {
-    VmemGpuReservation& r = reservations_[i];
+    const VmemGpuReservation& r = reservations_[i];
     if (r.ptr != ptr)
       continue;
     if (r.size != size)
       return kSizeMismatch;
     if (r.freed)
       return kDoubleFree;
-    r.freed = true;
     return kFirstFree;
   }
   return kNotTracked;
+}
+
+void VmemGpuReserveTracker::MarkFreed(uptr ptr, uptr size) {
+  SpinMutexLock l(&mu_);
+  for (uptr i = 0; i < reservations_.size(); ++i) {
+    VmemGpuReservation& r = reservations_[i];
+    if (r.ptr == ptr && r.size == size) {
+      r.freed = true;
+      return;
+    }
+  }
 }
 
 }  // namespace __sanitizer
