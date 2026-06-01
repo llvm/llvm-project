@@ -31,11 +31,11 @@
 ; CHECK-NOT: OpString "ae"
 
 ; Records emit in module order; Linkage's 2nd operand is the shared AE const.
-; CHECK-DAG: %{{[0-9]+}} = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fname]] %[[#akind]] %[[#aval]]
-; CHECK-DAG: %{{[0-9]+}} = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fname]] %[[#nounwind]]
-; CHECK-DAG: %{{[0-9]+}} = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#gname]] %[[#mdname]] %[[#mdval]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fname]] %[[#akind]] %[[#aval]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#fname]] %[[#nounwind]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#gname]] %[[#mdname]] %[[#mdval]]
 ; CHECK-DAG: %[[#aelink:]] = OpConstant %[[#i32]] 0
-; CHECK-DAG: %{{[0-9]+}} = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %{{[0-9]+}} %[[#aelink]]
+; CHECK-DAG: %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#]] %[[#aelink]]
 
 @gv = global i32 0, align 4, !some.md !0
 
