@@ -1534,12 +1534,9 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
-            RdxResult = createMinMaxOp(Builder, RK, RdxResult, RdxPart);
-          else
-            RdxResult = Builder.CreateBinOp(
-                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-                RdxPart, RdxResult, "bin.rdx");
+          RdxResult = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
@@ -1716,9 +1713,11 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
-  // TODO: Handle any-of and find-last reductions.
+  // TODO: Handle additional reductions, including FP and min-max
+  // reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK))
+      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
+      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
