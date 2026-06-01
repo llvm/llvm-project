@@ -3570,6 +3570,8 @@ bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
   if (!this->emitCheckDynamicCast(E))
     return false;
 
+  if (DiscardResult)
+    return this->emitPopPtr(E);
   return true;
 }
 
