@@ -59,13 +59,12 @@ using float16 = _Float16;
 // "include/llvm-libc-types/float128.h"
 
 // -- Emulated float128 support ------------------------------------------------
+// EFloat128 is always available regardless of native __float128 support.
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
-struct Float128;
+struct EFloat128;
 }
 } // namespace LIBC_NAMESPACE_DECL
-
-using float128 = LIBC_NAMESPACE::fputil::Float128;
 
 // -- bfloat16 support ---------------------------------------------------------
 
