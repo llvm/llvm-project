@@ -76,6 +76,12 @@ public:
   // Spinlock for deterministic type DIE allocation.
   std::atomic_flag Lock = {};
 
+  // Primary key for the comparator: ordinal of this child in its parent's
+  // child list, min-merged across CUs to keep record-like type members in
+  // source order. Sentinel UINT32_MAX sorts after any real observation.
+  // When set, overwrites the default getKey() in TypeComparator.
+  std::atomic<uint32_t> SortKey = {std::numeric_limits<uint32_t>::max()};
+
   /// Children for current type.
   ArrayList<TypeEntry *, 5> Children;
 
@@ -139,6 +145,9 @@ public:
 
   /// Create or return existing type entry body for the specified \p Entry.
   /// Link that entry as child for the specified \p ParentEntry.
+  /// The returned body's \c SortKey starts at the sentinel; callers that want
+  /// the entry to participate in source-order sorting must min-merge their
+  /// per-CU observation into it.
   /// \returns The existing or created type entry body.
   TypeEntryBody *getOrCreateTypeEntryBody(TypeEntry *Entry,
                                           TypeEntry *ParentEntry) {
@@ -177,6 +186,12 @@ public:
 protected:
   std::function<bool(const TypeEntry *LHS, const TypeEntry *RHS)>
       TypesComparator = [](const TypeEntry *LHS, const TypeEntry *RHS) -> bool {
+    uint32_t LK =
+        LHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    uint32_t RK =
+        RHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    if (LK != RK)
+      return LK < RK;
     return LHS->getKey() < RHS->getKey();
   };
 

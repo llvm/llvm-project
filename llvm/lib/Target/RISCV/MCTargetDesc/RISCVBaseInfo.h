@@ -47,12 +47,14 @@ enum OperandType : unsigned {
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM7_LSB000,
+  OPERAND_UIMM7_EQ_XLEN,
   OPERAND_UIMM8_LSB00,
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
-  OPERAND_UIMM9_LSB000,
   OPERAND_UIMM9,
+  OPERAND_UIMM9_LSB000,
+  OPERAND_UIMM9_YBNDSWI,
   OPERAND_UIMM10,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
@@ -667,10 +669,17 @@ enum ABI {
   ABI_ILP32F,
   ABI_ILP32D,
   ABI_ILP32E,
+  ABI_IL32PC64,
+  ABI_IL32PC64F,
+  ABI_IL32PC64D,
+  ABI_IL32PC64E,
   ABI_LP64,
   ABI_LP64F,
   ABI_LP64D,
   ABI_LP64E,
+  ABI_L64PC128,
+  ABI_L64PC128F,
+  ABI_L64PC128D,
   ABI_Unknown
 };
 
@@ -881,6 +890,12 @@ struct NDSVLNPseudo {
 #define GET_RISCVVSXTable_DECL
 #define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline bool isValidYBNDSWImm(int64_t Imm) {
+  return (Imm >= 1 && Imm <= 255) ||
+         (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) ||
+         (Imm >= 512 && Imm <= 4096 && (Imm % 16) == 0);
+}
 } // namespace RISCV
 
 } // namespace llvm

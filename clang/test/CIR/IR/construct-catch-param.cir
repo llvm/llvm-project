@@ -14,11 +14,13 @@ cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 // attribute; the verifier checks the symbol resolves and matches the
 // (T*, T*) -> void signature.
 cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
-    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>) {
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>)
+    attributes {cir.eh.catch_copy_thunk} {
   cir.return
 }
 
 // CHECK: cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+// CHECK-SAME: attributes {cir.eh.catch_copy_thunk}
 // CHECK:   cir.return
 // CHECK: }
 

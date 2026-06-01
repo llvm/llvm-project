@@ -2839,8 +2839,29 @@ static int CompareCudaMatchingDistance(
   return 0;
 }
 
-// Compute the matching distance as described in section 3.2.3 of the CUDA
-// Fortran references.
+// Compute the matching distance for one (dummy, actual) pair as described
+// in section 3.2.3 ("Table 2: Attributed Argument Matching Distance Values")
+// of the CUDA Fortran Programming Guide. The column applied for the actual
+// depends on its CUDA data attribute and (for unattributed actuals) on the
+// active -gpu=mem:{unified,managed} mode.
+//
+// Distance values returned (smaller is a better match; INF means
+// incompatible and disqualifies the candidate):
+//
+//                       Actual argument attribute
+//                 None                              ACC      gpu=    gpu=
+//   Dummy attr   (Host)  Device  Managed Unified  use_dev  unified  managed
+//   ----------+--------+-------+--------+-------+--------+--------+--------+
+//   None(host)|    0   |  INF  |   3    |   3   |   3    |   3    |   3    |
+//   Device    |   INF  |   0   |   2    |   2   |   0    |   2    |   2    |
+//   Managed   |   INF  |  INF  |   0    |   1   |  INF   |   1    |   0    |
+//   Unified   |   INF  |  INF  |   1    |   0   |  INF   |   0    |   1    |
+//
+// In addition: a dummy declared TYPE(*) (assumed-size/rank opaque buffer)
+// is "CUDA address space agnostic" and accepts any attributed actual at a
+// non-zero distance (3) so an explicit Device overload still wins. The
+// "ACC use_dev" column applies to actuals appearing in a surrounding
+// ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
@@ -2943,20 +2964,13 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // An actual argument with the UseDevice attribute comes from an OpenACC
   // host_data use_device clause: the variable itself is host-resident, but
   // inside the host_data region it is referenced via its device address.
-  // It can therefore match either a host dummy or a device dummy in generic
-  // resolution. The matching distance disambiguates when both kinds of
-  // specifics exist:
-  //   - device dummy:           0 (best match: actual carries a device address)
-  //   - managed/unified dummy:  2 (acceptable: dummy is reachable from device)
-  //   - host dummy (no attr):   3 (acceptable: underlying variable is host)
+  // It matches a Device dummy with distance 0, a host dummy (no attribute)
+  // with distance 3, and is incompatible with any other dummy attribute.
   if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::UseDevice) {
     if (!dummyDataAttr)
       return 3;
     if (*dummyDataAttr == common::CUDADataAttr::Device)
       return 0;
-    if (*dummyDataAttr == common::CUDADataAttr::Managed ||
-        *dummyDataAttr == common::CUDADataAttr::Unified)
-      return 2;
   }
   return cudaInfMatchingValue;
 }
@@ -2972,6 +2986,10 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
+    if (!actual) {
+      // Omitted optional arguments do not affect CUDA matching distances.
+      continue;
+    }
     int d{GetMatchingDistance(features, dummy, actual)};
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
@@ -5520,7 +5538,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? "TYPE("s + type->AsFortran() + ')'
+        ? (type->GetDerivedTypeSpec().IsVectorType()
+                  ? type->AsFortran()
+                  : "TYPE("s + type->AsFortran() + ')')
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());

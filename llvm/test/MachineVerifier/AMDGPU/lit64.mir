@@ -1,0 +1,9 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -verify-machineinstrs -run-pass=none -o - %s 2>&1 | FileCheck %s
+
+---
+
+name: lit64
+body: |
+  bb.0:
+    ; CHECK: illegal 64-bit immediate value for operand.
+    $vgpr0_vgpr1 = V_ADD_F64_e64 0, 68719476721, 0, undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode

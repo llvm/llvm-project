@@ -30,6 +30,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BasicBlock;
+class CallInst;
 class DominatorTree;
 class InnerLoopVectorizer;
 class IRBuilderBase;
@@ -40,6 +41,10 @@ class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
 class Value;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
 
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
@@ -194,12 +199,6 @@ struct VPTransformState {
   /// The chosen Vectorization Factor of the loop being vectorized.
   ElementCount VF;
 
-  /// Hold the index to generate specific scalar instructions. Null indicates
-  /// that all instances are to be generated, using either scalar or vector
-  /// instructions.
-  /// TODO: This is now only used in asserts. Remove as follow-up.
-  std::optional<VPLane> Lane;
-
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
@@ -352,9 +351,19 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
+  /// transform replaced the original recipe.
+  void invalidateWideningDecision(Instruction *I, ElementCount VF);
+
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
+
+  /// Returns true if \p I is known to be scalarized at \p VF.
+  bool willBeScalarized(Instruction *I, ElementCount VF) const;
+
+  /// Forwards to LoopVectorizationCostModel::isMaskRequired.
+  bool isMaskRequired(Instruction *I) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;

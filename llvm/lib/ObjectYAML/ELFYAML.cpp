@@ -507,6 +507,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V87, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V89, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V91, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V93, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
@@ -531,6 +532,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V87, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V89, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V91, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V93, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -1813,57 +1815,6 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapRequired("Size", E.Size);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("Version", E.Version);
-  IO.mapOptional("Feature", E.Feature, Hex16(0));
-  IO.mapOptional("NumBBRanges", E.NumBBRanges);
-  IO.mapOptional("BBRanges", E.BBRanges);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry::BBRangeEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry::BBRangeEntry &E) {
-  IO.mapOptional("BaseAddress", E.BaseAddress, Hex64(0));
-  IO.mapOptional("NumBlocks", E.NumBlocks);
-  IO.mapOptional("BBEntries", E.BBEntries);
-}
-
-void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
-    IO &IO, ELFYAML::BBAddrMapEntry::BBEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("ID", E.ID);
-  IO.mapRequired("AddressOffset", E.AddressOffset);
-  IO.mapRequired("Size", E.Size);
-  IO.mapRequired("Metadata", E.Metadata);
-  IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
-  IO.mapOptional("Hash", E.Hash);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(
-    IO &IO, ELFYAML::PGOAnalysisMapEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("FuncEntryCount", E.FuncEntryCount);
-  IO.mapOptional("PGOBBEntries", E.PGOBBEntries);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
-    IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("BBFreq", E.BBFreq);
-  IO.mapOptional("PostLinkBBFreq", E.PostLinkBBFreq);
-  IO.mapOptional("Successors", E.Successors);
-}
-
-void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
-    mapping(IO &IO,
-            ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("ID", E.ID);
-  IO.mapRequired("BrProb", E.BrProb);
-  IO.mapOptional("PostLinkBrFreq", E.PostLinkBrFreq);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,

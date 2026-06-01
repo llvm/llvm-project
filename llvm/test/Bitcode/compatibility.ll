@@ -38,7 +38,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant ptr null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8, i64 }
@@ -56,7 +56,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -71,7 +71,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -1625,6 +1625,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!10 = !{i32 0, !11}
+!11 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!12 = !{i32 1, !13}
+!13 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1635,11 +1639,15 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !10
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !10
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !12
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !12
 
   ret void
 }
@@ -1894,21 +1902,21 @@ declare i64 @llvm.readcyclecounter()
 declare void @llvm.clear_cache(ptr, ptr)
 declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 
-!10 = !{!"rax"}
+!14 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
   ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
-  call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
-  call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
-  call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
-  call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  call i32 @llvm.read_register.i32(metadata !14)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !14)
+  call i64 @llvm.read_register.i64(metadata !14)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !14)
+  call void @llvm.write_register.i32(metadata !14, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !14, i32 0)
+  call void @llvm.write_register.i64(metadata !14, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !14, i64 0)
 
   %stack = call ptr @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1954,10 +1962,10 @@ define void @intrinsics.localrecover() {
 
 ; We need this function to provide `uses' for some metadata tests.
 define void @misc.metadata() {
-  call void @f1(), !srcloc !11
-  call void @f1(), !srcloc !12
-  call void @f1(), !srcloc !13
-  call void @f1(), !srcloc !14
+  call void @f1(), !srcloc !15
+  call void @f1(), !srcloc !16
+  call void @f1(), !srcloc !17
+  call void @f1(), !srcloc !18
   ret void
 }
 
@@ -2578,11 +2586,11 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: !6 = !{i32 6, !"mod6", !0}
 
 ; Metadata -- Check `distinct'
-!11 = distinct !{}
-; CHECK: !11 = distinct !{}
-!12 = distinct !{}
-; CHECK: !12 = distinct !{}
-!13 = !{!11}
-; CHECK: !13 = !{!11}
-!14 = !{!12}
-; CHECK: !14 = !{!12}
+!15 = distinct !{}
+; CHECK: !15 = distinct !{}
+!16 = distinct !{}
+; CHECK: !16 = distinct !{}
+!17 = !{!15}
+; CHECK: !17 = !{!15}
+!18 = !{!16}
+; CHECK: !18 = !{!16}

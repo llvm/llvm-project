@@ -726,7 +726,10 @@ void privatizeSymbol(
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
-  if (!mlir::isa<fir::PointerType>(privVal.getType()))
+  // Only preserve fir.ptr wrapping for true Fortran POINTERs; EQUIVALENCE
+  // aliases also use fir.ptr but need the underlying type for allocation.
+  if (!mlir::isa<fir::PointerType>(privVal.getType()) ||
+      !semantics::IsPointer(ultimate))
     allocType = fir::unwrapRefType(privVal.getType());
 
   if (auto poly = mlir::dyn_cast<fir::ClassType>(allocType)) {

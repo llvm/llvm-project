@@ -77,11 +77,12 @@ static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return std::nullopt;
 }
 
-static bool isIndexOrIntegerType(Type type) {
+[[maybe_unused]] static bool isIndexOrIntegerType(Type type) {
   return type.isIndex() || type.isInteger();
 }
 
-static bool isIndexLikeType(Type type, ValueBoundsOptions options) {
+[[maybe_unused]] static bool isIndexLikeType(Type type,
+                                             ValueBoundsOptions options) {
   return type.isIndex() || (options.allowIntegerType && type.isInteger());
 }
 

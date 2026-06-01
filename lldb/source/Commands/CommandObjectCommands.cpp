@@ -868,6 +868,7 @@ protected:
 
       if (error.Success()) {
         AddRegexCommandToInterpreter();
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
     if (error.Fail()) {
@@ -2498,6 +2499,8 @@ protected:
     if (m_options.m_class_name.empty() && m_options.m_funct_name.empty()) {
       m_interpreter.GetPythonCommandsFromIOHandler("     ", // Prompt
                                                    *this);  // IOHandlerDelegate
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
 

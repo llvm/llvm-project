@@ -332,3 +332,8 @@ v_add_f64_e64 v[4:5], lit64(101.0), v[8:9]
 // GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX125X-ERR-NEXT:{{^}}v_add_f64_e64 v[4:5], lit64(101.0), v[8:9]
 // GFX125X-ERR-NEXT:{{^}}                            ^
+
+v_add_f64_e64 v[4:5], lit64(1.0), v[8:9]
+// GFX125X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX125X-ERR-NEXT:{{^}}v_add_f64_e64 v[4:5], lit64(1.0), v[8:9]
+// GFX125X-ERR-NEXT:{{^}}                            ^

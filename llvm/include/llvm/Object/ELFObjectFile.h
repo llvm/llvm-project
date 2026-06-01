@@ -110,6 +110,8 @@ public:
 
   virtual uint8_t getEIdentABIVersion() const = 0;
 
+  virtual uint8_t getEIdentOSABI() const = 0;
+
   std::vector<ELFPltEntry> getPltEntries(const MCSubtargetInfo &STI) const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
@@ -269,6 +271,7 @@ template <class ELFT> class ELFObjectFile : public ELFObjectFileBase {
   uint16_t getEMachine() const override;
   uint16_t getEType() const override;
   uint8_t getEIdentABIVersion() const override;
+  uint8_t getEIdentOSABI() const override;
   uint64_t getSymbolSize(DataRefImpl Sym) const override;
 
 public:
@@ -688,6 +691,10 @@ template <class ELFT> uint16_t ELFObjectFile<ELFT>::getEType() const {
 
 template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentABIVersion() const {
   return EF.getHeader().e_ident[ELF::EI_ABIVERSION];
+}
+
+template <class ELFT> uint8_t ELFObjectFile<ELFT>::getEIdentOSABI() const {
+  return EF.getHeader().e_ident[ELF::EI_OSABI];
 }
 
 template <class ELFT>
