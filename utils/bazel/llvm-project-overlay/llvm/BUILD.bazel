@@ -896,8 +896,8 @@ cc_binary(
             "utils/TableGen/Basic/*.h",
             "utils/TableGen/Common/*.cpp",
             "utils/TableGen/Common/*.h",
-            "utils/TableGen/Common/GlobalISel/*.cpp",
-            "utils/TableGen/Common/GlobalISel/*.h",
+            "utils/TableGen/Common/GlobalISel/**/*.cpp",
+            "utils/TableGen/Common/GlobalISel/**/*.h",
 
             # Some tablegen sources include headers from MC, so these have to be
             # listed here. MC uses headers produced by tablegen, so it cannot be a
