@@ -112,10 +112,18 @@ protected:
   llvm::SmallVector<ze_event_handle_t> WaitEvents;
   /// Kernel event not signaled.
   ze_event_handle_t KernelEvent = nullptr;
+
+  /// Contains information about pending memory copies.
+  struct PendingCopyDescTy {
+    const void *Src;
+    void *Dst;
+    size_t Size;
+  };
+
   /// Pending staging buffer to host copies.
-  llvm::SmallVector<std::tuple<void *, void *, size_t>> H2MList;
+  llvm::SmallVector<PendingCopyDescTy> H2MList;
   /// Pending USM memory copy commands that must wait for kernel completion.
-  llvm::SmallVector<std::tuple<const void *, void *, size_t>> USM2MList;
+  llvm::SmallVector<PendingCopyDescTy> USM2MList;
 
   virtual std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents();
   virtual std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents();
