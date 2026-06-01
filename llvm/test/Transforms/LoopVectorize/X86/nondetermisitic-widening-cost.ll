@@ -94,28 +94,28 @@ define i32 @fun(i64 %0, float %1, ptr %a, ptr %b, i64 %len) #0 {
 ;
 entry:
   %vla = alloca float, i64 %len, align 16
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %for.body, %entry
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx16 = getelementptr [8 x i8], ptr %a, i64 %indvars.iv
+loop:                                         ; preds = %loop, %entry
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx16 = getelementptr [8 x i8], ptr %a, i64 %iv
   %2 = load ptr, ptr %arrayidx16, align 8
   %3 = load i64, ptr %2, align 8
   %arrayidx18 = getelementptr [4 x i8], ptr %a, i64 %3
   %4 = load float, ptr %arrayidx18, align 4
-  %arrayidx21 = getelementptr [4 x i8], ptr %vla, i64 %indvars.iv
+  %arrayidx21 = getelementptr [4 x i8], ptr %vla, i64 %iv
   store float %4, ptr %arrayidx21, align 4
   %5 = load i64, ptr %b, align 8
   %arrayidx27 = getelementptr [4 x i8], ptr %a, i64 %5
   %6 = load float, ptr %arrayidx27, align 4
   %arrayidx28 = getelementptr [4 x i8], ptr %vla, i64 %0
-  %arrayidx30 = getelementptr [4 x i8], ptr %arrayidx28, i64 %indvars.iv
+  %arrayidx30 = getelementptr [4 x i8], ptr %arrayidx28, i64 %iv
   store float %1, ptr %arrayidx30, align 4
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv, %0
-  br i1 %exitcond.not, label %for.end.loopexit, label %for.body
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv, %0
+  br i1 %exitcond.not, label %for.end.loopexit, label %loop
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:                                 ; preds = %loop
   ret i32 0
 }
 
