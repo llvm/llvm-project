@@ -54,8 +54,8 @@ struct NonTrivial {
     return left.i == right.i;
   }
 };
-static_assert(not std::is_trivially_copy_assignable_v<NonTrivial>);
-static_assert(not std::is_trivially_default_constructible_v<NonTrivial>);
+static_assert(!std::is_trivially_copy_assignable<NonTrivial>::value, "");
+static_assert(!std::is_trivially_default_constructible<NonTrivial>::value, "");
 
 #endif
 
