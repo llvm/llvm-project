@@ -1,6 +1,6 @@
 // RUN: mlir-opt -mlgo-scalarize-single-element-tensor-return -split-input-file %s | FileCheck %s
 
-/// Both aller and callee updated
+/// Positive tests: both caller and callee updated.
 
 func.func private @rank0() -> tensor<i64> {
   %0 = arith.constant dense<-1> : tensor<i64>
@@ -21,16 +21,42 @@ func.func private @rank1(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //      CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
 //      CHECK:   return %[[EXT]] : i64
 
-func.func private @rank2_single_element(%arg0: tensor<1x1xi64>) -> tensor<1x1xi64> {
+func.func private @rank2_single_element(%arg0: tensor<1x1xi64>)
+    -> tensor<1x1xi64> {
   return %arg0 : tensor<1x1xi64>
 }
 // CHECK-LABEL: func.func private @rank2_single_element
 //  CHECK-SAME:     %[[SRC:.*]]: tensor<1x1xi64>) -> i64
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]], %[[C0]]] : tensor<1x1xi64>
+//       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]], %[[C0]]]
+//  CHECK-SAME:     : tensor<1x1xi64>
 //       CHECK:   return %[[EXT]] : i64
 
-// -----
+func.func private @non_return_terminator(%arg0: tensor<1xi64>, %cond: i1)
+    -> tensor<1xi64> {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%arg0 : tensor<1xi64>)
+^bb2:
+  %0 = tensor.empty() : tensor<1xi64>
+  cf.br ^bb3(%0 : tensor<1xi64>)
+^bb3(%result: tensor<1xi64>):
+  return %result : tensor<1xi64>
+}
+// CHECK-LABEL:   func.func private @non_return_terminator(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<1xi64>,
+// CHECK-SAME:      %[[ARG1:.*]]: i1) -> i64 {
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           cf.cond_br %[[ARG1]], ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb3(%[[ARG0]] : tensor<1xi64>)
+// CHECK:         ^bb2:
+// CHECK:           %[[EMPTY_0:.*]] = tensor.empty() : tensor<1xi64>
+// CHECK:           cf.br ^bb3(%[[EMPTY_0]] : tensor<1xi64>)
+// CHECK:         ^bb3(%[[VAL_0:.*]]: tensor<1xi64>):
+// CHECK:           %[[EXT:.*]] = tensor.extract %[[VAL_0]][%[[C0]]]
+// CHECK-SAME:        : tensor<1xi64>
+// CHECK:           return %[[EXT]] : i64
 
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
@@ -51,20 +77,22 @@ func.func private @caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   return %[[CALL]] : i64
 
 // -----
-/// Only callee updated
 
+/// Positive tests: only callee updated.
+
+/// Private non-scalarizeable callers break the DFS loop but still allow
+/// rewritten callees. The caller's signature remains unchanged.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
-/// Private non-scalarizeable callers break the DFS loop but still allow rewritten
-/// callees. The caller's signature remains unchanged.
 // CHECK-LABEL: func.func private @callee
 //  CHECK-SAME:     %[[SRC:.*]]: tensor<1xi64>) -> i64
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
 //       CHECK:   return %[[EXT]] : i64
 
-func.func private @non_scalarizable_caller_multiple_dimensions_return(%arg0: tensor<1xi64>) -> tensor<2xi64> {
+func.func private @non_scalarizable_caller_multiple_dimensions_return(
+    %arg0: tensor<1xi64>) -> tensor<2xi64> {
   %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   %1 = tensor.empty() : tensor<2xi64>
   return %1 : tensor<2xi64>
@@ -77,6 +105,10 @@ func.func private @non_scalarizable_caller_multiple_dimensions_return(%arg0: ten
 
 // -----
 
+/// Positive tests: only callee updated, with callsite reboxing.
+///
+/// The private caller is not scalarizable because it has multiple results,
+/// so the rewritten callee result is reboxed at the callsite.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
@@ -86,7 +118,8 @@ func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
 //       CHECK:   return %[[EXT]] : i64
 
-func.func private @non_scalarizeable_caller_with_multiple_returns(%arg0: tensor<1xi64>) -> (tensor<1xi64>, i64) {
+func.func private @non_scalarizeable_caller_with_multiple_returns(
+    %arg0: tensor<1xi64>) -> (tensor<1xi64>, i64) {
   %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   %1 = arith.constant 7 : i64
   return %0, %1 : tensor<1xi64>, i64
@@ -101,7 +134,9 @@ func.func private @non_scalarizeable_caller_with_multiple_returns(%arg0: tensor<
 
 // -----
 
-// Some existing uses in the caller still expect the old tensor type
+/// Positive tests: only callee updated, with callsite reboxing.
+///
+/// Some existing uses in the caller still expect the old tensor type.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
@@ -110,11 +145,13 @@ func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
 //       CHECK:   return %[[EXT]] : i64
-func.func private @non_scalarizeable_caller_expecting_tensor_type(%arg0: tensor<1xi64>, %arg1: tensor<1xi64>)
-    -> (tensor<1xi64>) {
+
+func.func private @non_scalarizeable_caller_expecting_tensor_type(
+    %arg0: tensor<1xi64>, %arg1: tensor<1xi64>) -> (tensor<1xi64>) {
   %0 = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
   %init = tensor.empty() : tensor<1xi64>
-  %1 = linalg.map { arith.addi } ins(%0, %arg1 : tensor<1xi64>, tensor<1xi64>) outs(%init : tensor<1xi64>)
+  %1 = linalg.map { arith.addi } ins(%0, %arg1 : tensor<1xi64>, tensor<1xi64>)
+    outs(%init : tensor<1xi64>)
   return %1 : tensor<1xi64>
 }
 // CHECK-LABEL: func.func private @non_scalarizeable_caller_expecting_tensor_type
@@ -132,13 +169,13 @@ func.func private @non_scalarizeable_caller_expecting_tensor_type(%arg0: tensor<
 
 // -----
 
-/// Only caller updated
+/// Positive tests: only caller updated.
 
+/// `func.constant` is a non-call symbol user of the target, so it blocks
+/// scalarization.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
-/// `func.constant` is a non-call symbol user of the target, so it blocks
-/// scalarization.
 // CHECK-LABEL: func.func private @callee
 //  CHECK-SAME:     -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
@@ -160,7 +197,7 @@ func.func private @caller_using_constant(%arg0: tensor<1xi64>) -> tensor<1xi64> 
 
 // -----
 
-/// Neither callee nor caller updated
+/// Negative tests: neither callee nor caller updated.
 
 func.func private @multiple_elements(%arg0: tensor<2xi64>) -> tensor<2xi64> {
   return %arg0 : tensor<2xi64>
@@ -211,31 +248,6 @@ func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
-
-func.func private @non_return_terminator(%arg0: tensor<1xi64>, %cond: i1)
-    -> tensor<1xi64> {
-  cf.cond_br %cond, ^bb1, ^bb2
-^bb1:
-  cf.br ^bb3(%arg0 : tensor<1xi64>)
-^bb2:
-  %0 = tensor.empty() : tensor<1xi64>
-  cf.br ^bb3(%0 : tensor<1xi64>)
-^bb3(%result: tensor<1xi64>):
-  return %result : tensor<1xi64>
-}
-// CHECK-LABEL: func.func private @non_return_terminator
-//  CHECK-SAME:   %[[ARG:.*]]: tensor<1xi64>, 
-//  CHECK-SAME:   %[[COND:.*]]: i1
-//  CHECK-SAME:     -> tensor<1xi64>
-//       CHECK:   cf.cond_br %[[COND]], ^bb1, ^bb2
-//       CHECK: ^bb1:
-//       CHECK:   cf.br ^bb3(%[[ARG]] : tensor<1xi64>)
-//       CHECK: ^bb2:
-//       CHECK:   %[[EMPTY:.*]] = tensor.empty() : tensor<1xi64>
-//       CHECK:   cf.br ^bb3(%[[EMPTY]] : tensor<1xi64>)
-//       CHECK: ^bb3(%[[RESULT:.*]]: tensor<1xi64>):
-//       CHECK:   return %[[RESULT]] : tensor<1xi64>
-//   CHECK-NOT:   tensor.extract
 
 func.func private @recursive_a(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   %0 = call @recursive_b(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
