@@ -294,7 +294,7 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   const Align Alignment = II.getParamAlign(0).valueOrOne();
   Value *Mask = II.getArgOperand(1);
 
-  // If the mask is all ones or poisons, this is a plain vector load of the 1st
+  // If the mask is all ones or poison, this is a plain vector load of the 1st
   // argument.
   if (match(Mask, m_AllOnesOrPoison())) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
@@ -326,11 +326,11 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros or poisons, this instruction does nothing.
+  // If the mask is all zeros or poison, this instruction does nothing.
   if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
-  // If the mask is all ones or poisons, this is a plain vector store of the 1st
+  // If the mask is all ones or poison, this is a plain vector store of the 1st
   // argument.
   if (match(ConstMask, m_AllOnesOrPoison())) {
     StoreInst *S =
@@ -390,7 +390,7 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros or poisons, a scatter does nothing.
+  // If the mask is all zeros or poison, a scatter does nothing.
   if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
