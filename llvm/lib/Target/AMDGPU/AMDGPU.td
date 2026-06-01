@@ -2330,7 +2330,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
-   FeatureTransposeLoadF4F6Insts,
    Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
