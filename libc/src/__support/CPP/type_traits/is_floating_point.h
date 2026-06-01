@@ -38,6 +38,8 @@ public:
 #endif
                               ,
                               bfloat16>();
+                              ,
+                              Float128>();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_floating_point_v =

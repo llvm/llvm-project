@@ -37,7 +37,8 @@ enum class FPType {
   IEEE754_Binary64,
   IEEE754_Binary128,
   X86_Binary80,
-  BFloat16
+  BFloat16,
+  Float128
 };
 
 // The classes hierarchy is as follows:
@@ -143,6 +144,14 @@ template <> struct FPLayout<FPType::BFloat16> {
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 8;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 7;
+  LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
+};
+
+template <> struct FPLayout<FPType::Float128> {
+  using StorageType = UInt128;
+  LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
+  LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
+  LIBC_INLINE_VAR static constexpr int SIG_LEN = 112;
   LIBC_INLINE_VAR static constexpr int FRACTION_LEN = SIG_LEN;
 };
 
@@ -813,6 +822,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
 #endif
   else if constexpr (cpp::is_same_v<UnqualT, bfloat16>)
     return FPType::BFloat16;
+  else if constexpr (cpp::is_same_v<UnqualT, Float128>)
+    return FPType::Float128;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }

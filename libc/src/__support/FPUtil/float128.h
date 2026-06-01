@@ -30,7 +30,7 @@ struct Float128 {
   constexpr Float128(double x) {
     FPBits<double> x_bits(x);
     uint64_t val = x_bits.uintval();
-    bits = static_cast<UInt128>(val) << 64;
+    bits = fputil::cast<UInt128>(val) << 64;
   }
 
   constexpr operator double() const {
