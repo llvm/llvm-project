@@ -2081,10 +2081,10 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
 
   switch (Latency) {
   case 8:
-    Category =  IsSWMMAC ? 2 : 0;
+    Category = IsSWMMAC ? 2 : 0;
     break;
   case 16:
-    Category =  IsSWMMAC ? 3 : 1;
+    Category = IsSWMMAC ? 3 : 1;
     break;
   default:
     llvm_unreachable("unexpected xdl wmma latency");
