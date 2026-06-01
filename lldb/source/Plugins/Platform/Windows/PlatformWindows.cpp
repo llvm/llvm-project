@@ -513,13 +513,13 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   ProcessSP process_sp =
       target.CreateProcess(launch_info.GetListener(),
                            launch_info.GetProcessPluginName(), nullptr, false);
+  if (!process_sp)
+    return nullptr;
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
-  if (!process_sp)
-    return nullptr;
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
   if (error.Success()) {
@@ -551,9 +551,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
 
   if (target == nullptr) {
     TargetSP new_target_sp;
-    FileSpec emptyFileSpec;
-    ArchSpec emptyArchSpec;
-
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();
