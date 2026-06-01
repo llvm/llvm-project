@@ -667,7 +667,8 @@ void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
   Profiler->VisitInteger(NumPrefs);
   for (unsigned I = 0; I < NumPrefs; ++I) {
     OMPInitClause::PrefView P = C->getPref(I);
-    Profiler->VisitInteger(P.Fr ? 1 : 0); // Fr may be null for an attr-only spec
+    Profiler->VisitInteger(P.Fr ? 1
+                                : 0); // Fr may be null for an attr-only spec
     if (P.Fr)
       Profiler->VisitStmt(P.Fr);
     Profiler->VisitInteger(P.Attrs.size()); // pref-spec boundary

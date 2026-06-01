@@ -1824,12 +1824,12 @@ OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
   for (unsigned I = 0; I < NumPrefs; ++I)
     E[1 + I] = InteropInfo.Prefs[I].Fr;
   unsigned *AttrEnds = Clause->getTrailingObjects<unsigned>();
-  unsigned AttrBase = 1 + NumPrefs; 
+  unsigned AttrBase = 1 + NumPrefs;
   unsigned AttrPos = AttrBase;
   for (unsigned I = 0; I < NumPrefs; ++I) {
     for (Expr *A : InteropInfo.Prefs[I].Attrs)
       E[AttrPos++] = A;
-    AttrEnds[I] = AttrPos - AttrBase; 
+    AttrEnds[I] = AttrPos - AttrBase;
   }
   return Clause;
 }
