@@ -21,13 +21,13 @@ jobs:
     name: Test SYCL
     runs-on: ubuntu-24.04
     container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:cc4fd65c131d4de97ebc077a4608f78fa959e45f2f9e7cf690c133b48d9cd7fa
+      image: ghcr.io/llvm/ci-ubuntu-24.04:latest@sha256:571cfd8a5ec38a9f241b421c56aa821139c0fd9dcbde5f6161210884befb5ec4
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
         with:
           max-size: 2G
           key: sycl-ubuntu-24.04
