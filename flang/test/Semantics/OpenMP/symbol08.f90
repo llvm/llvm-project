@@ -133,8 +133,8 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
 !$omp teams num_teams(num_teams) thread_limit(block_threads) reduction(+: sum)
 !$omp distribute
  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
- !REF: /dotprod/n
- !REF: /dotprod/block_size
+ !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/n HostAssoc INTEGER(4)
+ !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/block_size HostAssoc INTEGER(4)
  do i0=1,n,block_size
 !$omp parallel do  reduction(+: sum)
   !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)

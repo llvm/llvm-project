@@ -12,6 +12,5 @@
 #include "llvm/Support/CommandLine.h"
 
 extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 #endif // FORTRAN_SUPPORT_FLAGS_H_
