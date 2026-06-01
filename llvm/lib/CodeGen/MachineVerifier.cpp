@@ -104,6 +104,10 @@ static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
   assert(Reg.isPhysical() && "reg must be a physical register");
   assert(Ty.isValid() && "expected a valid type");
 
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+  if (TRI.isTypeLegalForClass(*RC, Ty))
+    return true;
+
   return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass *RC) {
     return RC->contains(Reg) && TRI.isTypeLegalForClass(*RC, Ty);
   });
