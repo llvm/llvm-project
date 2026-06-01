@@ -159,11 +159,11 @@ multiclass SIRegWithSubRegs<string n, bits<10> regIdx,
 multiclass SIRegLoHi16 <string n, bits<10> regIdx,
                         bit isVGPR = 0, bit isAGPR = 0,
                         list<int> DwarfEncodings = [-1, -1]> {
-  def _HI16 : SIReg<n#".h", regIdx, isVGPR, isAGPR, /* isHi16 */ 1>;
+  def _HI16 : SIReg<n#".h", regIdx, isVGPR, isAGPR, isHi16 = true>;
   defm "" : SIRegWithSubRegs<n, regIdx, isVGPR, isAGPR, DwarfEncodings,
                              [!cast<Register>(NAME#"_LO16"),
                              !cast<Register>(NAME#"_HI16")],
-                             [lo16, hi16], /* coveredBySubRegs */ 1>;
+                             [lo16, hi16], coveredBySubRegs = true>;
 }
 
 multiclass SIRegLo16 <string n, bits<10> regIdx,
@@ -171,7 +171,7 @@ multiclass SIRegLo16 <string n, bits<10> regIdx,
                       list<int> DwarfEncodings = [-1, -1]> {
   defm "" : SIRegWithSubRegs<n, regIdx, isVGPR, isAGPR, DwarfEncodings,
                              [!cast<Register>(NAME#"_LO16")],
-                             [lo16], /* coveredBySubRegs */ 0>;
+                             [lo16], coveredBySubRegs = false>;
 }
 
 // Special Registers
@@ -200,7 +200,7 @@ def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
   let CoveredBySubRegs = 1;
 }
 
-defm EXEC_LO : SIRegLo16<"exec_lo", 126, /*isVGPR=*/ 0, /*isAGPR=*/0, /*DwarfEncodings=*/[1, 1]>;
+defm EXEC_LO : SIRegLo16<"exec_lo", 126, isVGPR= false, isAGPR = false, DwarfEncodings = [1, 1]>;
 defm EXEC_HI : SIRegLo16<"exec_hi", 127>;
 
 def EXEC : RegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>, DwarfRegNum<[17, 1]> {
@@ -356,7 +356,7 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 // SGPR registers
 foreach Index = 0...105 in {
   defm SGPR#Index :
-     SIRegLo16 <"s"#Index, Index, /*isVGPR=*/0, /*isAGPR=*/0, /*DwarfEncodings=*/
+     SIRegLo16 <"s"#Index, Index, isVGPR = false, isAGPR = false, DwarfEncodings =
                 [!if(!le(Index, 63), !add(Index, 32), !add(Index, 1024)),
                 !if(!le(Index, 63), !add(Index, 32), !add(Index, 1024))]>;
 }
@@ -364,7 +364,7 @@ foreach Index = 0...105 in {
 // VGPR registers
 foreach Index = 0...1023 in {
   defm VGPR#Index :
-    SIRegLoHi16 <"v"#Index, Index, /*isVGPR=*/ 1, /*isAGPR=*/ 0, /*DwarfEncodings=*/
+    SIRegLoHi16 <"v"#Index, Index,  isVGPR = true, isAGPR = false, DwarfEncodings =
                  [!if(!le(Index, 511), !add(Index, 2560), -1),
                   !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
 }
@@ -372,7 +372,7 @@ foreach Index = 0...1023 in {
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :
-      SIRegLo16 <"a"#Index, Index, /*isVGPR=*/ 0, /*isAGPR=*/ 1, /*DwarfEncodings=*/
+      SIRegLo16 <"a"#Index, Index, isVGPR = false, isAGPR = true, DwarfEncodings =
                  [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
