@@ -823,8 +823,6 @@ for.exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
-
 define void @simple_histogram_metadata(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
 ; CHECK-LABEL: define void @simple_histogram_metadata(
 ; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
