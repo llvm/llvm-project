@@ -366,8 +366,9 @@ def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)> {
   let DiagnosticString = "operand must be a register in range [r8, r15]";
 }
 
-// For tail calls, we can't use callee-saved registers, as they are restored
-// to the saved value before the tail call, which would clobber a call address.
+// For tail calls, we can't use callee-saved registers. When the frame
+// is destroyed before the tail call, callee-saved registers are restored
+// to the caller's values, clobbering any call address stored in them.
 // Note, getMinimalPhysRegClass(R0) returns tGPR because of the names of
 // this class and the preceding one(!)  This is what we want.
 def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {
