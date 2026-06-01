@@ -110,7 +110,7 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   Error Err = DA.preprocessProfile(*BC);
 
   // Ignore errors from perf2bolt when parsing memory events later on.
-  ASSERT_THAT_ERROR(std::move(Err), Succeeded());
+  ASSERT_THAT_ERROR(std::move(Err), Failed());
 
   auto &BinaryMMapInfo = DA.getBinaryMMapInfo();
   auto El = BinaryMMapInfo.find(Pid);

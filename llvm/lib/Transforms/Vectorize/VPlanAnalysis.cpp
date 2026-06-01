@@ -13,158 +13,19 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
-  Type *ResTy = inferScalarType(R->getIncomingValue(0));
-  for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
-    VPValue *Inc = R->getIncomingValue(I);
-    assert(inferScalarType(Inc) == ResTy &&
-           "different types inferred for different incoming values");
-    CachedTypes[Inc] = ResTy;
-  }
-  return ResTy;
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
-  unsigned Opcode = R->getOpcode();
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
-      Instruction::isBitwiseLogicOp(Opcode)) {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    assert(ResTy == inferScalarType(R->getOperand(1)) &&
-           "types for both operands must match for binary op");
-    CachedTypes[R->getOperand(1)] = ResTy;
-    return ResTy;
-  }
-
-  switch (Opcode) {
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return IntegerType::get(Ctx, 1);
-  case Instruction::FNeg:
-  case Instruction::Freeze:
-    return inferScalarType(R->getOperand(0));
-  case Instruction::ExtractValue: {
-    assert(R->getNumOperands() == 2 && "expected single level extractvalue");
-    auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    return StructTy->getTypeAtIndex(
-        cast<VPConstantInt>(R->getOperand(1))->getZExtValue());
-  }
-  case Instruction::Select: {
-    Type *ResTy = inferScalarType(R->getOperand(1));
-    VPValue *OtherV = R->getOperand(2);
-    assert(inferScalarType(OtherV) == ResTy &&
-           "different types inferred for different operands");
-    CachedTypes[OtherV] = ResTy;
-    return ResTy;
-  }
-  default:
-    break;
-  }
-
-  // Type inference not implemented for opcode.
-  LLVM_DEBUG({
-    dbgs() << "LV: Found unhandled opcode for: ";
-    R->getVPSingleValue()->dump();
-  });
-  llvm_unreachable("Unhandled opcode!");
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
-  unsigned Opcode = R->getUnderlyingInstr()->getOpcode();
-
-  if (Instruction::isBinaryOp(Opcode) || Instruction::isShift(Opcode) ||
-      Instruction::isBitwiseLogicOp(Opcode)) {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    assert(ResTy == inferScalarType(R->getOperand(1)) &&
-           "inferred types for operands of binary op don't match");
-    CachedTypes[R->getOperand(1)] = ResTy;
-    return ResTy;
-  }
-
-  if (Instruction::isCast(Opcode))
-    return R->getUnderlyingInstr()->getType();
-
-  switch (Opcode) {
-  case Instruction::Call: {
-    unsigned CallIdx = R->getNumOperands() - (R->isPredicated() ? 2 : 1);
-    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
-        ->getReturnType();
-  }
-  case Instruction::Select: {
-    Type *ResTy = inferScalarType(R->getOperand(1));
-    assert(ResTy == inferScalarType(R->getOperand(2)) &&
-           "inferred types for operands of select op don't match");
-    CachedTypes[R->getOperand(2)] = ResTy;
-    return ResTy;
-  }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return IntegerType::get(Ctx, 1);
-  case Instruction::Alloca:
-  case Instruction::ExtractValue:
-    return R->getUnderlyingInstr()->getType();
-  case Instruction::Freeze:
-  case Instruction::FNeg:
-  case Instruction::GetElementPtr:
-    return inferScalarType(R->getOperand(0));
-  case Instruction::Load:
-    return cast<LoadInst>(R->getUnderlyingInstr())->getType();
-  case Instruction::Store:
-    // FIXME: VPReplicateRecipes with store opcodes still define a result
-    // VPValue, so we need to handle them here. Remove the code here once this
-    // is modeled accurately in VPlan.
-    return Type::getVoidTy(Ctx);
-  default:
-    break;
-  }
-  // Type inference not implemented for opcode.
-  LLVM_DEBUG({
-    dbgs() << "LV: Found unhandled opcode for: ";
-    R->getVPSingleValue()->dump();
-  });
-  llvm_unreachable("Unhandled opcode");
-}
-
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
-  if (Type *CachedTy = CachedTypes.lookup(V))
-    return CachedTy;
-
-  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
-          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
-          VPWidenLoadEVLRecipe, VPDerivedIVRecipe, VPHeaderPHIRecipe,
-          VPInstruction>(V)) {
-    Type *Ty = V->getScalarType();
-    assert(Ty && "Scalar type must be set by recipe construction");
-    return Ty;
-  }
-
-  Type *ResultTy =
-      TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPBlendRecipe, VPWidenRecipe, VPReplicateRecipe>(
-              [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([this](const VPReductionRecipe *R) {
-            return inferScalarType(R->getChainOp());
-          })
-          .Case([this](const VPExpressionRecipe *R) {
-            return inferScalarType(R->getOperandOfResultType());
-          });
-
-  assert(ResultTy && "could not infer type for the given VPValue");
-  CachedTypes[V] = ResultTy;
-  return ResultTy;
+  Type *Ty = V->getScalarType();
+  assert(Ty && "Scalar type must be set by recipe construction");
+  return Ty;
 }
 
 void llvm::collectEphemeralRecipesForVPlan(
