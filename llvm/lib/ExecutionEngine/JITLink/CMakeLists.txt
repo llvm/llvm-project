@@ -15,6 +15,9 @@ set(JITLINK_SOURCES
   ELF.cpp
   ELFLinkGraphBuilder.cpp
   ELF_aarch64.cpp
+
+  # Base architecture support (needed by format backends)
+  aarch64.cpp
   )
 
 # Format-specific backends needed by x86 (macOS/Windows)

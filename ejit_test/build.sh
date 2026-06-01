@@ -167,6 +167,10 @@ ALL_TESTS=(
   ejit_trace_test
 )
 
+# Per-test compile flags (e.g. for disabling global constructors)
+declare -A COMPILE_FLAGS
+COMPILE_FLAGS[ejit_manual_register_test]="-mllvm -enable-ejit-global-ctors=false"
+
 declare -A TEST_ARGS
 TEST_ARGS[ejit_complex_test]="0 1 2 3"
 TEST_ARGS[ejit_opt_level_test]="L2"
@@ -201,7 +205,8 @@ build_one() {
   fi
 
   echo "  Compiling ${name}.c ..."
-  "${CLANG}" -O2 ${INCLUDES} -c "${src}" -o "${obj}"
+  local extra_flags="${COMPILE_FLAGS[${name}]:-}"
+  "${CLANG}" -O2 ${INCLUDES} ${extra_flags} -c "${src}" -o "${obj}"
 
   echo "  Linking ${name} (${ARCH}) ..."
   if ${USE_LIPO}; then
