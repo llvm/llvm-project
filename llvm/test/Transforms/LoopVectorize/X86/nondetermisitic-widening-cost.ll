@@ -7,8 +7,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
 
-define i32 @fun(i64 %0, float %1, ptr %a, ptr %b, i64 %len) #0 {
-; CHECK-LABEL: define i32 @fun(
+define void @fun(i64 %0, float %1, ptr %a, ptr %b, i64 %len) #0 {
+; CHECK-LABEL: define void @fun(
 ; CHECK-SAME: i64 [[TMP0:%.*]], float [[TMP1:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[VLA:%.*]] = alloca float, i64 [[LEN]], align 16
@@ -119,7 +119,7 @@ define i32 @fun(i64 %0, float %1, ptr %a, ptr %b, i64 %len) #0 {
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret void
 ;
 entry:
   %vla = alloca float, i64 %len, align 16
@@ -145,7 +145,7 @@ loop:                                         ; preds = %loop, %entry
   br i1 %exitcond.not, label %for.end.loopexit, label %loop
 
 for.end.loopexit:                                 ; preds = %loop
-  ret i32 0
+  ret void
 }
 
 attributes #0 = { "target-features"="+avx2" }
