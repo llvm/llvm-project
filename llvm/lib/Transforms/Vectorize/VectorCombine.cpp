@@ -5833,15 +5833,12 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
     return false;
 
-  auto *II = dyn_cast<VPIntrinsic>(I.getOperand(0));
-  if (!II || II->getIntrinsicID() != Intrinsic::vp_load)
-    return false;
   // Fold away bit casts of the loaded value by loading the desired type,
   // if the mask is all-ones.
-  Value *Mask = II->getMaskParam();
-  Value *EVL = II->getVectorLengthParam();
-  if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
-      !II->hasOneUse())
+  Value *EVL;
+  auto *II = dyn_cast<VPIntrinsic>(I.getOperand(0));
+  if (!II || !match(II, m_OneUse(m_Intrinsic<Intrinsic::vp_load>(
+                            m_Value(), m_AllOnes(), m_Value(EVL)))))
     return false;
 
   VectorType *OrigVecTy = cast<VectorType>(II->getType());
