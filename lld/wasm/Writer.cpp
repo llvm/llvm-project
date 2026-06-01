@@ -1125,7 +1125,7 @@ void Writer::combineOutputSegments() {
   // This restriction does not apply when the extended const extension is
   // available: https://github.com/WebAssembly/extended-const
   assert(!ctx.arg.extendedConst);
-  assert(ctx.isPic && !ctx.arg.sharedMemory);
+  assert(ctx.isPic && !ctx.arg.isMultithreaded());
   if (segments.size() <= 1)
     return;
   OutputSegment *combined = make<OutputSegment>(".data");
@@ -1799,10 +1799,9 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (ctx.isPic && !ctx.arg.extendedConst &&
-      ctx.arg.threadModel != ThreadModel::SharedMemory) {
-    // In shared memory mode all data segments are passive and initialized
-    // via __wasm_init_memory.
+  if (ctx.isPic && !ctx.arg.extendedConst && !ctx.arg.isMultithreaded()) {
+    // In multithreaded modes (shared or cooperative), data segments may be
+    // passive and must not be combined into a single active segment.
     log("-- combineOutputSegments");
     combineOutputSegments();
   }
