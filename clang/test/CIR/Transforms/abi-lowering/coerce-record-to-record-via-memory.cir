@@ -1,17 +1,19 @@
-// Direct with a coerced type that's a different record (record-to-record):
-// neither side is a vector and at least one is a record, so the rewriter
-// uses the memory-roundtrip path even though both types are aggregates.
 // RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:   | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Pair  = !cir.record<struct "Pair"  {!s32i, !s32i}>
-!rec_Single = !cir.record<struct "Single" {!s64i}>
+!rec_Vec4   = !cir.record<struct "Vec4"   {!s32i, !s32i, !s32i, !s32i}>
+!rec_TwoI64 = !cir.record<struct "TwoI64" {!s64i, !s64i}>
 
-#coerce_pair_to_single = {
+#coerce_vec4_to_twoi64 = {
   return = { kind = "direct" },
-  args   = [ { kind = "direct", coerced_type = !rec_Single } ]
+  args   = [ { kind = "direct", coerced_type = !rec_TwoI64 } ]
+}
+
+#caller_no_args = {
+  return = { kind = "direct" },
+  args   = [ ]
 }
 
 module attributes {
@@ -20,15 +22,36 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  cir.func @takes_pair(%arg0: !rec_Pair)
-      attributes { test_classify = #coerce_pair_to_single } {
+  cir.func @takes_vec(%arg0: !rec_Vec4)
+      attributes { test_classify = #coerce_vec4_to_twoi64 } {
+    %0 = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !rec_Vec4, !cir.ptr<!rec_Vec4>
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_pair(%[[ARG:.*]]: !rec_Single)
-  // CHECK:   %[[SLOT:.*]] = cir.alloca !rec_Single, !cir.ptr<!rec_Single>, ["coerce"]
-  // CHECK:   cir.store %[[ARG]], %[[SLOT]] : !rec_Single, !cir.ptr<!rec_Single>
-  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Single> -> !cir.ptr<!rec_Pair>
-  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // 16-byte struct coerced to a two-eightbyte record through memory.
+  // CHECK:      cir.func{{.*}} @takes_vec(%[[ARG:.*]]: !rec_TwoI64)
+  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_TwoI64, !cir.ptr<!rec_TwoI64>, ["coerce"]
+  // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
+  // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec4>
+  // CHECK:        %[[REC:.*]] = cir.load %[[CAST]] : !cir.ptr<!rec_Vec4>, !rec_Vec4
+  // CHECK:        %[[V:.*]] = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"]
+  // CHECK:        cir.store %[[REC]], %[[V]] : !rec_Vec4, !cir.ptr<!rec_Vec4>
+
+  cir.func @caller()
+      attributes { test_classify = #caller_no_args } {
+    %0 = cir.alloca !rec_Vec4, !cir.ptr<!rec_Vec4>, ["v"] {alignment = 4 : i64}
+    %1 = cir.load %0 : !cir.ptr<!rec_Vec4>, !rec_Vec4
+    cir.call @takes_vec(%1) : (!rec_Vec4) -> ()
+    cir.return
+  }
+
+  // Call site coerces the !rec_Vec4 operand to !rec_TwoI64 through memory.
+  // CHECK:      cir.func{{.*}} @caller()
+  // CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_Vec4>, !rec_Vec4
+  // CHECK:        cir.store %[[VAL]], %{{.*}} : !rec_Vec4, !cir.ptr<!rec_Vec4>
+  // CHECK:        %[[ARGCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_Vec4> -> !cir.ptr<!rec_TwoI64>
+  // CHECK:        %[[ARGREC:.*]] = cir.load %[[ARGCAST]] : !cir.ptr<!rec_TwoI64>, !rec_TwoI64
+  // CHECK:        cir.call @takes_vec(%[[ARGREC]]) : (!rec_TwoI64) -> ()
 
 }

@@ -56,8 +56,8 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     case ArgKind::Direct:
       // Direct with a coerced type means the wire signature uses the
       // coerced type; the body still expects origTy and we'll insert a
-      // reinterpret/coercion at the entry block.  Direct without a
-      // coerced type is a true pass-through.
+      // coercion at the entry block.  Direct without a coerced type is a
+      // true pass-through.
       newArgTypes.push_back(ac.coercedType ? ac.coercedType : origTy);
       break;
     case ArgKind::Ignore:
@@ -174,17 +174,13 @@ ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
 
 /// Coerce \p src to type \p dstTy at the current builder insertion point.
 ///
-/// Three strategies, in order of preference:
-///   - If src and dst are the same type, return src unchanged and leave
-///     \p createdOps empty.
-///   - If both are non-aggregate same-bit-width values that just differ in
-///     vector-vs-scalar shape (e.g. !cir.vector<2 x !cir.float> ↔
-///     !cir.complex<!cir.float>), use cir.reinterpret_cast which is free at
-///     the IR level.
-///   - Otherwise go through memory: allocate a slot of the source type
-///     (using max(srcAlign, dstAlign) for the alloca alignment), store
-///     the source, bitcast the pointer to the destination type, load the
-///     destination type back.
+/// If src and dst are the same type, returns src unchanged and leaves
+/// \p createdOps empty.  Otherwise coerces through memory: allocate a slot
+/// of the source type (using max(srcAlign, dstAlign) for the alloca
+/// alignment), store the source, bitcast the pointer to the destination
+/// type, and load the destination type back.  This mirrors classic
+/// CodeGen's coerce-through-memory behavior for ABI argument and return
+/// coercion and lowers uniformly for scalar, vector, and record types.
 ///
 /// The temporary alloca is placed at the start of the enclosing function's
 /// entry block so that it composes correctly with the HoistAllocas pass
@@ -200,24 +196,10 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
   if (srcTy == dstTy)
     return src;
 
-  // Reinterpret path: same total bit width, neither side is a record, and
-  // the shapes differ only in vector-vs-non-vector.  Going through memory
-  // is wasteful for these — they have the same in-register representation.
-  bool isAggregate = isa<cir::RecordType>(srcTy) || isa<cir::RecordType>(dstTy);
-  bool vectorMismatch =
-      isa<cir::VectorType>(srcTy) != isa<cir::VectorType>(dstTy);
-  if (!isAggregate && vectorMismatch &&
-      dl.getTypeSizeInBits(srcTy) == dl.getTypeSizeInBits(dstTy)) {
-    auto reinterpret =
-        cir::ReinterpretCastOp::create(rewriter, loc, dstTy, src);
-    createdOps.insert(reinterpret);
-    return reinterpret;
-  }
-
-  // Memory path: alloca + store + ptr-cast + load.  The alloca goes in the
-  // entry block (Andy's review comment #3 on the original PR), with
-  // alignment = max(srcAlign, dstAlign) to satisfy both the store and the
-  // load (review comment #1).
+  // Coerce through memory: alloca + store + ptr-cast + load.  The alloca
+  // goes at the start of the entry block so it composes with the
+  // HoistAllocas pass, with alignment = max(srcAlign, dstAlign) to satisfy
+  // both the store and the load.
   uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
   uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
@@ -236,23 +218,14 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
   }
   createdOps.insert(alloca);
 
-  auto store = cir::StoreOp::create(rewriter, loc, src, alloca,
-                                    /*isVolatile=*/UnitAttr(),
-                                    /*alignment=*/IntegerAttr(),
-                                    /*sync_scope=*/cir::SyncScopeKindAttr(),
-                                    /*mem_order=*/cir::MemOrderAttr());
+  auto store = cir::StoreOp::create(rewriter, loc, src, alloca);
   createdOps.insert(store);
 
   auto ptrCast = cir::CastOp::create(rewriter, loc, dstPtrTy,
                                      cir::CastKind::bitcast, alloca);
   createdOps.insert(ptrCast);
 
-  auto load = cir::LoadOp::create(rewriter, loc, dstTy, ptrCast,
-                                  /*isDeref=*/UnitAttr(),
-                                  /*isVolatile=*/UnitAttr(),
-                                  /*alignment=*/IntegerAttr(),
-                                  /*sync_scope=*/cir::SyncScopeKindAttr(),
-                                  /*mem_order=*/cir::MemOrderAttr());
+  auto load = cir::LoadOp::create(rewriter, loc, ptrCast.getResult());
   createdOps.insert(load);
   return load;
 }
@@ -365,12 +338,12 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     Region &body = funcOp->getRegion(0);
     if (!body.empty()) {
       // In-body coercion for Direct-with-coerce / Extend args: change
-      // block-arg types to the coerced types and insert a
-      // cir.reinterpret_cast at the top of the entry block that converts
-      // each coerced value back to its original type, then route existing
-      // body uses (including in-body cir.call operands) through the cast.
-      // Done before the Ignore-drop below so the entry block argument
-      // indices used here still refer to the original positions.
+      // block-arg types to the coerced types and insert a memory roundtrip
+      // at the top of the entry block that converts each coerced value back
+      // to its original type, then route existing body uses (including
+      // in-body cir.call operands) through the recovered value.  Done before
+      // the Ignore-drop below so the entry block argument indices used here
+      // still refer to the original positions.
       insertArgCoercion(funcOp, fc, builder, dl);
 
       // Direct return with coerced type: insert a coercion at every

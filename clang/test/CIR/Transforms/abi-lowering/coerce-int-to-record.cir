@@ -1,7 +1,3 @@
-// Direct return with coerced type going from a small record to a same-bit-
-// width integer.  Mirror of coerce-record-to-int.cir but exercising the
-// return-side coercion code path: every cir.return gets the original
-// record value coerced to the integer type before being returned.
 // RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:   | FileCheck %s
 
@@ -14,7 +10,7 @@
   args   = [ ]
 }
 
-#all_direct_no_args = {
+#caller_ret_i32 = {
   return = { kind = "direct" },
   args   = [ ]
 }
@@ -31,10 +27,7 @@ module attributes {
     cir.return %0 : !rec_Pair
   }
 
-  // Signature changes to !s64i return; the cir.return's record operand
-  // gets coerced via memory roundtrip before being returned.  The alloca
-  // is hoisted to the entry-block start (Andy's review comment #3 from the
-  // original PR) so it sits ahead of the const that produces the value.
+  // Record return operand coerced to !s64i through an entry-block memory slot.
   // CHECK:      cir.func{{.*}} @returns_pair() -> !s64i
   // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_Pair, !cir.ptr<!rec_Pair>, ["coerce"]
   // CHECK:        %[[VAL:.*]] = cir.const #cir.zero : !rec_Pair
@@ -43,17 +36,22 @@ module attributes {
   // CHECK:        %[[COERCED:.*]] = cir.load %[[CAST]] : !cir.ptr<!s64i>, !s64i
   // CHECK:        cir.return %[[COERCED]] : !s64i
 
-  cir.func @caller() -> !rec_Pair
-      attributes { test_classify = #coerce_pair_return_to_i64 } {
+  cir.func @caller() -> !s32i
+      attributes { test_classify = #caller_ret_i32 } {
     %0 = cir.call @returns_pair() : () -> !rec_Pair
-    cir.return %0 : !rec_Pair
+    %1 = cir.alloca !rec_Pair, !cir.ptr<!rec_Pair>, ["r"] {alignment = 4 : i64}
+    cir.store %0, %1 : !rec_Pair, !cir.ptr<!rec_Pair>
+    %2 = cir.get_member %1[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
+    %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
   }
 
-  // At the call site the lowered call returns !s64i; the rewriter coerces
-  // it back to !rec_Pair for downstream uses (the caller's own return
-  // also needs the coerce-back-then-coerce-forward chain since caller's
-  // return is also Direct-with-coerce).
-  // CHECK:      cir.func{{.*}} @caller() -> !s64i
-  // CHECK:        %{{.*}} = cir.call @returns_pair() : () -> !s64i
+  // The !s64i call result is coerced back to !rec_Pair through memory.
+  // CHECK:      cir.func{{.*}} @caller() -> !s32i
+  // CHECK:        %[[RET:.*]] = cir.call @returns_pair() : () -> !s64i
+  // CHECK:        cir.store %[[RET]], %{{.*}} : !s64i, !cir.ptr<!s64i>
+  // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+  // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
 
 }

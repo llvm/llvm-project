@@ -1667,45 +1667,6 @@ mlir::LogicalResult CIRToLLVMReturnOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-mlir::LogicalResult CIRToLLVMReinterpretCastOpLowering::matchAndRewrite(
-    cir::ReinterpretCastOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  // After type conversion, source and destination LLVM types may be:
-  //   (a) Identical: trivially replace uses with the source value (the
-  //       op was a CIR-level type rename only; LLVM sees no change).
-  //   (b) Same scalar / vector category, same bit width: emit
-  //       LLVM::BitcastOp.
-  //   (c) Aggregate vs scalar / aggregate vs vector: LLVM::BitcastOp
-  //       does not allow aggregate types.  We currently emit an error
-  //       directing the producer to go through memory.  A future patch
-  //       will add an extract/insert lowering for the aggregate case so
-  //       the LLVM IR avoids the memory roundtrip too.
-  mlir::Type llvmDstTy = getTypeConverter()->convertType(op.getType());
-  mlir::Value llvmSrc = adaptor.getSrc();
-  mlir::Type llvmSrcTy = llvmSrc.getType();
-
-  if (llvmSrcTy == llvmDstTy) {
-    rewriter.replaceOp(op, llvmSrc);
-    return mlir::success();
-  }
-
-  bool srcIsAggregate =
-      mlir::isa<mlir::LLVM::LLVMStructType, mlir::LLVM::LLVMArrayType>(
-          llvmSrcTy);
-  bool dstIsAggregate =
-      mlir::isa<mlir::LLVM::LLVMStructType, mlir::LLVM::LLVMArrayType>(
-          llvmDstTy);
-  if (srcIsAggregate || dstIsAggregate)
-    return op.emitOpError()
-           << "lowering cir.reinterpret_cast to LLVM with aggregate type "
-           << "not yet implemented; producer should fall back to memory "
-           << "coercion until a follow-up patch adds extract/insert "
-           << "lowering";
-
-  rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(op, llvmDstTy, llvmSrc);
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
     cir::RotateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

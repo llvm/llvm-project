@@ -289,54 +289,6 @@ def CIR_CastOp : CIR_Op<"cast", [
 }
 
 //===----------------------------------------------------------------------===//
-// ReinterpretCastOp
-//===----------------------------------------------------------------------===//
-
-def CIR_ReinterpretCastOp : CIR_Op<"reinterpret_cast", [Pure]> {
-  let summary = "Reinterpret a value as a different same-bit-width type";
-  let description = [{
-    The `cir.reinterpret_cast` operation reinterprets the bits of its source
-    value as a different type, with no IR-level cost.  It is used by the
-    calling-convention lowering pass to coerce between same-bit-width types
-    that have an LLVM-IR-level shape mismatch but identical in-register
-    representation -- for example, between `!cir.vector<2 x !cir.float>` and
-    `!cir.complex<!cir.float>`, both of which lower to the same LLVM IR
-    representation but have distinct CIR types.
-
-    Unlike `cir.cast bitcast`, which is overloaded for pointer-to-pointer
-    bitcasts and several other use cases, `cir.reinterpret_cast` is reserved
-    for in-register value reinterpretation only.  The result type must
-    differ from the source type; otherwise the op is meaningless and the
-    folder removes it.
-
-    **Invariant** (not currently enforced by the verifier): the source and
-    destination types must have the same bit width per the module's
-    DataLayout, and they must use the same in-register lane order on the
-    target.  Producers (e.g. CallConvLowering's coerce-in-registers path)
-    are responsible for ensuring this; a follow-up patch will move the
-    bit-width check into the verifier once the design question of
-    DataLayout-aware op verifiers is resolved.
-
-    Example:
-
-    ```
-    %c = cir.reinterpret_cast %v
-       : !cir.vector<2 x !cir.float> -> !cir.complex<!cir.float>
-    ```
-  }];
-
-  let arguments = (ins CIR_AnyType:$src);
-  let results = (outs CIR_AnyType:$result);
-
-  let assemblyFormat = [{
-    $src `:` type($src) `->` type($result) attr-dict
-  }];
-
-  let hasVerifier = 1;
-  let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
@@ -867,6 +819,16 @@ def CIR_StoreOp : CIR_Op<"store", [
     (`atomic` `(` $mem_order^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
+
+  let builders = [
+    // Non-volatile, non-atomic store with default alignment.
+    OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
+      build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*alignment=*/mlir::IntegerAttr(),
+            /*sync_scope=*/cir::SyncScopeKindAttr(),
+            /*mem_order=*/cir::MemOrderAttr());
+    }]>
+  ];
 
   // FIXME: add verifier.
 }
