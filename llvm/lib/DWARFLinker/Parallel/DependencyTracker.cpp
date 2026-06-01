@@ -228,7 +228,7 @@ void DependencyTracker::collectRootsToKeep(
                             0)) {
         ChildInfo.setIsModuleForwardDeclCandidate();
         addActionToRootEntriesWorkList(
-            LiveRootWorklistActionTy::MarkSingleTypeEntry, ChildEntry,
+            LiveRootWorklistActionTy::MarkTypeEntryRec, ChildEntry,
             ReferencedBy);
       }
       break;
