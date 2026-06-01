@@ -477,24 +477,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lowerFor({f16, bf16, v4f16, v4bf16, v8f16, v8bf16});
 
-  getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({f32, f64, f128})
-      .minScalar(0, f32)
-      .scalarize(0);
-
-  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
+  getActionDefinitionsBuilder({G_FREM, G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10,
                                G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH,
                                G_FSINH, G_FTANH, G_FMODF})
-      // We need a call for these, so we always need to scalarize.
-      .scalarize(0)
-      // Regardless of FP16 support, widen 16-bit elements to 32-bits.
-      .minScalar(0, f32)
-      .libcallFor({f32, f64, f128});
+      .libcallFor({f32, f64, f128})
+      .widenScalarFor({f16, bf16}, changeElementTo(0, f32))
+      .scalarize(0);
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
-      .scalarize(0)
-      .minScalar(0, f32)
-      .libcallFor({{f32, i32}, {f64, i32}, {f128, i32}});
+      .libcallFor({{f32, i32}, {f64, i32}, {f128, i32}})
+      .widenScalarFor({f16, bf16}, changeElementTo(0, f32))
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_LROUND, G_INTRINSIC_LRINT})
       .legalFor({{i32, f32}, {i32, f64}, {i64, f32}, {i64, f64}})
