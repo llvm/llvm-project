@@ -238,7 +238,7 @@ define void @test_A_sub_B_add_ConstantInt_null_basptr() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr inbounds i8, ptr null, i64 2044
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr null, i64 2044
 ; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP3]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[UGLYGEP3]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]

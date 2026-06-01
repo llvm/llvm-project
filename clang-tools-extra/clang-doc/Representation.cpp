@@ -20,6 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
@@ -306,8 +307,7 @@ bool CommentInfo::operator==(const CommentInfo &Other) const {
   if (FirstCI != SecondCI || Children.size() != Other.Children.size())
     return false;
 
-  return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                    Other.Children.end());
+  return llvm::equal(Children, Other.Children);
 }
 
 bool CommentInfo::operator<(const CommentInfo &Other) const {
@@ -720,18 +720,16 @@ void Index::sort() {
     C.sort();
 }
 
-ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
-                                 StringRef ProjectName, bool PublicOnly,
-                                 StringRef OutDirectory, StringRef SourceRoot,
-                                 StringRef RepositoryUrl,
-                                 StringRef RepositoryLinePrefix, StringRef Base,
-                                 std::vector<std::string> UserStylesheets,
-                                 clang::DiagnosticsEngine &Diags,
-                                 OutputFormatTy Format, bool FTimeTrace)
+ClangDocContext::ClangDocContext(
+    tooling::ExecutionContext *ECtx, StringRef ProjectName, bool PublicOnly,
+    StringRef OutDirectory, StringRef SourceRoot, StringRef RepositoryUrl,
+    StringRef RepositoryLinePrefix, StringRef Base,
+    std::vector<std::string> UserStylesheets, clang::DiagnosticsEngine &Diags,
+    OutputFormatTy Format, bool FTimeTrace, bool Pretty)
     : ECtx(ECtx), ProjectName(ProjectName), OutDirectory(OutDirectory),
       SourceRoot(std::string(SourceRoot)), UserStylesheets(UserStylesheets),
       Base(Base), Diags(Diags), Format(Format), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace) {
+      FTimeTrace(FTimeTrace), Pretty(Pretty) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

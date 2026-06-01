@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -1131,7 +1133,7 @@ supported for the ``amdgcn`` target.
 
   These pointers can be created by ``addrspacecast`` from a buffer resource
   (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
-  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
+  ``ptr addrspace(9)`` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
@@ -1323,6 +1325,45 @@ It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
 intrinsics. Reading from or writing to such pointers is undefined behavior.
+
+Strided Buffer Marker (``stridemark``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The strided buffer marker type ``target("amdgpu.stridemark")`` is a type used to
+allow representing the mixed index/offset access provided by buffer instructions,
+which is used with ``ptr addrspace(9)`` - a pointer that carries both indices.
+
+This type is a compile-time marker that has no real value and appears only in
+element type metadata. No value of this type can be created.
+
+The marker type has one optional parameter - an integer indicating the constant
+value of the stride of the buffer(s) being addressed if known. That integer, if
+given, must be non-negative (but can be 0, indicating the degenarate case where
+no stride is set but the index field should be used anyway).
+
+When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
+represent indexing into the *index* component of the structured/strided buffer,
+while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
+part.
+
+Example usage:
+
+.. code-block:: llvm
+
+      ;; A 2-D array of unknown length and stride.
+      %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
+        i32 %index)
+      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
+
+      ;; Known bounds on index and offset.
+      %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
+        i32 %index)
+      %y = getelementptr ptr addrspace(9) %y1, i32 %offset
+
+Note that the lowering for these examples is not yet implemented and will
+be added in future changes.
 
 LLVM IR Intrinsics
 ------------------

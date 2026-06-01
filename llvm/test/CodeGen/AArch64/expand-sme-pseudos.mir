@@ -56,7 +56,7 @@ body:             |
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp
-    ; CHECK-NEXT: MSR 56965, $xzr
+    ; CHECK-NEXT: MSR 24197, $xzr
     ; CHECK-NEXT: B %bb.2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
@@ -87,7 +87,7 @@ body:             |
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp, implicit-def $zab0
-    ; CHECK-NEXT: MSR 56965, $xzr
+    ; CHECK-NEXT: MSR 24197, $xzr
     ; CHECK-NEXT: ZERO_M 255, implicit-def $zab0
     ; CHECK-NEXT: B %bb.2
     ; CHECK-NEXT: {{  $}}
@@ -119,7 +119,7 @@ body:             |
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp, implicit-def $zt0
-    ; CHECK-NEXT: MSR 56965, $xzr
+    ; CHECK-NEXT: MSR 24197, $xzr
     ; CHECK-NEXT: $zt0 = ZERO_T
     ; CHECK-NEXT: B %bb.2
     ; CHECK-NEXT: {{  $}}
@@ -151,7 +151,7 @@ body:             |
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp, implicit-def $zab0, implicit-def $zt0
-    ; CHECK-NEXT: MSR 56965, $xzr
+    ; CHECK-NEXT: MSR 24197, $xzr
     ; CHECK-NEXT: ZERO_M 255, implicit-def $zab0
     ; CHECK-NEXT: $zt0 = ZERO_T
     ; CHECK-NEXT: B %bb.2

@@ -330,11 +330,21 @@ namespace cxx_member_operator_call {
     Foo& operator+(RefCountable* bad);
     friend Foo& operator-(Foo& lhs, RefCountable* bad);
     void operator()(RefCountable* bad);
+    int operator[](unsigned i);
   };
 
   RefCountable* global;
 
-  void foo() {
+  struct Container : public RefCountable {
+    int m[4];
+    int& operator[](unsigned i) {
+      some_function();
+      return m[i];
+    }
+  };
+  Container container();
+
+  void foo12() {
     Foo f;
     f + global;
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
@@ -342,6 +352,8 @@ namespace cxx_member_operator_call {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
     f(global);
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
+    container()[0] = 3;
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 }
 
@@ -486,6 +498,48 @@ namespace call_with_adopt_ref {
   void foo() {
     adoptRef(new Obj)->method();
   }
+}
+
+namespace call_on_member {
+
+  class SomeObj {
+  public:
+    static Ref<SomeObj> create() { return adoptRef(*new SomeObj); }
+
+    void ref() const;
+    void deref() const;
+
+    void doWork() {
+      m_obj->method();
+      // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+      m_obj.get()->method();
+      // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+      m_constObj->method();
+    }
+
+    void localWork() {
+      RefPtr obj = provide();
+      obj->method();
+      obj.get()->method();
+    }
+
+    void argWork(RefPtr<RefCountable> arg) {
+      arg->method();
+      arg.get()->method();
+    }
+
+    void temporaryWork() {
+      RefPtr { provide() }->method();
+      RefPtr { provide() }.get()->method();
+    }
+
+    void work();
+
+  private:
+    RefPtr<RefCountable> m_obj;
+    const RefPtr<RefCountable> m_constObj;
+  };
+
 }
 
 namespace call_with_weak_ptr {

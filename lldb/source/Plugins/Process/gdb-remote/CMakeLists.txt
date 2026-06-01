@@ -36,6 +36,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   GDBRemoteCommunicationServerCommon.cpp
   GDBRemoteCommunicationServerLLGS.cpp
   GDBRemoteCommunicationServerPlatform.cpp
+  LLDBServerAcceleratorPlugin.cpp
   GDBRemoteRegisterContext.cpp
   GDBRemoteRegisterFallback.cpp
   ProcessGDBRemote.cpp

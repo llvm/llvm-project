@@ -1526,3 +1526,130 @@ define i64 @pr137274(ptr %ptr) {
   %mul = mul i64 %add, %conv
   ret i64 %mul
 }
+
+
+
+define i64 @umaddl_or(i32 %a, i32 %b, i64 %c) {
+; CHECK-LABEL: umaddl_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    umull x8, w0, w1
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ae = zext i32 %a to i64
+  %be = zext i32 %b to i64
+  %mul = mul nuw i64 %ae, %be
+  %add = or disjoint i64 %mul, %c
+  ret i64 %add
+}
+
+define i64 @smaddl_or(i32 %a, i32 %b, i64 %c) {
+; CHECK-LABEL: smaddl_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    smull x8, w0, w1
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ae = sext i32 %a to i64
+  %be = sext i32 %b to i64
+  %mul = mul nuw i64 %ae, %be
+  %add = or disjoint i64 %mul, %c
+  ret i64 %add
+}
+
+define i64 @umaddl_or_3(i32 %a, i32 %b, i64 %c) {
+; CHECK-LABEL: umaddl_or_3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    umull x8, w0, w8
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ae = zext i32 %a to i64
+  %mul = mul nuw i64 %ae, 23
+  %add = or disjoint i64 %mul, %c
+  ret i64 %add
+}
+
+define i64 @smaddl_or_inreg3(i64 %a, i32 %b, i64 %c) {
+; CHECK-LABEL: smaddl_or_inreg3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #23 // =0x17
+; CHECK-NEXT:    smull x8, w0, w8
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %at = trunc i64 %a to i32
+  %ae = sext i32 %at to i64
+  %mul = mul nuw i64 %ae, 23
+  %add = or disjoint i64 %mul, %c
+  ret i64 %add
+}
+
+define i64 @umaddl_ldrb_h_or(ptr %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldrb_h_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    umull x8, w8, w1
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, ptr %x0
+  %zext = zext i8 %ext64 to i64
+  %zext4 = zext i32 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  %add = or disjoint i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @smaddl_ldrb_h_or(ptr %x0, i32 %x1, i64 %x2) {
+; CHECK-LABEL: smaddl_ldrb_h_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrsb x8, [x0]
+; CHECK-NEXT:    smull x8, w8, w1
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, ptr %x0
+  %zext = sext i8 %ext64 to i64
+  %zext4 = sext i32 %x1 to i64
+  %mul = mul i64 %zext4, %zext
+  %add = or disjoint i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @umaddl_ldrb2_or(ptr %x0, ptr %x1, i64 %x2) {
+; CHECK-LABEL: umaddl_ldrb2_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrb w8, [x0]
+; CHECK-NEXT:    ldrb w9, [x1]
+; CHECK-NEXT:    umull x8, w9, w8
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, ptr %x0
+  %zext = zext i8 %ext64 to i64
+  %x1l = load i8, ptr %x1
+  %zext4 = zext i8 %x1l to i64
+  %mul = mul i64 %zext4, %zext
+  %add = or disjoint i64 %mul, %x2
+  ret i64 %add
+}
+
+define i64 @smaddl_ldrb2_or(ptr %x0, ptr %x1, i64 %x2) {
+; CHECK-LABEL: smaddl_ldrb2_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrsb x8, [x0]
+; CHECK-NEXT:    ldrsb x9, [x1]
+; CHECK-NEXT:    smull x8, w9, w8
+; CHECK-NEXT:    orr x0, x8, x2
+; CHECK-NEXT:    ret
+entry:
+  %ext64 = load i8, ptr %x0
+  %zext = sext i8 %ext64 to i64
+  %x1l = load i8, ptr %x1
+  %zext4 = sext i8 %x1l to i64
+  %mul = mul i64 %zext4, %zext
+  %add = or disjoint i64 %mul, %x2
+  ret i64 %add
+}

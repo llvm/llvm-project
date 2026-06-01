@@ -314,19 +314,18 @@ public:
   ///        by this change. For a simple bind, this list will be the same as
   ///        \p ExplicitRegions, since a bind does not affect the contents of
   ///        anything accessible through the base region.
-  /// \param LCtx LocationContext that is useful for getting various contextual
+  /// \param SF StackFrame that is useful for getting various contextual
   ///        info, like callstack, CFG etc.
   /// \param Call The opaque call triggering this invalidation. Will be 0 if the
   ///        change was not triggered by a call.
   ///
   /// check::RegionChanges
   ProgramStateRef
-    checkRegionChanges(ProgramStateRef State,
-                       const InvalidatedSymbols *Invalidated,
-                       ArrayRef<const MemRegion *> ExplicitRegions,
-                       ArrayRef<const MemRegion *> Regions,
-                       const LocationContext *LCtx,
-                       const CallEvent *Call) const {
+  checkRegionChanges(ProgramStateRef State,
+                     const InvalidatedSymbols *Invalidated,
+                     ArrayRef<const MemRegion *> ExplicitRegions,
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const {
     return State;
   }
 

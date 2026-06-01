@@ -20,6 +20,7 @@
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServerCommon.h"
+#include "LLDBServerAcceleratorPlugin.h"
 
 class StringExtractorGDBRemote;
 
@@ -72,6 +73,9 @@ public:
   ///     attach operation.
   Status AttachWaitProcess(llvm::StringRef process_name, bool include_existing);
 
+  void InstallPlugin(
+      std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> plugin_up);
+
   // NativeProcessProtocol::NativeDelegate overrides
   void InitializeDelegate(NativeProcessProtocol *process) override;
 
@@ -104,6 +108,8 @@ protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;
   NativeProcessProtocol::Manager &m_process_manager;
+  std::vector<std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin>>
+      m_accelerator_plugins;
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
   NativeProcessProtocol *m_current_process;
@@ -279,6 +285,9 @@ protected:
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_jMultiBreakpoint(StringExtractorGDBRemote &packet);
+
+  PacketResult
+  Handle_jAcceleratorPluginInitialize(StringExtractorGDBRemote &packet);
 
   void SetCurrentThreadID(lldb::tid_t tid);
 
