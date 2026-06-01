@@ -31,10 +31,10 @@ class UndefBranchChecker : public Checker<check::BranchCondition> {
 
   struct FindUndefExpr {
     ProgramStateRef St;
-    const LocationContext *LCtx;
+    const StackFrame *SF;
 
-    FindUndefExpr(ProgramStateRef S, const LocationContext *L)
-        : St(std::move(S)), LCtx(L) {}
+    FindUndefExpr(ProgramStateRef S, const StackFrame *SF)
+        : St(std::move(S)), SF(SF) {}
 
     const Expr *FindExpr(const Expr *Ex) {
       if (!MatchesCriteria(Ex))
@@ -49,7 +49,7 @@ class UndefBranchChecker : public Checker<check::BranchCondition> {
     }
 
     bool MatchesCriteria(const Expr *Ex) {
-      return St->getSVal(Ex, LCtx).isUndef();
+      return St->getSVal(Ex, SF).isUndef();
     }
   };
 
@@ -97,7 +97,7 @@ void UndefBranchChecker::checkBranchCondition(const Stmt *Condition,
     if (PS->getStmt() == Ex)
       St = PrevN->getState();
 
-  FindUndefExpr FindIt(St, Ctx.getLocationContext());
+  FindUndefExpr FindIt(St, Ctx.getStackFrame());
   Ex = FindIt.FindExpr(Ex);
 
   // Emit the bug report.

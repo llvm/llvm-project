@@ -59,6 +59,9 @@ static Error readInteger(StringRef Buffer, const char *Src, T &Val,
   return Error::success();
 }
 
+/// Read a null-terminated string at the position Src from Buffer, with maximum
+/// byte size of MaxSize (including the null-terminator). Advance Src by the
+/// number of bytes read.
 static Error readString(StringRef Buffer, const char *&Src, size_t MaxSize,
                         StringRef &Val, Twine Desc) {
   if (readIsOutOfBounds(Buffer, Src, MaxSize))
@@ -78,7 +81,11 @@ static Error readString(StringRef Buffer, const char *&Src, size_t MaxSize,
 DXContainer::DXContainer(MemoryBufferRef O) : Data(O) {}
 
 Error DXContainer::parseHeader() {
-  return readStruct(Data.getBuffer(), Data.getBuffer().data(), Header);
+  if (Error Err = readStruct(Data.getBuffer(), Data.getBuffer().data(), Header))
+    return Err;
+  if (StringRef(reinterpret_cast<char *>(Header.Magic), 4) != "DXBC")
+    return parseFailed("Missing DXBC header magic");
+  return Error::success();
 }
 
 Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {
@@ -180,6 +187,36 @@ Error DirectX::Signature::initialize(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parseCompilerVersionInfo(StringRef Part) {
+  if (VersionInfo)
+    return parseFailed("more than one VERS part is present in the file");
+  const char *Current = Part.begin();
+  dxbc::CompilerVersionHeader Header;
+  if (Error Err = readStruct(Part, Current, Header))
+    return Err;
+  Current += sizeof(Header);
+
+  if (!dxbc::isValidCompilerVersionFlags(to_underlying(Header.Flags)))
+    return parseFailed("Incorrect shader compiler version flags combination");
+
+  StringRef CommitSha;
+  const char *Prev = Current;
+  if (Error Err = readString(Part, Current, Header.ContentSizeInBytes,
+                             CommitSha, "CommitSha"))
+    return Err;
+  StringRef CustomVersionString;
+  if (Error Err = readString(Part, Current,
+                             Header.ContentSizeInBytes - (Current - Prev),
+                             CustomVersionString, "CustomVersionString"))
+    return Err;
+
+  VersionInfo.emplace();
+  VersionInfo->Parameters = Header;
+  VersionInfo->CommitSha = CommitSha;
+  VersionInfo->CustomVersionString = CustomVersionString;
+  return Error::success();
+}
+
 Error DXContainer::parsePartOffsets() {
   uint32_t LastOffset =
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
@@ -254,6 +291,10 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::RTS0:
       if (Error Err = parseRootSignature(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::VERS:
+      if (Error Err = parseCompilerVersionInfo(PartData))
         return Err;
       break;
     }

@@ -19,6 +19,15 @@ function(_get_common_test_compile_options output_var c_test flags)
       ${config_flags}
       ${arch_flags})
 
+  # EXPECT_DEATH and ASSERT_DEATH might be quite slow.  LIBC_TEST_SKIP_DEATH_TESTS
+  # will make those tests no-op to reduce the overall test time.
+  if(LIBC_TEST_SKIP_DEATH_TESTS)
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      message(STATUS "LIBC_TEST_SKIP_DEATH_TESTS is set.  EXPECT_DEATH/ASSERT_DEATH are no-op.")
+    endif()
+    list(APPEND compile_options "-DLIBC_TEST_SKIP_DEATH_TESTS")
+  endif()
+
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
 
@@ -44,7 +53,12 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
     endif()
-    list(APPEND compile_options "-Wconversion")
+    if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13.0.0"))
+      list(APPEND compile_options "-Wconversion")
+    else()
+      list(APPEND compile_options "-Wno-type-limits")
+      list(APPEND compile_options "-Wno-attributes")
+    endif()
     # FIXME: convert to -Wsign-conversion
     list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
@@ -65,6 +79,10 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
+    endif()
+
+    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
+      list(APPEND compile_options "-Wno-fenv-access")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
