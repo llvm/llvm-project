@@ -463,7 +463,7 @@ for it (vs something else, like 90 columns).
 However, documentation files are not source code files, and instead of fitting into 80 columns, they must be formatted to one sentence per line.
 This way a change in the middle of a paragraph doesn't cause unnecessary changes in subsequent lines, making it easier for reviewers to see what has changed when documentation is updated.
 
-Another exception are TableGen files (*.td).
+Another exception are TableGen files (.td).
 There are no tools that can parse, verify and edit them to match our coding style, including clang-format, so they are excluded from this limit.
 It is still good practice to try to fit them into 80 columns, but it is not a requirement.
 As with other changes, if you patch a TD file, do not reformat the entire file, but only the lines you are changing.
