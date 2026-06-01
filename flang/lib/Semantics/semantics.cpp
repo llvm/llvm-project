@@ -697,7 +697,8 @@ bool Semantics::Perform() {
     return false;
   }
 
-  // When compiling with offloading, write only the host's module file. The device invocations would otherwise overwrite the host's mod file.
+  // When compiling with offloading, write only the host's module file. The
+  // device invocations would otherwise overwrite the host's mod file.
   if (context_.langOptions().OffloadDevice) {
     return true;
   }
