@@ -909,8 +909,7 @@ public:
   /// Iterate HeaderFileInfo structures and their corresponding FileEntryRef, if
   /// they have ever been filled in locally.
   void forEachExistingLocalFileInfo(
-      llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn)
-      const;
+      llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const;
 
   SearchDirIterator search_dir_begin() { return {*this, 0}; }
   SearchDirIterator search_dir_end() { return {*this, SearchDirs.size()}; }

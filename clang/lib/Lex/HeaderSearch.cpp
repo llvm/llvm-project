@@ -1417,8 +1417,7 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
 }
 
 void HeaderSearch::forEachExistingLocalFileInfo(
-    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn)
-    const {
+    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const {
   for (const auto &[FE, HFI] : FileInfo)
     if (HFI.IsValid && !HFI.External)
       Fn(FE, HFI);

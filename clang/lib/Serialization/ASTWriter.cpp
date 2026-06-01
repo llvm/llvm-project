@@ -246,17 +246,17 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   }
 
   // Handle textually-included headers that belong to other modules.
-  HS.forEachExistingLocalFileInfo([&](FileEntryRef File,
-                                      const HeaderFileInfo &HFI) {
-    if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
-      return; // Modular header, handled in the above module-based loop.
-    if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
-      return; // Non-modular header not included locally is not affecting.
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Modular header, handled in the above module-based loop.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Non-modular header not included locally is not affecting.
 
-    for (const auto &KH : HS.findResolvedModulesForHeader(File))
-      if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
-  });
+        for (const auto &KH : HS.findResolvedModulesForHeader(File))
+          if (const Module *M = KH.getModule())
+            CollectModuleMapsForHierarchy(M, AR_TextualHeader);
+      });
 
   // FIXME: This algorithm is not correct for module map hierarchies where
   // module map file defining a (sub)module of a top-level module X includes
@@ -2239,34 +2239,36 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  HS.forEachExistingLocalFileInfo([&](FileEntryRef File,
-                                     const HeaderFileInfo &HFI) {
-    if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
-      return; // Header file info is tracked by the owning module file.
-    if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
-      return; // Header file info is tracked by the including module file.
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Header file info is tracked by the owning module file.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Header file info is tracked by the including module file.
 
-    // Massage the file path into an appropriate form.
-    StringRef Filename = File.getName();
-    SmallString<128> FilenameTmp(Filename);
-    if (PreparePathForOutput(FilenameTmp)) {
-      // If we performed any translation on the file name at all, we need to
-      // save this string, since the generator will refer to it later.
-      Filename = StringRef(strdup(FilenameTmp.c_str()));
-      SavedStrings.push_back(Filename.data());
-    }
+        // Massage the file path into an appropriate form.
+        StringRef Filename = File.getName();
+        SmallString<128> FilenameTmp(Filename);
+        if (PreparePathForOutput(FilenameTmp)) {
+          // If we performed any translation on the file name at all, we need to
+          // save this string, since the generator will refer to it later.
+          Filename = StringRef(strdup(FilenameTmp.c_str()));
+          SavedStrings.push_back(Filename.data());
+        }
 
-    bool Included = HFI.IsLocallyIncluded || PP->alreadyIncluded(File);
+        bool Included = HFI.IsLocallyIncluded || PP->alreadyIncluded(File);
 
-    HeaderFileInfoTrait::key_type Key = {
-        Filename, File.getSize(),
-        getTimestampForOutput(File.getModificationTime())};
-    HeaderFileInfoTrait::data_type Data = {
-      HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(File), {}
-    };
-    Generator.insert(Key, Data, GeneratorTrait);
-    ++NumHeaderSearchEntries;
-  });
+        HeaderFileInfoTrait::key_type Key = {
+            Filename, File.getSize(),
+            getTimestampForOutput(File.getModificationTime())};
+        HeaderFileInfoTrait::data_type Data = {
+            HFI,
+            Included,
+            HS.getModuleMap().findResolvedModulesForHeader(File),
+            {}};
+        Generator.insert(Key, Data, GeneratorTrait);
+        ++NumHeaderSearchEntries;
+      });
 
   // Create the on-disk hash table in a buffer.
   SmallString<4096> TableData;
