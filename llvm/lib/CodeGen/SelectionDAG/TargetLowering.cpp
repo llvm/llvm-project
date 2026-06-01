@@ -13093,7 +13093,7 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
 
   // No legal step vector: split mask in half and recombine results.
   // LoNumElts uses the non-poison CTTZ_ELTS so its result is well-defined
-  // (== |LoNumElts| when no active lane), allowing the SETNE comparison.
+  // (== LoNumElts when no active lane), allowing the SETNE comparison.
   // Result: (ResLo != LoNumElts) ? ResLo : (LoNumElts + ResHi)
   if (!StepVec) {
     EVT ResVT = Node->getValueType(0);
