@@ -11,6 +11,20 @@ import util
 
 
 class DiffFlags:
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "ignore_all_space",
+        "ignore_space_change",
+        "ignore_matching_lines",
+        "ignore_matching_lines_regex",
+        "unified_diff",
+        "num_context_lines",
+        "recursive_diff",
+        "strip_trailing_cr",
+    )
+
     def __init__(self):
         self.ignore_all_space = False
         self.ignore_space_change = False

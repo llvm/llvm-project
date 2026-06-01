@@ -12923,14 +12923,14 @@ static int matchShuffleAsVSHLD(MVT &ShiftVT, SDValue &V1, SDValue &V2,
       if (isShuffleEquivalent(Mask, FunnelMask)) {
         MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
         ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
-        return Shift * 8;
+        return Shift * ScalarSizeInBits;
       }
       ShuffleVectorSDNode::commuteMask(FunnelMask);
       if (isShuffleEquivalent(Mask, FunnelMask)) {
         MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
         ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
         std::swap(V1, V2);
-        return Shift * 8;
+        return Shift * ScalarSizeInBits;
       }
     }
   }
@@ -52422,6 +52422,41 @@ static SDValue combineAndNotOrIntoAndNotAnd(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// Fold vXi1 logicop(truncate(N0),truncate(N1)) -> truncate(logicop(X,Y))
+// Generic vector logicops are always quicker than predicate equivalents.
+static SDValue combineMaskBitOp(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
+  using namespace SDPatternMatch;
+  unsigned Opc = N->getOpcode();
+  assert(ISD::isBitwiseLogicOp(Opc) && "Unexpected opcode!");
+  EVT VT = N->getValueType(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (!VT.isVector() || VT.getScalarType() != MVT::i1 || !TLI.isTypeLegal(VT))
+    return SDValue();
+
+  SDValue Src0, Src1;
+  if (sd_match(
+          N, m_BitwiseLogic(m_Trunc(m_Value(Src0)), m_Trunc(m_Value(Src1))))) {
+    EVT SrcVT = Src0.getValueType();
+    if (SrcVT == Src1.getValueType() && TLI.isOperationLegal(Opc, SrcVT)) {
+      return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                         DAG.getNode(Opc, DL, SrcVT, Src0, Src1));
+    }
+  }
+
+  // Attempt to match expanded ANDNOT pattern (if AND is legal then ANDNP is).
+  if (sd_match(N, m_And(m_OneUse(m_Not(m_Trunc(m_Value(Src0)))),
+                        m_Trunc(m_Value(Src1))))) {
+    EVT SrcVT = Src0.getValueType();
+    if (SrcVT == Src1.getValueType() && TLI.isOperationLegal(ISD::AND, SrcVT)) {
+      return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                         DAG.getNode(X86ISD::ANDNP, DL, SrcVT, Src0, Src1));
+    }
+  }
+
+  return SDValue();
+}
+
 // This function recognizes cases where X86 bzhi instruction can replace and
 // 'and-load' sequence.
 // In case of loading integer value from an array of constants which is defined
@@ -52907,6 +52942,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineScalarAndWithMaskSetcc(N, DAG, Subtarget))
     return V;
+
+  if (SDValue R = combineMaskBitOp(N, dl, DAG))
+    return R;
 
   if (SDValue R = combineBitOpWithMOVMSK(N->getOpcode(), dl, N0, N1, DAG))
     return R;
@@ -53682,6 +53720,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
     return SetCC;
+
+  if (SDValue R = combineMaskBitOp(N, dl, DAG))
+    return R;
 
   if (SDValue R = combineBitOpWithMOVMSK(N->getOpcode(), dl, N0, N1, DAG))
     return R;
@@ -56521,6 +56562,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue Cmp = foldVectorXorShiftIntoCmp(N, DAG, Subtarget))
     return Cmp;
+
+  if (SDValue R = combineMaskBitOp(N, DL, DAG))
+    return R;
 
   if (SDValue R = combineBitOpWithMOVMSK(N->getOpcode(), DL, N0, N1, DAG))
     return R;
