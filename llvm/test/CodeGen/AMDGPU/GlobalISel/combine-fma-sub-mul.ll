@@ -5,8 +5,10 @@
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 -fp-contract=fast < %s | FileCheck -check-prefix=GFX10-CONTRACT %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefix=GFX10-DENORM %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT,GFX11-CONTRACT-TRUE16 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -fp-contract=fast < %s | FileCheck -check-prefixes=GFX11-CONTRACT,GFX11-CONTRACT-FAKE16 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-TRUE16 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 --denormal-fp-math=preserve-sign < %s | FileCheck -check-prefixes=GFX11-DENORM,GFX11-DENORM-FAKE16 %s
 
 ; fold (fsub (fmul x, y), z) -> (fma x, y, (fneg z))
 ; fold (fsub x, (fmul y, z)) -> (fma (fneg y), z, x)
@@ -167,19 +169,33 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v0, v2
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-CONTRACT-LABEL: test_half_sub_mul:
-; GFX11-CONTRACT:       ; %bb.0: ; %.entry
-; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    v_fma_f16 v0, v0, v1, -v2
-; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-CONTRACT-TRUE16-LABEL: test_half_sub_mul:
+; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
+; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-CONTRACT-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
+; GFX11-CONTRACT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-DENORM-LABEL: test_half_sub_mul:
-; GFX11-DENORM:       ; %bb.0: ; %.entry
-; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v0, v2
-; GFX11-DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-CONTRACT-FAKE16-LABEL: test_half_sub_mul:
+; GFX11-CONTRACT-FAKE16:       ; %bb.0: ; %.entry
+; GFX11-CONTRACT-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-CONTRACT-FAKE16-NEXT:    v_fma_f16 v0, v0, v1, -v2
+; GFX11-CONTRACT-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-DENORM-TRUE16-LABEL: test_half_sub_mul:
+; GFX11-DENORM-TRUE16:       ; %bb.0: ; %.entry
+; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
+; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-DENORM-FAKE16-LABEL: test_half_sub_mul:
+; GFX11-DENORM-FAKE16:       ; %bb.0: ; %.entry
+; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
+; GFX11-DENORM-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-FAKE16-NEXT:    v_sub_f16_e32 v0, v0, v2
+; GFX11-DENORM-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul half %x, %y
   %b = fsub half %a, %z
@@ -226,19 +242,33 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v0
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-CONTRACT-LABEL: test_half_sub_mul_rhs:
-; GFX11-CONTRACT:       ; %bb.0: ; %.entry
-; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    v_fma_f16 v0, -v0, v1, v2
-; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-CONTRACT-TRUE16-LABEL: test_half_sub_mul_rhs:
+; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
+; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-CONTRACT-TRUE16-NEXT:    v_fma_f16 v0.l, -v0.l, v1.l, v2.l
+; GFX11-CONTRACT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-DENORM-LABEL: test_half_sub_mul_rhs:
-; GFX11-DENORM:       ; %bb.0: ; %.entry
-; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v0
-; GFX11-DENORM-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-CONTRACT-FAKE16-LABEL: test_half_sub_mul_rhs:
+; GFX11-CONTRACT-FAKE16:       ; %bb.0: ; %.entry
+; GFX11-CONTRACT-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-CONTRACT-FAKE16-NEXT:    v_fma_f16 v0, -v0, v1, v2
+; GFX11-CONTRACT-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-DENORM-TRUE16-LABEL: test_half_sub_mul_rhs:
+; GFX11-DENORM-TRUE16:       ; %bb.0: ; %.entry
+; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v2.l, v0.l
+; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-DENORM-FAKE16-LABEL: test_half_sub_mul_rhs:
+; GFX11-DENORM-FAKE16:       ; %bb.0: ; %.entry
+; GFX11-DENORM-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-DENORM-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
+; GFX11-DENORM-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-DENORM-FAKE16-NEXT:    v_sub_f16_e32 v0, v2, v0
+; GFX11-DENORM-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul half %x, %y
   %b = fsub half %z, %a

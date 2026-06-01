@@ -349,6 +349,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
     const char *ClangType;
     switch (Input.getType()) {
     case types::TY_CXXModule:
+    case types::TY_CXXStdModule:
       ClangType = "c++";
       break;
     case types::TY_PP_CXXModule:
@@ -3503,22 +3504,24 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
   }
 
   const std::string &TripleStr = EffectiveTriple.getTriple();
+  StringRef GuardValue;
   if (Arg *A = Args.getLastArg(options::OPT_mstack_protector_guard_EQ)) {
-    StringRef Value = A->getValue();
+    GuardValue = A->getValue();
     if (!EffectiveTriple.isX86() && !EffectiveTriple.isAArch64() &&
         !EffectiveTriple.isARM() && !EffectiveTriple.isThumb() &&
-        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC())
+        !EffectiveTriple.isRISCV() && !EffectiveTriple.isPPC() &&
+        !EffectiveTriple.isSystemZ())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     if ((EffectiveTriple.isX86() || EffectiveTriple.isARM() ||
-         EffectiveTriple.isThumb()) &&
-        Value != "tls" && Value != "global") {
+         EffectiveTriple.isThumb() || EffectiveTriple.isSystemZ()) &&
+        GuardValue != "tls" && GuardValue != "global") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)
-          << A->getOption().getName() << Value << "tls global";
+          << A->getOption().getName() << GuardValue << "tls global";
       return;
     }
     if ((EffectiveTriple.isARM() || EffectiveTriple.isThumb()) &&
-        Value == "tls") {
+        GuardValue == "tls") {
       if (!Args.hasArg(options::OPT_mstack_protector_guard_offset_EQ)) {
         D.Diag(diag::err_drv_ssp_missing_offset_argument)
             << A->getAsString(Args);
@@ -3542,18 +3545,19 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
       CmdArgs.push_back("-target-feature");
       CmdArgs.push_back("+read-tp-tpidruro");
     }
-    if (EffectiveTriple.isAArch64() && Value != "sysreg" && Value != "global") {
+    if (EffectiveTriple.isAArch64() && GuardValue != "sysreg" &&
+        GuardValue != "global") {
       D.Diag(diag::err_drv_invalid_value_with_suggestion)
-          << A->getOption().getName() << Value << "sysreg global";
+          << A->getOption().getName() << GuardValue << "sysreg global";
       return;
     }
     if (EffectiveTriple.isRISCV() || EffectiveTriple.isPPC()) {
-      if (Value != "tls" && Value != "global") {
+      if (GuardValue != "tls" && GuardValue != "global") {
         D.Diag(diag::err_drv_invalid_value_with_suggestion)
-            << A->getOption().getName() << Value << "tls global";
+            << A->getOption().getName() << GuardValue << "tls global";
         return;
       }
-      if (Value == "tls") {
+      if (GuardValue == "tls") {
         if (!Args.hasArg(options::OPT_mstack_protector_guard_offset_EQ)) {
           D.Diag(diag::err_drv_ssp_missing_offset_argument)
               << A->getAsString(Args);
@@ -3649,6 +3653,18 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     if (Width != 4 && Width != 8) {
       D.Diag(diag::err_drv_invalid_int_value)
           << A->getOption().getName() << Value;
+    }
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_mstackprotector_guard_record)) {
+    if (!EffectiveTriple.isSystemZ()) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+      return;
+    }
+    if (GuardValue != "global") {
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << "-mstack-protector-guard-record"
+          << "-mstack-protector-guard=global";
       return;
     }
     A->render(Args, CmdArgs);
@@ -3665,7 +3681,7 @@ static void RenderSCPOptions(const ToolChain &TC, const ArgList &Args,
 
   if (!EffectiveTriple.isX86() && !EffectiveTriple.isSystemZ() &&
       !EffectiveTriple.isPPC64() && !EffectiveTriple.isAArch64() &&
-      !EffectiveTriple.isRISCV())
+      !EffectiveTriple.isRISCV() && !EffectiveTriple.isLoongArch())
     return;
 
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_clash_protection,
@@ -4479,6 +4495,10 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 
+  if (!Args.hasFlag(options::OPT_fdebug_record_sysroot,
+                    options::OPT_fno_debug_record_sysroot, true))
+    CmdArgs.push_back("-fno-debug-record-sysroot");
+
   // The 'g' groups options involve a somewhat intricate sequence of decisions
   // about what to pass from the driver to the frontend, but by the time they
   // reach cc1 they've been factored into three well-defined orthogonal choices:
@@ -5270,7 +5290,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_Nothing)
       CmdArgs.push_back("-fsyntax-only");
     else if (JA.getType() == types::TY_ModuleFile) {
-      if (Args.hasArg(options::OPT__precompile_reduced_bmi))
+      if (Args.hasArg(options::OPT__precompile_reduced_bmi) ||
+          ((Input.getType() == types::TY_CXXStdModule ||
+            Input.getType() == types::TY_PP_CXXStdModule) &&
+           !Args.hasArg(options::OPT_fno_modules_reduced_bmi)))
         CmdArgs.push_back("-emit-reduced-module-interface");
       else
         CmdArgs.push_back("-emit-module-interface");
@@ -7121,10 +7144,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_ftrap_function_EQ);
 
-  // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both
-  // clang and flang.
-  renderCommonIntegerOverflowOptions(Args, CmdArgs);
-
   Args.AddLastArg(CmdArgs, options::OPT_ffinite_loops,
                   options::OPT_fno_finite_loops);
 
@@ -7395,6 +7414,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         Args.hasArg(options::OPT_fms_define_stdc))
       CmdArgs.push_back("-fms-define-stdc");
   }
+
+  // Handle -f[no-]wrapv and -f[no-]strict-overflow, which are used by both
+  // clang and flang.
+  renderCommonIntegerOverflowOptions(Args, CmdArgs, IsMSVCCompat);
 
   // -fms-anonymous-structs is disabled by default.
   // Determine whether to enable Microsoft named anonymous struct/union support.
@@ -9498,6 +9521,39 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs, Inputs, Output));
 }
 
+// Options that need the profile compiler-rt library on the target toolchain.
+// Coverage mapping flags require -fprofile-instr-generate, so they belong here
+// too.
+static bool requiresProfileRT(unsigned ID) {
+  switch (ID) {
+  case options::OPT_fprofile_generate:
+  case options::OPT_fprofile_generate_EQ:
+  case options::OPT_fprofile_instr_generate:
+  case options::OPT_fprofile_instr_generate_EQ:
+  case options::OPT_fcoverage_mapping:
+  case options::OPT_fno_coverage_mapping:
+  case options::OPT_fcoverage_compilation_dir_EQ:
+  case options::OPT_ffile_compilation_dir_EQ:
+  case options::OPT_fcoverage_prefix_map_EQ:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Options that need the ubsan compiler-rt library on the target toolchain.
+static bool requiresUBSanRT(unsigned ID) {
+  switch (ID) {
+  case options::OPT_fsanitize_EQ:
+  case options::OPT_fno_sanitize_EQ:
+  case options::OPT_fsanitize_minimal_runtime:
+  case options::OPT_fno_sanitize_minimal_runtime:
+    return true;
+  default:
+    return false;
+  }
+}
+
 void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfo &Output,
                                  const InputInfoList &Inputs,
@@ -9545,6 +9601,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fprofile_generate_EQ,
       OPT_fprofile_instr_generate,
       OPT_fprofile_instr_generate_EQ,
+      OPT_fcoverage_mapping,
+      OPT_fno_coverage_mapping,
+      OPT_fcoverage_compilation_dir_EQ,
+      OPT_ffile_compilation_dir_EQ,
+      OPT_fcoverage_prefix_map_EQ,
       OPT_fsanitize_EQ,
       OPT_fno_sanitize_EQ,
       OPT_fsanitize_minimal_runtime,
@@ -9552,29 +9613,24 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fsanitize_trap_EQ,
       OPT_fno_sanitize_trap_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
+  auto ToolChainHasRT = [&](const ToolChain &TC, StringRef Name) {
+    return TC.getVFS().exists(
+        TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
+  };
   auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
-    auto HasProfileRT = TC.getVFS().exists(
-        TC.getCompilerRT(Args, "profile", ToolChain::FT_Static));
+    unsigned ID = A->getOption().getID();
     // Don't forward profiling arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
-    if (!HasProfileRT &&
-        (A->getOption().matches(OPT_fprofile_generate) ||
-         A->getOption().matches(OPT_fprofile_generate_EQ) ||
-         A->getOption().matches(OPT_fprofile_instr_generate) ||
-         A->getOption().matches(OPT_fprofile_instr_generate_EQ)))
+    // Coverage mapping flags require -fprofile-instr-generate, so drop them
+    // together to avoid a device cc1 diagnostic.
+    if (requiresProfileRT(ID) && !ToolChainHasRT(TC, "profile"))
       return false;
-    auto HasUBSanRT = TC.getVFS().exists(
-        TC.getCompilerRT(Args, "ubsan_minimal", ToolChain::FT_Static));
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
-    if (!HasUBSanRT &&
-        (A->getOption().matches(OPT_fsanitize_EQ) ||
-         A->getOption().matches(OPT_fno_sanitize_EQ) ||
-         A->getOption().matches(OPT_fsanitize_minimal_runtime) ||
-         A->getOption().matches(OPT_fno_sanitize_minimal_runtime)))
+    if (requiresUBSanRT(ID) && !ToolChainHasRT(TC, "ubsan_minimal"))
       return false;
     // Don't forward -mllvm to toolchains that don't support LLVM.
-    return TC.HasNativeLLVMSupport() || A->getOption().getID() != OPT_mllvm;
+    return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
@@ -9623,10 +9679,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
       // flags to normal compilation.
       // SPIR-V for AMD doesn't use spirv-link and therefore doesn't need these
-      // flags.
+      // flags. SYCL uses clang-sycl-linker instead of spirv-link, so skip it.
       if (TC->getTriple().isSPIRV() &&
           TC->getTriple().getVendor() != llvm::Triple::VendorType::AMD &&
-          !C.getDriver().isUsingLTO() && !C.getDriver().isUsingOffloadLTO()) {
+          Kind != Action::OFK_SYCL && !C.getDriver().isUsingLTO() &&
+          !C.getDriver().isUsingOffloadLTO()) {
         // For SPIR-V some functions will be defined by the runtime so allow
         // unresolved symbols in `spirv-link`.
         LinkerArgs.emplace_back("--allow-partial-linkage");
