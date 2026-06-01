@@ -779,7 +779,7 @@ enum NodeType {
   CLMULR,
   CLMULH,
 
-  /// Bit extract (compress) and bit deposit (expand).
+  /// Parallel bit extract (compress) and parallel bit deposit (expand).
   PEXT,
   PDEP,
 
