@@ -37,6 +37,7 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[C7]], [[C2]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[INT2]], [[SELECT3]]
     ; GFX6-NEXT: $vgpr0 = COPY [[FMUL1]](s32)
+    ;
     ; GFX9-LABEL: name: test_fpow_s32
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -119,6 +120,7 @@ body: |
     ; GFX6-NEXT: [[FMUL3:%[0-9]+]]:_(s32) = G_FMUL [[INT5]], [[SELECT7]]
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[FMUL1]](s32), [[FMUL3]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ;
     ; GFX9-LABEL: name: test_fpow_v2s32
     ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX9-NEXT: {{  $}}
@@ -230,6 +232,7 @@ body: |
     ; GFX6-NEXT: [[FMUL5:%[0-9]+]]:_(s32) = G_FMUL [[INT8]], [[SELECT11]]
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[FMUL1]](s32), [[FMUL3]](s32), [[FMUL5]](s32)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ;
     ; GFX9-LABEL: name: test_fpow_v3s32
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
     ; GFX9-NEXT: {{  $}}
@@ -325,6 +328,7 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = nnan nsz G_SELECT [[FCMP1]](s1), [[C7]], [[C2]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT2]], [[SELECT3]]
     ; GFX6-NEXT: $vgpr0 = COPY [[FMUL1]](s32)
+    ;
     ; GFX9-LABEL: name: test_fpow_s32_flags
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -389,6 +393,7 @@ body: |
     ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX9-LABEL: name: test_fpow_s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -466,6 +471,7 @@ body: |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ;
     ; GFX9-LABEL: name: test_fpow_v2s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -520,8 +526,8 @@ body: |
     ; GFX6-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
     ; GFX6-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
     ; GFX6-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC2]](s16)
+    ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC]](s16)
+    ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC2]](s16)
     ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.log), [[FPEXT]](s32)
     ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[INT]](s32), [[FPEXT1]](s32)
     ; GFX6-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.260000e+02
@@ -535,9 +541,9 @@ body: |
     ; GFX6-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
     ; GFX6-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = nnan nsz G_SELECT [[FCMP]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT2]], [[SELECT1]]
-    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
-    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
-    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC3]](s16)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = nnan nsz G_FPTRUNC [[FMUL]](s32)
+    ; GFX6-NEXT: [[FPEXT2:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC1]](s16)
+    ; GFX6-NEXT: [[FPEXT3:%[0-9]+]]:_(s32) = nnan nsz G_FPEXT [[TRUNC3]](s16)
     ; GFX6-NEXT: [[INT3:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.log), [[FPEXT2]](s32)
     ; GFX6-NEXT: [[INT4:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[INT3]](s32), [[FPEXT3]](s32)
     ; GFX6-NEXT: [[FCMP1:%[0-9]+]]:_(s1) = nnan nsz G_FCMP floatpred(olt), [[INT4]](s32), [[C1]]
@@ -546,13 +552,14 @@ body: |
     ; GFX6-NEXT: [[INT5:%[0-9]+]]:_(s32) = nnan nsz G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[FADD1]](s32)
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = nnan nsz G_SELECT [[FCMP1]](s1), [[C4]], [[C5]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = nnan nsz G_FMUL [[INT5]], [[SELECT3]]
-    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL1]](s32)
+    ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = nnan nsz G_FPTRUNC [[FMUL1]](s32)
     ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX6-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+    ;
     ; GFX9-LABEL: name: test_fpow_v2s16_flags
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}

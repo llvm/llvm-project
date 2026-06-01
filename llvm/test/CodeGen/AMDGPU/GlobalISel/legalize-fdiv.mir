@@ -177,11 +177,11 @@ body: |
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
-    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
-    ; SI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = afn G_FPEXT [[TRUNC]](s16)
+    ; SI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = afn G_FPEXT [[TRUNC1]](s16)
     ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = afn G_INTRINSIC intrinsic(@llvm.amdgcn.rcp), [[FPEXT1]](s32)
     ; SI-NEXT: [[FMUL:%[0-9]+]]:_(s32) = afn G_FMUL [[FPEXT]], [[INT]]
-    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FMUL]](s32)
+    ; SI-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = afn G_FPTRUNC [[FMUL]](s32)
     ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ;

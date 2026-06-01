@@ -2686,9 +2686,9 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   // G_FPTRUNC.
 
   if (DstTy.isBFloat16() && SrcTy.isFloat64()) {
-    auto Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()}, {Src});
-    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid});
+    auto Mid = MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {LLT::float32()},
+                                     {Src}, MI.getFlags());
+    MIRBuilder.buildInstr(AArch64::G_FPTRUNC, {Dst}, {Mid}, MI.getFlags());
     MI.eraseFromParent();
     return true;
   }
@@ -2726,9 +2726,10 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
 
   // Create all of the round-to-odd instructions and store them
   for (auto SrcReg : RegsToUnmergeTo) {
-    Register Mid =
-        MIRBuilder.buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg})
-            .getReg(0);
+    Register Mid = MIRBuilder
+                       .buildInstr(AArch64::G_FPTRUNC_ODD, {v2s32}, {SrcReg},
+                                   MI.getFlags())
+                       .getReg(0);
     TruncOddDstRegs.push_back(Mid);
   }
 
@@ -2744,10 +2745,12 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
               .getReg(0);
 
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v4s16, ConcatDst).getReg(0));
+          MIRBuilder.buildFPTrunc(v4s16, ConcatDst, MI.getFlags()).getReg(0));
     } else {
       RegsToMerge.push_back(
-          MIRBuilder.buildFPTrunc(v2s16, TruncOddDstRegs[Index++]).getReg(0));
+          MIRBuilder
+              .buildFPTrunc(v2s16, TruncOddDstRegs[Index++], MI.getFlags())
+              .getReg(0));
     }
   }
 

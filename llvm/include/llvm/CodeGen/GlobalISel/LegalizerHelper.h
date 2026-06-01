@@ -146,7 +146,7 @@ public:
   /// ExtOpcode for the extension instruction, and replacing the vreg of the
   /// operand in place.
   LLVM_ABI void widenScalarSrc(MachineInstr &MI, LLT WideTy, unsigned OpIdx,
-                               unsigned ExtOpcode);
+                               unsigned ExtOpcode, unsigned Flags = 0);
 
   /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   /// Use by truncating the operand's type to \p NarrowTy using G_TRUNC, and
@@ -157,7 +157,8 @@ public:
   /// Def by extending the operand's type to \p WideTy and truncating it back
   /// with the \p TruncOpcode, and replacing the vreg of the operand in place.
   LLVM_ABI void widenScalarDst(MachineInstr &MI, LLT WideTy, unsigned OpIdx = 0,
-                               unsigned TruncOpcode = TargetOpcode::G_TRUNC);
+                               unsigned TruncOpcode = TargetOpcode::G_TRUNC,
+                               unsigned Flags = 0);
 
   // Legalize a single operand \p OpIdx of the machine instruction \p MI as a
   // Def by truncating the operand's type to \p NarrowTy, replacing in place and

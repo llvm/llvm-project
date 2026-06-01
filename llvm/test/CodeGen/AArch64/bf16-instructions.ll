@@ -164,12 +164,9 @@ define bfloat @test_fadd_fast(bfloat %a, bfloat %b) #0 {
 ; CHECK-CVT-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-CVT-GI-NEXT:    fadd s0, s0, s1
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8
-; CHECK-CVT-GI-NEXT:    orr w9, w9, #0x400000
 ; CHECK-CVT-GI-NEXT:    add w8, w8, w10
-; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, vs
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -361,23 +358,17 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-CVT-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-CVT-GI-NEXT:    shll v1.4s, v2.4h, #16
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-CVT-GI-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-GI-NEXT:    add w11, w8, w10
-; CHECK-CVT-GI-NEXT:    orr w8, w8, #0x400000
-; CHECK-CVT-GI-NEXT:    add w9, w11, w9
-; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, vs
+; CHECK-CVT-GI-NEXT:    add w8, w8, w10
+; CHECK-CVT-GI-NEXT:    add w8, w8, w9
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
 ; CHECK-CVT-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-CVT-GI-NEXT:    fadd s0, s0, s1
 ; CHECK-CVT-GI-NEXT:    fmov w8, s0
-; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-CVT-GI-NEXT:    ubfx w9, w8, #16, #1
-; CHECK-CVT-GI-NEXT:    add w10, w8, w10
-; CHECK-CVT-GI-NEXT:    orr w8, w8, #0x400000
-; CHECK-CVT-GI-NEXT:    add w9, w10, w9
-; CHECK-CVT-GI-NEXT:    csel w8, w8, w9, vs
+; CHECK-CVT-GI-NEXT:    add w8, w8, w10
+; CHECK-CVT-GI-NEXT:    add w8, w8, w9
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -1921,12 +1912,9 @@ define bfloat @test_fptrunc_float_fast(float %a) #0 {
 ; CHECK-CVT-GI:       // %bb.0:
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
 ; CHECK-CVT-GI-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8
-; CHECK-CVT-GI-NEXT:    orr w9, w9, #0x400000
 ; CHECK-CVT-GI-NEXT:    add w8, w8, w10
-; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, vs
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
@@ -1960,12 +1948,9 @@ define bfloat @test_fptrunc_double_fast(double %a) #0 {
 ; CHECK-CVT-GI-NEXT:    fcvtxn s0, d0
 ; CHECK-CVT-GI-NEXT:    mov w8, #32767 // =0x7fff
 ; CHECK-CVT-GI-NEXT:    fmov w9, s0
-; CHECK-CVT-GI-NEXT:    fcmp s0, #0.0
 ; CHECK-CVT-GI-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-CVT-GI-NEXT:    add w8, w9, w8
-; CHECK-CVT-GI-NEXT:    orr w9, w9, #0x400000
 ; CHECK-CVT-GI-NEXT:    add w8, w8, w10
-; CHECK-CVT-GI-NEXT:    csel w8, w9, w8, vs
 ; CHECK-CVT-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-CVT-GI-NEXT:    fmov s0, w8
 ; CHECK-CVT-GI-NEXT:    // kill: def $h0 killed $h0 killed $s0
