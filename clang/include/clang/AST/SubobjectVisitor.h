@@ -31,8 +31,6 @@ template <template <typename> class Ptr, typename Derived>
 class SubobjectVisitorBase {
   ASTContext &Ctx;
   template <typename Class> using ptr_t = typename Ptr<Class>::type;
-  template <typename Class>
-  using non_ptr_t = typename std::remove_pointer<ptr_t<Class>>::type;
 
 public:
   SubobjectVisitorBase(ASTContext &Ctx) : Ctx(Ctx) {}
@@ -60,7 +58,7 @@ public:
 
   void traverseRecord(ptr_t<RecordDecl> RD) {
     if (ptr_t<CXXRecordDecl> CRD = dyn_cast<CXXRecordDecl>(RD)) {
-      for (non_ptr_t<CXXBaseSpecifier &> BS : CRD->bases()) {
+      for (auto &BS : CRD->bases()) {
         if (getDerived().visitBaseSpecifierPre(&BS))
           getDerived().visit(BS.getType());
         getDerived().visitBaseSpecifierPost(&BS);
