@@ -561,7 +561,6 @@ public:
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   QualType getSingleElementType(QualType Ty) const;
-  unsigned getMaxAlignFromTypeDefs(QualType Ty) const;
   std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy,
@@ -694,26 +693,6 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
   return Ty; // not record/union, unchanged
 }
 
-unsigned ZOSXPLinkABIInfo::getMaxAlignFromTypeDefs(QualType Ty) const {
-  unsigned MaxAlign = 0;
-  clang::QualType Cur = Ty;
-
-  while (true) {
-    if (auto *TypedefTy = dyn_cast<TypedefType>(Cur.getTypePtr())) {
-      auto *TyDecl = TypedefTy->getDecl();
-      unsigned CurrAlign = TyDecl->getMaxAlignment();
-      MaxAlign = std::max(CurrAlign, MaxAlign);
-    }
-    // Peel exactly one sugar layer (Typedef, Attributed, Paren, Elaborated,
-    // etc.).
-    clang::QualType Next = Cur.getSingleStepDesugaredType(getContext());
-    if (Next == Cur) // no more sugar to peel
-      break;
-    Cur = Next;
-  }
-  return MaxAlign;
-}
-
 std::optional<QualType>
 ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAsStructureType()) {
@@ -740,13 +719,8 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
-      // A record can be treated as complex-like if its size is exactly
-      // 2 * sizeof(T), matching the layout of two adjacent FP elements.
       QualType FT = FD->getType();
       QualType FTSingleTy = getSingleElementType(FT);
-      auto &Ctx = getContext();
-      if (Ctx.getTypeSize(Ty) != 2 * Ctx.getTypeSize(FTSingleTy))
-        return std::nullopt;
 
       if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
         switch (BT->getKind()) {
@@ -771,8 +745,11 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
     }
 
     if (Count == 2) {
-      // Size was already verified in the loop - no padding exists
-      return RetTy;
+      // A record can be treated as complex-like if its size is exactly
+      // 2 * sizeof(T), matching the layout of two adjacent FP elements.
+      auto &Ctx = getContext();
+      if (Ctx.getTypeSize(Ty) == 2 * Ctx.getTypeSize(RetTy))
+        return RetTy;
     }
   }
   return std::nullopt;
