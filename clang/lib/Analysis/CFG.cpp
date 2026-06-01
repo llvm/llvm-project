@@ -814,7 +814,7 @@ private:
                                LocalScope::const_iterator DstPos,
                                Stmt *S);
   void addFullExprCleanupMarker(TempDtorContext &Context,
-                                const Stmt *CleanupStmt);
+                                const ExprWithCleanups *CleanupExpr);
   CFGBlock *createScopeChangesHandlingBlock(LocalScope::const_iterator SrcPos,
                                             CFGBlock *SrcBlk,
                                             LocalScope::const_iterator DstPost,
@@ -1842,10 +1842,11 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      Expr *FullExpr = cast<ExprWithCleanups>(ActualInit)->getSubExpr();
-      VisitForTemporaries(FullExpr, /*ExternallyDestructed=*/false, Context);
+      auto *FullExprWithCleanups = cast<ExprWithCleanups>(ActualInit);
+      VisitForTemporaries(FullExprWithCleanups->getSubExpr(),
+                          /*ExternallyDestructed=*/false, Context);
 
-      addFullExprCleanupMarker(Context, FullExpr);
+      addFullExprCleanupMarker(Context, FullExprWithCleanups);
     }
   }
 
@@ -2098,7 +2099,7 @@ void CFGBuilder::addScopeChangesHandling(LocalScope::const_iterator SrcPos,
 }
 
 void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context,
-                                          const Stmt *CleanupStmt) {
+                                          const ExprWithCleanups *CleanupExpr) {
   CFGFullExprCleanup::MTEVecTy *ExpiringMTEs = nullptr;
   BumpVectorContext &BVC = cfg->getBumpVectorContext();
 
@@ -2109,7 +2110,7 @@ void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context,
         CFGFullExprCleanup::MTEVecTy(BVC, NumCollected);
     for (const MaterializeTemporaryExpr *MTE : Context.CollectedMTEs)
       ExpiringMTEs->push_back(MTE, BVC);
-    Block->appendFullExprCleanup(ExpiringMTEs, CleanupStmt, BVC);
+    Block->appendFullExprCleanup(ExpiringMTEs, CleanupExpr, BVC);
   }
 }
 
@@ -3175,10 +3176,11 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      Expr *FullExpr = cast<ExprWithCleanups>(Init)->getSubExpr();
-      VisitForTemporaries(FullExpr, /*ExternallyDestructed=*/true, Context);
+      auto *FullExprWithCleanups = cast<ExprWithCleanups>(Init);
+      VisitForTemporaries(FullExprWithCleanups->getSubExpr(),
+                          /*ExternallyDestructed=*/true, Context);
 
-      addFullExprCleanupMarker(Context, FullExpr);
+      addFullExprCleanupMarker(Context, FullExprWithCleanups);
     }
   }
 
@@ -4995,7 +4997,7 @@ CFGBlock *CFGBuilder::VisitExprWithCleanups(ExprWithCleanups *E,
     Expr *FullExpr = E->getSubExpr();
     VisitForTemporaries(FullExpr, ExternallyDestructed, Context);
 
-    addFullExprCleanupMarker(Context, FullExpr);
+    addFullExprCleanupMarker(Context, E);
 
     // Full expression has to be added as CFGStmt so it will be sequenced
     // before destructors of it's temporaries.
