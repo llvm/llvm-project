@@ -2304,16 +2304,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     }
 
     case Stmt::PseudoObjectExprClass: {
-      ProgramStateRef state = Pred->getState();
       const auto *PE = cast<PseudoObjectExpr>(S);
-      // FIXME: Simplify
-      if (const Expr *Result = PE->getResultExpr()) {
-        SVal V = state->getSVal(Result, Pred->getStackFrame());
-        Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
-      }
-      else
-        Dst.insert(Engine.makeNodeWithBinding(Pred, PE, UnknownVal()));
-
+      SVal V = UnknownVal();
+      if (const Expr *Result = PE->getResultExpr())
+        V = Pred->getState()->getSVal(Result, Pred->getStackFrame());
+      Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
       break;
     }
 
