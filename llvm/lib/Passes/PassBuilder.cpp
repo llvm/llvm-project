@@ -83,6 +83,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -352,6 +353,7 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
@@ -829,6 +831,17 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
 Expected<bool> parseLintOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
                                             "LintPass");
+}
+
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
+}
+
+/// Parser of parameters for InstCount pass.
+Expected<bool> parseInstCountOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.
@@ -1428,16 +1441,36 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
 }
 
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+  SROAOptions Result(SROAOptions::ModifyCFG);
+  bool SawCFGOption = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "modify-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::ModifyCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "preserve-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::PreserveCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "aggregate-to-vector") {
+      Result.AggregateToVector = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SROA pass parameter '{}' (expected preserve-cfg, "
+                  "modify-cfg, or aggregate-to-vector)",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 Expected<StackLifetime::LivenessType>

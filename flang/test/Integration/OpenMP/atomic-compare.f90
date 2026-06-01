@@ -6,7 +6,8 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
+!RUN: %if x86-registered-target %{ %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s %}
+!RUN: %if aarch64-registered-target %{ %flang_fc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s %}
 
 ! Int "==" → cmpxchg, default (monotonic) ordering
 !CHECK-LABEL: define void @atomic_compare_integer_(
@@ -33,7 +34,7 @@ subroutine atomic_compare_seq_cst(x, e, d)
   if (x == e) x = d
 end
 
-! acquire ordering → cmpxchg acquire
+! acquire ordering on compare (update) is valid in OpenMP 5.1
 !CHECK-LABEL: define void @atomic_compare_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]], ptr noalias %[[D:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4
@@ -93,7 +94,7 @@ subroutine atomic_compare_lt_seq_cst(x, e)
   if (x < e) x = e
 end
 
-! Less-than with acquire → atomicrmw max acquire (signed)
+! Less-than with acquire on compare (update) is valid in OpenMP 5.1
 !CHECK-LABEL: define void @atomic_compare_lt_acquire_(
 !CHECK-SAME: ptr noalias %[[X:.*]], ptr noalias %[[E:.*]])
 !CHECK: %[[EVAL:.*]] = load i32, ptr %[[E]], align 4

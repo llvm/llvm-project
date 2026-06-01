@@ -62,17 +62,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_test(
-  mblen_test
-  SUITE
-    libc_wchar_unittests
-  SRCS
-    mblen_test.cpp
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.src.wchar.mblen
-    libc.test.UnitTest.ErrnoCheckingTest
-)
 
 add_libc_test(
   mbsrtowcs_test

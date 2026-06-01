@@ -79,7 +79,9 @@ protected:
                                  const llvm::Triple &TargetTriple,
                                  StringRef SysRoot) const override;
   void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
   path_list getArchSpecificLibPaths() const override;

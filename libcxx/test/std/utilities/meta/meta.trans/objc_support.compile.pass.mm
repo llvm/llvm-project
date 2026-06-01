@@ -10,8 +10,6 @@
 
 // Simple test to check that type traits support Objective-C types.
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <type_traits>
 #include "test_macros.h"
 
@@ -34,16 +32,6 @@ static_assert(std::is_same<std::add_rvalue_reference<I>::type, I&&>::value, "");
 static_assert(std::is_same<std::decay<id>::type, id>::value, "");
 static_assert(std::is_same<std::decay<I>::type, I>::value, "");
 static_assert(std::is_same<std::decay<id(&)[5]>::type, id*>::value, "");
-
-// __is_referenceable_v
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id*>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id&>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<id&&>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I*>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I&>, "");
-LIBCPP_STATIC_ASSERT(std::__is_referenceable_v<I&&>, "");
 
 // remove_all_extents
 static_assert(std::is_same<std::remove_all_extents<id>::type, id>::value, "");
