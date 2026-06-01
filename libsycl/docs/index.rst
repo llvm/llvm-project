@@ -113,6 +113,10 @@ TODO for added SYCL classes
   * to implement submit & copy with accessors (low priority)
   * get_info & properties
   * ctors that accepts context (blocked by lack of liboffload support)
+  * nd_range kernel submissions
+  * cross-context events wait (host tasks are needed)
+  * implement check if lambda arguments are device copyable (requires clang support of corresponding builtins) unless FE will fully cover it
+  * kernel instantiating on host (debugging purposes)
 
 * ``property_list``: to fully implement and integrate with existing SYCL runtime classes supporting it
 * usm allocations:
