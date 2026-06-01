@@ -6068,8 +6068,8 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   // -> VPExpressionRecipe(op, sub/neg, red)
   if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
     auto *Neg = cast<VPWidenRecipe>(VecOp);
-    auto *Ext = cast<VPWidenCastRecipe>(
-        Neg->getOperand(Neg->getNumOperands() - 1));
+    auto *Ext =
+        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
     return new VPExpressionRecipe(Ext, Neg, Red);
   }
 
