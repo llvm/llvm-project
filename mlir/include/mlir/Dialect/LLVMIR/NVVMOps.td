@@ -1131,13 +1131,15 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
     within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
     all non-exited threads participating in the barrier to arrive.
 
-    The operation takes the following optional operands:
+    The operation takes the following optional operands and attributes:
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
       Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to true.
 
     Reduction variants of the barrier instruction are modeled by the
     `nvvm.barrier.reduction` op.
@@ -1159,7 +1161,8 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
 
   let arguments = (ins
       Optional<I32>:$barrierId,
-      Optional<I32>:$numberOfThreads);
+      Optional<I32>:$numberOfThreads,
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
@@ -1184,10 +1187,12 @@ def NVVM_BarrierReductionOp :
       per-thread predicates.
     - `reductionPredicate`: The per-thread i32 predicate. It is compared against
       zero to form the i1 value fed into the reduction.
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.red.*` intrinsic family. Defaults to
+      true.
 
     The result is the i32 reduction value computed across all threads
-    participating in the barrier. This op always lowers to the aligned form of
-    the `@llvm.nvvm.barrier.cta.red.*` intrinsic family.
+    participating in the barrier.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
@@ -1195,7 +1200,8 @@ def NVVM_BarrierReductionOp :
   let arguments = (ins
       Optional<I32>:$barrierId,
       BarrierReductionAttr:$reductionOp,
-      I32:$reductionPredicate);
+      I32:$reductionPredicate,
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
   let results = (outs I32:$res);
 
   let assemblyFormat =
