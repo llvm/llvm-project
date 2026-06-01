@@ -4012,8 +4012,18 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   constexpr unsigned MaxChainNodes = 32;
   SmallVector<Value *, 16> ChainPostorder;
   SmallPtrSet<Value *, 16> Visited;
+  SmallPtrSet<Value *, 16> KeptChain;
   SmallVector<Value *, 2> Sources;
   DenseMap<Value *, unsigned> SrcSizes;
+
+  auto AddSource = [&](Value *V) -> bool {
+    auto *VT = dyn_cast<FixedVectorType>(V->getType());
+    if (!VT)
+      return false;
+    if (SrcSizes.insert({V, VT->getNumElements()}).second)
+      Sources.push_back(V);
+    return true;
+  };
 
   struct StackEntry {
     Value *V;
@@ -4026,14 +4036,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       return false;
     if (!Visited.insert(V).second)
       return true;
-    if (!IsChainNode(V)) {
-      auto *VT = dyn_cast<FixedVectorType>(V->getType());
-      if (!VT)
-        return false;
-      if (SrcSizes.insert({V, VT->getNumElements()}).second)
-        Sources.push_back(V);
-      return true;
-    }
+    if (!IsChainNode(V))
+      return AddSource(V);
     Stack.push_back({V, 0});
     return true;
   };
@@ -4053,35 +4057,24 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       if (!Enqueue(Child))
         return false;
     } else {
-      ChainPostorder.push_back(V);
+      // Demote any binop/intrinsic whose operands are not themselves chain
+      // nodes. Walking past would re-derive the value from its operands,
+      // leaving the original alive if anything downstream still uses it.
+      bool Keep = isa<ShuffleVectorInst>(V);
+      if (!Keep) {
+        auto *U = cast<User>(V);
+        Keep = KeptChain.contains(U->getOperand(0)) ||
+               KeptChain.contains(U->getOperand(1));
+      }
+      if (Keep) {
+        KeptChain.insert(V);
+        ChainPostorder.push_back(V);
+      } else if (!AddSource(V)) {
+        return false;
+      }
       Stack.pop_back();
     }
   }
-
-  // Demote any binop/intrinsic whose operands are not themselves chain nodes.
-  // Walking past would re-derive the value from its operands, leaving the
-  // original alive if anything downstream still uses it.
-  SmallPtrSet<Value *, 16> KeptChain;
-  SmallVector<Value *, 16> NewChainPostorder;
-  NewChainPostorder.reserve(ChainPostorder.size());
-  for (Value *V : ChainPostorder) {
-    if (isa<ShuffleVectorInst>(V)) {
-      KeptChain.insert(V);
-      NewChainPostorder.push_back(V);
-      continue;
-    }
-    auto *U = cast<User>(V);
-    if (KeptChain.contains(U->getOperand(0)) ||
-        KeptChain.contains(U->getOperand(1))) {
-      KeptChain.insert(V);
-      NewChainPostorder.push_back(V);
-      continue;
-    }
-    auto *VT = cast<FixedVectorType>(V->getType());
-    if (SrcSizes.insert({V, VT->getNumElements()}).second)
-      Sources.push_back(V);
-  }
-  ChainPostorder = std::move(NewChainPostorder);
 
   bool IsIdempotent =
       CommonCallOp || (CommonBinOp && Instruction::isIdempotent(*CommonBinOp));
@@ -4089,7 +4082,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Each output lane has a bitmask of contributing source lanes and a
   // poison flag. Shuffles permute these records. Binops union them.
   struct LaneInfo {
-    SmallDenseMap<Value *, APInt, 2> SrcBits;
+    SmallDenseMap<Value *, APInt, 2> SrcElts;
     bool IsPoison = false;
   };
   DenseMap<Value *, SmallVector<LaneInfo, 16>> Attr;
@@ -4099,7 +4092,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     A.reserve(N);
     for (unsigned i = 0; i < N; ++i) {
       LaneInfo LI;
-      LI.SrcBits[Src] = APInt::getOneBitSet(N, i);
+      LI.SrcElts[Src] = APInt::getOneBitSet(N, i);
       A.push_back(std::move(LI));
     }
   }
@@ -4133,18 +4126,16 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       for (unsigned i = 0; i < L.size(); ++i) {
         LaneInfo OutLI;
         OutLI.IsPoison = L[i].IsPoison || R[i].IsPoison;
-        for (auto &SBP : L[i].SrcBits)
-          OutLI.SrcBits.insert(SBP);
-        for (auto &SBP : R[i].SrcBits) {
-          auto [It, Inserted] =
-              OutLI.SrcBits.try_emplace(SBP.first, SBP.second);
+        OutLI.SrcElts.insert(L[i].SrcElts.begin(), L[i].SrcElts.end());
+        for (auto &[RSrc, RMask] : R[i].SrcElts) {
+          auto [It, Inserted] = OutLI.SrcElts.try_emplace(RSrc, RMask);
           if (!Inserted) {
             // x op x != x for non-idempotent ops but poison lanes can be
             // refined.
-            if (It->second.intersects(SBP.second) && !IsIdempotent &&
+            if (It->second.intersects(RMask) && !IsIdempotent &&
                 !OutLI.IsPoison)
               return false;
-            It->second |= SBP.second;
+            It->second |= RMask;
           }
         }
         Out.push_back(std::move(OutLI));
@@ -4157,18 +4148,18 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   struct Partial {
     Value *Src;
-    APInt Bits;
+    APInt Elts;
     unsigned SrcSize;
   };
   SmallVector<Partial, 2> Partials;
   for (Value *Src : Sources) {
-    auto It = Lane0.SrcBits.find(Src);
-    if (It == Lane0.SrcBits.end())
+    auto It = Lane0.SrcElts.find(Src);
+    if (It == Lane0.SrcElts.end())
       continue;
-    const APInt &Bits = It->second;
-    if (Bits.popcount() == 0)
+    const APInt &Elts = It->second;
+    if (Elts.popcount() == 0)
       continue;
-    Partials.push_back({Src, Bits, SrcSizes[Src]});
+    Partials.push_back({Src, Elts, SrcSizes[Src]});
   }
   if (Partials.empty())
     return false;
@@ -4180,27 +4171,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     return false;
 
   InstructionCost OrigCost = 0;
-  for (Value *V : ChainPostorder) {
-    if (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
-      auto *VT = cast<FixedVectorType>(SVI->getType());
-      auto *SrcVT = cast<FixedVectorType>(SVI->getOperand(0)->getType());
-      int Index = 0;
-      auto Kind = SVI->isExtractSubvectorMask(Index)
-                      ? TargetTransformInfo::SK_ExtractSubvector
-                      : TargetTransformInfo::SK_PermuteSingleSrc;
-      OrigCost += TTI.getShuffleCost(Kind, VT, SrcVT, SVI->getShuffleMask(),
-                                     CostKind, Index, VT);
-    } else if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-      OrigCost +=
-          TTI.getArithmeticInstrCost(BO->getOpcode(), BO->getType(), CostKind);
-    } else {
-      auto *II = cast<IntrinsicInst>(V);
-      IntrinsicCostAttributes ICA(
-          II->getIntrinsicID(), II->getType(),
-          {II->getOperand(0)->getType(), II->getOperand(1)->getType()});
-      OrigCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
-    }
-  }
+  for (Value *V : ChainPostorder)
+    OrigCost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
 
   // Each source contributes a gather+reduce, or an extractelement for a
   // single-lane partial. Scalar ops then combine the partials.
@@ -4208,9 +4180,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstructionCost NewCost = 0;
   for (const Partial &P : Partials) {
     auto *SrcVT = cast<FixedVectorType>(P.Src->getType());
-    unsigned Pop = P.Bits.popcount();
+    unsigned Pop = P.Elts.popcount();
     if (Pop == 1) {
-      unsigned Idx = P.Bits.countTrailingZeros();
+      unsigned Idx = P.Elts.countTrailingZeros();
       NewCost += TTI.getVectorInstrCost(Instruction::ExtractElement, SrcVT,
                                         CostKind, Idx);
       continue;
@@ -4221,13 +4193,13 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       SmallVector<int> Mask;
       Mask.reserve(Pop);
       for (unsigned i = 0; i < P.SrcSize; ++i)
-        if (P.Bits[i])
+        if (P.Elts[i])
           Mask.push_back(i);
       // A contiguous run of bits (anywhere, not just the low prefix) is an
       // extract subvector. Pass its offset so TTI can model targets that
       // lower upper-half extracts cheaply.
       unsigned SubIdx = 0, SubLen;
-      auto Kind = P.Bits.isShiftedMask(SubIdx, SubLen)
+      auto Kind = P.Elts.isShiftedMask(SubIdx, SubLen)
                       ? TargetTransformInfo::SK_ExtractSubvector
                       : TargetTransformInfo::SK_PermuteSingleSrc;
       NewCost +=
@@ -4256,10 +4228,10 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   SmallVector<Value *, 2> PartialResults;
   for (const Partial &P : Partials) {
-    unsigned Pop = P.Bits.popcount();
+    unsigned Pop = P.Elts.popcount();
     // A single-lane partial is just the source lane. No reduce needed.
     if (Pop == 1) {
-      unsigned Idx = P.Bits.countTrailingZeros();
+      unsigned Idx = P.Elts.countTrailingZeros();
       PartialResults.push_back(Builder.CreateExtractElement(P.Src, Idx));
       continue;
     }
@@ -4268,7 +4240,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       SmallVector<int> Mask;
       Mask.reserve(Pop);
       for (unsigned i = 0; i < P.SrcSize; ++i)
-        if (P.Bits[i])
+        if (P.Elts[i])
           Mask.push_back(i);
       ReduceInput = Builder.CreateShuffleVector(P.Src, Mask);
     }
