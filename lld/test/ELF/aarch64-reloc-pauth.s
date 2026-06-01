@@ -248,7 +248,6 @@
 ## If some relocations are moved to the previously empty .rela.dyn and some stay
 ## in .relr.auth.dyn, the dynamic section needs contain tags for both these
 ## sections and have enough space for storing these tags.
-## See also https://github.com/llvm/llvm-project/issues/171475
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 dynamic-section-growth.s -o dynamic-section-growth.o
 # RUN: ld.lld -shared -z pack-relative-relocs dynamic-section-growth.o -o dynamic-section-growth.so
@@ -292,13 +291,11 @@ foo:
 
 #--- rela-iplt-end.s
 
-## See https://github.com/llvm/llvm-project/issues/171475
-
 # RUN: llvm-mc -filetype=obj -triple=aarch64 rela-iplt-end.s -o rela-iplt-end.o
-# RUN: ld.lld -static -z pack-relative-relocs rela-iplt-end.o -o rela-iplt-end
+# RUN: ld.lld -z pack-relative-relocs rela-iplt-end.o -o rela-iplt-end
 # RUN: llvm-readelf -S -s rela-iplt-end | FileCheck --check-prefix=IPLT-END %s
 
-## Ensure that the end address covers 0x30 bytes for both relocations
+## Ensure that the end address covers 0x30 bytes for both relocations.
 # IPLT-END:      .rela.dyn         RELA            00000000002001c8 0001c8 000030 18   A  0   0  8
 # IPLT-END:      00000000002001c8     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_start
 # IPLT-END-NEXT: 00000000002001f8     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_end
@@ -312,20 +309,17 @@ foo:
 ## Will be moved to .rela.dyn
 .quad foo+0x100000000@AUTH(da,42)
 
-## Extra relocation in a section with alignment 1 to force it into .rela.dyn
-## up-front.
+## Extra relocation in a section with alignment 1 to force it into .rela.dyn up-front.
 .section .data.rel.ro, "aw"
 .quad foo@AUTH(da,42)
 
 #--- rela-iplt-start.s
 
-## See https://github.com/llvm/llvm-project/issues/171475
-
 # RUN: llvm-mc -filetype=obj -triple=aarch64 rela-iplt-start.s -o rela-iplt-start.o
-# RUN: ld.lld -static -z pack-relative-relocs rela-iplt-start.o -o rela-iplt-start
+# RUN: ld.lld -z pack-relative-relocs rela-iplt-start.o -o rela-iplt-start
 # RUN: llvm-readelf -S -s rela-iplt-start | FileCheck --check-prefix=IPLT-START %s
 
-## Ensure that the __rela_iplt* addresses are properly set given that initially .rela.dyn is empty (before moving relocs from .relr.auth.dyn)
+## Ensure that the __rela_iplt* addresses are properly set given that initially .rela.dyn is empty (before moving relocs from .relr.auth.dyn).
 # IPLT-START:      .rela.dyn         RELA            0000000000200158 000158 000018 18   A  0   0  8
 # IPLT-START:      0000000000200158     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_start
 # IPLT-START-NEXT: 0000000000200170     0 NOTYPE  LOCAL  HIDDEN      1 __rela_iplt_end
