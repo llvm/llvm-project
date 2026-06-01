@@ -54,7 +54,7 @@ static cl::opt<float> MinUseDefFreqRatioToIgnoreSize(
 static cl::opt<float> MinSizeRatioNeededToEvict(
     "min-size-ratio-needed-to-evict", cl::Hidden,
     cl::desc("if live range A wants to evict live range B and A's use-def frequency divided by B's use-def frequency is in the renge `[1 / MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize]` then evict B only if size of A divided by the size of B is smaller than `MinSizeRatioNeededToEvict`"),
-    cl::init(0.1));
+    cl::init(0.05));
 
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
