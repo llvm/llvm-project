@@ -1391,7 +1391,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                                     VecTy, Ctx.CostKind, 0);
   }
   case VPInstruction::Not: {
-    Type *ValTy = Ctx.Types.inferScalarType(this);
+    Type *ValTy = this->getScalarType();
     // InstCombine will fold `xor` to the conditional branch.
     if (auto *U = const_cast<VPUser *>(getSingleUser()))
       if (match(U, m_BranchOnCond(m_VPValue())))
