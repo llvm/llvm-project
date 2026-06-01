@@ -864,8 +864,10 @@ OMPT_API_ROUTINE int ompt_get_target_info(uint64_t *device_num,
   return 0; // thread is not in a target region
 }
 
+extern "C" int omp_get_num_devices(void);
+
 OMPT_API_ROUTINE int ompt_get_num_devices(void) {
-  return 1; // only one device (the current device) is available
+  return omp_get_num_devices();
 }
 
 /*****************************************************************************
