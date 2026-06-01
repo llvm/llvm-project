@@ -43,7 +43,7 @@ coro.end:
 }
 
 ; CHECK-LABEL: @f.resume(
-; CHECK:          musttail call fastcc void
+; CHECK:          musttail call void
 ; CHECK-NEXT:     ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

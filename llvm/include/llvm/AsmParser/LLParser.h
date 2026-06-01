@@ -185,6 +185,11 @@ namespace llvm {
     /// scoped local types.
     SmallVector<DISubprogram *> NewDistinctSPs;
 
+    SmallVector<std::tuple<LocTy, DbgRecord *, TrackingMDNodeRef>>
+        PendingDbgRecords;
+    SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
+        PendingDbgInsts;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;

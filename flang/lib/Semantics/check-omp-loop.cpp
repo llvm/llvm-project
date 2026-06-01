@@ -465,7 +465,7 @@ void OmpStructureChecker::CheckIterationVariables(
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
       for (const parser::OmpObject &object :
           parser::omp::GetOmpObjectList(clause)->v) {
-        if (const Symbol *symbol{GetObjectSymbol(object)}) {
+        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
@@ -722,6 +722,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
   CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);

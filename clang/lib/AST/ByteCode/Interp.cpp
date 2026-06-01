@@ -251,7 +251,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
     assert(NumArgs >= Func->getNumWrittenParams());
     NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
-                            isa<CXXOperatorCallExpr>(CallSite));
+                            (isa<CXXOperatorCallExpr>(CallSite) &&
+                             Func->hasImplicitThisParam()));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
@@ -1719,7 +1720,6 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-    return false;
   }
   return true;
 }
@@ -1910,6 +1910,21 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
     DynamicDecl = DynamicType->getAsCXXRecordDecl();
   }
   return DynamicDecl != nullptr;
+}
+
+bool CheckDynamicCast(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isConstexprUnknown())
+    return true;
+
+  QualType T = Ptr.getType();
+  const Expr *E = S.Current->getExpr(OpPC);
+  APValue V = Ptr.toAPValue(S.getASTContext());
+  QualType TT = S.getASTContext().getLValueReferenceType(T);
+  S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+      << AK_DynamicCast << V.getAsString(S.getASTContext(), TT);
+  return false;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
