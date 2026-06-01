@@ -6720,13 +6720,12 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// Into:
 ///   (NVPTXISD::SRL_CLAMP x, shift_amt) or (NVPTXISD::SHL_CLAMP x, shift_amt)
 ///
-/// These patterns arise from C/C++ code like `shift >= 32 ? 0 : x >> shift`
-/// which guards against undefined behavior. PTX shr/shl instructions clamp
-/// shift amounts >= BitWidth to produce 0 for logical shifts, making the
-/// guard redundant.
+/// These patterns arise from code like `s >= 32 ? 0 : x >> s`. In LLVM,
+/// over-shifting a value results in poison, but PTX shr/shl instructions clamp
+/// the shift amount to BitWidth, making the guard redundant.
 ///
-/// Note: We only handle SRL and SHL, not SRA, because arithmetic right
-/// shifts could produce 0 or -1 when shift >= BitWidth.
+/// Note: We only handle SRL and SHL, not SRA, because arithmetic right shifts
+/// can produce 0 or -1 when shift >= BitWidth.
 /// Note: We don't handle uge or ule. These don't appear because of
 /// canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
@@ -6762,11 +6761,21 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
 
+  // In LLVM IR, the shift amount and the value-to-be-shifted are the same
+  // type, whereas in PTX the shift amount is always i32.  Therefore when
+  // shifting types larger than i32, we can only do this transformation if we
+  // know that the upper bits of the shift amount are known zero.
+  SDValue ClampAmt = ShiftOp.getOperand(1);
+  unsigned ClampAmtBits = ClampAmt.getValueSizeInBits();
+  if (ShiftAmt.getValueSizeInBits() > ClampAmtBits &&
+      DCI.DAG.computeKnownBits(ShiftAmt).countMaxActiveBits() > ClampAmtBits)
+    return SDValue();
+
   // Return a clamp shift operation, which has the same semantics as PTX shift.
   unsigned ClampOpc = ShiftOp.getOpcode() == ISD::SRL ? NVPTXISD::SRL_CLAMP
                                                       : NVPTXISD::SHL_CLAMP;
   return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
-                         ShiftOp.getOperand(0), ShiftOp.getOperand(1));
+                         ShiftOp.getOperand(0), ClampAmt);
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
