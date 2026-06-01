@@ -142,7 +142,7 @@ __lldb_objc_find_implementation_for_selector (void *object,
     }
 #if defined(__arm64e__)
     return_struct.class_addr =
-      __builtin_ptrauth_strip(return_struct.class_addr, 2);
+      __builtin_ptrauth_strip(return_struct.class_addr, /*ptrauth_key_asda*/ 2);
 #endif
     if (debug)
       printf("*** Super, class addr: %p\n", return_struct.class_addr);
