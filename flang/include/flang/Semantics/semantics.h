@@ -295,8 +295,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  const Scope &GetCUDABuiltinsScope();
-  const Scope &GetCUDADeviceScope();
+  // Locate CUDA intrinsic modules on demand. These return null after emitting a
+  // diagnostic when the required module file cannot be read.
+  const Scope *GetCUDABuiltinsScope();
+  const Scope *GetCUDADeviceScope();
 
   void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();

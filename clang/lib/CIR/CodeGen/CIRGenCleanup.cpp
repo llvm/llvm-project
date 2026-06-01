@@ -198,9 +198,10 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     cgf.builder.createStore(val.getLoc(), val, temp);
   }
 
-  // Pop any EH and lifetime-extended cleanups that were pushed during
-  // the expression (e.g. temporary destructors).
-  cleanups.forceCleanup();
+  // Pop any EH cleanups that were pushed during the expression but leave
+  // any lifetime-extended cleanups so that they can be promoted to the EH
+  // stack after we've finished emitting any deferred cleanups.
+  cleanups.forceCleanupExceptLifetimeExtended();
 
   // Make sure the cleanup scope body region has a terminator.
   {
@@ -264,6 +265,12 @@ void CIRGenFunction::FullExprCleanupScope::exit(
 
   cgf.deferredConditionalCleanupStack.truncate(oldSize);
   cgf.builder.setInsertionPointAfter(scope);
+
+  // Promote any lifetime-extended cleanups onto the EH scope stack. The new
+  // cir.cleanup.scope ops created here will wrap any code in the enclosing
+  // scope, including reloads of any spilled values below, so the
+  // lifetime-extended destructors run at the correct point.
+  cleanups.forceLifetimeExtendedCleanups();
 
   // Reload spilled values now that the builder is after the closed scope.
   for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {

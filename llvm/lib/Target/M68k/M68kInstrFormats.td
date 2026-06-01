@@ -31,8 +31,8 @@
 ///  21   M68000    (d16,PC)                 q       program counter with displacement
 ///  23   M68000    (d8,PC,Xn.L)             k       program counter with index and scale = 1
 ///  22   M68000    (d8,PC,Xn.W)             K       program counter with index and scale = 1
-///  25   M68020    (d8,PC,Xn.L,SCALE)       l       program counter with index
-///  24   M68020    (d8,PC,Xn.W,SCALE)       L       program counter with index
+///  25   M68020    (bd,PC,Xn.L,SCALE)       l       program counter with index (base displacement)
+///  24   M68020    (bd,PC,Xn.W,SCALE)       L       program counter with index (base displacement)
 ///  27   M68020    ([bd,PC],Xn.L,SCALE,od)  x       program counter memory indirect postindexed mode
 ///  26   M68020    ([bd,PC],Xn.W,SCALE,od)  X       program counter memory indirect postindexed mode
 ///  31   M68020    ([bd,PC,Xn.L,SCALE],od)  y       program counter memory indirect preindexed mode
@@ -93,6 +93,39 @@ class MxEncBriefExt<string reg_opnd, string disp_opnd,
     // Displacement
     (operand "$"#disp_opnd, 8, (encoder disp_encoder))
   );
+}
+
+class MxEncFullExt<string reg_opnd, string bd_opnd, string scale_opnd,
+                    int bd_size = 4, string bd_encoder = "",
+                    string bd_decoder = "", bit size_w_l = false> {
+  dag Value = (ascend (descend
+     // D/A + REGISTER
+     (operand "$"#reg_opnd, 4),
+     // W/L
+     size_w_l,
+     // SCALE
+     (operand "$"#scale_opnd, 2, (encoder "encodeScale"), (decoder "DecodeScale")),
+     0b1,
+     // Base Register Suppress
+     0b0,
+     // Index Register Suppress
+     // FIXME: the disassembler currently does not support mapping a single operand
+     // (i.e. reg_opnd in this case) to multiple bit ranges. (the REGISTER earlier
+     // and the index suppress here)
+     (operand "$"#reg_opnd, 1, (encoder "encodeIndexSuppress")),
+     // Base Displacement Size
+     !cond(
+       !eq(bd_size, 2) : 0b10,
+       !eq(bd_size, 4) : 0b11
+     ),
+     0b0,
+     // Index / Indirect Select
+     0b000
+   ),
+   // Base Displacement
+   (operand "$"#bd_opnd, !mul(8, bd_size),
+            (encoder bd_encoder), (decoder bd_decoder))
+ );
 }
 
 class MxEncAddrMode_d<string reg_opnd> : MxEncMemOp {
@@ -196,6 +229,28 @@ class MxEncAddrMode_o<string reg_opnd> : MxEncMemOp {
 class MxEncAddrMode_e<string reg_opnd> : MxEncMemOp {
   let EA = (descend /*MODE*/0b100,
                     /*REGISTER*/(operand "$"#reg_opnd, 3));
+}
+
+class MxEncAddrMode_l<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                    /*REGISTER*/0b011);
+
+  let Supplement = MxEncFullExt<opnd_name#".index", opnd_name#".disp",
+                                opnd_name#".scale",
+                                /*BDSize=*/4, /*BDEncoder=*/"encodePCRelImm<32>",
+                                /*BDDecoder=*/"DecodeImm32",
+                                /*W/L=*/true>.Value;
+}
+
+class MxEncAddrMode_L<string opnd_name> : MxEncMemOp {
+  let EA = (descend /*MODE*/0b111,
+                    /*REGISTER*/0b011);
+
+  let Supplement = MxEncFullExt<opnd_name#".index", opnd_name#".disp",
+                                opnd_name#".scale",
+                                /*BDSize=*/4, /*BDEncoder=*/"encodePCRelImm<32>",
+                                /*BDDecoder=*/"DecodeImm32",
+                                /*W/L=*/false>.Value;
 }
 
 class MxEncSize<bits<2> value> {

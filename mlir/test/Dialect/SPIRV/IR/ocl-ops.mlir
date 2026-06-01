@@ -521,6 +521,26 @@ func.func @rintvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.trunc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @trunc(
+func.func @trunc(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : f32
+  %0 = spirv.CL.trunc %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: func.func @truncvec(
+func.func @truncvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : vector<3xf16>
+  %0 = spirv.CL.trunc %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.printf
 //===----------------------------------------------------------------------===//
 // CHECK-LABEL: func.func @printf(

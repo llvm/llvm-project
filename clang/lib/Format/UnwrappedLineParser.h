@@ -208,6 +208,8 @@ private:
   void parseVerilogCaseLabel();
   // For import, export, and extern.
   void parseVerilogExtern();
+  // Skip things that can precede the keywords like module.
+  void skipVerilogQualifiers();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 

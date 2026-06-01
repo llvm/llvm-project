@@ -244,21 +244,17 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error = Status(::GetLastError(), eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
-  }
-
-  if (result) {
-    // Do not call CloseHandle on pi.hProcess, since we want to pass that back
-    // through the HostProcess.
-    ::CloseHandle(pi.hThread);
-    if (pty_mode == PseudoConsole::Mode::Pipe)
-      launch_info.GetPTY().CloseAnonymousPipes();
-  }
-
-  if (!result)
+    error = Status(::GetLastError(), eErrorTypeWin32);
     return HostProcess();
+  }
+
+  // Do not call CloseHandle on pi.hProcess, since we want to pass that back
+  // through the HostProcess.
+  ::CloseHandle(pi.hThread);
+  if (pty_mode == PseudoConsole::Mode::Pipe)
+    launch_info.GetPTY().CloseAnonymousPipes();
 
   return HostProcess(pi.hProcess);
 }

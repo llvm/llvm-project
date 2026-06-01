@@ -152,6 +152,12 @@ public:
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
   }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
+  }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
   }

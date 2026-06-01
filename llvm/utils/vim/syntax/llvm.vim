@@ -199,7 +199,6 @@ syn keyword llvmKeyword
       \ unnamed_addr
       \ unordered
       \ uselistorder
-      \ uselistorder_bb
       \ uwtable
       \ volatile
       \ weak

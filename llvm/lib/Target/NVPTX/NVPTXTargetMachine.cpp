@@ -300,7 +300,8 @@ void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
 void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // NVPTXLowerArgs emits alloca for byval parameters which can often
   // be eliminated by SROA.
-  addPass(createSROAPass());
+  addPass(createSROAPass(/*PreserveCFG=*/true,
+                         /*AggregateToVector=*/true));
   addPass(createNVPTXLowerAllocaPass());
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
@@ -391,7 +392,8 @@ void NVPTXPassConfig::addIRPasses() {
     addEarlyCSEOrGVNPass();
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
-    addPass(createSROAPass());
+    addPass(createSROAPass(/*PreserveCFG=*/true,
+                           /*AggregateToVector=*/true));
     addPass(createNVPTXTagInvariantLoadsPass());
     if (!DisableNVPTXIRPeephole)
       addPass(createNVPTXIRPeepholePass());

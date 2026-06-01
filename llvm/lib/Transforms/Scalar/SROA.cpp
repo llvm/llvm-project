@@ -178,6 +178,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const bool AggregateToVector;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -240,9 +241,10 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
+       SROAOptions Options)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+        PreserveCFG(Options.CFG == SROAOptions::PreserveCFG),
+        AggregateToVector(Options.AggregateToVector) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -5086,6 +5088,67 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Try to canonicalize a homogeneous struct partition to a vector type.
+///
+/// We can do this if all the elements of the struct are the same and tightly
+/// packed. This can sometimes eliminate allocas because structs cannot get
+/// promoted to LLVM values, but vectors can.
+///
+/// We only apply this transformation when all users of the alloca are memory
+/// intrinsics. Otherwise, if there is a load or store of some other type to the
+/// partition, SROA would select that type.
+///
+/// Applying this transformation too early may hinder memcpyopt, which may
+/// generate better code when eliminating allocas. For example, see
+/// `struct-to-vector-fp-store-only-tail.ll`, which demonstrates that applying
+/// this before memcpyopt can initialize previously uninitialized memory when
+/// the alloca gets promoted to an SSA value. For another example, see
+/// `struct-to-vector-before-memcpyopt.ll`, which demonstrates that applying
+/// this before memcpyopt can result in promoting an alloca so that we load a
+/// temporary value instead of copying the temporary value into memory, whereas
+/// memcpyopt eliminates the temporary altogether.
+///
+/// As such, we only apply this transformation after memcpyopt has run. We gate
+/// this transformation by the "AggregateToVector" pass option.
+static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
+                                                      Partition &P,
+                                                      const DataLayout &DL) {
+  unsigned NumElts = STy->getNumElements();
+
+  Type *EltTy = STy->getElementType(0);
+  if (!llvm::all_equal(STy->elements()))
+    return nullptr;
+
+  bool IsIntegralPointerTy =
+      EltTy->isPointerTy() && !DL.isNonIntegralPointerType(EltTy);
+  if (!EltTy->isIntegerTy() && !EltTy->isFloatingPointTy() &&
+      !IsIntegralPointerTy)
+    return nullptr;
+
+  auto *VTy = FixedVectorType::get(EltTy, NumElts);
+  TypeSize StructSize = DL.getStructLayout(STy)->getSizeInBytes();
+  TypeSize VectorSize = DL.getTypeAllocSize(VTy);
+  if (StructSize != VectorSize)
+    return nullptr;
+
+  for (const Slice &S : P) {
+    if (S.isDead())
+      continue;
+    auto *U = S.getUse();
+    if (!U)
+      continue;
+
+    User *Usr = U->getUser();
+    if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
+      continue;
+
+    if (!isa<MemIntrinsic>(Usr))
+      return nullptr;
+  }
+
+  return VTy;
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5099,7 +5162,27 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C) {
+                    LLVMContext &C, bool AggregateToVector) {
+  auto LogSelection = [&](StringRef Path, Type *SelectedTy,
+                          VectorType *SelectedVecTy, bool SelectedIntWidening) {
+    LLVM_DEBUG({
+      dbgs() << "selectPartitionType path=" << Path
+             << " func=" << AI.getFunction()->getName() << " alloca=";
+      if (AI.hasName())
+        dbgs() << AI.getName();
+      else
+        dbgs() << "<unnamed>";
+      dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+             << ") size=" << P.size();
+      if (std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL))
+        dbgs() << " alloc-size=" << AllocSize->getKnownMinValue();
+      if (SelectedTy)
+        dbgs() << " chosen=" << *SelectedTy;
+      if (SelectedVecTy)
+        dbgs() << " vec=" << *SelectedVecTy;
+      dbgs() << " intwiden=" << SelectedIntWidening << "\n";
+    });
+  };
   // First check if the partition is viable for vector promotion.
   //
   // We prefer vector promotion over integer widening promotion when:
@@ -5116,8 +5199,10 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // promotion. If the vector has one element, let the below code select
   // whether we promote with the vector or scalar.
   if (VecTy && VecTy->getElementType()->isFloatingPointTy() &&
-      VecTy->getElementCount().getFixedValue() > 1)
+      VecTy->getElementCount().getFixedValue() > 1) {
+    LogSelection("direct-fp-vecty", VecTy, VecTy, false);
     return {VecTy, false, VecTy};
+  }
 
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
@@ -5129,10 +5214,13 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       // We prefer vector promotion here because if vector promotion is viable
       // and there is a common type used, then it implies the second listed
       // condition for preferring vector promotion is true.
-      if (VecTy)
+      if (VecTy) {
+        LogSelection("common-type-vecty", VecTy, VecTy, false);
         return {VecTy, false, VecTy};
-      return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
-              nullptr};
+      }
+      bool IntWiden = isIntegerWideningViable(P, CommonUseTy, DL);
+      LogSelection("common-type", CommonUseTy, nullptr, IntWiden);
+      return {CommonUseTy, IntWiden, nullptr};
     }
   }
 
@@ -5148,32 +5236,57 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.isLegalInteger(P.size() * 8))
       TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
     // There was no common type used, so we prefer integer widening promotion.
-    if (isIntegerWideningViable(P, TypePartitionTy, DL))
+    if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
+      LogSelection("type-partition-int-widen", TypePartitionTy, nullptr, true);
       return {TypePartitionTy, true, nullptr};
-    if (VecTy)
+    }
+    if (VecTy) {
+      LogSelection("type-partition-vecty", VecTy, VecTy, false);
       return {VecTy, false, VecTy};
+    }
     // If we couldn't promote with TypePartitionTy, try with the largest
     // integer type used.
     if (LargestIntTy &&
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
-        isIntegerWideningViable(P, LargestIntTy, DL))
+        isIntegerWideningViable(P, LargestIntTy, DL)) {
+      LogSelection("largest-int-int-widen", LargestIntTy, nullptr, true);
       return {LargestIntTy, true, nullptr};
+    }
+
+    // Try homogeneous struct to vector canonicalization when requested. Running
+    // this too early can hide memcpy chains from MemCpyOpt.
+    if (AggregateToVector) {
+      if (auto *STy = dyn_cast<StructType>(TypePartitionTy)) {
+        if (auto *VTy = tryCanonicalizeStructToVector(STy, P, DL)) {
+          LogSelection("struct-fallback-vecty", VTy, nullptr, false);
+          return {VTy, false, nullptr};
+        }
+      }
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
+    LogSelection("type-partition-fallback", TypePartitionTy, nullptr, false);
     return {TypePartitionTy, false, nullptr};
   }
 
   // Select the largest integer type used if it spans the partition.
   if (LargestIntTy &&
-      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size())
+      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size()) {
+    LogSelection("largest-int-fallback", LargestIntTy, nullptr, false);
     return {LargestIntTy, false, nullptr};
+  }
 
   // Select a legal integer type if it spans the partition.
-  if (DL.isLegalInteger(P.size() * 8))
-    return {Type::getIntNTy(C, P.size() * 8), false, nullptr};
+  if (DL.isLegalInteger(P.size() * 8)) {
+    Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+    LogSelection("legal-int-fallback", IntTy, nullptr, false);
+    return {IntTy, false, nullptr};
+  }
 
   // Fallback to an i8 array.
-  return {ArrayType::get(Type::getInt8Ty(C), P.size()), false, nullptr};
+  Type *ArrayTy = ArrayType::get(Type::getInt8Ty(C), P.size());
+  LogSelection("byte-array-fallback", ArrayTy, nullptr, false);
+  return {ArrayTy, false, nullptr};
 }
 
 /// Rewrite an alloca partition's users.
@@ -5191,7 +5304,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C);
+      selectPartitionType(P, DL, AI, *C, AggregateToVector);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -6000,7 +6113,7 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6014,23 +6127,27 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
-                                                 : "<modify-cfg>");
+  OS << '<'
+     << (Options.CFG == SROAOptions::PreserveCFG ? "preserve-cfg"
+                                                 : "modify-cfg");
+  if (Options.AggregateToVector)
+    OS << ";aggregate-to-vector";
+  OS << '>';
 }
 
-SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
+SROAPass::SROAPass(SROAOptions Options) : Options(Options) {}
 
 namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 class SROALegacyPass : public FunctionPass {
-  SROAOptions PreserveCFG;
+  SROAOptions Options;
 
 public:
   static char ID;
 
-  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
-      : FunctionPass(ID), PreserveCFG(PreserveCFG) {
+  SROALegacyPass(SROAOptions Options = SROAOptions::PreserveCFG)
+      : FunctionPass(ID), Options(Options) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -6042,8 +6159,7 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+    auto [Changed, _] = SROA(&F.getContext(), &DTU, &AC, Options).runSROA(F);
     return Changed;
   }
 
@@ -6061,9 +6177,10 @@ public:
 
 char SROALegacyPass::ID = 0;
 
-FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
-  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
-                                        : SROAOptions::ModifyCFG);
+FunctionPass *llvm::createSROAPass(bool PreserveCFG, bool AggregateToVector) {
+  return new SROALegacyPass(SROAOptions(PreserveCFG ? SROAOptions::PreserveCFG
+                                                    : SROAOptions::ModifyCFG,
+                                        AggregateToVector));
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",

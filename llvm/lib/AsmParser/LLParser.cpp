@@ -188,6 +188,11 @@ void LLParser::dropUnknownMetadataReferences() {
   for (GlobalVariable &GV : M->globals())
     GV.eraseMetadataIf(Pred);
 
+  llvm::erase_if(PendingDbgRecords,
+                 [](const auto &E) { return std::get<2>(E)->isTemporary(); });
+  llvm::erase_if(PendingDbgInsts,
+                 [](const auto &E) { return std::get<2>(E)->isTemporary(); });
+
   for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
     // Check whether there is only a single use left, which would be in our
     // own NumberedMetadata.
@@ -326,6 +331,30 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined comdat '$" +
                      ForwardRefComdats.begin()->first + "'");
 
+  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
+    dropUnknownMetadataReferences();
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  // Set debug locations.
+  for (auto [Loc, DR, MD] : PendingDbgRecords) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      DR->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid debug location");
+  }
+  PendingDbgRecords.clear();
+  for (auto [Loc, I, MD] : PendingDbgInsts) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      I->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid !dbg metadata");
+  }
+  PendingDbgInsts.clear();
+
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
@@ -416,14 +445,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefValIDs.begin()->second.second,
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
-
-  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
-    dropUnknownMetadataReferences();
-
-  if (!ForwardRefMDNodes.empty())
-    return error(ForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(ForwardRefMDNodes.begin()->first) + "'");
 
   // Resolve metadata cycles.
   for (auto &N : NumberedMetadata) {
@@ -611,10 +632,6 @@ bool LLParser::parseTopLevelEntities() {
       break;
     case lltok::kw_uselistorder:
       if (parseUseListOrder())
-        return true;
-      break;
-    case lltok::kw_uselistorder_bb:
-      if (parseUseListOrderBB())
         return true;
       break;
     }
@@ -2407,11 +2424,14 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
 
     unsigned MDK;
     MDNode *N;
+    auto Loc = Lex.getLoc();
     if (parseMetadataAttachment(MDK, N))
       return true;
 
     if (MDK == LLVMContext::MD_DIAssignID)
       TempDIAssignIDAttachments[N].push_back(&Inst);
+    else if (MDK == LLVMContext::MD_dbg)
+      PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
 
@@ -7479,7 +7499,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
       return true;
     if (parseToken(lltok::rparen, "Expected ')' here"))
       return true;
-    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label, DbgLoc);
+    DR = DbgLabelRecord::createUnresolvedDbgLabelRecord(Label);
+    PendingDbgRecords.emplace_back(DVRLoc, DR, DbgLoc);
     return false;
   }
 
@@ -7547,7 +7568,8 @@ bool LLParser::parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS) {
     return true;
   DR = DbgVariableRecord::createUnresolvedDbgVariableRecord(
       ValueType, ValLocMD, Variable, Expression, AssignID, AddressLocation,
-      AddressExpression, DebugLoc);
+      AddressExpression);
+  PendingDbgRecords.emplace_back(DVRLoc, DR, DebugLoc);
   return false;
 }
 //===----------------------------------------------------------------------===//
@@ -9442,53 +9464,6 @@ bool LLParser::parseUseListOrder(PerFunctionState *PFS) {
       parseToken(lltok::comma, "expected comma in uselistorder directive") ||
       parseUseListOrderIndexes(Indexes))
     return true;
-
-  return sortUseListOrder(V, Indexes, Loc);
-}
-
-/// parseUseListOrderBB
-///   ::= 'uselistorder_bb' @foo ',' %bar ',' UseListOrderIndexes
-bool LLParser::parseUseListOrderBB() {
-  assert(Lex.getKind() == lltok::kw_uselistorder_bb);
-  SMLoc Loc = Lex.getLoc();
-  Lex.Lex();
-
-  ValID Fn, Label;
-  SmallVector<unsigned, 16> Indexes;
-  if (parseValID(Fn, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseValID(Label, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseUseListOrderIndexes(Indexes))
-    return true;
-
-  // Check the function.
-  GlobalValue *GV;
-  if (Fn.Kind == ValID::t_GlobalName)
-    GV = M->getNamedValue(Fn.StrVal);
-  else if (Fn.Kind == ValID::t_GlobalID)
-    GV = NumberedVals.get(Fn.UIntVal);
-  else
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (!GV)
-    return error(Fn.Loc,
-                 "invalid function forward reference in uselistorder_bb");
-  auto *F = dyn_cast<Function>(GV);
-  if (!F)
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (F->isDeclaration())
-    return error(Fn.Loc, "invalid declaration in uselistorder_bb");
-
-  // Check the basic block.
-  if (Label.Kind == ValID::t_LocalID)
-    return error(Label.Loc, "invalid numeric label in uselistorder_bb");
-  if (Label.Kind != ValID::t_LocalName)
-    return error(Label.Loc, "expected basic block name in uselistorder_bb");
-  Value *V = F->getValueSymbolTable()->lookup(Label.StrVal);
-  if (!V)
-    return error(Label.Loc, "invalid basic block in uselistorder_bb");
-  if (!isa<BasicBlock>(V))
-    return error(Label.Loc, "expected basic block in uselistorder_bb");
 
   return sortUseListOrder(V, Indexes, Loc);
 }

@@ -1215,16 +1215,28 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  const StackFrame *SF = Pred->getStackFrame();
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
-  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-    for (ExplodedNode *N : CheckerPreStmt) {
-      Visit(Attr->getAssumption()->IgnoreParens(), N, EvalSet);
+  for (ExplodedNode *N : CheckerPreStmt) {
+    ProgramStateRef State = N->getState();
+    for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+      SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
+      // This code ignores assumptions that evaluate to UndefinedVal.
+      // Perhaps there should be a checker that reports this situation.
+      if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
+        State = State->assume(*ValidAssumedVal, true);
+      }
+
+      if (!State)
+        break;
     }
+
+    if (State)
+      EvalSet.insert(Engine.makePostStmtNode(A, State, N));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);

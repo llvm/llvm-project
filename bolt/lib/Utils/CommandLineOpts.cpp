@@ -243,15 +243,14 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
-                              cl::cat(AggregatorCategory),
-                              cl::sub(cl::SubCommand::getAll()));
+cl::list<std::string> PerfData("perfdata", cl::CommaSeparated,
+                               cl::desc("<data file>"),
+                               cl::cat(AggregatorCategory),
+                               cl::sub(cl::SubCommand::getAll()));
 
-static cl::alias
-PerfDataA("p",
-  cl::desc("alias for -perfdata"),
-  cl::aliasopt(PerfData),
-  cl::cat(AggregatorCategory));
+static cl::alias PerfDataA("p", cl::CommaSeparated,
+                           cl::desc("alias for -perfdata"),
+                           cl::aliasopt(PerfData), cl::cat(AggregatorCategory));
 
 cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",

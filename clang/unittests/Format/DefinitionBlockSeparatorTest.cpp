@@ -478,8 +478,24 @@ TEST_F(DefinitionBlockSeparatorTest, OpeningBracketOwnsLine) {
 
 TEST_F(DefinitionBlockSeparatorTest, TryBlocks) {
   FormatStyle Style = getLLVMStyle();
-  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+  verifyFormat("void foo() try {\n"
+               "  // do something\n"
+               "} catch (const std::exception &) {\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("void foo()\n"
+               "try\n"
+               "{\n"
+               "  // do something\n"
+               "}\n"
+               "catch (const std::exception &)\n"
+               "{\n"
+               "  // handle exception\n"
+               "}",
+               Style, "", /*Inverse=*/false);
   verifyFormat("void FunctionWithInternalTry()\n"
                "{\n"
                "  try\n"

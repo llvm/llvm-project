@@ -1429,6 +1429,7 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:    WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
 ; CHECK-NEXT:    WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
 ; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<%vector.recur.extract.for.phi> = extract-penultimate-element ir<%load.ext.ext>
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-part ir<%load.ext.ext>
 ; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP2]]>, vp<[[VP1]]>
@@ -1436,7 +1437,9 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %res1.lcssa = phi i64 [ %res1, %loop ] (extra operand: vp<%vector.recur.extract.for.phi> from middle.block)
 ; CHECK-NEXT:    IR   %add.lcssa = phi i64 [ %add, %loop ] (extra operand: vp<[[VP7]]> from middle.block)
+; CHECK-NEXT:    IR   %res = add i64 %res1.lcssa, %add.lcssa
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -1482,7 +1485,8 @@ loop:
   br i1 %exitcond740.not, label %exit, label %loop
 
 exit:
-  ret i64 %add
+  %res = add i64 %res1, %add
+  ret i64 %res
 }
 
 define i32 @print_umax_reduction_out_of_loop(ptr %y) {

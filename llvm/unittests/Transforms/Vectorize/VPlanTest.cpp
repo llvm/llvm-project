@@ -1212,7 +1212,7 @@ TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
 
   VPValue *I1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *I2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
+  VPValue *M2 = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   SmallVector<VPValue *, 4> Args;
   Args.push_back(I1);
   Args.push_back(I2);
@@ -1397,7 +1397,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
+    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
                              CondOp, RdxUnordered{});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
@@ -1409,7 +1409,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
+    VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
                              CondOp, RdxUnordered{});
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
@@ -1741,7 +1741,7 @@ TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
+  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::getTrue(C));
   VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
                            CondOp, RdxUnordered{});
   checkVPRecipeCastImpl<VPReductionRecipe, VPUser>(&Recipe);
@@ -1754,7 +1754,7 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
+  VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::getTrue(C));
   VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
                            CondOp, RdxUnordered{});
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));

@@ -608,6 +608,18 @@ public:
     }
   }
 
+  /// Copy offsets into the argument list at the given index, unless
+  /// the offsets are known to be zero (i.e., a null constant).
+  static void extractNonZeroOffsets(IRBuilder<> &IRB,
+                                    MutableArrayRef<Value *> Args,
+                                    unsigned ArgIdx, Value *Offsets,
+                                    unsigned MaxElements) {
+    auto *COff = dyn_cast<Constant>(Offsets);
+    bool OffsetsAreZero = COff && COff->isNullValue();
+    if (!OffsetsAreZero)
+      extractElementsIntoArgs(IRB, Args, ArgIdx, Offsets, MaxElements);
+  }
+
   [[nodiscard]] bool lowerTextureLoad(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int32Ty = IRB.getInt32Ty();
@@ -630,11 +642,52 @@ public:
 
       // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
-      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
-        extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
+      extractNonZeroOffsets(IRB, Args, 5, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+    Type *FloatTy = IRB.getFloatTy();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Sampler =
+          createTmpHandleCast(CI->getArgOperand(1), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(2);
+      Value *Bias = CI->getArgOperand(3);
+      Value *Offsets = CI->getArgOperand(4);
+      Value *Clamp = HasClamp ? CI->getArgOperand(5) : UndefValue::get(FloatTy);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *UndefF = UndefValue::get(FloatTy);
+      Value *UndefI = UndefValue::get(Int32Ty);
+      // Args: Handle, Sampler, Coord0..3, Offset0..2, Bias, Clamp
+      std::array<Value *, 11> Args{Handle, Sampler, UndefF, UndefF,
+                                   UndefF, UndefF,  UndefI, UndefI,
+                                   UndefI, Bias,    Clamp};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
+      extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::SampleBias, Args, CI->getName(), NewRetTy);
       if (Error E = OpCall.takeError())
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
@@ -1060,6 +1113,12 @@ public:
         break;
       case Intrinsic::dx_resource_load_level:
         HasErrors |= lowerTextureLoad(F);
+        break;
+      case Intrinsic::dx_resource_samplebias:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplebias_clamp:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);

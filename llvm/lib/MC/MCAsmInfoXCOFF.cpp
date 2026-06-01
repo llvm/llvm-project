@@ -26,7 +26,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
   IsLittleEndian = false;
 
   InternalSymbolPrefix = "L..";
-  PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
   if (UseLEB128Directives == cl::BOU_UNSET)
     HasLEB128Directives = false;

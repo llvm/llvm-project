@@ -302,6 +302,8 @@ private:
       const std::string &clauseName);
   void CheckMultListItems();
   void CheckStructureComponent(
+      const parser::OmpObject &object, llvm::omp::Clause clauseId);
+  void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
       const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
@@ -328,7 +330,6 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
-  bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &obj, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,

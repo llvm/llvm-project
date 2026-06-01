@@ -641,4 +641,8 @@ namespace DynamicCast {
                                                   // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
                                                   // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
   }
+
+  struct S {};
+  constexpr S s;
+  constexpr int foo = (dynamic_cast<const S &>(s), 0);
 }

@@ -26,7 +26,6 @@ MCAsmInfoGOFF::MCAsmInfoGOFF(const MCTargetOptions &Options)
   Data64bitsDirective = "\t.quad\t";
   WeakRefDirective = "WXTRN";
   InternalSymbolPrefix = "L#";
-  PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";
 }
 

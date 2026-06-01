@@ -9,7 +9,7 @@
 #
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
-# Maintainers.* files in the the respective subproject directories.
+# Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx

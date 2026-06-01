@@ -1082,7 +1082,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1114,7 +1116,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1125,7 +1127,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 

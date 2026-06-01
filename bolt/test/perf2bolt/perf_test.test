@@ -7,11 +7,23 @@ RUN: perf record -Fmax -e cycles:u -o %t2 -- %t
 RUN: perf2bolt %t -p=%t2 -o %t3 -ba -ignore-build-id --show-density \
 RUN:   --heatmap %t.hm 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm-section-hotness.csv --check-prefix=CHECK-HM
+# Multiple perf.data files as input
+RUN: perf2bolt %t -p=%t2 -p %t2 -o %t3.multi -ba -ignore-build-id \
+RUN:   | FileCheck %s --check-prefix=CHECK-MULTI
+RUN: perf2bolt %t -p=%t2,%t2 -o %t3.comma -ba -ignore-build-id \
+RUN:   | FileCheck %s --check-prefix=CHECK-MULTI
+RUN: cmp %t3.multi %t3.comma
+# Check counts are 2x the original
+RUN: merge-fdata %t3 %t3 | sort > %t3.x2
+RUN: sort %t3.multi > %t3.multi.x2
+RUN: cmp %t3.x2 %t3.multi.x2
 
 CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.
 CHECK: HEATMAP: building heat map
 CHECK: BOLT-INFO: Functions with density >= {{.*}} account for 99.00% total sample counts.
+CHECK-MULTI: PERF2BOLT: Starting data aggregation job
+CHECK-MULTI: PERF2BOLT: Starting data aggregation job
 
 RUN: %clang %S/Inputs/perf_test.c -no-pie -fuse-ld=lld -o %t4
 RUN: perf record -Fmax -e cycles:u -o %t5 -- %t4

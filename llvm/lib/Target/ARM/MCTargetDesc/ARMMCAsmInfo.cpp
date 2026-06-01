@@ -126,7 +126,6 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   InternalSymbolPrefix = "$M";
-  PrivateLabelPrefix = "$M";
   CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
@@ -144,7 +143,6 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
 
   CommentString = "@";
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;

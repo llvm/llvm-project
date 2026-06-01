@@ -100,6 +100,11 @@ private:
   void handleMovedArgsInCall(const FunctionDecl *FD,
                              ArrayRef<const Expr *> Args);
 
+  // Handles [[clang::lifetime_capture_by(X)]] annotations on a function call to
+  // create flow facts from captured arguments to the capturer
+  void handleLifetimeCaptureBy(const FunctionDecl *FD,
+                               ArrayRef<const Expr *> Args);
+
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.
   /// \param IsGslConstruction True if this is a GSL construction where all

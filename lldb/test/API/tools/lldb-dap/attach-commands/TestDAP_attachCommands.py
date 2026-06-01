@@ -77,6 +77,10 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
 
+        # Check that we got module events from target
+        modules = self.dap_server.wait_for_module_events()
+        self.assertGreater(len(modules), 0)
+
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after we stop.

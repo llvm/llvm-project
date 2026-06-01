@@ -1456,6 +1456,7 @@ void UnwrappedLineParser::parseStructuralElement(
            Tokens->peekNextToken()->is(tok::star)) {
       parseParens();
     }
+    skipVerilogQualifiers();
     // Skip things that can exist before keywords like 'if' and 'case'.
     if (FormatTok->isOneOf(Keywords.kw_priority, Keywords.kw_unique,
                            Keywords.kw_unique0)) {
@@ -4603,14 +4604,22 @@ void UnwrappedLineParser::parseVerilogExtern() {
   // "DPI-C"
   if (FormatTok->is(tok::string_literal))
     nextToken();
-  if (FormatTok->isOneOf(Keywords.kw_context, Keywords.kw_pure))
-    nextToken();
+  skipVerilogQualifiers();
   if (Keywords.isVerilogIdentifier(*FormatTok))
     nextToken();
   if (FormatTok->is(tok::equal))
     nextToken();
   if (Keywords.isVerilogHierarchy(*FormatTok))
     parseVerilogHierarchyHeader();
+}
+
+void UnwrappedLineParser::skipVerilogQualifiers() {
+  while (FormatTok->isOneOf(tok::kw_protected, tok::kw_virtual, tok::kw_static,
+                            Keywords.kw_rand, Keywords.kw_context,
+                            Keywords.kw_pure, Keywords.kw_randc,
+                            Keywords.kw_local)) {
+    nextToken();
+  }
 }
 
 bool UnwrappedLineParser::containsExpansion(const UnwrappedLine &Line) const {

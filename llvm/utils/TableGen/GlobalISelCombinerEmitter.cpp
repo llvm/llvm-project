@@ -33,8 +33,8 @@
 #include "Common/GlobalISel/CodeExpander.h"
 #include "Common/GlobalISel/CodeExpansions.h"
 #include "Common/GlobalISel/CombinerUtils.h"
-#include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchTable/Matchers.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
@@ -2714,8 +2714,8 @@ MatchTable
 GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
   std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
-  return MatchTable::buildTable(OptRules, /*WithCoverage*/ false,
-                                /*IsCombiner*/ true);
+  return ::buildMatchTable(OptRules, /*WithCoverage*/ false,
+                           /*IsCombiner*/ true);
 }
 
 /// Recurse into GICombineGroup's and flatten the ruleset into a simple list.

@@ -6074,7 +6074,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo().getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getInternalSymbolPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
