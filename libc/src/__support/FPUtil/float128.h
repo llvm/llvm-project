@@ -23,7 +23,7 @@ struct EFloat128 {
 
   LIBC_INLINE EFloat128() = default;
 
-  LIBC_INLINE constexpr explicit EFloat128(double x) {
+  LIBC_INLINE constexpr explicit EFloat128(double x) : bits(0) {
     uint64_t d = cpp::bit_cast<uint64_t>(x);
     bits = static_cast<UInt128>(d) << 64U;
   }
