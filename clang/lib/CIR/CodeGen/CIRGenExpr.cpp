@@ -1938,11 +1938,19 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
     auto globalOp =
         mlir::cast<cir::GlobalOp>(cgm.getAddrOfGlobalTemporary(m, e));
 
+    // The destruction of the reference temporary is done in the dtor
+    // region of the global object it is associated with.
+    const auto *extendingDecl = cast<VarDecl>(m->getExtendingDecl());
+    cir::GlobalOp extendingGlobalOp =
+        cgm.getOrCreateCIRGlobal(extendingDecl, /*ty=*/nullptr,
+                                 NotForDefinition);
+
     CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::OpBuilder::InsertionGuard guard(builder);
-    assert(globalOp.getDtorRegion().empty() &&
-           "global temporary already has a dtor region");
-    mlir::Block *block = builder.createBlock(&globalOp.getDtorRegion());
+    assert(extendingGlobalOp.getDtorRegion().empty() &&
+           "extending global already has a dtor region");
+    mlir::Block *block =
+        builder.createBlock(&extendingGlobalOp.getDtorRegion());
     builder.setInsertionPointToStart(block);
 
     mlir::Location loc = cgm.getLoc(m->getSourceRange());
