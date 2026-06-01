@@ -7229,6 +7229,35 @@ defm VPMADD52HUQ : avx512_pmadd52_common<0xb5, "vpmadd52huq", x86vpmadd52h,
                                          SchedWriteVecIMul, avx512vl_i64_info>,
                                          REX_W;
 
+// Use 512bit VPMADD52LUQ/VPMADD52HUQ version to implement 128/256 bit in case NoVLX.
+let Predicates = [HasIFMA, NoVLX] in {
+  def : Pat<(v2i64 (x86vpmadd52l VR128X:$x, VR128X:$y, VR128X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52LUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$x, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$y, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$z, sub_xmm)), sub_xmm)>;
+  def : Pat<(v2i64 (x86vpmadd52l VR128X:$x, VR128X:$y, VR128X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52HUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$x, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$y, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$z, sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v4i64 (x86vpmadd52l VR256X:$x, VR256X:$y, VR256X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52LUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$x, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$y, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$z, sub_ymm)), sub_ymm)>;
+  def : Pat<(v4i64 (x86vpmadd52l VR256X:$x, VR256X:$y, VR256X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52HUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$x, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$y, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$z, sub_ymm)), sub_ymm)>;
+}
+
 //===----------------------------------------------------------------------===//
 // AVX-512  Scalar convert from sign integer to float/double
 //===----------------------------------------------------------------------===//
