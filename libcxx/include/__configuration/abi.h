@@ -76,7 +76,6 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
 #  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
-#  define _LIBCPP_ABI_USE_LOWER_DEQUE_BLOCK_SIZE
 
 #elif _LIBCPP_ABI_VERSION == 1
 // Feature macros for disabling pre ABI v1 features. All of these options
