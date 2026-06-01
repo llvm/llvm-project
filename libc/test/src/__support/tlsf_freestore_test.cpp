@@ -225,18 +225,18 @@ TEST(LlvmLibcTLSFFreeStoreTest, FindAndRemoveFit) {
   store.insert(block1);
   store.insert(block2);
 
-  // 1. Test exact size-class search path.
+  // 1. Test oversized bin search path (guaranteed O(1) fit takes priority).
   Block *removed = store.find_and_remove_fit(1050);
-  EXPECT_EQ(removed, block1);
-
-  // Verify that bit 32 is now cleared.
-  EXPECT_FALSE(store.get_bit(32));
-  EXPECT_TRUE(store.get_bit(36));
-
-  // 2. Test oversized bin search path.
-  removed = store.find_and_remove_fit(1050);
   EXPECT_EQ(removed, block2);
+
+  // Verify that bit 36 is now cleared and bit 32 is still set.
   EXPECT_FALSE(store.get_bit(36));
+  EXPECT_TRUE(store.get_bit(32));
+
+  // 2. Test exact size-class search path (fallback linear scan).
+  removed = store.find_and_remove_fit(1050);
+  EXPECT_EQ(removed, block1);
+  EXPECT_FALSE(store.get_bit(32));
 }
 
 TEST(LlvmLibcTLSFFreeStoreTest, FindAndRemoveFitSkipsNonFitExactClass) {

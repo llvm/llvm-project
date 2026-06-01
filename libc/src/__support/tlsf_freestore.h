@@ -82,11 +82,11 @@ struct TLSFFreeStoreConfig {
 // L |(Base 8K)|[8192 - 10239]|[10240 - 12287]|[12288 - 14335]|[14336 - 16383]|
 //   +---------+---------------+---------------+---------------+---------------+
 //
-// Note: For the real implementation, we don't actually store the lists in a 2-D
-// structure. Instead, we flatten the entire 2-D layout into a single flat 1-D
-// array of size TOTAL_BITS (free_lists), and map sizes directly to a continuous
-// 1-D index using size_to_bit_index. The allocation state is tracked compactly
-// in the lookup_table bitmask array.
+// Note: For the real implementation, we don't actually store the lists in a
+// 2-D structure. Instead, we flatten the entire 2-D layout into a single
+// flat 1-D array of size TOTAL_BITS (free_lists), and map sizes directly to
+// a continuous 1-D index using size_to_bit_index. The allocation state is
+// tracked compactly in the lookup_table bitmask array.
 template <typename CONFIG> class TLSFFreeStoreImpl {
 protected:
   static_assert(cpp::has_single_bit(CONFIG::UNIT_SIZE),
@@ -109,13 +109,14 @@ public:
   static constexpr size_t MIN_OUTER_SIZE =
       align_up(sizeof(Block) + sizeof(FreeList::Node), Block::MIN_ALIGN);
 
-  TLSFFreeStoreImpl() = default;
-  TLSFFreeStoreImpl(const TLSFFreeStoreImpl &other) = delete;
-  TLSFFreeStoreImpl &operator=(const TLSFFreeStoreImpl &other) = delete;
+  LIBC_INLINE TLSFFreeStoreImpl() = default;
+  LIBC_INLINE TLSFFreeStoreImpl(const TLSFFreeStoreImpl &other) = delete;
+  LIBC_INLINE TLSFFreeStoreImpl &
+  operator=(const TLSFFreeStoreImpl &other) = delete;
 
-  void insert(Block *block);
-  void remove(Block *block);
-  Block *find_and_remove_fit(size_t size);
+  LIBC_INLINE void insert(Block *block);
+  LIBC_INLINE void remove(Block *block);
+  LIBC_INLINE Block *find_and_remove_fit(size_t size);
 
 protected:
   LIBC_INLINE static bool too_small(Block *block) {
@@ -136,7 +137,7 @@ protected:
 template <typename CONFIG>
 LIBC_INLINE constexpr size_t
 TLSFFreeStoreImpl<CONFIG>::size_to_bit_index(size_t size) {
-  // Equivalent branchy form, kept here to make the mapping easy to audit:
+  // Original branchy form, kept here to make the mapping easy to audit:
   //   size_t shifted_size = size / CONFIG::UNIT_SIZE;
   //   size_t index = shifted_size;
   //   if (shifted_size > EXP_BASE) {
@@ -148,19 +149,61 @@ TLSFFreeStoreImpl<CONFIG>::size_to_bit_index(size_t size) {
   //   }
   //   return index < TOTAL_BITS ? index : TOTAL_BITS - 1;
 
-  // CONFIG::UNIT_SIZE and EXP_BASE are powers of two, so use static shifts for
-  // the unit and exponential-base divisions. Keep the early return for the
-  // linear range; the optimized large path avoids the old dynamic base/step
-  // computation and uses one variable shift to extract the second-level index.
-  size_t shifted_size = size >> UNIT_SIZE_LOG2;
-  if (shifted_size <= EXP_BASE)
-    return shifted_size;
+  // =========================================================================
+  // --- Optimized Shift-and-Add Indexing ---
+  // =========================================================================
+  // Intuition:
+  // For sizes above EXP_BASE, the flat index is composed of an exponential
+  // row index (determined by the highest set bit, size_ilog2) and a linear
+  // column index (determined by the next NUM_STEP_BITS bits directly below
+  // the highest set bit).
+  //
+  // Instead of subtracting the power-of-two row base and then shifting to
+  // find the column index, we shift the entire value so the highest set bit
+  // aligns with the NUM_STEPS boundary. This single shift operation extracts
+  // both the column index and a fixed offset simultaneously:
+  //
+  //   size >> (size_ilog2 - NUM_STEP_BITS) = NUM_STEPS + column_index
+  //
+  // Substituting this into the flat index equation collapses the multi-stage
+  // pipeline into a single, highly parallelizable shift-and-add sequence:
+  //
+  //   index = EXP_BASE
+  //           + NUM_STEPS * (size_ilog2 - UNIT_SIZE_LOG2 - EXP_BASE_LOG2 - 1)
+  //           + (size >> (size_ilog2 - NUM_STEP_BITS))
+  //
+  // Key Properties:
+  // 1. Direct Leading Zero: Operates directly on the raw size parameter to
+  //    count leading zeros, saving one shift instruction on the critical path.
+  // 2. No Base Subtractions: Avoids subtracting the power-of-two row base,
+  //    reducing dynamic data hazards.
+  // 3. Underflow Safety: When (size_ilog2 - UNIT_SIZE_LOG2) == EXP_BASE_LOG2,
+  //    the subtraction term underflows to standard two's complement, which
+  //    shifts left to -NUM_STEPS, perfectly acting as subtraction in standard
+  //    unsigned flat index calculations.
+  //
+  // Example (UNIT_SIZE=16, STEP_SIZE_BITS=2, NUM_STEP_BITS=4):
+  //   - EXP_BASE = 64 (EXP_BASE_LOG2 = 6), NUM_STEPS = 16 (S = 4)
+  //   - Let size = 2100 bytes
+  //   - Raw version:
+  //       shifted_size = 131
+  //       131 / 64 = 2 -> exp_index = 1 (row base = 128, step = 8)
+  //       linear_index = (131 - 128) / 8 = 0
+  //       index = 64 + 16 * 1 + 0 = 80
+  //   - Optimized version:
+  //       size_ilog2 = 11 (bit_width(2100) - 1)
+  //       exp_offset = (11 - 4 - 6 - 1) << 4 = 0
+  //       step_index = 2100 >> (11 - 4) = 16
+  //       index = 64 + 0 + 16 = 80
+  // =========================================================================
+  if (size <= (EXP_BASE << UNIT_SIZE_LOG2))
+    return size >> UNIT_SIZE_LOG2;
 
-  size_t large_shifted = shifted_size >> EXP_BASE_LOG2;
-  size_t exp_index = static_cast<size_t>(cpp::bit_width(large_shifted) - 1);
-  size_t linear_index =
-      (shifted_size >> (CONFIG::STEP_SIZE_BITS + exp_index)) - NUM_STEPS;
-  size_t index = EXP_BASE + NUM_STEPS * exp_index + linear_index;
+  size_t size_ilog2 = static_cast<size_t>(cpp::bit_width(size) - 1);
+  size_t exp_offset = (size_ilog2 - UNIT_SIZE_LOG2 - EXP_BASE_LOG2 - 1)
+                      << CONFIG::NUM_STEP_BITS;
+  size_t step_index = size >> (size_ilog2 - CONFIG::NUM_STEP_BITS);
+  size_t index = EXP_BASE + exp_offset + step_index;
 
   return index < TOTAL_BITS ? index : TOTAL_BITS - 1;
 }
@@ -262,23 +305,24 @@ LIBC_INLINE Block *TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
   if (LIBC_UNLIKELY(bit_index >= TOTAL_BITS - 1))
     return remove_first_fit_in_list(TOTAL_BITS - 1, size);
 
-  // Search the exact size class first because it may contain blocks from a
-  // range of sizes and not every block in it is guaranteed to fit.
-  if (Block *block = remove_first_fit_in_list(bit_index, size))
-    return block;
-
-  // Search for the first oversized free list that can guarantee a fit.
+  // Search for the first oversized free list that can guarantee a fit in O(1).
   size_t oversized_bit = find_first_bit_set_after(bit_index);
-  if (LIBC_UNLIKELY(oversized_bit >= TOTAL_BITS))
-    return nullptr;
+  if (LIBC_LIKELY(oversized_bit < TOTAL_BITS)) {
+    Block *block = free_lists[oversized_bit].front();
+    free_lists[oversized_bit].pop();
+    if (free_lists[oversized_bit].empty())
+      clear_bit(oversized_bit);
+    return block;
+  }
 
-  // If a larger free list is found, any block inside it is guaranteed to fit
-  // the requested size. Pop the first block in FIFO order.
-  Block *block = free_lists[oversized_bit].front();
-  free_lists[oversized_bit].pop();
-  if (free_lists[oversized_bit].empty())
-    clear_bit(oversized_bit);
-  return block;
+  // Fallback: Search the exact size class (requires a linear scan since the
+  // bin contains a range of sizes and not all blocks are guaranteed to fit).
+  // Check the bitmap bit first to bypass useless list head loading.
+  if (get_bit(bit_index))
+    if (Block *block = remove_first_fit_in_list(bit_index, size))
+      return block;
+
+  return nullptr;
 }
 
 template <size_t UNIT_SIZE, size_t STEP_SIZE_BITS, size_t NUM_STEP_BITS,
