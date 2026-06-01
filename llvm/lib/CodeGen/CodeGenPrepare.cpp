@@ -7730,13 +7730,6 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   if (DisableSelectToBranch)
     return false;
 
-  // SelectOptimize (IR-level) and CodeGenPrepare use complementary heuristics:
-  // SelectOptimize focuses on density-based and loop-level analysis, while
-  // CodeGenPrepare focuses on expensive-cold-operand sinking.  Both can safely
-  // coexist: if SelectOptimize already converted a select to a branch, that
-  // select is gone from the IR and CodeGenPrepare simply has nothing to do for
-  // it.  Do NOT skip based on SelectOptimize being enabled.
-
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
   ASI.push_back(SI);
