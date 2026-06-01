@@ -93,6 +93,19 @@ void negativeBoundary(std::optional<EightBytes> opt) {
   auto val = opt.value_or(EightBytes{});
 }
 
+struct TrivialCopyNonTrivialAssign {
+  int x;
+  TrivialCopyNonTrivialAssign() = default;
+  TrivialCopyNonTrivialAssign(const TrivialCopyNonTrivialAssign &) = default;
+  TrivialCopyNonTrivialAssign &operator=(const TrivialCopyNonTrivialAssign &);
+  ~TrivialCopyNonTrivialAssign() = default;
+};
+
+void negativeTrivialCopyNonTrivialAssign(
+    std::optional<TrivialCopyNonTrivialAssign> opt) {
+  auto val = opt.value_or(TrivialCopyNonTrivialAssign{});
+}
+
 std::optional<std::string> getOpt();
 void negativeRvalueOptional() {
   auto val = getOpt().value_or("default");

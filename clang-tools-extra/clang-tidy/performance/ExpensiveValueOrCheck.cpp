@@ -8,6 +8,7 @@
 
 #include "ExpensiveValueOrCheck.h"
 #include "../utils/OptionsUtils.h"
+#include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -49,14 +50,14 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   if (!WarnOnRvalueOptional && ObjExpr && !ObjExpr->isLValue())
     return;
 
-  const QualType ValueType = Call->getType().getCanonicalType();
-  if (ValueType->isDependentType() || ValueType->isIncompleteType())
-    return;
-
   const ASTContext &Ctx = *Result.Context;
+  const QualType ValueType = Call->getType().getCanonicalType();
+  const bool IsExpensiveType =
+      utils::type_traits::isExpensiveToCopy(ValueType, Ctx).value_or(false);
+
   const int64_t ValueSize = Ctx.getTypeSizeInChars(ValueType).getQuantity();
-  const bool IsExpensive = !ValueType.isTriviallyCopyableType(Ctx) ||
-                           ValueSize > static_cast<int64_t>(SizeThreshold);
+  const bool IsExpensive =
+      IsExpensiveType || ValueSize > static_cast<int64_t>(SizeThreshold);
 
   if (!IsExpensive)
     return;
