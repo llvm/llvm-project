@@ -286,7 +286,7 @@ L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
 Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                                   bool ReleaseQueue) {
 
-  L0QueueTy *Queue = reinterpret_cast<L0QueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   if (!Queue)
     return Plugin::success();
 
@@ -311,7 +311,7 @@ L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 
 Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                  bool *IsQueueWorkCompleted) {
-  L0QueueTy *Queue = reinterpret_cast<L0QueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   bool WorkCompleted = true;
 
   if (Queue) {
@@ -394,7 +394,7 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
   if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
-                                (__tgt_async_info *)AsyncInfoWrapper))
+                                static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
 }

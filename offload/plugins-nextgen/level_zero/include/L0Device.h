@@ -408,7 +408,7 @@ public:
   Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
     __tgt_async_info AsyncInfo;
     if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
-      releaseQueue((L0QueueTy *)AsyncInfo.Queue);
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
       return Err;
     }
     return synchronize(&AsyncInfo);
@@ -422,7 +422,7 @@ public:
     __tgt_async_info AsyncInfo;
     if (auto Err =
             enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
-      releaseQueue((L0QueueTy *)AsyncInfo.Queue);
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
       return Err;
     }
     return synchronize(&AsyncInfo);
