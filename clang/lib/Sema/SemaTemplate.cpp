@@ -8111,8 +8111,6 @@ static ExprResult BuildExpressionFromReflection(Sema &S, const APValue &RV,
   return CXXReflectExpr::Create(
        S.Context, CaretCaretLoc,
       static_cast<TypeSourceInfo *>(const_cast<void *>(RV.getReflectionOpaqueOperand())));
-      static_cast<TypeSourceInfo *>(
-          const_cast<void *>(RV.getReflectionOpaqueOperand()));
 }
 
 static Expr *BuildExpressionFromNonTypeTemplateArgumentValue(

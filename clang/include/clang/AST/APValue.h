@@ -331,7 +331,7 @@ private:
   typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
                                       ComplexAPFloat, Vec, Mat, Arr, StructData,
                                       UnionData, AddrLabelDiffData, ReflectionData>
-                                      DataType;
+  DataType;
   static const size_t DataSize = sizeof(DataType);
 
   DataType Data;

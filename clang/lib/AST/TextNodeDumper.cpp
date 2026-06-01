@@ -878,7 +878,8 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
       break;
     case ReflectionKind::Type: {
       OS << "^^";
-      const TypeSourceInfo *TSI = static_cast<const TypeSourceInfo *>(Value.getReflectionOpaqueOperand());
+      const TypeSourceInfo *TSI = static_cast<const TypeSourceInfo *>(
+          Value.getReflectionOpaqueOperand());
       TSI->getType().print(OS, PrintPolicy);
       break;
     }
