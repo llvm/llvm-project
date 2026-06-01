@@ -1563,7 +1563,7 @@ static bool CanShareConstantPoolEntry(const Constant *A, const Constant *B,
   if (StoreSize != DL.getTypeStoreSize(B->getType()) || StoreSize > 128)
     return false;
 
-  bool ContainsUndefOrPoisonA = match(A, m_AnyVectorElement(m_UndefValue()));
+  bool ContainsUndefOrPoisonA = match(A, m_ContainsVectorElement(m_UndefValue()));
 
   Type *IntTy = IntegerType::get(A->getContext(), StoreSize*8);
 

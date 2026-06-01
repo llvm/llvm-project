@@ -816,7 +816,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     Instruction *TheNeg = dyn_cast<Instruction>(U);
 
     // We can't safely propagate a vector zero constant with poison/undef lanes.
-    if (match(TheNeg, m_BinOp(m_AnyVectorElement(m_UndefValue()), m_Value())))
+    if (match(TheNeg, m_BinOp(m_ContainsVectorElement(m_UndefValue()), m_Value())))
       continue;
 
     // Verify that the negate is in this function, V might be a constant expr.

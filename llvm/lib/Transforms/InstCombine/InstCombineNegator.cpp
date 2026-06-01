@@ -275,7 +275,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     // While this is normally not behind a use-check,
     // let's consider division to be special since it's costly.
     if (auto *Op1C = dyn_cast<Constant>(I->getOperand(1))) {
-      if (!match(Op1C, m_AnyVectorElement(m_UndefValue())) &&
+      if (!match(Op1C, m_ContainsVectorElement(m_UndefValue())) &&
           Op1C->isNotMinSignedValue() && Op1C->isNotOneValue()) {
         Value *BO =
             Builder.CreateSDiv(I->getOperand(0), ConstantExpr::getNeg(Op1C),
