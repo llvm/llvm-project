@@ -326,6 +326,16 @@ void OmpStructureChecker::CheckNestedConstruct(
     // Check requirements on nest depth.
     auto [needDepth, needPerfect]{
         GetAffectedNestDepthWithReason(beginSpec, version)};
+
+    // Perfect nesting for doacross loop nests is handled differently across
+    // versions. Only in 6.0+ is the requirement keyed off the body
+    // actually containing an ORDERED directive with a doacross dependence
+    // rather than the ORDERED clause, so the body scan applies only to those
+    // later versions.
+    if (!needPerfect && version > 52 && IsDoacrossAffected(x)) {
+      needPerfect = true;
+    }
+
     auto &[haveSema, havePerf]{sequence.depth()};
 
     auto haveDepth{needPerfect ? havePerf : haveSema};
