@@ -47,11 +47,17 @@ define i16 @test_reduce_v3i16_and(<3 x i16> %a0) {
   ret i16 %5
 }
 
-define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v6i16_xor(
+define i16 @test_no_reduce_v6i16_xor(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_no_reduce_v6i16_xor(
 ; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.xor.v6i16(<6 x i16> [[A0]])
-; CHECK-NEXT:    ret i16 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i16> [[A0]], <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <6 x i16> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i16> [[TMP2]], <6 x i16> poison, <6 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <6 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i16> [[TMP4]], <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <6 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <6 x i16> [[TMP6]], i64 0
+; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
   %1 = shufflevector <6 x i16> %a0, <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
   %2 = xor <6 x i16> %a0, %1
@@ -67,7 +73,11 @@ define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
 define i32 @test_no_reduce_v3i32_add(<3 x i32> %a0) {
 ; CHECK-LABEL: define i32 @test_no_reduce_v3i32_add(
 ; CHECK-SAME: <3 x i32> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[A0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[A0]], <3 x i32> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <3 x i32> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <3 x i32> [[TMP2]], <3 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <3 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <3 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %1 = shufflevector <3 x i32> %a0, <3 x i32> poison, <3 x i32> <i32 1, i32 2, i32 poison>
