@@ -19029,6 +19029,35 @@ static bool areAllDeinterleaveUsersWideningUIToFP(IntrinsicInst *DI,
   });
 }
 
+static bool tryLowerDeinterleave4UIToFPLoadToShuffle(LoadInst *LI,
+                                                     IntrinsicInst *DI,
+                                                     VectorType *VTy) {
+  if (!areAllDeinterleaveUsersWideningUIToFP(DI, VTy))
+    return false;
+
+  constexpr unsigned Factor = 4;
+  auto *FVTy = cast<FixedVectorType>(VTy);
+  unsigned SubElts = FVTy->getNumElements();
+  unsigned WideElts = SubElts * Factor;
+  auto *WideTy = FixedVectorType::get(FVTy->getElementType(), WideElts);
+  assert(LI->getType() == WideTy &&
+         "Unexpected load type for deinterleave intrinsic");
+
+  IRBuilder<> Builder(LI);
+  LoadInst *ClonedLI = cast<LoadInst>(LI->clone());
+  Builder.Insert(ClonedLI);
+  Value *Result = PoisonValue::get(DI->getType());
+  for (unsigned I = 0; I < Factor; ++I) {
+    SmallVector<int, 16> Mask(SubElts);
+    for (unsigned J = 0; J < SubElts; ++J)
+      Mask[J] = I + J * Factor;
+    Value *Shuf = Builder.CreateShuffleVector(ClonedLI, Mask);
+    Result = Builder.CreateInsertValue(Result, Shuf, I);
+  }
+  DI->replaceAllUsesWith(Result);
+  return true;
+}
+
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI,
     const APInt &GapMask) const {
@@ -19059,11 +19088,12 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   if (UseScalable && !VTy->isScalableTy())
     return false;
 
-  // When all deinterleaved results feed into widening uitofp operations,
-  // avoid lowering through ld4 so existing shuffle lowering can optimize them.
+  // When all deinterleaved results feed into uitofp,
+  // Convert the deinterleaved intrinsic load to wider load + shuffle
+  // to benefit from existing shufflevector optimizations.
   if (Factor == 4 && !VTy->isScalableTy() &&
-      areAllDeinterleaveUsersWideningUIToFP(DI, VTy))
-    return false;
+      tryLowerDeinterleave4UIToFPLoadToShuffle(LI, DI, VTy))
+    return true;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
   VectorType *LdTy =

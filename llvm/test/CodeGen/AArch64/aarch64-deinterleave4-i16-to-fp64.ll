@@ -5,68 +5,64 @@
 define <8 x double> @uitofp_fadd_02(ptr %p) {
 ; CHECK-LABEL: uitofp_fadd_02:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    ldp q3, q2, [x0, #32]
-; CHECK-NEXT:    uzp1 v5.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uzp2 v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uzp1 v4.8h, v3.8h, v2.8h
-; CHECK-NEXT:    uzp2 v2.8h, v3.8h, v2.8h
-; CHECK-NEXT:    movprfx z1, z5
-; CHECK-NEXT:    and z1.s, z1.s, #0xffff
-; CHECK-NEXT:    movprfx z6, z0
-; CHECK-NEXT:    and z6.s, z6.s, #0xffff
-; CHECK-NEXT:    ushr v5.4s, v5.4s, #16
-; CHECK-NEXT:    movprfx z3, z4
-; CHECK-NEXT:    and z3.s, z3.s, #0xffff
-; CHECK-NEXT:    movprfx z7, z2
-; CHECK-NEXT:    and z7.s, z7.s, #0xffff
-; CHECK-NEXT:    ushr v4.4s, v4.4s, #16
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #16
-; CHECK-NEXT:    ushr v2.4s, v2.4s, #16
-; CHECK-NEXT:    ushll2 v16.2d, v1.4s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    ushll2 v18.2d, v6.4s, #0
-; CHECK-NEXT:    ushll2 v17.2d, v3.4s, #0
-; CHECK-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-NEXT:    ushll2 v19.2d, v7.4s, #0
-; CHECK-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-NEXT:    ushll2 v20.2d, v5.4s, #0
-; CHECK-NEXT:    ushll2 v21.2d, v4.4s, #0
-; CHECK-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-NEXT:    ushll v4.2d, v4.2s, #0
-; CHECK-NEXT:    ushll v22.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    ushll2 v23.2d, v2.4s, #0
-; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    ushr v5.2d, v3.2d, #16
+; CHECK-NEXT:    ushr v6.2d, v2.2d, #16
+; CHECK-NEXT:    ushr v20.2d, v3.2d, #32
+; CHECK-NEXT:    ushr v7.2d, v1.2d, #16
+; CHECK-NEXT:    ushr v19.2d, v0.2d, #16
+; CHECK-NEXT:    ushr v21.2d, v2.2d, #32
+; CHECK-NEXT:    ushr v22.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v23.2d, v0.2d, #32
+; CHECK-NEXT:    movprfx z4, z3
+; CHECK-NEXT:    and z4.d, z4.d, #0xffff
+; CHECK-NEXT:    movprfx z16, z2
+; CHECK-NEXT:    and z16.d, z16.d, #0xffff
+; CHECK-NEXT:    movprfx z17, z1
+; CHECK-NEXT:    and z17.d, z17.d, #0xffff
+; CHECK-NEXT:    movprfx z18, z0
+; CHECK-NEXT:    and z18.d, z18.d, #0xffff
+; CHECK-NEXT:    and z5.d, z5.d, #0xffff
+; CHECK-NEXT:    and z6.d, z6.d, #0xffff
+; CHECK-NEXT:    and z7.d, z7.d, #0xffff
+; CHECK-NEXT:    and z19.d, z19.d, #0xffff
+; CHECK-NEXT:    and z20.d, z20.d, #0xffff
+; CHECK-NEXT:    and z21.d, z21.d, #0xffff
+; CHECK-NEXT:    and z22.d, z22.d, #0xffff
+; CHECK-NEXT:    and z23.d, z23.d, #0xffff
+; CHECK-NEXT:    ushr v3.2d, v3.2d, #48
+; CHECK-NEXT:    ushr v2.2d, v2.2d, #48
+; CHECK-NEXT:    ushr v1.2d, v1.2d, #48
+; CHECK-NEXT:    ushr v0.2d, v0.2d, #48
+; CHECK-NEXT:    ucvtf v4.2d, v4.2d
 ; CHECK-NEXT:    ucvtf v16.2d, v16.2d
 ; CHECK-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-NEXT:    ucvtf v19.2d, v19.2d
+; CHECK-NEXT:    ucvtf v5.2d, v5.2d
 ; CHECK-NEXT:    ucvtf v6.2d, v6.2d
 ; CHECK-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-NEXT:    ucvtf v19.2d, v19.2d
 ; CHECK-NEXT:    ucvtf v20.2d, v20.2d
 ; CHECK-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v4.2d, v4.2d
 ; CHECK-NEXT:    ucvtf v22.2d, v22.2d
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-NEXT:    ucvtf v23.2d, v23.2d
+; CHECK-NEXT:    ucvtf v3.2d, v3.2d
 ; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    fadd v7.2d, v3.2d, v7.2d
-; CHECK-NEXT:    fadd v1.2d, v1.2d, v6.2d
-; CHECK-NEXT:    fadd v3.2d, v17.2d, v19.2d
-; CHECK-NEXT:    fadd v6.2d, v16.2d, v18.2d
-; CHECK-NEXT:    fadd v5.2d, v5.2d, v22.2d
-; CHECK-NEXT:    fadd v16.2d, v20.2d, v0.2d
-; CHECK-NEXT:    fadd v2.2d, v4.2d, v2.2d
-; CHECK-NEXT:    fadd v4.2d, v21.2d, v23.2d
-; CHECK-NEXT:    fadd v0.2d, v1.2d, v5.2d
-; CHECK-NEXT:    fadd v1.2d, v6.2d, v16.2d
-; CHECK-NEXT:    fadd v3.2d, v3.2d, v4.2d
-; CHECK-NEXT:    fadd v2.2d, v7.2d, v2.2d
+; CHECK-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-NEXT:    fadd v6.2d, v16.2d, v6.2d
+; CHECK-NEXT:    fadd v4.2d, v4.2d, v5.2d
+; CHECK-NEXT:    fadd v18.2d, v18.2d, v19.2d
+; CHECK-NEXT:    fadd v7.2d, v17.2d, v7.2d
+; CHECK-NEXT:    fadd v3.2d, v20.2d, v3.2d
+; CHECK-NEXT:    fadd v16.2d, v22.2d, v1.2d
+; CHECK-NEXT:    fadd v1.2d, v21.2d, v2.2d
+; CHECK-NEXT:    fadd v5.2d, v23.2d, v0.2d
+; CHECK-NEXT:    fadd v0.2d, v4.2d, v3.2d
+; CHECK-NEXT:    fadd v1.2d, v6.2d, v1.2d
+; CHECK-NEXT:    fadd v2.2d, v7.2d, v16.2d
+; CHECK-NEXT:    fadd v3.2d, v18.2d, v5.2d
 ; CHECK-NEXT:    ret
     %l = load <32 x i16>, ptr %p
     %deint = call {<8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.vector.deinterleave4(<32 x i16> %l)
