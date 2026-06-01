@@ -7,6 +7,7 @@
 #include <level_zero/ze_api.h>
 #include <level_zero/zes_api.h>
 #include <memory>
+#include <mutex>
 
 #include "DLWrap.h"
 #include "Shared/Debug.h"
@@ -109,7 +110,6 @@ DLWRAP_FINALIZE()
 // Extension function pointer for getting argument sizes.
 static ze_result_t (*zexKernelGetArgumentSize_ptr)(ze_kernel_handle_t, uint32_t,
                                                    uint32_t *) = nullptr;
-static bool zexKernelGetArgumentSize_initialized = false;
 
 static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
     ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
@@ -117,37 +117,35 @@ static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
     void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) {
 
+  static std::once_flag zexKernelGetArgumentSize_once;
   ze_result_t Res;
 
-  if (!zexKernelGetArgumentSize_initialized) {
-    zexKernelGetArgumentSize_initialized = true;
-
-    // Get the driver to query for extensions.
+  // Load zexKernelGetArgumentSize extension if available.
+  std::call_once(zexKernelGetArgumentSize_once, []() {
     uint32_t DriverCount = 0;
-    Res = zeDriverGet(&DriverCount, nullptr);
-    if (Res == ZE_RESULT_SUCCESS && DriverCount > 0) {
+    if (zeDriverGet(&DriverCount, nullptr) == ZE_RESULT_SUCCESS &&
+        DriverCount > 0) {
       ze_driver_handle_t Driver;
       DriverCount = 1;
-      Res = zeDriverGet(&DriverCount, &Driver);
-      if (Res == ZE_RESULT_SUCCESS) {
-        // Try to get the extension function address
+      if (zeDriverGet(&DriverCount, &Driver) == ZE_RESULT_SUCCESS) {
         void *ExtFunc = nullptr;
-        Res = zeDriverGetExtensionFunctionAddress(
-            Driver, "zexKernelGetArgumentSize", &ExtFunc);
-        if (Res == ZE_RESULT_SUCCESS && ExtFunc) {
+        if (zeDriverGetExtensionFunctionAddress(
+                Driver, "zexKernelGetArgumentSize", &ExtFunc) ==
+                ZE_RESULT_SUCCESS &&
+            ExtFunc) {
           zexKernelGetArgumentSize_ptr =
               reinterpret_cast<decltype(zexKernelGetArgumentSize_ptr)>(ExtFunc);
           ODBG(OLDT_Init) << "Loaded zexKernelGetArgumentSize extension";
         }
       }
     }
-    if (!zexKernelGetArgumentSize_ptr) {
-      ODBG(OLDT_Kernel)
-          << "zeCommandListAppendLaunchKernelWithArguments is not "
-             "available, and no fallback is possible without "
-             "argument size information.";
-      return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
-    }
+  });
+  if (!zexKernelGetArgumentSize_ptr) {
+    ODBG(OLDT_Kernel)
+        << "zeCommandListAppendLaunchKernelWithArguments is not "
+           "available, and no fallback is possible without "
+           "argument size information.";
+    return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
   }
 
   Res = zeKernelSetGroupSize(hKernel, groupSizes.groupSizeX,
