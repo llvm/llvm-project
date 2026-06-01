@@ -25,5 +25,3 @@ define void @masked_store_splat_mask(ptr %p, i32 %x, i1 %m) {
   tail call void @llvm.masked.store.v4i32.p0(<4 x i32> %splat_v, ptr %p, i32 8, <4 x i1> %splat_m)
   ret void
 }
-
-declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32, <4 x i1>)

@@ -384,16 +384,6 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   bool BinOpShuffleChanged =
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
-  // tryReplaceExtracts and replaceBinOpShuffles above can mutate the IR as a
-  // side-effect of succeeding. tryReplaceExtracts rewrites every entry in
-  // Extracts when it can rewrite all of them . And replaceBinOpShuffles returns
-  // true iff it rewrote at least one binop(shuffle()) pair. If we end up
-  // bailing out of the rest of the interleaved-load transformation below, we
-  // must still report those earlier mutations.
-  auto hasMutatedIR = [&] {
-    return !Extracts.empty() || BinOpShuffleChanged;
-  };
-
   Value *Mask = nullptr;
   auto GapMask = APInt::getAllOnes(Factor);
   if (LI) {
@@ -401,8 +391,15 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor, VecTy);
+
+    // tryReplaceExtracts and replaceBinOpShuffles above can mutate the IR as a
+    // side-effect of succeeding. tryReplaceExtracts rewrites every entry in
+    // Extracts when it can rewrite all of them . And replaceBinOpShuffles returns
+    // true iff it rewrote at least one binop(shuffle()) pair. If we end up
+    // bailing out of the rest of the interleaved-load transformation below, we
+    // must still report those earlier mutations.
     if (!Mask)
-      return hasMutatedIR();
+      return !Extracts.empty() || BinOpShuffleChanged;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
                       << *Load << "\n");
@@ -413,10 +410,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   // Try to create target specific intrinsics to replace the load and
   // shuffles.
   if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
-                                 Indices, Factor, GapMask)) {
-    eraseDeadMaskInstructions(Mask);
-    return hasMutatedIR();
-  }
+                                 Indices, Factor, GapMask))
+    return true;
 
   DeadInsts.insert_range(Shuffles);
 
