@@ -328,7 +328,7 @@ ByteValue::ByteValue(const APInt &V, bool IsLittleEndian)
     : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian) {
   Val.resize(divideCeil(BitWidth, 8));
   MutableBytesView View(Val, IsLittleEndian);
-  for (uint8_t I = 0; I < BitWidth; I += 8)
+  for (uint32_t I = 0; I < BitWidth; I += 8)
     View[I / 8] = Byte::concrete(static_cast<uint8_t>(
         V.extractBitsAsZExtValue(std::min(BitWidth - I, 8), I)));
 }
