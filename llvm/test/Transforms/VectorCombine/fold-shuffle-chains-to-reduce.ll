@@ -63,6 +63,36 @@ define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
   ret i16 %7
 }
 
+; Non-idempotent op (add) on a non-power-of-2 vector: can't fold into reduction.
+define i32 @test_no_reduce_v3i32_add(<3 x i32> %a0) {
+; CHECK-LABEL: define i32 @test_no_reduce_v3i32_add(
+; CHECK-SAME: <3 x i32> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[A0]])
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %1 = shufflevector <3 x i32> %a0, <3 x i32> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+  %2 = add <3 x i32> %a0, %1
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+  %4 = add <3 x i32> %2, %3
+  %5 = extractelement <3 x i32> %4, i64 0
+  ret i32 %5
+}
+
+; Idempotent op (smax) on a non-power-of-2 vector: lane duplication is harmless
+define i16 @test_reduce_v3i16_smax(<3 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v3i16_smax(
+; CHECK-SAME: <3 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.smax.v3i16(<3 x i16> [[A0]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %1 = shufflevector <3 x i16> %a0, <3 x i16> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+  %2 = tail call <3 x i16> @llvm.smax.v3i16(<3 x i16> %a0, <3 x i16> %1)
+  %3 = shufflevector <3 x i16> %2, <3 x i16> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+  %4 = tail call <3 x i16> @llvm.smax.v3i16(<3 x i16> %2, <3 x i16> %3)
+  %5 = extractelement <3 x i16> %4, i64 0
+  ret i16 %5
+}
+
 define i16 @test_reduce_v8i16_2(<8 x i16> %a0) {
 ; CHECK-LABEL: define i16 @test_reduce_v8i16_2(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
