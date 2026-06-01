@@ -100,7 +100,28 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
     %v = math.erf %in : f32
     linalg.yield %v : f32
   } -> tensor<?x?x?xf32>
-  return %12 : tensor<?x?x?xf32>
+  %13 = linalg.generic
+          {indexing_maps = [#umap, #umap], iterator_types = ["parallel", "parallel","parallel"]}
+          ins(%12 : tensor<?x?x?xf32>) outs(%Out : tensor<?x?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = math.sin %in : f32
+    linalg.yield %v : f32
+  } -> tensor<?x?x?xf32>
+  %14 = linalg.generic
+          {indexing_maps = [#umap, #umap], iterator_types = ["parallel", "parallel","parallel"]}
+          ins(%13 : tensor<?x?x?xf32>) outs(%Out : tensor<?x?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = math.cos %in : f32
+    linalg.yield %v : f32
+  } -> tensor<?x?x?xf32>
+  %15 = linalg.generic
+          {indexing_maps = [#umap, #umap], iterator_types = ["parallel", "parallel","parallel"]}
+          ins(%14 : tensor<?x?x?xf32>) outs(%Out : tensor<?x?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %v = math.tan %in : f32
+    linalg.yield %v : f32
+  } -> tensor<?x?x?xf32>
+  return %15 : tensor<?x?x?xf32>
 }
 
 // ALL-LABEL: unary_ops
@@ -146,6 +167,15 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
 // NAMED: %[[RES12:.+]] = linalg.erf
 // NAMED-SAME: ins(%[[RES11]] : tensor<?x?x?xf32>)
 // NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// NAMED: %[[RES13:.+]] = linalg.sin
+// NAMED-SAME: ins(%[[RES12]] : tensor<?x?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// NAMED: %[[RES14:.+]] = linalg.cos
+// NAMED-SAME: ins(%[[RES13]] : tensor<?x?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// NAMED: %[[RES15:.+]] = linalg.tan
+// NAMED-SAME: ins(%[[RES14]] : tensor<?x?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
 // CATEGORY: %[[RES0:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
 // CATEGORY-SAME: ins(%[[A]] : tensor<?x?x?xf32>)
@@ -185,6 +215,15 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CATEGORY: %[[RES12:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<erf>
 // CATEGORY-SAME: ins(%[[RES11]] : tensor<?x?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CATEGORY: %[[RES13:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sin>
+// CATEGORY-SAME: ins(%[[RES12]] : tensor<?x?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CATEGORY: %[[RES14:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<cos>
+// CATEGORY-SAME: ins(%[[RES13]] : tensor<?x?x?xf32>)
+// CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+// CATEGORY: %[[RES15:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<tan>
+// CATEGORY-SAME: ins(%[[RES14]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
 // -----
