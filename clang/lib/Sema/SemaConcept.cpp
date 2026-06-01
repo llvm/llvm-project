@@ -381,6 +381,10 @@ public:
     return true;
   }
 
+  bool TraverseCXXThisExpr(CXXThisExpr *E) {
+    return inherited::TraverseType(E->getType());
+  }
+
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     // We don't care about TypeLocs. So traverse Types instead.
     return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
@@ -392,6 +396,16 @@ public:
     // FIXME: Add an assert to catch cases where we failed to profile the
     // concept.
     return true;
+  }
+
+  bool TraverseUnresolvedUsingType(UnresolvedUsingType *T,
+                                   bool TraverseQualifier) {
+    // Sometimes the written type doesn't contain a qualifier which contains
+    // necessary template arguments, whereas the declaration does.
+    if (NestedNameSpecifier NNS = T->getDecl()->getQualifier();
+        TraverseQualifier && NNS)
+      return inherited::TraverseNestedNameSpecifier(NNS);
+    return inherited::TraverseUnresolvedUsingType(T, TraverseQualifier);
   }
 
   bool TraverseInjectedClassNameType(InjectedClassNameType *T,
