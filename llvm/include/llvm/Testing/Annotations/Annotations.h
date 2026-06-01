@@ -54,6 +54,11 @@ class raw_ostream;
 ///
 /// Alternatively, use setters to customize markers individually:
 ///
+///    // Customize only the point marker, leaving the rest as default:
+///    Annotations Example("~point $name[[range]]", Annotations::Markers()
+///      .setPoint("~"));
+///
+///    // Customize all markers:
 ///    Annotations Example("~point @@name{{range}}", Annotations::Markers()
 ///      .setPoint("~")
 ///      .setName("@@")

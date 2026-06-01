@@ -155,35 +155,42 @@ TEST(AnnotationsTest, Named) {
 }
 
 TEST(AnnotationsTest, CustomMarkers) {
-  auto Custom = llvm::Annotations::Markers()
-                    .setPoint("~")
-                    .setName("@")
-                    .setRangeBegin("{{")
-                    .setRangeEnd("}}");
+  // Only point marker customized.
+  auto CustomPoint = llvm::Annotations::Markers().setPoint("~");
+  EXPECT_EQ(
+      llvm::Annotations("foo~bar$nnn[[baz$~[[qux]]]]", CustomPoint).code(),
+      "foobarbazqux");
+
+  // All markers customized.
+  auto AllCustom = llvm::Annotations::Markers()
+                       .setPoint("~")
+                       .setName("@")
+                       .setRangeBegin("{{")
+                       .setRangeEnd("}}");
 
   // Cleaned code.
-  EXPECT_EQ(llvm::Annotations("foo~bar@nnn{{baz@~{{qux}}}}", Custom).code(),
+  EXPECT_EQ(llvm::Annotations("foo~bar@nnn{{baz@~{{qux}}}}", AllCustom).code(),
             "foobarbazqux");
 
   // A single point.
-  EXPECT_EQ(llvm::Annotations("~ab", Custom).point(), 0u);
-  EXPECT_EQ(llvm::Annotations("a~b", Custom).point(), 1u);
+  EXPECT_EQ(llvm::Annotations("~ab", AllCustom).point(), 0u);
+  EXPECT_EQ(llvm::Annotations("a~b", AllCustom).point(), 1u);
 
   // Multiple points.
-  EXPECT_THAT(llvm::Annotations("~a~bc~d~", Custom).points(),
+  EXPECT_THAT(llvm::Annotations("~a~bc~d~", AllCustom).points(),
               ElementsAre(0u, 1u, 3u, 4u));
 
   // A single range.
-  EXPECT_EQ(llvm::Annotations("{{a}}bc", Custom).range(), range(0, 1));
-  EXPECT_EQ(llvm::Annotations("a{{bc}}d", Custom).range(), range(1, 3));
+  EXPECT_EQ(llvm::Annotations("{{a}}bc", AllCustom).range(), range(0, 1));
+  EXPECT_EQ(llvm::Annotations("a{{bc}}d", AllCustom).range(), range(1, 3));
 
   // Multiple ranges.
-  EXPECT_THAT(llvm::Annotations("{{a}}{{b}}cd{{ef}}ef", Custom).ranges(),
+  EXPECT_THAT(llvm::Annotations("{{a}}{{b}}cd{{ef}}ef", AllCustom).ranges(),
               ElementsAre(range(0, 1), range(1, 2), range(4, 6)));
 
   // Named and payloads.
-  EXPECT_EQ(llvm::Annotations("a@foo~b", Custom).point("foo"), 1u);
-  EXPECT_THAT(llvm::Annotations("a@name(foo){{b}}cdef", Custom)
+  EXPECT_EQ(llvm::Annotations("a@foo~b", AllCustom).point("foo"), 1u);
+  EXPECT_THAT(llvm::Annotations("a@name(foo){{b}}cdef", AllCustom)
                   .rangeWithPayload("name"),
               Pair(range(1, 2), "foo"));
 
