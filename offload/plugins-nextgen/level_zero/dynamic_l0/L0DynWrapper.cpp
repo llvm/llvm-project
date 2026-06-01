@@ -141,10 +141,9 @@ static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
     }
   });
   if (!zexKernelGetArgumentSize_ptr) {
-    ODBG(OLDT_Kernel)
-        << "zeCommandListAppendLaunchKernelWithArguments is not "
-           "available, and no fallback is possible without "
-           "argument size information.";
+    ODBG(OLDT_Kernel) << "zeCommandListAppendLaunchKernelWithArguments is not "
+                         "available, and no fallback is possible without "
+                         "argument size information.";
     return ZE_RESULT_ERROR_UNSUPPORTED_FEATURE;
   }
 
