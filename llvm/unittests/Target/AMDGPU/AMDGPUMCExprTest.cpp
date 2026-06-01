@@ -1,4 +1,5 @@
-//===- llvm/unittests/MC/AMDGPU/AMDGPUMCExprTest.cpp ---------------------------===//
+//===- llvm/unittests/MC/AMDGPU/AMDGPUMCExprTest.cpp
+//---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPUUnitTests.h"
 #include "GCNSubtarget.h"
 #include "SIProgramInfo.h"
-#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "Utils/AMDGPUPALMetadata.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -36,7 +37,7 @@ protected:
   AMDGPUPALMetadata MD;
 
   AMDGPUMCExprTest() {
-    
+
     TM = createAMDGPUTargetMachine("amdgcn--amdpal", "gfx1010", "");
 
     LLVMCtx = std::make_unique<LLVMContext>();
@@ -53,9 +54,10 @@ protected:
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 1);
   }
 };
-//Next two tests showcases the folding of foldAMDGPUMCExpr function that uses KnownBits to simplify expressions as much as possible
-// max(((external_unknown & 0) | 0x8000000000000000), 5)
-TEST_F(AMDGPUMCExprTest, MaxFoldKnownBitsSignedness){
+// Next two tests showcases the folding of foldAMDGPUMCExpr function that uses
+// KnownBits to simplify expressions as much as possible
+//  max(((external_unknown & 0) | 0x8000000000000000), 5)
+TEST_F(AMDGPUMCExprTest, MaxFoldKnownBitsSignedness) {
   MCContext &Ctx = MF->getContext();
 
   // Set up the unknown/undefined part of the expression
@@ -63,18 +65,19 @@ TEST_F(AMDGPUMCExprTest, MaxFoldKnownBitsSignedness){
   const MCExpr *SymRef = MCSymbolRefExpr::create(Sym, Ctx);
 
   // Set up the rest of the expression
-  const MCExpr *Masked = MCBinaryExpr::createAnd(
-      SymRef, MCConstantExpr::create(0, Ctx),Ctx);
-  const MCExpr *SignBit = AMDGPUMCExpr::createOr({
-      Masked, MCConstantExpr::create(INT64_MIN, Ctx)}, Ctx);
-  const MCExpr *MaxExpr = AMDGPUMCExpr::createMax({
-      SignBit, MCConstantExpr::create(5, Ctx)}, Ctx);
-  
+  const MCExpr *Masked =
+      MCBinaryExpr::createAnd(SymRef, MCConstantExpr::create(0, Ctx), Ctx);
+  const MCExpr *SignBit = AMDGPUMCExpr::createOr(
+      {Masked, MCConstantExpr::create(INT64_MIN, Ctx)}, Ctx);
+  const MCExpr *MaxExpr =
+      AMDGPUMCExpr::createMax({SignBit, MCConstantExpr::create(5, Ctx)}, Ctx);
+
   // running evaluateAsAbsolute will fail since external_unknown is undefined.
   int64_t RuntimeRst;
   EXPECT_FALSE(MaxExpr->evaluateAsAbsolute(RuntimeRst));
 
-  // fold expression and then running evaluateAsAbsolute should now succeed with the correct rst
+  // fold expression and then running evaluateAsAbsolute should now succeed with
+  // the correct result
   const MCExpr *Folded = AMDGPU::foldAMDGPUMCExpr(MaxExpr, Ctx);
   int64_t FoldedVal;
   ASSERT_TRUE(Folded->evaluateAsAbsolute(FoldedVal));
@@ -82,7 +85,7 @@ TEST_F(AMDGPUMCExprTest, MaxFoldKnownBitsSignedness){
 }
 
 // min(((external_unknown & 0) | 0x8000000000000000), 5)
-TEST_F(AMDGPUMCExprTest, MinFolddKnownBitsSignedness){
+TEST_F(AMDGPUMCExprTest, MinFolddKnownBitsSignedness) {
   MCContext &Ctx = MF->getContext();
 
   // Set up the unknown/undefined part of the expression
@@ -90,18 +93,19 @@ TEST_F(AMDGPUMCExprTest, MinFolddKnownBitsSignedness){
   const MCExpr *SymRef = MCSymbolRefExpr::create(Sym, Ctx);
 
   // Set up the rest of the expression
-  const MCExpr *Masked = MCBinaryExpr::createAnd(
-      SymRef, MCConstantExpr::create(0, Ctx),Ctx);
-  const MCExpr *SignBit = AMDGPUMCExpr::createOr({
-      Masked, MCConstantExpr::create(INT64_MIN, Ctx)}, Ctx);
-  const MCExpr *MinExpr = AMDGPUMCExpr::createMin({
-      SignBit, MCConstantExpr::create(5, Ctx)}, Ctx);
+  const MCExpr *Masked =
+      MCBinaryExpr::createAnd(SymRef, MCConstantExpr::create(0, Ctx), Ctx);
+  const MCExpr *SignBit = AMDGPUMCExpr::createOr(
+      {Masked, MCConstantExpr::create(INT64_MIN, Ctx)}, Ctx);
+  const MCExpr *MinExpr =
+      AMDGPUMCExpr::createMin({SignBit, MCConstantExpr::create(5, Ctx)}, Ctx);
 
   // running evaluateAsAbsolute will fail since external_unknown is undefined.
   int64_t AbsoluteRst;
   EXPECT_FALSE(MinExpr->evaluateAsAbsolute(AbsoluteRst));
 
-  // fold expression and then running evaluateAsAbsolute should now succeed with the correct rst
+  // fold expression and then running evaluateAsAbsolute should now succeed with
+  // the correct result
   const MCExpr *Folded = AMDGPU::foldAMDGPUMCExpr(MinExpr, Ctx);
   int64_t FoldedVal;
   ASSERT_TRUE(Folded->evaluateAsAbsolute(FoldedVal));
