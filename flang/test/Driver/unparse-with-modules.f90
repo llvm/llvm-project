@@ -25,7 +25,7 @@ end
 !CHECK:  implicit none
 !CHECK:  real(kind=real32) x
 !CHECK: end module
-!CHECK: program test
+!CHECK: program TEST
 !CHECK:  use :: m1
 !CHECK:  use :: basictestmoduletwo
 !CHECK:  implicit none

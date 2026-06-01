@@ -40,5 +40,5 @@ LanaiSubtarget::LanaiSubtarget(const Triple &TargetTriple, StringRef Cpu,
                                CodeModel::Model /*CodeModel*/,
                                CodeGenOptLevel /*OptLevel*/)
     : LanaiGenSubtargetInfo(TargetTriple, Cpu, /*TuneCPU*/ Cpu, FeatureString),
-      FrameLowering(initializeSubtargetDependencies(Cpu, FeatureString)),
-      TLInfo(TM, *this) {}
+      InstrInfo(initializeSubtargetDependencies(Cpu, FeatureString)),
+      FrameLowering(*this), TLInfo(TM, *this) {}

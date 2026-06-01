@@ -94,6 +94,10 @@ function (add_flangrt_library name)
     set(build_object ON)
   elseif (build_static AND build_shared)
     set(build_object ON)
+  elseif (NOT build_static AND NOT build_shared)
+    # If not building a library, still build the object files
+    # Needed to generate the .mod files as byproduct
+    set(build_object ON)
   endif ()
 
   # srctargets: targets that contain source files
@@ -122,12 +126,16 @@ function (add_flangrt_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Include the RPC utilities from the `libc` project.
+  set(extra_deps llvm-libc-common-utilities)
+
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   # Create selected library types.
   if (build_object)
     add_library("${name_object}" OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name_object} PRIVATE ${extra_deps})
     set_target_properties(${name_object} PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         FOLDER "Flang-RT/Object Libraries"
@@ -139,11 +147,11 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static ${extra_deps})
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared  ${extra_deps})
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
@@ -168,14 +176,18 @@ function (add_flangrt_library name)
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
-      else ()
+      elseif (build_static)
         set(default_target "${name_static}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     else ()
       if (build_static)
         set(default_target "${name_static}")
-      else ()
+      elseif (build_shared)
         set(default_target "${name_shared}")
+      else ()
+        set(default_target "${name_object}")
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
@@ -189,6 +201,15 @@ function (add_flangrt_library name)
       add_dependencies(${name} ${libtargets})
     endif ()
   endif ()
+
+  # An alias for the target that compiles the sources. When building a shared
+  # and static library at the same time, the sources are compiled in an object
+  # library, so there can be only one.
+  # Can be used to introspect and change the real target's properties, like:
+  #
+  # get_target_property(compile_target ${name}.compile ALIASED_TARGET)
+  # target_sources(${compile_target} more_sources.c)
+  add_library(${name}.compile ALIAS "${srctargets}")
 
   foreach (tgtname IN LISTS libtargets)
     if (NOT WIN32)
@@ -204,12 +225,30 @@ function (add_flangrt_library name)
     endif ()
   endforeach ()
 
+ set(TARGET_FLAGS)
+  if(APPLE)
+    set(DARWIN_EMBEDDED_PLATFORMS)
+    set(DARWIN_osx_BUILTIN_MIN_VER 10.7)
+    set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
+        -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
+  endif()
+
   # Define how to compile and link the library.
   # Some conceptionally only apply to ${srctargets} or ${libtargets}, but we
   # apply them to ${alltargets}. In worst case, they are ignored by CMake.
   foreach (tgtname IN LISTS alltargets)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
+
+    if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
+      target_compile_options(${tgtname} PRIVATE
+        # Always enable preprocessor regardless of file extension
+        "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
+
+        # Missing type descriptors are expected for intrinsic modules
+        "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
+      )
+    endif ()
 
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
@@ -218,29 +257,64 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
     endif ()
 
+    if (FORTRAN_SUPPORTS_REAL16)
+      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
+    endif ()
+
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+        )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
         )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
-    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+    elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
+        )
+    elseif (APPLE)
+      # Clang on Darwin enables non-POSIX extensions by default.
+      # This causes some macros to leak, such as HUGE from <math.h>, which
+      # causes some conflicts with Flang symbols (but not with Flang-RT, for
+      # now).
+      # It also causes some Flang-RT extensions to be disabled, such as fdate,
+      # that checks for _POSIX_C_SOURCE.
+      # Setting _POSIX_C_SOURCE avoids these issues.
+      target_compile_options(${tgtname} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG} -D_POSIX_C_SOURCE=200809>
         )
     endif ()
 
@@ -269,30 +343,12 @@ function (add_flangrt_library name)
 
     # Disable libstdc++/libc++ assertions, even in an LLVM_ENABLE_ASSERTIONS
     # build, to avoid an unwanted dependency on libstdc++/libc++.so.
+    target_compile_definitions(${tgtname} PUBLIC _GLIBCXX_NO_ASSERTIONS)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
-      target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
-      target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
-    endif ()
-
-    # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-    # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
-    # functions in some cases like 128-bit integer math (__udivti3, __modti3,
-    # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
-    # dependency to Compiler-RT's builtin library where these are implemented.
-    if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      endif ()
-    endif ()
-    if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      else ()
-        message(WARNING "Did not find libclang_rt.builtins.lib.
-          LLVM may emit builtins that are not implemented in msvcrt/ucrt and
-          instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
-          may result in a linker error.")
-      endif ()
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_GLIBCXX_ASSERTIONS>")
+      target_compile_options(${tgtname} PUBLIC
+          "$<$<COMPILE_LANGUAGE:CXX>:-Wp,-U_LIBCPP_ENABLE_ASSERTIONS>")
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport
@@ -320,15 +376,29 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatible
+      #        version. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
-          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
+          LIBRARY_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
         )
 
       install(TARGETS ${tgtname}
-          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
-          LIBRARY DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
+          ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
+          LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )
     endif ()
 

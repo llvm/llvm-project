@@ -8,7 +8,7 @@
 
 // <list>
 
-// iterator erase(const_iterator first, const_iterator last);
+// iterator erase(const_iterator first, const_iterator last); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   int a1[] = {1, 2, 3};
   {
     std::list<int> l1(a1, a1 + 3);
@@ -79,6 +79,15 @@ int main(int, char**) {
     assert(std::distance(l1.cbegin(), l1.cend()) == 0);
     assert(i == l1.begin());
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

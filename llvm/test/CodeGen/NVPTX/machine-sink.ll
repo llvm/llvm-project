@@ -17,8 +17,8 @@ define float @post_dominate(float %x, i1 %cond) {
 entry:
   %0 = load float, ptr addrspacecast (ptr addrspace(3) @scalar1 to ptr), align 4
   %1 = load float, ptr addrspacecast (ptr addrspace(3) @scalar2 to ptr), align 4
-; CHECK: ld.shared.f32
-; CHECK: ld.shared.f32
+; CHECK: ld.shared.b32
+; CHECK: ld.shared.b32
   %2 = fmul float %0, %0
   %3 = fmul float %1, %2
 ; CHECK-NOT: bra

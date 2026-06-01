@@ -11,8 +11,8 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import os
 
-# DAP tests are flakey, see https://github.com/llvm/llvm-project/issues/137660.
-@skip
+
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_breakpointLocations(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, Addresses, AtomicFloat32AddEXT], [SPV_EXT_shader_atomic_float_add]> {
   // CHECK-LABEL: @test_int_atomics
   spirv.func @test_int_atomics(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32, %comparator: i32) -> i32 "None" {
     // CHECK: spirv.AtomicCompareExchangeWeak <Workgroup> <Release> <Acquire> %{{.*}}, %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
@@ -31,6 +36,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %12 = spirv.AtomicCompareExchange <Workgroup> <Release> <Acquire> %ptr, %value, %comparator: !spirv.ptr<i32, Workgroup>
     // CHECK: spirv.AtomicExchange <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
     %13 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value: !spirv.ptr<i32, Workgroup>
+    // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<i32, Workgroup>
+    %14 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<i32, Workgroup>
+    // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+    spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
     spirv.ReturnValue %0: i32
   }
 
@@ -38,6 +47,10 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @test_float_atomics(%ptr: !spirv.ptr<f32, Workgroup>, %value: f32) -> f32 "None" {
     // CHECK: spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
     %0 = spirv.EXT.AtomicFAdd <Workgroup> <Acquire> %ptr, %value : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<f32, Workgroup>
+    %1 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<f32, Workgroup>
+    // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<f32, Workgroup>
+    spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<f32, Workgroup>
     spirv.ReturnValue %0: f32
   }
 }

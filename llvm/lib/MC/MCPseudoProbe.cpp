@@ -13,7 +13,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -21,11 +20,11 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <limits>
-#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -41,9 +40,8 @@ int MCPseudoProbeTable::DdgPrintIndent = 0;
 static const MCExpr *buildSymbolDiff(MCObjectStreamer *MCOS, const MCSymbol *A,
                                      const MCSymbol *B) {
   MCContext &Context = MCOS->getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
-  const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
+  const MCExpr *ARef = MCSymbolRefExpr::create(A, Context);
+  const MCExpr *BRef = MCSymbolRefExpr::create(B, Context);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context);
   return AddrDelta;
@@ -83,8 +81,9 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
-          AddrDelta));
+      auto *F = MCOS->getCurrentFragment();
+      F->makeLEB(true, AddrDelta);
+      MCOS->newFragment();
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.
@@ -376,7 +375,8 @@ ErrorOr<StringRef> MCPseudoProbeDecoder::readString(uint32_t Size) {
 
 bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
                                                  std::size_t Size,
-                                                 bool IsMMapped) {
+                                                 bool IsMMapped,
+                                                 bool VerboseWarnings) {
   // The pseudo_probe_desc section has a format like:
   // .section .pseudo_probe_desc,"",@progbits
   // .quad -5182264717993193164   // GUID
@@ -429,9 +429,32 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   assert(Data == End && "Have unprocessed data in pseudo_probe_desc section");
   assert(GUID2FuncDescMap.size() == FuncDescCount &&
          "Mismatching function description count pre- and post-parsing");
-  llvm::sort(GUID2FuncDescMap, [](const auto &LHS, const auto &RHS) {
+  llvm::stable_sort(GUID2FuncDescMap, [](const auto &LHS, const auto &RHS) {
     return LHS.FuncGUID < RHS.FuncGUID;
   });
+
+  // Detect duplicate GUIDs with different hashes across TUs.
+  uint32_t MismatchCount = 0;
+  uint64_t LastMismatchGUID = 0;
+  for (size_t I = 1; I < GUID2FuncDescMap.size(); ++I) {
+    const auto &Prev = GUID2FuncDescMap[I - 1];
+    const auto &Curr = GUID2FuncDescMap[I];
+    if (Prev.FuncGUID == Curr.FuncGUID && Prev.FuncHash != Curr.FuncHash) {
+      if (LastMismatchGUID != Curr.FuncGUID) {
+        ++MismatchCount;
+        LastMismatchGUID = Curr.FuncGUID;
+      }
+      if (VerboseWarnings)
+        WithColor::warning() << "pseudo probe descriptor for " << Prev.FuncName
+                             << " has mismatching hash across TUs: "
+                             << format_hex(Prev.FuncHash, 18) << " vs "
+                             << format_hex(Curr.FuncHash, 18) << "\n";
+    }
+  }
+  if (MismatchCount > 0)
+    WithColor::warning() << MismatchCount
+                         << " functions have mismatching pseudo probe "
+                            "descriptors across translation units.\n";
   return true;
 }
 

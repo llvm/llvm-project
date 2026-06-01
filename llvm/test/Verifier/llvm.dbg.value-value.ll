@@ -1,6 +1,6 @@
 ; RUN: llvm-as -disable-output <%s 2>&1 | FileCheck %s
-; CHECK: invalid llvm.dbg.value intrinsic address/value
-; CHECK-NEXT: call void @llvm.dbg.value({{.*}})
+; CHECK: invalid #dbg record address/value
+; CHECK-NEXT: #dbg_value({{.*}})
 ; CHECK-NEXT: !""
 ; CHECK: warning: ignoring invalid debug info
 
@@ -15,4 +15,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram()
+!1 = distinct !DISubprogram(type: !3)
+!2 = !{null}
+!3 = !DISubroutineType(types: !2)

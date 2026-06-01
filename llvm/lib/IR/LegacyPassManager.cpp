@@ -21,17 +21,16 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
 // See PassManagers.h for Pass Manager infrastructure overview.
 
 //===----------------------------------------------------------------------===//
@@ -120,7 +119,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // If no function was passed in, then we're either a module pass or an
   // CGSCC pass.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(M.begin(), M.end(), UpdateFunctionChanges);
+    llvm::for_each(M, UpdateFunctionChanges);
   else
     UpdateFunctionChanges(*F);
 
@@ -197,9 +196,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // Are we looking at more than one function? If so, emit remarks for all of
   // the functions in the module. Otherwise, only emit one remark.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(FunctionToInstrCount.keys().begin(),
-                  FunctionToInstrCount.keys().end(),
-                  EmitFunctionSizeChangedRemark);
+    llvm::for_each(FunctionToInstrCount.keys(), EmitFunctionSizeChangedRemark);
   else
     EmitFunctionSizeChangedRemark(F->getName().str());
 }
@@ -525,11 +522,6 @@ bool PassManagerImpl::run(Module &M) {
 
   dumpArguments();
   dumpPasses();
-
-  // RemoveDIs: if a command line flag is given, convert to the
-  // DbgVariableRecord representation of debug-info for the duration of these
-  // passes.
-  ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
 
   for (ImmutablePass *ImPass : getImmutablePasses())
     Changed |= ImPass->doInitialization(M);
@@ -911,42 +903,34 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  for (DenseMap<AnalysisID, Pass*>::iterator I = AvailableAnalysis.begin(),
-         E = AvailableAnalysis.end(); I != E; ) {
-    DenseMap<AnalysisID, Pass*>::iterator Info = I++;
-    if (Info->second->getAsImmutablePass() == nullptr &&
-        !is_contained(PreservedSet, Info->first)) {
-      // Remove this analysis
-      if (PassDebugging >= Details) {
-        Pass *S = Info->second;
-        dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-        dbgs() << S->getPassName() << "'\n";
-      }
-      AvailableAnalysis.erase(Info);
-    }
-  }
-
+  SmallVector<DenseMap<AnalysisID, Pass *> *, 8> Maps = {&AvailableAnalysis};
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
-    if (!IA)
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
+    if (IA)
+      Maps.push_back(IA);
+  // Prune every map from a single remove_if call site. The instantiated
+  // DenseMap::remove_if is a local function; sharing it across more than one
+  // call site makes the inliner emit it out of line, which adds a call in this
+  // hot per-pass path. A single call site keeps it inlined here.
+  for (DenseMap<AnalysisID, Pass *> *M : Maps) {
+    // These maps are usually empty here, but a DenseMap keeps its grown bucket
+    // array after the entries are erased, so remove_if would still scan all
+    // those empty buckets. Skip it.
+    if (M->empty())
       continue;
-
-    for (DenseMap<AnalysisID, Pass *>::iterator I = IA->begin(),
-                                                E = IA->end();
-         I != E;) {
-      DenseMap<AnalysisID, Pass *>::iterator Info = I++;
-      if (Info->second->getAsImmutablePass() == nullptr &&
-          !is_contained(PreservedSet, Info->first)) {
-        // Remove this analysis
-        if (PassDebugging >= Details) {
-          Pass *S = Info->second;
-          dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-          dbgs() << S->getPassName() << "'\n";
-        }
-        IA->erase(Info);
+    M->remove_if([&](const auto &Entry) {
+      if (Entry.second->getAsImmutablePass() != nullptr ||
+          is_contained(PreservedSet, Entry.first))
+        return false;
+      // Remove this analysis
+      if (PassDebugging >= Details) {
+        Pass *S = Entry.second;
+        dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
+        dbgs() << S->getPassName() << "'\n";
       }
-    }
+      return true;
+    });
   }
 }
 
@@ -1106,7 +1090,7 @@ void PMDataManager::initializeAnalysisImpl(Pass *P) {
 Pass *PMDataManager::findAnalysisPass(AnalysisID AID, bool SearchParent) {
 
   // Check if AvailableAnalysis map has one entry.
-  DenseMap<AnalysisID, Pass*>::const_iterator I =  AvailableAnalysis.find(AID);
+  auto I = AvailableAnalysis.find(AID);
 
   if (I != AvailableAnalysis.end())
     return I->second;

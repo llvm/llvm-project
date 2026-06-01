@@ -461,15 +461,10 @@ define i8 @sel_constants_udiv_constant(i1 %cond) {
 ; CHECK-GI-LABEL: sel_constants_udiv_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    and w8, w0, #0x1
-; CHECK-GI-NEXT:    mov w9, #-4 // =0xfffffffc
-; CHECK-GI-NEXT:    mov w10, #23 // =0x17
+; CHECK-GI-NEXT:    mov w9, #50 // =0x32
+; CHECK-GI-NEXT:    mov w10, #4 // =0x4
 ; CHECK-GI-NEXT:    tst w8, #0x1
-; CHECK-GI-NEXT:    csel w8, w9, w10, ne
-; CHECK-GI-NEXT:    mov w9, #205 // =0xcd
-; CHECK-GI-NEXT:    and w8, w8, #0xff
-; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    lsr w8, w8, #8
-; CHECK-GI-NEXT:    lsr w0, w8, #2
+; CHECK-GI-NEXT:    csel w0, w9, w10, ne
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = udiv i8 %sel, 5
@@ -976,4 +971,28 @@ define double @frem_constant_sel_constants(i1 %cond) {
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double 5.1, %sel
   ret double %bo
+}
+
+define <4 x float> @select_const_i1(i1 %c) {
+; CHECK-SD-LABEL: select_const_i1:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tst w0, #0x1
+; CHECK-SD-NEXT:    fmov v0.4s, #1.00000000
+; CHECK-SD-NEXT:    csetm w8, ne
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: select_const_i1:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    and w8, w0, #0x1
+; CHECK-GI-NEXT:    fmov v0.4s, #1.00000000
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    sbfx w8, w8, #0, #1
+; CHECK-GI-NEXT:    dup v2.4s, w8
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %a.addr.5.i = select i1 %c, <4 x float> splat (float 1.000000e+00), <4 x float> zeroinitializer
+  ret <4 x float> %a.addr.5.i
 }

@@ -12,9 +12,6 @@
 #include <cstring>
 #include <optional>
 
-constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
-constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;
-
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType() const {
   if (m_packet.empty())
@@ -280,6 +277,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_qSupported;
       if (PACKET_MATCHES("qSyncThreadStateSupported"))
         return eServerPacketType_qSyncThreadStateSupported;
+      if (PACKET_MATCHES("qStructuredDataPlugins"))
+        return eServerPacketType_qStructuredDataPlugins;
       break;
 
     case 'T':
@@ -331,6 +330,10 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jLLDBTraceGetState;
     if (PACKET_STARTS_WITH("jLLDBTraceGetBinaryData:"))
       return eServerPacketType_jLLDBTraceGetBinaryData;
+    if (PACKET_STARTS_WITH("jMultiBreakpoint:"))
+      return eServerPacketType_jMultiBreakpoint;
+    if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
+      return eServerPacketType_jAcceleratorPluginInitialize;
     break;
 
   case 'v':

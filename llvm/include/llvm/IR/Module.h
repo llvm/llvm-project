@@ -31,6 +31,8 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -214,11 +216,6 @@ private:
 /// @name Constructors
 /// @{
 public:
-  /// Is this Module using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
@@ -229,7 +226,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
-    IsNewDbgInfoFormat = true;
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -237,20 +235,6 @@ public:
     for (auto &F : *this) {
       F.convertFromNewDbgValues();
     }
-    IsNewDbgInfoFormat = false;
-  }
-
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
-    if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
-    else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
-  }
-  void setNewDbgInfoFormatFlag(bool NewFlag) {
-    for (auto &F : *this) {
-      F.setNewDbgInfoFormatFlag(NewFlag);
-    }
-    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -471,15 +455,14 @@ public:
 
   /// Look up the specified global in the module symbol table.
   /// If it does not exist, invoke a callback to create a declaration of the
-  /// global and return it. The global is constantexpr casted to the expected
-  /// type if necessary.
-  Constant *
+  /// global and return it.
+  GlobalVariable *
   getOrInsertGlobal(StringRef Name, Type *Ty,
                     function_ref<GlobalVariable *()> CreateGlobalCallback);
 
   /// Look up the specified global in the module symbol table. If required, this
   /// overload constructs the global variable using its constructor's defaults.
-  Constant *getOrInsertGlobal(StringRef Name, Type *Ty);
+  GlobalVariable *getOrInsertGlobal(StringRef Name, Type *Ty);
 
 /// @}
 /// @name Global Alias Accessors
@@ -596,10 +579,34 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
+  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
+    const auto It = ValueToGUIDMap.find(V);
+    if (It == ValueToGUIDMap.end())
+      return std::nullopt;
+
+    return It->getSecond();
+  }
+
+  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
+    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
+
+    (void)It, (void)WasInserted;
+#ifndef NDEBUG
+    if (!WasInserted) {
+      assert((It->second == GUID) && "insertGUID called with different value");
+    }
+#endif
+  }
+
 private:
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// A mapping directly from Value to GUID. Populated from bitcode
+  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
+  /// don't load metadata.
+  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }
@@ -730,6 +737,17 @@ public:
     return make_range(begin(), end());
   }
 
+  /// Get an iterator range over all function definitions (excluding
+  /// declarations).
+  auto getFunctionDefs() {
+    return make_filter_range(functions(),
+                             [](Function &F) { return !F.isDeclaration(); });
+  }
+  auto getFunctionDefs() const {
+    return make_filter_range(
+        functions(), [](const Function &F) { return !F.isDeclaration(); });
+  }
+
 /// @}
 /// @name Alias Iteration
 /// @{
@@ -818,7 +836,7 @@ public:
     NamedMDNode *CUs;
     unsigned Idx;
 
-    void SkipNoDebugCUs();
+    LLVM_ABI void SkipNoDebugCUs();
 
   public:
     using iterator_category = std::input_iterator_tag;
@@ -852,8 +870,8 @@ public:
       return Idx != I.Idx;
     }
 
-    DICompileUnit *operator*() const;
-    DICompileUnit *operator->() const;
+    LLVM_ABI DICompileUnit *operator*() const;
+    LLVM_ABI DICompileUnit *operator->() const;
   };
 
   debug_compile_units_iterator debug_compile_units_begin() const {
@@ -1016,6 +1034,14 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  /// Get/set the width in memory of the stack protector guard value.
+  std::optional<unsigned> getStackProtectorGuardValueWidth() const;
+  void setStackProtectorGuardValueWidth(unsigned Width);
+
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
@@ -1061,14 +1087,21 @@ public:
 
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
+
+  /// Get how unwind v2 (epilog) information should be generated for x64
+  /// Windows.
+  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+
+  /// Gets the Control Flow Guard mode.
+  ControlFlowGuardMode getControlFlowGuardMode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallVectorImpl<GlobalValue *> &Vec,
-                                           bool CompilerUsed);
+LLVM_ABI GlobalVariable *
+collectUsedGlobalVariables(const Module &M, SmallVectorImpl<GlobalValue *> &Vec,
+                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {

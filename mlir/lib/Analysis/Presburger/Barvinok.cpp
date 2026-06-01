@@ -167,9 +167,9 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
 
   // If the determinant is zero, there is no unique solution.
   // Thus we return null.
-  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
+  if (FracMatrix(equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d,
                                         /*fromColumn=*/0,
-                                        /*toColumn=*/d - 1))
+                                        /*toColumn=*/d))
           .determinant() == 0)
     return std::nullopt;
 
@@ -178,13 +178,13 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   for (unsigned i = 0; i < d; ++i) {
     // First ensure that the diagonal element is nonzero, by swapping
     // it with a row that is non-zero at column i.
-    if (equations(i, i) != 0)
-      continue;
-    for (unsigned j = i + 1; j < d; ++j) {
-      if (equations(j, i) == 0)
-        continue;
-      equations.swapRows(j, i);
-      break;
+    if (equations(i, i) == 0) {
+      for (unsigned j = i + 1; j < d; ++j) {
+        if (equations(j, i) == 0)
+          continue;
+        equations.swapRows(j, i);
+        break;
+      }
     }
 
     Fraction diagElement = equations(i, i);
@@ -218,8 +218,8 @@ mlir::presburger::detail::solveParametricEquations(FracMatrix equations) {
   //
   // We copy these columns and return them.
   ParamPoint vertex =
-      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d - 1,
-                             /*fromColumn=*/d, /*toColumn=*/numCols - 1);
+      equations.getSubMatrix(/*fromRow=*/0, /*toRow=*/d,
+                             /*fromColumn=*/d, /*toColumn=*/numCols);
   vertex.negateMatrix();
   return vertex;
 }
@@ -345,10 +345,9 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // b2c2 stores the coefficients of the parameters and the constant term.
     FracMatrix a2(numIneqs - numVars, numVars);
     FracMatrix b2c2(numIneqs - numVars, numSymbols + 1);
-    a2 = FracMatrix(
-        remainder.getSubMatrix(0, numIneqs - numVars - 1, 0, numVars - 1));
-    b2c2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars - 1, numVars,
-                                             numVars + numSymbols));
+    a2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars, 0, numVars));
+    b2c2 = FracMatrix(remainder.getSubMatrix(0, numIneqs - numVars, numVars,
+                                             numVars + numSymbols + 1));
 
     // Find the vertex, if any, corresponding to the current subset of
     // inequalities.
@@ -554,7 +553,7 @@ QuasiPolynomial mlir::presburger::detail::getCoefficientInRationalFunction(
 /// t^num / \prod_j (1 - t^dens[j]).
 /// v represents the affine functions whose floors are multiplied by the
 /// generators, and ds represents the list of generators.
-std::pair<QuasiPolynomial, std::vector<Fraction>>
+static std::pair<QuasiPolynomial, std::vector<Fraction>>
 substituteMuInTerm(unsigned numParams, const ParamPoint &v,
                    const std::vector<Point> &ds, const Point &mu) {
   unsigned numDims = mu.size();
@@ -606,8 +605,8 @@ substituteMuInTerm(unsigned numParams, const ParamPoint &v,
 /// Here, sign = ± 1,
 /// num is a QuasiPolynomial, and
 /// each dens[j] is a Fraction.
-void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
-                                   std::vector<Fraction> &dens) {
+static void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
+                                          std::vector<Fraction> &dens) {
   // We track the number of exponents that are negative in the
   // denominator, and convert them to their absolute values.
   unsigned numNegExps = 0;
@@ -634,8 +633,8 @@ void normalizeDenominatorExponents(int &sign, QuasiPolynomial &num,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
-                                                     unsigned r) {
+static std::vector<QuasiPolynomial>
+getBinomialCoefficients(const QuasiPolynomial &n, unsigned r) {
   unsigned numParams = n.getNumInputs();
   std::vector<QuasiPolynomial> coefficients;
   coefficients.reserve(r + 1);
@@ -651,8 +650,8 @@ std::vector<QuasiPolynomial> getBinomialCoefficients(const QuasiPolynomial &n,
 
 /// Compute the binomial coefficients nCi for 0 ≤ i ≤ r,
 /// where n is a QuasiPolynomial.
-std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
-                                              const Fraction &r) {
+static std::vector<Fraction> getBinomialCoefficients(const Fraction &n,
+                                                     const Fraction &r) {
   std::vector<Fraction> coefficients;
   coefficients.reserve((int64_t)floor(r));
   coefficients.emplace_back(1);

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -25,8 +26,8 @@ struct MemorySanitizerOptions {
   MemorySanitizerOptions() : MemorySanitizerOptions(0, false, false, false){};
   MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
       : MemorySanitizerOptions(TrackOrigins, Recover, Kernel, false) {}
-  MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
-                         bool EagerChecks);
+  LLVM_ABI MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel,
+                                  bool EagerChecks);
   bool Kernel;
   int TrackOrigins;
   bool Recover;
@@ -39,13 +40,13 @@ struct MemorySanitizerOptions {
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
 /// used.
-struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
+struct MemorySanitizerPass : public RequiredPassInfoMixin<MemorySanitizerPass> {
   MemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   MemorySanitizerOptions Options;

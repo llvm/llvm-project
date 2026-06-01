@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_shared_library", "cc_test")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
@@ -33,6 +34,82 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "inline_advisor_plugin",
+    srcs = glob(["Analysis/InlineAdvisorPlugin/*.cpp"]),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Plugins",
+        "//llvm:Support",
+    ],
+)
+
+cc_shared_library(
+    name = "inline_advisor_plugin_shared",
+    shared_lib_name = "InlineAdvisorPlugin.so",
+    deps = [":inline_advisor_plugin"],
+)
+
+cc_test(
+    name = "plugin_inline_advisor_analysis_test",
+    srcs = ["Analysis/PluginInlineAdvisorAnalysisTest.cpp"],
+    data = [
+        ":inline_advisor_plugin_shared",
+    ],
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Plugins",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "inline_order_plugin",
+    srcs = glob(["Analysis/InlineOrderPlugin/*.cpp"]),
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Plugins",
+        "//llvm:Support",
+    ],
+)
+
+cc_shared_library(
+    name = "inline_order_plugin_shared",
+    shared_lib_name = "InlineOrderPlugin.so",
+    deps = [":inline_order_plugin"],
+)
+
+cc_test(
+    name = "plugin_inline_order_analysis_test",
+    srcs = ["Analysis/PluginInlineOrderAnalysisTest.cpp"],
+    data = [
+        ":inline_order_plugin_shared",
+    ],
+    deps = [
+        "//llvm:Analysis",
+        "//llvm:AsmParser",
+        "//llvm:Core",
+        "//llvm:Passes",
+        "//llvm:Plugins",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
 cc_test(
     name = "analysis_tests",
     size = "small",
@@ -45,6 +122,12 @@ cc_test(
             "Analysis/TFUtilsTest.cpp",
             "Analysis/TrainingLoggerTest.cpp",
             "Analysis/MLModelRunnerTest.cpp",
+            # These tests dynamically load Plugins which both pull in
+            # llvm/lib/Analysis/ProfileSummaryInfo.cpp, which registers flags;
+            # if built into the same cc_test target, those flags will be
+            # registered twice and cause runtime failures.
+            "Analysis/PluginInlineAdvisorAnalysisTest.cpp",
+            "Analysis/PluginInlineOrderAnalysisTest.cpp",
         ],
     ),
     deps = [
@@ -59,7 +142,6 @@ cc_test(
         "//llvm:TestingSupport",
         "//llvm:TransformUtils",
         "//llvm:attributes_gen",
-        "//llvm:config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -130,9 +212,6 @@ cc_test(
     ),
     deps = [
         "//llvm:CGData",
-        "//llvm:CodeGen",
-        "//llvm:Core",
-        "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -170,6 +249,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TestingSupport",
@@ -195,7 +275,6 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AsmParser",
         "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
         "//llvm:Core",
         "//llvm:FileCheckLib",
         "//llvm:MC",
@@ -250,9 +329,9 @@ cc_test(
     srcs = glob(["Debuginfod/*.cpp"]),
     deps = [
         "//llvm:Debuginfod",
+        "//llvm:HTTP",
         "//llvm:Support",
         "//llvm:TestingSupport",
-        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -267,7 +346,6 @@ cc_test(
     ),
     deps = [
         "//llvm:AllTargetsCodeGens",
-        "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:Interpreter",
@@ -293,7 +371,6 @@ cc_test(
     deps = [
         "//llvm:AllTargetsCodeGens",
         "//llvm:Analysis",
-        "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:MC",
@@ -326,14 +403,13 @@ cc_test(
         "@platforms//os:macos": [],
         "@platforms//os:windows": [],
         "//conditions:default": [
-            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBWrapper",
+            "-Wl,--export-dynamic-symbol=llvm_orc_registerJITLoaderGDBAllocAction",
         ],
     }),
     deps = [
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Analysis",
-        "//llvm:AsmParser",
         "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
@@ -341,6 +417,7 @@ cc_test(
         "//llvm:JITLink",
         "//llvm:MC",
         "//llvm:Object",
+        "//llvm:ObjectYAML",
         "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -393,6 +470,7 @@ cc_test(
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:Passes",
+        "//llvm:Plugins",
         "//llvm:Scalar",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -428,8 +506,9 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
-        "//llvm:Analysis",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
+        "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",
         "//llvm:FrontendOpenMP",
         "//llvm:Passes",
@@ -471,6 +550,7 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:BinaryFormat",
+        "//llvm:DebugInfoDWARF",
         "//llvm:MC",
         "//llvm:MCDisassembler",
         "//llvm:Object",
@@ -528,6 +608,7 @@ cc_test(
     ),
     deps = [
         "//llvm:BinaryFormat",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:ObjectYAML",
         "//llvm:Support",
@@ -547,11 +628,11 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
-        "//llvm:DebugInfoCodeView",
         "//llvm:Object",
         "//llvm:ObjectYAML",
         "//llvm:Support",
         "//llvm:TestingSupport",
+        "//llvm:config",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -563,6 +644,15 @@ gentbl_cc_library(
     tbl_outs = {"Option/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "Option/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "sub_command_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/SubCommandOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/SubCommandOpts.td",
     deps = ["//llvm:OptParserTdFiles"],
 )
 
@@ -587,6 +677,7 @@ cc_test(
     ),
     deps = [
         ":option_tests_gen",
+        ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
         "//third-party/unittest:gtest",
@@ -681,7 +772,6 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
         "//llvm:Core",
-        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
@@ -704,6 +794,22 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:Support",
         "//llvm:config",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "SupportLSPTests",
+    size = "small",
+    srcs = glob(["Support/LSP/*.cpp"]),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
+    linkstatic = 1,
+    deps = [
+        "//llvm:Support",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -819,14 +925,11 @@ cc_test(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:CodeGen",
-        "//llvm:CodeGenTypes",
         "//llvm:Exegesis",
         "//llvm:MC",
-        "//llvm:MCDisassembler",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
-        "//llvm:X86CodeGen",
         "//llvm:X86UtilsAndDesc",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",

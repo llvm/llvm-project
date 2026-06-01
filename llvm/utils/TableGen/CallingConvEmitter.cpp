@@ -15,6 +15,7 @@
 #include "Common/CodeGenTarget.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
@@ -54,6 +55,21 @@ private:
 };
 } // End anonymous namespace
 
+static void emitCCHeader(raw_ostream &O, const Record *CC, StringRef Suffix) {
+  unsigned Pad = CC->getName().size();
+  if (CC->getValueAsBit("Entry")) {
+    O << "bool llvm::";
+    Pad += 12;
+  } else {
+    O << "static bool ";
+    Pad += 13;
+  }
+  O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
+    << indent(Pad) << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
+    << indent(Pad) << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, CCState &State)"
+    << Suffix;
+}
+
 void CallingConvEmitter::run(raw_ostream &O) {
   emitSourceFileHeader("Calling Convention Implementation Fragment", O);
 
@@ -63,35 +79,20 @@ void CallingConvEmitter::run(raw_ostream &O) {
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
   Records.getTimer().startTimer("Emit prototypes");
-  O << "#ifndef GET_CC_REGISTER_LISTS\n\n";
+  IfGuardEmitter IfGuard(O, "!defined(GET_CC_REGISTER_LISTS)");
   for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom")) {
-      unsigned Pad = CC->getName().size();
-      if (CC->getValueAsBit("Entry")) {
-        O << "bool llvm::";
-        Pad += 12;
-      } else {
-        O << "static bool ";
-        Pad += 13;
-      }
-      O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
-        << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-        << std::string(Pad, ' ')
-        << "ISD::ArgFlagsTy ArgFlags, CCState &State);\n";
-    }
+    if (!CC->getValueAsBit("Custom"))
+      emitCCHeader(O, CC, ";\n");
   }
 
   // Emit each non-custom calling convention description in full.
   Records.getTimer().startTimer("Emit full descriptions");
   for (const Record *CC : CCs) {
-    if (!CC->getValueAsBit("Custom")) {
+    if (!CC->getValueAsBit("Custom"))
       emitCallingConv(CC, O);
-    }
   }
 
   emitArgRegisterLists(O);
-
-  O << "\n#endif // CC_REGISTER_LIST\n";
 }
 
 void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
@@ -105,17 +106,7 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
   AssignedRegsMap[CurrentAction] = {};
 
   O << "\n\n";
-  unsigned Pad = CurrentAction.size();
-  if (CC->getValueAsBit("Entry")) {
-    O << "bool llvm::";
-    Pad += 12;
-  } else {
-    O << "static bool ";
-    Pad += 13;
-  }
-  O << CurrentAction << "(unsigned ValNo, MVT ValVT,\n"
-    << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-    << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
+  emitCCHeader(O, CC, " {\n");
   // Emit all of the actions, in order.
   for (unsigned I = 0, E = CCActions->size(); I != E; ++I) {
     const Record *Action = CCActions->getElementAsRecord(I);
@@ -154,7 +145,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "static const MCPhysReg " << RLName << "[] = {\n";
     O << Indent << "  ";
     ListSeparator LS;
-    for (const Init *V : RL->getValues())
+    for (const Init *V : RL->getElements())
       O << LS << getQualifiedRegisterName(V);
     O << "\n" << Indent << "};\n";
   };
@@ -221,120 +212,119 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << ") {\n";
     emitAction(Action->getValueAsDef("SubAction"), Indent + 2, O);
     O << Indent << "}\n";
-  } else {
-    if (Action->isSubClassOf("CCDelegateTo")) {
-      const Record *CC = Action->getValueAsDef("CC");
-      O << Indent << "if (!" << CC->getName()
-        << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State))\n"
-        << Indent + 2 << "return false;\n";
-      DelegateToMap[CurrentAction].insert(CC->getName().str());
-    } else if (Action->isSubClassOf("CCAssignToReg") ||
-               Action->isSubClassOf("CCAssignToRegTuple") ||
-               Action->isSubClassOf("CCAssignToRegAndStack")) {
-      const ListInit *RegList = Action->getValueAsListInit("RegList");
-      for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
-        std::string Name = getQualifiedRegisterName(RegList->getElement(I));
-        if (SwiftAction)
-          AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
-        else
-          AssignedRegsMap[CurrentAction].insert(std::move(Name));
-      }
-      EmitAllocateReg({RegList}, {"RegList"});
+    return;
+  }
 
-      if (Action->isSubClassOf("CCAssignToRegAndStack"))
-        EmitAllocateStack();
-
-      O << Indent << "  return false;\n";
-      O << Indent << "}\n";
-    } else if (Action->isSubClassOf("CCAssignToRegWithShadow")) {
-      const ListInit *RegList = Action->getValueAsListInit("RegList");
-      const ListInit *ShadowRegList =
-          Action->getValueAsListInit("ShadowRegList");
-      if (!ShadowRegList->empty() && ShadowRegList->size() != RegList->size())
-        PrintFatalError(Action->getLoc(),
-                        "Invalid length of list of shadowed registers");
-
-      EmitAllocateReg({RegList, ShadowRegList}, {"RegList", "RegList"});
-
-      O << Indent << "  return false;\n";
-      O << Indent << "}\n";
-    } else if (Action->isSubClassOf("CCAssignToStack")) {
-      EmitAllocateStack(/*EmitOffset=*/true);
-      O << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
-        << Counter << ", LocVT, LocInfo));\n";
-      O << Indent << "return false;\n";
-    } else if (Action->isSubClassOf("CCAssignToStackWithShadow")) {
-      int Size = Action->getValueAsInt("Size");
-      int Align = Action->getValueAsInt("Align");
-      const ListInit *ShadowRegList =
-          Action->getValueAsListInit("ShadowRegList");
-
-      unsigned ShadowRegListNumber = ++Counter;
-      EmitRegList(ShadowRegList, "ShadowRegList" + utostr(ShadowRegListNumber));
-
-      O << Indent << "int64_t Offset" << ++Counter << " = State.AllocateStack("
-        << Size << ", Align(" << Align << "), "
-        << "ShadowRegList" << ShadowRegListNumber << ");\n";
-      O << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
-        << Counter << ", LocVT, LocInfo));\n";
-      O << Indent << "return false;\n";
-    } else if (Action->isSubClassOf("CCPromoteToType")) {
-      const Record *DestTy = Action->getValueAsDef("DestTy");
-      MVT::SimpleValueType DestVT = getValueType(DestTy);
-      O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-      if (MVT(DestVT).isFloatingPoint()) {
-        O << Indent << "LocInfo = CCValAssign::FPExt;\n";
-      } else {
-        O << Indent << "if (ArgFlags.isSExt())\n"
-          << Indent << "  LocInfo = CCValAssign::SExt;\n"
-          << Indent << "else if (ArgFlags.isZExt())\n"
-          << Indent << "  LocInfo = CCValAssign::ZExt;\n"
-          << Indent << "else\n"
-          << Indent << "  LocInfo = CCValAssign::AExt;\n";
-      }
-    } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
-      const Record *DestTy = Action->getValueAsDef("DestTy");
-      MVT::SimpleValueType DestVT = getValueType(DestTy);
-      O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
-      if (MVT(DestVT).isFloatingPoint()) {
-        PrintFatalError(Action->getLoc(),
-                        "CCPromoteToUpperBitsInType does not handle floating "
-                        "point");
-      } else {
-        O << Indent << "if (ArgFlags.isSExt())\n"
-          << Indent << "  LocInfo = CCValAssign::SExtUpper;\n"
-          << Indent << "else if (ArgFlags.isZExt())\n"
-          << Indent << "  LocInfo = CCValAssign::ZExtUpper;\n"
-          << Indent << "else\n"
-          << Indent << "  LocInfo = CCValAssign::AExtUpper;\n";
-      }
-    } else if (Action->isSubClassOf("CCBitConvertToType")) {
-      const Record *DestTy = Action->getValueAsDef("DestTy");
-      O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
-      O << Indent << "LocInfo = CCValAssign::BCvt;\n";
-    } else if (Action->isSubClassOf("CCTruncToType")) {
-      const Record *DestTy = Action->getValueAsDef("DestTy");
-      O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
-      O << Indent << "LocInfo = CCValAssign::Trunc;\n";
-    } else if (Action->isSubClassOf("CCPassIndirect")) {
-      const Record *DestTy = Action->getValueAsDef("DestTy");
-      O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
-      O << Indent << "LocInfo = CCValAssign::Indirect;\n";
-    } else if (Action->isSubClassOf("CCPassByVal")) {
-      int Size = Action->getValueAsInt("Size");
-      int Align = Action->getValueAsInt("Align");
-      O << Indent << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, " << Size
-        << ", Align(" << Align << "), ArgFlags);\n";
-      O << Indent << "return false;\n";
-    } else if (Action->isSubClassOf("CCCustom")) {
-      O << Indent << "if (" << Action->getValueAsString("FuncName")
-        << "(ValNo, ValVT, "
-        << "LocVT, LocInfo, ArgFlags, State))\n";
-      O << Indent << "  return false;\n";
-    } else {
-      errs() << *Action;
-      PrintFatalError(Action->getLoc(), "Unknown CCAction!");
+  if (Action->isSubClassOf("CCDelegateTo")) {
+    const Record *CC = Action->getValueAsDef("CC");
+    O << Indent << "if (!" << CC->getName()
+      << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State))\n"
+      << Indent + 2 << "return false;\n";
+    DelegateToMap[CurrentAction].insert(CC->getName().str());
+  } else if (Action->isSubClassOf("CCAssignToReg") ||
+             Action->isSubClassOf("CCAssignToRegTuple") ||
+             Action->isSubClassOf("CCAssignToRegAndStack")) {
+    const ListInit *RegList = Action->getValueAsListInit("RegList");
+    for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
+      std::string Name = getQualifiedRegisterName(RegList->getElement(I));
+      if (SwiftAction)
+        AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
+      else
+        AssignedRegsMap[CurrentAction].insert(std::move(Name));
     }
+    EmitAllocateReg({RegList}, {"RegList"});
+
+    if (Action->isSubClassOf("CCAssignToRegAndStack"))
+      EmitAllocateStack();
+
+    O << Indent << "  return false;\n";
+    O << Indent << "}\n";
+  } else if (Action->isSubClassOf("CCAssignToRegWithShadow")) {
+    const ListInit *RegList = Action->getValueAsListInit("RegList");
+    const ListInit *ShadowRegList = Action->getValueAsListInit("ShadowRegList");
+    if (!ShadowRegList->empty() && ShadowRegList->size() != RegList->size())
+      PrintFatalError(Action->getLoc(),
+                      "Invalid length of list of shadowed registers");
+
+    EmitAllocateReg({RegList, ShadowRegList}, {"RegList", "RegList"});
+
+    O << Indent << "  return false;\n";
+    O << Indent << "}\n";
+  } else if (Action->isSubClassOf("CCAssignToStack")) {
+    EmitAllocateStack(/*EmitOffset=*/true);
+    O << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
+      << Counter << ", LocVT, LocInfo));\n";
+    O << Indent << "return false;\n";
+  } else if (Action->isSubClassOf("CCAssignToStackWithShadow")) {
+    int Size = Action->getValueAsInt("Size");
+    int Align = Action->getValueAsInt("Align");
+    const ListInit *ShadowRegList = Action->getValueAsListInit("ShadowRegList");
+
+    unsigned ShadowRegListNumber = ++Counter;
+    EmitRegList(ShadowRegList, "ShadowRegList" + utostr(ShadowRegListNumber));
+
+    O << Indent << "int64_t Offset" << ++Counter << " = State.AllocateStack("
+      << Size << ", Align(" << Align << "), "
+      << "ShadowRegList" << ShadowRegListNumber << ");\n";
+    O << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
+      << Counter << ", LocVT, LocInfo));\n";
+    O << Indent << "return false;\n";
+  } else if (Action->isSubClassOf("CCPromoteToType")) {
+    const Record *DestTy = Action->getValueAsDef("DestTy");
+    MVT DestVT = getValueType(DestTy);
+    O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
+    if (DestVT.isFloatingPoint()) {
+      O << Indent << "LocInfo = CCValAssign::FPExt;\n";
+    } else {
+      O << Indent << "if (ArgFlags.isSExt())\n"
+        << Indent << "  LocInfo = CCValAssign::SExt;\n"
+        << Indent << "else if (ArgFlags.isZExt())\n"
+        << Indent << "  LocInfo = CCValAssign::ZExt;\n"
+        << Indent << "else\n"
+        << Indent << "  LocInfo = CCValAssign::AExt;\n";
+    }
+  } else if (Action->isSubClassOf("CCPromoteToUpperBitsInType")) {
+    const Record *DestTy = Action->getValueAsDef("DestTy");
+    MVT DestVT = getValueType(DestTy);
+    O << Indent << "LocVT = " << getEnumName(DestVT) << ";\n";
+    if (DestVT.isFloatingPoint()) {
+      PrintFatalError(Action->getLoc(),
+                      "CCPromoteToUpperBitsInType does not handle floating "
+                      "point");
+    } else {
+      O << Indent << "if (ArgFlags.isSExt())\n"
+        << Indent << "  LocInfo = CCValAssign::SExtUpper;\n"
+        << Indent << "else if (ArgFlags.isZExt())\n"
+        << Indent << "  LocInfo = CCValAssign::ZExtUpper;\n"
+        << Indent << "else\n"
+        << Indent << "  LocInfo = CCValAssign::AExtUpper;\n";
+    }
+  } else if (Action->isSubClassOf("CCBitConvertToType")) {
+    const Record *DestTy = Action->getValueAsDef("DestTy");
+    O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
+    O << Indent << "LocInfo = CCValAssign::BCvt;\n";
+  } else if (Action->isSubClassOf("CCTruncToType")) {
+    const Record *DestTy = Action->getValueAsDef("DestTy");
+    O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
+    O << Indent << "LocInfo = CCValAssign::Trunc;\n";
+  } else if (Action->isSubClassOf("CCPassIndirect")) {
+    const Record *DestTy = Action->getValueAsDef("DestTy");
+    O << Indent << "LocVT = " << getEnumName(getValueType(DestTy)) << ";\n";
+    O << Indent << "LocInfo = CCValAssign::Indirect;\n";
+  } else if (Action->isSubClassOf("CCPassByVal")) {
+    int Size = Action->getValueAsInt("Size");
+    int Align = Action->getValueAsInt("Align");
+    O << Indent << "State.HandleByVal(ValNo, ValVT, LocVT, LocInfo, " << Size
+      << ", Align(" << Align << "), ArgFlags);\n";
+    O << Indent << "return false;\n";
+  } else if (Action->isSubClassOf("CCCustom")) {
+    O << Indent << "if (" << Action->getValueAsString("FuncName")
+      << "(ValNo, ValVT, "
+      << "LocVT, LocInfo, ArgFlags, State))\n";
+    O << Indent << "  return false;\n";
+  } else {
+    errs() << *Action;
+    PrintFatalError(Action->getLoc(), "Unknown CCAction!");
   }
 }
 

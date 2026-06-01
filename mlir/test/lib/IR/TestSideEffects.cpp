@@ -52,12 +52,12 @@ struct SideEffectsPass
           diag << "'write'";
 
         if (instance.getValue()) {
-          if (instance.getEffectValue<OpOperand *>())
-            diag << " on a op operand,";
-          else if (instance.getEffectValue<OpResult>())
-            diag << " on a op result,";
-          else if (instance.getEffectValue<BlockArgument>())
-            diag << " on a block argument,";
+          if (auto *opOpd = instance.getEffectValue<OpOperand *>())
+            diag << " on op operand " << opOpd->getOperandNumber() << ",";
+          else if (auto opRes = instance.getEffectValue<OpResult>())
+            diag << " on op result " << opRes.getResultNumber() << ",";
+          else if (auto opBlk = instance.getEffectValue<BlockArgument>())
+            diag << " on block argument " << opBlk.getArgNumber() << ",";
         } else if (SymbolRefAttr symbolRef = instance.getSymbolRef())
           diag << " on a symbol '" << symbolRef << "',";
 

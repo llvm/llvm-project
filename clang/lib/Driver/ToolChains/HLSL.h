@@ -20,7 +20,9 @@ namespace tools {
 namespace hlsl {
 class LLVM_LIBRARY_VISIBILITY Validator : public Tool {
 public:
-  Validator(const ToolChain &TC) : Tool("hlsl::Validator", "dxv", TC) {}
+  Validator(const ToolChain &TC)
+      : Tool("hlsl::Validator", TC.getTriple().isSPIRV() ? "spirv-val" : "dxv",
+             TC) {}
 
   bool hasIntegratedCPP() const override { return false; }
 
@@ -42,6 +44,20 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY LLVMObjcopy : public Tool {
+public:
+  LLVMObjcopy(const ToolChain &TC)
+      : Tool("hlsl::LLVMObjcopy", "llvm-objcopy", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
 } // namespace hlsl
 } // namespace tools
 
@@ -63,16 +79,40 @@ public:
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
   static std::optional<std::string> parseTargetProfile(StringRef TargetProfile);
-  bool requiresValidation(llvm::opt::DerivedArgList &Args) const;
+
+  struct ValidationInfo {
+    bool NeedsValidation = false;
+    bool ProducesOutput = false;
+  };
+
+  /// Returns information about whether validation is required and whether the
+  /// validator produces output. When Diagnose is true, emits a warning if the
+  /// required validator executable cannot be found.
+  ValidationInfo getValidationInfo(llvm::opt::DerivedArgList &Args,
+                                   bool Diagnose = true) const;
   bool requiresBinaryTranslation(llvm::opt::DerivedArgList &Args) const;
-  bool isLastJob(llvm::opt::DerivedArgList &Args, Action::ActionClass AC) const;
+  bool requiresObjcopy(llvm::opt::DerivedArgList &Args) const;
+
+  /// Determines whether the given action class is the last job that produces
+  /// an output file. This is used to decide whether to write to the -Fo
+  /// output path or to a temporary file.
+  ///
+  /// For example, spirv-val is a pure validator that runs after the compile
+  /// step but doesn't produce output, so the compile step is the last
+  /// output-producing job. For DXIL, dxv validates and signs, producing the
+  /// final output.
+  bool isLastOutputProducingJob(llvm::opt::DerivedArgList &Args,
+                                Action::ActionClass AC) const;
 
   // Set default DWARF version to 4 for DXIL uses version 4.
   unsigned GetDefaultDwarfVersion() const override { return 4; }
 
+  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
   mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
+  mutable std::unique_ptr<tools::hlsl::LLVMObjcopy> LLVMObjcopy;
 };
 
 } // end namespace toolchains

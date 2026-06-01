@@ -2,10 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for shuffle_zip1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for shuffle_zip2
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for shuffle_zip3
-
 define <8 x i8> @vzipi8(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vzipi8:
 ; CHECK:       // %bb.0:
@@ -355,66 +351,76 @@ define <8 x i16> @combine_v8i16_undef(<4 x i16> %0, <4 x i16> %1) {
   ret <8 x i16> %3
 }
 
-; FIXME: This could be zip1 too, 8,0,9,1... pattern is handled
 define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
-; CHECK-SD-LABEL: combine_v8i16_8first:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-SD-NEXT:    adrp x8, .LCPI25_0
-; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI25_0]
-; CHECK-SD-NEXT:    tbl.16b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_v8i16_8first:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI25_0
-; CHECK-GI-NEXT:    fmov d31, d1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI25_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v31, v0 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_v8i16_8first:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   ret <16 x i8> %3
 }
 
 
-; FIXME: This could be zip1 too, 8,0,9,1... pattern is handled
 define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
-; CHECK-SD-LABEL: combine_v8i16_8firstundef:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-SD-NEXT:    adrp x8, .LCPI26_0
-; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI26_0]
-; CHECK-SD-NEXT:    tbl.16b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: combine_v8i16_8firstundef:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q31_q0
-; CHECK-GI-NEXT:    adrp x8, .LCPI26_0
-; CHECK-GI-NEXT:    fmov d31, d1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI26_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v31, v0 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: combine_v8i16_8firstundef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    zip1.16b v0, v0, v1
+; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 undef>
   ret <16 x i8> %3
 }
 
 define <4 x float> @shuffle_zip1(<4 x float> %arg) {
-; CHECK-LABEL: shuffle_zip1:
-; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    fcmgt.4s v0, v0, #0.0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
-; CHECK-NEXT:    fmov.4s v1, #1.00000000
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v1, v0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shuffle_zip1:
+; CHECK-SD:       // %bb.0: // %bb
+; CHECK-SD-NEXT:    fcmgt.4s v0, v0, #0.0
+; CHECK-SD-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-SD-NEXT:    xtn.4h v0, v0
+; CHECK-SD-NEXT:    xtn.4h v1, v1
+; CHECK-SD-NEXT:    zip2.4h v0, v0, v1
+; CHECK-SD-NEXT:    fmov.4s v1, #1.00000000
+; CHECK-SD-NEXT:    zip1.4h v0, v0, v0
+; CHECK-SD-NEXT:    sshll.4s v0, v0, #0
+; CHECK-SD-NEXT:    and.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shuffle_zip1:
+; CHECK-GI:       // %bb.0: // %bb
+; CHECK-GI-NEXT:    fcmgt.4s v0, v0, #0.0
+; CHECK-GI-NEXT:    fmov.4s v2, #1.00000000
+; CHECK-GI-NEXT:    mov.s w8, v0[1]
+; CHECK-GI-NEXT:    mov.s w9, v0[2]
+; CHECK-GI-NEXT:    mov.s w10, v0[3]
+; CHECK-GI-NEXT:    mov.b v0[1], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI27_1
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-GI-NEXT:    mov.b v0[2], w9
+; CHECK-GI-NEXT:    mov.b v0[3], w10
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
+; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
+; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
+; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    umov.b w8, v0[0]
+; CHECK-GI-NEXT:    umov.b w9, v0[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    umov.b w8, v0[2]
+; CHECK-GI-NEXT:    mov.s v1[1], w9
+; CHECK-GI-NEXT:    umov.b w9, v0[3]
+; CHECK-GI-NEXT:    mov.s v1[2], w8
+; CHECK-GI-NEXT:    mov.s v1[3], w9
+; CHECK-GI-NEXT:    shl.4s v0, v1, #31
+; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-GI-NEXT:    cmlt.4s v0, v0, #0
+; CHECK-GI-NEXT:    bsl.16b v0, v2, v1
+; CHECK-GI-NEXT:    ret
 bb:
   %inst = fcmp olt <4 x float> zeroinitializer, %arg
   %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>
@@ -424,18 +430,52 @@ bb:
 }
 
 define <4 x i32> @shuffle_zip2(<4 x i32> %arg) {
-; CHECK-LABEL: shuffle_zip2:
-; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    cmtst.4s v0, v0, v0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
-; CHECK-NEXT:    movi.4s v1, #1
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shuffle_zip2:
+; CHECK-SD:       // %bb.0: // %bb
+; CHECK-SD-NEXT:    cmtst.4s v0, v0, v0
+; CHECK-SD-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-SD-NEXT:    xtn.4h v0, v0
+; CHECK-SD-NEXT:    xtn.4h v1, v1
+; CHECK-SD-NEXT:    zip2.4h v0, v0, v1
+; CHECK-SD-NEXT:    movi.4s v1, #1
+; CHECK-SD-NEXT:    zip1.4h v0, v0, v0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    and.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shuffle_zip2:
+; CHECK-GI:       // %bb.0: // %bb
+; CHECK-GI-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-GI-NEXT:    cmhi.4s v0, v0, v1
+; CHECK-GI-NEXT:    mov.s w8, v0[1]
+; CHECK-GI-NEXT:    mov.s w9, v0[2]
+; CHECK-GI-NEXT:    mov.s w10, v0[3]
+; CHECK-GI-NEXT:    mov.b v0[1], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI28_1
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI28_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-NEXT:    mov.b v0[2], w9
+; CHECK-GI-NEXT:    mov.b v0[3], w10
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
+; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
+; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
+; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    umov.b w8, v0[0]
+; CHECK-GI-NEXT:    umov.b w9, v0[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    umov.b w8, v0[2]
+; CHECK-GI-NEXT:    mov.s v1[1], w9
+; CHECK-GI-NEXT:    umov.b w9, v0[3]
+; CHECK-GI-NEXT:    mov.s v1[2], w8
+; CHECK-GI-NEXT:    mov.s v1[3], w9
+; CHECK-GI-NEXT:    shl.4s v0, v1, #31
+; CHECK-GI-NEXT:    movi.4s v1, #1
+; CHECK-GI-NEXT:    cmlt.4s v0, v0, #0
+; CHECK-GI-NEXT:    and.16b v0, v1, v0
+; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp ult <4 x i32> zeroinitializer, %arg
   %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>
@@ -445,18 +485,51 @@ bb:
 }
 
 define <4 x i32> @shuffle_zip3(<4 x i32> %arg) {
-; CHECK-LABEL: shuffle_zip3:
-; CHECK:       // %bb.0: // %bb
-; CHECK-NEXT:    cmgt.4s v0, v0, #0
-; CHECK-NEXT:    uzp1.8h v1, v0, v0
-; CHECK-NEXT:    xtn.4h v0, v0
-; CHECK-NEXT:    xtn.4h v1, v1
-; CHECK-NEXT:    zip2.4h v0, v0, v1
-; CHECK-NEXT:    movi.4s v1, #1
-; CHECK-NEXT:    zip1.4h v0, v0, v0
-; CHECK-NEXT:    sshll.4s v0, v0, #0
-; CHECK-NEXT:    and.16b v0, v0, v1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: shuffle_zip3:
+; CHECK-SD:       // %bb.0: // %bb
+; CHECK-SD-NEXT:    cmgt.4s v0, v0, #0
+; CHECK-SD-NEXT:    uzp1.8h v1, v0, v0
+; CHECK-SD-NEXT:    xtn.4h v0, v0
+; CHECK-SD-NEXT:    xtn.4h v1, v1
+; CHECK-SD-NEXT:    zip2.4h v0, v0, v1
+; CHECK-SD-NEXT:    movi.4s v1, #1
+; CHECK-SD-NEXT:    zip1.4h v0, v0, v0
+; CHECK-SD-NEXT:    ushll.4s v0, v0, #0
+; CHECK-SD-NEXT:    and.16b v0, v0, v1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shuffle_zip3:
+; CHECK-GI:       // %bb.0: // %bb
+; CHECK-GI-NEXT:    cmgt.4s v0, v0, #0
+; CHECK-GI-NEXT:    mov.s w8, v0[1]
+; CHECK-GI-NEXT:    mov.s w9, v0[2]
+; CHECK-GI-NEXT:    mov.s w10, v0[3]
+; CHECK-GI-NEXT:    mov.b v0[1], w8
+; CHECK-GI-NEXT:    adrp x8, .LCPI29_1
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI29_1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI29_0
+; CHECK-GI-NEXT:    mov.b v0[2], w9
+; CHECK-GI-NEXT:    mov.b v0[3], w10
+; CHECK-GI-NEXT:    mov.d v0[1], v0[0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
+; CHECK-GI-NEXT:    mov.b v1[0], v0[0]
+; CHECK-GI-NEXT:    mov.b v1[1], v0[1]
+; CHECK-GI-NEXT:    mov.d v1[1], v0[0]
+; CHECK-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI29_0]
+; CHECK-GI-NEXT:    tbl.16b v0, { v1 }, v0
+; CHECK-GI-NEXT:    umov.b w8, v0[0]
+; CHECK-GI-NEXT:    umov.b w9, v0[1]
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    umov.b w8, v0[2]
+; CHECK-GI-NEXT:    mov.s v1[1], w9
+; CHECK-GI-NEXT:    umov.b w9, v0[3]
+; CHECK-GI-NEXT:    mov.s v1[2], w8
+; CHECK-GI-NEXT:    mov.s v1[3], w9
+; CHECK-GI-NEXT:    shl.4s v0, v1, #31
+; CHECK-GI-NEXT:    movi.4s v1, #1
+; CHECK-GI-NEXT:    cmlt.4s v0, v0, #0
+; CHECK-GI-NEXT:    and.16b v0, v1, v0
+; CHECK-GI-NEXT:    ret
 bb:
   %inst = icmp slt <4 x i32> zeroinitializer, %arg
   %inst1 = shufflevector <4 x i1> %inst, <4 x i1> zeroinitializer, <2 x i32> <i32 2, i32 0>

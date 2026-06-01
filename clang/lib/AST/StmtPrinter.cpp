@@ -47,10 +47,8 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -153,11 +151,11 @@ namespace {
       else StmtVisitor<StmtPrinter>::Visit(S);
     }
 
-    void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
       Indent() << "<<unknown stmt type>>" << NL;
     }
 
-    void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
       OS << "<<unknown expr type>>";
     }
 
@@ -299,7 +297,7 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  ArrayRef<const Attr *> Attrs = Node->getAttrs();
   for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
     if (Attr != Attrs.back())
@@ -456,10 +454,7 @@ void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {
   else
     OS << "__if_not_exists (";
 
-  if (NestedNameSpecifier *Qualifier
-        = Node->getQualifierLoc().getNestedNameSpecifier())
-    Qualifier->print(OS, Policy);
-
+  Node->getQualifierLoc().getNestedNameSpecifier().print(OS, Policy);
   OS << Node->getNameInfo() << ") ";
 
   PrintRawCompoundStmt(Node->getSubStmt());
@@ -478,13 +473,27 @@ void StmtPrinter::VisitIndirectGotoStmt(IndirectGotoStmt *Node) {
 }
 
 void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
-  Indent() << "continue;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "continue " << Node->getLabelDecl()->getIdentifier()->getName()
+       << ';';
+  else
+    OS << "continue;";
   if (Policy.IncludeNewlines) OS << NL;
 }
 
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
-  Indent() << "break;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "break " << Node->getLabelDecl()->getIdentifier()->getName() << ';';
+  else
+    OS << "break;";
   if (Policy.IncludeNewlines) OS << NL;
+}
+
+void StmtPrinter::VisitDeferStmt(DeferStmt *Node) {
+  Indent() << "_Defer";
+  PrintControlledStmt(Node->getBody());
 }
 
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
@@ -591,7 +600,7 @@ void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
 }
 
 void StmtPrinter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *Node) {
-  PrintStmt(Node->getOutlinedFunctionDecl()->getBody());
+  PrintStmt(Node->getOriginalStmt());
 }
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
@@ -612,7 +621,7 @@ void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
     }
   }
 
-  if (auto *FS = static_cast<ObjCAtFinallyStmt *>(Node->getFinallyStmt())) {
+  if (ObjCAtFinallyStmt *FS = Node->getFinallyStmt()) {
     Indent() << "@finally";
     if (auto *CS = dyn_cast<CompoundStmt>(FS->getFinallyBody())) {
       PrintRawCompoundStmt(CS);
@@ -737,7 +746,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy);
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -786,6 +797,16 @@ void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
 
 void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
+  Indent() << "#pragma omp split";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
+  Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -964,14 +985,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1305,8 +1330,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     TPOD->printAsExpr(OS, Policy);
     return;
   }
-  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
 
@@ -1355,8 +1379,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
 
 void StmtPrinter::VisitDependentScopeDeclRefExpr(
                                            DependentScopeDeclRefExpr *Node) {
-  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getNameInfo();
@@ -1365,8 +1388,7 @@ void StmtPrinter::VisitDependentScopeDeclRefExpr(
 }
 
 void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
-  if (Node->getQualifier())
-    Node->getQualifier()->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getNameInfo();
@@ -1428,6 +1450,11 @@ void StmtPrinter::VisitSYCLUniqueStableNameExpr(
   OS << "__builtin_sycl_unique_stable_name(";
   Node->getTypeSourceInfo()->getType().print(OS, Policy);
   OS << ")";
+}
+
+void StmtPrinter::VisitUnresolvedSYCLKernelCallStmt(
+    UnresolvedSYCLKernelCallStmt *Node) {
+  PrintStmt(Node->getOriginalStmt());
 }
 
 void StmtPrinter::VisitPredefinedExpr(PredefinedExpr *Node) {
@@ -1673,6 +1700,14 @@ void StmtPrinter::VisitArraySubscriptExpr(ArraySubscriptExpr *Node) {
   OS << "]";
 }
 
+void StmtPrinter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << "[";
+  PrintExpr(Node->getRowIdx());
+  OS << "]";
+}
+
 void StmtPrinter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *Node) {
   PrintExpr(Node->getBase());
   OS << "[";
@@ -1774,8 +1809,7 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
     if (FD->isAnonymousStructOrUnion())
       return;
 
-  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -1797,6 +1831,12 @@ void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
 }
 
 void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << ".";
+  OS << Node->getAccessor().getName();
+}
+
+void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
   PrintExpr(Node->getBase());
   OS << ".";
   OS << Node->getAccessor().getName();
@@ -2018,11 +2058,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
 
   // AtomicExpr stores its subexpressions in a permuted order.
   PrintExpr(Node->getPtr());
-  if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
-      Node->getOp() != AtomicExpr::AO__atomic_load_n &&
-      Node->getOp() != AtomicExpr::AO__scoped_atomic_load_n &&
-      Node->getOp() != AtomicExpr::AO__opencl_atomic_load &&
-      Node->getOp() != AtomicExpr::AO__hip_atomic_load) {
+  if (Node->hasVal1Operand()) {
     OS << ", ";
     PrintExpr(Node->getVal1());
   }
@@ -2173,9 +2209,7 @@ void StmtPrinter::VisitMSPropertyRefExpr(MSPropertyRefExpr *Node) {
     OS << "->";
   else
     OS << ".";
-  if (NestedNameSpecifier *Qualifier =
-      Node->getQualifierLoc().getNestedNameSpecifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifierLoc().getNestedNameSpecifier().print(OS, Policy);
   OS << Node->getPropertyDecl()->getDeclName();
 }
 
@@ -2434,7 +2468,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
 
   // Print the body.
   OS << ' ';
-  if (Policy.TerseOutput)
+  if (Policy.TerseOutput || Policy.SuppressLambdaBody)
     OS << "{}";
   else
     PrintRawCompoundStmt(Node->getCompoundStmtBody());
@@ -2505,8 +2539,7 @@ void StmtPrinter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     OS << "->";
   else
     OS << '.';
-  if (E->getQualifier())
-    E->getQualifier()->print(OS, Policy);
+  E->getQualifier().print(OS, Policy);
   OS << "~";
 
   if (const IdentifierInfo *II = E->getDestroyedTypeIdentifier())
@@ -2562,14 +2595,18 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
     OS << ')';
 }
 
+void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
+}
+
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
                                          CXXDependentScopeMemberExpr *Node) {
   if (!Node->isImplicitAccess()) {
     PrintExpr(Node->getBase());
     OS << (Node->isArrow() ? "->" : ".");
   }
-  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -2582,8 +2619,7 @@ void StmtPrinter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *Node) {
     PrintExpr(Node->getBase());
     OS << (Node->isArrow() ? "->" : ".");
   }
-  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
-    Qualifier->print(OS, Policy);
+  Node->getQualifier().print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -2674,8 +2710,7 @@ void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   NestedNameSpecifierLoc NNS = E->getNestedNameSpecifierLoc();
-  if (NNS)
-    NNS.getNestedNameSpecifier()->print(OS, Policy);
+  NNS.getNestedNameSpecifier().print(OS, Policy);
   if (E->getTemplateKWLoc().isValid())
     OS << "template ";
   OS << E->getFoundDecl()->getName();
@@ -2907,11 +2942,6 @@ void StmtPrinter::VisitBlockExpr(BlockExpr *Node) {
 
 void StmtPrinter::VisitOpaqueValueExpr(OpaqueValueExpr *Node) {
   PrintExpr(Node->getSourceExpr());
-}
-
-void StmtPrinter::VisitTypoExpr(TypoExpr *Node) {
-  // TODO: Print something reasonable for a TypoExpr, if necessary.
-  llvm_unreachable("Cannot print TypoExpr nodes");
 }
 
 void StmtPrinter::VisitRecoveryExpr(RecoveryExpr *Node) {

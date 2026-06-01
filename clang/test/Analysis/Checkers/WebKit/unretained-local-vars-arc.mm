@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fobjc-arc -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fobjc-runtime-has-weak -fobjc-weak -fobjc-arc -verify %s
 
 #import "objc-mock-types.h"
 
@@ -17,10 +17,25 @@ void foo2() {
   [bar doWork];
 }
 
+void foo3() {
+  SomeObj *bar = provide();
+  IOSurfaceRef surface;
+  // expected-warning@-1{{Local variable 'surface' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+}
+
+void foo4() {
+  __weak SomeObj *bar = provide();
+}
+
 void bar() {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
   // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
+}
+
+void baz() {
+  auto queue = dispatch_queue_create("some queue", nullptr);
+  dispatch_queue_get_label(queue);
 }
 
 } // namespace raw_ptr
@@ -29,18 +44,21 @@ namespace const_global {
 
 extern NSString * const SomeConstant;
 extern CFDictionaryRef const SomeDictionary;
-void doWork(NSString *, CFDictionaryRef);
+extern dispatch_queue_t const SomeDispatch;
+void doWork(NSString *, CFDictionaryRef, dispatch_queue_t);
 void use_const_global() {
-  doWork(SomeConstant, SomeDictionary);
+  doWork(SomeConstant, SomeDictionary, SomeDispatch);
 }
 
 NSString *provide_str();
 CFDictionaryRef provide_dict();
+dispatch_queue_t provide_dispatch();
 void use_const_local() {
   NSString * const str = provide_str();
   CFDictionaryRef dict = provide_dict();
   // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
-  doWork(str, dict);
+  auto dispatch = provide_dispatch();
+  doWork(str, dict, dispatch);
 }
 
 } // namespace const_global
@@ -62,5 +80,10 @@ void use_const_local() {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
   // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
+}
+
+- (void)baz {
+  auto queue = dispatch_queue_create("some queue", nullptr);
+  dispatch_queue_get_label(queue);
 }
 @end

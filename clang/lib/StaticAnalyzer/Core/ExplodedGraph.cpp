@@ -16,7 +16,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Analysis/Support/BumpVector.h"
 #include "clang/Basic/LLVM.h"
@@ -26,8 +25,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -76,7 +73,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // (4) There is no 'tag' for the ProgramPoint.
   // (5) The 'store' is the same as the predecessor.
   // (6) The 'GDM' is the same as the predecessor.
-  // (7) The LocationContext is the same as the predecessor.
+  // (7) The StackFrame is the same as the predecessor.
   // (8) Expressions that are *not* lvalue expressions.
   // (9) The PostStmt isn't for a non-consumed Stmt or Expr.
   // (10) The successor is neither a CallExpr StmtPoint nor a CallEnter or
@@ -114,7 +111,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   ProgramStateRef state = node->getState();
   ProgramStateRef pred_state = pred->getState();
   if (state->store != pred_state->store || state->GDM != pred_state->GDM ||
-      progPoint.getLocationContext() != pred->getLocationContext())
+      progPoint.getStackFrame() != pred->getStackFrame())
     return false;
 
   // All further checks require expressions. As per #3, we know that we have
@@ -133,7 +130,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
   // Do not collect nodes for non-consumed Stmt or Expr to ensure precise
   // diagnostic generation; specifically, so that we could anchor arrows
   // pointing to the beginning of statements (as written in code).
-  const ParentMap &PM = progPoint.getLocationContext()->getParentMap();
+  const ParentMap &PM = progPoint.getStackFrame()->getParentMap();
   if (!PM.isConsumedExpr(Ex))
     return false;
 
@@ -295,36 +292,33 @@ const CFGBlock *ExplodedNode::getCFGBlock() const {
   // FIXME: getStmtForDiagnostics() does nasty things in order to provide
   // a valid statement for body farms, do we need this behavior here?
   if (const Stmt *S = getStmtForDiagnostics())
-    return getLocationContext()
-        ->getAnalysisDeclContext()
-        ->getCFGStmtMap()
-        ->getBlock(S);
+    return getStackFrame()->getAnalysisDeclContext()->getCFGStmtMap()->getBlock(
+        S);
 
   return nullptr;
 }
 
-static const LocationContext *
-findTopAutosynthesizedParentContext(const LocationContext *LC) {
-  assert(LC->getAnalysisDeclContext()->isBodyAutosynthesized());
-  const LocationContext *ParentLC = LC->getParent();
-  assert(ParentLC && "We don't start analysis from autosynthesized code");
-  while (ParentLC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
-    LC = ParentLC;
-    ParentLC = LC->getParent();
-    assert(ParentLC && "We don't start analysis from autosynthesized code");
+static const StackFrame *
+findTopAutosynthesizedParentStackFrame(const StackFrame *SF) {
+  assert(SF->getAnalysisDeclContext()->isBodyAutosynthesized());
+  const StackFrame *ParentSF = SF->getParent();
+  assert(ParentSF && "We don't start analysis from autosynthesized code");
+  while (ParentSF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+    SF = ParentSF;
+    ParentSF = SF->getParent();
+    assert(ParentSF && "We don't start analysis from autosynthesized code");
   }
-  return LC;
+  return SF;
 }
 
 const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   // We cannot place diagnostics on autosynthesized code.
   // Put them onto the call site through which we jumped into autosynthesized
   // code for the first time.
-  const LocationContext *LC = getLocationContext();
-  if (LC->getAnalysisDeclContext()->isBodyAutosynthesized()) {
+  const StackFrame *SF = getStackFrame();
+  if (SF->getAnalysisDeclContext()->isBodyAutosynthesized()) {
     // It must be a stack frame because we only autosynthesize functions.
-    return cast<StackFrameContext>(findTopAutosynthesizedParentContext(LC))
-        ->getCallSite();
+    return findTopAutosynthesizedParentStackFrame(SF)->getCallSite();
   }
   // Otherwise, see if the node's program point directly points to a statement.
   // FIXME: Refactor into a ProgramPoint method?
@@ -336,7 +330,7 @@ const Stmt *ExplodedNode::getStmtForDiagnostics() const {
   if (auto CE = P.getAs<CallEnter>())
     return CE->getCallExpr();
   if (auto CEE = P.getAs<CallExitEnd>())
-    return CEE->getCalleeContext()->getCallSite();
+    return CEE->getCalleeStackFrame()->getCallSite();
   if (auto PIPP = P.getAs<PostInitializer>())
     return PIPP->getInitializer()->getInit();
   if (auto CEB = P.getAs<CallExitBegin>())
@@ -442,6 +436,10 @@ std::unique_ptr<ExplodedGraph>
 ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
                     InterExplodedGraphMap *ForwardMap,
                     InterExplodedGraphMap *InverseMap) const {
+  // FIXME: The two-pass algorithm of this function (which was introduced in
+  // 2008) is terribly overcomplicated and should be replaced by a single
+  // (backward) pass.
+
   if (Nodes.empty())
     return nullptr;
 
@@ -467,8 +465,9 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     if (!Pass1.insert(N).second)
       continue;
 
-    // If this is a root enqueue it to the second worklist.
+    // If this is the root enqueue it to the second worklist.
     if (N->Preds.empty()) {
+      assert(N == getRoot() && "Found non-root node with no predecessors!");
       WL2.push_back(N);
       continue;
     }
@@ -477,12 +476,14 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     WL1.append(N->Preds.begin(), N->Preds.end());
   }
 
-  // We didn't hit a root? Return with a null pointer for the new graph.
+  // We didn't hit the root? Return with a null pointer for the new graph.
   if (WL2.empty())
     return nullptr;
 
+  assert(WL2.size() == 1 && "There must be only one root!");
+
   // Create an empty graph.
-  std::unique_ptr<ExplodedGraph> G = MakeEmptyGraph();
+  std::unique_ptr<ExplodedGraph> G = std::make_unique<ExplodedGraph>();
 
   // ===- Pass 2 (forward DFS to construct the new graph) -===
   while (!WL2.empty()) {
@@ -503,9 +504,11 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // Also record the reverse mapping from the new node to the old node.
     if (InverseMap) (*InverseMap)[NewN] = N;
 
-    // If this node is a root, designate it as such in the graph.
-    if (N->Preds.empty())
-      G->addRoot(NewN);
+    // If this node is the root, designate it as such in the graph.
+    if (N->Preds.empty()) {
+      assert(N == getRoot());
+      G->designateAsRoot(NewN);
+    }
 
     // In the case that some of the intended predecessors of NewN have already
     // been created, we should hook them up as predecessors.

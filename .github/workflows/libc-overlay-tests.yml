@@ -4,50 +4,49 @@ permissions:
   contents: read
 on:
   pull_request:
-    branches: [ "main" ]
     paths:
       - 'libc/**'
       - '.github/workflows/libc-overlay-tests.yml'
 
 jobs:
   build:
+    if: github.repository_owner == 'llvm'
+    timeout-minutes: 30
     runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || null }}
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        build_type: [Debug, Release, MinSizeRel]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            ccache-variant: sccache
+            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
             compiler:
-              c_compiler: clang
-              cpp_compiler: clang++
-          # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
+              c_compiler: clang-23
+              cpp_compiler: clang++-23
           - os: ubuntu-24.04-arm
-            ccache-variant: ccache
+            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
             compiler:
-              c_compiler: clang
-              cpp_compiler: clang++
+              c_compiler: clang-23
+              cpp_compiler: clang++-23
           - os: windows-2022
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
           - os: windows-2025
-            ccache-variant: sccache
             compiler:
               c_compiler: clang-cl
               cpp_compiler: clang-cl
-          - os: macos-14
-            ccache-variant: sccache
+          - os: macos-15
             compiler:
               c_compiler: clang
               cpp_compiler: clang++
     
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
     
     # Libc's build is relatively small comparing with other components of LLVM.
     # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
@@ -57,18 +56,11 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+      uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
       with:
         max-size: 1G
-        key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
-        variant: ${{ matrix.ccache-variant }}
-    
-    # MPFR is required by some of the mathlib tests.
-    - name: Prepare dependencies (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build
+        key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
+        variant: sccache
     
     # Chocolatey is shipped with Windows runners. Windows Server 2025 recommends WinGet.
     # Consider migrating to WinGet when Windows Server 2025 is available.
@@ -82,40 +74,34 @@ jobs:
       run: |
         brew install ninja
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
     # Use MinSizeRel to reduce the size of the build.
     # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
     # by the sccache tool.
     - name: Configure CMake
       run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
-        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }}
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+        -DLIBC_COMPILE_OPTIONS_NATIVE=""
         -DLLVM_ENABLE_RUNTIMES=libc
         -G Ninja
-        -S ${{ github.workspace }}/runtimes
+        -S runtimes
 
     - name: Build
       run: >
         cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --build build
         --parallel 
-        --config MinSizeRel 
         --target libc
 
     - name: Test
       run: >
         cmake 
-        --build ${{ steps.strings.outputs.build-output-dir }} 
+        --build build 
         --parallel 
         --target check-libc

@@ -17,6 +17,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -117,7 +118,7 @@ struct VFShape {
     return {EC, Parameters};
   }
   /// Validation check on the Parameters in the VFShape.
-  bool hasValidParameterList() const;
+  LLVM_ABI bool hasValidParameterList() const;
 };
 
 /// Holds the VFShape for a specific scalar to vector function mapping.
@@ -127,20 +128,22 @@ struct VFInfo {
   std::string VectorName; /// Vector Function Name associated to this VFInfo.
   VFISAKind ISA;          /// Instruction Set Architecture.
 
-  /// Returns the index of the first parameter with the kind 'GlobalPredicate',
-  /// if any exist.
-  std::optional<unsigned> getParamIndexForOptionalMask() const {
-    unsigned ParamCount = Shape.Parameters.size();
-    for (unsigned i = 0; i < ParamCount; ++i)
-      if (Shape.Parameters[i].ParamKind == VFParamKind::GlobalPredicate)
-        return i;
-
-    return std::nullopt;
+  /// Returns true if the last operand to the vectorized function has the
+  /// kind 'GlobalPredicate'.
+  bool isMasked() const {
+#ifndef NDEBUG
+    unsigned NumMaskParams =
+        llvm::count_if(Shape.Parameters, [](const VFParameter &I) {
+          return I.ParamKind == VFParamKind::GlobalPredicate;
+        });
+    assert(NumMaskParams <= 1 && "Should be at most one mask parameter");
+    assert((!NumMaskParams || Shape.Parameters.back().ParamKind ==
+                                  VFParamKind::GlobalPredicate) &&
+           "Mask parameter in unexpected position");
+#endif
+    return !Shape.Parameters.empty() &&
+           Shape.Parameters.back().ParamKind == VFParamKind::GlobalPredicate;
   }
-
-  /// Returns true if at least one of the operands to the vectorized function
-  /// has the kind 'GlobalPredicate'.
-  bool isMasked() const { return getParamIndexForOptionalMask().has_value(); }
 };
 
 namespace VFABI {
@@ -180,11 +183,11 @@ static constexpr char const *_LLVM_Scalarize_ = "_LLVM_Scalarize_";
 /// factor for scalable vectors, since the mangled name doesn't encode that;
 /// it needs to be derived from the widest element types of vector arguments
 /// or return values.
-std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
-                                          const FunctionType *FTy);
+LLVM_ABI std::optional<VFInfo> tryDemangleForVFABI(StringRef MangledName,
+                                                   const FunctionType *FTy);
 
 /// Retrieve the `VFParamKind` from a string token.
-VFParamKind getVFParamKindFromString(const StringRef Token);
+LLVM_ABI VFParamKind getVFParamKindFromString(const StringRef Token);
 
 // Name of the attribute where the variant mappings are stored.
 static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
@@ -194,8 +197,9 @@ static constexpr char const *MappingsAttrName = "vector-function-abi-variant";
 /// vector-function-abi-variant attribute, we return without populating
 /// VariantMappings, i.e. callers of getVectorVariantNames need not check for
 /// the presence of the attribute (see InjectTLIMappings).
-void getVectorVariantNames(const CallInst &CI,
-                           SmallVectorImpl<std::string> &VariantMappings);
+LLVM_ABI void
+getVectorVariantNames(const CallInst &CI,
+                      SmallVectorImpl<std::string> &VariantMappings);
 
 /// Constructs a FunctionType by applying vector function information to the
 /// type of a matching scalar function.
@@ -204,12 +208,13 @@ void getVectorVariantNames(const CallInst &CI,
 /// \param ScalarFTy gets the Type information of parameters, as it is not
 /// stored in \p Info.
 /// \returns a pointer to a newly created vector FunctionType
-FunctionType *createFunctionType(const VFInfo &Info,
-                                 const FunctionType *ScalarFTy);
+LLVM_ABI FunctionType *createFunctionType(const VFInfo &Info,
+                                          const FunctionType *ScalarFTy);
 
 /// Overwrite the Vector Function ABI variants attribute with the names provide
 /// in \p VariantMappings.
-void setVectorVariantNames(CallInst *CI, ArrayRef<std::string> VariantMappings);
+LLVM_ABI void setVectorVariantNames(CallInst *CI,
+                                    ArrayRef<std::string> VariantMappings);
 
 } // end namespace VFABI
 

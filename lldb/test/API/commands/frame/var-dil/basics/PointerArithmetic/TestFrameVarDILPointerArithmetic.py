@@ -33,11 +33,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect_var_path("*offset_pref", True, type="int *")
         self.expect_var_path("**pp_int0", value="0")
         self.expect_var_path("&**pp_int0", type="int *")
-        self.expect(
-            "frame var '*array'",
-            error=True,
-            substrs=["not a pointer or reference type"],
-        )
+        self.expect_var_path("*array", value="0")
         self.expect(
             "frame var '&*p_null'",
             error=True,
@@ -46,5 +42,5 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect(
             "frame var '&*p_void'",
             error=True,
-            substrs=["dereference failed: (void *) p_void"],
+            substrs=["dereference failed: cannot dereference void *: (void *) p_void"],
         )

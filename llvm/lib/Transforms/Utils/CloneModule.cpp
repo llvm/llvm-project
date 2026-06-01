@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -61,7 +62,6 @@ std::unique_ptr<Module> llvm::CloneModule(
   New->setDataLayout(M.getDataLayout());
   New->setTargetTriple(M.getTargetTriple());
   New->setModuleInlineAsm(M.getModuleInlineAsm());
-  New->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   // Loop over all of the global variables, making corresponding globals in the
   // new module.  Here we add them to the VMap and to the new Module.  We
@@ -79,7 +79,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Loop over the functions in the module, making external functions as before
   for (const Function &I : M) {
     Function *NF =
-        Function::Create(cast<FunctionType>(I.getValueType()), I.getLinkage(),
+        Function::Create(I.getFunctionType(), I.getLinkage(),
                          I.getAddressSpace(), I.getName(), New.get());
     NF->copyAttributesFrom(&I);
     VMap[&I] = NF;
@@ -117,6 +117,18 @@ std::unique_ptr<Module> llvm::CloneModule(
 
   for (const GlobalIFunc &I : M.ifuncs()) {
     // Defer setting the resolver function until after functions are cloned.
+    if (!ShouldCloneDefinition(&I)) {
+      // An ifunc also cannot act as an external reference, so we need to create
+      // a function.
+      GlobalValue *GV;
+      assert(I.getValueType()->isFunctionTy() &&
+             "ValueType of ifunc must be function type!");
+      GV = Function::Create(cast<FunctionType>(I.getValueType()),
+                            GlobalValue::ExternalLinkage, I.getAddressSpace(),
+                            I.getName(), New.get());
+      VMap[&I] = GV;
+      continue;
+    }
     auto *GI =
         GlobalIFunc::create(I.getValueType(), I.getAddressSpace(),
                             I.getLinkage(), I.getName(), nullptr, New.get());
@@ -129,17 +141,21 @@ std::unique_ptr<Module> llvm::CloneModule(
   for (const Function &I : M) {
     Function *F = cast<Function>(VMap[&I]);
 
-    if (I.isDeclaration()) {
+    auto CopyMD = [&]() {
       // Copy over metadata for declarations since we're not doing it below in
       // CloneFunctionInto().
       SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
       I.getAllMetadata(MDs);
       for (auto MD : MDs)
         F->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+    };
+    if (I.isDeclaration()) {
+      CopyMD();
       continue;
     }
 
     if (!ShouldCloneDefinition(&I)) {
+      CopyMD();
       // Skip after setting the correct linkage for an external reference.
       F->setLinkage(GlobalValue::ExternalLinkage);
       // Personality function is not valid on a declaration.
@@ -174,6 +190,9 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   for (const GlobalIFunc &I : M.ifuncs()) {
+    // We already dealt with undefined ifuncs above.
+    if (!ShouldCloneDefinition(&I))
+      continue;
     GlobalIFunc *GI = cast<GlobalIFunc>(VMap[&I]);
     if (const Constant *Resolver = I.getResolver())
       GI->setResolver(MapValue(Resolver, VMap));

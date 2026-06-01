@@ -81,6 +81,15 @@ def G_ROLW : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_ROLW, riscv_rolw>;
 
+// Pseudo equivalent to a RISCVISD::BREV8.
+def G_BREV8 : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = false;
+}
+
+def : GINodeEquiv<G_BREV8, riscv_brev8>;
+
 // Pseudo equivalent to a RISCVISD::CLZW.
 def G_CLZW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -145,14 +154,12 @@ def G_VMSET_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VMSET_VL, riscv_vmset_vl>;
 
-// Pseudo equivalent to a RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL. There is no
-// record to mark as equivalent to using GINodeEquiv because it gets lowered
-// before instruction selection.
 def G_SPLAT_VECTOR_SPLIT_I64_VL : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$passthru, type1:$hi, type1:$lo, type2:$vl);
   let hasSideEffects = false;
 }
+def : GINodeEquiv<G_SPLAT_VECTOR_SPLIT_I64_VL, riscv_splat_vector_split_i64_vl>;
 
 // Pseudo equivalent to a RISCVISD::VSLIDEDOWN_VL
 def G_VSLIDEDOWN_VL : RISCVGenericInstruction {
@@ -180,3 +187,10 @@ def G_VSLIDEUP_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VSLIDEUP_VL, riscv_slideup_vl>;
 
+// Pseudo equivalent to RISCVISD::CLSW
+def G_CLSW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_CLSW , riscv_clsw>;

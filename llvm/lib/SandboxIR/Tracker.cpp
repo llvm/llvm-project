@@ -10,10 +10,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/SandboxIR/Instruction.h"
-#include <sstream>
 
 using namespace llvm::sandboxir;
 
@@ -97,24 +95,16 @@ PHIRemoveIncoming::PHIRemoveIncoming(PHINode *PHI, unsigned RemovedIdx)
 }
 
 void PHIRemoveIncoming::revert(Tracker &Tracker) {
-  // Special case: if the PHI is now empty, as we don't need to care about the
-  // order of the incoming values.
+  // Special case: if the removed incoming value is the last.
   unsigned NumIncoming = PHI->getNumIncomingValues();
-  if (NumIncoming == 0) {
+  if (NumIncoming == RemovedIdx) {
     PHI->addIncoming(RemovedV, RemovedBB);
     return;
   }
-  // Shift all incoming values by one starting from the end until `Idx`.
-  // Start by adding a copy of the last incoming values.
-  unsigned LastIdx = NumIncoming - 1;
-  PHI->addIncoming(PHI->getIncomingValue(LastIdx),
-                   PHI->getIncomingBlock(LastIdx));
-  for (unsigned Idx = LastIdx; Idx > RemovedIdx; --Idx) {
-    auto *PrevV = PHI->getIncomingValue(Idx - 1);
-    auto *PrevBB = PHI->getIncomingBlock(Idx - 1);
-    PHI->setIncomingValue(Idx, PrevV);
-    PHI->setIncomingBlock(Idx, PrevBB);
-  }
+  // Move the incoming value currently at `RemovedIdx` to the end, restore the
+  // old incoming value back to `RemovedIdx`.
+  PHI->addIncoming(PHI->getIncomingValue(RemovedIdx),
+                   PHI->getIncomingBlock(RemovedIdx));
   PHI->setIncomingValue(RemovedIdx, RemovedV);
   PHI->setIncomingBlock(RemovedIdx, RemovedBB);
 }
@@ -340,36 +330,69 @@ void CmpSwapOperands::dump() const {
 
 void Tracker::save() {
   State = TrackerState::Record;
+  // Record the last index in `Changes` that we will revert.
+  Snapshots.push_back(Changes.size());
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  SnapshotChecker.save();
+  SnapshotChecker.emplace_back(Ctx);
+  SnapshotChecker.back().save();
 #endif
 }
 
-void Tracker::revert() {
+void Tracker::revert(bool RevertAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
   State = TrackerState::Reverting;
-  for (auto &Change : reverse(Changes))
+  unsigned UntilChangeIdx = RevertAll ? 0 : Snapshots.back();
+  const unsigned ToRevert = Changes.size() - UntilChangeIdx;
+  unsigned CntReverts = 0;
+  for (auto &Change : reverse(Changes)) {
+    // Stop reverting if we reach the index of the last snapshot.
+    if (CntReverts++ == ToRevert)
+      break;
     Change->revert(*this);
-  Changes.clear();
 #if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  SnapshotChecker.expectNoDiff();
+    // There may be multiple changes between snapshots, so use the snapshot
+    // checker only if this change has an associated snapshot.
+    unsigned ChangeIdx = Changes.size() - CntReverts;
+    bool ChangeHasSnapshot = ChangeIdx == Snapshots.back();
+    if (ChangeHasSnapshot) {
+      SnapshotChecker.back().expectNoDiff();
+      SnapshotChecker.pop_back();
+    }
 #endif
-  State = TrackerState::Disabled;
+  }
+  Changes.erase(Changes.end() - ToRevert, Changes.end());
+  if (RevertAll)
+    Snapshots.clear();
+  else
+    Snapshots.pop_back();
+  State = Snapshots.empty() ? TrackerState::Disabled : TrackerState::Record;
 }
 
-void Tracker::accept() {
+void Tracker::accept(bool AcceptAll) {
   assert(State == TrackerState::Record && "Forgot to save()!");
+  if (!AcceptAll && Snapshots.size() > 1) {
+    // Just remove the last stacked checkpoint.
+    Snapshots.pop_back();
+    return;
+  }
   State = TrackerState::Disabled;
   for (auto &Change : Changes)
     Change->accept();
   Changes.clear();
+  Snapshots.clear();
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.clear();
+#endif
 }
 
 #ifndef NDEBUG
 void Tracker::dump(raw_ostream &OS) const {
+  unsigned SnapshotCnt = 0;
   for (auto [Idx, ChangePtr] : enumerate(Changes)) {
     OS << Idx << ". ";
     ChangePtr->dump(OS);
+    if (find(Snapshots, Idx) != Snapshots.end())
+      OS << " [Snapshot " << SnapshotCnt++ << "]";
     OS << "\n";
   }
 }

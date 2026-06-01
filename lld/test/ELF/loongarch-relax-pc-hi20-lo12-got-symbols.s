@@ -4,9 +4,9 @@
 # REQUIRES: loongarch
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax symbols.s -o symbols.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s,+relax symbols.s -o symbols.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax symbols.s -o symbols.64.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax abs.s -o abs.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s,+relax abs.s -o abs.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax abs.s -o abs.64.o
 
 # RUN: ld.lld --shared -Tlinker.t symbols.32.o abs.32.o -o symbols.32.so

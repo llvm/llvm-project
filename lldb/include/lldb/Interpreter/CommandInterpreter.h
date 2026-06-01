@@ -449,12 +449,14 @@ public:
 
   void GetAliasHelp(const char *alias_name, StreamString &help_string);
 
-  void OutputFormattedHelpText(Stream &strm, llvm::StringRef prefix,
-                               llvm::StringRef help_text);
+  void OutputFormattedHelpText(
+      Stream &strm, llvm::StringRef prefix, llvm::StringRef help_text,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
-  void OutputFormattedHelpText(Stream &stream, llvm::StringRef command_word,
-                               llvm::StringRef separator,
-                               llvm::StringRef help_text, size_t max_word_len);
+  void OutputFormattedHelpText(
+      Stream &stream, llvm::StringRef command_word, llvm::StringRef separator,
+      llvm::StringRef help_text, size_t max_word_len,
+      std::optional<Stream::HighlightSettings> highlight = std::nullopt);
 
   // this mimics OutputFormattedHelpText but it does perform a much simpler
   // formatting, basically ensuring line alignment. This is only good if you
@@ -468,7 +470,21 @@ public:
 
   Debugger &GetDebugger() { return m_debugger; }
 
-  ExecutionContext GetExecutionContext() const;
+  /// Get the target selected by the user at the command line. All commands
+  /// should prefer this over any other notion of a "current" target, so that
+  /// the user's explicit `target select` stays authoritative within the
+  /// command layer. Non-command code should use the execution context instead.
+  lldb::TargetSP GetSelectedTarget() {
+    return m_debugger.GetTargetList().GetSelectedTarget();
+  }
+
+  /// Returns the execution context the interpreter should run a command in.
+  /// If `adopt_dummy_target` is true and no real target is selected, the
+  /// dummy target is substituted in. Pass false from CommandObject paths
+  /// where the command hasn't opted into the dummy via
+  /// eCommandAllowsDummyTarget, so callers can't inadvertently end up
+  /// operating on the dummy.
+  ExecutionContext GetExecutionContext(bool adopt_dummy_target = true) const;
 
   lldb::PlatformSP GetPlatform(bool prefer_target_platform);
 
@@ -729,6 +745,12 @@ private:
 
   bool EchoCommandNonInteractive(llvm::StringRef line,
                                  const Flags &io_handler_flags) const;
+
+  /// Return the language specific command object for the current frame.
+  ///
+  /// For example, when stopped on a C++ frame, this returns the command object
+  /// for "language cplusplus" (`CommandObjectMultiwordItaniumABI`).
+  lldb::CommandObjectSP GetFrameLanguageCommand() const;
 
   // A very simple state machine which models the command handling transitions
   enum class CommandHandlingState {

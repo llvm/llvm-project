@@ -8,6 +8,7 @@
 ; RUN: llvm-bcanalyzer -dump %t0 | FileCheck --check-prefix=BCA0 %s
 ; RUN: llvm-bcanalyzer -dump %t1 | FileCheck --check-prefix=BCA1 %s
 
+source_filename = "split-internal2.ll"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; ERROR: llvm-modextract: error: module index out of range; bitcode file contains 2 module(s)
@@ -15,12 +16,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ; BCA0: <GLOBALVAL_SUMMARY_BLOCK
 ; BCA1-NOT: <GLOBALVAL_SUMMARY_BLOCK
 
-; M0: @g = external global ptr{{$}}
+; M0: @g = external global ptr
 ; M1: @g = global ptr @f.13757e0fb71915e385efa4dc9d1e08fd, !type !0
 @g = global ptr @f, !type !0
 
 ; M0: define hidden void @f.13757e0fb71915e385efa4dc9d1e08fd()
-; M1: declare hidden void @f.13757e0fb71915e385efa4dc9d1e08fd()
+; M1: declare !guid !4 hidden void @f.13757e0fb71915e385efa4dc9d1e08fd()
 define internal void @f() {
   call void @f2()
   ret void
@@ -33,3 +34,8 @@ define internal void @f2() {
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}
+
+; test that the GUID of f.<hash> is the same in the summaries of the 2 split
+; modules
+; M0: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd", {{.*}} ; guid = 7412521599758238647
+; M1: = gv: (name: "f.13757e0fb71915e385efa4dc9d1e08fd") ; guid = 7412521599758238647

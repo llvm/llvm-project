@@ -1141,10 +1141,25 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a1, %hi(.LCPI67_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI67_0)
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vdivu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 6, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    lui a1, 1048568
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    li a1, 33
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmulhu.vv v10, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
+; CHECK-NEXT:    vmulhu.vv v8, v8, v9
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vmv.v.i v9, 3
+; CHECK-NEXT:    vmerge.vim v9, v9, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1207,8 +1222,8 @@ define void @mulhu_v2i64(ptr %x) {
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 838861
 ; RV64-NEXT:    lui a2, 699051
-; RV64-NEXT:    addiw a1, a1, -819
-; RV64-NEXT:    addiw a2, a2, -1365
+; RV64-NEXT:    addi a1, a1, -819
+; RV64-NEXT:    addi a2, a2, -1365
 ; RV64-NEXT:    slli a3, a1, 32
 ; RV64-NEXT:    add a1, a1, a3
 ; RV64-NEXT:    slli a3, a2, 32
@@ -1287,9 +1302,16 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    li a1, 22
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv.v.i v9, -7
-; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
-; CHECK-NEXT:    vdiv.vv v8, v8, v9
+; CHECK-NEXT:    lui a1, 1048571
+; CHECK-NEXT:    addi a1, a1, 1755
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    lui a1, 5
+; CHECK-NEXT:    addi a1, a1, -1755
+; CHECK-NEXT:    vmerge.vxm v9, v9, a1, v0
+; CHECK-NEXT:    vmulh.vv v8, v8, v9
+; CHECK-NEXT:    vsra.vi v8, v8, 1
+; CHECK-NEXT:    vsrl.vi v9, v8, 15
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <6 x i16>, ptr %x
@@ -1368,7 +1390,7 @@ define void @mulhs_v2i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
-; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    addi a1, a1, 1365
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    lui a2, %hi(.LCPI74_0)
@@ -1493,7 +1515,6 @@ define void @smin_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.smin.v16i8(<16 x i8>, <16 x i8>)
 
 define void @smin_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smin_vx_v8i16:
@@ -1510,7 +1531,6 @@ define void @smin_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smin_vx_v6i16:
@@ -1527,7 +1547,6 @@ define void @smin_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.smin.v6i16(<6 x i16>, <6 x i16>)
 
 define void @smin_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: smin_vx_v4i32:
@@ -1544,7 +1563,6 @@ define void @smin_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)
 
 define void @smin_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: smin_xv_v16i8:
@@ -1710,7 +1728,6 @@ define void @smax_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)
 
 define void @smax_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smax_vx_v8i16:
@@ -1727,7 +1744,6 @@ define void @smax_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @smax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: smax_vx_v6i16:
@@ -1744,7 +1760,6 @@ define void @smax_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.smax.v6i16(<6 x i16>, <6 x i16>)
 
 define void @smax_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: smax_vx_v4i32:
@@ -1761,7 +1776,6 @@ define void @smax_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @smax_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: smax_xv_v16i8:
@@ -1927,7 +1941,6 @@ define void @umin_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.umin.v16i8(<16 x i8>, <16 x i8>)
 
 define void @umin_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umin_vx_v8i16:
@@ -1944,7 +1957,6 @@ define void @umin_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.umin.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umin_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umin_vx_v6i16:
@@ -1961,7 +1973,6 @@ define void @umin_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.umin.v6i16(<6 x i16>, <6 x i16>)
 
 define void @umin_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: umin_vx_v4i32:
@@ -1978,7 +1989,6 @@ define void @umin_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.umin.v4i32(<4 x i32>, <4 x i32>)
 
 define void @umin_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: umin_xv_v16i8:
@@ -2144,7 +2154,6 @@ define void @umax_vx_v16i8(ptr %x, i8 %y) {
   store <16 x i8> %d, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.umax.v16i8(<16 x i8>, <16 x i8>)
 
 define void @umax_vx_v8i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umax_vx_v8i16:
@@ -2161,7 +2170,6 @@ define void @umax_vx_v8i16(ptr %x, i16 %y) {
   store <8 x i16> %d, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.umax.v8i16(<8 x i16>, <8 x i16>)
 
 define void @umax_vx_v6i16(ptr %x, i16 %y) {
 ; CHECK-LABEL: umax_vx_v6i16:
@@ -2178,7 +2186,6 @@ define void @umax_vx_v6i16(ptr %x, i16 %y) {
   store <6 x i16> %d, ptr %x
   ret void
 }
-declare <6 x i16> @llvm.umax.v6i16(<6 x i16>, <6 x i16>)
 
 define void @umax_vx_v4i32(ptr %x, i32 %y) {
 ; CHECK-LABEL: umax_vx_v4i32:
@@ -2195,7 +2202,6 @@ define void @umax_vx_v4i32(ptr %x, i32 %y) {
   store <4 x i32> %d, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
 
 define void @umax_xv_v16i8(ptr %x, i8 %y) {
 ; CHECK-LABEL: umax_xv_v16i8:
@@ -3501,7 +3507,7 @@ define void @mulhs_v4i64(ptr %x) {
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 1044496
-; RV64-NEXT:    addiw a1, a1, 1365
+; RV64-NEXT:    addi a1, a1, 1365
 ; RV64-NEXT:    addi a2, a2, -256
 ; RV64-NEXT:    vmv.s.x v14, a2
 ; RV64-NEXT:    slli a2, a1, 32
@@ -5527,7 +5533,7 @@ define void @mulhu_vx_v2i64(ptr %x) {
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 699051
-; RV64-NEXT:    addiw a1, a1, -1365
+; RV64-NEXT:    addi a1, a1, -1365
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    add a1, a1, a2
 ; RV64-NEXT:    vmulhu.vx v8, v8, a1
@@ -5706,4 +5712,198 @@ define void @msub_vv_v2i64_2(ptr %x, <2 x i64> %y) {
   %c = mul <2 x i64> %y, %b
   store <2 x i64> %c, ptr %x
   ret void
+}
+
+define <8 x i8> @vsub_if_uge_v8i8(<8 x i8> %va, <8 x i8> %vb) {
+; CHECK-LABEL: vsub_if_uge_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <8 x i8> %va, %vb
+  %select = select <8 x i1> %cmp, <8 x i8> zeroinitializer, <8 x i8> %vb
+  %sub = sub nuw <8 x i8> %va, %select
+  ret <8 x i8> %sub
+}
+
+define <8 x i8> @vsub_if_uge_swapped_v8i8(<8 x i8> %va, <8 x i8> %vb) {
+; CHECK-LABEL: vsub_if_uge_swapped_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp uge <8 x i8> %va, %vb
+  %select = select <8 x i1> %cmp, <8 x i8> %vb, <8 x i8> zeroinitializer
+  %sub = sub nuw <8 x i8> %va, %select
+  ret <8 x i8> %sub
+}
+
+define <8 x i16> @vsub_if_uge_v8i16(<8 x i16> %va, <8 x i16> %vb) {
+; CHECK-LABEL: vsub_if_uge_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <8 x i16> %va, %vb
+  %select = select <8 x i1> %cmp, <8 x i16> zeroinitializer, <8 x i16> %vb
+  %sub = sub nuw <8 x i16> %va, %select
+  ret <8 x i16> %sub
+}
+
+define <8 x i16> @vsub_if_uge_swapped_v8i16(<8 x i16> %va, <8 x i16> %vb) {
+; CHECK-LABEL: vsub_if_uge_swapped_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp uge <8 x i16> %va, %vb
+  %select = select <8 x i1> %cmp, <8 x i16> %vb, <8 x i16> zeroinitializer
+  %sub = sub nuw <8 x i16> %va, %select
+  ret <8 x i16> %sub
+}
+
+define <4 x i32> @vsub_if_uge_v4i32(<4 x i32> %va, <4 x i32> %vb) {
+; CHECK-LABEL: vsub_if_uge_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <4 x i32> %va, %vb
+  %select = select <4 x i1> %cmp, <4 x i32> zeroinitializer, <4 x i32> %vb
+  %sub = sub nuw <4 x i32> %va, %select
+  ret <4 x i32> %sub
+}
+
+define <4 x i32> @vsub_if_uge_swapped_v4i32(<4 x i32> %va, <4 x i32> %vb) {
+; CHECK-LABEL: vsub_if_uge_swapped_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp uge <4 x i32> %va, %vb
+  %select = select <4 x i1> %cmp, <4 x i32> %vb, <4 x i32> zeroinitializer
+  %sub = sub nuw <4 x i32> %va, %select
+  ret <4 x i32> %sub
+}
+
+define <2 x i64> @vsub_if_uge_v2i64(<2 x i64> %va, <2 x i64> %vb) {
+; CHECK-LABEL: vsub_if_uge_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <2 x i64> %va, %vb
+  %select = select <2 x i1> %cmp, <2 x i64> zeroinitializer, <2 x i64> %vb
+  %sub = sub nuw <2 x i64> %va, %select
+  ret <2 x i64> %sub
+}
+
+define <2 x i64> @vsub_if_uge_swapped_v2i64(<2 x i64> %va, <2 x i64> %vb) {
+; CHECK-LABEL: vsub_if_uge_swapped_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v9, v8, v9
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp uge <2 x i64> %va, %vb
+  %select = select <2 x i1> %cmp, <2 x i64> %vb, <2 x i64> zeroinitializer
+  %sub = sub nuw <2 x i64> %va, %select
+  ret <2 x i64> %sub
+}
+
+define <8 x i8> @sub_if_uge_C_v8i8(<8 x i8> %x) {
+; CHECK-LABEL: sub_if_uge_C_v8i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vadd.vi v9, v8, -13
+; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt <8 x i8> %x, splat (i8 12)
+  %sub = add <8 x i8> %x, splat (i8 -13)
+  %select = select <8 x i1> %cmp, <8 x i8> %sub, <8 x i8> %x
+  ret <8 x i8> %select
+}
+
+define <8 x i16> @sub_if_uge_C_v8i16(<8 x i16> %x) {
+; CHECK-LABEL: sub_if_uge_C_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, -2001
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v9, v8, a0
+; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt <8 x i16> %x, splat (i16 2000)
+  %sub = add <8 x i16> %x, splat (i16 -2001)
+  %select = select <8 x i1> %cmp, <8 x i16> %sub, <8 x i16> %x
+  ret <8 x i16> %select
+}
+
+define <4 x i32> @sub_if_uge_C_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: sub_if_uge_C_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1048560
+; CHECK-NEXT:    addi a0, a0, 15
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v9, v8, a0
+; CHECK-NEXT:    vminu.vv v8, v9, v8
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt <4 x i32> %x, splat (i32 65520)
+  %sub = add <4 x i32> %x, splat (i32 -65521)
+  %select = select <4 x i1> %cmp, <4 x i32> %sub, <4 x i32> %x
+  ret <4 x i32> %select
+}
+
+define <4 x i32> @sub_if_uge_C_swapped_v4i32(<4 x i32> %x) {
+; CHECK-LABEL: sub_if_uge_C_swapped_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 1048560
+; CHECK-NEXT:    addi a0, a0, 15
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v9, v8, a0
+; CHECK-NEXT:    vminu.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %cmp = icmp ult <4 x i32> %x, splat (i32 65521)
+  %sub = add <4 x i32> %x, splat (i32 -65521)
+  %select = select <4 x i1> %cmp, <4 x i32> %x, <4 x i32> %sub
+  ret <4 x i32> %select
+}
+
+define <2 x i64> @sub_if_uge_C_v2i64(<2 x i64> %x) nounwind {
+; RV32-LABEL: sub_if_uge_C_v2i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    li a0, -2
+; RV32-NEXT:    lui a1, 876449
+; RV32-NEXT:    addi a1, a1, -513
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vadd.vv v9, v8, v9
+; RV32-NEXT:    vminu.vv v8, v9, v8
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: sub_if_uge_C_v2i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a0, 1048278
+; RV64-NEXT:    addi a0, a0, -95
+; RV64-NEXT:    slli a0, a0, 12
+; RV64-NEXT:    addi a0, a0, -513
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vadd.vx v9, v8, a0
+; RV64-NEXT:    vminu.vv v8, v9, v8
+; RV64-NEXT:    ret
+  %cmp = icmp ugt <2 x i64> %x, splat (i64 5000000000)
+  %sub = add <2 x i64> %x, splat (i64 -5000000001)
+  %select = select <2 x i1> %cmp, <2 x i64> %sub, <2 x i64> %x
+  ret <2 x i64> %select
 }

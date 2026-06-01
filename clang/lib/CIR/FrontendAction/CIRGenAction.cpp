@@ -14,8 +14,20 @@
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
+#include "clang/CodeGen/ModuleLinker.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Linker/Linker.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO/Internalize.h"
 
 using namespace cir;
 using namespace clang;
@@ -44,8 +56,11 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
 }
 
 static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx) {
-  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx);
+lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
+                     llvm::StringRef mlirSaveTempsOutFile = {},
+                     llvm::vfs::FileSystem *fs = nullptr) {
+  return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx,
+                                              mlirSaveTempsOutFile, fs);
 }
 
 class CIRGenConsumer : public clang::ASTConsumer {
@@ -62,15 +77,22 @@ class CIRGenConsumer : public clang::ASTConsumer {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
   std::unique_ptr<CIRGenerator> Gen;
   const FrontendOptions &FEOptions;
+  CodeGenOptions &CGO;
+
+  llvm::LLVMContext &LLVMCtx;
+  SmallVectorImpl<::clang::LinkModule> &LinkModules;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType Action, CompilerInstance &CI,
-                 std::unique_ptr<raw_pwrite_stream> OS)
+                 CodeGenOptions &CGO, std::unique_ptr<raw_pwrite_stream> OS,
+                 llvm::LLVMContext &LLVMCtx,
+                 SmallVectorImpl<::clang::LinkModule> &LinkModules)
       : Action(Action), CI(CI), OutputStream(std::move(OS)),
         FS(&CI.getVirtualFileSystem()),
         Gen(std::make_unique<CIRGenerator>(CI.getDiagnostics(), std::move(FS),
                                            CI.getCodeGenOpts())),
-        FEOptions(CI.getFrontendOpts()) {}
+        FEOptions(CI.getFrontendOpts()), CGO(CGO), LLVMCtx(LLVMCtx),
+        LinkModules(LinkModules) {}
 
   void Initialize(ASTContext &Ctx) override {
     assert(!Context && "initialized multiple times");
@@ -81,6 +103,19 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef D) override {
     Gen->HandleTopLevelDecl(D);
     return true;
+  }
+
+  void HandleCXXStaticMemberVarInstantiation(clang::VarDecl *VD) override {
+    Gen->HandleCXXStaticMemberVarInstantiation(VD);
+  }
+
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
+  void HandleInlineFunctionDefinition(FunctionDecl *D) override {
+    Gen->HandleInlineFunctionDefinition(D);
   }
 
   void HandleTranslationUnit(ASTContext &C) override {
@@ -101,8 +136,9 @@ public:
 
     if (!FEOptions.ClangIRDisablePasses) {
       // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier)
+      if (runCIRToCIRPasses(
+              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
@@ -121,9 +157,29 @@ public:
     case CIRGenAction::OutputType::EmitBC:
     case CIRGenAction::OutputType::EmitObj:
     case CIRGenAction::OutputType::EmitAssembly: {
-      llvm::LLVMContext LLVMCtx;
+      StringRef saveTempsPrefix = CGO.SaveTempsFilePrefix;
+      std::string cirSaveTempsOutFile, mlirSaveTempsOutFile;
+      if (!saveTempsPrefix.empty()) {
+        SmallString<128> stem(saveTempsPrefix);
+        llvm::sys::path::replace_extension(stem, "cir");
+        cirSaveTempsOutFile = std::string(stem);
+        llvm::sys::path::replace_extension(stem, "mlir");
+        mlirSaveTempsOutFile = std::string(stem);
+      }
+
+      if (!cirSaveTempsOutFile.empty()) {
+        std::error_code ec;
+        llvm::raw_fd_ostream out(cirSaveTempsOutFile, ec);
+        if (!ec)
+          MlirModule->print(out);
+      }
+
       std::unique_ptr<llvm::Module> LLVMModule =
-          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx);
+          lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, mlirSaveTempsOutFile,
+                               &CI.getVirtualFileSystem());
+
+      if (linkInModules(*LLVMModule))
+        return;
 
       BackendAction BEAction = getBackendActionFromOutputType(Action);
       emitBackendOutput(
@@ -133,15 +189,74 @@ public:
     }
     }
   }
+
+  // TODO: share with BackendConsumer::LinkInModules once OG's CurLinkModule
+  // diagnostic-handler indirection is abstracted behind a callback for CIR.
+  bool linkInModules(llvm::Module &M) {
+    for (auto &LM : LinkModules) {
+      assert(LM.Module && "LinkModule does not actually have a module");
+
+      if (LM.PropagateAttrs)
+        for (llvm::Function &F : *LM.Module) {
+          if (F.isIntrinsic())
+            continue;
+          clang::CodeGen::mergeDefaultFunctionDefinitionAttributes(
+              F, CGO, CI.getLangOpts(), CI.getTargetOpts(), LM.Internalize);
+        }
+
+      bool Err;
+      if (LM.Internalize) {
+        Err = llvm::Linker::linkModules(
+            M, std::move(LM.Module), LM.LinkFlags,
+            [](llvm::Module &M, const llvm::StringSet<> &GVS) {
+              llvm::internalizeModule(M, [&GVS](const llvm::GlobalValue &GV) {
+                return !GV.hasName() || (GVS.count(GV.getName()) == 0);
+              });
+            });
+      } else {
+        Err = llvm::Linker::linkModules(M, std::move(LM.Module), LM.LinkFlags);
+      }
+
+      if (Err)
+        return true;
+    }
+
+    LinkModules.clear();
+    return false;
+  }
+
+  void HandleTagDeclDefinition(TagDecl *D) override {
+    PrettyStackTraceDecl CrashInfo(D, SourceLocation(),
+                                   Context->getSourceManager(),
+                                   "CIR generation of declaration");
+    Gen->HandleTagDeclDefinition(D);
+  }
+
+  void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
+    Gen->HandleTagDeclRequiredDefinition(D);
+  }
+
+  void CompleteTentativeDefinition(VarDecl *D) override {
+    Gen->CompleteTentativeDefinition(D);
+  }
+
+  void HandleVTable(CXXRecordDecl *RD) override { Gen->HandleVTable(RD); }
 };
 } // namespace cir
 
 void CIRGenConsumer::anchor() {}
 
 CIRGenAction::CIRGenAction(OutputType Act, mlir::MLIRContext *MLIRCtx)
-    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext), Action(Act) {}
+    : MLIRCtx(MLIRCtx ? MLIRCtx : new mlir::MLIRContext),
+      Ctx(std::make_unique<llvm::LLVMContext>()), Action(Act) {}
 
 CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
+
+bool CIRGenAction::BeginSourceFileAction(CompilerInstance &CI) {
+  if (clang::loadLinkModules(CI, *Ctx, LinkModules))
+    return false;
+  return ASTFrontendAction::BeginSourceFileAction(CI);
+}
 
 static std::unique_ptr<raw_pwrite_stream>
 getOutputStream(CompilerInstance &CI, StringRef InFile,
@@ -168,8 +283,8 @@ CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   if (!Out)
     Out = getOutputStream(CI, InFile, Action);
 
-  auto Result =
-      std::make_unique<cir::CIRGenConsumer>(Action, CI, std::move(Out));
+  auto Result = std::make_unique<cir::CIRGenConsumer>(
+      Action, CI, CI.getCodeGenOpts(), std::move(Out), *Ctx, LinkModules);
 
   return Result;
 }

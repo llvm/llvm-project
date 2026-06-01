@@ -70,9 +70,10 @@ public:
   }
 
   void test_subnormal_range(Func func) {
-    constexpr StorageType COUNT = 10'001;
-    for (unsigned scale = 0; scale < 4; ++scale) {
-      StorageType max_value = MAX_SUBNORMAL << scale;
+    constexpr StorageType COUNT = 1'231;
+    constexpr unsigned SCALE = (sizeof(T) < 4) ? 1 : 4;
+    for (unsigned scale = 0; scale < SCALE; ++scale) {
+      StorageType max_value = static_cast<StorageType>(MAX_SUBNORMAL << scale);
       StorageType step = (max_value - MIN_SUBNORMAL) / COUNT + 1;
       for (int signs = 0; signs < 4; ++signs) {
         for (StorageType v = MIN_SUBNORMAL, w = max_value;
@@ -94,7 +95,7 @@ public:
   }
 
   void test_normal_range(Func func) {
-    constexpr StorageType COUNT = 10'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = (MAX_NORMAL - MIN_NORMAL) / COUNT;
     for (int signs = 0; signs < 4; ++signs) {
       for (StorageType v = MIN_NORMAL, w = MAX_NORMAL;

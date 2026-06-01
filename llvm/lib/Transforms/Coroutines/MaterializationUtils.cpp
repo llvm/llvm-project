@@ -15,6 +15,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Transforms/Coroutines/SpillUtils.h"
 #include <deque>
@@ -137,8 +138,7 @@ struct RematGraph {
 
 } // namespace
 
-namespace llvm {
-template <> struct GraphTraits<RematGraph *> {
+template <> struct llvm::GraphTraits<RematGraph *> {
   using NodeRef = RematGraph::RematNode *;
   using ChildIteratorType = RematGraph::RematNode **;
 
@@ -148,8 +148,6 @@ template <> struct GraphTraits<RematGraph *> {
   }
   static ChildIteratorType child_end(NodeRef N) { return N->Operands.end(); }
 };
-
-} // end namespace llvm
 
 // For each instruction identified as materializable across the suspend point,
 // and its associated DAG of other rematerializable instructions,
@@ -234,8 +232,61 @@ static void rewriteMaterializableInstructions(
 // Check for instructions that we can recreate on resume as opposed to spill
 // the result into a coroutine frame.
 bool llvm::coro::defaultMaterializable(Instruction &V) {
-  return (isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
-          isa<BinaryOperator>(&V) || isa<CmpInst>(&V) || isa<SelectInst>(&V));
+  if (isa<CastInst>(&V) || isa<GetElementPtrInst>(&V) ||
+      isa<BinaryOperator>(&V) || isa<UnaryOperator>(&V) || isa<CmpInst>(&V) ||
+      isa<SelectInst>(&V))
+    return true;
+
+  if (auto *II = dyn_cast<IntrinsicInst>(&V)) {
+    switch (II->getIntrinsicID()) {
+    // Floating-point unary math
+    case Intrinsic::fabs:
+    case Intrinsic::sqrt:
+    case Intrinsic::sin:
+    case Intrinsic::cos:
+    case Intrinsic::exp2:
+    case Intrinsic::log2:
+    // Floating-point binary math
+    case Intrinsic::minnum:
+    case Intrinsic::maxnum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximum:
+    case Intrinsic::copysign:
+    case Intrinsic::ldexp:
+    // Floating-point conversion
+    case Intrinsic::fptoui_sat:
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::is_fpclass:
+    // Rounding
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::trunc:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+    // Integer bit ops
+    case Intrinsic::ctpop:
+    case Intrinsic::ctlz:
+    case Intrinsic::cttz:
+    case Intrinsic::bitreverse:
+    // Integer saturating arithmetic
+    case Intrinsic::sadd_sat:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::ssub_sat:
+    case Intrinsic::usub_sat:
+    // Integer min and max
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin:
+      return true;
+    default:
+      break;
+    }
+  }
+
+  return false;
 }
 
 bool llvm::coro::isTriviallyMaterializable(Instruction &V) {

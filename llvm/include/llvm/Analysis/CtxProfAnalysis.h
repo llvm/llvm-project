@@ -15,6 +15,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/ProfileData/PGOCtxProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
@@ -46,9 +47,6 @@ class PGOContextualProfile {
   // we'll need when we maintain the profiles during IPO transformations.
   std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
 
-  /// Get the GUID of this Function if it's defined in this module.
-  GlobalValue::GUID getDefinedFunctionGUID(const Function &F) const;
-
   // This is meant to be constructed from CtxProfAnalysis, which will also set
   // its state piecemeal.
   PGOContextualProfile() = default;
@@ -65,11 +63,9 @@ public:
 
   const PGOCtxProfile &profiles() const { return Profiles; }
 
-  bool isInSpecializedModule() const;
+  LLVM_ABI bool isInSpecializedModule() const;
 
-  bool isFunctionKnown(const Function &F) const {
-    return getDefinedFunctionGUID(F) != 0;
-  }
+  bool isFunctionKnown(const Function &F) const { return !F.isDeclaration(); }
 
   StringRef getFunctionName(GlobalValue::GUID GUID) const {
     auto It = FuncInfo.find(GUID);
@@ -80,32 +76,32 @@ public:
 
   uint32_t getNumCounters(const Function &F) const {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCounterIndex;
+    return FuncInfo.find(F.getGUID())->second.NextCounterIndex;
   }
 
   uint32_t getNumCallsites(const Function &F) const {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex;
+    return FuncInfo.find(F.getGUID())->second.NextCallsiteIndex;
   }
 
   uint32_t allocateNextCounterIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCounterIndex++;
+    return FuncInfo.find(F.getGUID())->second.NextCounterIndex++;
   }
 
   uint32_t allocateNextCallsiteIndex(const Function &F) {
     assert(isFunctionKnown(F));
-    return FuncInfo.find(getDefinedFunctionGUID(F))->second.NextCallsiteIndex++;
+    return FuncInfo.find(F.getGUID())->second.NextCallsiteIndex++;
   }
 
   using ConstVisitor = function_ref<void(const PGOCtxProfContext &)>;
   using Visitor = function_ref<void(PGOCtxProfContext &)>;
 
-  void update(Visitor, const Function &F);
-  void visit(ConstVisitor, const Function *F = nullptr) const;
+  LLVM_ABI void update(Visitor, const Function &F);
+  LLVM_ABI void visit(ConstVisitor, const Function *F = nullptr) const;
 
-  const CtxProfFlatProfile flatten() const;
-  const CtxProfFlatIndirectCallProfile flattenVirtCalls() const;
+  LLVM_ABI const CtxProfFlatProfile flatten() const;
+  LLVM_ABI const CtxProfFlatIndirectCallProfile flattenVirtCalls() const;
 
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &) {
@@ -120,37 +116,38 @@ class CtxProfAnalysis : public AnalysisInfoMixin<CtxProfAnalysis> {
   const std::optional<StringRef> Profile;
 
 public:
-  static AnalysisKey Key;
-  explicit CtxProfAnalysis(std::optional<StringRef> Profile = std::nullopt);
+  LLVM_ABI static AnalysisKey Key;
+  LLVM_ABI explicit CtxProfAnalysis(
+      std::optional<StringRef> Profile = std::nullopt);
 
   using Result = PGOContextualProfile;
 
-  PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PGOContextualProfile run(Module &M, ModuleAnalysisManager &MAM);
 
   /// Get the instruction instrumenting a callsite, or nullptr if that cannot be
   /// found.
-  static InstrProfCallsite *getCallsiteInstrumentation(CallBase &CB);
+  LLVM_ABI static InstrProfCallsite *getCallsiteInstrumentation(CallBase &CB);
 
   /// Get the instruction instrumenting a BB, or nullptr if not present.
-  static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
+  LLVM_ABI static InstrProfIncrementInst *getBBInstrumentation(BasicBlock &BB);
 
   /// Get the step instrumentation associated with a `select`
-  static InstrProfIncrementInstStep *getSelectInstrumentation(SelectInst &SI);
+  LLVM_ABI static InstrProfIncrementInstStep *
+  getSelectInstrumentation(SelectInst &SI);
 
   // FIXME: refactor to an advisor model, and separate
-  static void collectIndirectCallPromotionList(
+  LLVM_ABI static void collectIndirectCallPromotionList(
       CallBase &IC, Result &Profile,
       SetVector<std::pair<CallBase *, Function *>> &Candidates);
 };
 
 class CtxProfAnalysisPrinterPass
-    : public PassInfoMixin<CtxProfAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
   enum class PrintMode { Everything, YAML };
-  explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   raw_ostream &OS;
@@ -166,44 +163,23 @@ class ProfileAnnotator {
   std::unique_ptr<ProfileAnnotatorImpl> PImpl;
 
 public:
-  ProfileAnnotator(const Function &F, ArrayRef<uint64_t> RawCounters);
-  uint64_t getBBCount(const BasicBlock &BB) const;
+  LLVM_ABI ProfileAnnotator(const Function &F, ArrayRef<uint64_t> RawCounters);
+  LLVM_ABI uint64_t getBBCount(const BasicBlock &BB) const;
 
   // Finds the true and false counts for the given select instruction. Returns
   // false if the select doesn't have instrumentation or if the count of the
   // parent BB is 0.
-  bool getSelectInstrProfile(SelectInst &SI, uint64_t &TrueCount,
-                             uint64_t &FalseCount) const;
+  LLVM_ABI bool getSelectInstrProfile(SelectInst &SI, uint64_t &TrueCount,
+                                      uint64_t &FalseCount) const;
   // Clears Profile and populates it with the edge weights, in the same order as
   // they need to appear in the MD_prof metadata. Also computes the max of those
   // weights an returns it in MaxCount. Returs false if:
   //   - the BB has less than 2 successors
   //   - the counts are 0
-  bool getOutgoingBranchWeights(BasicBlock &BB,
-                                SmallVectorImpl<uint64_t> &Profile,
-                                uint64_t &MaxCount) const;
-  ~ProfileAnnotator();
-};
-
-/// Assign a GUID to functions as metadata. GUID calculation takes linkage into
-/// account, which may change especially through and after thinlto. By
-/// pre-computing and assigning as metadata, this mechanism is resilient to such
-/// changes (as well as name changes e.g. suffix ".llvm." additions).
-
-// FIXME(mtrofin): we can generalize this mechanism to calculate a GUID early in
-// the pass pipeline, associate it with any Global Value, and then use it for
-// PGO and ThinLTO.
-// At that point, this should be moved elsewhere.
-class AssignGUIDPass : public PassInfoMixin<AssignGUIDPass> {
-public:
-  explicit AssignGUIDPass() = default;
-
-  /// Assign a GUID *if* one is not already assign, as a function metadata named
-  /// `GUIDMetadataName`.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static const char *GUIDMetadataName;
-  // This should become GlobalValue::getGUID
-  static uint64_t getGUID(const Function &F);
+  LLVM_ABI bool getOutgoingBranchWeights(BasicBlock &BB,
+                                         SmallVectorImpl<uint64_t> &Profile,
+                                         uint64_t &MaxCount) const;
+  LLVM_ABI ~ProfileAnnotator();
 };
 
 } // namespace llvm

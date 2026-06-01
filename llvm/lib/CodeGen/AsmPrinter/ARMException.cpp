@@ -29,7 +29,7 @@ ARMTargetStreamer &ARMException::getTargetStreamer() {
 }
 
 void ARMException::beginFunction(const MachineFunction *MF) {
-  if (Asm->MAI->getExceptionHandlingType() == ExceptionHandling::ARM)
+  if (Asm->MAI.getExceptionHandlingType() == ExceptionHandling::ARM)
     getTargetStreamer().emitFnStart();
   // See if we need call frame info.
   AsmPrinter::CFISection CFISecType = Asm->getFunctionCFISectionType(*MF);
@@ -39,7 +39,7 @@ void ARMException::beginFunction(const MachineFunction *MF) {
   if (CFISecType == AsmPrinter::CFISection::Debug) {
     if (!hasEmittedCFISections) {
       if (Asm->getModuleCFISectionType() == AsmPrinter::CFISection::Debug)
-        Asm->OutStreamer->emitCFISections(false, true);
+        Asm->OutStreamer->emitCFISections(false, true, false);
       hasEmittedCFISections = true;
     }
 
@@ -83,7 +83,7 @@ void ARMException::endFunction(const MachineFunction *MF) {
     emitExceptionTable();
   }
 
-  if (Asm->MAI->getExceptionHandlingType() == ExceptionHandling::ARM)
+  if (Asm->MAI.getExceptionHandlingType() == ExceptionHandling::ARM)
     ATS.emitFnEnd();
 }
 

@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ProcessSaveCoreMinidumpTestCase(TestBase):
     def verify_core_file(
         self,
@@ -608,7 +609,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
     @skipUnlessPlatform(["linux"])
     @skipUnlessArch("x86_64")
-    def minidump_saves_fs_base_region(self):
+    def minidump_saves_tls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         try:

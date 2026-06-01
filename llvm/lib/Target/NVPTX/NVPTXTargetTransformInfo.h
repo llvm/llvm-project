@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
+class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   typedef BasicTTIImplBase<NVPTXTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -37,6 +37,10 @@ class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
   const NVPTXSubtarget *getST() const { return ST; };
   const NVPTXTargetLowering *getTLI() const { return TLI; };
 
+  /// \returns true if the result of the value could potentially be
+  /// different across threads in a warp.
+  bool isSourceOfDivergence(const Value *V) const;
+
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
@@ -46,8 +50,6 @@ public:
     return true;
   }
 
-  bool isSourceOfDivergence(const Value *V) const override;
-
   unsigned getFlatAddressSpace() const override {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
@@ -55,7 +57,8 @@ public:
   bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const override {
     return AS != AddressSpace::ADDRESS_SPACE_SHARED &&
-           AS != AddressSpace::ADDRESS_SPACE_LOCAL && AS != ADDRESS_SPACE_PARAM;
+           AS != AddressSpace::ADDRESS_SPACE_LOCAL &&
+           AS != AddressSpace::ADDRESS_SPACE_ENTRY_PARAM;
   }
 
   std::optional<Instruction *>
@@ -87,6 +90,13 @@ public:
   }
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override {
+    // Turn off ExpandReductions pass for NVPTX, which doesn't have advanced
+    // swizzling operations. Our backend/Selection DAG can expand these
+    // reductions with less movs.
+    return false;
+  }
+
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.
@@ -110,10 +120,13 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getScalarizationOverhead(
-      VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override {
+  InstructionCost
+  getScalarizationOverhead(VectorType *InTy, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override {
     if (!InTy->getElementCount().isFixed())
       return InstructionCost::getInvalid();
 
@@ -129,8 +142,9 @@ public:
         Insert = false;
       }
     }
-    if (Insert && Isv2x16VT(VT)) {
-      // Can be built in a single mov
+    if (Insert && NVPTX::isPackedVectorTy(VT) && VT.is32BitVector()) {
+      // Can be built in a single 32-bit mov (64-bit regs are emulated in SASS
+      // with 2x 32-bit regs)
       Cost += 1;
       Insert = false;
     }
@@ -170,8 +184,30 @@ public:
     }
   }
 
+  APInt getAddrSpaceCastPreservedPtrMask(unsigned SrcAS,
+                                         unsigned DstAS) const override {
+    if (SrcAS != llvm::ADDRESS_SPACE_GENERIC)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+    if (DstAS != llvm::ADDRESS_SPACE_GLOBAL &&
+        DstAS != llvm::ADDRESS_SPACE_SHARED)
+      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+
+    // Address change within 4K size does not change the original address space
+    // and is safe to perform address cast form SrcAS to DstAS.
+    APInt PtrMask(DL.getPointerSizeInBits(llvm::ADDRESS_SPACE_GENERIC), 0xfff);
+    return PtrMask;
+  }
+
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
+
+  bool isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddrSpace,
+                          TTI::MaskKind MaskKind) const override;
+
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddrSpace,
+                         TTI::MaskKind MaskKind) const override;
+
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;
@@ -180,6 +216,22 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override;
+
+  bool shouldBuildRelLookupTables() const override {
+    // Self-referential globals are not supported.
+    return false;
+  }
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
+  ValueUniformity getValueUniformity(const Value *V) const override;
 };
 
 } // end namespace llvm

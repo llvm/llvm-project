@@ -33,7 +33,7 @@ using namespace sema;
 
 static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
                                          const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
   if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
@@ -58,9 +58,14 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
       // FIXME: this is copied from CheckAvailability. We should try to
       // de-duplicate.
 
+      // If this attr has an inferred platform-specific attr (e.g. anyappleos
+      // → ios/macos/...), use that for platform matching but return the
+      // original.
+      const AvailabilityAttr *EffectiveAvail = Avail->getEffectiveAttr();
+
       // Check if this is an App Extension "platform", and if so chop off
       // the suffix for matching with the actual platform.
-      StringRef ActualPlatform = Avail->getPlatform()->getName();
+      StringRef ActualPlatform = EffectiveAvail->getPlatform()->getName();
       StringRef RealizedPlatform = ActualPlatform;
       if (Context.getLangOpts().AppExt) {
         size_t suffix = RealizedPlatform.rfind("_app_extension");
@@ -73,7 +78,7 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
       // Match the platform name.
       if (RealizedPlatform == TargetPlatform) {
         // Find the best matching attribute for this environment
-        if (hasMatchingEnvironmentOrNone(Context, Avail))
+        if (hasMatchingEnvironmentOrNone(Context, EffectiveAvail))
           return Avail;
         PartialMatch = Avail;
       }
@@ -90,10 +95,9 @@ static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
 /// the availability attribute that is selected.
 /// \param ClassReceiver If we're checking the method of a class message
 /// send, the class. Otherwise nullptr.
-static std::pair<AvailabilityResult, const NamedDecl *>
-ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
-                                 std::string *Message,
-                                 ObjCInterfaceDecl *ClassReceiver) {
+std::pair<AvailabilityResult, const NamedDecl *>
+Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
+                                       ObjCInterfaceDecl *ClassReceiver) {
   AvailabilityResult Result = D->getAvailability(Message);
 
   // For typedefs, if the typedef declaration appears available look
@@ -103,7 +107,7 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getDecl();
+        D = TT->getDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -122,12 +126,6 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
     }
   }
 done:
-  // For alias templates, get the underlying declaration.
-  if (const auto *ADecl = dyn_cast<TypeAliasTemplateDecl>(D)) {
-    D = ADecl->getTemplatedDecl();
-    Result = D->getAvailability(Message);
-  }
-
   // Forward class declarations get their attributes from their definition.
   if (const auto *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
@@ -147,12 +145,12 @@ done:
 
   // For +new, infer availability from -init.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
-    if (S.ObjC().NSAPIObj && ClassReceiver) {
+    if (ObjC().NSAPIObj && ClassReceiver) {
       ObjCMethodDecl *Init = ClassReceiver->lookupInstanceMethod(
-          S.ObjC().NSAPIObj->getInitSelector());
+          ObjC().NSAPIObj->getInitSelector());
       if (Init && Result == AR_Available && MD->isClassMethod() &&
-          MD->getSelector() == S.ObjC().NSAPIObj->getNewSelector() &&
-          MD->definedInNSObject(S.getASTContext())) {
+          MD->getSelector() == ObjC().NSAPIObj->getNewSelector() &&
+          MD->definedInNSObject(getASTContext())) {
         Result = Init->getAvailability(Message);
         D = Init;
       }
@@ -161,7 +159,6 @@ done:
 
   return {Result, D};
 }
-
 
 /// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
@@ -189,7 +186,9 @@ static bool ShouldDiagnoseAvailabilityInContext(
   // For libraries the availability will be checked later in
   // DiagnoseHLSLAvailability class once where the specific environment/shader
   // stage of the caller is known.
-  if (S.getLangOpts().HLSL) {
+  // We only do this for APIs that are not explicitly deprecated. Any API that
+  // is explicitly deprecated we always issue a diagnostic on.
+  if (S.getLangOpts().HLSL && K != AR_Deprecated) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
          S.getASTContext().getTargetInfo().getTriple().getEnvironment() ==
@@ -207,8 +206,8 @@ static bool ShouldDiagnoseAvailabilityInContext(
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
       if (const AvailabilityAttr *AA = getAttrForPlatform(S.Context, C))
-        if (AA->getIntroduced() >= DeclVersion &&
-            AA->getEnvironment() == DeclEnv)
+        if (AA->getEffectiveIntroduced() >= DeclVersion &&
+            AA->getEffectiveEnvironment() == DeclEnv)
           return true;
     } else if (K == AR_Deprecated) {
       if (C->isDeprecated())
@@ -429,8 +428,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   const AvailabilityAttr *AA = getAttrForPlatform(S.Context, OffendingDecl);
   const IdentifierInfo *IIEnv = nullptr;
   if (AA) {
-    DeclVersion = AA->getIntroduced();
-    IIEnv = AA->getEnvironment();
+    DeclVersion = AA->getEffectiveIntroduced();
+    IIEnv = AA->getEffectiveEnvironment();
   }
 
   if (!ShouldDiagnoseAvailabilityInContext(S, K, DeclVersion, IIEnv, Ctx,
@@ -462,9 +461,9 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or
     // later.
     assert(AA != nullptr && "expecting valid availability attribute");
-    VersionTuple Introduced = AA->getIntroduced();
+    VersionTuple Introduced = AA->getEffectiveIntroduced();
     bool EnvironmentMatchesOrNone =
-        hasMatchingEnvironmentOrNone(S.getASTContext(), AA);
+        hasMatchingEnvironmentOrNone(S.getASTContext(), AA->getEffectiveAttr());
 
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
     std::string PlatformName(
@@ -549,8 +548,19 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     return;
   }
   case AR_Deprecated:
-    diag = !ObjCPropertyAccess ? diag::warn_deprecated
-                               : diag::warn_property_method_deprecated;
+    // Suppress -Wdeprecated-declarations in implicit
+    // functions.
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(S.getCurFunctionDecl());
+        FD && FD->isImplicit())
+      return;
+
+    if (ObjCPropertyAccess)
+      diag = diag::warn_property_method_deprecated;
+    else if (S.currentEvaluationContext().IsCaseExpr)
+      diag = diag::warn_deprecated_switch_case;
+    else
+      diag = diag::warn_deprecated;
+
     diag_message = diag::warn_deprecated_message;
     diag_fwdclass_message = diag::warn_deprecated_fwdclass_message;
     property_note_select = /* deprecated */ 0;
@@ -665,10 +675,11 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
   struct AllowWarningInSystemHeaders {
     AllowWarningInSystemHeaders(DiagnosticsEngine &E,
                                 bool AllowWarningInSystemHeaders)
-        : Engine(E), Prev(E.getSuppressSystemWarnings()) {
-      E.setSuppressSystemWarnings(!AllowWarningInSystemHeaders);
+        : Engine(E), Prev(E.getForceSystemWarnings()) {
+      if (AllowWarningInSystemHeaders)
+        Engine.setForceSystemWarnings(true);
     }
-    ~AllowWarningInSystemHeaders() { Engine.setSuppressSystemWarnings(Prev); }
+    ~AllowWarningInSystemHeaders() { Engine.setForceSystemWarnings(Prev); }
 
   private:
     DiagnosticsEngine &Engine;
@@ -876,7 +887,7 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
   AvailabilityResult Result;
   const NamedDecl *OffendingDecl;
   std::tie(Result, OffendingDecl) =
-      ShouldDiagnoseAvailabilityOfDecl(SemaRef, D, nullptr, ReceiverClass);
+      SemaRef.ShouldDiagnoseAvailabilityOfDecl(D, nullptr, ReceiverClass);
   if (Result != AR_Available) {
     // All other diagnostic kinds have already been handled in
     // DiagnoseAvailabilityOfDecl.
@@ -886,9 +897,9 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     const AvailabilityAttr *AA =
       getAttrForPlatform(SemaRef.getASTContext(), OffendingDecl);
     assert(AA != nullptr && "expecting valid availability attribute");
-    bool EnvironmentMatchesOrNone =
-        hasMatchingEnvironmentOrNone(SemaRef.getASTContext(), AA);
-    VersionTuple Introduced = AA->getIntroduced();
+    bool EnvironmentMatchesOrNone = hasMatchingEnvironmentOrNone(
+        SemaRef.getASTContext(), AA->getEffectiveAttr());
+    VersionTuple Introduced = AA->getEffectiveIntroduced();
 
     if (EnvironmentMatchesOrNone && AvailabilityStack.back() >= Introduced)
       return;
@@ -896,7 +907,7 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     // If the context of this function is less available than D, we should not
     // emit a diagnostic.
     if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced,
-                                             AA->getEnvironment(), Ctx,
+                                             AA->getEffectiveEnvironment(), Ctx,
                                              OffendingDecl))
       return;
 
@@ -976,12 +987,22 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
     const char *ExtraIndentation = "    ";
     std::string FixItString;
     llvm::raw_string_ostream FixItOS(FixItString);
-    FixItOS << "if (" << (SemaRef.getLangOpts().ObjC ? "@available"
-                                                     : "__builtin_available")
-            << "("
-            << AvailabilityAttr::getPlatformNameSourceSpelling(
-                   SemaRef.getASTContext().getTargetInfo().getPlatformName())
-            << " " << Introduced.getAsString() << ", *)) {\n"
+    StringRef FixItPlatformName;
+    VersionTuple FixItVersion;
+
+    if (AA->getInferredAttr()) {
+      FixItPlatformName = "anyAppleOS";
+      FixItVersion = AA->getIntroduced();
+    } else {
+      FixItPlatformName = AvailabilityAttr::getPlatformNameSourceSpelling(
+          SemaRef.getASTContext().getTargetInfo().getPlatformName());
+      FixItVersion = AA->getEffectiveIntroduced();
+    }
+    FixItOS << "if ("
+            << (SemaRef.getLangOpts().ObjC ? "@available"
+                                           : "__builtin_available")
+            << "(" << FixItPlatformName << " " << FixItVersion.getAsString()
+            << ", *)) {\n"
             << Indentation << ExtraIndentation;
     FixitDiag << FixItHint::CreateInsertion(IfInsertionLoc, FixItOS.str());
     SourceLocation ElseInsertionLoc = Lexer::findLocationAfterToken(
@@ -1008,7 +1029,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getDecl();
+    TagDecl *TD = TT->getDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {
@@ -1112,12 +1133,13 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
                                       bool ObjCPropertyAccess,
                                       bool AvoidPartialAvailabilityChecks,
                                       ObjCInterfaceDecl *ClassReceiver) {
+
   std::string Message;
   AvailabilityResult Result;
   const NamedDecl* OffendingDecl;
   // See if this declaration is unavailable, deprecated, or partial.
   std::tie(Result, OffendingDecl) =
-      ShouldDiagnoseAvailabilityOfDecl(*this, D, &Message, ClassReceiver);
+      ShouldDiagnoseAvailabilityOfDecl(D, &Message, ClassReceiver);
   if (Result == AR_Available)
     return;
 
@@ -1145,4 +1167,12 @@ void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
 
   EmitAvailabilityWarning(*this, Result, D, OffendingDecl, Message, Locs,
                           UnknownObjCClass, ObjCPDecl, ObjCPropertyAccess);
+}
+
+void Sema::DiagnoseAvailabilityOfDecl(NamedDecl *D,
+                                      ArrayRef<SourceLocation> Locs) {
+  DiagnoseAvailabilityOfDecl(D, Locs, /*UnknownObjCClass=*/nullptr,
+                             /*ObjCPropertyAccess=*/false,
+                             /*AvoidPartialAvailabilityChecks=*/false,
+                             /*ClassReceiver=*/nullptr);
 }

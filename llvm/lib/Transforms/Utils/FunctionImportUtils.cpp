@@ -13,7 +13,11 @@
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/TimeProfiler.h"
+
 using namespace llvm;
+
+namespace llvm {
 
 /// Uses the "source_filename" instead of a Module hash ID for the suffix of
 /// promoted locals during LTO. NOTE: This requires that the source filename
@@ -24,6 +28,8 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
+
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
     cl::desc(
@@ -32,6 +38,8 @@ cl::list<GlobalValue::GUID> MoveSymbolGUID(
         "linkage is External where they are imported. It is meant to be "
         "used with the name of contextual profiling roots."),
     cl::Hidden);
+
+} // end namespace llvm
 
 FunctionImportGlobalProcessing::FunctionImportGlobalProcessing(
     Module &M, const ModuleSummaryIndex &Index,
@@ -75,7 +83,7 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
 }
 
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
-    const GlobalValue *SGV, ValueInfo VI) {
+    const GlobalValue *SGV, GlobalValueSummary *Summary) {
   assert(SGV->hasLocalLinkage());
 
   // Ifuncs and ifunc alias does not have summary.
@@ -106,8 +114,6 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   // same-named source files that were compiled in their respective directories
   // (so the source file name and resulting GUID is the same). Find the one
   // in this module.
-  auto Summary = ImportIndex.findSummaryInModule(
-      VI, SGV->getParent()->getModuleIdentifier());
   assert(Summary && "Missing summary for global value when exporting");
   auto Linkage = Summary->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
@@ -179,7 +185,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
     if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
-      return SymbolsToMove.contains(SGV->getGUID())
+      return SymbolsToMove.contains(SGV->getGUIDOrFallback())
                  ? GlobalValue::ExternalLinkage
                  : GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
@@ -255,7 +261,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   ValueInfo VI;
   if (GV.hasName())
-    VI = ImportIndex.getValueInfo(GV.getGUID());
+    VI = ImportIndex.getValueInfo(GV.getGUIDOrFallback());
 
   // We should always have a ValueInfo (i.e. GV in index) for definitions when
   // we are exporting, and also when importing that value.
@@ -300,10 +306,22 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, VI)) {
+  GlobalValueSummary *Summary = nullptr;
+  if (VI && GV.hasLocalLinkage())
+    Summary = ImportIndex.findSummaryInModule(
+        VI, GV.getParent()->getModuleIdentifier());
+
+  assert((!Summary || !Summary->noRenameOnPromotion() ||
+          shouldPromoteLocalToGlobal(&GV, Summary)) &&
+         "noRenameOnPromotion requires promotion to external linkage");
+
+  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    GV.setName(getPromotedName(&GV));
+    if (AlwaysRenamePromotedLocals || !Summary ||
+        !Summary->noRenameOnPromotion())
+      GV.setName(getPromotedName(&GV));
+
     GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
     assert(!GV.hasLocalLinkage());
     GV.setVisibility(GlobalValue::HiddenVisibility);
@@ -370,6 +388,7 @@ void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
+  llvm::TimeTraceScope timeScope("Rename module for ThinLTO");
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
   ThinLTOProcessing.run();

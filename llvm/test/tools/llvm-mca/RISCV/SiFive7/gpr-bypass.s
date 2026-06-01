@@ -214,14 +214,14 @@ jr a0
 # CHECK-NEXT:  1      3     1.00                        jr	a0
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - SiFive7FDiv
-# CHECK-NEXT: [1]   - SiFive7IDiv
-# CHECK-NEXT: [2]   - SiFive7PipeA
-# CHECK-NEXT: [3]   - SiFive7PipeB
-# CHECK-NEXT: [4]   - SiFive7VA
-# CHECK-NEXT: [5]   - SiFive7VCQ
-# CHECK-NEXT: [6]   - SiFive7VL
-# CHECK-NEXT: [7]   - SiFive7VS
+# CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
+# CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
+# CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
+# CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
+# CHECK-NEXT: [6]   - VLEN512SiFive7VL
+# CHECK-NEXT: [7]   - VLEN512SiFive7VS
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
@@ -515,4 +515,4 @@ jr a0
 # CHECK-NEXT: 88.    1     0.0    0.0    0.0       lwu	a0, 0(a0)
 # CHECK-NEXT: 89.    1     0.0    0.0    0.0       addw	a0, a0, a0
 # CHECK-NEXT: 90.    1     0.0    0.0    0.0       jr	a0
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        91    0.0    0.0    0.0       <total>

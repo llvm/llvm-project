@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -48,10 +49,13 @@ MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 FunctionPass *createNVPTXLowerArgsPass();
+FunctionPass *createNVPTXSetByValParamAlignPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
+FunctionPass *createNVPTXMarkKernelPtrsGlobalPass();
 FunctionPass *createNVPTXTagInvariantLoadsPass();
+FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
@@ -59,14 +63,15 @@ MachineFunctionPass *createNVPTXForwardParamsPass();
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
+void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
 void initializeNVPTXAtomicLowerPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
-void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
+void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
@@ -74,13 +79,20 @@ void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 void initializeNVPTXPeepholePass(PassRegistry &);
+void initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
+void initializeNVPTXIRPeepholePass(PassRegistry &);
+void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
 
-struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
+struct NVVMIntrRangePass : OptionalPassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
+struct NVPTXIRPeepholePass : OptionalPassInfoMixin<NVPTXIRPeepholePass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVVMReflectPass : OptionalPassInfoMixin<NVVMReflectPass> {
   NVVMReflectPass() : SmVersion(0) {}
   NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
@@ -89,15 +101,20 @@ private:
   unsigned SmVersion;
 };
 
-struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+struct GenericToNVVMPass : OptionalPassInfoMixin<GenericToNVVMPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct NVPTXCopyByValArgsPass : PassInfoMixin<NVPTXCopyByValArgsPass> {
+struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXLowerArgsPass : PassInfoMixin<NVPTXLowerArgsPass> {
+struct NVPTXSetByValParamAlignPass
+    : OptionalPassInfoMixin<NVPTXSetByValParamAlignPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {
 private:
   TargetMachine &TM;
 
@@ -106,7 +123,13 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXTagInvariantLoadsPass : PassInfoMixin<NVPTXTagInvariantLoadsPass> {
+struct NVPTXMarkKernelPtrsGlobalPass
+    : OptionalPassInfoMixin<NVPTXMarkKernelPtrsGlobalPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct NVPTXTagInvariantLoadsPass
+    : OptionalPassInfoMixin<NVPTXTagInvariantLoadsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
@@ -162,7 +185,6 @@ enum Ordering : OrderingUnderlyingType {
       (OrderingUnderlyingType)AtomicOrdering::SequentiallyConsistent,
   Volatile = SequentiallyConsistent + 1,
   RelaxedMMIO = Volatile + 1,
-  LASTORDERING = RelaxedMMIO
 };
 
 using ScopeUnderlyingType = unsigned int;
@@ -172,34 +194,29 @@ enum Scope : ScopeUnderlyingType {
   Cluster = 2,
   Device = 3,
   System = 4,
-  LASTSCOPE = System
+  DefaultDevice = 5, //  For SM < 70: denotes PTX op implicit/default .gpu scope
+  LASTSCOPE = DefaultDevice
 };
 
 using AddressSpaceUnderlyingType = unsigned int;
 enum AddressSpace : AddressSpaceUnderlyingType {
-  Generic = 0,
-  Global = 1,
-  Shared = 3,
-  Const = 4,
-  Local = 5,
-  SharedCluster = 7,
+  Generic = NVPTXAS::ADDRESS_SPACE_GENERIC,
+  Global = NVPTXAS::ADDRESS_SPACE_GLOBAL,
+  Shared = NVPTXAS::ADDRESS_SPACE_SHARED,
+  Const = NVPTXAS::ADDRESS_SPACE_CONST,
+  Local = NVPTXAS::ADDRESS_SPACE_LOCAL,
+  SharedCluster = NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER,
+  EntryParam = NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM,
 
-  // NVPTX Backend Private:
-  Param = 101
+  // DeviceParam is not a real address space, as it does not support pointers
+  // and instead can only be referenced by param+offset. For this reason it is
+  // only used in MIR as an instruction modifier and should not be used in LLVM
+  // IR.
+  DeviceParam
 };
 
 namespace PTXLdStInstCode {
-enum FromType {
-  Unsigned = 0,
-  Signed,
-  Float,
-  Untyped
-};
-enum VecType {
-  Scalar = 1,
-  V2 = 2,
-  V4 = 4
-};
+enum FromType { Unsigned = 0, Signed, Float, Untyped };
 } // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
@@ -215,11 +232,13 @@ enum CvtMode {
   RM,
   RP,
   RNA,
+  RS,
 
   BASE_MASK = 0x0F,
   FTZ_FLAG = 0x10,
   SAT_FLAG = 0x20,
-  RELU_FLAG = 0x40
+  RELU_FLAG = 0x40,
+  SATFINITE_FLAG = 0x80
 };
 }
 
@@ -232,10 +251,6 @@ enum CmpMode {
   LE,
   GT,
   GE,
-  LO,
-  LS,
-  HI,
-  HS,
   EQU,
   NEU,
   LTU,
@@ -245,9 +260,6 @@ enum CmpMode {
   NUM,
   // NAN is a MACRO
   NotANumber,
-
-  BASE_MASK = 0xFF,
-  FTZ_FLAG = 0x100
 };
 }
 
@@ -262,7 +274,15 @@ enum PrmtMode {
   RC16,
 };
 }
-}
+
+enum class DivPrecisionLevel : unsigned {
+  Approx = 0,
+  Full = 1,
+  IEEE754 = 2,
+  IEEE754_NoFTZ = 3,
+};
+
+} // namespace NVPTX
 void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 

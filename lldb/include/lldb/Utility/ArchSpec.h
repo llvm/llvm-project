@@ -14,6 +14,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -139,6 +140,9 @@ public:
     eCore_arm_armv7k,
     eCore_arm_armv7m,
     eCore_arm_armv7em,
+    eCore_arm_armv8m_base,
+    eCore_arm_armv8m_main,
+    eCore_arm_armv8_1m_main,
     eCore_arm_xscale,
 
     eCore_thumb,
@@ -327,6 +331,11 @@ public:
   ///  \return a boolean value.
   bool IsMIPS() const;
 
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
+
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
   ///
@@ -445,18 +454,6 @@ public:
 
   uint32_t GetMachOCPUSubType() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's data bus
-  uint32_t GetDataByteSize() const;
-
-  /// Architecture code byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's code bus
-  uint32_t GetCodeByteSize() const;
-
   /// Architecture triple accessor.
   ///
   /// \return A triple describing this ArchSpec.
@@ -537,6 +534,14 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
+  const llvm::SubtargetFeatures &GetSubtargetFeatures() const {
+    return m_subtarget_features;
+  }
+
+  void SetSubtargetFeatures(llvm::SubtargetFeatures &&subtarget_features) {
+    m_subtarget_features = std::move(subtarget_features);
+  }
+
 protected:
   void UpdateCore();
 
@@ -547,6 +552,8 @@ protected:
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
+
+  llvm::SubtargetFeatures m_subtarget_features;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.
@@ -564,6 +571,7 @@ protected:
 /// \return true if \a lhs is less than \a rhs
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
+bool operator!=(const ArchSpec &lhs, const ArchSpec &rhs);
 
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 

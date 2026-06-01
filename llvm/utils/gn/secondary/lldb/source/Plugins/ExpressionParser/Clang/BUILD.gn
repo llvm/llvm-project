@@ -47,7 +47,6 @@ static_library("Clang") {
     "ClangASTImporter.cpp",
     "ClangASTMetadata.cpp",
     "ClangASTSource.cpp",
-    "ClangDeclVendor.cpp",
     "ClangExpressionDeclMap.cpp",
     "ClangExpressionHelper.cpp",
     "ClangExpressionParser.cpp",
@@ -66,6 +65,7 @@ static_library("Clang") {
     "CxxModuleHandler.cpp",
     "IRDynamicChecks.cpp",
     "IRForTarget.cpp",
+    "InjectPointerSigningFixups.cpp",
     "NameSearchContext.cpp",
   ]
 }

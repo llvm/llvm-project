@@ -35,6 +35,11 @@ class GINodeEquiv<Instruction i, SDNode node> {
   // depending on the predicates on the node.
   Instruction IfSignExtend = ?;
   Instruction IfZeroExtend = ?;
+  // In contrast to SelectionDAG we would like not to overload an anyext load
+  // for floating point truncation and extending stores and loads. Instead we
+  // assign separate opcodes for it.
+  Instruction IfFPExtend = ?;
+  Instruction IfFPTrunc = ?;
 
   // SelectionDAG has one setcc for all compares. This differentiates
   // for G_ICMP and G_FCMP.
@@ -51,6 +56,9 @@ def : GINodeEquiv<G_SEXT, sext>;
 def : GINodeEquiv<G_SEXT_INREG, sext_inreg>;
 def : GINodeEquiv<G_ZEXT, zext>;
 def : GINodeEquiv<G_TRUNC, trunc>;
+def : GINodeEquiv<G_TRUNC_SSAT_S, truncssat_s>;
+def : GINodeEquiv<G_TRUNC_SSAT_U, truncssat_u>;
+def : GINodeEquiv<G_TRUNC_USAT_U, truncusat_u>;
 def : GINodeEquiv<G_BITCAST, bitconvert>;
 // G_INTTOPTR - SelectionDAG has no equivalent.
 // G_PTRTOINT - SelectionDAG has no equivalent.
@@ -64,6 +72,7 @@ def : GINodeEquiv<G_PTR_ADD, ptradd>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
+def : GINodeEquiv<G_CLMUL, clmul>;
 def : GINodeEquiv<G_UMULH, mulhu>;
 def : GINodeEquiv<G_SMULH, mulhs>;
 def : GINodeEquiv<G_SDIV, sdiv>;
@@ -78,6 +87,12 @@ def : GINodeEquiv<G_XOR, xor>;
 def : GINodeEquiv<G_SHL, shl>;
 def : GINodeEquiv<G_LSHR, srl>;
 def : GINodeEquiv<G_ASHR, sra>;
+def : GINodeEquiv<G_ABDS, abds>;
+def : GINodeEquiv<G_ABDU, abdu>;
+def : GINodeEquiv<G_UAVGFLOOR, avgflooru>;
+def : GINodeEquiv<G_UAVGCEIL, avgceilu>;
+def : GINodeEquiv<G_SAVGFLOOR, avgfloors>;
+def : GINodeEquiv<G_SAVGCEIL, avgceils>;
 def : GINodeEquiv<G_SADDSAT, saddsat>;
 def : GINodeEquiv<G_UADDSAT, uaddsat>;
 def : GINodeEquiv<G_SSUBSAT, ssubsat>;
@@ -143,8 +158,9 @@ def : GINodeEquiv<G_FSHL, fshl>;
 def : GINodeEquiv<G_FSHR, fshr>;
 def : GINodeEquiv<G_CTLZ, ctlz>;
 def : GINodeEquiv<G_CTTZ, cttz>;
-def : GINodeEquiv<G_CTLZ_ZERO_UNDEF, ctlz_zero_undef>;
-def : GINodeEquiv<G_CTTZ_ZERO_UNDEF, cttz_zero_undef>;
+def : GINodeEquiv<G_CTLZ_ZERO_POISON, ctlz_zero_poison>;
+def : GINodeEquiv<G_CTTZ_ZERO_POISON, cttz_zero_poison>;
+def : GINodeEquiv<G_CTLS, ctls>;
 def : GINodeEquiv<G_CTPOP, ctpop>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, extractelt>;
 def : GINodeEquiv<G_INSERT_VECTOR_ELT, vector_insert>;
@@ -186,6 +202,8 @@ def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
 def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
 def : GINodeEquiv<G_FMAXIMUM, fmaximum>;
 def : GINodeEquiv<G_FMINIMUM, fminimum>;
+def : GINodeEquiv<G_FMAXIMUMNUM, fmaximumnum>;
+def : GINodeEquiv<G_FMINIMUMNUM, fminimumnum>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
 def : GINodeEquiv<G_READSTEADYCOUNTER, readsteadycounter>;
 def : GINodeEquiv<G_ROTR, rotr>;
@@ -224,6 +242,7 @@ def : GINodeEquiv<G_LOAD, ld> {
   let CheckMMOIsNonAtomic = true;
   let IfSignExtend = G_SEXTLOAD;
   let IfZeroExtend = G_ZEXTLOAD;
+  let IfFPExtend = G_FPEXTLOAD;
 }
 
 def : GINodeEquiv<G_ICMP, setcc> {
@@ -237,7 +256,11 @@ def : GINodeEquiv<G_ICMP, setcc> {
 // G_STORE handles both atomic and non-atomic stores where as SelectionDAG had
 // separate nodes for them. This GINodeEquiv maps the non-atomic stores to
 // G_STORE with a non-atomic MachineMemOperand.
-def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = true; }
+def : GINodeEquiv<G_STORE, st> {
+  let CheckMMOIsNonAtomic = true;
+  let IfFPTrunc = G_FPTRUNCSTORE;
+}
+
 def : GINodeEquiv<G_STORE, atomic_store> {
   let CheckMMOIsNonAtomic = false;
   let CheckMMOIsAtomic = true;

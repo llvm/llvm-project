@@ -3,6 +3,7 @@ static_library("OpenMP") {
   deps = [
     "//llvm/lib/Analysis",
     "//llvm/lib/Frontend/Atomic",
+    "//llvm/lib/Frontend/Directive",
     "//llvm/lib/Frontend/Offloading",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
@@ -13,6 +14,7 @@ static_library("OpenMP") {
   ]
   public_deps = [ "//llvm/include/llvm/Frontend/OpenMP:public_tablegen" ]
   sources = [
+    "DirectiveNameParser.cpp",
     "OMP.cpp",
     "OMPContext.cpp",
     "OMPIRBuilder.cpp",

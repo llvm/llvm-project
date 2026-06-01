@@ -12,13 +12,13 @@
 ---
 name:            test
 registers:
-  - { id: 0, class: float32regs }
-  - { id: 1, class: float32regs }
+  - { id: 0, class: b32 }
+  - { id: 1, class: b32 }
 body: |
   bb.0.entry:
-    %0 = LD_f32 0, 4, 1, 2, 32, &test_param_0, 0
+    %0 = LD_i32 0, 4, 1, 2, 32, &test_param_0, 0
   ; CHECK: [[@LINE+1]]:33: expected a floating point literal
     %1 = FADD_rnf32ri %0, float 3
-    StoreRetvalF32 %1, 0
+    StoreRetvalI32 %1, 0
     Return
 ...

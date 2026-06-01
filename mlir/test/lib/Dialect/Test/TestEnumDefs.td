@@ -17,15 +17,20 @@ include "mlir/IR/EnumAttr.td"
 
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
+def I32CaseSignedMaxPlusOne
+    : I32EnumAttrCase<"caseSignedMaxPlusOne", 2147483648>;
+def I32CaseUnsignedMax : I32EnumAttrCase<"caseUnsignedMax", 4294967295>;
 
-def SomeI32Enum: I32EnumAttr<
-  "SomeI32Enum", "", [I32Case5, I32Case10]>;
+def SomeI32Enum : I32EnumAttr<"SomeI32Enum", "",
+                              [I32Case5, I32Case10, I32CaseSignedMaxPlusOne,
+                               I32CaseUnsignedMax]>;
 
 def I64Case5:  I64EnumAttrCase<"case5", 5>;
 def I64Case10: I64EnumAttrCase<"case10", 10>;
+def I64Case1p32 : I64EnumAttrCase<"caseLarse", 4294967296>;
 
 def SomeI64Enum: I64EnumAttr<
-  "SomeI64Enum", "", [I64Case5, I64Case10]>;
+  "SomeI64Enum", "", [I64Case5, I64Case10, I64Case1p32]>;
 
 //===----------------------------------------------------------------------===//
 // Test Enum
@@ -42,9 +47,41 @@ def TestEnum
   let cppNamespace = "test";
 }
 
+def TestOtherEnum
+    : I32Enum<"TestOtherEnum", "another test enum", [
+        I32EnumCase<"Dog", 0, "dog">,
+        I32EnumCase<"Cat", 1, "cat">,
+        I32EnumCase<"Fish", 2, "fish">,
+      ]> {
+  let cppNamespace = "test";
+}
+
 def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
     I32EnumCase<"a", 0>,
-    I32EnumCase<"b", 1>
+    I32EnumCase<"b", 1>,
+    I32EnumCase<"Plus", 2, "+">,
+    I32EnumCase<"LongString", 3, "dash-separated-sentence">,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum8: I8Enum<"SimpleEnum8", "", [
+    I8EnumCase<"a", 254>,
+    I8EnumCase<"b", 255>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum16: I16Enum<"SimpleEnum16", "", [
+    I16EnumCase<"a", 65534>,
+    I16EnumCase<"b", 65535>,
+  ]> {
+  let cppNamespace = "::test";
+}
+
+def TestSimpleEnum64 : I64Enum<"SimpleEnum64", "", [
+    I64EnumCase<"a", 4294967296>,
+    I64EnumCase<"b", 4294967297>
   ]> {
   let cppNamespace = "::test";
 }

@@ -50,8 +50,7 @@ define { <2 x float>, <2 x float> } @sincos_zero_vector() {
 
 define { float, float } @sincos_poison() {
 ; CHECK-LABEL: define { float, float } @sincos_poison() {
-; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float poison)
-; CHECK-NEXT:    ret { float, float } [[RET]]
+; CHECK-NEXT:    ret { float, float } poison 
 ;
   %ret = call { float, float } @llvm.sincos.f32(float poison)
   ret { float, float } %ret
@@ -59,8 +58,7 @@ define { float, float } @sincos_poison() {
 
 define { <2 x float>, <2 x float> } @sincos_poison_vector() {
 ; CHECK-LABEL: define { <2 x float>, <2 x float> } @sincos_poison_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> poison)
-; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[RET]]
+; CHECK-NEXT:    ret { <2 x float>, <2 x float> } poison 
 ;
   %ret = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> poison)
   ret { <2 x float>, <2 x float> } %ret
@@ -68,8 +66,7 @@ define { <2 x float>, <2 x float> } @sincos_poison_vector() {
 
 define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_poison_scalable_vector() {
 ; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_poison_scalable_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> poison)
-; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[RET]]
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } poison
 ;
   %ret = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> poison)
   ret { <vscale x 2 x float>, <vscale x 2 x float> } %ret
@@ -111,9 +108,18 @@ define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_zero_scalable_vect
   ret { <vscale x 2 x float>, <vscale x 2 x float> } %ret
 }
 
+define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_one_scalable_vector() {
+; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x float> } @sincos_one_scalable_vector() {
+; CHECK-NEXT:    [[RET:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x float> } [[RET]]
+;
+  %ret = call { <vscale x 2 x float>, <vscale x 2 x float> } @llvm.sincos.nxv2f32(<vscale x 2 x float> splat (float 1.0))
+  ret { <vscale x 2 x float>, <vscale x 2 x float> } %ret
+}
+
 define { float, float } @sincos_inf() {
 ; CHECK-LABEL: define { float, float } @sincos_inf() {
-; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float +inf)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
   %ret = call { float, float } @llvm.sincos.f32(float 0x7FF0000000000000)
@@ -122,7 +128,7 @@ define { float, float } @sincos_inf() {
 
 define { float, float } @sincos_neginf() {
 ; CHECK-LABEL: define { float, float } @sincos_neginf() {
-; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0xFFF0000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float -inf)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
   %ret = call { float, float } @llvm.sincos.f32(float 0xFFF0000000000000)
@@ -131,7 +137,7 @@ define { float, float } @sincos_neginf() {
 
 define { float, float } @sincos_qnan() {
 ; CHECK-LABEL: define { float, float } @sincos_qnan() {
-; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float +qnan)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
   %ret = call { float, float } @llvm.sincos.f32(float 0x7FF8000000000000)
@@ -140,7 +146,7 @@ define { float, float } @sincos_qnan() {
 
 define { float, float } @sincos_snan() {
 ; CHECK-LABEL: define { float, float } @sincos_snan() {
-; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float 0x7FF0000020000000)
+; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float +snan(0x1))
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
   %ret = call { float, float } @llvm.sincos.f32(float bitcast (i32 2139095041 to float))

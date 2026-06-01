@@ -4,19 +4,14 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-define i32 @test_plain(i1 %f) {
+define i32 @test_plain(i1 %f, ptr %a, ptr %b) {
 ; CHECK-LABEL: @test_plain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[F:%.*]], ptr [[A:%.*]], ptr [[B1:%.*]]
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 [[B_VAL]]
 ;
 entry:
-  %a = alloca i32, align 8
-  %b = alloca i32, align 8
   %sel = select i1 %f, ptr %a, ptr %b
   %l = load i32, ptr %sel, align 8
   ret i32 %l
@@ -82,19 +77,14 @@ entry:
 
 ; Msan just propagates shadow, even if speculated load accesses uninitialized
 ; value, instrumentation will select shadow of the desired value anyway.
-define i32 @test_msan(i1 %f) sanitize_memory {
+define i32 @test_msan(i1 %f, ptr %a, ptr %b) sanitize_memory {
 ; CHECK-LABEL: @test_msan(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 8
-; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A]], align 8
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[F:%.*]], ptr [[A:%.*]], ptr [[B1:%.*]]
 ; CHECK-NEXT:    [[B_VAL:%.*]] = load i32, ptr [[B]], align 8
-; CHECK-NEXT:    [[L:%.*]] = select i1 [[F:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
-; CHECK-NEXT:    ret i32 [[L]]
+; CHECK-NEXT:    ret i32 [[B_VAL]]
 ;
 entry:
-  %a = alloca i32, align 8
-  %b = alloca i32, align 8
   %sel = select i1 %f, ptr %a, ptr %b
   %l = load i32, ptr %sel, align 8
   ret i32 %l

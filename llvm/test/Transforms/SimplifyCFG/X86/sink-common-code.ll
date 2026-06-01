@@ -510,7 +510,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !{i32 2, !"Dwarf Version", i32 4}
 !6 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = distinct !DICompileUnit(language: DW_LANG_C99, file: !10)
-!8 = distinct !DISubprogram(name: "foo", unit: !7)
+!8 = distinct !DISubprogram(name: "foo", unit: !7, type: !14)
 !9 = !DILocalVariable(name: "b", line: 1, arg: 2, scope: !8)
 !10 = !DIFile(filename: "a.c", directory: "a/b")
 !11 = !DILocation(line: 1, column: 14, scope: !8)
@@ -1338,10 +1338,10 @@ define i32 @test_not_sink_lifetime_marker(i1 zeroext %flag, i32 %x) {
 ; CHECK-NEXT:    [[Z:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[Y]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[Y]])
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[Z]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[Z]])
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 1
@@ -1352,11 +1352,11 @@ entry:
   br i1 %flag, label %if.then, label %if.else
 
 if.then:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
   br label %if.end
 
 if.else:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
   br label %if.end
 
 if.end:
@@ -1468,8 +1468,8 @@ declare void @direct_callee()
 declare void @direct_callee2()
 declare void @direct_callee3()
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @creating_too_many_phis(i1 %cond, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; CHECK-LABEL: @creating_too_many_phis(
@@ -2181,3 +2181,5 @@ declare void @dummy()
 declare void @use.ptr(ptr)
 
 !12 = !{i32 1}
+!13 = !{null}
+!14 = !DISubroutineType(types: !13)

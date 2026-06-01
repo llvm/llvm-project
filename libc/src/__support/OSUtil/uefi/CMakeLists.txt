@@ -6,6 +6,8 @@ add_object_library(
   HDRS
     io.h
   DEPENDS
+    libc.config.app_h
+    libc.include.llvm-libc-types.EFI_SYSTEM_TABLE
     libc.src.__support.common
     libc.src.__support.CPP.string_view
 )

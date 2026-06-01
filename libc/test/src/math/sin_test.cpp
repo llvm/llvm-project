@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sin.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcSinTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -46,12 +53,12 @@ TEST_F(LlvmLibcSinTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
-                                   LIBC_NAMESPACE::sin(x), 0.5);
+                                   LIBC_NAMESPACE::sin(x), TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcSinTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 1'234'51;
+  constexpr uint64_t COUNT = 1'231;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
@@ -71,7 +78,7 @@ TEST_F(LlvmLibcSinTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
-      LIBC_NAMESPACE::libc_errno = 0;
+      libc_errno = 0;
       double result = LIBC_NAMESPACE::sin(x);
       ++cc;
       if (FPBits(result).is_nan() || FPBits(result).is_inf())

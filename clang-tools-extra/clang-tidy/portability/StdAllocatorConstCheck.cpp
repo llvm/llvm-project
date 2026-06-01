@@ -1,4 +1,4 @@
-//===-- StdAllocatorConstCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,11 @@ namespace clang::tidy::portability {
 
 void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // Match std::allocator<const T>.
-  auto AllocatorConst =
+  auto AllocatorConst = qualType(hasCanonicalType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName("::std::allocator"),
-          hasTemplateArgument(0, refersToType(qualType(isConstQualified()))))));
+          hasTemplateArgument(0,
+                              refersToType(qualType(isConstQualified()))))))));
 
   auto HasContainerName =
       hasAnyName("::std::vector", "::std::deque", "::std::list",
@@ -31,8 +32,10 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // aren't caught.
   Finder->addMatcher(
       typeLoc(
-          templateSpecializationTypeLoc(),
-          loc(hasUnqualifiedDesugaredType(anyOf(
+          anyOf(templateSpecializationTypeLoc(),
+                qualifiedTypeLoc(
+                    hasUnqualifiedLoc(templateSpecializationTypeLoc()))),
+          loc(qualType(anyOf(
               recordType(hasDeclaration(classTemplateSpecializationDecl(
                   HasContainerName,
                   anyOf(
@@ -51,13 +54,7 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
 
 void StdAllocatorConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *T = Result.Nodes.getNodeAs<TypeLoc>("type_loc");
-  if (!T)
-    return;
-  // Exclude TypeLoc matches in STL headers.
-  if (isSystem(Result.Context->getSourceManager().getFileCharacteristic(
-          T->getBeginLoc())))
-    return;
-
+  assert(T);
   diag(T->getBeginLoc(),
        "container using std::allocator<const T> is a deprecated libc++ "
        "extension; remove const for compatibility with other standard "

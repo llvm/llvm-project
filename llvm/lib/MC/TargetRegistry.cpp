@@ -13,8 +13,10 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -22,6 +24,14 @@ using namespace llvm;
 
 // Clients are responsible for avoid race conditions in registration.
 static Target *FirstTarget = nullptr;
+
+bool Target::isValidFeatureListFormat(StringRef Features) {
+  if (Features.empty())
+    return true;
+
+  static const llvm::Regex pattern("^([+-][^,]+)(,[+-][^,]+)*,?$");
+  return pattern.match(Features);
+}
 
 MCStreamer *Target::createMCObjectStreamer(
     const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> TAB,
@@ -32,7 +42,8 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert(T.isOSWindowsOrUEFI() && "only Windows and UEFI COFF are supported");
+    assert((T.isOSWindows() || T.isUEFI()) &&
+           "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
     break;
@@ -75,6 +86,8 @@ MCStreamer *Target::createMCObjectStreamer(
   }
   if (ObjectTargetStreamerCtorFn)
     ObjectTargetStreamerCtorFn(*S, STI);
+  if (T.isLFI())
+    initializeLFIMCStreamer(*S, Ctx, T);
   return S;
 }
 

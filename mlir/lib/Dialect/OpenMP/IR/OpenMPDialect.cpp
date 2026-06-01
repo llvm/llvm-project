@@ -14,24 +14,27 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -55,6 +58,11 @@ makeDenseBoolArrayAttr(MLIRContext *ctx, const ArrayRef<bool> boolArray) {
   return boolArray.empty() ? nullptr : DenseBoolArrayAttr::get(ctx, boolArray);
 }
 
+static DenseI64ArrayAttr
+makeDenseI64ArrayAttr(MLIRContext *ctx, const ArrayRef<int64_t> intArray) {
+  return intArray.empty() ? nullptr : DenseI64ArrayAttr::get(ctx, intArray);
+}
+
 namespace {
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
@@ -70,6 +78,232 @@ struct LLVMPointerPointerLikeModel
   Type getElementType(Type pointer) const { return Type(); }
 };
 } // namespace
+
+/// Generate a name of a canonical loop nest of the format
+/// `<prefix>(_r<idx>_s<idx>)*`. Hereby, `_r<idx>` identifies the region
+/// argument index of an operation that has multiple regions, if the operation
+/// has multiple regions.
+/// `_s<idx>` identifies the position of an operation within a region, where
+/// only operations that may potentially contain loops ("container operations"
+/// i.e. have region arguments) are counted. Again, it is omitted if there is
+/// only one such operation in a region. If there are canonical loops nested
+/// inside each other, also may also use the format `_d<num>` where <num> is the
+/// nesting depth of the loop.
+///
+/// The generated name is a best-effort to make canonical loop unique within an
+/// SSA namespace. This also means that regions with IsolatedFromAbove property
+/// do not consider any parents or siblings.
+static std::string generateLoopNestingName(StringRef prefix,
+                                           CanonicalLoopOp op) {
+  struct Component {
+    /// If true, this component describes a region operand of an operation (the
+    /// operand's owner) If false, this component describes an operation located
+    /// in a parent region
+    bool isRegionArgOfOp;
+    bool skip = false;
+    bool isUnique = false;
+
+    size_t idx;
+    Operation *op;
+    Region *parentRegion;
+    size_t loopDepth;
+
+    Operation *&getOwnerOp() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return op;
+    }
+    size_t &getArgIdx() {
+      assert(isRegionArgOfOp && "Must describe a region operand");
+      return idx;
+    }
+
+    Operation *&getContainerOp() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return op;
+    }
+    size_t &getOpPos() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return idx;
+    }
+    bool isLoopOp() const {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return isa<CanonicalLoopOp>(op);
+    }
+    Region *&getParentRegion() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return parentRegion;
+    }
+    size_t &getLoopDepth() {
+      assert(!isRegionArgOfOp && "Must describe a operation of a region");
+      return loopDepth;
+    }
+
+    void skipIf(bool v = true) { skip = skip || v; }
+  };
+
+  // List of ancestors, from inner to outer.
+  // Alternates between
+  //  * region argument of an operation
+  //  * operation within a region
+  SmallVector<Component> components;
+
+  // Gather a list of parent regions and operations, and the position within
+  // their parent
+  Operation *o = op.getOperation();
+  while (o) {
+    // Operation within a region
+    Region *r = o->getParentRegion();
+    if (!r)
+      break;
+
+    llvm::ReversePostOrderTraversal<Block *> traversal(&r->getBlocks().front());
+    size_t idx = 0;
+    bool found = false;
+    size_t sequentialIdx = -1;
+    bool isOnlyContainerOp = true;
+    for (Block *b : traversal) {
+      for (Operation &op : *b) {
+        if (&op == o && !found) {
+          sequentialIdx = idx;
+          found = true;
+        }
+        if (op.getNumRegions()) {
+          idx += 1;
+          if (idx > 1)
+            isOnlyContainerOp = false;
+        }
+        if (found && !isOnlyContainerOp)
+          break;
+      }
+    }
+
+    Component &containerOpInRegion = components.emplace_back();
+    containerOpInRegion.isRegionArgOfOp = false;
+    containerOpInRegion.isUnique = isOnlyContainerOp;
+    containerOpInRegion.getContainerOp() = o;
+    containerOpInRegion.getOpPos() = sequentialIdx;
+    containerOpInRegion.getParentRegion() = r;
+
+    Operation *parent = r->getParentOp();
+
+    // Region argument of an operation
+    Component &regionArgOfOperation = components.emplace_back();
+    regionArgOfOperation.isRegionArgOfOp = true;
+    regionArgOfOperation.isUnique = true;
+    regionArgOfOperation.getArgIdx() = 0;
+    regionArgOfOperation.getOwnerOp() = parent;
+
+    // The IsolatedFromAbove trait of the parent operation implies that each
+    // individual region argument has its own separate namespace, so no
+    // ambiguity.
+    if (!parent || parent->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+      break;
+
+    // Component only needed if operation has multiple region operands. Region
+    // arguments may be optional, but we currently do not consider this.
+    if (parent->getRegions().size() > 1) {
+      auto getRegionIndex = [](Operation *o, Region *r) {
+        for (auto [idx, region] : llvm::enumerate(o->getRegions())) {
+          if (&region == r)
+            return idx;
+        }
+        llvm_unreachable("Region not child of its parent operation");
+      };
+      regionArgOfOperation.isUnique = false;
+      regionArgOfOperation.getArgIdx() = getRegionIndex(parent, r);
+    }
+
+    // next parent
+    o = parent;
+  }
+
+  // Determine whether a region-argument component is not needed
+  for (Component &c : components)
+    c.skipIf(c.isRegionArgOfOp && c.isUnique);
+
+  // Find runs of nested loops and determine each loop's depth in the loop nest
+  size_t numSurroundingLoops = 0;
+  for (Component &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    // non-skipped multi-argument operands interrupt the loop nest
+    if (c.isRegionArgOfOp) {
+      numSurroundingLoops = 0;
+      continue;
+    }
+
+    // Multiple loops in a region means each of them is the outermost loop of a
+    // new loop nest
+    if (!c.isUnique)
+      numSurroundingLoops = 0;
+
+    c.getLoopDepth() = numSurroundingLoops;
+
+    // Next loop is surrounded by one more loop
+    if (isa<CanonicalLoopOp>(c.getContainerOp()))
+      numSurroundingLoops += 1;
+  }
+
+  // In loop nests, skip all but the innermost loop that contains the depth
+  // number
+  bool isLoopNest = false;
+  for (Component &c : components) {
+    if (c.skip || c.isRegionArgOfOp)
+      continue;
+
+    if (!isLoopNest && c.getLoopDepth() >= 1) {
+      // Innermost loop of a loop nest of at least two loops
+      isLoopNest = true;
+    } else if (isLoopNest) {
+      // Non-innermost loop of a loop nest
+      c.skipIf(c.isUnique);
+
+      // If there is no surrounding loop left, this must have been the outermost
+      // loop; leave loop-nest mode for the next iteration
+      if (c.getLoopDepth() == 0)
+        isLoopNest = false;
+    }
+  }
+
+  // Skip non-loop unambiguous regions (but they should interrupt loop nests, so
+  // we mark them as skipped only after computing loop nests)
+  for (Component &c : components)
+    c.skipIf(!c.isRegionArgOfOp && c.isUnique &&
+             !isa<CanonicalLoopOp>(c.getContainerOp()));
+
+  // Components can be skipped if they are already disambiguated by their parent
+  // (or does not have a parent)
+  bool newRegion = true;
+  for (Component &c : llvm::reverse(components)) {
+    c.skipIf(newRegion && c.isUnique);
+
+    // non-skipped components disambiguate unique children
+    if (!c.skip)
+      newRegion = true;
+
+    // ...except canonical loops that need a suffix for each nest
+    if (!c.isRegionArgOfOp && c.getContainerOp())
+      newRegion = false;
+  }
+
+  // Compile the nesting name string
+  SmallString<64> Name{prefix};
+  llvm::raw_svector_ostream NameOS(Name);
+  for (auto &c : llvm::reverse(components)) {
+    if (c.skip)
+      continue;
+
+    if (c.isRegionArgOfOp)
+      NameOS << "_r" << c.getArgIdx();
+    else if (c.getLoopDepth() >= 1)
+      NameOS << "_d" << c.getLoopDepth();
+    else
+      NameOS << "_s" << c.getOpPos();
+  }
+
+  return NameOS.str().str();
+}
 
 void OpenMPDialect::initialize() {
   addOperations<
@@ -176,7 +410,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
 }
 
 template <typename ClauseAttr>
-void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
+static void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
 }
 
@@ -187,38 +421,112 @@ void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
 /// linear ::= `linear` `(` linear-list `)`
 /// linear-list := linear-val | linear-val linear-list
 /// linear-val := ssa-id-and-type `=` ssa-id-and-type
+///           | `val` `(` ssa-id-and-type `=` ssa-id-and-type `)`
+///           | `ref` `(` ssa-id-and-type `=` ssa-id-and-type `)`
+///           | `uval` `(` ssa-id-and-type `=` ssa-id-and-type `)`
 static ParseResult parseLinearClause(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearVars,
     SmallVectorImpl<Type> &linearTypes,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars) {
-  return parser.parseCommaSeparatedList([&]() {
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &linearStepVars,
+    SmallVectorImpl<Type> &linearStepTypes, ArrayAttr &linearModifiers) {
+  SmallVector<Attribute> modifiers;
+  auto result = parser.parseCommaSeparatedList([&]() {
     OpAsmParser::UnresolvedOperand var;
-    Type type;
+    Type type, stepType;
     OpAsmParser::UnresolvedOperand stepVar;
-    if (parser.parseOperand(var) || parser.parseEqual() ||
-        parser.parseOperand(stepVar) || parser.parseColonType(type))
+
+    std::optional<omp::LinearModifier> linearModifier;
+    if (succeeded(parser.parseOptionalKeyword("val"))) {
+      linearModifier = omp::LinearModifier::val;
+    } else if (succeeded(parser.parseOptionalKeyword("ref"))) {
+      linearModifier = omp::LinearModifier::ref;
+    } else if (succeeded(parser.parseOptionalKeyword("uval"))) {
+      linearModifier = omp::LinearModifier::uval;
+    }
+
+    bool hasLinearModifierParens = linearModifier.has_value();
+    if (hasLinearModifierParens && parser.parseLParen())
+      return failure();
+
+    if (parser.parseOperand(var) || parser.parseColonType(type) ||
+        parser.parseEqual() || parser.parseOperand(stepVar) ||
+        parser.parseColonType(stepType))
+      return failure();
+
+    if (hasLinearModifierParens && parser.parseRParen())
       return failure();
 
     linearVars.push_back(var);
     linearTypes.push_back(type);
     linearStepVars.push_back(stepVar);
+    linearStepTypes.push_back(stepType);
+    if (linearModifier) {
+      modifiers.push_back(
+          omp::LinearModifierAttr::get(parser.getContext(), *linearModifier));
+    } else {
+      modifiers.push_back(UnitAttr::get(parser.getContext()));
+    }
     return success();
   });
+  if (failed(result))
+    return failure();
+  linearModifiers = ArrayAttr::get(parser.getContext(), modifiers);
+  return success();
 }
 
 /// Print Linear Clause
 static void printLinearClause(OpAsmPrinter &p, Operation *op,
                               ValueRange linearVars, TypeRange linearTypes,
-                              ValueRange linearStepVars) {
+                              ValueRange linearStepVars, TypeRange stepVarTypes,
+                              ArrayAttr linearModifiers) {
   size_t linearVarsSize = linearVars.size();
   for (unsigned i = 0; i < linearVarsSize; ++i) {
-    std::string separator = i == linearVarsSize - 1 ? "" : ", ";
-    p << linearVars[i];
-    if (linearStepVars.size() > i)
-      p << " = " << linearStepVars[i];
-    p << " : " << linearVars[i].getType() << separator;
+    if (i != 0)
+      p << ", ";
+    // Print modifier keyword wrapper if present.
+    Attribute modAttr = linearModifiers ? linearModifiers[i] : nullptr;
+    auto mod = modAttr ? dyn_cast<omp::LinearModifierAttr>(modAttr) : nullptr;
+    if (mod) {
+      p << omp::stringifyLinearModifier(mod.getValue()) << "(";
+    }
+    p << linearVars[i] << " : " << linearTypes[i];
+    p << " = " << linearStepVars[i] << " : " << stepVarTypes[i];
+    if (mod)
+      p << ")";
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Verifier for Linear modifier
+//===----------------------------------------------------------------------===//
+
+/// OpenMP 5.2, Section 5.4.6: "A linear-modifier may be specified as ref or
+/// uval only on a declare simd directive."
+/// Also verifies that modifier count matches variable count.
+static LogicalResult
+verifyLinearModifiers(Operation *op, std::optional<ArrayAttr> linearModifiers,
+                      OperandRange linearVars, bool isDeclareSimd = false) {
+  if (!linearModifiers)
+    return success();
+  if (linearModifiers->size() != linearVars.size())
+    return op->emitOpError()
+           << "expected as many linear modifiers as linear variables";
+  if (!isDeclareSimd) {
+    for (Attribute attr : *linearModifiers) {
+      if (!attr)
+        continue;
+      auto modAttr = dyn_cast<omp::LinearModifierAttr>(attr);
+      if (!modAttr)
+        continue;
+      omp::LinearModifier mod = modAttr.getValue();
+      if (mod == omp::LinearModifier::ref || mod == omp::LinearModifier::uval)
+        return op->emitOpError()
+               << "linear modifier '" << omp::stringifyLinearModifier(mod)
+               << "' may only be specified on a declare simd directive";
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -385,6 +693,7 @@ parseScheduleClause(OpAsmParser &parser, ClauseScheduleKindAttr &scheduleAttr,
     break;
   case ClauseScheduleKind::Auto:
   case ClauseScheduleKind::Runtime:
+  case ClauseScheduleKind::Distribute:
     chunkSize = std::nullopt;
   }
 
@@ -566,6 +875,170 @@ static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for Heap Alloc Clause
+//===----------------------------------------------------------------------===//
+
+/// operation ::= $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
+static ParseResult parseHeapAllocClause(
+    OpAsmParser &parser, TypeAttr &inTypeAttr,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &typeparams,
+    SmallVectorImpl<Type> &typeparamsTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &shape,
+    SmallVectorImpl<Type> &shapeTypes) {
+  mlir::Type inType;
+  if (parser.parseType(inType))
+    return mlir::failure();
+  inTypeAttr = TypeAttr::get(inType);
+
+  if (!parser.parseOptionalLParen()) {
+    // parse the LEN params of the derived type. (<params> : <types>)
+    if (parser.parseOperandList(typeparams, OpAsmParser::Delimiter::None) ||
+        parser.parseColonTypeList(typeparamsTypes) || parser.parseRParen())
+      return failure();
+  }
+
+  if (!parser.parseOptionalComma()) {
+    // parse size to scale by, vector of n dimensions of type index
+    if (parser.parseOperandList(shape, OpAsmParser::Delimiter::None))
+      return failure();
+
+    // TODO: This overrides the actual types of the operands, which might cause
+    // issues when they don't match. At the moment this is done in place of
+    // making the corresponding operand type `Variadic<Index>` because index
+    // types are lowered to I64 prior to LLVM IR translation.
+    shapeTypes.append(shape.size(), IndexType::get(parser.getContext()));
+  }
+
+  return success();
+}
+
+static void printHeapAllocClause(OpAsmPrinter &p, Operation *op,
+                                 TypeAttr inType, ValueRange typeparams,
+                                 TypeRange typeparamsTypes, ValueRange shape,
+                                 TypeRange shapeTypes) {
+  p << inType;
+  if (!typeparams.empty()) {
+    p << '(' << typeparams << " : " << typeparamsTypes << ')';
+  }
+  for (auto sh : shape) {
+    p << ", ";
+    p.printOperand(sh);
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer and verify for dyn_groupprivate Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult
+verifyDynGroupprivateClause(Operation *op, AccessGroupModifierAttr accessGroup,
+                            FallbackModifierAttr fallback,
+                            Value dynGroupprivateSize) {
+  if (!dynGroupprivateSize && (accessGroup || fallback))
+    return op->emitOpError("dyn_groupprivate modifiers require a size operand");
+
+  return success();
+}
+
+static ParseResult parseDynGroupprivateClause(
+    OpAsmParser &parser, AccessGroupModifierAttr &accessGroupAttr,
+    FallbackModifierAttr &fallbackAttr,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynGroupprivateSize,
+    Type &sizeType) {
+
+  bool parsedAccessGroup = false;
+  bool parsedFallback = false;
+  bool parsedSize = false;
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    // Parse AccessGroupModifier.
+    if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
+      if (parsedAccessGroup)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate access group modifier");
+      accessGroupAttr = AccessGroupModifierAttr::get(
+          parser.getContext(), AccessGroupModifier::cgroup);
+      parsedAccessGroup = true;
+      return success();
+    }
+    // Parse FallbackModifier.
+    if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+      if (parsedFallback)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate fallback modifier");
+      if (parser.parseLParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected '(' after 'fallback'");
+      llvm::StringRef fbKind;
+      if (parser.parseKeyword(&fbKind))
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "expected fallback modifier (abort/null/default_mem)");
+      std::optional<FallbackModifier> fbEnum;
+      if (fbKind == "abort")
+        fbEnum = FallbackModifier::abort;
+      else if (fbKind == "null")
+        fbEnum = FallbackModifier::null;
+      else if (fbKind == "default_mem")
+        fbEnum = FallbackModifier::default_mem;
+      else
+        return parser.emitError(parser.getCurrentLocation(),
+                                "invalid fallback modifier '" + fbKind + "'");
+      fallbackAttr = FallbackModifierAttr::get(parser.getContext(), *fbEnum);
+      if (parser.parseRParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ')' after fallback modifier");
+      parsedFallback = true;
+      return success();
+    }
+    // Parse size operand.
+    OpAsmParser::UnresolvedOperand operand;
+    if (succeeded(parser.parseOperand(operand))) {
+      if (parsedSize)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate size operand");
+      dynGroupprivateSize = operand;
+      parsedSize = true;
+      if (failed(parser.parseColon()) || failed(parser.parseType(sizeType)))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ':' and type after size operand");
+      return success();
+    }
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected dyn_groupprivate_size operand");
+  });
+}
+
+static void printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
+                                       AccessGroupModifierAttr modifierFirst,
+                                       FallbackModifierAttr modifierSecond,
+                                       Value dynGroupprivateSize,
+                                       Type sizeType) {
+
+  bool needsComma = false;
+
+  if (modifierFirst) {
+    printer << modifierFirst.getValue();
+    needsComma = true;
+  }
+
+  if (modifierSecond) {
+    if (needsComma)
+      printer << ", ";
+    printer << "fallback(";
+    printer << modifierSecond.getValue();
+    printer << ")";
+    needsComma = true;
+  }
+
+  if (dynGroupprivateSize) {
+    if (needsComma)
+      printer << ", ";
+    printer << dynGroupprivateSize << " : " << sizeType;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -581,11 +1054,14 @@ struct PrivateParseArgs {
   llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars;
   llvm::SmallVectorImpl<Type> &types;
   ArrayAttr &syms;
+  UnitAttr &needsBarrier;
   DenseI64ArrayAttr *mapIndices;
   PrivateParseArgs(SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
                    SmallVectorImpl<Type> &types, ArrayAttr &syms,
+                   UnitAttr &needsBarrier,
                    DenseI64ArrayAttr *mapIndices = nullptr)
-      : vars(vars), types(types), syms(syms), mapIndices(mapIndices) {}
+      : vars(vars), types(types), syms(syms), needsBarrier(needsBarrier),
+        mapIndices(mapIndices) {}
 };
 
 struct ReductionParseArgs {
@@ -613,6 +1089,10 @@ struct AllRegionParseArgs {
 };
 } // namespace
 
+static inline constexpr StringRef getPrivateNeedsBarrierSpelling() {
+  return "private_barrier";
+}
+
 static ParseResult parseClauseWithRegionArgs(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
@@ -620,7 +1100,8 @@ static ParseResult parseClauseWithRegionArgs(
     SmallVectorImpl<OpAsmParser::Argument> &regionPrivateArgs,
     ArrayAttr *symbols = nullptr, DenseI64ArrayAttr *mapIndices = nullptr,
     DenseBoolArrayAttr *byref = nullptr,
-    ReductionModifierAttr *modifier = nullptr) {
+    ReductionModifierAttr *modifier = nullptr,
+    UnitAttr *needsBarrier = nullptr) {
   SmallVector<SymbolRefAttr> symbolVec;
   SmallVector<int64_t> mapIndicesVec;
   SmallVector<bool> isByRefVec;
@@ -662,8 +1143,9 @@ static ParseResult parseClauseWithRegionArgs(
                 parser.parseInteger(mapIndicesVec.emplace_back()) ||
                 parser.parseRSquare())
               return failure();
-          } else
+          } else {
             mapIndicesVec.push_back(-1);
+          }
         }
 
         return success();
@@ -686,6 +1168,12 @@ static ParseResult parseClauseWithRegionArgs(
 
   if (parser.parseRParen())
     return failure();
+
+  if (needsBarrier) {
+    if (parser.parseOptionalKeyword(getPrivateNeedsBarrierSpelling())
+            .succeeded())
+      *needsBarrier = mlir::UnitAttr::get(parser.getContext());
+  }
 
   auto *argsBegin = regionPrivateArgs.begin();
   MutableArrayRef argsSubrange(argsBegin + regionArgOffset,
@@ -734,7 +1222,8 @@ static ParseResult parseBlockArgClause(
 
     if (failed(parseClauseWithRegionArgs(
             parser, privateArgs->vars, privateArgs->types, entryBlockArgs,
-            &privateArgs->syms, privateArgs->mapIndices)))
+            &privateArgs->syms, privateArgs->mapIndices, /*byref=*/nullptr,
+            /*modifier=*/nullptr, &privateArgs->needsBarrier)))
       return failure();
   }
   return success();
@@ -823,7 +1312,7 @@ static ParseResult parseTargetOpRegion(
     SmallVectorImpl<Type> &mapTypes,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
-    DenseI64ArrayAttr &privateMaps) {
+    UnitAttr &privateNeedsBarrier, DenseI64ArrayAttr &privateMaps) {
   AllRegionParseArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
@@ -831,7 +1320,7 @@ static ParseResult parseTargetOpRegion(
                                inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
-                           &privateMaps);
+                           privateNeedsBarrier, &privateMaps);
   return parseBlockArgRegion(parser, region, args);
 }
 
@@ -841,11 +1330,13 @@ static ParseResult parseInReductionPrivateRegion(
     SmallVectorImpl<Type> &inReductionTypes,
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
-    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms) {
+    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
+    UnitAttr &privateNeedsBarrier) {
   AllRegionParseArgs args;
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
-  args.privateArgs.emplace(privateVars, privateTypes, privateSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier);
   return parseBlockArgRegion(parser, region, args);
 }
 
@@ -856,14 +1347,15 @@ static ParseResult parseInReductionPrivateReductionRegion(
     DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
-    ReductionModifierAttr &reductionMod,
+    UnitAttr &privateNeedsBarrier, ReductionModifierAttr &reductionMod,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVars,
     SmallVectorImpl<Type> &reductionTypes, DenseBoolArrayAttr &reductionByref,
     ArrayAttr &reductionSyms) {
   AllRegionParseArgs args;
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
-  args.privateArgs.emplace(privateVars, privateTypes, privateSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
                              reductionSyms, &reductionMod);
   return parseBlockArgRegion(parser, region, args);
@@ -872,9 +1364,11 @@ static ParseResult parseInReductionPrivateReductionRegion(
 static ParseResult parsePrivateRegion(
     OpAsmParser &parser, Region &region,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
-    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms) {
+    llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
+    UnitAttr &privateNeedsBarrier) {
   AllRegionParseArgs args;
-  args.privateArgs.emplace(privateVars, privateTypes, privateSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier);
   return parseBlockArgRegion(parser, region, args);
 }
 
@@ -882,12 +1376,13 @@ static ParseResult parsePrivateReductionRegion(
     OpAsmParser &parser, Region &region,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
-    ReductionModifierAttr &reductionMod,
+    UnitAttr &privateNeedsBarrier, ReductionModifierAttr &reductionMod,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &reductionVars,
     SmallVectorImpl<Type> &reductionTypes, DenseBoolArrayAttr &reductionByref,
     ArrayAttr &reductionSyms) {
   AllRegionParseArgs args;
-  args.privateArgs.emplace(privateVars, privateTypes, privateSyms);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
                              reductionSyms, &reductionMod);
   return parseBlockArgRegion(parser, region, args);
@@ -930,10 +1425,12 @@ struct PrivatePrintArgs {
   ValueRange vars;
   TypeRange types;
   ArrayAttr syms;
+  UnitAttr needsBarrier;
   DenseI64ArrayAttr mapIndices;
   PrivatePrintArgs(ValueRange vars, TypeRange types, ArrayAttr syms,
-                   DenseI64ArrayAttr mapIndices)
-      : vars(vars), types(types), syms(syms), mapIndices(mapIndices) {}
+                   UnitAttr needsBarrier, DenseI64ArrayAttr mapIndices)
+      : vars(vars), types(types), syms(syms), needsBarrier(needsBarrier),
+        mapIndices(mapIndices) {}
 };
 struct ReductionPrintArgs {
   ValueRange vars;
@@ -963,7 +1460,7 @@ static void printClauseWithRegionArgs(
     ValueRange argsSubrange, ValueRange operands, TypeRange types,
     ArrayAttr symbols = nullptr, DenseI64ArrayAttr mapIndices = nullptr,
     DenseBoolArrayAttr byref = nullptr,
-    ReductionModifierAttr modifier = nullptr) {
+    ReductionModifierAttr modifier = nullptr, UnitAttr needsBarrier = nullptr) {
   if (argsSubrange.empty())
     return;
 
@@ -1005,6 +1502,9 @@ static void printClauseWithRegionArgs(
   p << " : ";
   llvm::interleaveComma(types, p);
   p << ") ";
+
+  if (needsBarrier)
+    p << getPrivateNeedsBarrierSpelling() << " ";
 }
 
 static void printBlockArgClause(OpAsmPrinter &p, MLIRContext *ctx,
@@ -1019,9 +1519,10 @@ static void printBlockArgClause(OpAsmPrinter &p, MLIRContext *ctx,
                                 StringRef clauseName, ValueRange argsSubrange,
                                 std::optional<PrivatePrintArgs> privateArgs) {
   if (privateArgs)
-    printClauseWithRegionArgs(p, ctx, clauseName, argsSubrange,
-                              privateArgs->vars, privateArgs->types,
-                              privateArgs->syms, privateArgs->mapIndices);
+    printClauseWithRegionArgs(
+        p, ctx, clauseName, argsSubrange, privateArgs->vars, privateArgs->types,
+        privateArgs->syms, privateArgs->mapIndices, /*byref=*/nullptr,
+        /*modifier=*/nullptr, privateArgs->needsBarrier);
 }
 
 static void
@@ -1067,23 +1568,23 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
 
 // These parseXyz functions correspond to the custom<Xyz> definitions
 // in the .td file(s).
-static void
-printTargetOpRegion(OpAsmPrinter &p, Operation *op, Region &region,
-                    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
-                    ValueRange hostEvalVars, TypeRange hostEvalTypes,
-                    ValueRange inReductionVars, TypeRange inReductionTypes,
-                    DenseBoolArrayAttr inReductionByref,
-                    ArrayAttr inReductionSyms, ValueRange mapVars,
-                    TypeRange mapTypes, ValueRange privateVars,
-                    TypeRange privateTypes, ArrayAttr privateSyms,
-                    DenseI64ArrayAttr privateMaps) {
+static void printTargetOpRegion(
+    OpAsmPrinter &p, Operation *op, Region &region,
+    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
+    ValueRange hostEvalVars, TypeRange hostEvalTypes,
+    ValueRange inReductionVars, TypeRange inReductionTypes,
+    DenseBoolArrayAttr inReductionByref, ArrayAttr inReductionSyms,
+    ValueRange mapVars, TypeRange mapTypes, ValueRange privateVars,
+    TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
+    DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
-  args.privateArgs.emplace(privateVars, privateTypes, privateSyms, privateMaps);
+  args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier, privateMaps);
   printBlockArgRegion(p, op, region, args);
 }
 
@@ -1091,11 +1592,12 @@ static void printInReductionPrivateRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange inReductionVars,
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
     ArrayAttr inReductionSyms, ValueRange privateVars, TypeRange privateTypes,
-    ArrayAttr privateSyms) {
+    ArrayAttr privateSyms, UnitAttr privateNeedsBarrier) {
   AllRegionPrintArgs args;
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   printBlockArgRegion(p, op, region, args);
 }
@@ -1104,13 +1606,15 @@ static void printInReductionPrivateReductionRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange inReductionVars,
     TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
     ArrayAttr inReductionSyms, ValueRange privateVars, TypeRange privateTypes,
-    ArrayAttr privateSyms, ReductionModifierAttr reductionMod,
-    ValueRange reductionVars, TypeRange reductionTypes,
-    DenseBoolArrayAttr reductionByref, ArrayAttr reductionSyms) {
+    ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
+    ReductionModifierAttr reductionMod, ValueRange reductionVars,
+    TypeRange reductionTypes, DenseBoolArrayAttr reductionByref,
+    ArrayAttr reductionSyms) {
   AllRegionPrintArgs args;
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
                              reductionSyms, reductionMod);
@@ -1119,21 +1623,24 @@ static void printInReductionPrivateReductionRegion(
 
 static void printPrivateRegion(OpAsmPrinter &p, Operation *op, Region &region,
                                ValueRange privateVars, TypeRange privateTypes,
-                               ArrayAttr privateSyms) {
+                               ArrayAttr privateSyms,
+                               UnitAttr privateNeedsBarrier) {
   AllRegionPrintArgs args;
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   printBlockArgRegion(p, op, region, args);
 }
 
 static void printPrivateReductionRegion(
     OpAsmPrinter &p, Operation *op, Region &region, ValueRange privateVars,
-    TypeRange privateTypes, ArrayAttr privateSyms,
+    TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
     ReductionModifierAttr reductionMod, ValueRange reductionVars,
     TypeRange reductionTypes, DenseBoolArrayAttr reductionByref,
     ArrayAttr reductionSyms) {
   AllRegionPrintArgs args;
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
+                           privateNeedsBarrier,
                            /*mapIndices=*/nullptr);
   args.reductionArgs.emplace(reductionVars, reductionTypes, reductionByref,
                              reductionSyms, reductionMod);
@@ -1162,6 +1669,56 @@ static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
   args.useDeviceAddrArgs.emplace(useDeviceAddrVars, useDeviceAddrTypes);
   args.useDevicePtrArgs.emplace(useDevicePtrVars, useDevicePtrTypes);
   printBlockArgRegion(p, op, region, args);
+}
+
+template <typename ParsePrefixFn>
+static ParseResult parseSplitIteratedList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &plainVars,
+    SmallVectorImpl<Type> &plainTypes, ParsePrefixFn &&parsePrefix) {
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (failed(parsePrefix()))
+      return failure();
+
+    OpAsmParser::UnresolvedOperand v;
+    Type ty;
+    if (parser.parseOperand(v) || parser.parseColonType(ty))
+      return failure();
+
+    if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+      iteratedVars.push_back(v);
+      iteratedTypes.push_back(ty);
+    } else {
+      plainVars.push_back(v);
+      plainTypes.push_back(ty);
+    }
+    return success();
+  });
+}
+
+template <typename PrintPrefixFn>
+static void printSplitIteratedList(OpAsmPrinter &p, ValueRange iteratedVars,
+                                   TypeRange iteratedTypes,
+                                   ValueRange plainVars, TypeRange plainTypes,
+                                   PrintPrefixFn &&printPrefixForPlain,
+                                   PrintPrefixFn &&printPrefixForIterated) {
+
+  bool first = true;
+  auto emit = [&](Value v, Type t, auto &&printPrefix) {
+    if (!first)
+      p << ", ";
+    printPrefix(v, t);
+    p << v << " : " << t;
+    first = false;
+  };
+
+  for (unsigned i = 0; i < iteratedVars.size(); ++i)
+    emit(iteratedVars[i], iteratedTypes[i], printPrefixForIterated);
+  for (unsigned i = 0; i < plainVars.size(); ++i)
+    emit(plainVars[i], plainTypes[i], printPrefixForPlain);
 }
 
 /// Verifies Reduction Clause
@@ -1320,50 +1877,77 @@ verifyCopyprivateVarList(Operation *op, OperandRange copyprivateVars,
 /// depend-entry-list ::= depend-entry
 ///                     | depend-entry-list `,` depend-entry
 /// depend-entry ::= depend-kind `->` ssa-id `:` type
-static ParseResult
-parseDependVarList(OpAsmParser &parser,
-                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dependVars,
-                   SmallVectorImpl<Type> &dependTypes, ArrayAttr &dependKinds) {
+///                | depend-kind `->` ssa-id `:` iterated-type
+static ParseResult parseDependVarList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &dependVars,
+    SmallVectorImpl<Type> &dependTypes, ArrayAttr &dependKinds,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes, ArrayAttr &iteratedKinds) {
   SmallVector<ClauseTaskDependAttr> kindsVec;
+  SmallVector<ClauseTaskDependAttr> iterKindsVec;
   if (failed(parser.parseCommaSeparatedList([&]() {
         StringRef keyword;
+        OpAsmParser::UnresolvedOperand operand;
+        Type ty;
         if (parser.parseKeyword(&keyword) || parser.parseArrow() ||
-            parser.parseOperand(dependVars.emplace_back()) ||
-            parser.parseColonType(dependTypes.emplace_back()))
+            parser.parseOperand(operand) || parser.parseColonType(ty))
           return failure();
-        if (std::optional<ClauseTaskDepend> keywordDepend =
-                (symbolizeClauseTaskDepend(keyword)))
-          kindsVec.emplace_back(
-              ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend));
-        else
+        std::optional<ClauseTaskDepend> keywordDepend =
+            symbolizeClauseTaskDepend(keyword);
+        if (!keywordDepend)
           return failure();
+        auto kindAttr =
+            ClauseTaskDependAttr::get(parser.getContext(), *keywordDepend);
+        if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+          iteratedVars.push_back(operand);
+          iteratedTypes.push_back(ty);
+          iterKindsVec.push_back(kindAttr);
+        } else {
+          dependVars.push_back(operand);
+          dependTypes.push_back(ty);
+          kindsVec.push_back(kindAttr);
+        }
         return success();
       })))
     return failure();
   SmallVector<Attribute> kinds(kindsVec.begin(), kindsVec.end());
   dependKinds = ArrayAttr::get(parser.getContext(), kinds);
+  SmallVector<Attribute> iterKinds(iterKindsVec.begin(), iterKindsVec.end());
+  iteratedKinds = ArrayAttr::get(parser.getContext(), iterKinds);
   return success();
 }
 
 /// Print Depend clause
 static void printDependVarList(OpAsmPrinter &p, Operation *op,
                                OperandRange dependVars, TypeRange dependTypes,
-                               std::optional<ArrayAttr> dependKinds) {
-
-  for (unsigned i = 0, e = dependKinds->size(); i < e; ++i) {
-    if (i != 0)
-      p << ", ";
-    p << stringifyClauseTaskDepend(
-             llvm::cast<mlir::omp::ClauseTaskDependAttr>((*dependKinds)[i])
-                 .getValue())
-      << " -> " << dependVars[i] << " : " << dependTypes[i];
-  }
+                               std::optional<ArrayAttr> dependKinds,
+                               OperandRange iteratedVars,
+                               TypeRange iteratedTypes,
+                               std::optional<ArrayAttr> iteratedKinds) {
+  bool first = true;
+  auto printEntries = [&](OperandRange vars, TypeRange types,
+                          std::optional<ArrayAttr> kinds) {
+    for (unsigned i = 0, e = vars.size(); i < e; ++i) {
+      if (!first)
+        p << ", ";
+      p << stringifyClauseTaskDepend(
+               llvm::cast<mlir::omp::ClauseTaskDependAttr>((*kinds)[i])
+                   .getValue())
+        << " -> " << vars[i] << " : " << types[i];
+      first = false;
+    }
+  };
+  printEntries(dependVars, dependTypes, dependKinds);
+  printEntries(iteratedVars, iteratedTypes, iteratedKinds);
 }
 
 /// Verifies Depend clause
 static LogicalResult verifyDependVarList(Operation *op,
                                          std::optional<ArrayAttr> dependKinds,
-                                         OperandRange dependVars) {
+                                         OperandRange dependVars,
+                                         std::optional<ArrayAttr> iteratedKinds,
+                                         OperandRange iteratedVars) {
   if (!dependVars.empty()) {
     if (!dependKinds || dependKinds->size() != dependVars.size())
       return op->emitOpError() << "expected as many depend values"
@@ -1371,7 +1955,15 @@ static LogicalResult verifyDependVarList(Operation *op,
   } else {
     if (dependKinds && !dependKinds->empty())
       return op->emitOpError() << "unexpected depend values";
-    return success();
+  }
+
+  if (!iteratedVars.empty()) {
+    if (!iteratedKinds || iteratedKinds->size() != iteratedVars.size())
+      return op->emitOpError() << "expected as many depend iterated values"
+                                  " as depend iterated variables";
+  } else {
+    if (iteratedKinds && !iteratedKinds->empty())
+      return op->emitOpError() << "unexpected depend iterated values";
   }
 
   return success();
@@ -1470,10 +2062,10 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 // Parser, printer and verifier for Target
 //===----------------------------------------------------------------------===//
 
-// Helper function to get bitwise AND of `value` and 'flag'
-uint64_t mapTypeToBitFlag(uint64_t value,
-                          llvm::omp::OpenMPOffloadMappingFlags flag) {
-  return value & llvm::to_underlying(flag);
+// Helper function to get bitwise AND of `value` and 'flag' then return it as a
+// boolean
+static bool mapTypeToBool(ClauseMapFlags value, ClauseMapFlags flag) {
+  return (value & flag) == flag;
 }
 
 /// Parses a map_entries map type from a string format back into its numeric
@@ -1481,10 +2073,9 @@ uint64_t mapTypeToBitFlag(uint64_t value,
 ///
 /// map-clause = `map_clauses (  ( `(` `always, `? `implicit, `? `ompx_hold, `?
 /// `close, `? `present, `? ( `to` | `from` | `delete` `)` )+ `)` )
-static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
-  llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-
+static ParseResult parseMapClause(OpAsmParser &parser,
+                                  ClauseMapFlagsAttr &mapType) {
+  ClauseMapFlags mapTypeBits = ClauseMapFlags::none;
   // This simply verifies the correct keyword is read in, the
   // keyword itself is stored inside of the operation
   auto parseTypeAndMod = [&]() -> ParseResult {
@@ -1493,32 +2084,64 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
       return failure();
 
     if (mapTypeMod == "always")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+      mapTypeBits |= ClauseMapFlags::always;
 
     if (mapTypeMod == "implicit")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+      mapTypeBits |= ClauseMapFlags::implicit;
 
     if (mapTypeMod == "ompx_hold")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
+      mapTypeBits |= ClauseMapFlags::ompx_hold;
 
     if (mapTypeMod == "close")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      mapTypeBits |= ClauseMapFlags::close;
 
     if (mapTypeMod == "present")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+      mapTypeBits |= ClauseMapFlags::present;
 
     if (mapTypeMod == "to")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      mapTypeBits |= ClauseMapFlags::to;
 
     if (mapTypeMod == "from")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::from;
 
     if (mapTypeMod == "tofrom")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::to | ClauseMapFlags::from;
 
     if (mapTypeMod == "delete")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+      mapTypeBits |= ClauseMapFlags::del;
+
+    if (mapTypeMod == "storage")
+      mapTypeBits |= ClauseMapFlags::storage;
+
+    if (mapTypeMod == "return_param")
+      mapTypeBits |= ClauseMapFlags::return_param;
+
+    if (mapTypeMod == "private")
+      mapTypeBits |= ClauseMapFlags::priv;
+
+    if (mapTypeMod == "literal")
+      mapTypeBits |= ClauseMapFlags::literal;
+
+    if (mapTypeMod == "attach")
+      mapTypeBits |= ClauseMapFlags::attach;
+
+    if (mapTypeMod == "attach_always")
+      mapTypeBits |= ClauseMapFlags::attach_always;
+
+    if (mapTypeMod == "attach_never")
+      mapTypeBits |= ClauseMapFlags::attach_never;
+
+    if (mapTypeMod == "attach_auto")
+      mapTypeBits |= ClauseMapFlags::attach_auto;
+
+    if (mapTypeMod == "ref_ptr")
+      mapTypeBits |= ClauseMapFlags::ref_ptr;
+
+    if (mapTypeMod == "ref_ptee")
+      mapTypeBits |= ClauseMapFlags::ref_ptee;
+
+    if (mapTypeMod == "is_device_ptr")
+      mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
     return success();
   };
@@ -1526,9 +2149,8 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
   if (parser.parseCommaSeparatedList(parseTypeAndMod))
     return failure();
 
-  mapType = parser.getBuilder().getIntegerAttr(
-      parser.getBuilder().getIntegerType(64, /*isSigned=*/false),
-      llvm::to_underlying(mapTypeBits));
+  mapType =
+      parser.getBuilder().getAttr<mlir::omp::ClauseMapFlagsAttr>(mapTypeBits);
 
   return success();
 }
@@ -1536,54 +2158,62 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
 /// Prints a map_entries map type from its numeric value out into its string
 /// format.
 static void printMapClause(OpAsmPrinter &p, Operation *op,
-                           IntegerAttr mapType) {
-  uint64_t mapTypeBits = mapType.getUInt();
-
-  bool emitAllocRelease = true;
+                           ClauseMapFlagsAttr mapType) {
   llvm::SmallVector<std::string, 4> mapTypeStrs;
+  ClauseMapFlags mapFlags = mapType.getValue();
 
   // handling of always, close, present placed at the beginning of the string
   // to aid readability
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::always))
     mapTypeStrs.push_back("always");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::implicit))
     mapTypeStrs.push_back("implicit");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ompx_hold))
     mapTypeStrs.push_back("ompx_hold");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::close))
     mapTypeStrs.push_back("close");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
   // both the to and from flag to be set.
-  bool to = mapTypeToBitFlag(mapTypeBits,
-                             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-  bool from = mapTypeToBitFlag(
-      mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-  if (to && from) {
-    emitAllocRelease = false;
+  bool to = mapTypeToBool(mapFlags, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapFlags, ClauseMapFlags::from);
+
+  if (to && from)
     mapTypeStrs.push_back("tofrom");
-  } else if (from) {
-    emitAllocRelease = false;
+  else if (from)
     mapTypeStrs.push_back("from");
-  } else if (to) {
-    emitAllocRelease = false;
+  else if (to)
     mapTypeStrs.push_back("to");
-  }
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)) {
-    emitAllocRelease = false;
+
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::del))
     mapTypeStrs.push_back("delete");
-  }
-  if (emitAllocRelease)
-    mapTypeStrs.push_back("exit_release_or_enter_alloc");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::return_param))
+    mapTypeStrs.push_back("return_param");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::storage))
+    mapTypeStrs.push_back("storage");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::priv))
+    mapTypeStrs.push_back("private");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::literal))
+    mapTypeStrs.push_back("literal");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach))
+    mapTypeStrs.push_back("attach");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_always))
+    mapTypeStrs.push_back("attach_always");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_never))
+    mapTypeStrs.push_back("attach_never");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_auto))
+    mapTypeStrs.push_back("attach_auto");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr))
+    mapTypeStrs.push_back("ref_ptr");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
+    mapTypeStrs.push_back("ref_ptee");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
+    mapTypeStrs.push_back("is_device_ptr");
+  if (mapFlags == ClauseMapFlags::none)
+    mapTypeStrs.push_back("none");
 
   for (unsigned int i = 0; i < mapTypeStrs.size(); ++i) {
     p << mapTypeStrs[i];
@@ -1686,23 +2316,17 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
-      uint64_t mapTypeBits = mapInfoOp.getMapType();
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
+      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
 
-      bool to = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-      bool from = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-      bool del = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
 
-      bool always = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
-      bool close = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-      bool implicit = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+      bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
 
       if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
@@ -1722,10 +2346,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
                            "specified, other map types are not permitted");
         }
 
-        if (!to && !from) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
+        if (!to && !from && !attach) {
+          return emitError(
+              op->getLoc(),
+              "at least one of to or from or attach map types must be "
+              "specified, other map types are not permitted");
         }
 
         auto updateVar = mapInfoOp.getVarPtr();
@@ -1743,7 +2368,20 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
               "present, mapper and iterator map type modifiers are permitted");
         }
 
-        to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+        // It's possible we have an attach map, in which case if there is no to
+        // or from tied to it, we skip insertion.
+        if (to || from) {
+          to ? updateToVars.insert(updateVar)
+             : updateFromVars.insert(updateVar);
+        }
+      }
+
+      if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+          (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+        return emitError(
+            op->getLoc(),
+            "if varPtrPtr or varPtrPtrType is specified, then both "
+            "must be present");
       }
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
@@ -1753,6 +2391,9 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
 
   return success();
 }
+
+template <typename OpType>
+static LogicalResult verifyPrivateVarList(OpType &op);
 
 static LogicalResult verifyPrivateVarsMapping(TargetOp targetOp) {
   std::optional<DenseI64ArrayAttr> privateMapIndices =
@@ -1776,12 +2417,26 @@ static LogicalResult verifyPrivateVarsMapping(TargetOp targetOp) {
 // MapInfoOp
 //===----------------------------------------------------------------------===//
 
+static LogicalResult verifyMapInfoDefinedArgs(Operation *op,
+                                              StringRef clauseName,
+                                              OperandRange vars) {
+  for (Value var : vars)
+    if (!llvm::isa_and_present<MapInfoOp>(var.getDefiningOp()))
+      return op->emitOpError()
+             << "'" << clauseName
+             << "' arguments must be defined by 'omp.map.info' ops";
+  return success();
+}
+
 LogicalResult MapInfoOp::verify() {
   if (getMapperId() &&
       !SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
           *this, getMapperIdAttr())) {
     return emitError("invalid mapper id");
   }
+
+  if (failed(verifyMapInfoDefinedArgs(*this, "members", getMembers())))
+    return failure();
 
   return success();
 }
@@ -1804,6 +2459,15 @@ LogicalResult TargetDataOp::verify() {
                        "At least one of map, use_device_ptr_vars, or "
                        "use_device_addr_vars operand must be present");
   }
+
+  if (failed(verifyMapInfoDefinedArgs(*this, "use_device_ptr",
+                                      getUseDevicePtrVars())))
+    return failure();
+
+  if (failed(verifyMapInfoDefinedArgs(*this, "use_device_addr",
+                                      getUseDeviceAddrVars())))
+    return failure();
+
   return verifyMapClause(*this, getMapVars());
 }
 
@@ -1815,15 +2479,17 @@ void TargetEnterDataOp::build(
     OpBuilder &builder, OperationState &state,
     const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TargetEnterDataOp::build(builder, state,
-                           makeArrayAttr(ctx, clauses.dependKinds),
-                           clauses.dependVars, clauses.device, clauses.ifExpr,
-                           clauses.mapVars, clauses.nowait);
+  TargetEnterDataOp::build(
+      builder, state, makeArrayAttr(ctx, clauses.dependKinds),
+      clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
+      clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
+      clauses.nowait);
 }
 
 LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -1835,15 +2501,17 @@ LogicalResult TargetEnterDataOp::verify() {
 void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
                              const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TargetExitDataOp::build(builder, state,
-                          makeArrayAttr(ctx, clauses.dependKinds),
-                          clauses.dependVars, clauses.device, clauses.ifExpr,
-                          clauses.mapVars, clauses.nowait);
+  TargetExitDataOp::build(
+      builder, state, makeArrayAttr(ctx, clauses.dependKinds),
+      clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
+      clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
+      clauses.nowait);
 }
 
 LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -1856,13 +2524,16 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                            const TargetEnterExitUpdateDataOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   TargetUpdateOp::build(builder, state, makeArrayAttr(ctx, clauses.dependKinds),
-                        clauses.dependVars, clauses.device, clauses.ifExpr,
+                        clauses.dependVars,
+                        makeArrayAttr(ctx, clauses.dependIteratedKinds),
+                        clauses.dependIterated, clauses.device, clauses.ifExpr,
                         clauses.mapVars, clauses.nowait);
 }
 
 LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
   return failed(verifyDependVars) ? verifyDependVars
                                   : verifyMapClause(*this, getMapVars());
 }
@@ -1876,28 +2547,41 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
   // inReductionByref, inReductionSyms.
-  TargetOp::build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
-                  clauses.bare, makeArrayAttr(ctx, clauses.dependKinds),
-                  clauses.dependVars, clauses.device, clauses.hasDeviceAddrVars,
-                  clauses.hostEvalVars, clauses.ifExpr,
-                  /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
-                  /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars,
-                  clauses.mapVars, clauses.nowait, clauses.privateVars,
-                  makeArrayAttr(ctx, clauses.privateSyms), clauses.threadLimit,
-                  /*private_maps=*/nullptr);
+  TargetOp::build(
+      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
+      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
+      clauses.device, clauses.dynGroupprivateAccessGroup,
+      clauses.dynGroupprivateFallback, clauses.dynGroupprivateSize,
+      clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
+      /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
+      /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
+      clauses.nowait, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      clauses.threadLimitVars,
+      /*private_maps=*/nullptr);
 }
 
 LogicalResult TargetOp::verify() {
-  LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
+  if (failed(verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                                 getDependIteratedKinds(),
+                                 getDependIterated())))
+    return failure();
 
-  if (failed(verifyDependVars))
-    return verifyDependVars;
+  if (failed(verifyMapInfoDefinedArgs(*this, "has_device_addr",
+                                      getHasDeviceAddrVars())))
+    return failure();
 
-  LogicalResult verifyMapVars = verifyMapClause(*this, getMapVars());
+  if (failed(verifyMapClause(*this, getMapVars())))
+    return failure();
 
-  if (failed(verifyMapVars))
-    return verifyMapVars;
+  if (failed(verifyDynGroupprivateClause(
+          *this, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
+    return failure();
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
 
   return verifyPrivateVarsMapping(*this);
 }
@@ -1908,25 +2592,26 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
+  bool hostEvalTripCount;
   Operation *capturedOp = getInnermostCapturedOmpOp();
-  TargetRegionFlags execFlags = getKernelExecFlags(capturedOp);
+  TargetExecMode execMode = getKernelExecFlags(capturedOp, &hostEvalTripCount);
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
-        if (llvm::is_contained({teamsOp.getNumTeamsLower(),
-                                teamsOp.getNumTeamsUpper(),
-                                teamsOp.getThreadLimit()},
-                               hostEvalArg))
+        // Check if used in num_teams_lower or any of num_teams_upper_vars
+        if (hostEvalArg == teamsOp.getNumTeamsLower() ||
+            llvm::is_contained(teamsOp.getNumTeamsUpperVars(), hostEvalArg) ||
+            llvm::is_contained(teamsOp.getThreadLimitVars(), hostEvalArg))
           continue;
 
         return emitOpError() << "host_eval argument only legal as 'num_teams' "
                                 "and 'thread_limit' in 'omp.teams'";
       }
       if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
-        if (bitEnumContainsAny(execFlags, TargetRegionFlags::spmd) &&
+        if (execMode == TargetExecMode::spmd &&
             parallelOp->isAncestor(capturedOp) &&
-            hostEvalArg == parallelOp.getNumThreads())
+            llvm::is_contained(parallelOp.getNumThreadsVars(), hostEvalArg))
           continue;
 
         return emitOpError()
@@ -1934,8 +2619,7 @@ LogicalResult TargetOp::verifyRegions() {
                   "'omp.parallel' when representing target SPMD";
       }
       if (auto loopNestOp = dyn_cast<LoopNestOp>(user)) {
-        if (bitEnumContainsAny(execFlags, TargetRegionFlags::trip_count) &&
-            loopNestOp.getOperation() == capturedOp &&
+        if (hostEvalTripCount && loopNestOp.getOperation() == capturedOp &&
             (llvm::is_contained(loopNestOp.getLoopLowerBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopUpperBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopSteps(), hostEvalArg)))
@@ -2040,7 +2724,34 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
       });
 }
 
-TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
+/// Check if we can promote SPMD kernel to No-Loop kernel.
+static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
+                               WsloopOp *wsLoopOp) {
+  // num_teams clause can break no-loop teams/threads assumption.
+  if (!teamsOp.getNumTeamsUpperVars().empty())
+    return false;
+
+  // Reduction kernels are slower in no-loop mode.
+  if (teamsOp.getNumReductionVars())
+    return false;
+  if (wsLoopOp->getNumReductionVars())
+    return false;
+
+  // Check if the user allows the promotion of kernels to no-loop mode.
+  OffloadModuleInterface offloadMod =
+      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
+  if (!offloadMod)
+    return false;
+  auto ompFlags = offloadMod.getFlags();
+  if (!ompFlags)
+    return false;
+  return ompFlags.getAssumeTeamsOversubscription() &&
+         ompFlags.getAssumeThreadsOversubscription();
+}
+
+TargetExecMode TargetOp::getKernelExecFlags(Operation *capturedOp,
+                                            bool *hostEvalTripCount) {
+  // TODO: Support detection of bare kernel mode.
   // A non-null captured op is only valid if it resides inside of a TargetOp
   // and is the result of calling getInnermostCapturedOmpOp() on it.
   TargetOp targetOp =
@@ -2049,9 +2760,12 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
           (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
          "unexpected captured op");
 
+  if (hostEvalTripCount)
+    *hostEvalTripCount = false;
+
   // If it's not capturing a loop, it's a default target region.
   if (!isa_and_present<LoopNestOp>(capturedOp))
-    return TargetRegionFlags::generic;
+    return TargetExecMode::generic;
 
   // Get the innermost non-simd loop wrapper.
   SmallVector<LoopWrapperInterface> loopWrappers;
@@ -2064,79 +2778,63 @@ TargetRegionFlags TargetOp::getKernelExecFlags(Operation *capturedOp) {
 
   auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
   if (numWrappers != 1 && numWrappers != 2)
-    return TargetRegionFlags::generic;
+    return TargetExecMode::generic;
 
   // Detect target-teams-distribute-parallel-wsloop[-simd].
   if (numWrappers == 2) {
-    if (!isa<WsloopOp>(innermostWrapper))
-      return TargetRegionFlags::generic;
+    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
+    if (!wsloopOp)
+      return TargetExecMode::generic;
 
     innermostWrapper = std::next(innermostWrapper);
     if (!isa<DistributeOp>(innermostWrapper))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     Operation *parallelOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
-    Operation *teamsOp = parallelOp->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
-      return TargetRegionFlags::generic;
+    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
+    if (!teamsOp)
+      return TargetExecMode::generic;
 
-    if (teamsOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+    if (teamsOp->getParentOp() == targetOp.getOperation()) {
+      TargetExecMode result = TargetExecMode::spmd;
+      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
+        result = TargetExecMode::no_loop;
+      if (hostEvalTripCount)
+        *hostEvalTripCount = true;
+      return result;
+    }
   }
   // Detect target-teams-distribute[-simd] and target-teams-loop.
   else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
     Operation *teamsOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<TeamsOp>(teamsOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     if (teamsOp->getParentOp() != targetOp.getOperation())
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
+
+    if (hostEvalTripCount)
+      *hostEvalTripCount = true;
 
     if (isa<LoopOp>(innermostWrapper))
-      return TargetRegionFlags::spmd | TargetRegionFlags::trip_count;
+      return TargetExecMode::spmd;
 
-    // Find single immediately nested captured omp.parallel and add spmd flag
-    // (generic-spmd case).
-    //
-    // TODO: This shouldn't have to be done here, as it is too easy to break.
-    // The openmp-opt pass should be updated to be able to promote kernels like
-    // this from "Generic" to "Generic-SPMD". However, the use of the
-    // `kmpc_distribute_static_loop` family of functions produced by the
-    // OMPIRBuilder for these kernels prevents that from working.
-    Dialect *ompDialect = targetOp->getDialect();
-    Operation *nestedCapture = findCapturedOmpOp(
-        capturedOp, /*checkSingleMandatoryExec=*/false,
-        [&](Operation *sibling) {
-          return sibling && (ompDialect != sibling->getDialect() ||
-                             sibling->hasTrait<OpTrait::IsTerminator>());
-        });
-
-    TargetRegionFlags result =
-        TargetRegionFlags::generic | TargetRegionFlags::trip_count;
-
-    if (!nestedCapture)
-      return result;
-
-    while (nestedCapture->getParentOp() != capturedOp)
-      nestedCapture = nestedCapture->getParentOp();
-
-    return isa<ParallelOp>(nestedCapture) ? result | TargetRegionFlags::spmd
-                                          : result;
+    return TargetExecMode::generic;
   }
   // Detect target-parallel-wsloop[-simd].
   else if (isa<WsloopOp>(innermostWrapper)) {
     Operation *parallelOp = (*innermostWrapper)->getParentOp();
     if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetRegionFlags::generic;
+      return TargetExecMode::generic;
 
     if (parallelOp->getParentOp() == targetOp.getOperation())
-      return TargetRegionFlags::spmd;
+      return TargetExecMode::spmd;
   }
 
-  return TargetRegionFlags::generic;
+  return TargetExecMode::generic;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2147,8 +2845,10 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
                     /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
-                    /*num_threads=*/nullptr, /*private_vars=*/ValueRange(),
-                    /*private_syms=*/nullptr, /*proc_bind_kind=*/nullptr,
+                    /*num_threads_vars=*/ValueRange(),
+                    /*private_vars=*/ValueRange(),
+                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    /*proc_bind_kind=*/nullptr,
                     /*reduction_mod =*/nullptr, /*reduction_vars=*/ValueRange(),
                     /*reduction_byref=*/nullptr, /*reduction_syms=*/nullptr);
   state.addAttributes(attributes);
@@ -2158,10 +2858,10 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.ifExpr, clauses.numThreads, clauses.privateVars,
+                    clauses.ifExpr, clauses.numThreadsVars, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
-                    clauses.procBindKind, clauses.reductionMod,
-                    clauses.reductionVars,
+                    clauses.privateNeedsBarrier, clauses.procBindKind,
+                    clauses.reductionMod, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms));
 }
@@ -2265,14 +2965,34 @@ static bool opInGlobalImplicitParallelRegion(Operation *op) {
 void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms.
-  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                 clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
-                 /*private_vars=*/{}, /*private_syms=*/nullptr,
-                 clauses.reductionMod, clauses.reductionVars,
-                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                 makeArrayAttr(ctx, clauses.reductionSyms),
-                 clauses.threadLimit);
+  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
+  TeamsOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
+      clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
+      clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
+      /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+      clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
+}
+
+// Verify num_teams clause
+static LogicalResult verifyNumTeamsClause(Operation *op, Value numTeamsLower,
+                                          OperandRange numTeamsUpperVars) {
+  // If lower is specified, upper must have exactly one value
+  if (numTeamsLower) {
+    if (numTeamsUpperVars.size() != 1)
+      return op->emitError(
+          "expected exactly one num_teams upper bound when lower bound is "
+          "specified");
+    if (numTeamsLower.getType() != numTeamsUpperVars[0].getType())
+      return op->emitError(
+          "expected num_teams upper bound and lower bound to be "
+          "the same type");
+  }
+
+  return success();
 }
 
 LogicalResult TeamsOp::verify() {
@@ -2288,20 +3008,22 @@ LogicalResult TeamsOp::verify() {
                      "in any OpenMP dialect operations");
 
   // Check for num_teams clause restrictions
-  if (auto numTeamsLowerBound = getNumTeamsLower()) {
-    auto numTeamsUpperBound = getNumTeamsUpper();
-    if (!numTeamsUpperBound)
-      return emitError("expected num_teams upper bound to be defined if the "
-                       "lower bound is defined");
-    if (numTeamsLowerBound.getType() != numTeamsUpperBound.getType())
-      return emitError(
-          "expected num_teams upper bound and lower bound to be the same type");
-  }
+  if (failed(verifyNumTeamsClause(op, this->getNumTeamsLower(),
+                                  this->getNumTeamsUpperVars())))
+    return failure();
 
   // Check for allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyDynGroupprivateClause(
+          op, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
+    return failure();
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
@@ -2326,11 +3048,11 @@ OperandRange SectionOp::getReductionVars() {
 void SectionsOp::build(OpBuilder &builder, OperationState &state,
                        const SectionsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms.
+  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SectionsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                     clauses.nowait, /*private_vars=*/{},
-                    /*private_syms=*/nullptr, clauses.reductionMod,
-                    clauses.reductionVars,
+                    /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
+                    clauses.reductionMod, clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms));
 }
@@ -2356,17 +3078,46 @@ LogicalResult SectionsOp::verifyRegions() {
 }
 
 //===----------------------------------------------------------------------===//
+// ScopeOp
+//===----------------------------------------------------------------------===//
+
+void ScopeOp::build(OpBuilder &builder, OperationState &state,
+                    const ScopeOperands &clauses) {
+  MLIRContext *ctx = builder.getContext();
+  ScopeOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 clauses.nowait, clauses.privateVars,
+                 makeArrayAttr(ctx, clauses.privateSyms),
+                 clauses.privateNeedsBarrier, clauses.reductionMod,
+                 clauses.reductionVars,
+                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                 makeArrayAttr(ctx, clauses.reductionSyms));
+}
+
+LogicalResult ScopeOp::verify() {
+  if (getAllocateVars().size() != getAllocatorVars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
+                                getReductionByref());
+}
+
+//===----------------------------------------------------------------------===//
 // SingleOp
 //===----------------------------------------------------------------------===//
 
 void SingleOp::build(OpBuilder &builder, OperationState &state,
                      const SingleOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms.
+  // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SingleOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
                   clauses.copyprivateVars,
                   makeArrayAttr(ctx, clauses.copyprivateSyms), clauses.nowait,
-                  /*private_vars=*/{}, /*private_syms=*/nullptr);
+                  /*private_vars=*/{}, /*private_syms=*/nullptr,
+                  /*private_needs_barrier=*/nullptr);
 }
 
 LogicalResult SingleOp::verify() {
@@ -2442,13 +3193,17 @@ void LoopOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
 
   LoopOp::build(builder, state, clauses.bindKind, clauses.privateVars,
-                makeArrayAttr(ctx, clauses.privateSyms), clauses.order,
-                clauses.orderMod, clauses.reductionMod, clauses.reductionVars,
+                makeArrayAttr(ctx, clauses.privateSyms),
+                clauses.privateNeedsBarrier, clauses.order, clauses.orderMod,
+                clauses.reductionMod, clauses.reductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                 makeArrayAttr(ctx, clauses.reductionSyms));
 }
 
 LogicalResult LoopOp::verify() {
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
 }
@@ -2469,8 +3224,10 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ArrayRef<NamedAttribute> attributes) {
   build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
+        /*linear_var_types*/ nullptr, /*linear_modifiers=*/nullptr,
         /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
         /*ordered=*/nullptr, /*private_vars=*/{}, /*private_syms=*/nullptr,
+        /*private_needs_barrier=*/false,
         /*reduction_mod=*/nullptr, /*reduction_vars=*/ValueRange(),
         /*reduction_byref=*/nullptr,
         /*reduction_syms=*/nullptr, /*schedule_kind=*/nullptr,
@@ -2482,21 +3239,30 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      const WsloopOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO: Store clauses in op: allocateVars, allocatorVars, privateVars,
-  // privateSyms.
-  WsloopOp::build(builder, state,
-                  /*allocate_vars=*/{}, /*allocator_vars=*/{},
-                  clauses.linearVars, clauses.linearStepVars, clauses.nowait,
-                  clauses.order, clauses.orderMod, clauses.ordered,
-                  clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-                  clauses.reductionMod, clauses.reductionVars,
-                  makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                  makeArrayAttr(ctx, clauses.reductionSyms),
-                  clauses.scheduleKind, clauses.scheduleChunk,
-                  clauses.scheduleMod, clauses.scheduleSimd);
+  // TODO: Store clauses in op: allocateVars, allocatorVars
+  WsloopOp::build(
+      builder, state,
+      /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.linearVars,
+      clauses.linearStepVars, clauses.linearVarTypes, clauses.linearModifiers,
+      clauses.nowait, clauses.order, clauses.orderMod, clauses.ordered,
+      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.scheduleKind,
+      clauses.scheduleChunk, clauses.scheduleMod, clauses.scheduleSimd);
 }
 
 LogicalResult WsloopOp::verify() {
+  if (failed(
+          verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars())))
+    return failure();
+  if (getLinearVars().size() &&
+      getLinearVarTypes().value().size() != getLinearVars().size())
+    return emitError() << "Ill-formed type attributes for linear variables";
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
 }
@@ -2533,14 +3299,14 @@ LogicalResult WsloopOp::verifyRegions() {
 void SimdOp::build(OpBuilder &builder, OperationState &state,
                    const SimdOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: linearVars, linearStepVars, privateVars,
-  // privateSyms.
   SimdOp::build(builder, state, clauses.alignedVars,
                 makeArrayAttr(ctx, clauses.alignments), clauses.ifExpr,
-                /*linear_vars=*/{}, /*linear_step_vars=*/{},
+                clauses.linearVars, clauses.linearStepVars,
+                clauses.linearVarTypes, clauses.linearModifiers,
                 clauses.nontemporalVars, clauses.order, clauses.orderMod,
                 clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-                clauses.reductionMod, clauses.reductionVars,
+                clauses.privateNeedsBarrier, clauses.reductionMod,
+                clauses.reductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                 makeArrayAttr(ctx, clauses.reductionSyms), clauses.safelen,
                 clauses.simdlen);
@@ -2559,6 +3325,10 @@ LogicalResult SimdOp::verify() {
   if (verifyNontemporalClause(*this, getNontemporalVars()).failed())
     return failure();
 
+  if (failed(
+          verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars())))
+    return failure();
+
   bool isCompositeChildLeaf =
       llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp());
 
@@ -2570,6 +3340,29 @@ LogicalResult SimdOp::verify() {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
 
+  // Firstprivate is not allowed for SIMD in the standard. Check that none of
+  // the private decls are for firstprivate.
+  std::optional<ArrayAttr> privateSyms = getPrivateSyms();
+  if (privateSyms) {
+    for (const Attribute &sym : *privateSyms) {
+      auto symRef = cast<SymbolRefAttr>(sym);
+      omp::PrivateClauseOp privatizer =
+          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+              getOperation(), symRef);
+      if (!privatizer)
+        return emitError() << "Cannot find privatizer '" << symRef << "'";
+      if (privatizer.getDataSharingType() ==
+          DataSharingClauseType::FirstPrivate)
+        return emitError() << "FIRSTPRIVATE cannot be used with SIMD";
+    }
+  }
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  if (getLinearVars().size() &&
+      getLinearVarTypes().value().size() != getLinearVars().size())
+    return emitError() << "Ill-formed type attributes for linear variables";
   return success();
 }
 
@@ -2590,7 +3383,8 @@ void DistributeOp::build(OpBuilder &builder, OperationState &state,
                       clauses.allocatorVars, clauses.distScheduleStatic,
                       clauses.distScheduleChunkSize, clauses.order,
                       clauses.orderMod, clauses.privateVars,
-                      makeArrayAttr(builder.getContext(), clauses.privateSyms));
+                      makeArrayAttr(builder.getContext(), clauses.privateSyms),
+                      clauses.privateNeedsBarrier);
 }
 
 LogicalResult DistributeOp::verify() {
@@ -2601,6 +3395,9 @@ LogicalResult DistributeOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
 
   return success();
 }
@@ -2739,24 +3536,31 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                clauses.final, clauses.ifExpr, clauses.inReductionVars,
-                makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-                makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
-                clauses.priority, /*private_vars=*/clauses.privateVars,
-                /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
-                clauses.untied, clauses.eventHandle);
+  TaskOp::build(
+      builder, state, clauses.iterated, clauses.affinityVars,
+      clauses.allocateVars, clauses.allocatorVars,
+      makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+      makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
+      clauses.final, clauses.ifExpr, clauses.inReductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+      clauses.priority, /*private_vars=*/clauses.privateVars,
+      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, clauses.untied, clauses.eventHandle);
 }
 
 LogicalResult TaskOp::verify() {
   LogicalResult verifyDependVars =
-      verifyDependVarList(*this, getDependKinds(), getDependVars());
-  return failed(verifyDependVars)
-             ? verifyDependVars
-             : verifyReductionVarList(*this, getInReductionSyms(),
-                                      getInReductionVars(),
-                                      getInReductionByref());
+      verifyDependVarList(*this, getDependKinds(), getDependVars(),
+                          getDependIteratedKinds(), getDependIterated());
+  if (failed(verifyDependVars))
+    return verifyDependVars;
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  return verifyReductionVarList(*this, getInReductionSyms(),
+                                getInReductionVars(), getInReductionByref());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2779,30 +3583,41 @@ LogicalResult TaskgroupOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TaskloopOp
+// TaskloopContextOp
 //===----------------------------------------------------------------------===//
 
-void TaskloopOp::build(OpBuilder &builder, OperationState &state,
-                       const TaskloopOperands &clauses) {
+void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopContextOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: privateVars, privateSyms.
-  TaskloopOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                    clauses.final, clauses.grainsizeMod, clauses.grainsize,
-                    clauses.ifExpr, clauses.inReductionVars,
-                    makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
-                    makeArrayAttr(ctx, clauses.inReductionSyms),
-                    clauses.mergeable, clauses.nogroup, clauses.numTasksMod,
-                    clauses.numTasks, clauses.priority, /*private_vars=*/{},
-                    /*private_syms=*/nullptr, clauses.reductionMod,
-                    clauses.reductionVars,
-                    makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-                    makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
+  TaskloopContextOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      clauses.final, clauses.grainsizeMod, clauses.grainsize, clauses.ifExpr,
+      clauses.inReductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
+      clauses.nogroup, clauses.numTasksMod, clauses.numTasks, clauses.priority,
+      /*private_vars=*/clauses.privateVars,
+      /*private_syms=*/makeArrayAttr(ctx, clauses.privateSyms),
+      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-LogicalResult TaskloopOp::verify() {
+TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
+  return cast<TaskloopWrapperOp>(
+      *llvm::find_if(getRegion().front(), [](mlir::Operation &op) {
+        return isa<TaskloopWrapperOp>(op);
+      }));
+}
+
+LogicalResult TaskloopContextOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   if (failed(verifyReductionVarList(*this, getReductionSyms(),
                                     getReductionVars(), getReductionByref())) ||
       failed(verifyReductionVarList(*this, getInReductionSyms(),
@@ -2828,7 +3643,78 @@ LogicalResult TaskloopOp::verify() {
   return success();
 }
 
-LogicalResult TaskloopOp::verifyRegions() {
+LogicalResult TaskloopContextOp::verifyRegions() {
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError() << "expected non-empty region";
+
+  auto count = llvm::count_if(region.front(), [](mlir::Operation &op) {
+    return isa<TaskloopWrapperOp>(op);
+  });
+  if (count != 1)
+    return emitOpError()
+           << "expected exactly 1 TaskloopWrapperOp directly nested in "
+              "the region, but "
+           << count << " were found";
+  TaskloopWrapperOp loopWrapperOp = getLoopOp();
+
+  auto loopNestOp = dyn_cast<LoopNestOp>(loopWrapperOp.getWrappedLoop());
+  // This will fail the verifier for TaskloopWrapperOp and print an error
+  // message there.
+  if (!loopNestOp)
+    return failure();
+
+  std::function<bool(Value)> isValidBoundValue = [&](Value value) -> bool {
+    Region *valueRegion = value.getParentRegion();
+    // A loop bound value defined outside of the taskloop context region is
+    // valid. A region is considered an ancestor of itself.
+    if (!region.isAncestor(valueRegion))
+      return true;
+
+    Operation *defOp = value.getDefiningOp();
+    if (!defOp || defOp->getNumRegions() != 0 || !isPure(defOp))
+      return false;
+
+    return llvm::all_of(defOp->getOperands(), isValidBoundValue);
+  };
+  auto hasUnsupportedTaskloopLocalBound = [&](OperandRange range) -> bool {
+    return llvm::any_of(range,
+                        [&](Value value) { return !isValidBoundValue(value); });
+  };
+
+  if (hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopLowerBounds()) ||
+      hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopUpperBounds()) ||
+      hasUnsupportedTaskloopLocalBound(loopNestOp.getLoopSteps())) {
+    return emitOpError()
+           << "expects loop bounds and steps to be defined outside of the "
+              "taskloop.context region or by pure, regionless operations "
+              "that do not depend on block arguments";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TaskloopWrapperOp
+//===----------------------------------------------------------------------===//
+
+void TaskloopWrapperOp::build(OpBuilder &builder, OperationState &state,
+                              const TaskloopWrapperOperands &clauses) {
+  TaskloopWrapperOp::build(builder, state);
+}
+
+TaskloopContextOp TaskloopWrapperOp::getTaskloopContext() {
+  return dyn_cast<TaskloopContextOp>(getOperation()->getParentOp());
+}
+
+LogicalResult TaskloopWrapperOp::verify() {
+  TaskloopContextOp context = getTaskloopContext();
+  if (!context)
+    return emitOpError() << "expected to be nested in a taskloop context op";
+  return success();
+}
+
+LogicalResult TaskloopWrapperOp::verifyRegions() {
   if (LoopWrapperInterface nested = getNestedWrapper()) {
     if (!isComposite())
       return emitError()
@@ -2867,16 +3753,45 @@ ParseResult LoopNestOp::parse(OpAsmParser &parser, OperationState &result) {
   for (auto &iv : ivs)
     iv.type = loopVarType;
 
+  auto *ctx = parser.getBuilder().getContext();
   // Parse "inclusive" flag.
   if (succeeded(parser.parseOptionalKeyword("inclusive")))
-    result.addAttribute("loop_inclusive",
-                        UnitAttr::get(parser.getBuilder().getContext()));
+    result.addAttribute("loop_inclusive", UnitAttr::get(ctx));
 
   // Parse step values.
   SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(), OpAsmParser::Delimiter::Paren))
     return failure();
+
+  // Parse collapse
+  int64_t value = 0;
+  if (!parser.parseOptionalKeyword("collapse") &&
+      (parser.parseLParen() || parser.parseInteger(value) ||
+       parser.parseRParen()))
+    return failure();
+  if (value > 1)
+    result.addAttribute(
+        "collapse_num_loops",
+        IntegerAttr::get(parser.getBuilder().getI64Type(), value));
+
+  // Parse tiles
+  SmallVector<int64_t> tiles;
+  auto parseTiles = [&]() -> ParseResult {
+    int64_t tile;
+    if (parser.parseInteger(tile))
+      return failure();
+    tiles.push_back(tile);
+    return success();
+  };
+
+  if (!parser.parseOptionalKeyword("tiles") &&
+      (parser.parseLParen() || parser.parseCommaSeparatedList(parseTiles) ||
+       parser.parseRParen()))
+    return failure();
+
+  if (tiles.size() > 0)
+    result.addAttribute("tile_sizes", DenseI64ArrayAttr::get(ctx, tiles));
 
   // Parse the body.
   Region *region = result.addRegion();
@@ -2901,14 +3816,23 @@ void LoopNestOp::print(OpAsmPrinter &p) {
   if (getLoopInclusive())
     p << "inclusive ";
   p << "step (" << getLoopSteps() << ") ";
+  if (int64_t numCollapse = getCollapseNumLoops())
+    if (numCollapse > 1)
+      p << "collapse(" << numCollapse << ") ";
+
+  if (const auto tiles = getTileSizes())
+    p << "tiles(" << tiles.value() << ") ";
+
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
 void LoopNestOp::build(OpBuilder &builder, OperationState &state,
                        const LoopNestOperands &clauses) {
-  LoopNestOp::build(builder, state, clauses.loopLowerBounds,
-                    clauses.loopUpperBounds, clauses.loopSteps,
-                    clauses.loopInclusive);
+  MLIRContext *ctx = builder.getContext();
+  LoopNestOp::build(builder, state, clauses.collapseNumLoops,
+                    clauses.loopLowerBounds, clauses.loopUpperBounds,
+                    clauses.loopSteps, clauses.loopInclusive,
+                    makeDenseI64ArrayAttr(ctx, clauses.tileSizes));
 }
 
 LogicalResult LoopNestOp::verify() {
@@ -2924,6 +3848,17 @@ LogicalResult LoopNestOp::verify() {
              << "range argument type does not match corresponding IV type";
   }
 
+  uint64_t numIVs = getIVs().size();
+
+  if (const auto &numCollapse = getCollapseNumLoops())
+    if (numCollapse > numIVs)
+      return emitOpError()
+             << "collapse value is larger than the number of loops";
+
+  if (const auto &tiles = getTileSizes())
+    if (tiles.value().size() > numIVs)
+      return emitOpError() << "too few canonical loops for tile dimensions";
+
   if (!llvm::dyn_cast_if_present<LoopWrapperInterface>((*this)->getParentOp()))
     return emitOpError() << "expects parent op to be a loop wrapper";
 
@@ -2938,6 +3873,528 @@ void LoopNestOp::gatherWrappers(
     wrappers.push_back(wrapper);
     parent = parent->getParentOp();
   }
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP canonical loop handling
+//===----------------------------------------------------------------------===//
+
+std::tuple<NewCliOp, OpOperand *, OpOperand *>
+mlir::omp ::decodeCli(Value cli) {
+
+  // Defining a CLI for a generated loop is optional; if there is none then
+  // there is no followup-tranformation
+  if (!cli)
+    return {{}, nullptr, nullptr};
+
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
+         "Unexpected type of cli");
+
+  NewCliOp create = cast<NewCliOp>(cli.getDefiningOp());
+  OpOperand *gen = nullptr;
+  OpOperand *cons = nullptr;
+  for (OpOperand &use : cli.getUses()) {
+    auto op = cast<LoopTransformationInterface>(use.getOwner());
+
+    unsigned opnum = use.getOperandNumber();
+    if (op.isGeneratee(opnum)) {
+      assert(!gen && "Each CLI may have at most one def");
+      gen = &use;
+    } else if (op.isApplyee(opnum)) {
+      assert(!cons && "Each CLI may have at most one consumer");
+      cons = &use;
+    } else {
+      llvm_unreachable("Unexpected operand for a CLI");
+    }
+  }
+
+  return {create, gen, cons};
+}
+
+void NewCliOp::build(::mlir::OpBuilder &odsBuilder,
+                     ::mlir::OperationState &odsState) {
+  odsState.addTypes(CanonicalLoopInfoType::get(odsBuilder.getContext()));
+}
+
+void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
+  Value result = getResult();
+  auto [newCli, gen, cons] = decodeCli(result);
+
+  // Structured binding `gen` cannot be captured in lambdas before C++20
+  OpOperand *generator = gen;
+
+  // Derive the CLI variable name from its generator:
+  //  * "canonloop" for omp.canonical_loop
+  //  * custom name for loop transformation generatees
+  //  * "cli" as fallback if no generator
+  //  * "_r<idx>" suffix for nested loops, where <idx> is the sequential order
+  //  at that level
+  //  * "_s<idx>" suffix for operations with multiple regions, where <idx> is
+  //  the index of that region
+  std::string cliName{"cli"};
+  if (gen) {
+    cliName =
+        TypeSwitch<Operation *, std::string>(gen->getOwner())
+            .Case([&](CanonicalLoopOp op) {
+              return generateLoopNestingName("canonloop", op);
+            })
+            .Case([&](UnrollHeuristicOp op) -> std::string {
+              llvm_unreachable("heuristic unrolling does not generate a loop");
+            })
+            .Case([&](FuseOp op) -> std::string {
+              unsigned opnum = generator->getOperandNumber();
+              // The position of the first loop to be fused is the same position
+              // as the resulting fused loop
+              if (op.getFirst().has_value() && opnum != op.getFirst().value())
+                return "canonloop_fuse";
+              else
+                return "fused";
+            })
+            .Case([&](TileOp op) -> std::string {
+              auto [generateesFirst, generateesCount] =
+                  op.getGenerateesODSOperandIndexAndLength();
+              unsigned firstGrid = generateesFirst;
+              unsigned firstIntratile = generateesFirst + generateesCount / 2;
+              unsigned end = generateesFirst + generateesCount;
+              unsigned opnum = generator->getOperandNumber();
+              // In the OpenMP apply and looprange clauses, indices are 1-based
+              if (firstGrid <= opnum && opnum < firstIntratile) {
+                unsigned gridnum = opnum - firstGrid + 1;
+                return ("grid" + Twine(gridnum)).str();
+              }
+              if (firstIntratile <= opnum && opnum < end) {
+                unsigned intratilenum = opnum - firstIntratile + 1;
+                return ("intratile" + Twine(intratilenum)).str();
+              }
+              llvm_unreachable("Unexpected generatee argument");
+            })
+            .DefaultUnreachable("TODO: Custom name for this operation");
+  }
+
+  setNameFn(result, cliName);
+}
+
+LogicalResult NewCliOp::verify() {
+  Value cli = getResult();
+
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
+         "Unexpected type of cli");
+
+  // Check that the CLI is used in at most generator and one consumer
+  OpOperand *gen = nullptr;
+  OpOperand *cons = nullptr;
+  for (mlir::OpOperand &use : cli.getUses()) {
+    auto op = cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+
+    unsigned opnum = use.getOperandNumber();
+    if (op.isGeneratee(opnum)) {
+      if (gen) {
+        InFlightDiagnostic error =
+            emitOpError("CLI must have at most one generator");
+        error.attachNote(gen->getOwner()->getLoc())
+            .append("first generator here:");
+        error.attachNote(use.getOwner()->getLoc())
+            .append("second generator here:");
+        return error;
+      }
+
+      gen = &use;
+    } else if (op.isApplyee(opnum)) {
+      if (cons) {
+        InFlightDiagnostic error =
+            emitOpError("CLI must have at most one consumer");
+        error.attachNote(cons->getOwner()->getLoc())
+            .append("first consumer here:")
+            .appendOp(*cons->getOwner(),
+                      OpPrintingFlags().printGenericOpForm());
+        error.attachNote(use.getOwner()->getLoc())
+            .append("second consumer here:")
+            .appendOp(*use.getOwner(), OpPrintingFlags().printGenericOpForm());
+        return error;
+      }
+
+      cons = &use;
+    } else {
+      llvm_unreachable("Unexpected operand for a CLI");
+    }
+  }
+
+  // If the CLI is source of a transformation, it must have a generator
+  if (cons && !gen) {
+    InFlightDiagnostic error = emitOpError("CLI has no generator");
+    error.attachNote(cons->getOwner()->getLoc())
+        .append("see consumer here: ")
+        .appendOp(*cons->getOwner(), OpPrintingFlags().printGenericOpForm());
+    return error;
+  }
+
+  return success();
+}
+
+void CanonicalLoopOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            Value tripCount) {
+  odsState.addOperands(tripCount);
+  odsState.addOperands(Value());
+  (void)odsState.addRegion();
+}
+
+void CanonicalLoopOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            Value tripCount, ::mlir::Value cli) {
+  odsState.addOperands(tripCount);
+  odsState.addOperands(cli);
+  (void)odsState.addRegion();
+}
+
+void CanonicalLoopOp::getAsmBlockNames(OpAsmSetBlockNameFn setNameFn) {
+  setNameFn(&getRegion().front(), "body_entry");
+}
+
+void CanonicalLoopOp::getAsmBlockArgumentNames(Region &region,
+                                               OpAsmSetValueNameFn setNameFn) {
+  std::string ivName = generateLoopNestingName("iv", *this);
+  setNameFn(region.getArgument(0), ivName);
+}
+
+void CanonicalLoopOp::print(OpAsmPrinter &p) {
+  if (getCli())
+    p << '(' << getCli() << ')';
+  p << ' ' << getInductionVar() << " : " << getInductionVar().getType()
+    << " in range(" << getTripCount() << ") ";
+
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
+                                         ::mlir::OperationState &result) {
+  CanonicalLoopInfoType cliType =
+      CanonicalLoopInfoType::get(parser.getContext());
+
+  // Parse (optional) omp.cli identifier
+  OpAsmParser::UnresolvedOperand cli;
+  SmallVector<mlir::Value, 1> cliOperand;
+  if (!parser.parseOptionalLParen()) {
+    if (parser.parseOperand(cli) ||
+        parser.resolveOperand(cli, cliType, cliOperand) || parser.parseRParen())
+      return failure();
+  }
+
+  // We derive the type of tripCount from inductionVariable. MLIR requires the
+  // type of tripCount to be known when calling resolveOperand so we have parse
+  // the type before processing the inductionVariable.
+  OpAsmParser::Argument inductionVariable;
+  OpAsmParser::UnresolvedOperand tripcount;
+  if (parser.parseArgument(inductionVariable, /*allowType*/ true) ||
+      parser.parseKeyword("in") || parser.parseKeyword("range") ||
+      parser.parseLParen() || parser.parseOperand(tripcount) ||
+      parser.parseRParen() ||
+      parser.resolveOperand(tripcount, inductionVariable.type, result.operands))
+    return failure();
+
+  // Parse the loop body.
+  Region *region = result.addRegion();
+  if (parser.parseRegion(*region, {inductionVariable}))
+    return failure();
+
+  // We parsed the cli operand forst, but because it is optional, it must be
+  // last in the operand list.
+  result.operands.append(cliOperand);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+LogicalResult CanonicalLoopOp::verify() {
+  // The region's entry must accept the induction variable
+  // It can also be empty if just created
+  if (!getRegion().empty()) {
+    Region &region = getRegion();
+    if (region.getNumArguments() != 1)
+      return emitOpError(
+          "Canonical loop region must have exactly one argument");
+
+    if (getInductionVar().getType() != getTripCount().getType())
+      return emitOpError(
+          "Region argument must be the same type as the trip count");
+  }
+
+  return success();
+}
+
+Value CanonicalLoopOp::getInductionVar() { return getRegion().getArgument(0); }
+
+std::pair<unsigned, unsigned>
+CanonicalLoopOp::getApplyeesODSOperandIndexAndLength() {
+  // No applyees
+  return {0, 0};
+}
+
+std::pair<unsigned, unsigned>
+CanonicalLoopOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_cli);
+}
+
+//===----------------------------------------------------------------------===//
+// UnrollHeuristicOp
+//===----------------------------------------------------------------------===//
+
+void UnrollHeuristicOp::build(::mlir::OpBuilder &odsBuilder,
+                              ::mlir::OperationState &odsState,
+                              ::mlir::Value cli) {
+  odsState.addOperands(cli);
+}
+
+void UnrollHeuristicOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult UnrollHeuristicOp::parse(::mlir::OpAsmParser &parser,
+                                           ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // Optional output loop (full unrolling has none)
+  if (!parser.parseOptionalArrow()) {
+    if (parser.parseLParen() || parser.parseRParen())
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
+// TileOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, TileOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+static ParseResult parseLoopTransformClis(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &generateesOperands,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &applyeesOperands) {
+  if (parser.parseOptionalLess()) {
+    // Syntax 1: generatees present
+
+    if (parser.parseOperandList(generateesOperands,
+                                mlir::OpAsmParser::Delimiter::Paren))
+      return failure();
+
+    if (parser.parseLess())
+      return failure();
+  } else {
+    // Syntax 2: generatees omitted
+  }
+
+  // Parse `<-` (`<` has already been parsed)
+  if (parser.parseMinus())
+    return failure();
+
+  if (parser.parseOperandList(applyeesOperands,
+                              mlir::OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  return success();
+}
+
+/// Check properties of the loop nest consisting of the transformation's
+/// applyees:
+/// 1. They are nested inside each other
+/// 2. They are perfectly nested
+///    (no code with side-effects in-between the loops)
+/// 3. They are rectangular
+///    (loop bounds are invariant in respect to the outer loops)
+///
+/// TODO: Generalize for LoopTransformationInterface.
+static LogicalResult checkApplyeesNesting(TileOp op) {
+  // Collect the loops from the nest
+  bool isOnlyCanonLoops = true;
+  SmallVector<CanonicalLoopOp> canonLoops;
+  for (Value applyee : op.getApplyees()) {
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!gen)
+      return op.emitOpError() << "applyee CLI has no generator";
+
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    canonLoops.push_back(loop);
+    if (!loop)
+      isOnlyCanonLoops = false;
+  }
+
+  // FIXME: We currently can only verify non-rectangularity and perfect nest of
+  // omp.canonical_loop.
+  if (!isOnlyCanonLoops)
+    return success();
+
+  DenseSet<Value> parentIVs;
+  for (auto i : llvm::seq<int>(1, canonLoops.size())) {
+    auto parentLoop = canonLoops[i - 1];
+    auto loop = canonLoops[i];
+
+    if (parentLoop.getOperation() != loop.getOperation()->getParentOp())
+      return op.emitOpError()
+             << "tiled loop nest must be nested within each other";
+
+    parentIVs.insert(parentLoop.getInductionVar());
+
+    // Canonical loop must be perfectly nested, i.e. the body of the parent must
+    // only contain the omp.canonical_loop of the nested loops, and
+    // omp.terminator
+    bool isPerfectlyNested = [&]() {
+      auto &parentBody = parentLoop.getRegion();
+      if (!parentBody.hasOneBlock())
+        return false;
+      auto &parentBlock = parentBody.getBlocks().front();
+
+      auto nestedLoopIt = parentBlock.begin();
+      if (nestedLoopIt == parentBlock.end() ||
+          (&*nestedLoopIt != loop.getOperation()))
+        return false;
+
+      auto termIt = std::next(nestedLoopIt);
+      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+        return false;
+
+      if (std::next(termIt) != parentBlock.end())
+        return false;
+
+      return true;
+    }();
+    if (!isPerfectlyNested)
+      return op.emitOpError() << "tiled loop nest must be perfectly nested";
+
+    if (parentIVs.contains(loop.getTripCount()))
+      return op.emitOpError() << "tiled loop nest must be rectangular";
+  }
+
+  // TODO: The tile sizes must be computed before the loop, but checking this
+  // requires dominance analysis. For instance:
+  //
+  //      %canonloop = omp.new_cli
+  //      omp.canonical_loop(%canonloop) %iv : i32 in range(%tc) {
+  //        // write to %x
+  //        omp.terminator
+  //      }
+  //      %ts = llvm.load %x
+  //      omp.tile <- (%canonloop) sizes(%ts : i32)
+
+  return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  return checkApplyeesNesting(*this);
+}
+
+std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
+}
+
+//===----------------------------------------------------------------------===//
+// FuseOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, FuseOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+LogicalResult FuseOp::verify() {
+  if (getApplyees().size() < 2)
+    return emitOpError() << "must apply to at least two loops";
+
+  if (getFirst().has_value() && getCount().has_value()) {
+    int64_t first = getFirst().value();
+    int64_t count = getCount().value();
+    if ((unsigned)(first + count - 1) > getApplyees().size())
+      return emitOpError() << "the numbers of applyees must be at least first "
+                              "minus one plus count attributes";
+    if (!getGeneratees().empty() &&
+        getGeneratees().size() != getApplyees().size() + 1 - count)
+      return emitOpError() << "the number of generatees must be the number of "
+                              "aplyees plus one minus count";
+
+  } else {
+    if (!getGeneratees().empty() && getGeneratees().size() != 1)
+      return emitOpError()
+             << "in a complete fuse the number of generatees must be exactly 1";
+  }
+  for (auto &&applyee : getApplyees()) {
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+  }
+  return success();
+}
+std::pair<unsigned, unsigned> FuseOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3038,7 +4495,8 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
                        const TaskwaitOperands &clauses) {
   // TODO Store clauses in op: dependKinds, dependVars, nowait.
   TaskwaitOp::build(builder, state, /*depend_kinds=*/nullptr,
-                    /*depend_vars=*/{}, /*nowait=*/nullptr);
+                    /*depend_vars=*/{}, /*depend_iterated_kinds=*/nullptr,
+                    /*depend_iterated=*/{}, /*nowait=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3049,11 +4507,19 @@ LogicalResult AtomicReadOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Release) {
-      return emitError(
-          "memory-order must not be acq_rel or release for atomic reads");
+    if (*mo == ClauseMemoryOrderKind::Release) {
+      return emitError("memory-order must not be release for atomic reads");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on read only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic reads");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -3067,11 +4533,19 @@ LogicalResult AtomicWriteOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic writes");
+    if (*mo == ClauseMemoryOrderKind::Acquire) {
+      return emitError("memory-order must not be acquire for atomic writes");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on write only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic writes");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -3099,11 +4573,18 @@ LogicalResult AtomicUpdateOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic updates");
+      // This restriction applies only to OpenMP 5.0; removed in 5.1.
+      if (version < 51)
+        return emitError(
+            "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
 
@@ -3150,6 +4631,32 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
       getSecondOp()->getAttr("memory_order"))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCompareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+  return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult AtomicCompareOp::verifyRegions() {
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
+
+  if (verifyOperator().failed())
+    return mlir::failure();
+
+  Block &block = getRegion().front();
+
+  Operation *terminator = block.getTerminator();
+  if (!terminator || !isa<YieldOp>(terminator))
+    return emitOpError("region must be terminated with omp.yield");
+
   return success();
 }
 
@@ -3217,7 +4724,8 @@ LogicalResult CancelOp::verify() {
     }
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
-      !mlir::isa<omp::TaskOp>(structuralParent)) {
+      (!mlir::isa<omp::TaskOp>(structuralParent) &&
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancel taskgroup must appear "
                          << "inside a task region";
   }
@@ -3258,7 +4766,8 @@ LogicalResult CancellationPointOp::verify() {
                          << "inside a sections region";
   }
   if ((cct == ClauseCancellationConstructType::Taskgroup) &&
-      !mlir::isa<omp::TaskOp>(structuralParent)) {
+      (!mlir::isa<omp::TaskOp>(structuralParent) &&
+       !mlir::isa<omp::TaskloopWrapperOp>(structuralParent->getParentOp()))) {
     return emitOpError() << "cancellation point taskgroup must appear "
                          << "inside a task region";
   }
@@ -3418,6 +4927,340 @@ LogicalResult ScanOp::verify() {
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
+}
+
+/// Verifies align clause in allocate directive
+LogicalResult verifyAlignment(Operation &op,
+                              std::optional<uint64_t> alignment) {
+  if (alignment.has_value()) {
+    if ((alignment.value() != 0) && !llvm::has_single_bit(alignment.value()))
+      return op.emitError()
+             << "ALIGN value : " << alignment.value() << " must be power of 2";
+  }
+  return success();
+}
+
+LogicalResult AllocateDirOp::verify() {
+  return verifyAlignment(*getOperation(), getAlign());
+}
+
+//===----------------------------------------------------------------------===//
+// AllocSharedMemOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AllocSharedMemOp::verify() {
+  return verifyAlignment(*getOperation(), getMemAlignment());
+}
+
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult FreeSharedMemOp::verify() {
+  return verifyAlignment(*getOperation(), getMemAlignment());
+}
+
+//===----------------------------------------------------------------------===//
+// WorkdistributeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WorkdistributeOp::verify() {
+  // Check that region exists and is not empty
+  Region &region = getRegion();
+  if (region.empty())
+    return emitOpError("region cannot be empty");
+  // Verify single entry point.
+  Block &entryBlock = region.front();
+  if (entryBlock.empty())
+    return emitOpError("region must contain a structured block");
+  // Verify single exit point.
+  bool hasTerminator = false;
+  for (Block &block : region) {
+    if (isa<TerminatorOp>(block.back())) {
+      if (hasTerminator) {
+        return emitOpError("region must have exactly one terminator");
+      }
+      hasTerminator = true;
+    }
+  }
+  if (!hasTerminator) {
+    return emitOpError("region must be terminated with omp.terminator");
+  }
+  auto walkResult = region.walk([&](Operation *op) -> WalkResult {
+    // No implicit barrier at end
+    if (isa<BarrierOp>(op)) {
+      return emitOpError(
+          "explicit barriers are not allowed in workdistribute region");
+    }
+    // Check for invalid nested constructs
+    if (isa<ParallelOp>(op)) {
+      return emitOpError(
+          "nested parallel constructs not allowed in workdistribute");
+    }
+    if (isa<TeamsOp>(op)) {
+      return emitOpError(
+          "nested teams constructs not allowed in workdistribute");
+    }
+    return WalkResult::advance();
+  });
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  Operation *parentOp = (*this)->getParentOp();
+  if (!llvm::dyn_cast<TeamsOp>(parentOp))
+    return emitOpError("workdistribute must be nested under teams");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Declare simd [7.7]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareSimdOp::verify() {
+  // Must be nested inside a function-like op
+  auto func =
+      dyn_cast_if_present<mlir::FunctionOpInterface>((*this)->getParentOp());
+  if (!func)
+    return emitOpError() << "must be nested inside a function";
+
+  if (getInbranch() && getNotinbranch())
+    return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
+
+  if (failed(verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars(),
+                                   /*isDeclareSimd=*/true)))
+    return failure();
+
+  return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
+}
+
+void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          const DeclareSimdOperands &clauses) {
+  MLIRContext *ctx = odsBuilder.getContext();
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.linearModifiers,
+                       clauses.notinbranch, clauses.simdlen,
+                       clauses.uniformVars);
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for Uniform Clause
+//===----------------------------------------------------------------------===//
+
+/// uniform ::= `uniform` `(` uniform-list `)`
+/// uniform-list := uniform-val (`,` uniform-val)*
+/// uniform-val := ssa-id `:` type
+static ParseResult
+parseUniformClause(OpAsmParser &parser,
+                   SmallVectorImpl<OpAsmParser::UnresolvedOperand> &uniformVars,
+                   SmallVectorImpl<Type> &uniformTypes) {
+  return parser.parseCommaSeparatedList([&]() -> mlir::ParseResult {
+    if (parser.parseOperand(uniformVars.emplace_back()) ||
+        parser.parseColonType(uniformTypes.emplace_back()))
+      return mlir::failure();
+    return mlir::success();
+  });
+}
+
+/// Print Uniform Clauses
+static void printUniformClause(OpAsmPrinter &p, Operation *op,
+                               ValueRange uniformVars, TypeRange uniformTypes) {
+  for (unsigned i = 0; i < uniformVars.size(); ++i) {
+    if (i != 0)
+      p << ", ";
+    p << uniformVars[i] << " : " << uniformTypes[i];
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for Affinity Clause
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseAffinityClause(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iterated,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<Type> &affinityVarTypes) {
+  if (failed(parseSplitIteratedList(
+          parser, iterated, iteratedTypes, affinityVars, affinityVarTypes,
+          /*parsePrefix=*/[&]() -> ParseResult { return success(); })))
+    return failure();
+  return success();
+}
+
+static void printAffinityClause(OpAsmPrinter &p, Operation *op,
+                                ValueRange iterated, ValueRange affinityVars,
+                                TypeRange iteratedTypes,
+                                TypeRange affinityVarTypes) {
+  auto nop = [&](Value, Type) {};
+  printSplitIteratedList(p, iterated, iteratedTypes, affinityVars,
+                         affinityVarTypes,
+                         /*plain prefix*/ nop,
+                         /*iterated prefix*/ nop);
+}
+
+//===----------------------------------------------------------------------===//
+// Parser, printer, and verifier for Iterator modifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parseIteratorHeader(OpAsmParser &parser, Region &region,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lbs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &ubs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+                    SmallVectorImpl<Type> &lbTypes,
+                    SmallVectorImpl<Type> &ubTypes,
+                    SmallVectorImpl<Type> &stepTypes) {
+
+  llvm::SMLoc ivLoc = parser.getCurrentLocation();
+  SmallVector<OpAsmParser::Argument> ivArgs;
+
+  // Parse induction variables: %i : i32, %j : i32
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::Argument &arg = ivArgs.emplace_back();
+        if (parser.parseArgument(arg))
+          return failure();
+
+        // Optional type, default to Index if not provided
+        if (succeeded(parser.parseOptionalColon())) {
+          if (parser.parseType(arg.type))
+            return failure();
+        } else {
+          arg.type = parser.getBuilder().getIndexType();
+        }
+        return success();
+      }))
+    return failure();
+
+  // ) = (
+  if (parser.parseRParen() || parser.parseEqual() || parser.parseLParen())
+    return failure();
+
+  // Parse Ranges: (%lb to %ub step %st, ...)
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        OpAsmParser::UnresolvedOperand lb, ub, st;
+        if (parser.parseOperand(lb) || parser.parseKeyword("to") ||
+            parser.parseOperand(ub) || parser.parseKeyword("step") ||
+            parser.parseOperand(st))
+          return failure();
+
+        lbs.push_back(lb);
+        ubs.push_back(ub);
+        steps.push_back(st);
+        return success();
+      }))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  if (ivArgs.size() != lbs.size())
+    return parser.emitError(ivLoc)
+           << "mismatch: " << ivArgs.size() << " variables but " << lbs.size()
+           << " ranges";
+
+  for (auto &arg : ivArgs) {
+    lbTypes.push_back(arg.type);
+    ubTypes.push_back(arg.type);
+    stepTypes.push_back(arg.type);
+  }
+
+  return parser.parseRegion(region, ivArgs);
+}
+
+static void printIteratorHeader(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange lbs, ValueRange ubs,
+                                ValueRange steps, TypeRange, TypeRange,
+                                TypeRange) {
+  Block &entry = region.front();
+
+  for (unsigned i = 0, e = entry.getNumArguments(); i < e; ++i) {
+    if (i != 0)
+      p << ", ";
+    p.printRegionArgument(entry.getArgument(i));
+  }
+  p << ") = (";
+
+  // (%lb0 to %ub0 step %step0, %lb1 to %ub1 step %step1, ...)
+  for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
+    if (i)
+      p << ", ";
+    p << lbs[i] << " to " << ubs[i] << " step " << steps[i];
+  }
+  p << ") ";
+
+  p.printRegion(region, /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+}
+
+LogicalResult IteratorOp::verify() {
+  auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
+  if (!iteratedTy)
+    return emitOpError() << "result must be omp.iterated<entry_ty>";
+
+  for (auto [lb, ub, step] : llvm::zip_equal(
+           getLoopLowerBounds(), getLoopUpperBounds(), getLoopSteps())) {
+    if (matchPattern(step, m_Zero()))
+      return emitOpError() << "loop step must not be zero";
+
+    IntegerAttr lbAttr;
+    IntegerAttr ubAttr;
+    IntegerAttr stepAttr;
+    if (!matchPattern(lb, m_Constant(&lbAttr)) ||
+        !matchPattern(ub, m_Constant(&ubAttr)) ||
+        !matchPattern(step, m_Constant(&stepAttr)))
+      continue;
+
+    const APInt &lbVal = lbAttr.getValue();
+    const APInt &ubVal = ubAttr.getValue();
+    const APInt &stepVal = stepAttr.getValue();
+    if (stepVal.isStrictlyPositive() && lbVal.sgt(ubVal))
+      return emitOpError() << "positive loop step requires lower bound to be "
+                              "less than or equal to upper bound";
+    if (stepVal.isNegative() && lbVal.slt(ubVal))
+      return emitOpError() << "negative loop step requires lower bound to be "
+                              "greater than or equal to upper bound";
+  }
+
+  Block &b = getRegion().front();
+  auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
+
+  if (!yield)
+    return emitOpError() << "region must be terminated by omp.yield";
+
+  if (yield.getNumOperands() != 1)
+    return emitOpError()
+           << "omp.yield in omp.iterator region must yield exactly one value";
+
+  mlir::Type yieldedTy = yield.getOperand(0).getType();
+  mlir::Type elemTy = iteratedTy.getElementType();
+
+  if (yieldedTy != elemTy)
+    return emitOpError() << "omp.iterated element type (" << elemTy
+                         << ") does not match omp.yield operand type ("
+                         << yieldedTy << ")";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GroupprivateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GroupprivateOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto *symbol = symbolTable.lookupNearestSymbolFrom(*this, getSymNameAttr());
+  if (!symbol)
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable";
+
+  if (isa<FunctionOpInterface>(symbol))
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable, not a function";
+
+  return success();
 }
 
 #define GET_ATTRDEF_CLASSES

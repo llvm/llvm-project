@@ -354,6 +354,70 @@ public:
   void print(AsmPrinter &printer);
 };
 
+/// Base class of traits for dynamic-defined operations.
+class DynamicOpTrait {
+public:
+  virtual LogicalResult verifyTrait(Operation *op) const { return success(); };
+  virtual LogicalResult verifyRegionTrait(Operation *op) const {
+    return success();
+  };
+
+  /// Returns the TypeID of the trait.
+  /// It must be equal to the TypeID of corresponding static trait
+  /// which will be used in `hasTrait(TypeID)`.
+  virtual TypeID getTypeID() const = 0;
+  virtual ~DynamicOpTrait() = default;
+};
+
+/// This class holds a list of traits for dynamic-defined operations.
+class DynamicOpTraitList {
+public:
+  bool insert(std::unique_ptr<DynamicOpTrait> trait) {
+    return traits.try_emplace(trait->getTypeID(), std::move(trait)).second;
+  }
+
+  bool contains(TypeID id) const { return traits.contains(id); }
+
+  LogicalResult verifyTraits(Operation *op) const {
+    for (const auto &[_, trait] : traits) {
+      if (failed(trait->verifyTrait(op)))
+        return failure();
+    }
+    return success();
+  }
+
+  LogicalResult verifyRegionTraits(Operation *op) const {
+    for (const auto &[_, trait] : traits) {
+      if (failed(trait->verifyRegionTrait(op)))
+        return failure();
+    }
+    return success();
+  }
+
+private:
+  llvm::MapVector<TypeID, std::unique_ptr<DynamicOpTrait>> traits;
+};
+
+template <template <typename T> class Trait>
+class DynamicOpTraitImpl : public DynamicOpTrait {
+public:
+  static TypeID getStaticTypeID() { return TypeID::get<Trait>(); }
+  TypeID getTypeID() const override { return getStaticTypeID(); }
+};
+
+namespace DynamicOpTraits {
+
+class IsTerminator : public DynamicOpTraitImpl<OpTrait::IsTerminator> {
+public:
+  LogicalResult verifyTrait(Operation *op) const override {
+    return OpTrait::impl::verifyIsTerminator(op);
+  }
+};
+
+class NoTerminator : public DynamicOpTraitImpl<OpTrait::NoTerminator> {};
+
+} // namespace DynamicOpTraits
+
 //===----------------------------------------------------------------------===//
 // Dynamic operation
 //===----------------------------------------------------------------------===//
@@ -437,6 +501,11 @@ public:
     populateDefaultAttrsFn = std::move(populateDefaultAttrs);
   }
 
+  /// Attach a trait to this dynamic-defined op.
+  bool addTrait(std::unique_ptr<DynamicOpTrait> trait) {
+    return traits.insert(std::move(trait));
+  }
+
   LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
                          SmallVectorImpl<OpFoldResult> &results) final {
     return foldHookFn(op, attrs, results);
@@ -445,7 +514,7 @@ public:
                                    MLIRContext *context) final {
     getCanonicalizationPatternsFn(set, context);
   }
-  bool hasTrait(TypeID id) final { return false; }
+  bool hasTrait(TypeID id) final { return traits.contains(id); }
   OperationName::ParseAssemblyFn getParseAssemblyFn() final {
     return [&](OpAsmParser &parser, OperationState &state) {
       return parseFn(parser, state);
@@ -459,9 +528,12 @@ public:
                      StringRef name) final {
     printFn(op, printer, name);
   }
-  LogicalResult verifyInvariants(Operation *op) final { return verifyFn(op); }
+  LogicalResult verifyInvariants(Operation *op) final {
+    return failure(failed(traits.verifyTraits(op)) || failed(verifyFn(op)));
+  }
   LogicalResult verifyRegionInvariants(Operation *op) final {
-    return verifyRegionFn(op);
+    return failure(failed(traits.verifyRegionTraits(op)) ||
+                   failed(verifyRegionFn(op)));
   }
 
   /// Implementation for properties (unsupported right now here).
@@ -479,23 +551,23 @@ public:
     return success();
   }
   int getOpPropertyByteSize() final { return 0; }
-  void initProperties(OperationName opName, OpaqueProperties storage,
-                      OpaqueProperties init) final {}
-  void deleteProperties(OpaqueProperties prop) final {}
+  void initProperties(OperationName opName, PropertyRef storage,
+                      PropertyRef init) final {}
+  void deleteProperties(PropertyRef prop) final {}
   void populateDefaultProperties(OperationName opName,
-                                 OpaqueProperties properties) final {}
+                                 PropertyRef properties) final {}
 
   LogicalResult
-  setPropertiesFromAttr(OperationName opName, OpaqueProperties properties,
+  setPropertiesFromAttr(OperationName opName, PropertyRef properties,
                         Attribute attr,
                         function_ref<InFlightDiagnostic()> emitError) final {
     emitError() << "extensible Dialects don't support properties";
     return failure();
   }
   Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
-  void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
-  bool compareProperties(OpaqueProperties, OpaqueProperties) final { return false; }
-  llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
+  void copyProperties(PropertyRef lhs, PropertyRef rhs) final {}
+  bool compareProperties(PropertyRef, PropertyRef) final { return true; }
+  llvm::hash_code hashProperties(PropertyRef prop) final { return {}; }
 
 private:
   DynamicOpDefinition(
@@ -518,6 +590,7 @@ private:
   OperationName::FoldHookFn foldHookFn;
   GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
   OperationName::PopulateDefaultAttrsFn populateDefaultAttrsFn;
+  DynamicOpTraitList traits;
 
   friend ExtensibleDialect;
 };

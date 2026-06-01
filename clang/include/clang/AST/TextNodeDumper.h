@@ -87,7 +87,7 @@ public:
       // Note that the first level gets no prefix.
       {
         OS << '\n';
-        ColorScope Color(OS, ShowColors, IndentColor);
+        ColorScope Color(OS, ShowColors, ASTDumpColor::Indent);
         OS << Prefix << (IsLastChild ? '`' : '|') << '-';
         if (!Label.empty())
           OS << Label << ": ";
@@ -208,10 +208,11 @@ public:
   void dumpType(QualType T);
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
+  void dumpFormalLinkage(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
-  void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void dumpNestedNameSpecifier(NestedNameSpecifier NNS);
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
@@ -255,6 +256,7 @@ public:
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
   void VisitPackTemplateArgument(const TemplateArgument &TA);
 
+  void VisitLoopControlStmt(const LoopControlStmt *L);
   void VisitIfStmt(const IfStmt *Node);
   void VisitSwitchStmt(const SwitchStmt *Node);
   void VisitWhileStmt(const WhileStmt *Node);
@@ -285,6 +287,7 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
   void VisitMemberExpr(const MemberExpr *Node);
   void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
+  void VisitMatrixElementExpr(const MatrixElementExpr *Node);
   void VisitBinaryOperator(const BinaryOperator *Node);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
   void VisitAddrLabelExpr(const AddrLabelExpr *Node);
@@ -341,6 +344,7 @@ public:
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T);
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
+  void VisitDeducedType(const DeducedType *T);
   void VisitAutoType(const AutoType *T);
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *T);
@@ -392,6 +396,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
   void VisitAccessSpecDecl(const AccessSpecDecl *D);
   void VisitFriendDecl(const FriendDecl *D);
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);
   void VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D);
@@ -408,6 +413,7 @@ public:
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitHLSLRootSignatureDecl(const HLSLRootSignatureDecl *D);
   void VisitHLSLOutArgExpr(const HLSLOutArgExpr *E);
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);

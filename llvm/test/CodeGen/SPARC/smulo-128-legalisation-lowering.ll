@@ -130,8 +130,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    xor %i0, %g4, %i0
 ; SPARC-NEXT:    xor %i5, %g4, %i4
 ; SPARC-NEXT:    or %i4, %i0, %i0
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    orcc %i0, %i1, %g0
 ; SPARC-NEXT:    bne .LBB0_2
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.1: ! %start

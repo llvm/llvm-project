@@ -24,7 +24,8 @@ namespace {
 
 /// Implement the interface to convert Func to EmitC.
 struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
-  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+  FuncToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
 
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
@@ -99,8 +100,8 @@ public:
     }
 
     // Create the converted `emitc.func` op.
-    emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(),
+    emitc::FuncOp newFuncOp = emitc::FuncOp::create(
+        rewriter, funcOp.getLoc(), funcOp.getName(),
         FunctionType::get(rewriter.getContext(),
                           signatureConverter.getConvertedTypes(),
                           resultType ? TypeRange(resultType) : TypeRange()));

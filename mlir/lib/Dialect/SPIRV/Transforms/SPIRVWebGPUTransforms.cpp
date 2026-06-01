@@ -64,16 +64,16 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
   //     and 4 additions after constant folding.
   //   - With sign-extended arguments, we end up emitting 8 multiplications and
   //     and 12 additions after CSE.
-  Value cstLowMask = rewriter.create<ConstantOp>(
-      loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
+  Value cstLowMask = ConstantOp::create(
+      rewriter, loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
   auto getLowDigit = [&rewriter, loc, cstLowMask](Value val) {
-    return rewriter.create<BitwiseAndOp>(loc, val, cstLowMask);
+    return BitwiseAndOp::create(rewriter, loc, val, cstLowMask);
   };
 
-  Value cst16 = rewriter.create<ConstantOp>(loc, lhs.getType(),
-                                            getScalarOrSplatAttr(argTy, 16));
+  Value cst16 = ConstantOp::create(rewriter, loc, lhs.getType(),
+                                   getScalarOrSplatAttr(argTy, 16));
   auto getHighDigit = [&rewriter, loc, cst16](Value val) {
-    return rewriter.create<ShiftRightLogicalOp>(loc, val, cst16);
+    return ShiftRightLogicalOp::create(rewriter, loc, val, cst16);
   };
 
   auto getSignDigit = [&rewriter, loc, cst16, &getHighDigit](Value val) {
@@ -82,11 +82,11 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
     // fine. We do not have to introduce an extra constant since any
     // value in [15, 32) would do.
     return getHighDigit(
-        rewriter.create<ShiftRightArithmeticOp>(loc, val, cst16));
+        ShiftRightArithmeticOp::create(rewriter, loc, val, cst16));
   };
 
-  Value cst0 = rewriter.create<ConstantOp>(loc, lhs.getType(),
-                                           getScalarOrSplatAttr(argTy, 0));
+  Value cst0 = ConstantOp::create(rewriter, loc, lhs.getType(),
+                                  getScalarOrSplatAttr(argTy, 0));
 
   Value lhsLow = getLowDigit(lhs);
   Value lhsHigh = getHighDigit(lhs);
@@ -108,7 +108,7 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
         continue;
 
       Value &thisResDigit = resultDigits[i + j];
-      Value mul = rewriter.create<IMulOp>(loc, lhsDigit, rhsDigit);
+      Value mul = IMulOp::create(rewriter, loc, lhsDigit, rhsDigit);
       Value current = rewriter.createOrFold<IAddOp>(loc, thisResDigit, mul);
       thisResDigit = getLowDigit(current);
 
@@ -122,14 +122,15 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
   }
 
   auto combineDigits = [loc, cst16, &rewriter](Value low, Value high) {
-    Value highBits = rewriter.create<ShiftLeftLogicalOp>(loc, high, cst16);
-    return rewriter.create<BitwiseOrOp>(loc, low, highBits);
+    Value highBits = ShiftLeftLogicalOp::create(rewriter, loc, high, cst16);
+    return BitwiseOrOp::create(rewriter, loc, low, highBits);
   };
   Value low = combineDigits(resultDigits[0], resultDigits[1]);
   Value high = combineDigits(resultDigits[2], resultDigits[3]);
 
-  return rewriter.create<CompositeConstructOp>(
-      loc, mulOp->getResultTypes().front(), llvm::ArrayRef({low, high}));
+  return CompositeConstructOp::create(rewriter, loc,
+                                      mulOp->getResultTypes().front(),
+                                      llvm::ArrayRef({low, high}));
 }
 
 //===----------------------------------------------------------------------===//
@@ -166,10 +167,11 @@ using ExpandSMulExtendedPattern =
 using ExpandUMulExtendedPattern =
     ExpandMulExtendedPattern<UMulExtendedOp, false>;
 
-struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
-  using OpRewritePattern<IAddCarryOp>::OpRewritePattern;
+template <typename Op, typename ArithOp>
+struct ExpandAddCarryOrSubBorrowPattern final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(IAddCarryOp op,
+  LogicalResult matchAndRewrite(Op op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value lhs = op.getOperand1();
@@ -184,26 +186,37 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
           loc,
           llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
 
-    Value one =
-        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 1));
-    Value zero =
-        rewriter.create<ConstantOp>(loc, argTy, getScalarOrSplatAttr(argTy, 0));
+    Value one = ConstantOp::create(rewriter, loc, argTy,
+                                   getScalarOrSplatAttr(argTy, 1));
+    Value zero = ConstantOp::create(rewriter, loc, argTy,
+                                    getScalarOrSplatAttr(argTy, 0));
 
-    // Calculate the carry by checking if the addition resulted in an overflow.
-    Value out = rewriter.create<IAddOp>(loc, lhs, rhs);
-    Value cmp = rewriter.create<ULessThanOp>(loc, out, lhs);
-    Value carry = rewriter.create<SelectOp>(loc, cmp, one, zero);
+    Value out = ArithOp::create(rewriter, loc, lhs, rhs);
+    // For add: carry iff out < lhs (unsigned overflow).
+    // For sub: borrow iff lhs < rhs (unsigned underflow).
+    Value cmp;
+    if constexpr (std::is_same_v<Op, IAddCarryOp>)
+      cmp = ULessThanOp::create(rewriter, loc, out, lhs);
+    else
+      cmp = ULessThanOp::create(rewriter, loc, lhs, rhs);
+    Value flag = SelectOp::create(rewriter, loc, cmp, one, zero);
 
-    Value add = rewriter.create<CompositeConstructOp>(
-        loc, op->getResultTypes().front(), llvm::ArrayRef({out, carry}));
+    Value result = CompositeConstructOp::create(rewriter, loc,
+                                                op->getResultTypes().front(),
+                                                llvm::ArrayRef({out, flag}));
 
-    rewriter.replaceOp(op, add);
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
 
+using ExpandAddCarryPattern =
+    ExpandAddCarryOrSubBorrowPattern<IAddCarryOp, IAddOp>;
+using ExpandSubBorrowPattern =
+    ExpandAddCarryOrSubBorrowPattern<ISubBorrowOp, ISubOp>;
+
 struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IsInfOp op,
                                 PatternRewriter &rewriter) const override {
@@ -215,7 +228,7 @@ struct ExpandIsInfPattern final : OpRewritePattern<IsInfOp> {
 };
 
 struct ExpandIsNanPattern final : OpRewritePattern<IsNanOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(IsNanOp op,
                                 PatternRewriter &rewriter) const override {
@@ -250,7 +263,8 @@ void populateSPIRVExpandExtendedMultiplicationPatterns(
   // WGSL currently does not support extended multiplication ops, see:
   // https://github.com/gpuweb/gpuweb/issues/1565.
   patterns.add<ExpandSMulExtendedPattern, ExpandUMulExtendedPattern,
-               ExpandAddCarryPattern>(patterns.getContext());
+               ExpandAddCarryPattern, ExpandSubBorrowPattern>(
+      patterns.getContext());
 }
 
 void populateSPIRVExpandNonFiniteArithmeticPatterns(

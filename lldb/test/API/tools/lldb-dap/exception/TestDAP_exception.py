@@ -2,14 +2,13 @@
 Test exception behavior in DAP with signal.
 """
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfNoSignals
 class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
-    @skipIfWindows
     def test_stopped_description(self):
         """
         Test that exception description is shown correctly in stopped
@@ -17,8 +16,9 @@ class TestDAP_exception(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
-        self.dap_server.request_continue()
-        self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))
+        self.do_continue()
+
+        self.verify_stop_exception_info("signal SIGABRT")
         exceptionInfo = self.get_exceptionInfo()
         self.assertEqual(exceptionInfo["breakMode"], "always")
         self.assertEqual(exceptionInfo["description"], "signal SIGABRT")

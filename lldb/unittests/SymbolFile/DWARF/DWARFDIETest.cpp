@@ -10,8 +10,15 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
@@ -20,7 +27,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
-using namespace lldb_private::dwarf;
+using namespace llvm::dwarf;
 
 TEST(DWARFDIETest, ChildIteration) {
   // Tests DWARFDIE::child_iterator.
@@ -393,6 +400,64 @@ DWARF:
       unit->DIE().GetFirstChild().GetFirstChild().GetSibling().GetFirstChild();
   EXPECT_THAT(foo_struct_die.GetTypeLookupContext(),
               testing::ElementsAre(make_struct("struct_t")));
+}
+
+TEST(DWARFDIETest, GetAttributeValue_ImplicitConst) {
+  // Make sure we can correctly retrieve the value of an attribute
+  // that has a DW_FORM_implicit_const form.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - ''
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_implicit_const
+              Value:           5
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            func
+        - AbbrCode:        0x0)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
+  ASSERT_TRUE(unit);
+
+  DWARFDIE subprogram = unit->DIE().GetFirstChild();
+  ASSERT_TRUE(subprogram);
+  dw_offset_t end_attr_offset;
+  DWARFFormValue form_value;
+  dw_offset_t offset = subprogram.GetDIE()->GetAttributeValue(
+      unit, DW_AT_object_pointer, form_value, &end_attr_offset);
+  EXPECT_EQ(form_value.Unsigned(), 5U);
+  EXPECT_GT(offset, 0U);
+  EXPECT_GT(end_attr_offset, 0U);
 }
 
 struct GetAttributesTestFixture : public testing::TestWithParam<dw_attr_t> {};
@@ -1034,3 +1099,103 @@ DWARF:
 INSTANTIATE_TEST_SUITE_P(GetAttributeTests, GetAttributesTestFixture,
                          testing::Values(DW_AT_specification,
                                          DW_AT_abstract_origin));
+
+// Exercises fallback in SymbolFileDWARF::ParseVariableDIE (added for
+// Swift) that walks the type chain for DW_AT_byte_size when the
+// TypeSystem cannot determine the size of a variable's storage. The
+// test uses a Fortran DW_TAG_string_type, which TypeSystemClang
+// doesn't know about.  Type::GetByteSize() will fails but since
+// DW_AT_string_type has a DW_AT_byte_size, so we should still be able
+// to extract the constant value.
+TEST(DWARFDIETest, ParseVariableDIE_ConstValueByteSizeFromTypeChain) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_string_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_byte_size
+              Form:            DW_FORM_data1
+        - Code:            0x3
+          Tag:             DW_TAG_const_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+        - Code:            0x4
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_data8
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:           0xC          # DW_LANG_C99
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0x8          # DW_AT_byte_size
+        - AbbrCode:        0x3
+          Values:
+            - Value:           0xE          # -> string_type
+        - AbbrCode:        0x4
+          Values:
+            - CStr:            g
+            - Value:           0x10         # -> const_type
+            - Value:           0x1122334455667788  # DW_AT_const_value
+        - AbbrCode:        0x0
+)";
+
+  YAMLModuleTester t(yamldata);
+  ModuleSP module_sp = t.GetModule();
+  ASSERT_TRUE(module_sp);
+
+  // FindGlobalVariables uses the ManualDWARFIndex which needs the
+  // Debugger's thread pool.
+  std::call_once(TestUtilities::g_debugger_initialize_flag,
+                 []() { Debugger::Initialize(nullptr); });
+
+  VariableList vars;
+  module_sp->GetSymbolFile()->FindGlobalVariables(
+      ConstString("g"), CompilerDeclContext(), /*max_matches=*/1, vars);
+  ASSERT_EQ(vars.GetSize(), 1u);
+  VariableSP var_sp = vars.GetVariableAtIndex(0);
+  ASSERT_TRUE(var_sp);
+  EXPECT_TRUE(var_sp->GetLocationIsConstantValueData());
+
+  // The fallback should have laid out the const-value bytes using
+  // DW_AT_byte_size from the DW_TAG_string_type at the end of the
+  // type chain.
+  const DWARFExpression *expr =
+      var_sp->LocationExpressionList().GetExpressionAtAddress(
+          LLDB_INVALID_ADDRESS, 0);
+  ASSERT_NE(expr, nullptr);
+  EXPECT_TRUE(expr->IsValid());
+
+  DataExtractor data;
+  ASSERT_TRUE(expr->GetExpressionData(data));
+  EXPECT_EQ(data.GetByteSize(), 8u);
+  lldb::offset_t off = 0;
+  EXPECT_EQ(data.GetU64(&off), 0x1122334455667788u);
+}

@@ -170,7 +170,7 @@ public:
   bool isSignedCharBool(QualType Ty);
 
   void adornBoolConversionDiagWithTernaryFixit(
-      Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
+      const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
 
   /// Check an Objective-C dictionary literal being converted to the given
   /// target type.
@@ -658,7 +658,10 @@ public:
   /// or "id" if NSNumber is unavailable.
   ExprResult BuildObjCNumericLiteral(SourceLocation AtLoc, Expr *Number);
   ExprResult ActOnObjCBoolLiteral(SourceLocation AtLoc, SourceLocation ValueLoc,
-                                  bool Value);
+                                  bool Value) {
+    return BuildObjCNumericLiteral(
+        AtLoc, SemaRef.BuildBoolLiteral(ValueLoc, Value).get());
+  }
   ExprResult BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements);
 
   /// BuildObjCBoxedExpr - builds an ObjCBoxedExpr AST node for the
@@ -812,7 +815,8 @@ public:
                                           CheckedConversionKind CCK,
                                           bool Diagnose = true,
                                           bool DiagnoseCFAudited = false,
-                                          BinaryOperatorKind Opc = BO_PtrMemD);
+                                          BinaryOperatorKind Opc = BO_PtrMemD,
+                                          bool IsReinterpretCast = false);
 
   Expr *stripARCUnbridgedCast(Expr *e);
   void diagnoseARCUnbridgedCast(Expr *e);

@@ -23,12 +23,13 @@
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// ConstantFolder - Create constants with minimum, target independent, folding.
-class ConstantFolder final : public IRBuilderFolder {
-  virtual void anchor();
+class LLVM_ABI ConstantFolder final : public IRBuilderFolder {
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit ConstantFolder() = default;
@@ -118,7 +119,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     auto *CC = dyn_cast<Constant>(C);
     auto *TC = dyn_cast<Constant>(True);
     auto *FC = dyn_cast<Constant>(False);
@@ -180,8 +182,14 @@ public:
     return nullptr;
   }
 
+  Value *FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                            FastMathFlags FMF) const override {
+    // Use TargetFolder or InstSimplifyFolder instead.
+    return nullptr;
+  }
+
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+                             FastMathFlags FMF) const override {
     // Use TargetFolder or InstSimplifyFolder instead.
     return nullptr;
   }

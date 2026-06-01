@@ -20,13 +20,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> ShouldPreserveAllAttributes(
+LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
     cl::desc("enable preservation of all attributes. even those that are "
              "unlikely to be useful"));
@@ -73,7 +74,7 @@ RetainedKnowledge canonicalizedKnowledge(RetainedKnowledge RK,
   default:
     return RK;
   case Attribute::NonNull:
-    RK.WasOn = getUnderlyingObject(RK.WasOn);
+    RK.WasOn = RK.WasOn->stripInBoundsOffsets();
     return RK;
   case Attribute::Alignment: {
     Value *V = RK.WasOn->stripInBoundsOffsets([&](const Value *Strip) {
@@ -114,12 +115,12 @@ struct AssumeBuilderState {
       : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingModified || !RK.WasOn)
+    if (!InstBeingModified || !RK.WasOn || !AC)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
     getKnowledgeForValue(
-        RK.WasOn, {RK.AttrKind}, AC,
+        RK.WasOn, {RK.AttrKind}, *AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
           if (!isValidAssumeForContext(Assume, InstBeingModified, DT))
@@ -273,7 +274,13 @@ struct AssumeBuilderState {
       return addAccessedPtr(I, Store->getPointerOperand(),
                             Store->getValueOperand()->getType(),
                             Store->getAlign());
-    // TODO: Add support for the other Instructions.
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
+      return addAccessedPtr(I, RMW->getPointerOperand(),
+                            RMW->getValOperand()->getType(), RMW->getAlign());
+    if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(I))
+      return addAccessedPtr(I, CmpXchg->getPointerOperand(),
+                            CmpXchg->getCompareOperand()->getType(),
+                            CmpXchg->getAlign());
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
 };
@@ -302,16 +309,6 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
       AC->registerAssumption(Intr);
   }
   return Changed;
-}
-
-AssumeInst *
-llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                               Instruction *CtxI, AssumptionCache *AC,
-                               DominatorTree *DT) {
-  AssumeBuilderState Builder(CtxI->getModule(), CtxI, AC, DT);
-  for (const RetainedKnowledge &RK : Knowledge)
-    Builder.addKnowledge(RK);
-  return Builder.build();
 }
 
 RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,

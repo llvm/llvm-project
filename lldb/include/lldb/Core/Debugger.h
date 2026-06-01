@@ -70,11 +70,31 @@ class Stream;
 class SymbolContext;
 class Target;
 
-/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
+#ifndef NDEBUG
+/// Global properties used in the LLDB testsuite.
+struct TestingProperties : public Properties {
+  TestingProperties();
+  bool GetInjectVarLocListError() const;
+  static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Target;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
+};
+#endif
+
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
@@ -93,10 +113,6 @@ public:
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
 
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
-
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
   static void Terminate();
@@ -106,6 +122,9 @@ public:
   static void SettingsTerminate();
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
+
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
 
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
@@ -177,11 +196,19 @@ public:
   // GetSourceManager on the target instead.
   SourceManager &GetSourceManager();
 
-  lldb::TargetSP GetSelectedTarget() {
-    return m_target_list.GetSelectedTarget();
-  }
+  /// Get the execution context representing the selected entities in the
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
 
-  ExecutionContext GetSelectedExecutionContext();
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
+
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
@@ -227,6 +254,8 @@ public:
 
   const char *GetIOHandlerHelpPrologue();
 
+  void RefreshIOHandler();
+
   void ClearIOHandlers();
 
   bool EnableLog(llvm::StringRef channel,
@@ -243,17 +272,17 @@ public:
 
   bool GetAutoConfirm() const;
 
-  const FormatEntity::Entry *GetDisassemblyFormat() const;
+  FormatEntity::Entry GetDisassemblyFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormat() const;
+  FormatEntity::Entry GetFrameFormat() const;
 
-  const FormatEntity::Entry *GetFrameFormatUnique() const;
+  FormatEntity::Entry GetFrameFormatUnique() const;
 
   uint64_t GetStopDisassemblyMaxSize() const;
 
-  const FormatEntity::Entry *GetThreadFormat() const;
+  FormatEntity::Entry GetThreadFormat() const;
 
-  const FormatEntity::Entry *GetThreadStopFormat() const;
+  FormatEntity::Entry GetThreadStopFormat() const;
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 
@@ -297,7 +326,7 @@ public:
 
   bool GetShowStatusline() const;
 
-  const FormatEntity::Entry *GetStatuslineFormat() const;
+  FormatEntity::Entry GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
   llvm::StringRef GetSeparator() const;
@@ -306,6 +335,10 @@ public:
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
+
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
 
   bool GetUseAutosuggestion() const;
 
@@ -322,6 +355,8 @@ public:
   bool GetUseSourceCache() const;
 
   bool SetUseSourceCache(bool use_source_cache);
+
+  bool GetMarkHiddenFrames() const;
 
   bool GetHighlightSource() const;
 
@@ -361,7 +396,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 
@@ -413,7 +448,10 @@ public:
   void CancelInterruptRequest();
 
   /// Redraw the statusline if enabled.
-  void RedrawStatusline(bool update = true);
+  void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Flush cached state (e.g. stale execution context in the statusline).
+  void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -610,6 +648,8 @@ public:
   };
   std::optional<ProgressReport> GetCurrentProgressReport() const;
 
+  static const FileSpecList &GetDefaultSafeAutoLoadPaths();
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -668,6 +708,7 @@ protected:
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
 
+  bool IsEscapeCodeCapableTTY();
   bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
@@ -695,9 +736,9 @@ protected:
 
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 
-  void HandleProcessEvent(const lldb::EventSP &event_sp);
+  lldb::ProcessSP HandleProcessEvent(const lldb::EventSP &event_sp);
 
-  void HandleThreadEvent(const lldb::EventSP &event_sp);
+  lldb::ThreadSP HandleThreadEvent(const lldb::EventSP &event_sp);
 
   void HandleProgressEvent(const lldb::EventSP &event_sp);
 

@@ -49,6 +49,29 @@ func.func @m16n8k16_fp16_fp32(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %a
   return %d : vector<2x2xf32>
 }
 
+// CHECK-LABEL: @m16n8k16_bf16_fp32
+func.func @m16n8k16_bf16_fp32(%arg0: vector<4x2xbf16>, %arg1: vector<2x2xbf16>, %arg2: vector<2x2xf32>) -> vector<2x2xf32> {
+  // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[2] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[3] : !llvm.array<4 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: llvm.extractvalue %{{.*}}[1] : !llvm.array<2 x vector<2xbf16>>
+  // CHECK: llvm.bitcast {{.*}} : vector<2xbf16> to i32
+  // CHECK: [[d:%.+]] = nvvm.mma.sync A[{{%.+}}, {{%.+}}, {{%.+}}, {{%.+}}] B[{{%.+}}, {{%.+}}] C[{{%.+}}, {{%.+}}, {{%.+}}, {{%.+}}]
+  // CHECK-SAME: multiplicandAPtxType = #nvvm.mma_type<bf16>
+  // CHECK-SAME: multiplicandBPtxType = #nvvm.mma_type<bf16>
+  // CHECK-SAME: shape = #nvvm.shape<m = 16, n = 8, k = 16>
+  // CHECK-SAME: (i32, i32, f32) -> !llvm.struct<(f32, f32, f32, f32)>
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16]} : (vector<4x2xbf16>, vector<2x2xbf16>, vector<2x2xf32>) -> vector<2x2xf32>
+  return %d : vector<2x2xf32>
+}
+
 // CHECK-LABEL: @m16n8k8_fp16
 func.func @m16n8k8_fp16(%arg0: vector<2x2xf16>, %arg1: vector<1x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
   // CHECK: llvm.extractvalue %{{.*}}[0] : !llvm.array<2 x vector<2xf16>>
@@ -159,7 +182,7 @@ func.func @m8n8k4_f64(%arg0: vector<1x1xf64>, %arg1: vector<1x1xf64>, %arg2: vec
 // CHECK-LABEL: @ldmatrix_x4
 func.func @ldmatrix_x4(%arg0: memref<128x128xf16, 3>) ->  vector<4x2xf16> {
   %c0  = arith.constant 0 : index
-  // CHECK: nvvm.ldmatrix {{%.+}} {layout = #nvvm.mma_layout<row>, num = 4 : i32} {{.*}} -> !llvm.struct<(i32, i32, i32, i32)
+  // CHECK: nvvm.ldmatrix {{%.+}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, layout = #nvvm.mma_layout<row>, num = 4 : i32, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : {{.*}} -> !llvm.struct<(i32, i32, i32, i32)>
   %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 4 : i32} : memref<128x128xf16, 3> -> vector<4x2xf16>
   // CHECK: llvm.extractvalue
   // CHECK: llvm.bitcast
@@ -179,7 +202,7 @@ func.func @ldmatrix_x4(%arg0: memref<128x128xf16, 3>) ->  vector<4x2xf16> {
 // CHECK-LABEL: @ldmatrix_x1
 func.func @ldmatrix_x1(%arg0: memref<128x128xf16, 3>) ->  vector<1x2xf16> {
   %c0  = arith.constant 0 : index
-  // CHECK: nvvm.ldmatrix {{%.+}} {layout = #nvvm.mma_layout<row>, num = 1 : i32} {{.*}} -> i32
+  // CHECK: nvvm.ldmatrix {{%.+}} {eltType = #nvvm.ld_st_matrix_elt_type<b16>, layout = #nvvm.mma_layout<row>, num = 1 : i32, shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>} : {{.*}} -> i32
   %a = nvgpu.ldmatrix %arg0[%c0, %c0] {transpose = false, numTiles = 1 : i32} : memref<128x128xf16, 3> -> vector<1x2xf16>
   // CHECK: llvm.bitcast
   // CHECK: llvm.insertvalue
@@ -486,17 +509,17 @@ func.func @mbarrier() {
   // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  // CHECK: nvvm.mbarrier.init %[[barPtr]]
     nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
 
   // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.shared %[[barPtr2]]
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive %[[barPtr2]]
   %token = nvgpu.mbarrier.arrive %barrier[%c0] : !barrierType -> !tokenType
 
   // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  // CHECK: nvvm.mbarrier.test.wait %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
 
   func.return
@@ -516,17 +539,17 @@ func.func @mbarrier_nocomplete() {
   // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  // CHECK: nvvm.mbarrier.init %[[barPtr]]
   nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
 
   // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.nocomplete.shared %[[barPtr2]]
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.nocomplete %[[barPtr2]]
   %token = nvgpu.mbarrier.arrive.nocomplete %barrier[%c0], %count : !barrierType -> !tokenType
 
   // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  // CHECK: nvvm.mbarrier.test.wait %[[barPtr3]], %[[token]]
   %isDone = nvgpu.mbarrier.test.wait %barrier[%c0], %token : !barrierType, !tokenType
 
   func.return
@@ -572,7 +595,7 @@ func.func @mbarrier_wait(%barriers : !nvgpu.mbarrier.group<memorySpace = #gpu.ad
 // CHECK: %[[S3:.+]] = builtin.unrealized_conversion_cast %[[S2]] : index to i64
 // CHECK: %[[S4:.+]] = llvm.extractvalue %[[CARG0]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK: %[[S5:.+]] = llvm.getelementptr %[[S4]][%[[S3]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-// CHECK: nvvm.mbarrier.test.wait.shared {{.*}}, %[[CARG1]]
+// CHECK: nvvm.mbarrier.test.wait {{.*}}, %[[CARG1]]
     %mbarId = arith.remui %i, %numBarriers : index
     %isDone = nvgpu.mbarrier.test.wait %barriers[%mbarId], %token : !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>, num_barriers = 5>, !tokenType
   }
@@ -592,7 +615,7 @@ func.func @mbarrier_txcount() {
     // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-    // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+    // CHECK: nvvm.mbarrier.init %[[barPtr]]
     nvgpu.mbarrier.init %barrier[%c0], %num_threads : !barrierType
 
     %tidxreg = nvvm.read.ptx.sreg.tid.x : i32
@@ -603,14 +626,14 @@ func.func @mbarrier_txcount() {
       %txcount = arith.constant 256 : index
       // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
       // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]]
       nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount : !barrierType
       scf.yield
     } else {
       %txcount = arith.constant 0 : index
       // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
       // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]]
       nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount : !barrierType
       scf.yield
     }
@@ -620,7 +643,7 @@ func.func @mbarrier_txcount() {
     %ticks = arith.constant 10000000 : index
     // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-    // CHECK: nvvm.mbarrier.try_wait.parity.shared %[[barPtr3]]
+    // CHECK: nvvm.mbarrier.try_wait.parity %[[barPtr3]]
     nvgpu.mbarrier.try_wait.parity %barrier[%c0], %phase_c0, %ticks : !barrierType
 
     func.return
@@ -631,7 +654,7 @@ func.func @mbarrier_txcount_pred() {
     %mine = arith.constant 1 : index
     // CHECK: %[[c0:.+]] = arith.constant 0 : index
     // CHECK: %[[mid:.+]] = builtin.unrealized_conversion_cast %[[c0]] : index to i64
-    // CHECK: %[[S2:.+]] = gpu.thread_id  x
+    // CHECK: %[[S2:.+]] = gpu.thread_id x
     // CHECK: %[[P:.+]] = arith.cmpi eq, %[[S2]], %[[c0]] : index
     %c0 = arith.constant 0 : index
     %tidx = gpu.thread_id x
@@ -643,20 +666,20 @@ func.func @mbarrier_txcount_pred() {
     // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[base:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[barPtr:.+]] = llvm.getelementptr %[[base]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-    // CHECK: nvvm.mbarrier.init.shared %[[barPtr]], {{.*}}, predicate = %[[P]]
+    // CHECK: nvvm.mbarrier.init %[[barPtr]], {{.*}}, predicate = %[[P]]
     nvgpu.mbarrier.init %barrier[%c0], %mine, predicate = %pred : !barrierType
 
     %txcount = arith.constant 256 : index
     // CHECK: %[[base2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[barPtr2:.+]] = llvm.getelementptr %[[base2]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-    // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]], {{.*}}, predicate = %[[P]]
+    // CHECK: nvvm.mbarrier.arrive.expect_tx %[[barPtr2]], {{.*}}, predicate = %[[P]]
     nvgpu.mbarrier.arrive.expect_tx %barrier[%c0], %txcount, predicate = %pred : !barrierType
 
     %phase_c0 = arith.constant 0 : i1
     %ticks = arith.constant 10000000 : index
     // CHECK: %[[base3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK: %[[barPtr3:.+]] = llvm.getelementptr %[[base3]][%[[mid]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, i64
-    // CHECK: nvvm.mbarrier.try_wait.parity.shared %[[barPtr3]]
+    // CHECK: nvvm.mbarrier.try_wait.parity %[[barPtr3]]
     nvgpu.mbarrier.try_wait.parity %barrier[%c0], %phase_c0, %ticks : !barrierType
 
     func.return
@@ -664,15 +687,15 @@ func.func @mbarrier_txcount_pred() {
 
 // CHECK-LABEL: func @async_tma_load
 !tensorMap1d = !nvgpu.tensormap.descriptor<tensor = memref<128xf32,3>,         swizzle=none,        l2promo = none,        oob = nan,  interleave = none>
-!tensorMap2d = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>,       swizzle=swizzle_32b, l2promo = none,        oob = zero, interleave = none>
-!tensorMap3d = !nvgpu.tensormap.descriptor<tensor = memref<2x32x32xf32,3>,     swizzle=swizzle_64b, l2promo = l2promo_64b, oob = zero, interleave = none>
+!tensorMap2d = !nvgpu.tensormap.descriptor<tensor = memref<32x8xf32,3>,       swizzle=swizzle_32b, l2promo = none,        oob = zero, interleave = none>
+!tensorMap3d = !nvgpu.tensormap.descriptor<tensor = memref<2x32x16xf32,3>,     swizzle=swizzle_64b, l2promo = l2promo_64b, oob = zero, interleave = none>
 !tensorMap4d = !nvgpu.tensormap.descriptor<tensor = memref<2x2x32x32xf32,3>,   swizzle=swizzle_128b,l2promo = l2promo_128b,oob = zero, interleave = none>
 !tensorMap5d = !nvgpu.tensormap.descriptor<tensor = memref<2x2x2x32x32xf32,3>, swizzle=none,        l2promo = none,        oob = zero, interleave = none>
 !mbarrier = !nvgpu.mbarrier.group<memorySpace = #gpu.address_space<workgroup>>
 func.func @async_tma_load(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d,
                               %buffer1d: memref<128xf32,3>,
-                              %buffer2d: memref<32x32xf32,3>,
-                              %buffer3d: memref<2x32x32xf32,3>,
+                              %buffer2d: memref<32x8xf32,3>,
+                              %buffer3d: memref<2x32x16xf32,3>,
                               %buffer4d: memref<2x2x32x32xf32,3>,
                               %buffer5d: memref<2x2x2x32x32xf32,3>,
                               %mbarrier: !mbarrier) {
@@ -682,9 +705,9 @@ func.func @async_tma_load(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}]
   nvgpu.tma.async.load %tensorMap1d[%crd0], %mbarrier[%c0] to %buffer1d : !tensorMap1d, !mbarrier -> memref<128xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}]
-  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d : !tensorMap2d, !mbarrier -> memref<32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d : !tensorMap2d, !mbarrier -> memref<32x8xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}]
-  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d : !tensorMap3d, !mbarrier -> memref<2x32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d : !tensorMap3d, !mbarrier -> memref<2x32x16xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
   nvgpu.tma.async.load %tensorMap4d[%crd0, %crd1, %crd1, %crd0], %mbarrier[%c0] to %buffer4d : !tensorMap4d, !mbarrier -> memref<2x2x32x32xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
@@ -708,8 +731,8 @@ func.func @async_tma_load_gpu_address_space(%tensorMap1d: !tensorMap1dgpuspace,
 // CHECK-LABEL: func @async_tma_load_pred
 func.func @async_tma_load_pred(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d,
                               %buffer1d: memref<128xf32,3>,
-                              %buffer2d: memref<32x32xf32,3>,
-                              %buffer3d: memref<2x32x32xf32,3>,
+                              %buffer2d: memref<32x8xf32,3>,
+                              %buffer3d: memref<2x32x16xf32,3>,
                               %buffer4d: memref<2x2x32x32xf32,3>,
                               %buffer5d: memref<2x2x2x32x32xf32,3>,
                               %mbarrier: !mbarrier,
@@ -720,9 +743,9 @@ func.func @async_tma_load_pred(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensor
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}] predicate = %{{.*}}
   nvgpu.tma.async.load %tensorMap1d[%crd0], %mbarrier[%c0] to %buffer1d, predicate = %p : !tensorMap1d, !mbarrier -> memref<128xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}] predicate = %{{.*}}
-  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d, predicate = %p : !tensorMap2d, !mbarrier -> memref<32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d, predicate = %p : !tensorMap2d, !mbarrier -> memref<32x8xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}] predicate = %{{.*}}
-  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d, predicate = %p : !tensorMap3d, !mbarrier -> memref<2x32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d, predicate = %p : !tensorMap3d, !mbarrier -> memref<2x32x16xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] predicate = %{{.*}}
   nvgpu.tma.async.load %tensorMap4d[%crd0, %crd1, %crd1, %crd0], %mbarrier[%c0] to %buffer4d, predicate = %p : !tensorMap4d, !mbarrier -> memref<2x2x32x32xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] predicate = %{{.*}}
@@ -734,7 +757,7 @@ func.func @async_tma_load_multicast(
   %tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d,
   %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d,
   %tensorMap5d: !tensorMap5d, %buffer1d: memref<128xf32,3>,
-  %buffer2d: memref<32x32xf32,3>, %buffer3d: memref<2x32x32xf32,3>,
+  %buffer2d: memref<32x8xf32,3>, %buffer3d: memref<2x32x16xf32,3>,
   %buffer4d: memref<2x2x32x32xf32,3>, %buffer5d: memref<2x2x2x32x32xf32,3>,
   %mbarrier: !mbarrier,
   %multicastMask: i16) {
@@ -744,9 +767,9 @@ func.func @async_tma_load_multicast(
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}]
   nvgpu.tma.async.load %tensorMap1d[%crd0], %mbarrier[%c0] to %buffer1d multicast_mask = %multicastMask : !tensorMap1d, !mbarrier -> memref<128xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}]
-  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d multicast_mask = %multicastMask : !tensorMap2d, !mbarrier -> memref<32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier[%c0] to %buffer2d multicast_mask = %multicastMask : !tensorMap2d, !mbarrier -> memref<32x8xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}]
-  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d multicast_mask = %multicastMask : !tensorMap3d, !mbarrier -> memref<2x32x32xf32,3>
+  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier[%c0] to %buffer3d multicast_mask = %multicastMask : !tensorMap3d, !mbarrier -> memref<2x32x16xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
   nvgpu.tma.async.load %tensorMap4d[%crd0, %crd1, %crd1, %crd0], %mbarrier[%c0] to %buffer4d multicast_mask = %multicastMask : !tensorMap4d, !mbarrier -> memref<2x2x32x32xf32,3>
   // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}} box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
@@ -756,8 +779,8 @@ func.func @async_tma_load_multicast(
 
 func.func @async_tma_store(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d,
                            %buffer1d: memref<128xf32,3>,
-                           %buffer2d: memref<32x32xf32,3>,
-                           %buffer3d: memref<2x32x32xf32,3>,
+                           %buffer2d: memref<32x8xf32,3>,
+                           %buffer3d: memref<2x32x16xf32,3>,
                            %buffer4d: memref<2x2x32x32xf32,3>,
                            %buffer5d: memref<2x2x2x32x32xf32,3>) {
   %c0 = arith.constant 0 : index
@@ -766,9 +789,9 @@ func.func @async_tma_store(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}]
   nvgpu.tma.async.store %buffer1d to %tensorMap1d[%crd0] : memref<128xf32,3> -> !tensorMap1d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}]
-  nvgpu.tma.async.store %buffer2d to %tensorMap2d[%crd0, %crd1]  : memref<32x32xf32,3> -> !tensorMap2d
+  nvgpu.tma.async.store %buffer2d to %tensorMap2d[%crd0, %crd1]  : memref<32x8xf32,3> -> !tensorMap2d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}]
-  nvgpu.tma.async.store %buffer3d to %tensorMap3d[%crd0, %crd1, %crd0]  : memref<2x32x32xf32,3> -> !tensorMap3d
+  nvgpu.tma.async.store %buffer3d to %tensorMap3d[%crd0, %crd1, %crd0]  : memref<2x32x16xf32,3> -> !tensorMap3d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
   nvgpu.tma.async.store %buffer4d to %tensorMap4d[%crd0, %crd1, %crd1, %crd0]  : memref<2x2x32x32xf32,3> -> !tensorMap4d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}]
@@ -779,8 +802,8 @@ func.func @async_tma_store(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2
 
 func.func @async_tma_store_predicate(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d,
                            %buffer1d: memref<128xf32,3>,
-                           %buffer2d: memref<32x32xf32,3>,
-                           %buffer3d: memref<2x32x32xf32,3>,
+                           %buffer2d: memref<32x8xf32,3>,
+                           %buffer3d: memref<2x32x16xf32,3>,
                            %buffer4d: memref<2x2x32x32xf32,3>,
                            %buffer5d: memref<2x2x2x32x32xf32,3>,
                            %p: i1) {
@@ -790,9 +813,9 @@ func.func @async_tma_store_predicate(%tensorMap1d: !tensorMap1d, %tensorMap2d: !
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}], predicate = %{{.*}}
   nvgpu.tma.async.store %buffer1d to %tensorMap1d[%crd0], predicate = %p : memref<128xf32,3> -> !tensorMap1d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}], predicate = %{{.*}}
-  nvgpu.tma.async.store %buffer2d to %tensorMap2d[%crd0, %crd1], predicate = %p  : memref<32x32xf32,3> -> !tensorMap2d
+  nvgpu.tma.async.store %buffer2d to %tensorMap2d[%crd0, %crd1], predicate = %p  : memref<32x8xf32,3> -> !tensorMap2d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}], predicate = %{{.*}}
-  nvgpu.tma.async.store %buffer3d to %tensorMap3d[%crd0, %crd1, %crd0], predicate = %p  : memref<2x32x32xf32,3> -> !tensorMap3d
+  nvgpu.tma.async.store %buffer3d to %tensorMap3d[%crd0, %crd1, %crd0], predicate = %p  : memref<2x32x16xf32,3> -> !tensorMap3d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}], predicate = %{{.*}}
   nvgpu.tma.async.store %buffer4d to %tensorMap4d[%crd0, %crd1, %crd1, %crd0], predicate = %p  : memref<2x2x32x32xf32,3> -> !tensorMap4d
   // CHECK: nvvm.cp.async.bulk.tensor.global.shared.cta %{{.*}} %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}], predicate = %{{.*}}
@@ -817,9 +840,9 @@ func.func @create_tensor_map(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : m
 // CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.tensormap.descriptor<tensor = memref<128xf32, 3>, swizzle = none, l2promo = none, oob = nan, interleave = none>, %[[arg1:[a-zA-Z0-9_]+]]: i1
 func.func @tma_prefetch(%tensorMap1d: !tensorMap1d, %p : i1) {
   // CHECK: %[[S0:.+]] = builtin.unrealized_conversion_cast %[[arg0]] : !nvgpu.tensormap.descriptor<tensor = memref<128xf32, 3>, swizzle = none, l2promo = none, oob = nan, interleave = none> to !llvm.ptr
-  // CHECK: nvvm.prefetch.tensormap %[[S0]] : !llvm.ptr
+  // CHECK: nvvm.prefetch tensormap, %[[S0]] : !llvm.ptr
   nvgpu.tma.prefetch.descriptor %tensorMap1d: !tensorMap1d
-  // CHECK: nvvm.prefetch.tensormap %[[S0]], predicate = %[[arg1]] : !llvm.ptr, i1
+  // CHECK: nvvm.prefetch tensormap, %[[S0]], predicate = %[[arg1]] : !llvm.ptr, i1
   nvgpu.tma.prefetch.descriptor %tensorMap1d, predicate = %p: !tensorMap1d
   func.return
 }
@@ -854,7 +877,8 @@ module @mymodule {
     // CHECK: %[[desc:.+]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<2 x i64>, array<2 x i64>)>
     // CHECK: %[[c8192:.+]] = llvm.mlir.constant(8192 : index) : i64
     // CHECK: %[[shmemOfset:.+]] = llvm.getelementptr %[[desc]][%[[c8192]]] : (!llvm.ptr<3>, i64)
-    // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %[[shmemOfset]], %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}]
+    // CHECK: %[[dest:.+]] = llvm.addrspacecast %[[shmemOfset]] : !llvm.ptr<3> to !llvm.ptr<7>
+    // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %[[dest]], %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}]
     nvgpu.tma.async.load %rhsTensorMap[%c0, %c0], %mbarrier[%c0] to %rhsShmem : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[64, 1], offset: 8192>, 3>
     return
   }
@@ -1383,6 +1407,6 @@ func.func @rcp_approx_ftz_f32(%in: vector<32x16xf32>) {
   // CHECK: %[[ELEM_RCP0:.*]] = nvvm.rcp.approx.ftz.f %[[ELEM_0]] : f32
   // CHECK: llvm.insertelement %[[ELEM_RCP0]], %[[OUT1DVEC]][%[[IDX_0]] : i64] : vector<16xf32>
   // CHECK-COUNT-511: nvvm.rcp.approx.ftz.f
-  %out = nvgpu.rcp %in {rounding = approx, ftz} : vector<32x16xf32>
+  %out = nvgpu.rcp %in {approx = true, ftz = true} : vector<32x16xf32>
   return
 }

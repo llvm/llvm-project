@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
+#include "HexagonAggressiveRDFCopy.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -34,19 +35,21 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;
 
 static unsigned RDFCount = 0;
+extern cl::opt<unsigned> RDFFuncBlockLimit;
 
 static cl::opt<unsigned>
     RDFLimit("hexagon-rdf-limit",
              cl::init(std::numeric_limits<unsigned>::max()));
-
-extern cl::opt<unsigned> RDFFuncBlockLimit;
-
+static cl::opt<bool> EnableAggressiveRDFCopy(
+    "hexagon-aggressive-rdf-copy",
+    cl::desc("Enable aggressive RDF copy propagation with super-register "
+             "support"),
+    cl::init(false), cl::Hidden);
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
 
@@ -58,7 +61,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineDominanceFrontier>();
+      AU.addRequired<MachineDominanceFrontierWrapperPass>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -70,8 +73,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     static char ID;
@@ -83,6 +85,12 @@ namespace {
 
 struct HexagonCP : public CopyPropagation {
   HexagonCP(DataFlowGraph &G) : CopyPropagation(G) {}
+
+  bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
+};
+
+struct HexagonAggressiveCP : public AggressiveCopyPropagation {
+  HexagonAggressiveCP(DataFlowGraph &G) : AggressiveCopyPropagation(G) {}
 
   bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
 };
@@ -104,7 +112,7 @@ char HexagonRDFOpt::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
 
@@ -116,11 +124,57 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   DataFlowGraph &DFG = getDFG();
   unsigned Opc = MI->getOpcode();
   switch (Opc) {
+  case Hexagon::A2_combinew: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &HiOp = MI->getOperand(1);
+    const MachineOperand &LoOp = MI->getOperand(2);
+    assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
+            DFG.makeRegRef(HiOp.getReg(), HiOp.getSubReg()));
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
+            DFG.makeRegRef(LoOp.getReg(), LoOp.getSubReg()));
+    return true;
+  }
+  case Hexagon::A2_addi: {
+    const MachineOperand &A = MI->getOperand(2);
+    if (!A.isImm() || A.getImm() != 0)
+      return false;
+    [[fallthrough]];
+  }
+  case Hexagon::A2_tfr: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    mapRegs(DFG.makeRegRef(DstOp.getReg(), DstOp.getSubReg()),
+            DFG.makeRegRef(SrcOp.getReg(), SrcOp.getSubReg()));
+    return true;
+  }
+  }
+
+  return CopyPropagation::interpretAsCopy(MI, EM);
+}
+
+bool HexagonAggressiveCP::interpretAsCopy(const MachineInstr *MI,
+                                          EqualityMap &EM) {
+  auto mapRegs = [&EM](RegisterRef DstR, RegisterRef SrcR) -> void {
+    EM.insert(std::make_pair(DstR, SrcR));
+  };
+
+  DataFlowGraph &DFG = getDFG();
+  const TargetRegisterInfo &TRI = DFG.getTRI();
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
     case Hexagon::A2_combinew: {
+      // Combine instruction is equivalent to double reg copy.
+      // Add double reg copy to map.
       const MachineOperand &DstOp = MI->getOperand(0);
       const MachineOperand &HiOp = MI->getOperand(1);
       const MachineOperand &LoOp = MI->getOperand(2);
       assert(DstOp.getSubReg() == 0 && "Unexpected subregister");
+      unsigned DoubleRegDest = TRI.getMatchingSuperReg(
+          LoOp.getReg(), Hexagon::isub_lo, &Hexagon::DoubleRegsRegClass);
+      if (DoubleRegDest != 0 &&
+          TRI.isSuperRegister(HiOp.getReg(), DoubleRegDest))
+        mapRegs(DFG.makeRegRef(DstOp), DFG.makeRegRef(DoubleRegDest, 0));
       mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_hi),
               DFG.makeRegRef(HiOp.getReg(),  HiOp.getSubReg()));
       mapRegs(DFG.makeRegRef(DstOp.getReg(), Hexagon::isub_lo),
@@ -142,7 +196,7 @@ bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
     }
   }
 
-  return CopyPropagation::interpretAsCopy(MI, EM);
+  return AggressiveCopyPropagation::interpretAsCopy(MI, EM);
 }
 
 bool HexagonDCE::run() {
@@ -297,7 +351,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   }
 
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();
@@ -316,12 +370,22 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
                     : BuildOptions::KeepDeadPhis | BuildOptions::OmitReserved;
   G.build(Cfg);
 
-  if (RDFDump)
-    dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
-           << PrintNode<FuncNode*>(G.getFunc(), G) << '\n';
-  HexagonCP CP(G);
-  CP.trace(RDFDump);
-  Changed = CP.run();
+  if (EnableAggressiveRDFCopy) {
+    if (RDFDump)
+      dbgs() << "Starting aggressive copy propagation on: " << MF.getName()
+             << '\n'
+             << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
+    HexagonAggressiveCP CP(G);
+    CP.trace(RDFDump);
+    Changed = CP.run();
+  } else {
+    if (RDFDump)
+      dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'
+             << PrintNode<FuncNode *>(G.getFunc(), G) << '\n';
+    HexagonCP CP(G);
+    CP.trace(RDFDump);
+    Changed = CP.run();
+  }
 
   if (RDFDump)
     dbgs() << "Starting dead code elimination on: " << MF.getName() << '\n'

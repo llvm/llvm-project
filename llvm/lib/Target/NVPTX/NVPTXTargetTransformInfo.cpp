@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXTargetTransformInfo.h"
-#include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -207,30 +207,26 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fma_rn_bf16x2:
       return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
-      return {Intrinsic::maxnum, FTZ_Any};
+      return {Intrinsic::maximumnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOff};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_f:
-      return {Intrinsic::maxnum, FTZ_MustBeOn};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmax_ftz_nan_f:
       return {Intrinsic::maximum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmax_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOff, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_f16x2:
-      return {Intrinsic::maxnum, FTZ_MustBeOn, true};
+      return {Intrinsic::maximumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_nan_f16:
       return {Intrinsic::maximum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmax_ftz_nan_f16:
@@ -240,23 +236,23 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     case Intrinsic::nvvm_fmax_ftz_nan_f16x2:
       return {Intrinsic::maximum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_d:
-      return {Intrinsic::minnum, FTZ_Any};
+      return {Intrinsic::minimumnum, FTZ_Any};
     case Intrinsic::nvvm_fmin_f:
-      return {Intrinsic::minnum, FTZ_MustBeOff};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_f:
-      return {Intrinsic::minnum, FTZ_MustBeOn};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOff};
     case Intrinsic::nvvm_fmin_ftz_nan_f:
       return {Intrinsic::minimum, FTZ_MustBeOn};
     case Intrinsic::nvvm_fmin_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOff, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_f16x2:
-      return {Intrinsic::minnum, FTZ_MustBeOn, true};
+      return {Intrinsic::minimumnum, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmin_nan_f16:
       return {Intrinsic::minimum, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fmin_ftz_nan_f16:
@@ -281,21 +277,12 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::trunc, FTZ_MustBeOn};
 
     // NVVM intrinsics that map to LLVM cast operations.
-    //
-    // Note that llvm's target-generic conversion operators correspond to the rz
-    // (round to zero) versions of the nvvm conversion intrinsics, even though
-    // most everything else here uses the rn (round to nearest even) nvvm ops.
-    case Intrinsic::nvvm_d2i_rz:
-    case Intrinsic::nvvm_f2i_rz:
-    case Intrinsic::nvvm_d2ll_rz:
-    case Intrinsic::nvvm_f2ll_rz:
-      return {Instruction::FPToSI};
-    case Intrinsic::nvvm_d2ui_rz:
-    case Intrinsic::nvvm_f2ui_rz:
-    case Intrinsic::nvvm_d2ull_rz:
-    case Intrinsic::nvvm_f2ull_rz:
-      return {Instruction::FPToUI};
-    // Integer to floating-point uses RN rounding, not RZ
+    // Note - we cannot map intrinsics like nvvm_d2ll_rz to LLVM's
+    // FPToSI, as NaN to int conversion with FPToSI is considered UB and is
+    // eliminated. NVVM conversion intrinsics are translated to PTX cvt
+    // instructions which define the outcome for NaN rather than leaving as UB.
+    // Therefore, translate NVVM intrinsics to sitofp/uitofp, but not to
+    // fptosi/fptoui.
     case Intrinsic::nvvm_i2d_rn:
     case Intrinsic::nvvm_i2f_rn:
     case Intrinsic::nvvm_ll2d_rn:
@@ -327,7 +314,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       // answer. These include:
       //
       //   - nvvm_cos_approx_{f,ftz_f}
-      //   - nvvm_ex2_approx_{d,f,ftz_f}
+      //   - nvvm_ex2_approx(_ftz)
       //   - nvvm_lg2_approx_{d,f,ftz_f}
       //   - nvvm_sin_approx_{f,ftz_f}
       //   - nvvm_sqrt_approx_{f,ftz_f}
@@ -416,7 +403,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
 // Returns true/false when we know the answer, nullopt otherwise.
 static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
-      AS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
@@ -492,7 +479,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
       // since it is classified as a call in the IR. A better cost model would
       // be to return the number of asm instructions embedded in the asm
       // string.
-      auto &AsmStr = IA->getAsmString();
+      StringRef AsmStr = IA->getAsmString();
       const unsigned InstCount =
           count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
             // Trim off scopes denoted by '{' and '}' as these can be ignored
@@ -502,7 +489,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
             // predicate ("@").
             return !AsmInst.empty() &&
                    (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
-                    AsmInst.find(".pragma") != StringRef::npos);
+                    AsmInst.contains(".pragma"));
           });
       return InstCount * TargetTransformInfo::TCC_Basic;
     }
@@ -564,7 +551,8 @@ bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster: {
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+  case Intrinsic::nvvm_prefetch_tensormap: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -587,8 +575,63 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
       return ConstantInt::get(II->getType(), *R);
     return nullptr;
   }
+  case Intrinsic::nvvm_prefetch_tensormap: {
+    IRBuilder<> Builder(II);
+    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
+        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
+      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                          NewV);
+    return nullptr;
+  }
   }
   return nullptr;
+}
+
+bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
+                                      unsigned AddrSpace,
+                                      TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
+    return false;
+
+  //  We currently only support this feature for 256-bit vectors, so the
+  //  alignment must be at least 32
+  if (Alignment < 32)
+    return false;
+
+  if (!ST->has256BitVectorLoadStore(AddrSpace))
+    return false;
+
+  auto *VTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VTy)
+    return false;
+
+  auto *ElemTy = VTy->getScalarType();
+  return (ElemTy->getScalarSizeInBits() == 32 && VTy->getNumElements() == 8) ||
+         (ElemTy->getScalarSizeInBits() == 64 && VTy->getNumElements() == 4);
+}
+
+bool NVPTXTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                     unsigned /*AddrSpace*/,
+                                     TTI::MaskKind MaskKind) const {
+  if (MaskKind != TTI::MaskKind::ConstantMask)
+    return false;
+
+  if (Alignment < DL.getTypeStoreSize(DataTy))
+    return false;
+
+  // We do not support sub-byte element type masked loads.
+  auto *VTy = dyn_cast<FixedVectorType>(DataTy);
+  if (!VTy)
+    return false;
+  return VTy->getElementType()->getScalarSizeInBits() >= 8;
+}
+
+unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
+  // 256 bit loads/stores are currently only supported for global address space
+  if (ST->has256BitVectorLoadStore(AddrSpace))
+    return 256;
+  return 128;
 }
 
 unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {
@@ -626,4 +669,11 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
+  if (isSourceOfDivergence(V))
+    return ValueUniformity::NeverUniform;
+
+  return ValueUniformity::Default;
 }

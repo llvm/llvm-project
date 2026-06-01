@@ -12,13 +12,17 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/DebugInfo/GSYM/FileEntry.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
+#include "llvm/DebugInfo/GSYM/GlobalData.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <inttypes.h>
+#include <map>
 #include <memory>
 #include <stdint.h>
 #include <vector>
@@ -32,49 +36,61 @@ namespace gsym {
 /// GsymReader is used to read GSYM data from a file or buffer.
 ///
 /// This class is optimized for very quick lookups when the endianness matches
-/// the host system. The Header, address table, address info offsets, and file
-/// table is designed to be mmap'ed as read only into memory and used without
-/// any parsing needed. If the endianness doesn't match, we swap these objects
-/// and tables into GsymReader::SwappedData and then point our header and
-/// ArrayRefs to this swapped internal data.
+/// the host system. The header and the address table are designed to be mmap'ed
+/// as read only into memory and used without any parsing needed. If the
+/// endianness doesn't match, we swap the byte order of the address table into a
+/// separate buffer for efficient binary search. All the other data are parsed
+/// on demand with the correct endianness.
 ///
 /// GsymReader objects must use one of the static functions to create an
 /// instance: GsymReader::openFile(...) and GsymReader::copyBuffer(...).
 
 class GsymReader {
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer);
-  llvm::Error parse();
-
+protected:
   std::unique_ptr<MemoryBuffer> MemBuffer;
-  StringRef GsymBytes;
   llvm::endianness Endian;
-  const Header *Hdr = nullptr;
+  /// Parsed GlobalData entries, keyed by type. Populated by
+  /// parseHeaderAndGlobalDataEntries().
+  std::map<GlobalInfoType, GlobalData> GlobalDataSections;
   ArrayRef<uint8_t> AddrOffsets;
-  ArrayRef<uint32_t> AddrInfoOffsets;
-  ArrayRef<FileEntry> Files;
+  std::vector<uint8_t> SwappedAddrOffsets;
+  GsymDataExtractor AddrInfoOffsetsData;
+  GsymDataExtractor FileEntryData;
   StringTable StrTab;
-  /// When the GSYM file's endianness doesn't match the host system then
-  /// we must decode all data structures that need to be swapped into
-  /// local storage and set point the ArrayRef objects above to these swapped
-  /// copies.
-  struct SwappedData {
-    Header Hdr;
-    std::vector<uint8_t> AddrOffsets;
-    std::vector<uint32_t> AddrInfoOffsets;
-    std::vector<FileEntry> Files;
-  };
-  std::unique_ptr<SwappedData> Swap;
+
+  GsymReader(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
 
 public:
-  GsymReader(GsymReader &&RHS);
-  ~GsymReader();
+  LLVM_ABI GsymReader(GsymReader &&RHS) = default;
+  virtual ~GsymReader() = default;
+
+  bool isLittleEndian() const { return Endian == llvm::endianness::little; }
+
+  /// Get the GSYM version for this reader.
+  virtual uint16_t getVersion() const = 0;
+
+  /// Get the base address of this GSYM file.
+  virtual uint64_t getBaseAddress() const = 0;
+
+  /// Get the number of addresses in this GSYM file.
+  virtual uint64_t getNumAddresses() const = 0;
+
+  /// Get the address offset byte size for this GSYM file.
+  virtual uint8_t getAddressOffsetSize() const = 0;
+
+  /// Get the address info offset byte size for this GSYM file.
+  virtual uint8_t getAddressInfoOffsetSize() const = 0;
+
+  /// Get the string offset byte size for this GSYM file.
+  virtual uint8_t getStringOffsetSize() const = 0;
 
   /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<GsymReader> openFile(StringRef Path);
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  openFile(StringRef Path);
 
   /// Construct a GsymReader from a buffer.
   ///
@@ -82,11 +98,8 @@ public:
   /// returned object on success.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<GsymReader> copyBuffer(StringRef Bytes);
-
-  /// Access the GSYM header.
-  /// \returns A native endian version of the GSYM header.
-  const Header &getHeader() const;
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
+  copyBuffer(StringRef Bytes);
 
   /// Get the full function info for an address.
   ///
@@ -104,7 +117,7 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
 
   /// Get the full function info given an address index.
   ///
@@ -113,7 +126,8 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing get the function
   /// info object.
-  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+  LLVM_ABI llvm::Expected<FunctionInfo>
+  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
 
   /// Lookup an address in the a GSYM.
   ///
@@ -128,16 +142,16 @@ public:
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
   ///
-  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// \param MergedFuncsData A pointer to an optional GsymDataExtractor that, if
   /// non-null, will be set to the raw data of the MergedFunctionInfo, if
   /// present.
   ///
   /// \returns An expected LookupResult that contains only the information
   /// needed for the current address, or an error object that indicates reason
   /// for failing to lookup the address.
-  llvm::Expected<LookupResult>
+  LLVM_ABI llvm::Expected<LookupResult>
   lookup(uint64_t Addr,
-         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+         std::optional<GsymDataExtractor> *MergedFuncsData = nullptr) const;
 
   /// Lookup all merged functions for a given address.
   ///
@@ -149,13 +163,14 @@ public:
   ///
   /// \returns A vector of LookupResult objects, where the first element is the
   /// primary result, followed by results for any merged functions
-  llvm::Expected<std::vector<LookupResult>> lookupAll(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<std::vector<LookupResult>>
+  lookupAll(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
   /// \param Offset The string table offset for the string to retrieve.
   /// \returns The string from the strin table.
-  StringRef getString(uint32_t Offset) const { return StrTab[Offset]; }
+  StringRef getString(gsym_strp_t Offset) const { return StrTab[Offset]; }
 
   /// Get the a file entry for the suppplied file index.
   ///
@@ -167,15 +182,21 @@ public:
   /// \returns An optional FileInfo that will be valid if the file index is
   /// valid, or std::nullopt if the file index is out of bounds,
   std::optional<FileEntry> getFile(uint32_t Index) const {
-    if (Index < Files.size())
-      return Files[Index];
-    return std::nullopt;
+    uint64_t EntrySize =
+        FileEntry::getEncodedSize(FileEntryData.getStringOffsetSize());
+    uint64_t Offset = Index * EntrySize;
+    if (!FileEntryData.isValidOffsetForDataOfSize(Offset, EntrySize))
+      return std::nullopt;
+    FileEntry FE;
+    FE.Dir = FileEntryData.getStringOffset(&Offset);
+    FE.Base = FileEntryData.getStringOffset(&Offset);
+    return FE;
   }
 
   /// Dump the entire Gsym data contained in this object.
   ///
   /// \param  OS The output stream to dump to.
-  void dump(raw_ostream &OS);
+  virtual void dump(raw_ostream &OS) = 0;
 
   /// Dump a FunctionInfo object.
   ///
@@ -188,7 +209,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item within MergedFunctionsInfo.
-  void dump(raw_ostream &OS, const FunctionInfo &FI, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
+                     uint32_t Indent = 0);
 
   /// Dump a MergedFunctionsInfo object.
   ///
@@ -198,7 +220,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param MFI The object to dump.
-  void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
 
   /// Dump a CallSiteInfo object.
   ///
@@ -208,7 +230,7 @@ public:
   /// \param OS The output stream to dump to.
   ///
   /// \param CSI The CallSiteInfo object to dump.
-  void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI);
 
   /// Dump a CallSiteInfoCollection object.
   ///
@@ -221,8 +243,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
-  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
-            uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                     uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///
@@ -236,7 +258,7 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
-  void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
 
   /// Dump a InlineInfo object.
   ///
@@ -249,7 +271,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used for recurive
   /// dumping.
-  void dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
+                     uint32_t Indent = 0);
 
   /// Dump a FileEntry object.
   ///
@@ -259,12 +282,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  void dump(raw_ostream &OS, std::optional<FileEntry> FE);
-
-  /// Get the number of addresses in this Gsym file.
-  uint32_t getNumAddresses() const {
-    return Hdr->NumAddresses;
-  }
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Gets an address from the address table.
   ///
@@ -273,9 +291,104 @@ public:
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  std::optional<uint64_t> getAddress(size_t Index) const;
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
+  /// Get the GlobalData entry for a section type.
+  ///
+  /// \param Type The section type to retrieve.
+  /// \returns The GlobalData entry, or std::nullopt if the section is not
+  /// present.
+  LLVM_ABI std::optional<GlobalData> getGlobalData(GlobalInfoType Type) const;
+
+  /// Get the raw bytes for a required GlobalData section as a StringRef.
+  ///
+  /// \param Type The section type to retrieve.
+  /// \returns The section data, or an error if the section is not present or
+  /// any bytes are not present in the file.
+  LLVM_ABI llvm::Expected<StringRef>
+  getRequiredGlobalDataBytes(GlobalInfoType Type) const;
+
+  /// Get the raw bytes for an optional GlobalData section as a StringRef.
+  ///
+  /// \param Type The section type to retrieve.
+  /// \returns The section data, or std::nullopt if the section is not present
+  /// or any bytes are not present in the file.
+  LLVM_ABI std::optional<StringRef>
+  getOptionalGlobalDataBytes(GlobalInfoType Type) const;
+
+  /// Parse the GSYM data from the memory buffer.
+  ///
+  /// \returns Error on failure.
+  LLVM_ABI llvm::Error parse();
+
+  /// Parse the version-specific header and populate GlobalDataSections.
+  ///
+  /// \returns Error on failure.
+  virtual llvm::Error parseHeaderAndGlobalDataEntries() = 0;
+
+  /// Parse and validate the header from the beginning of the memory buffer.
+  ///
+  /// \param OutHdr Output pointer to the parsed header.
+  /// \param OutSwappedHdr Storage for byte-swapped header if needed.
+  /// \returns Error on failure.
+  template <class HeaderT>
+  llvm::Error parseHeader(const HeaderT *&OutHdr,
+                          std::unique_ptr<HeaderT> &OutSwappedHdr) {
+    const StringRef Buf = MemBuffer->getBuffer();
+    if (Buf.size() < HeaderT::getEncodedSize())
+      return createStringError(std::errc::invalid_argument,
+                               "not enough data for a GSYM header");
+    if (Endian == llvm::endianness::native) {
+      // Non-swap case. Mmap the header.
+      OutHdr = reinterpret_cast<const HeaderT *>(Buf.data());
+    } else {
+      // Swap case. Decode with a GsymDataExtractor with the correct endianness.
+      GsymDataExtractor Data(Buf, isLittleEndian());
+      OutSwappedHdr = std::make_unique<HeaderT>();
+      auto ExpectedHdr = HeaderT::decode(Data);
+      if (!ExpectedHdr)
+        return ExpectedHdr.takeError();
+      *OutSwappedHdr = *ExpectedHdr;
+      OutHdr = OutSwappedHdr.get();
+    }
+    if (Error Err = OutHdr->checkForError())
+      return Err;
+    return Error::success();
+  }
+
+  /// Parse GlobalData entries starting at \p Offset into GlobalDataSections.
+  ///
+  /// This should only be called by any GSYM version >= 2. If called by V1, an
+  /// error will be returned.
+  ///
+  /// \param Offset The byte offset where GlobalData entries begin.
+  /// \returns Error on failure.
+  llvm::Error parseGlobalDataEntries(uint64_t Offset);
+
+  /// Parse address offsets section bytes into AddrOffsets.
+  ///
+  /// \param Bytes The raw section bytes.
+  /// \returns Error on failure.
+  llvm::Error parseAddrOffsets(StringRef Bytes);
+
+  /// Set address info offsets section bytes into AddrInfoOffsetsData.
+  ///
+  /// \param Bytes The raw section bytes.
+  /// \returns Error on failure.
+  llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
+
+  /// Set string table section bytes into StrTab.
+  ///
+  /// \param Bytes The raw section bytes.
+  /// \returns Error on failure.
+  llvm::Error setStringTableData(StringRef Bytes);
+
+  /// Set file table section bytes into FileEntryData.
+  ///
+  /// \param Bytes The raw section bytes.
+  /// \returns Error on failure.
+  llvm::Error setFileTableData(StringRef Bytes);
 
   /// Get an appropriate address info offsets array.
   ///
@@ -309,9 +422,10 @@ protected:
   std::optional<uint64_t> addressForIndex(size_t Index) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     if (Index < AIO.size())
-      return AIO[Index] + Hdr->BaseAddress;
+      return AIO[Index] + getBaseAddress();
     return std::nullopt;
   }
+
   /// Lookup an address offset in the AddrOffsets table.
   ///
   /// Given an address offset, look it up using a binary search of the
@@ -359,9 +473,8 @@ protected:
   /// GsymReader.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<llvm::gsym::GsymReader>
+  LLVM_ABI static llvm::Expected<std::unique_ptr<GsymReader>>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);
-
 
   /// Given an address, find the address index.
   ///
@@ -372,7 +485,7 @@ protected:
   /// \returns An index into the address table. This index can be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   /// Returns an error if the address isn't in the GSYM with details of why.
-  Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
+  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
 
   /// Given an address index, get the offset for the FunctionInfo.
   ///
@@ -383,7 +496,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  LLVM_ABI std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
 
   /// Given an address, find the correct function info data and function
   /// address.
@@ -404,7 +517,7 @@ protected:
   ///
   /// \returns An valid data extractor on success, or an error if we fail to
   /// find the address in a function info or corrrectly decode the data
-  llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<GsymDataExtractor>
   getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
 
   /// Get the function data and address given an address index.
@@ -414,7 +527,7 @@ protected:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<GsymDataExtractor>
   getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 

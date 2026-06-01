@@ -17,12 +17,14 @@
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTX.h"
+#include "NVPTXDwarfDebug.h"
 #include "NVPTXMCExpr.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXRegisterInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
+#include "NVVMProperties.h"
 #include "TargetInfo/NVPTXTargetInfo.h"
 #include "cl_common_defines.h"
 #include "llvm/ADT/APFloat.h"
@@ -77,7 +79,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
@@ -89,12 +91,49 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <utility>
-#include <vector>
 
 using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
+
+static StringRef getTextureName(const Value &V) {
+  assert(V.hasName() && "Found texture variable with no name");
+  return V.getName();
+}
+
+static StringRef getSurfaceName(const Value &V) {
+  assert(V.hasName() && "Found surface variable with no name");
+  return V.getName();
+}
+
+static StringRef getSamplerName(const Value &V) {
+  assert(V.hasName() && "Found sampler variable with no name");
+  return V.getName();
+}
+
+/// Emits initial debug location directive.
+static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
+                                            DwarfDebug *DD,
+                                            MCStreamer &OutStreamer) {
+  if (!DD)
+    return;
+
+  assert(OutStreamer.hasRawTextSupport() && "Expected assembly output mode.");
+  // This is NVPTX specific and it's unclear why.
+  // PR51079: If we have code without debug information we need to give up.
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+  assert(SP->getUnit());
+  // NoDebug and DebugDirectivesOnly do not require emitting the initial loc
+  // directive. NoDebug does not require any debug directives and the initial
+  // loc directive is not needed for DebugDirectivesOnly as it is redundant
+  // assuming this is a non-empty function.
+  if (SP->getUnit()->isDebugDirectivesOnly() || SP->getUnit()->isNoDebug())
+    return;
+
+  (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
+}
 
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
@@ -215,19 +254,15 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
     // Encode the register class in the upper 4 bits
     // Must be kept in sync with NVPTXInstPrinter::printRegName
     unsigned Ret = 0;
-    if (RC == &NVPTX::Int1RegsRegClass) {
+    if (RC == &NVPTX::B1RegClass) {
       Ret = (1 << 28);
-    } else if (RC == &NVPTX::Int16RegsRegClass) {
+    } else if (RC == &NVPTX::B16RegClass) {
       Ret = (2 << 28);
-    } else if (RC == &NVPTX::Int32RegsRegClass) {
+    } else if (RC == &NVPTX::B32RegClass) {
       Ret = (3 << 28);
-    } else if (RC == &NVPTX::Int64RegsRegClass) {
+    } else if (RC == &NVPTX::B64RegClass) {
       Ret = (4 << 28);
-    } else if (RC == &NVPTX::Float32RegsRegClass) {
-      Ret = (5 << 28);
-    } else if (RC == &NVPTX::Float64RegsRegClass) {
-      Ret = (6 << 28);
-    } else if (RC == &NVPTX::Int128RegsRegClass) {
+    } else if (RC == &NVPTX::B128RegClass) {
       Ret = (7 << 28);
     } else {
       report_fatal_error("Bad register class");
@@ -264,8 +299,8 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   };
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
-    const Align RetAlignment = TLI->getFunctionArgumentAlignment(
-        F, Ty, AttributeList::ReturnIndex, DL);
+    const Align RetAlignment =
+        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -364,11 +399,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   setAndEmitFunctionVirtualRegisters(*MF);
   encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
-    assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly())
-      emitInitialRawDwarfLocDirective(*MF);
-  }
+  emitInitialRawDwarfLocDirective(*MF, getDwarfDebug(), *OutStreamer);
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -436,26 +467,45 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // .maxclusterrank directive requires SM_90 or higher, make sure that we
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget *STI = &NTM.getSubtarget<NVPTXSubtarget>(F);
 
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
+    const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
     if (!ClusterDim.empty()) {
-      O << ".explicitcluster\n";
+
+      if (!BlocksAreClusters)
+        O << ".explicitcluster\n";
+
       if (ClusterDim[0] != 0) {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D != 0; }) &&
+        assert(llvm::all_of(ClusterDim, not_equal_to(0)) &&
                "cluster_dim_x != 0 implies cluster_dim_y and cluster_dim_z "
                "should be non-zero as well");
 
         O << formatv(".reqnctapercluster {0:$[, ]}\n",
                      make_range(ClusterDim.begin(), ClusterDim.end()));
       } else {
-        assert(llvm::all_of(ClusterDim, [](unsigned D) { return D == 0; }) &&
+        assert(llvm::all_of(ClusterDim, equal_to(0)) &&
                "cluster_dim_x == 0 implies cluster_dim_y and cluster_dim_z "
                "should be 0 as well");
       }
     }
+
+    if (BlocksAreClusters) {
+      LLVMContext &Ctx = F.getContext();
+      if (ReqNTID.empty() || ClusterDim.empty())
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires reqntid and cluster_dim attributes",
+            F.getSubprogram()));
+      else if (STI->getPTXVersion() < 90)
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "blocksareclusters requires PTX version >= 9.0",
+            F.getSubprogram()));
+      else
+        O << ".blocksareclusters\n";
+    }
+
     if (const auto Maxclusterrank = getMaxClusterRank(F))
       O << ".maxclusterrank " << *Maxclusterrank << "\n";
   }
@@ -609,6 +659,15 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F.getIntrinsicID())
         continue;
+      // An unrecognized intrinsic would produce an invalid PTX declaration. Let
+      // the user know that, and skip it.
+      if (F.isIntrinsic()) {
+        LLVMContext &Ctx = F.getContext();
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "unknown intrinsic '" + F.getName() +
+                   "' cannot be lowered by the NVPTX backend"));
+        continue;
+      }
       emitDeclaration(&F, O);
       continue;
     }
@@ -654,19 +713,20 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // rest of NVPTX isn't friendly to change subtargets per function and
   // so the default TargetMachine will have all of the options.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto* STI = static_cast<const NVPTXSubtarget*>(NTM.getSubtargetImpl());
-  SmallString<128> Str1;
-  raw_svector_ostream OS1(Str1);
+  const NVPTXSubtarget *STI = NTM.getSubtargetImpl();
 
   // Emit header before any dwarf directives are emitted below.
-  emitHeader(M, OS1, *STI);
-  OutStreamer->emitRawText(OS1.str());
+  emitHeader(M, *STI);
+}
+
+/// Create NVPTX-specific DwarfDebug handler.
+DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
+  return new NVPTXDwarfDebug(this);
 }
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
   if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
@@ -701,8 +761,7 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
   // Print out module-level global variables in proper order
   for (const GlobalVariable *GV : Globals)
@@ -725,22 +784,11 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   OutStreamer->emitRawText(OS.str());
 }
 
-void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
-                                 const NVPTXSubtarget &STI) {
-  const unsigned PTXVersion = STI.getPTXVersion();
+NVPTXTargetStreamer *NVPTXAsmPrinter::getTargetStreamer() const {
+  return static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer());
+}
 
-  O << "//\n"
-       "// Generated by LLVM NVPTX Back-End\n"
-       "//\n"
-       "\n"
-    << ".version " << (PTXVersion / 10) << "." << (PTXVersion % 10) << "\n"
-    << ".target " << STI.getTargetName();
-
-  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  if (NTM.getDrvInterface() == NVPTX::NVCL)
-    O << ", texmode_independent";
-
-  bool HasFullDebugInfo = false;
+static bool hasFullDebugInfo(Module &M) {
   for (DICompileUnit *CU : M.debug_compile_units()) {
     switch(CU->getEmissionKind()) {
     case DICompileUnit::NoDebug:
@@ -748,18 +796,27 @@ void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
       break;
     case DICompileUnit::LineTablesOnly:
     case DICompileUnit::FullDebug:
-      HasFullDebugInfo = true;
-      break;
+      return true;
     }
-    if (HasFullDebugInfo)
-      break;
   }
-  if (HasFullDebugInfo)
-    O << ", debug";
 
-  O << "\n"
-    << ".address_size " << (NTM.is64Bit() ? "64" : "32") << "\n"
-    << "\n";
+  return false;
+}
+
+void NVPTXAsmPrinter::emitHeader(Module &M, const NVPTXSubtarget &STI) {
+  auto *TS = getTargetStreamer();
+
+  TS->emitBanner();
+
+  const unsigned PTXVersion = STI.getPTXVersion();
+  TS->emitVersionDirective(PTXVersion);
+
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  bool TexModeIndependent = NTM.getDrvInterface() == NVPTX::NVCL;
+
+  TS->emitTargetDirective(STI.getTargetName(), TexModeIndependent,
+                          hasFullDebugInfo(M));
+  TS->emitAddressSizeDirective(M.getDataLayout().getPointerSizeInBits());
 }
 
 bool NVPTXAsmPrinter::doFinalization(Module &M) {
@@ -854,12 +911,14 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     O << ".weak ";
   }
 
-  if (isTexture(*GVar)) {
+  const PTXOpaqueType OpaqueType = getPTXOpaqueType(*GVar);
+
+  if (OpaqueType == PTXOpaqueType::Texture) {
     O << ".global .texref " << getTextureName(*GVar) << ";\n";
     return;
   }
 
-  if (isSurface(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Surface) {
     O << ".global .surfref " << getSurfaceName(*GVar) << ";\n";
     return;
   }
@@ -873,7 +932,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
     return;
   }
 
-  if (isSampler(*GVar)) {
+  if (OpaqueType == PTXOpaqueType::Sampler) {
     O << ".global .samplerref " << getSamplerName(*GVar);
 
     const Constant *Initializer = nullptr;
@@ -1021,7 +1080,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
-            const unsigned int ptrSize = MAI->getCodePointerSize();
+            const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
                 !aggBuffer.allSymbolsAligned(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
@@ -1093,12 +1152,12 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
-  unsigned int InitializerCount = size;
+  unsigned int InitializerCount = Size;
   // TODO: symbols make this harder, but it would still be good to trim trailing
   // 0s for aggs with symbols as well.
   if (numSymbols() == 0)
@@ -1135,12 +1194,12 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
+  symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
   assert(nextSymbolPos % ptrSize == 0);
-  for (unsigned int pos = 0; pos < size; pos += ptrSize) {
+  for (unsigned int pos = 0; pos < Size; pos += ptrSize) {
     if (pos)
       os << ", ";
     if (pos == nextSymbolPos) {
@@ -1163,8 +1222,7 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *F, raw_ostream &O) {
   ArrayRef<const GlobalVariable *> GVars = It->second;
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
   for (const GlobalVariable *GV : GVars) {
     O << "\t// demoted variable\n\t";
@@ -1323,33 +1381,37 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     // Handle image/sampler parameters
     if (IsKernelFunc) {
-      const bool IsSampler = isSampler(Arg);
-      const bool IsTexture = !IsSampler && isImageReadOnly(Arg);
-      const bool IsSurface = !IsSampler && !IsTexture &&
-                             (isImageReadWrite(Arg) || isImageWriteOnly(Arg));
-      if (IsSampler || IsTexture || IsSurface) {
+      const PTXOpaqueType ArgOpaqueType = getPTXOpaqueType(Arg);
+      if (ArgOpaqueType != PTXOpaqueType::None) {
         const bool EmitImgPtr = !MFI || !MFI->checkImageHandleSymbol(ParamSym);
         O << "\t.param ";
         if (EmitImgPtr)
           O << ".u64 .ptr ";
 
-        if (IsSampler)
+        switch (ArgOpaqueType) {
+        case PTXOpaqueType::Sampler:
           O << ".samplerref ";
-        else if (IsTexture)
+          break;
+        case PTXOpaqueType::Texture:
           O << ".texref ";
-        else // IsSurface
+          break;
+        case PTXOpaqueType::Surface:
           O << ".surfref ";
+          break;
+        case PTXOpaqueType::None:
+          llvm_unreachable("handled above");
+        }
         O << ParamSym;
         continue;
       }
     }
 
-    auto GetOptimalAlignForParam = [TLI, &DL, F, &Arg](Type *Ty) -> Align {
+    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
       if (MaybeAlign StackAlign =
               getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
         return StackAlign.value();
 
-      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
+      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
       MaybeAlign ParamAlign =
           Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
       return std::max(TypeAlign, ParamAlign.valueOrOne());
@@ -1366,7 +1428,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // size = typeallocsize of element type
       const Align OptimalAlign =
           IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : TLI->getFunctionByValParamAlign(
+                       : getFunctionByValParamAlign(
                              F, ETy, Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
@@ -1462,7 +1524,6 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // Map the global virtual register number to a register class specific
   // virtual register number starting from 1 with that class.
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  //unsigned numRegClasses = TRI->getNumRegClasses();
 
   // Emit the Fake Stack Object
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1483,13 +1544,12 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   // global virtual
   // register number and the per class virtual register number.
   // We use the per class virtual register number in the ptx output.
-  unsigned int numVRs = MRI->getNumVirtRegs();
-  for (unsigned i = 0; i < numVRs; i++) {
-    Register vr = Register::index2VirtReg(i);
-    const TargetRegisterClass *RC = MRI->getRegClass(vr);
-    DenseMap<unsigned, unsigned> &regmap = VRegMapping[RC];
-    int n = regmap.size();
-    regmap.insert(std::make_pair(vr, n + 1));
+  for (unsigned I : llvm::seq(MRI->getNumVirtRegs())) {
+    Register VR = Register::index2VirtReg(I);
+    if (MRI->use_empty(VR) && MRI->def_empty(VR))
+      continue;
+    auto &RCRegMap = VRegMapping[MRI->getRegClass(VR)];
+    RCRegMap[VR] = RCRegMap.size() + 1;
   }
 
   // Emit declaration of the virtual registers or 'physical' registers for
@@ -1679,24 +1739,41 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
       Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
   };
 
+  // Integer or floating point vector splats.
+  if (isa<ConstantInt, ConstantFP>(CPV)) {
+    if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
+      for (unsigned I : llvm::seq(VTy->getNumElements()))
+        bufferLEByte(CPV->getAggregateElement(I), 0, aggBuffer);
+      return;
+    }
+  }
+
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+    assert(CI->getType()->isIntegerTy() && "Expected integer constant!");
     ExtendBuffer(CI->getValue(), aggBuffer);
     return;
   }
 
   // f128
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+    assert(CFP->getType()->isFloatingPointTy() && "Expected fp constant!");
     if (CFP->getType()->isFP128Ty()) {
       ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
       return;
     }
   }
 
-  // Old constants
-  if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {
+  // Buffer arrays one element at a time.
+  if (isa<ConstantArray>(CPV)) {
     for (const auto &Op : CPV->operands())
       bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Constant vectors
+  if (const auto *CVec = dyn_cast<ConstantVector>(CPV)) {
+    bufferAggregateConstVec(CVec, aggBuffer);
     return;
   }
 
@@ -1721,6 +1798,77 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     return;
   }
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
+}
+
+void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
+                                              AggBuffer *aggBuffer) {
+  unsigned NumElems = CV->getType()->getNumElements();
+  const unsigned BuffSize = aggBuffer->getBufferSize();
+
+  // Buffer one element at a time if we have allocated enough buffer space.
+  if (BuffSize >= NumElems) {
+    for (const auto &Op : CV->operands())
+      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Sub-byte datatypes will have more elements than bytes allocated for the
+  // buffer. Merge consecutive elements to form a full byte. We expect that 8 %
+  // sub-byte-elem-size should be 0 and current expected usage is for i4 (for
+  // e2m1-fp4 types).
+  Type *ElemTy = CV->getType()->getElementType();
+  assert(ElemTy->isIntegerTy() && "Expected integer data type.");
+  unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
+  assert(ElemTySize < 8 && "Expected sub-byte data type.");
+  assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
+  // Number of elements to merge to form a full byte.
+  unsigned NumElemsPerByte = 8 / ElemTySize;
+  unsigned NumCompleteBytes = NumElems / NumElemsPerByte;
+  unsigned NumTailElems = NumElems % NumElemsPerByte;
+
+  // Helper lambda to constant-fold sub-vector of sub-byte type elements into
+  // i8. Start and end indices of the sub-vector is provided, along with number
+  // of padding zeros if required.
+  auto ConvertSubCVtoInt8 = [this, &ElemTy](const ConstantVector *CV,
+                                            unsigned Start, unsigned End,
+                                            unsigned NumPaddingZeros = 0) {
+    // Collect elements to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned I : llvm::seq(Start, End))
+      SubCVElems.push_back(CV->getAggregateElement(I));
+
+    // Optionally pad with zeros.
+    if (NumPaddingZeros)
+      SubCVElems.append(NumPaddingZeros, ConstantInt::getNullValue(ElemTy));
+
+    auto SubCV = ConstantVector::get(SubCVElems);
+    Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
+
+    // Merge elements of the sub-vector using ConstantFolding.
+    ConstantInt *MergedElem =
+        dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+            ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
+            getDataLayout()));
+
+    if (!MergedElem)
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+
+    return MergedElem;
+  };
+
+  // Iterate through elements of vector one chunk at a time and buffer that
+  // chunk.
+  for (unsigned ByteIdx : llvm::seq(NumCompleteBytes))
+    bufferLEByte(ConvertSubCVtoInt8(CV, ByteIdx * NumElemsPerByte,
+                                    (ByteIdx + 1) * NumElemsPerByte),
+                 0, aggBuffer);
+
+  // For unevenly sized vectors add tail padding zeros.
+  if (NumTailElems > 0)
+    bufferLEByte(ConvertSubCVtoInt8(CV, NumElems - NumTailElems, NumElems,
+                                    NumElemsPerByte - NumTailElems),
+                 0, aggBuffer);
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
@@ -1854,75 +2002,8 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
   report_fatal_error(Twine(OS.str()));
 }
 
-// Copy of MCExpr::print customized for NVPTX
 void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) const {
-  switch (Expr.getKind()) {
-  case MCExpr::Target:
-    return cast<MCTargetExpr>(&Expr)->printImpl(OS, MAI);
-  case MCExpr::Constant:
-    OS << cast<MCConstantExpr>(Expr).getValue();
-    return;
-
-  case MCExpr::SymbolRef: {
-    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Expr);
-    const MCSymbol &Sym = SRE.getSymbol();
-    Sym.print(OS, MAI);
-    return;
-  }
-
-  case MCExpr::Unary: {
-    const MCUnaryExpr &UE = cast<MCUnaryExpr>(Expr);
-    switch (UE.getOpcode()) {
-    case MCUnaryExpr::LNot:  OS << '!'; break;
-    case MCUnaryExpr::Minus: OS << '-'; break;
-    case MCUnaryExpr::Not:   OS << '~'; break;
-    case MCUnaryExpr::Plus:  OS << '+'; break;
-    }
-    printMCExpr(*UE.getSubExpr(), OS);
-    return;
-  }
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr &BE = cast<MCBinaryExpr>(Expr);
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getLHS()) || isa<MCSymbolRefExpr>(BE.getLHS()) ||
-        isa<NVPTXGenericMCSymbolRefExpr>(BE.getLHS())) {
-      printMCExpr(*BE.getLHS(), OS);
-    } else {
-      OS << '(';
-      printMCExpr(*BE.getLHS(), OS);
-      OS<< ')';
-    }
-
-    switch (BE.getOpcode()) {
-    case MCBinaryExpr::Add:
-      // Print "X-42" instead of "X+-42".
-      if (const MCConstantExpr *RHSC = dyn_cast<MCConstantExpr>(BE.getRHS())) {
-        if (RHSC->getValue() < 0) {
-          OS << RHSC->getValue();
-          return;
-        }
-      }
-
-      OS <<  '+';
-      break;
-    default: llvm_unreachable("Unhandled binary operator");
-    }
-
-    // Only print parens around the LHS if it is non-trivial.
-    if (isa<MCConstantExpr>(BE.getRHS()) || isa<MCSymbolRefExpr>(BE.getRHS())) {
-      printMCExpr(*BE.getRHS(), OS);
-    } else {
-      OS << '(';
-      printMCExpr(*BE.getRHS(), OS);
-      OS << ')';
-    }
-    return;
-  }
-  }
-
-  llvm_unreachable("Invalid expression kind!");
+  OutContext.getAsmInfo().printExpr(OS, Expr);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.
@@ -2013,8 +2094,127 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
   }
 }
 
+/// Returns true if \p Line begins with an alphabetic character or underscore,
+/// indicating it is a PTX instruction that should receive a .loc directive.
+static bool isPTXInstruction(StringRef Line) {
+  StringRef Trimmed = Line.ltrim();
+  return !Trimmed.empty() &&
+         (std::isalpha(static_cast<unsigned char>(Trimmed[0])) ||
+          Trimmed[0] == '_');
+}
+
+/// Returns the DILocation for an inline asm MachineInstr if debug line info
+/// should be emitted, or nullptr otherwise.
+static const DILocation *getInlineAsmDebugLoc(const MachineInstr *MI) {
+  if (!MI || !MI->getDebugLoc())
+    return nullptr;
+  const DISubprogram *SP = MI->getMF()->getFunction().getSubprogram();
+  if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
+    return nullptr;
+  const DILocation *DL = MI->getDebugLoc();
+  if (!DL->getFile() || !DL->getLine())
+    return nullptr;
+  return DL;
+}
+
+namespace {
+struct InlineAsmInliningContext {
+  MCSymbol *FuncNameSym = nullptr;
+  unsigned FileIA = 0;
+  unsigned LineIA = 0;
+  unsigned ColIA = 0;
+
+  bool hasInlinedAt() const { return FuncNameSym != nullptr; }
+};
+} // namespace
+
+/// Resolves the enhanced-lineinfo inlining context for an inline asm debug
+/// location. Returns a default (empty) context if inlining info is unavailable.
+static InlineAsmInliningContext
+getInlineAsmInliningContext(const DILocation *DL, const MachineFunction &MF,
+                            NVPTXDwarfDebug *NVDD, MCStreamer &Streamer,
+                            unsigned CUID) {
+  InlineAsmInliningContext Ctx;
+  const DILocation *InlinedAt = DL->getInlinedAt();
+  if (!InlinedAt || !InlinedAt->getFile() || !NVDD ||
+      !NVDD->isEnhancedLineinfo(MF))
+    return Ctx;
+  const auto *SubProg = getDISubprogram(DL->getScope());
+  if (!SubProg)
+    return Ctx;
+  Ctx.FuncNameSym = NVDD->getOrCreateFuncNameSymbol(SubProg->getLinkageName());
+  Ctx.FileIA = Streamer.emitDwarfFileDirective(
+      0, InlinedAt->getFile()->getDirectory(),
+      InlinedAt->getFile()->getFilename(), std::nullopt, std::nullopt, CUID);
+  Ctx.LineIA = InlinedAt->getLine();
+  Ctx.ColIA = InlinedAt->getColumn();
+  return Ctx;
+}
+
+void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                                    const MCTargetOptions &MCOptions,
+                                    const MDNode *LocMDNode,
+                                    InlineAsm::AsmDialect Dialect,
+                                    const MachineInstr *MI) {
+  assert(!Str.empty() && "Can't emit empty inline asm block");
+  if (Str.back() == 0)
+    Str = Str.substr(0, Str.size() - 1);
+
+  auto emitAsmStr = [&](StringRef AsmStr) {
+    emitInlineAsmStart();
+    OutStreamer->emitRawText(AsmStr);
+    emitInlineAsmEnd(STI, nullptr, MI);
+  };
+
+  const DILocation *DL = getInlineAsmDebugLoc(MI);
+  if (!DL) {
+    emitAsmStr(Str);
+    return;
+  }
+
+  const DIFile *File = DL->getFile();
+  unsigned Line = DL->getLine();
+  const unsigned Column = DL->getColumn();
+  const unsigned CUID = OutStreamer->getContext().getDwarfCompileUnitID();
+  const unsigned FileNumber = OutStreamer->emitDwarfFileDirective(
+      0, File->getDirectory(), File->getFilename(), std::nullopt, std::nullopt,
+      CUID);
+
+  auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug());
+  InlineAsmInliningContext InlineCtx =
+      getInlineAsmInliningContext(DL, *MI->getMF(), NVDD, *OutStreamer, CUID);
+
+  SmallVector<StringRef, 16> Lines;
+  Str.split(Lines, '\n');
+  emitInlineAsmStart();
+  for (const StringRef &L : Lines) {
+    StringRef RTrimmed = L.rtrim('\r');
+    if (isPTXInstruction(L)) {
+      if (InlineCtx.hasInlinedAt()) {
+        OutStreamer->emitDwarfLocDirectiveWithInlinedAt(
+            FileNumber, Line, Column, InlineCtx.FileIA, InlineCtx.LineIA,
+            InlineCtx.ColIA, InlineCtx.FuncNameSym, DWARF2_FLAG_IS_STMT, 0, 0,
+            File->getFilename());
+      } else {
+        OutStreamer->emitDwarfLocDirective(FileNumber, Line, Column,
+                                           DWARF2_FLAG_IS_STMT, 0, 0,
+                                           File->getFilename());
+      }
+    }
+    OutStreamer->emitRawText(RTrimmed);
+    ++Line;
+  }
+  emitInlineAsmEnd(STI, nullptr, MI);
+}
+
+char NVPTXAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
+                false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeNVPTXAsmPrinter() {
   RegisterAsmPrinter<NVPTXAsmPrinter> X(getTheNVPTXTarget32());
   RegisterAsmPrinter<NVPTXAsmPrinter> Y(getTheNVPTXTarget64());
 }

@@ -34,6 +34,9 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
+namespace remark::detail {
+class RemarkEngine;
+} // namespace remark::detail
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -208,9 +211,17 @@ public:
   // This is effectively private given that only MLIRContext.cpp can see the
   // MLIRContextImpl type.
   MLIRContextImpl &getImpl() { return *impl; }
+  const MLIRContextImpl &getImpl() const { return *impl; }
 
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
+
+  /// Returns the remark engine for this context, or nullptr if none has been
+  /// set.
+  remark::detail::RemarkEngine *getRemarkEngine();
+
+  /// Set the remark engine for this context.
+  void setRemarkEngine(std::unique_ptr<remark::detail::RemarkEngine> engine);
 
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
@@ -256,6 +267,11 @@ public:
   /// Register a handler for handling actions that are dispatched through this
   /// context. A nullptr handler can be set to disable a previously set handler.
   void registerActionHandler(HandlerTy handler);
+
+  /// Return a reference to the currently registered action handler. Its target
+  /// can be used to gain access to the handler's state, if any.
+  const HandlerTy &getActionHandler() const;
+  HandlerTy &getActionHandler();
 
   /// Return true if a valid ActionHandler is set.
   bool hasActionHandler();

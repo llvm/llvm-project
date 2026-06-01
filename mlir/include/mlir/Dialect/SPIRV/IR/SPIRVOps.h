@@ -16,10 +16,12 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTosaOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Interfaces/AlignmentAttrInterface.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -55,7 +57,7 @@ public:
   static inline mlir::spirv::FuncOp getFromVoidPointer(void *p) {
     return mlir::spirv::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // namespace llvm

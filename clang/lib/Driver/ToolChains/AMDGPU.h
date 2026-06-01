@@ -10,13 +10,12 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
 
@@ -80,6 +79,9 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
 
   /// Return whether denormals should be flushed, and treated as 0 by default
   /// for the subtarget.
@@ -99,11 +101,8 @@ public:
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize options.
-  bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                const llvm::opt::ArgList &DriverArgs,
-                                StringRef TargetID,
-                                const llvm::opt::Arg *A) const;
+  StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                    StringRef BoundArch) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -132,6 +131,10 @@ protected:
   /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
   /// Language specific warning options should go to derived classes.
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
@@ -146,25 +149,32 @@ public:
   // Returns a list of device library names shared by different languages
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          const std::string &GPUArch,
-                          bool isOpenMP = false) const;
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
+                          Action::OffloadKind DeviceOffloadingKind) const;
 
-  SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address;
-  }
-
-  void diagnoseUnsupportedSanitizers(const llvm::opt::ArgList &Args) const {
-    if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                      true))
-      return;
+  bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
+                                 const llvm::opt::DerivedArgList &DAL,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 const char *Value = nullptr) const {
     auto &Diags = getDriver().getDiags();
-    for (auto *A : Args.filtered(options::OPT_fsanitize_EQ)) {
-      SanitizerMask K =
-          parseSanitizerValue(A->getValue(), /*Allow Groups*/ false);
-      if (K != SanitizerKind::Address)
-        Diags.Report(clang::diag::warn_drv_unsupported_option_for_target)
-            << A->getAsString(Args) << getTriple().str();
+    bool IsExplicitDevice =
+        A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+
+    if (Value) {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_part_for_target
+              : clang::diag::warn_drv_unsupported_option_part_for_target;
+      Diags.Report(DiagID) << Value << A->getAsString(DriverArgs)
+                           << getTriple().str();
+    } else {
+      unsigned DiagID =
+          IsExplicitDevice
+              ? clang::diag::err_drv_unsupported_option_for_target
+              : clang::diag::warn_drv_unsupported_option_for_target;
+      Diags.Report(DiagID) << A->getAsString(DAL) << getTriple().str();
     }
+    return true;
   }
 };
 

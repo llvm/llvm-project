@@ -38,7 +38,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant ptr null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8, i64 }
@@ -56,7 +56,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -71,7 +71,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -217,9 +217,13 @@ declare void @g.f1()
 ; CHECK: @g.sanitize_address_dyninit = global i32 0, sanitize_address_dyninit
 ; CHECK: @g.sanitize_multiple = global i32 0, sanitize_memtag, sanitize_address_dyninit
 
+@ds = external global i32
+
 ; ptrauth constant
 @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null)
 ; CHECK: @auth_var = global ptr ptrauth (ptr @g1, i32 0, i64 65535)
+@auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
+; CHECK: @auth_var.ds = global ptr ptrauth (ptr @g1, i32 0, i64 65535, ptr null, ptr @ds)
 
 ;; Aliases
 ; Format: @<Name> = [Linkage] [Visibility] [DLLStorageClass] [ThreadLocal]
@@ -564,6 +568,10 @@ declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 ; CHECK: declare riscv_vls_cc(32768) void @riscv_vls_cc_32768()
 declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
 ; CHECK: declare riscv_vls_cc(65536) void @riscv_vls_cc_65536()
+declare cc124 void @f.cc124(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.cc124(i1)
+declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
+; CHECK: declare amdgpu_gfx_whole_wave void @f.amdgpu_gfx_whole_wave(i1)
 declare cc1023 void @f.cc1023()
 ; CHECK: declare cc1023 void @f.cc1023()
 
@@ -755,6 +763,24 @@ declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
 
+; Functions -- prefalign
+define void @f.prefalign2() prefalign(2) {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign(8)
+define void @f.prefalign4294967296() prefalign(4294967296) {
+  ret void
+}
+; CHECK: define void @f.prefalign4294967296() prefalign(4294967296)
+
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"
 ; CHECK: declare void @f.gcshadow() gc "shadow-stack"
@@ -929,6 +955,12 @@ define void @fp_atomics(ptr %word) {
 ; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.0 monotonic
+
   ret void
 }
 
@@ -991,6 +1023,16 @@ define void @usub_cond_usub_sat_atomics(ptr %word) {
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
+  ret void
+}
+
+define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) {
+; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+  %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval seq_cst, align 16
+
   ret void
 }
 
@@ -1262,6 +1304,8 @@ define void @typesystem() {
   ; CHECK: %t9 = alloca <4 x i32>
   %t10 = alloca <vscale x 4 x i32>
   ; CHECK: %t10 = alloca <vscale x 4 x i32>
+  %t11 = alloca b8
+  ; CHECK: %t11 = alloca b8
 
   ret void
 }
@@ -1581,6 +1625,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!10 = !{i32 0, !11}
+!11 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!12 = !{i32 1, !13}
+!13 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1591,11 +1639,15 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !10
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !10
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !12
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !12
 
   ret void
 }
@@ -1714,7 +1766,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #54
+  ; CHECK: call void @f.nobuiltin() #87
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -1850,21 +1902,21 @@ declare i64 @llvm.readcyclecounter()
 declare void @llvm.clear_cache(ptr, ptr)
 declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 
-!10 = !{!"rax"}
+!14 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
-  call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
-  call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
-  call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
-  call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  call i32 @llvm.read_register.i32(metadata !14)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !14)
+  call i64 @llvm.read_register.i64(metadata !14)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !14)
+  call void @llvm.write_register.i32(metadata !14, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !14, i32 0)
+  call void @llvm.write_register.i64(metadata !14, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !14, i64 0)
 
   %stack = call ptr @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1881,7 +1933,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(ptr null, ptr null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
@@ -1910,10 +1962,10 @@ define void @intrinsics.localrecover() {
 
 ; We need this function to provide `uses' for some metadata tests.
 define void @misc.metadata() {
-  call void @f1(), !srcloc !11
-  call void @f1(), !srcloc !12
-  call void @f1(), !srcloc !13
-  call void @f1(), !srcloc !14
+  call void @f1(), !srcloc !15
+  call void @f1(), !srcloc !16
+  call void @f1(), !srcloc !17
+  call void @f1(), !srcloc !18
   ret void
 }
 
@@ -2147,6 +2199,9 @@ declare void @f.sanitize_realtime() sanitize_realtime
 declare void @f.sanitize_realtime_blocking() sanitize_realtime_blocking
 ; CHECK: declare void @f.sanitize_realtime_blocking() #53
 
+declare void @f.sanitize_alloc_token() sanitize_alloc_token
+; CHECK: declare void @f.sanitize_alloc_token() #54
+
 ; CHECK: declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 declare nofpclass(snan) float @nofpclass_snan(float nofpclass(snan))
 
@@ -2226,6 +2281,200 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ret float %add1
 }
 
+; CHECK: define void @denormal_fpenv__ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee() denormal_fpenv(ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_preservesign() #56 {
+define void @denormal_fpenv__ieee_preservesign() denormal_fpenv(ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_positivezero() #57 {
+define void @denormal_fpenv__ieee_positivezero() denormal_fpenv(ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_dynamic() #58 {
+define void @denormal_fpenv__ieee_dynamic() denormal_fpenv(ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_ieee() #59 {
+define void @denormal_fpenv__preservesign_ieee() denormal_fpenv(preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign() denormal_fpenv(preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_positivezero() #61 {
+define void @denormal_fpenv__preservesign_positivezero() denormal_fpenv(preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_dynamic() #62 {
+define void @denormal_fpenv__preservesign_dynamic() denormal_fpenv(preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_ieee() #63 {
+define void @denormal_fpenv__positivezero_ieee() denormal_fpenv(positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_preservesign() #64 {
+define void @denormal_fpenv__positivezero_preservesign() denormal_fpenv(positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero() denormal_fpenv(positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_dynamix() #66 {
+define void @denormal_fpenv__positivezero_dynamix() denormal_fpenv(positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_ieee() #67 {
+define void @denormal_fpenv__dynamic_ieee() denormal_fpenv(dynamic|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_preservesign() #68 {
+define void @denormal_fpenv__dynamic_preservesign() denormal_fpenv(dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_positivezero() #69 {
+define void @denormal_fpenv__dynamic_positivezero() denormal_fpenv(dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic() denormal_fpenv(dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_ieee() #55 {
+define void @denormal_fpenv_float__ieee_ieee() denormal_fpenv(float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_preservesign() #71 {
+define void @denormal_fpenv_float__ieee_preservesign() denormal_fpenv(float: ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_positivezero() #72 {
+define void @denormal_fpenv_float__ieee_positivezero() denormal_fpenv(float: ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_dynamic() #73 {
+define void @denormal_fpenv_float__ieee_dynamic() denormal_fpenv(float: ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_ieee() #74 {
+define void @denormal_fpenv_float__preservesign_ieee() denormal_fpenv(float: preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_preservesign() #75 {
+define void @denormal_fpenv_float__preservesign_preservesign() denormal_fpenv(float: preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_positivezero() #76 {
+define void @denormal_fpenv_float__preservesign_positivezero() denormal_fpenv(float: preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_dynamic() #77 {
+define void @denormal_fpenv_float__preservesign_dynamic() denormal_fpenv(float: preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_ieee() #78 {
+define void @denormal_fpenv_float__positivezero_ieee() denormal_fpenv(float: positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_preservesign() #79 {
+define void @denormal_fpenv_float__positivezero_preservesign() denormal_fpenv(float: positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_positivezero() #80 {
+define void @denormal_fpenv_float__positivezero_positivezero() denormal_fpenv(float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_dynamix() #81 {
+define void @denormal_fpenv_float__positivezero_dynamix() denormal_fpenv(float: positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_ieee() #82 {
+define void @denormal_fpenv_float__dynamic_ieee() denormal_fpenv(float: dynamic|ieee) {
+  ret void
+}
+
+; Function Attrs: denormal_fpenv(float: dynamic|preservesign)
+define void @denormal_fpenv_float__dynamic_preservesign() denormal_fpenv(float: dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_positivezero() #84 {
+define void @denormal_fpenv_float__dynamic_positivezero() denormal_fpenv(float: dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_dynamic() #85 {
+define void @denormal_fpenv_float__dynamic_dynamic() denormal_fpenv(float: dynamic|dynamic) {
+  ret void
+}
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() denormal_fpenv(ieee|ieee, float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() #75 {
+define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() denormal_fpenv(ieee|ieee, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() denormal_fpenv(preservesign|preservesign, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() denormal_fpenv(positivezero|positivezero, float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() denormal_fpenv(dynamic|dynamic, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() #85 {
+define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() denormal_fpenv(ieee|ieee, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() #86 {
+define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() denormal_fpenv(preservesign|preservesign, float: dynamic|dynamic) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2280,7 +2529,40 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #51 = { sanitize_numerical_stability }
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
-; CHECK: attributes #54 = { builtin }
+; CHECK: attributes #54 = { sanitize_alloc_token }
+; CHECK: attributes #55 = { denormal_fpenv(ieee) }
+; CHECK: attributes #56 = { denormal_fpenv(ieee|preservesign) }
+; CHECK: attributes #57 = { denormal_fpenv(ieee|positivezero) }
+; CHECK: attributes #58 = { denormal_fpenv(ieee|dynamic) }
+; CHECK: attributes #59 = { denormal_fpenv(preservesign|ieee) }
+; CHECK: attributes #60 = { denormal_fpenv(preservesign) }
+; CHECK: attributes #61 = { denormal_fpenv(preservesign|positivezero) }
+; CHECK: attributes #62 = { denormal_fpenv(preservesign|dynamic) }
+; CHECK: attributes #63 = { denormal_fpenv(positivezero|ieee) }
+; CHECK: attributes #64 = { denormal_fpenv(positivezero|preservesign) }
+; CHECK: attributes #65 = { denormal_fpenv(positivezero) }
+; CHECK: attributes #66 = { denormal_fpenv(positivezero|dynamic) }
+; CHECK: attributes #67 = { denormal_fpenv(dynamic|ieee) }
+; CHECK: attributes #68 = { denormal_fpenv(dynamic|preservesign) }
+; CHECK: attributes #69 = { denormal_fpenv(dynamic|positivezero) }
+; CHECK: attributes #70 = { denormal_fpenv(dynamic) }
+; CHECK: attributes #71 = { denormal_fpenv(float: ieee|preservesign) }
+; CHECK: attributes #72 = { denormal_fpenv(float: ieee|positivezero) }
+; CHECK: attributes #73 = { denormal_fpenv(float: ieee|dynamic) }
+; CHECK: attributes #74 = { denormal_fpenv(float: preservesign|ieee) }
+; CHECK: attributes #75 = { denormal_fpenv(float: preservesign) }
+; CHECK: attributes #76 = { denormal_fpenv(float: preservesign|positivezero) }
+; CHECK: attributes #77 = { denormal_fpenv(float: preservesign|dynamic) }
+; CHECK: attributes #78 = { denormal_fpenv(float: positivezero|ieee) }
+; CHECK: attributes #79 = { denormal_fpenv(float: positivezero|preservesign) }
+; CHECK: attributes #80 = { denormal_fpenv(float: positivezero) }
+; CHECK: attributes #81 = { denormal_fpenv(float: positivezero|dynamic) }
+; CHECK: attributes #82 = { denormal_fpenv(float: dynamic|ieee) }
+; CHECK: attributes #83 = { denormal_fpenv(float: dynamic|preservesign) }
+; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
+; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
+; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
+; CHECK: attributes #87 = { builtin }
 
 ;; Metadata
 
@@ -2304,11 +2586,11 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: !6 = !{i32 6, !"mod6", !0}
 
 ; Metadata -- Check `distinct'
-!11 = distinct !{}
-; CHECK: !11 = distinct !{}
-!12 = distinct !{}
-; CHECK: !12 = distinct !{}
-!13 = !{!11}
-; CHECK: !13 = !{!11}
-!14 = !{!12}
-; CHECK: !14 = !{!12}
+!15 = distinct !{}
+; CHECK: !15 = distinct !{}
+!16 = distinct !{}
+; CHECK: !16 = distinct !{}
+!17 = !{!15}
+; CHECK: !17 = !{!15}
+!18 = !{!16}
+; CHECK: !18 = !{!16}

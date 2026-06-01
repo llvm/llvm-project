@@ -1,5 +1,6 @@
-; XFAIL: *
-; RUN: llvm-diff %s %s
+; RUN: llvm-diff %s %s | count 0
+; Make sure there is no error produced by using uselistorder with two
+; modules using the same constant in the same context.
 
 define void @func() {
 entry:

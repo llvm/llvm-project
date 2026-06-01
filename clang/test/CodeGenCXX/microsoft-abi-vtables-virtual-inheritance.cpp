@@ -492,7 +492,7 @@ struct X {
 
 struct Y : virtual X {
   // CHECK-LABEL: VFTable for 'vdtors::X' in 'vdtors::Y' (2 entries).
-  // CHECK-NEXT: 0 | vdtors::Y::~Y() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::Y::~Y() [vector deleting]
   // CHECK-NEXT: 1 | void vdtors::X::zzz()
 
   // CHECK-NOT: Thunks for 'vdtors::Y::~Y()'
@@ -515,7 +515,7 @@ struct U : virtual W {
   // CHECK-NEXT: 0 | void vdtors::Z::z()
 
   // CHECK-LABEL: VFTable for 'vdtors::X' in 'vdtors::W' in 'vdtors::U' (2 entries).
-  // CHECK-NEXT: 0 | vdtors::U::~U() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::U::~U() [vector deleting]
   // CHECK-NEXT:     [this adjustment: -4 non-virtual]
   // CHECK-NEXT: 1 | void vdtors::X::zzz()
 
@@ -524,7 +524,7 @@ struct U : virtual W {
 
   // CHECK-LABEL: VFTable indices for 'vdtors::U' (1 entry).
   // CHECK-NEXT: -- accessible via vbtable index 1, vfptr at offset 4 --
-  // CHECK-NEXT: 0 | vdtors::U::~U() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::U::~U() [vector deleting]
   virtual ~U();
 };
 
@@ -536,7 +536,7 @@ struct V : virtual W {
   // CHECK-NEXT: 0 | void vdtors::Z::z()
 
   // CHECK-LABEL: VFTable for 'vdtors::X' in 'vdtors::W' in 'vdtors::V' (2 entries).
-  // CHECK-NEXT: 0 | vdtors::V::~V() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::V::~V() [vector deleting]
   // CHECK-NEXT:     [this adjustment: -4 non-virtual]
   // CHECK-NEXT: 1 | void vdtors::X::zzz()
 
@@ -545,7 +545,7 @@ struct V : virtual W {
 
   // CHECK-LABEL: VFTable indices for 'vdtors::V' (1 entry).
   // CHECK-NEXT: -- accessible via vbtable index 1, vfptr at offset 4 --
-  // CHECK-NEXT: 0 | vdtors::V::~V() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::V::~V() [vector deleting]
 };
 
 V v;
@@ -557,7 +557,7 @@ struct T : virtual X {
 
 struct P : T, Y {
   // CHECK-LABEL: VFTable for 'vdtors::X' in 'vdtors::T' in 'vdtors::P' (2 entries).
-  // CHECK-NEXT: 0 | vdtors::P::~P() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::P::~P() [vector deleting]
   // CHECK-NEXT: 1 | void vdtors::X::zzz()
 
   // CHECK-NOT: Thunks for 'vdtors::P::~P()'
@@ -574,18 +574,18 @@ struct Q {
 // PR19172: Yet another diamond we miscompiled.
 struct R : virtual Q, X {
   // CHECK-LABEL: VFTable for 'vdtors::Q' in 'vdtors::R' (1 entry).
-  // CHECK-NEXT: 0 | vdtors::R::~R() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::R::~R() [vector deleting]
   // CHECK-NEXT:     [this adjustment: -8 non-virtual]
 
   // CHECK-LABEL: Thunks for 'vdtors::R::~R()' (1 entry).
   // CHECK-NEXT: 0 | [this adjustment: -8 non-virtual]
 
   // CHECK-LABEL: VFTable for 'vdtors::X' in 'vdtors::R' (2 entries).
-  // CHECK-NEXT: 0 | vdtors::R::~R() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::R::~R() [vector deleting]
   // CHECK-NEXT: 1 | void vdtors::X::zzz()
 
   // CHECK-LABEL: VFTable indices for 'vdtors::R' (1 entry).
-  // CHECK-NEXT: 0 | vdtors::R::~R() [scalar deleting]
+  // CHECK-NEXT: 0 | vdtors::R::~R() [vector deleting]
   virtual ~R();
 };
 
@@ -771,7 +771,7 @@ struct A {
 };
 struct __declspec(dllexport) B : virtual A {
   virtual void f() = 0;
-  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @_purecall] }
+  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport constant { [1 x ptr] } { [1 x ptr] [ptr @_purecall] }
 };
 }
 
@@ -788,8 +788,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_1::B' in 'pr21031_1::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_1::B::g()
 
-// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
-// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}}constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}}constant { [1 x ptr] }
 }
 
 namespace pr21031_2 {
@@ -804,8 +804,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_2::A' in 'pr21031_2::B' in 'pr21031_2::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_2::A::f()
 
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x ptr] }
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}}constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}}constant { [1 x ptr] }
 }
 
 namespace pr21062_1 {
@@ -818,7 +818,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_1::A' in 'pr21062_1::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_1::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}}constant { [1 x ptr] }
 }
 
 namespace pr21062_2 {
@@ -831,7 +831,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_2::A' in 'pr21062_2::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_2::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}}constant { [1 x ptr] }
 }
 
 namespace pr21064 {
@@ -843,5 +843,5 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21064::B' in 'pr21064::C' in 'pr21064::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21064::B::f()
 
-// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}}constant { [1 x ptr] }
 }

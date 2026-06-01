@@ -19,10 +19,11 @@
 
 namespace llvm {
 class MCAsmInfoGOFF : public MCAsmInfo {
-  virtual void anchor();
+  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
+                            raw_ostream &) const final;
 
 protected:
-  MCAsmInfoGOFF();
+  MCAsmInfoGOFF(const MCTargetOptions &Options);
 };
 } // end namespace llvm
 

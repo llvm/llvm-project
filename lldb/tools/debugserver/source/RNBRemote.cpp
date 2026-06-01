@@ -21,6 +21,10 @@
 #include <mach/exception_types.h>
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
+#include <memory>
+#if __has_include(<os/security_config.h>)
+#include <os/security_config.h>
+#endif
 #include <pwd.h>
 #include <string>
 #include <sys/stat.h>
@@ -37,7 +41,6 @@
 #include "DNBLog.h"
 #include "DNBThreadResumeActions.h"
 #include "JSON.h"
-#include "JSONGenerator.h"
 #include "JSONGenerator.h"
 #include "MacOSX/Genealogy.h"
 #include "OsLogger.h"
@@ -90,11 +93,34 @@ static const std::string JSON_ASYNC_TYPE_KEY_NAME("type");
   std::setfill(' ') << std::setw((iword_idx)) << ""
 #define INDENT_WITH_TABS(iword_idx)                                            \
   std::setfill('\t') << std::setw((iword_idx)) << ""
-// Class to handle communications via gdb remote protocol.
 
-// Prototypes
+// If `ch` is a meta character as per the binary packet convention in the
+// gdb-remote protocol, quote it and write it into `stream`, otherwise write it
+// as is.
+static void binary_encode_char(std::ostringstream &stream, char ch) {
+  if (ch == '#' || ch == '$' || ch == '}' || ch == '*') {
+    stream.put('}');
+    stream.put(ch ^ 0x20);
+  } else {
+    stream.put(ch);
+  }
+}
 
-static std::string binary_encode_string(const std::string &s);
+// Equivalent to calling binary_encode_char for every element of `data`.
+static void binary_encode_data_vector(std::ostringstream &stream,
+                                      std::vector<uint8_t> data) {
+  for (auto ch : data)
+    binary_encode_char(stream, ch);
+}
+
+// Quote any meta characters in a std::string as per the binary
+// packet convention in the gdb-remote protocol.
+static std::string binary_encode_string(const std::string &s) {
+  std::ostringstream stream;
+  for (char ch : s)
+    binary_encode_char(stream, ch);
+  return stream.str();
+}
 
 // Decode a single hex character and return the hex value as a number or
 // -1 if "ch" is not a hex character.
@@ -136,16 +162,30 @@ static std::string decode_hex_ascii_string(const char *p,
   return arg;
 }
 
-uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
-                       uint64_t fail_value = 0) {
+static uint64_t decode_uint64(const char *p, int base, char **end = nullptr,
+                              uint64_t fail_value = 0) {
   nub_addr_t addr = strtoull(p, end, 16);
   if (addr == 0 && errno != 0)
     return fail_value;
   return addr;
 }
 
-void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
-                      bool swap) {
+/// Attempts to parse a prefix of `number_str` as a uint64_t. If
+/// successful, the number is returned and the prefix is dropped from
+/// `number_str`.
+static std::optional<uint64_t> extract_u64(std::string_view &number_str) {
+  char *str_end = nullptr;
+  errno = 0;
+  uint64_t number = strtoull(number_str.data(), &str_end, 16);
+  if (errno != 0)
+    return std::nullopt;
+  assert(str_end);
+  number_str.remove_prefix(str_end - number_str.data());
+  return number;
+}
+
+static void append_hex_value(std::ostream &ostrm, const void *buf,
+                             size_t buf_size, bool swap) {
   int i;
   const uint8_t *p = (const uint8_t *)buf;
   if (swap) {
@@ -157,7 +197,7 @@ void append_hex_value(std::ostream &ostrm, const void *buf, size_t buf_size,
   }
 }
 
-std::string cstring_to_asciihex_string(const char *str) {
+static std::string cstring_to_asciihex_string(const char *str) {
   std::string hex_str;
   hex_str.reserve(strlen(str) * 2);
   while (str && *str) {
@@ -169,12 +209,32 @@ std::string cstring_to_asciihex_string(const char *str) {
   return hex_str;
 }
 
-void append_hexified_string(std::ostream &ostrm, const std::string &string) {
+static void append_hexified_string(std::ostream &ostrm,
+                                   const std::string &string) {
   size_t string_size = string.size();
   const char *string_buf = string.c_str();
   for (size_t i = 0; i < string_size; i++) {
     ostrm << RAWHEX8(*(string_buf + i));
   }
+}
+
+/// Returns true if `str` starts with `prefix`.
+static bool starts_with(std::string_view str, std::string_view prefix) {
+  return str.substr(0, prefix.size()) == prefix;
+}
+
+/// Splits `list_str` into multiple string_views separated by `,`.
+static std::vector<std::string_view>
+parse_comma_separated_list(std::string_view list_str) {
+  std::vector<std::string_view> list;
+  while (!list_str.empty()) {
+    auto pos = list_str.find(',');
+    list.push_back(list_str.substr(0, pos));
+    if (pos == list_str.npos)
+      break;
+    list_str.remove_prefix(pos + 1);
+  }
+  return list;
 }
 
 // from System.framework/Versions/B/PrivateHeaders/sys/codesign.h
@@ -243,6 +303,11 @@ void RNBRemote::CreatePacketTable() {
                      "Read memory"));
   t.push_back(Packet(read_register, &RNBRemote::HandlePacket_p, NULL, "p",
                      "Read one register"));
+  // Careful: this *must* come before the `M` packet, as debugserver matches
+  // packet prefixes against known packet names. Inverting the order would match
+  // `MultiMemRead` as an `M` packet.
+  t.push_back(Packet(multi_mem_read, &RNBRemote::HandlePacket_MultiMemRead,
+                     NULL, "MultiMemRead", "Read multiple memory addresses"));
   t.push_back(Packet(write_memory, &RNBRemote::HandlePacket_M, NULL, "M",
                      "Write memory"));
   t.push_back(Packet(write_register, &RNBRemote::HandlePacket_P, NULL, "P",
@@ -416,6 +481,9 @@ void RNBRemote::CreatePacketTable() {
                      "jGetSharedCacheInfo", "Replies with JSON data about the "
                                             "location and uuid of the shared "
                                             "cache in the inferior process."));
+  t.push_back(Packet(
+      json_multi_breakpoint, &RNBRemote::HandlePacket_jMultiBreakpoint, NULL,
+      "jMultiBreakpoint", "Set/remove multiple breakpoints at once"));
   t.push_back(Packet(start_noack_mode, &RNBRemote::HandlePacket_QStartNoAckMode,
                      NULL, "QStartNoAckMode",
                      "Request that " DEBUGSERVER_PROGRAM_NAME
@@ -502,6 +570,8 @@ void RNBRemote::CreatePacketTable() {
       memory_region_info, &RNBRemote::HandlePacket_MemoryRegionInfo, NULL,
       "qMemoryRegionInfo", "Return size and attributes of a memory region that "
                            "contains the given address"));
+  t.push_back(Packet(get_memory_tags, &RNBRemote::HandlePacket_qMemTags, NULL,
+                     "qMemTags", "Return tags for a region of memory"));
   t.push_back(Packet(get_profile_data, &RNBRemote::HandlePacket_GetProfileData,
                      NULL, "qGetProfileData",
                      "Return profiling data of the current target."));
@@ -811,6 +881,13 @@ rnb_err_t RNBRemote::SendErrorPacket(std::string errcode,
   return SendPacket(errcode);
 }
 
+rnb_err_t RNBRemote::SendErrorPacket(uint32_t errcode,
+                                     const std::string &errmsg) {
+  char error_str[8];
+  snprintf(error_str, sizeof(error_str), "E%02x", errcode);
+  return SendErrorPacket(error_str, errmsg);
+}
+
 /* Get a packet via gdb remote protocol.
  Strip off the prefix/suffix, verify the checksum to make sure
  a valid packet was received, send an ACK if they match.  */
@@ -1022,8 +1099,6 @@ rnb_err_t RNBRemote::HandleAsyncPacket(PacketEnum *type) {
 rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
   static DNBTimer g_packetTimer(true);
 
-  //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8u RNBRemote::%s",
-  //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
   rnb_err_t err = rnb_err;
   std::string packet_data;
   RNBRemote::Packet packet_info;
@@ -1279,8 +1354,7 @@ static cpu_type_t best_guess_cpu_type() {
  LEN is the number of bytes to be processed.  If a character is escaped,
  it is 2 characters for LEN.  A LEN of -1 means decode-until-nul-byte
  (end of string).  */
-
-std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
+static std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
   std::vector<uint8_t> bytes;
   if (len == 0) {
     return bytes;
@@ -1299,31 +1373,10 @@ std::vector<uint8_t> decode_binary_data(const char *str, size_t len) {
   return bytes;
 }
 
-// Quote any meta characters in a std::string as per the binary
-// packet convention in the gdb-remote protocol.
-
-static std::string binary_encode_string(const std::string &s) {
-  std::string output;
-  const size_t s_size = s.size();
-  const char *s_chars = s.c_str();
-
-  for (size_t i = 0; i < s_size; i++) {
-    unsigned char ch = *(s_chars + i);
-    if (ch == '#' || ch == '$' || ch == '}' || ch == '*') {
-      output.push_back('}'); // 0x7d
-      output.push_back(ch ^ 0x20);
-    } else {
-      output.push_back(ch);
-    }
-  }
-  return output;
-}
-
 // If the value side of a key-value pair in JSON is a string,
 // and that string has a " character in it, the " character must
 // be escaped.
-
-std::string json_string_quote_metachars(const std::string &s) {
+static std::string json_string_quote_metachars(const std::string &s) {
   if (s.find('"') == std::string::npos)
     return s;
 
@@ -1457,15 +1510,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
       }
     }
 
-    //        for (auto &reg_entry: g_dynamic_register_map)
-    //        {
-    //            DNBLogThreaded("%4i: size = %3u, pseudo = %i, name = %s",
-    //                           reg_entry.offset,
-    //                           reg_entry.nub_info.size,
-    //                           reg_entry.nub_info.value_regs != NULL,
-    //                           reg_entry.nub_info.name);
-    //        }
-
     g_reg_entries = g_dynamic_register_map.data();
     g_num_reg_entries = g_dynamic_register_map.size();
   }
@@ -1477,7 +1521,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -1715,7 +1758,7 @@ rnb_err_t RNBRemote::HandlePacket_qThreadExtraInfo(const char *p) {
   return SendPacket("");
 }
 
-const char *k_space_delimiters = " \t";
+static const char *k_space_delimiters = " \t";
 static void skip_spaces(std::string &line) {
   if (!line.empty()) {
     size_t space_pos = line.find_first_not_of(k_space_delimiters);
@@ -2020,7 +2063,7 @@ rnb_err_t RNBRemote::HandlePacket_qRegisterInfo(const char *p) {
  QSetLogging:bitmask=LOG_ALL;mode=asl;
  */
 
-rnb_err_t set_logging(const char *p) {
+static rnb_err_t set_logging(const char *p) {
   int bitmask = 0;
   while (p && *p != '\0') {
     if (strncmp(p, "bitmask=", sizeof("bitmask=") - 1) == 0) {
@@ -2564,11 +2607,10 @@ rnb_err_t RNBRemote::HandlePacket_QSetProcessEvent(const char *p) {
 
 // If a fail_value is provided, a correct-length reply is always provided,
 // even if the register cannot be read right now on this thread.
-bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
-                                       nub_thread_t tid,
-                                       const register_map_entry_t *reg,
-                                       const DNBRegisterValue *reg_value_ptr,
-                                       std::optional<uint8_t> fail_value) {
+static bool register_value_in_hex_fixed_width(
+    std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
+    const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
+    std::optional<uint8_t> fail_value) {
   if (reg != NULL) {
     std::unique_ptr<DNBRegisterValue> reg_value =
         std::make_unique<DNBRegisterValue>();
@@ -2595,7 +2637,7 @@ bool register_value_in_hex_fixed_width(std::ostream &ostrm, nub_process_t pid,
   return false;
 }
 
-void debugserver_regnum_with_fixed_width_hex_register_value(
+static void debugserver_regnum_with_fixed_width_hex_register_value(
     std::ostream &ostrm, nub_process_t pid, nub_thread_t tid,
     const register_map_entry_t *reg, const DNBRegisterValue *reg_value_ptr,
     std::optional<uint8_t> fail_value) {
@@ -2798,9 +2840,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2870,11 +2911,12 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         if (!DNBThreadGetRegisterValueByID(pid, tid, regset,
                                            g_reg_entries[reg].nub_info.reg,
                                            reg_value.get()))
-          continue;
-
-        debugserver_regnum_with_fixed_width_hex_register_value(
-            ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
-            std::nullopt);
+          // base16(regnum):<no value>; means a register that cannot be fetched.
+          ostrm << RAWHEX8(g_reg_entries[reg].debugserver_regnum) << ":;";
+        else
+          debugserver_regnum_with_fixed_width_hex_register_value(
+              ostrm, pid, tid, &g_reg_entries[reg], reg_value.get(),
+              std::nullopt);
       }
     }
 
@@ -2946,6 +2988,38 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
         append_hex_value(ostrm, stack_memory.second.bytes,
                          stack_memory.second.length, false);
+        ostrm << ';';
+      }
+    }
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -3156,6 +3230,153 @@ rnb_err_t RNBRemote::HandlePacket_m(const char *p) {
   return SendPacket(ostrm.str());
 }
 
+rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
+  const std::string_view packet_name("MultiMemRead:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiMemRead packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  const std::string_view ranges_prefix("ranges:");
+  if (!starts_with(packet, ranges_prefix))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                  "Missing 'ranges' in MultiMemRead packet");
+  packet.remove_prefix(ranges_prefix.size());
+
+  std::vector<std::pair<nub_addr_t, std::size_t>> ranges;
+
+  // Ranges should have the form: <addr>,<size>[,<addr>,<size>]*;
+  auto end_of_ranges_pos = packet.find(';');
+  if (end_of_ranges_pos == packet.npos)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                  "MultiMemRead missing end of ranges marker");
+
+  std::vector<std::string_view> numbers_list =
+      parse_comma_separated_list(packet.substr(0, end_of_ranges_pos));
+  packet.remove_prefix(end_of_ranges_pos + 1);
+
+  // Ranges are pairs, so the number of elements must be even.
+  if (numbers_list.size() % 2 == 1)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiMemRead has an odd number of numbers for the ranges");
+
+  for (unsigned idx = 0; idx < numbers_list.size(); idx += 2) {
+    std::optional<uint64_t> maybe_addr = extract_u64(numbers_list[idx]);
+    std::optional<uint64_t> maybe_length = extract_u64(numbers_list[idx + 1]);
+    if (!maybe_addr || !maybe_length)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                    "Invalid MultiMemRead range");
+    // A sanity check that the packet requested is not too large or a negative
+    // number.
+    if (*maybe_length > 4 * 1024 * 1024)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, packet.data(),
+                                    "MultiMemRead length is too large");
+
+    ranges.emplace_back(*maybe_addr, *maybe_length);
+  }
+
+  if (ranges.empty())
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "MultiMemRead has an empty range list");
+
+  if (!packet.empty())
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p, "MultiMemRead packet has unrecognized fields");
+
+  std::vector<std::vector<uint8_t>> buffers;
+  buffers.reserve(ranges.size());
+  for (auto [base_addr, length] : ranges) {
+    buffers.emplace_back(length, 0);
+    nub_size_t bytes_read = DNBProcessMemoryRead(m_ctx.ProcessID(), base_addr,
+                                                 length, buffers.back().data());
+    buffers.back().resize(bytes_read);
+  }
+
+  std::ostringstream reply_stream;
+  bool first = true;
+  for (const std::vector<uint8_t> &buffer : buffers) {
+    reply_stream << (first ? "" : ",") << std::hex << buffer.size();
+    first = false;
+  }
+  reply_stream << ';';
+
+  for (const std::vector<uint8_t> &buffer : buffers)
+    binary_encode_data_vector(reply_stream, buffer);
+
+  return SendPacket(reply_stream.str());
+}
+
+rnb_err_t RNBRemote::HandlePacket_jMultiBreakpoint(const char *p) {
+  const std::string_view packet_name("jMultiBreakpoint:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiBreakpoint packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  JSONParser parser(packet.cbegin());
+  JSONValue::SP parsed = parser.ParseJSONValue();
+  if (!parsed || parsed->GetKind() != JSONValue::Kind::Object)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a JSON dictionary");
+
+  auto *request_dict = static_cast<JSONObject *>(parsed.get());
+  JSONValue::SP request_array_sp =
+      request_dict->GetObject("breakpoint_requests");
+
+  if (!request_array_sp ||
+      request_array_sp->GetKind() != JSONValue::Kind::Array)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  auto *request_array = static_cast<JSONArray *>(request_array_sp.get());
+  std::vector<std::string> requests;
+  requests.reserve(request_array->GetNumElements());
+  for (JSONValue::SP value : request_array->Elements()) {
+    if (!value || value->GetKind() != JSONValue::Kind::String)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                    "MultiBreakpoint had a non-string entry");
+    auto *request_str = static_cast<JSONString *>(value.get());
+    requests.push_back(request_str->GetData());
+  }
+
+  auto reply_array = std::make_shared<JSONGenerator::Array>();
+  for (const std::string &request : requests) {
+    BreakpointResult result = ExecuteBreakpointRequest(request.c_str());
+    std::string reply_str;
+    switch (result.kind) {
+    case BreakpointResult::Kind::OK:
+      reply_str = "OK";
+      break;
+    case BreakpointResult::Kind::Error: {
+      char error_str[8];
+      snprintf(error_str, sizeof(error_str), "E%02x", result.error_code);
+      reply_str = error_str;
+      break;
+    }
+    case BreakpointResult::Kind::IllFormed:
+    case BreakpointResult::Kind::Unimplemented:
+      reply_str = "E03";
+      break;
+    }
+    reply_array->AddItem(std::make_shared<JSONGenerator::String>(reply_str));
+  }
+
+  JSONGenerator::Dictionary reply_dict;
+  reply_dict.AddItem("results", reply_array);
+  std::ostringstream reply_stream;
+  reply_dict.DumpBinaryEscaped(reply_stream);
+  return SendPacket(reply_stream.str());
+}
+
 // Read memory, sent it up as binary data.
 // Usage:  xADDR,LEN
 // ADDR and LEN are both base 16.
@@ -3212,21 +3433,9 @@ rnb_err_t RNBRemote::HandlePacket_x(const char *p) {
     return SendErrorPacket("E80");
   }
 
-  std::vector<uint8_t> buf_quoted;
-  buf_quoted.reserve(bytes_read + 30);
-  for (nub_size_t i = 0; i < bytes_read; i++) {
-    if (buf[i] == '#' || buf[i] == '$' || buf[i] == '}' || buf[i] == '*') {
-      buf_quoted.push_back(0x7d);
-      buf_quoted.push_back(buf[i] ^ 0x20);
-    } else {
-      buf_quoted.push_back(buf[i]);
-    }
-  }
-  length = buf_quoted.size();
-
+  buf.resize(bytes_read);
   std::ostringstream ostrm;
-  for (unsigned long i = 0; i < length; i++)
-    ostrm << buf_quoted[i];
+  binary_encode_data_vector(ostrm, buf);
 
   return SendPacket(ostrm.str());
 }
@@ -3476,8 +3685,20 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
   return return_val;
 }
 
+static bool supports_memory_tagging() {
+  const char *name = "hw.optional.arm.FEAT_MTE4";
+  uint32_t val;
+  size_t len = sizeof(val);
+  int ret = ::sysctlbyname(name, &val, &len, nullptr, 0);
+  if (ret != 0)
+    return false;
+
+  assert(len == sizeof(val));
+  return val;
+}
+
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
-  uint32_t max_packet_size = 128 * 1024; // 128KBytes is a reasonable max packet
+  uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
   std::stringstream reply;
   reply << "qXfer:features:read+;PacketSize=" << std::hex << max_packet_size
@@ -3506,6 +3727,11 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   reply << "SupportedWatchpointTypes=x86_64;";
 #endif
 
+  if (supports_memory_tagging())
+    reply << "memory-tagging+;";
+
+  reply << "MultiMemRead+;";
+  reply << "jMultiBreakpoint+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -3961,38 +4187,35 @@ rnb_err_t RNBRemote::HandlePacket_T(const char *p) {
   return SendPacket("OK");
 }
 
-rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+RNBRemote::BreakpointResult RNBRemote::ExecuteBreakpointRequest(const char *p) {
   if (p == NULL || *p == '\0')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in z packet");
+    return BreakpointResult::CreateIllFormed("No thread specified in z packet");
 
   if (!m_ctx.HasValidProcessID())
-    return SendErrorPacket("E15");
+    return BreakpointResult::CreateError(0x15);
 
   char packet_cmd = *p++;
   char break_type = *p++;
 
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   char *c = NULL;
   nub_process_t pid = m_ctx.ProcessID();
   errno = 0;
   nub_addr_t addr = strtoull(p, &c, 16);
   if (errno != 0 && addr == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid address in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid address in z packet");
   p = c;
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   errno = 0;
   auto byte_size = strtoul(p, &c, 16);
   if (errno != 0 && byte_size == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid length in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid length in z packet");
 
   if (packet_cmd == 'Z') {
     // set
@@ -4000,18 +4223,12 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // set software breakpoint
     case '1': // set hardware breakpoint
     {
-      // gdb can send multiple Z packets for the same address and
-      // these calls must be ref counted.
       bool hardware = (break_type == '1');
 
       if (DNBBreakpointSet(pid, addr, byte_size, hardware)) {
-        // We successfully created a breakpoint, now lets full out
-        // a ref count structure with the breakID and add it to our
-        // map.
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the software breakpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4029,10 +4246,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
         watch_flags = WATCH_TYPE_READ | WATCH_TYPE_WRITE;
 
       if (DNBWatchpointSet(pid, addr, byte_size, watch_flags, hardware)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the watchpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4045,9 +4261,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // remove software breakpoint
     case '1': // remove hardware breakpoint
       if (DNBBreakpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4055,9 +4271,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '3': // remove read watchpoint
     case '4': // remove access watchpoint
       if (DNBWatchpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4065,7 +4281,23 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
       break;
     }
   }
-  return HandlePacket_UNIMPLEMENTED(p);
+  return BreakpointResult::CreateUnimplemented();
+}
+
+rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+  BreakpointResult result = ExecuteBreakpointRequest(p);
+  switch (result.kind) {
+  case BreakpointResult::Kind::OK:
+    return SendPacket("OK");
+  case BreakpointResult::Kind::Error:
+    return SendErrorPacket(result.error_code);
+  case BreakpointResult::Kind::IllFormed:
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  result.message.c_str());
+  case BreakpointResult::Kind::Unimplemented:
+    return HandlePacket_UNIMPLEMENTED(p);
+  }
+  assert(false && "unhandled BreakpointResult kind");
 }
 
 // Extract the thread number from the thread suffix that might be appended to
@@ -4252,7 +4484,6 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
      is in unmapped memory
          Region lookup cannot be performed on this platform or process is not
      yet launched
-         This packet isn't implemented
 
      Examples of use:
         qMemoryRegionInfo:3a55140
@@ -4304,6 +4535,16 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << 'x';
     ostrm << ';';
 
+    if (!region_info.flags.empty()) {
+      ostrm << "flags:";
+      for (size_t i = 0; i < region_info.flags.size(); i++) {
+        if (i != 0)
+          ostrm << " "; // Separator is whitespace
+        ostrm << region_info.flags[i];
+      }
+      ostrm << ";";
+    }
+
     ostrm << "dirty-pages:";
     if (region_info.dirty_pages.size() > 0) {
       bool first = true;
@@ -4325,6 +4566,62 @@ rnb_err_t RNBRemote::HandlePacket_MemoryRegionInfo(const char *p) {
       ostrm << ";";
     }
   }
+  return SendPacket(ostrm.str());
+}
+
+// qMemTags:<hex address>,<hex length>:<hex type>
+rnb_err_t RNBRemote::HandlePacket_qMemTags(const char *p) {
+  nub_process_t pid = m_ctx.ProcessID();
+  if (pid == INVALID_NUB_PROCESS)
+    return SendPacket("OK");
+
+  StdStringExtractor packet(p);
+  packet.SetFilePos(strlen("qMemTags:"));
+
+  // Address
+  nub_addr_t addr =
+      packet.GetHexMaxU64(StdStringExtractor::BigEndian, INVALID_NUB_ADDRESS);
+  if (addr == INVALID_NUB_ADDRESS)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing address in qMemTags packet");
+  // ,
+  if (packet.GetChar() != ',')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Length
+  uint64_t length = packet.GetHexMaxU64(StdStringExtractor::BigEndian, 0);
+  if (length == 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing length in qMemTags packet");
+  // :
+  if (packet.GetChar() != ':')
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+  // Type
+  // On the LLDB side this is a `int32_t` serialized as (unsigned) hex, which
+  // means negative values will show up as large positive values here.  Right
+  // now, we only support MTE (type 1), so we can ignore this complication.
+  uint32_t type = packet.GetHexMaxU32(StdStringExtractor::BigEndian, 0);
+  if (type != 1 /* MTE */)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid/missing type in qMemTags packet, "
+                                  "only MTE (type 1) is supported");
+  // <EOF>
+  if (packet.GetBytesLeft() != 0)
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid qMemTags packet format");
+
+  std::vector<uint8_t> tags;
+  bool ok = DNBProcessGetMemoryTags(pid, addr, length, tags);
+  if (!ok)
+    return SendErrorPacket("E91");
+
+  std::ostringstream ostrm;
+  ostrm << "m"; // Multi part replies
+  for (uint8_t tag : tags) {
+    ostrm << RAWHEX8(tag); // 2 hex chars per tag
+  }
+
   return SendPacket(ostrm.str());
 }
 
@@ -4424,12 +4721,12 @@ rnb_err_t RNBRemote::HandlePacket_qSpeedTest(const char *p) {
     return HandlePacket_ILLFORMED(
         __FILE__, __LINE__, p,
         "Didn't find response_size value at right offset");
-  else if (*end == ';') {
-    static char g_data[4 * 1024 * 1024 + 16];
-    strcpy(g_data, "data:");
-    memset(g_data + 5, 'a', response_size);
-    g_data[response_size + 5] = '\0';
-    return SendPacket(g_data);
+  else if (*end == ';' && response_size < (4 * 1024 * 1024)) {
+    std::vector<char> buf(response_size + 6, 'a');
+    memcpy(buf.data(), "data:", 5);
+    buf[buf.size() - 1] = '\0';
+    rnb_err_t return_value = SendPacket(buf.data());
+    return return_value;
   } else {
     return SendErrorPacket("E79");
   }
@@ -4818,8 +5115,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   return SendPacket(strm.str());
 }
 
-void XMLElementStart(std::ostringstream &s, uint32_t indent, const char *name,
-                     bool has_attributes) {
+static void XMLElementStart(std::ostringstream &s, uint32_t indent,
+                            const char *name, bool has_attributes) {
   if (indent)
     s << INDENT_WITH_SPACES(indent);
   s << '<' << name;
@@ -4827,43 +5124,22 @@ void XMLElementStart(std::ostringstream &s, uint32_t indent, const char *name,
     s << '>' << std::endl;
 }
 
-void XMLElementStartEndAttributes(std::ostringstream &s, bool empty) {
+static void XMLElementStartEndAttributes(std::ostringstream &s, bool empty) {
   if (empty)
     s << '/';
   s << '>' << std::endl;
 }
 
-void XMLElementEnd(std::ostringstream &s, uint32_t indent, const char *name) {
+static void XMLElementEnd(std::ostringstream &s, uint32_t indent,
+                          const char *name) {
   if (indent)
     s << INDENT_WITH_SPACES(indent);
   s << '<' << '/' << name << '>' << std::endl;
 }
 
-void XMLElementWithStringValue(std::ostringstream &s, uint32_t indent,
-                               const char *name, const char *value,
-                               bool close = true) {
-  if (value) {
-    if (indent)
-      s << INDENT_WITH_SPACES(indent);
-    s << '<' << name << '>' << value;
-    if (close)
-      XMLElementEnd(s, 0, name);
-  }
-}
-
-void XMLElementWithUnsignedValue(std::ostringstream &s, uint32_t indent,
-                                 const char *name, uint64_t value,
-                                 bool close = true) {
-  if (indent)
-    s << INDENT_WITH_SPACES(indent);
-
-  s << '<' << name << '>' << DECIMAL << value;
-  if (close)
-    XMLElementEnd(s, 0, name);
-}
-
-void XMLAttributeString(std::ostringstream &s, const char *name,
-                        const char *value, const char *default_value = NULL) {
+static void XMLAttributeString(std::ostringstream &s, const char *name,
+                               const char *value,
+                               const char *default_value = NULL) {
   if (value) {
     if (default_value && strcmp(value, default_value) == 0)
       return; // No need to emit the attribute because it matches the default
@@ -4872,15 +5148,16 @@ void XMLAttributeString(std::ostringstream &s, const char *name,
   }
 }
 
-void XMLAttributeUnsignedDecimal(std::ostringstream &s, const char *name,
-                                 uint64_t value) {
+static void XMLAttributeUnsignedDecimal(std::ostringstream &s, const char *name,
+                                        uint64_t value) {
   s << ' ' << name << "=\"" << DECIMAL << value << "\"";
 }
 
-void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
-                               nub_size_t num_reg_sets,
-                               const DNBRegisterSetInfo *reg_set_info,
-                               const register_map_entry_t &reg) {
+static void GenerateTargetXMLRegister(std::ostringstream &s,
+                                      const uint32_t reg_num,
+                                      nub_size_t num_reg_sets,
+                                      const DNBRegisterSetInfo *reg_set_info,
+                                      const register_map_entry_t &reg) {
   const char *default_lldb_encoding = "uint";
   const char *lldb_encoding = default_lldb_encoding;
   const char *gdb_group = "general";
@@ -5051,7 +5328,7 @@ void GenerateTargetXMLRegister(std::ostringstream &s, const uint32_t reg_num,
   XMLElementStartEndAttributes(s, true);
 }
 
-void GenerateTargetXMLRegisters(std::ostringstream &s) {
+static void GenerateTargetXMLRegisters(std::ostringstream &s) {
   nub_size_t num_reg_sets = 0;
   const DNBRegisterSetInfo *reg_sets = DNBGetRegisterSetInfo(&num_reg_sets);
 
@@ -5090,7 +5367,7 @@ static const char *g_target_xml_footer = "</target>";
 
 static std::string g_target_xml;
 
-void UpdateTargetXML() {
+static void UpdateTargetXML() {
   std::ostringstream s;
   s << g_target_xml_header << std::endl;
 
@@ -5225,8 +5502,9 @@ rnb_err_t RNBRemote::HandlePacket_jGetDyldProcessState(const char *p) {
 // a one-level-deep JSON dictionary of key-value pairs.  e.g.
 // jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":144305}]
 //
-uint64_t get_integer_value_for_key_name_from_json(const char *key,
-                                                  const char *json_string) {
+static uint64_t
+get_integer_value_for_key_name_from_json(const char *key,
+                                         const char *json_string) {
   uint64_t retval = INVALID_NUB_ADDRESS;
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
@@ -5262,9 +5540,56 @@ uint64_t get_integer_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, and sets the 'value'
 // argument to the value found.
 
-bool get_boolean_value_for_key_name_from_json(const char *key,
-                                              const char *json_string,
-                                              bool &value) {
+static bool get_string_value_for_key_name_from_json(const char *key,
+                                                    const char *json_string,
+                                                    std::string &value) {
+  value.clear();
+  std::string key_with_quotes = "\"";
+  key_with_quotes += key;
+  key_with_quotes += "\"";
+  const char *c = strstr(json_string, key_with_quotes.c_str());
+  if (!c)
+    return false;
+
+  c += key_with_quotes.size();
+
+  while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+    c++;
+
+  if (*c == ':') {
+    c++;
+
+    while (*c != '\0' && (*c == ' ' || *c == '\t' || *c == '\n' || *c == '\r'))
+      c++;
+
+    if (*c == '\0')
+      return false;
+
+    bool escaped_char = false;
+    while (*++c != '\0') {
+      if (escaped_char) {
+        value += *c;
+        escaped_char = false;
+        continue;
+      }
+      if (*c == '\\') {
+        value += *c;
+        escaped_char = true;
+        continue;
+      }
+      if (*c == '"')
+        break;
+
+      value += *c;
+    }
+    return true;
+  }
+  return false;
+}
+
+static bool get_boolean_value_for_key_name_from_json(const char *key,
+                                                     const char *json_string,
+                                                     bool &value) {
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
   key_with_quotes += "\"";
@@ -5301,7 +5626,7 @@ bool get_boolean_value_for_key_name_from_json(const char *key,
 // Returns true if it was able to find the key name, false if it did not.
 // "ints" will have all integers found in the array appended to it.
 
-bool get_array_of_ints_value_for_key_name_from_json(
+static bool get_array_of_ints_value_for_key_name_from_json(
     const char *key, const char *json_string, std::vector<uint64_t> &ints) {
   std::string key_with_quotes = "\"";
   key_with_quotes += key;
@@ -5412,9 +5737,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             JSONGenerator::ArraySP medata_array_sp(new JSONGenerator::Array());
             for (nub_size_t i = 0;
                  i < tid_stop_info.details.exception.data_count; ++i) {
-              medata_array_sp->AddItem(
-                  JSONGenerator::IntegerSP(new JSONGenerator::Integer(
-                      tid_stop_info.details.exception.data[i])));
+              medata_array_sp->AddItem(std::make_shared<JSONGenerator::Integer>(
+                  tid_stop_info.details.exception.data[i]));
             }
             thread_dict_sp->AddItem("medata", medata_array_sp);
           }
@@ -5495,15 +5819,30 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               new JSONGenerator::Dictionary());
 
           for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
+            bool include_reg = false;
             // Expedite all registers in the first register set that aren't
-            // contained in other registers
+            // contained in other registers.
             if (g_reg_entries[reg].nub_info.set == 1 &&
-                g_reg_entries[reg].nub_info.value_regs == NULL) {
+                g_reg_entries[reg].nub_info.value_regs == NULL)
+              include_reg = true;
+            // Include the SME state register values, whether we can
+            // fetch the value or not.
+            if (strcmp("svcr", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("tpidr2", g_reg_entries[reg].nub_info.name) == 0 ||
+                strcmp("svl", g_reg_entries[reg].nub_info.name) == 0)
+              include_reg = true;
+
+            if (include_reg) {
               if (!DNBThreadGetRegisterValueByID(
                       pid, tid, g_reg_entries[reg].nub_info.set,
-                      g_reg_entries[reg].nub_info.reg, reg_value.get()))
+                      g_reg_entries[reg].nub_info.reg, reg_value.get())) {
+                // Indicate unavailable registers as having an empty value
+                // string.
+                std::ostringstream reg_num;
+                reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
+                registers_dict_sp->AddStringItem(reg_num.str(), "");
                 continue;
-
+              }
               std::ostringstream reg_num;
               reg_num << std::dec << g_reg_entries[reg].debugserver_regnum;
               // Encode native byte ordered bytes as hex ascii
@@ -5532,6 +5871,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             memory_array_sp->AddItem(stack_memory_sp);
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
+        }
+
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
+
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
         }
       }
 
@@ -5854,14 +6215,31 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
     bool report_load_commands = true;
     get_boolean_value_for_key_name_from_json("report_load_commands", p,
                                              report_load_commands);
+    DNBBinaryInformationLevel info_level = eBinaryInformationLevelFull;
+    if (!report_load_commands)
+      info_level = eBinaryInformationLevelAddrOnly;
+
+    std::string level_str;
+    if (get_string_value_for_key_name_from_json("information-level", p,
+                                                level_str)) {
+      if (level_str == "address-only")
+        info_level = eBinaryInformationLevelAddrOnly;
+      else if (level_str == "address-name")
+        info_level = eBinaryInformationLevelAddrName;
+      else if (level_str == "address-name-uuid")
+        info_level = eBinaryInformationLevelAddrNameUUID;
+      else if (level_str == "full")
+        info_level = eBinaryInformationLevelFull;
+    }
 
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, info_level);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
-      json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
+      json_sp =
+          DNBGetLibrariesInfoForAddresses(pid, info_level, macho_addresses);
     }
 
     if (json_sp.get()) {
@@ -6164,6 +6542,21 @@ GetCPUTypesFromHost(nub_process_t pid) {
   return {cputype, cpusubtype};
 }
 
+static bool ProcessRunningWithMemoryTagging(pid_t pid) {
+#if __has_include(<os/security_config.h>)
+  if (__builtin_available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0,
+                          visionOS 26.0, driverkit 25.0, *)) {
+    os_security_config_t config;
+    int ret = ::os_security_config_get_for_proc(pid, &config);
+    if (ret != 0)
+      return false;
+
+    return (config & OS_SECURITY_CONFIG_MTE);
+  }
+#endif
+  return false;
+}
+
 // Note that all numeric values returned by qProcessInfo are hex encoded,
 // including the pid and the cpu type.
 
@@ -6339,6 +6732,9 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
   }
 
   rep << "vendor:apple;";
+
+  if (ProcessRunningWithMemoryTagging(pid))
+    rep << "mte:enabled;";
 
 #if defined(__LITTLE_ENDIAN__)
   rep << "endian:little;";

@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_ARCHITECTURE_ARM_ARCHITECTUREARM_H
 
 #include "lldb/Core/Architecture.h"
+#include "lldb/Target/Thread.h"
 
 namespace lldb_private {
 
@@ -28,6 +29,13 @@ public:
 
   lldb::addr_t GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                     AddressClass addr_class) const override;
+
+  lldb::UnwindPlanSP GetArchitectureUnwindPlan(
+      lldb_private::Thread &thread, lldb_private::RegisterContextUnwind *regctx,
+      std::shared_ptr<const UnwindPlan> current_unwindplan) override;
+
+  bool IsValidTrapInstruction(llvm::ArrayRef<uint8_t> reference,
+                              llvm::ArrayRef<uint8_t> observed) const override;
 
 private:
   static std::unique_ptr<Architecture> Create(const ArchSpec &arch);

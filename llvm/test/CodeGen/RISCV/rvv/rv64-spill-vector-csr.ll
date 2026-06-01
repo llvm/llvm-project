@@ -14,7 +14,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+d,+zcmp,+prefer-vsetvli-over-read-vlenb -O2 < %s \
 ; RUN:    | FileCheck --check-prefix=SPILL-O2-ZCMP-VSETVLI %s
 
-
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
 define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double> %b, <vscale x 1 x double> %c, i64 %gvl) nounwind
@@ -41,13 +40,12 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O0-NEXT:    call puts
-; SPILL-O0-NEXT:    addi a1, sp, 32
-; SPILL-O0-NEXT:    vl1r.v v10, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-NEXT:    csrr a1, vlenb
-; SPILL-O0-NEXT:    add a1, sp, a1
-; SPILL-O0-NEXT:    addi a1, a1, 32
-; SPILL-O0-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-NEXT:    # kill: def $x11 killed $x10
+; SPILL-O0-NEXT:    addi a0, sp, 32
+; SPILL-O0-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O0-NEXT:    csrr a0, vlenb
+; SPILL-O0-NEXT:    add a0, sp, a0
+; SPILL-O0-NEXT:    addi a0, a0, 32
+; SPILL-O0-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O0-NEXT:    # implicit-def: $v8
 ; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
@@ -176,13 +174,12 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-VSETVLI-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O0-VSETVLI-NEXT:    call puts
-; SPILL-O0-VSETVLI-NEXT:    addi a1, sp, 32
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v10, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-VSETVLI-NEXT:    csrr a1, vlenb
-; SPILL-O0-VSETVLI-NEXT:    add a1, sp, a1
-; SPILL-O0-VSETVLI-NEXT:    addi a1, a1, 32
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-VSETVLI-NEXT:    # kill: def $x11 killed $x10
+; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 32
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    csrr a0, vlenb
+; SPILL-O0-VSETVLI-NEXT:    add a0, sp, a0
+; SPILL-O0-VSETVLI-NEXT:    addi a0, a0, 32
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    # implicit-def: $v8
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
@@ -256,11 +253,10 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    add sp, sp, a0
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    cm.popret {ra, s0}, 32
 {
-   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
+   %x = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64 7, i64 %gvl)
    %call = call signext i32 @puts(ptr @.str)
-   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
+   %z = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> poison, <vscale x 1 x double> %a, <vscale x 1 x double> %x, i64 7, i64 %gvl)
    ret <vscale x 1 x double> %z
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double> %passthru, <vscale x 1 x double> %a, <vscale x 1 x double> %b, i64, i64 %gvl)
 declare i32 @puts(ptr);

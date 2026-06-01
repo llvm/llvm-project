@@ -6,6 +6,6 @@
 
 ; After linking this testcase, there should be no opaque types left.  The two
 ; S's should cause the opaque type to be resolved to 'int'.
-@S = global { i32, i32* } { i32 5, i32* null }		; <{ i32, i32* }*> [#uses=0]
+@S = global { i32, ptr } { i32 5, ptr null }		; <{ i32, i32* }*> [#uses=0]
 
-declare void @F(i32*)
+declare void @F(ptr)

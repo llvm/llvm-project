@@ -123,7 +123,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 32 * 1024;  //  32 KByte
+    return 32 * 1024;  //  32 KiB
   case TargetTransformInfo::CacheLevel::L2D:
     //   - Penryn
     //   - Nehalem
@@ -134,7 +134,7 @@ std::optional<unsigned> X86TTIImpl::getCacheSize(
     //   - Broadwell
     //   - Skylake
     //   - Kabylake
-    return 256 * 1024; // 256 KByte
+    return 256 * 1024; // 256 KiB
   }
 
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
@@ -161,19 +161,26 @@ std::optional<unsigned> X86TTIImpl::getCacheAssociativity(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
+enum ClassIDEnum { GPRClass = 0, VectorClass = 1, ScalarFPClass = 2 };
+
+unsigned X86TTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
+  return Vector                          ? VectorClass
+         : Ty && Ty->isFloatingPointTy() ? ScalarFPClass
+                                         : GPRClass;
+}
+
 unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
-  bool Vector = (ClassID == 1);
-  if (Vector && !ST->hasSSE1())
+  if (ClassID == VectorClass && !ST->hasSSE1())
     return 0;
 
-  if (ST->is64Bit()) {
-    if (Vector && ST->hasAVX512())
-      return 32;
-    if (!Vector && ST->hasEGPR())
-      return 32;
-    return 16;
-  }
-  return 8;
+  if (!ST->is64Bit())
+    return 8;
+
+  if ((ClassID == GPRClass && ST->hasEGPR()) ||
+      (ClassID != GPRClass && ST->hasAVX512()))
+    return 32;
+
+  return 16;
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
@@ -206,7 +213,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
+    if (ST->hasAVX512() && PreferVectorWidth >= 512)
       return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
       return TypeSize::getFixed(256);
@@ -1199,6 +1206,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
     { ISD::MUL,     MVT::v4i64,   { 12, 15, 19, 20 } },
 
+    { X86ISD::PMULUDQ, MVT::v4i64, { 3,  5, 5, 6 } }, // pmuludq + split
+
     { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vandps
@@ -1522,15 +1531,24 @@ X86TTIImpl::getAltInstrCost(VectorType *VecTy, unsigned Opcode0,
   return InstructionCost::getInvalid();
 }
 
-InstructionCost X86TTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *BaseTp, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind,
+                                           int Index, VectorType *SubTp,
+                                           ArrayRef<const Value *> Args,
+                                           const Instruction *CxtI) const {
+  assert((Mask.empty() || DstTy->isScalableTy() ||
+          Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
+         "Expected the Mask to match the return size if given");
+  assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
+         "Expected the same scalar types");
+
   // 64-bit packed float vectors (v2f32) are widened to type v4f32.
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(BaseTp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
-  Kind = improveShuffleKindFromMask(Kind, Mask, BaseTp, Index, SubTp);
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
   // If all args are constant than this will be constant folded away.
   if (!Args.empty() &&
@@ -1539,15 +1557,17 @@ InstructionCost X86TTIImpl::getShuffleCost(
 
   // Recognize a basic concat_vector shuffle.
   if (Kind == TTI::SK_PermuteTwoSrc &&
-      Mask.size() == (2 * BaseTp->getElementCount().getKnownMinValue()) &&
+      Mask.size() == (2 * SrcTy->getElementCount().getKnownMinValue()) &&
       ShuffleVectorInst::isIdentityMask(Mask, Mask.size()))
     return getShuffleCost(TTI::SK_InsertSubvector,
-                          VectorType::getDoubleElementsVectorType(BaseTp), Mask,
-                          CostKind, Mask.size() / 2, BaseTp);
+                          VectorType::getDoubleElementsVectorType(SrcTy),
+                          VectorType::getDoubleElementsVectorType(SrcTy), Mask,
+                          CostKind, Mask.size() / 2, SrcTy);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
-    Kind = TTI::SK_PermuteTwoSrc;
+    if (LT.second != MVT::v4f64 && LT.second != MVT::v4i64)
+      Kind = TTI::SK_PermuteTwoSrc;
 
   if (Kind == TTI::SK_Broadcast) {
     // For Broadcasts we are splatting the first element from the first input
@@ -1556,8 +1576,41 @@ InstructionCost X86TTIImpl::getShuffleCost(
     LT.first = 1;
 
     // If we're broadcasting a load then AVX/AVX2 can do this for free.
+    // If many-used-load whose every use is one of a small set of operations
+    // that SLP can rewrite into a single vector lane, codegen can fold it into
+    // the free broadcast.
     using namespace PatternMatch;
-    if (!Args.empty() && match(Args[0], m_OneUse(m_Load(m_Value()))) &&
+    auto IsBroadcastLoadFoldUser = [&](const User *U) {
+      if (isa<InsertElementInst>(U) && U->getOperand(1) == Args[0])
+        return true;
+      if (U->getType()->isVectorTy())
+        return false;
+      // Terminators (return/branch/switch/indirectbr/resume/invoke EH)
+      // and phis carry the value across control flow.
+      if (const auto *I = dyn_cast<Instruction>(U))
+        if (I->isTerminator() ||
+            isa<PHINode, AtomicRMWInst, AtomicCmpXchgInst>(I))
+          return false;
+      // Only pure calls can be folded.
+      if (const auto *CB = dyn_cast<CallBase>(U))
+        return CB->doesNotAccessMemory() && !CB->mayHaveSideEffects();
+      return true;
+    };
+    auto IsFoldableSLPBroadcastLoad = [&]() {
+      if (!match(Args[0], m_Load(m_Value())))
+        return false;
+      auto *FVT = dyn_cast<FixedVectorType>(DstTy);
+      if (!FVT)
+        return false;
+      // getNumUses() counts each Use, matching the per-lane broadcast
+      // accounting (a use like `op %x, %x` consumes two broadcast lanes).
+      if (Args[0]->getNumUses() != FVT->getNumElements())
+        return false;
+      return all_of(Args[0]->users(), IsBroadcastLoadFoldUser);
+    };
+    if (!Args.empty() &&
+        (match(Args[0], m_OneUse(m_Load(m_Value()))) ||
+         IsFoldableSLPBroadcastLoad()) &&
         (ST->hasAVX2() ||
          (ST->hasAVX() && LT.second.getScalarSizeInBits() >= 32)))
       return TTI::TCC_Free;
@@ -1568,11 +1621,11 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // Attempt to detect a shuffle mask with a single defined element.
   bool IsInLaneShuffle = false;
   bool IsSingleElementMask = false;
-  if (BaseTp->getPrimitiveSizeInBits() > 0 &&
-      (BaseTp->getPrimitiveSizeInBits() % 128) == 0 &&
-      BaseTp->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
-      Mask.size() == BaseTp->getElementCount().getKnownMinValue()) {
-    unsigned NumLanes = BaseTp->getPrimitiveSizeInBits() / 128;
+  if (SrcTy->getPrimitiveSizeInBits() > 0 &&
+      (SrcTy->getPrimitiveSizeInBits() % 128) == 0 &&
+      SrcTy->getScalarSizeInBits() == LT.second.getScalarSizeInBits() &&
+      Mask.size() == SrcTy->getElementCount().getKnownMinValue()) {
+    unsigned NumLanes = SrcTy->getPrimitiveSizeInBits() / 128;
     unsigned NumEltsPerLane = Mask.size() / NumLanes;
     if ((Mask.size() % NumLanes) == 0) {
       IsInLaneShuffle = all_of(enumerate(Mask), [&](const auto &P) {
@@ -1588,7 +1641,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
   }
 
   // Treat <X x bfloat> shuffles as <X x half>.
-  if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
+  if (LT.second.isVectorOf(MVT::bf16))
     LT.second = LT.second.changeVectorElementType(MVT::f16);
 
   // Subvector extractions are free if they start at the beginning of a
@@ -1614,16 +1667,17 @@ InstructionCost X86TTIImpl::getShuffleCost(
           LT.second.getVectorElementType() ==
               SubLT.second.getVectorElementType() &&
           LT.second.getVectorElementType().getSizeInBits() ==
-              BaseTp->getElementType()->getPrimitiveSizeInBits()) {
+              SrcTy->getElementType()->getPrimitiveSizeInBits()) {
         assert(NumElts >= NumSubElts && NumElts > OrigSubElts &&
                "Unexpected number of elements!");
-        auto *VecTy = FixedVectorType::get(BaseTp->getElementType(),
+        auto *VecTy = FixedVectorType::get(SrcTy->getElementType(),
                                            LT.second.getVectorNumElements());
-        auto *SubTy = FixedVectorType::get(BaseTp->getElementType(),
+        auto *SubTy = FixedVectorType::get(SrcTy->getElementType(),
                                            SubLT.second.getVectorNumElements());
         int ExtractIndex = alignDown((Index % NumElts), NumSubElts);
-        InstructionCost ExtractCost = getShuffleCost(
-            TTI::SK_ExtractSubvector, VecTy, {}, CostKind, ExtractIndex, SubTy);
+        InstructionCost ExtractCost =
+            getShuffleCost(TTI::SK_ExtractSubvector, VecTy, VecTy, {}, CostKind,
+                           ExtractIndex, SubTy);
 
         // If the original size is 32-bits or more, we can use pshufd. Otherwise
         // if we have SSSE3 we can use pshufb.
@@ -1646,7 +1700,8 @@ InstructionCost X86TTIImpl::getShuffleCost(
   // but if the destination vector legalizes to the same width as the subvector
   // then the insertion will simplify to a (free) register copy.
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
-    int NumElts = LT.second.getVectorNumElements();
+    std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(DstTy);
+    int NumElts = DstLT.second.getVectorNumElements();
     std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
@@ -1664,13 +1719,15 @@ InstructionCost X86TTIImpl::getShuffleCost(
         SubLT.second == MVT::f32 && (Index == 0 || ST->hasSSE41()))
       return 1;
 
-    // If the insertion isn't aligned, treat it like a 2-op shuffle.
-    Kind = TTI::SK_PermuteTwoSrc;
+    // If the insertion is the lowest subvector then it will be blended
+    // otherwise treat it like a 2-op shuffle.
+    Kind =
+        (Index == 0 && LT.first == 1) ? TTI::SK_Select : TTI::SK_PermuteTwoSrc;
   }
 
   // Handle some common (illegal) sub-vector types as they are often very cheap
   // to shuffle even on targets without PSHUFB.
-  EVT VT = TLI->getValueType(DL, BaseTp);
+  EVT VT = TLI->getValueType(DL, SrcTy);
   if (VT.isSimple() && VT.isVector() && VT.getSizeInBits() < 128 &&
       !ST->hasSSSE3()) {
      static const CostKindTblEntry SSE2SubVectorShuffleTbl[] = {
@@ -1717,17 +1774,17 @@ InstructionCost X86TTIImpl::getShuffleCost(
     MVT LegalVT = LT.second;
     if (LegalVT.isVector() &&
         LegalVT.getVectorElementType().getSizeInBits() ==
-            BaseTp->getElementType()->getPrimitiveSizeInBits() &&
+            SrcTy->getElementType()->getPrimitiveSizeInBits() &&
         LegalVT.getVectorNumElements() <
-            cast<FixedVectorType>(BaseTp)->getNumElements()) {
-      unsigned VecTySize = DL.getTypeStoreSize(BaseTp);
+            cast<FixedVectorType>(SrcTy)->getNumElements()) {
+      unsigned VecTySize = DL.getTypeStoreSize(SrcTy);
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
       unsigned NumOfSrcs = (VecTySize + LegalVTSize - 1) / LegalVTSize;
       // Number of destination vectors after legalization:
       InstructionCost NumOfDests = LT.first;
 
-      auto *SingleOpTy = FixedVectorType::get(BaseTp->getElementType(),
+      auto *SingleOpTy = FixedVectorType::get(SrcTy->getElementType(),
                                               LegalVT.getVectorNumElements());
 
       if (!Mask.empty() && NumOfDests.isValid()) {
@@ -1746,7 +1803,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
         // this operation is TTI::TCC_Free.
         NumOfDests =
             getTypeLegalizationCost(
-                FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
+                FixedVectorType::get(SrcTy->getElementType(), Mask.size()))
                 .first;
         unsigned E = NumOfDests.getValue();
         unsigned NormalizedVF =
@@ -1767,15 +1824,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
                 // one.
                 if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
                     PrevRegMask != RegMask)
-                  Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                         RegMask, CostKind, 0, nullptr);
+                  Cost +=
+                      getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                     SingleOpTy, RegMask, CostKind, 0, nullptr);
                 else
                   // Just a copy of previous destination register.
                   Cost += TTI::TCC_Basic;
                 return;
               }
               if (SrcReg != DestReg &&
-                  any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
+                  any_of(RegMask, not_equal_to(PoisonMaskElem))) {
                 // Just a copy of the source register.
                 Cost += TTI::TCC_Free;
               }
@@ -1785,18 +1843,20 @@ InstructionCost X86TTIImpl::getShuffleCost(
             [this, SingleOpTy, CostKind,
              &Cost](ArrayRef<int> RegMask, unsigned /*Unused*/,
                     unsigned /*Unused*/, bool /*Unused*/) {
-              Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
-                                     CostKind, 0, nullptr);
+              Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
+                                     SingleOpTy, RegMask, CostKind, 0, nullptr);
             });
         return Cost;
       }
 
       InstructionCost NumOfShuffles = (NumOfSrcs - 1) * NumOfDests;
       return NumOfShuffles * getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
-                                            {}, CostKind, 0, nullptr);
+                                            SingleOpTy, {}, CostKind, 0,
+                                            nullptr);
     }
 
-    return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
+    return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                                 SubTp);
   }
 
   // If we're just moving a single element around (probably as an alternative to
@@ -1821,14 +1881,15 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX512BWShuffleTbl[] = {
-    { TTI::SK_Broadcast, MVT::v32i16, { 1, 1, 1, 1 } }, // vpbroadcastw
-    { TTI::SK_Broadcast, MVT::v32f16, { 1, 1, 1, 1 } }, // vpbroadcastw
-    { TTI::SK_Broadcast, MVT::v64i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
+    { TTI::SK_Broadcast, MVT::v32i16, { 1, 3, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v32f16, { 1, 3, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v64i8,  { 1, 3, 1, 1 } }, // vpbroadcastb
 
-    { TTI::SK_Reverse, MVT::v32i16,   { 2, 2, 2, 2 } }, // vpermw
-    { TTI::SK_Reverse, MVT::v32f16,   { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v32i16,   { 2, 6, 2, 4 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v32f16,   { 2, 6, 2, 4 } }, // vpermw
     { TTI::SK_Reverse, MVT::v16i16,   { 2, 2, 2, 2 } }, // vpermw
-    { TTI::SK_Reverse, MVT::v64i8,    { 2, 2, 2, 2 } }, // pshufb + vshufi64x2
+    { TTI::SK_Reverse, MVT::v16f16,   { 2, 2, 2, 2 } }, // vpermw
+    { TTI::SK_Reverse, MVT::v64i8,    { 2, 9, 2, 3 } }, // pshufb + vshufi64x2
 
     { TTI::SK_PermuteSingleSrc, MVT::v32i16, { 2, 2, 2, 2 } }, // vpermw
     { TTI::SK_PermuteSingleSrc, MVT::v32f16, { 2, 2, 2, 2 } }, // vpermw
@@ -1856,19 +1917,43 @@ InstructionCost X86TTIImpl::getShuffleCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
-  static const CostKindTblEntry AVX512ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v8f64,  { 1, 1, 1, 1 } }, // vbroadcastsd
-      {TTI::SK_Broadcast, MVT::v16f32, { 1, 1, 1, 1 } }, // vbroadcastss
-      {TTI::SK_Broadcast, MVT::v8i64,  { 1, 1, 1, 1 } }, // vpbroadcastq
-      {TTI::SK_Broadcast, MVT::v16i32, { 1, 1, 1, 1 } }, // vpbroadcastd
-      {TTI::SK_Broadcast, MVT::v32i16, { 1, 1, 1, 1 } }, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v32f16, { 1, 1, 1, 1 } }, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v64i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
+  static const CostKindTblEntry AVX512InLaneShuffleTbl[] = {
+      {TTI::SK_PermuteTwoSrc, MVT::v8f64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v16f32, { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v8i64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v16i32, { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 1, 3, 1, 1 } },
+  };
 
-      {TTI::SK_Reverse, MVT::v8f64,  { 1, 3, 1, 1 } }, // vpermpd
-      {TTI::SK_Reverse, MVT::v16f32, { 1, 3, 1, 1 } }, // vpermps
-      {TTI::SK_Reverse, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpermq
-      {TTI::SK_Reverse, MVT::v16i32, { 1, 3, 1, 1 } }, // vpermd
+  if (IsInLaneShuffle && ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512InLaneShuffleTbl, Kind, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX512ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v8f64,  { 1, 3, 1, 1 } }, // vbroadcastsd
+      {TTI::SK_Broadcast, MVT::v4f64,  { 1, 3, 1, 1 } }, // vbroadcastsd
+      {TTI::SK_Broadcast, MVT::v16f32, { 1, 3, 1, 1 } }, // vbroadcastss
+      {TTI::SK_Broadcast, MVT::v8f32,  { 1, 3, 1, 1 } }, // vbroadcastss
+      {TTI::SK_Broadcast, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpbroadcastq
+      {TTI::SK_Broadcast, MVT::v4i64,  { 1, 3, 1, 1 } }, // vpbroadcastq
+      {TTI::SK_Broadcast, MVT::v16i32, { 1, 3, 1, 1 } }, // vpbroadcastd
+      {TTI::SK_Broadcast, MVT::v8i32,  { 1, 3, 1, 1 } }, // vpbroadcastd
+      {TTI::SK_Broadcast, MVT::v32i16, { 1, 3, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v16i16, { 1, 3, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v32f16, { 1, 3, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v16f16, { 1, 3, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v64i8,  { 1, 3, 1, 1 } }, // vpbroadcastb
+      {TTI::SK_Broadcast, MVT::v32i8,  { 1, 3, 1, 1 }},  // vpbroadcastb
+
+      {TTI::SK_Reverse, MVT::v8f64,  { 1, 5, 2, 3 } }, // vpermpd
+      {TTI::SK_Reverse, MVT::v16f32, { 1, 3, 2, 3 } }, // vpermps
+      {TTI::SK_Reverse, MVT::v8i64,  { 1, 5, 2, 3 } }, // vpermq
+      {TTI::SK_Reverse, MVT::v16i32, { 1, 3, 2, 3 } }, // vpermd
       {TTI::SK_Reverse, MVT::v32i16, { 7, 7, 7, 7 } }, // per mca
       {TTI::SK_Reverse, MVT::v32f16, { 7, 7, 7, 7 } }, // per mca
       {TTI::SK_Reverse, MVT::v64i8,  { 7, 7, 7, 7 } }, // per mca
@@ -1899,18 +1984,18 @@ InstructionCost X86TTIImpl::getShuffleCost(
       {TTI::SK_PermuteSingleSrc, MVT::v4i32,  { 1, 3, 1, 1 } }, // vpermd
       {TTI::SK_PermuteSingleSrc, MVT::v16i8,  { 1, 3, 1, 1 } }, // pshufb
 
-      {TTI::SK_PermuteTwoSrc, MVT::v8f64,  { 1, 3, 1, 1 } }, // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v16f32, { 1, 3, 1, 1 } }, // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v16i32, { 1, 3, 1, 1 } }, // vpermt2d
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 1, 3, 1, 1 } }, // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 1, 3, 1, 1 } }, // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 1, 3, 1, 1 } }, // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 1, 3, 1, 1 } }, // vpermt2d
-      {TTI::SK_PermuteTwoSrc, MVT::v2f64,  { 1, 3, 1, 1 } }, // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v4f32,  { 1, 3, 1, 1 } }, // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v2i64,  { 1, 3, 1, 1 } }, // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v4i32,  { 1, 3, 1, 1 } }, // vpermt2d
+      {TTI::SK_PermuteTwoSrc, MVT::v8f64,  { 2, 3, 1, 1 } }, // vpermt2pd
+      {TTI::SK_PermuteTwoSrc, MVT::v16f32, { 2, 3, 1, 1 } }, // vpermt2ps
+      {TTI::SK_PermuteTwoSrc, MVT::v8i64,  { 2, 3, 1, 1 } }, // vpermt2q
+      {TTI::SK_PermuteTwoSrc, MVT::v16i32, { 2, 3, 1, 1 } }, // vpermt2d
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 2, 3, 1, 1 } }, // vpermt2pd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 2, 3, 1, 1 } }, // vpermt2ps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 2, 3, 1, 1 } }, // vpermt2q
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 2, 3, 1, 1 } }, // vpermt2d
+      {TTI::SK_PermuteTwoSrc, MVT::v2f64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v4f32,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v2i64,  { 1, 3, 1, 1 } },
+      {TTI::SK_PermuteTwoSrc, MVT::v4i32,  { 1, 3, 1, 1 } },
 
       // FIXME: This just applies the type legalization cost rules above
       // assuming these completely split.
@@ -1940,6 +2025,9 @@ InstructionCost X86TTIImpl::getShuffleCost(
     { TTI::SK_PermuteSingleSrc, MVT::v16f16, { 1, 1, 1, 1 } }, // vpshufb
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpshufb
 
+    { TTI::SK_Transpose,        MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,        MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+
     { TTI::SK_PermuteTwoSrc,    MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc,    MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
     { TTI::SK_PermuteTwoSrc,    MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpshufd + vpblendd
@@ -1956,21 +2044,24 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX2ShuffleTbl[] = {
-    { TTI::SK_Broadcast, MVT::v4f64,  { 1, 1, 1, 1 } }, // vbroadcastpd
-    { TTI::SK_Broadcast, MVT::v8f32,  { 1, 1, 1, 1 } }, // vbroadcastps
-    { TTI::SK_Broadcast, MVT::v4i64,  { 1, 1, 1, 1 } }, // vpbroadcastq
-    { TTI::SK_Broadcast, MVT::v8i32,  { 1, 1, 1, 1 } }, // vpbroadcastd
-    { TTI::SK_Broadcast, MVT::v16i16, { 1, 1, 1, 1 } }, // vpbroadcastw
-    { TTI::SK_Broadcast, MVT::v16f16, { 1, 1, 1, 1 } }, // vpbroadcastw
-    { TTI::SK_Broadcast, MVT::v32i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
+    { TTI::SK_Broadcast, MVT::v4f64,  { 1, 3, 1, 2 } }, // vbroadcastpd
+    { TTI::SK_Broadcast, MVT::v8f32,  { 1, 3, 1, 2 } }, // vbroadcastps
+    { TTI::SK_Broadcast, MVT::v4i64,  { 1, 3, 1, 2 } }, // vpbroadcastq
+    { TTI::SK_Broadcast, MVT::v8i32,  { 1, 3, 1, 2 } }, // vpbroadcastd
+    { TTI::SK_Broadcast, MVT::v16i16, { 1, 3, 1, 2 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v8i16,  { 1, 3, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v16f16, { 1, 3, 1, 2 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v8f16,  { 1, 3, 1, 1 } }, // vpbroadcastw
+    { TTI::SK_Broadcast, MVT::v32i8,  { 1, 3, 1, 2 } }, // vpbroadcastb
+    { TTI::SK_Broadcast, MVT::v16i8,  { 1, 3, 1, 1 } }, // vpbroadcastb
 
-    { TTI::SK_Reverse, MVT::v4f64,    { 1, 1, 1, 1 } }, // vpermpd
-    { TTI::SK_Reverse, MVT::v8f32,    { 1, 1, 1, 1 } }, // vpermps
-    { TTI::SK_Reverse, MVT::v4i64,    { 1, 1, 1, 1 } }, // vpermq
-    { TTI::SK_Reverse, MVT::v8i32,    { 1, 1, 1, 1 } }, // vpermd
-    { TTI::SK_Reverse, MVT::v16i16,   { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
-    { TTI::SK_Reverse, MVT::v16f16,   { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
-    { TTI::SK_Reverse, MVT::v32i8,    { 2, 2, 2, 2 } }, // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v4f64,    { 1, 6, 1, 2 } }, // vpermpd
+    { TTI::SK_Reverse, MVT::v8f32,    { 2, 7, 2, 4 } }, // vpermps
+    { TTI::SK_Reverse, MVT::v4i64,    { 1, 6, 1, 2 } }, // vpermq
+    { TTI::SK_Reverse, MVT::v8i32,    { 2, 7, 2, 4 } }, // vpermd
+    { TTI::SK_Reverse, MVT::v16i16,   { 2, 9, 2, 4 } }, // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v16f16,   { 2, 9, 2, 4 } }, // vperm2i128 + pshufb
+    { TTI::SK_Reverse, MVT::v32i8,    { 2, 9, 2, 4 } }, // vperm2i128 + pshufb
 
     { TTI::SK_Select, MVT::v16i16,    { 1, 1, 1, 1 } }, // vpblendvb
     { TTI::SK_Select, MVT::v16f16,    { 1, 1, 1, 1 } }, // vpblendvb
@@ -2041,6 +2132,9 @@ InstructionCost X86TTIImpl::getShuffleCost(
     { TTI::SK_PermuteSingleSrc, MVT::v32i8,  { 4, 4, 4, 4 } }, // vextractf128 + 2*pshufb
                                                                // + vpor + vinsertf128
 
+    { TTI::SK_Transpose,     MVT::v4f64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+    { TTI::SK_Transpose,     MVT::v4i64,  { 1, 1, 1, 1 } }, // vshufpd/vunpck
+
     { TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 2, 2, 2, 2 } }, // 2*vshufpd + vblendpd
     { TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 2, 2, 2, 2 } }, // 2*vshufps + vblendps
     { TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 2, 2, 2, 2 } }, // 2*vpermilpd + vblendpd
@@ -2060,23 +2154,23 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry AVX1ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v4f64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
-      {TTI::SK_Broadcast, MVT::v8f32,  {2,2,2,2}}, // vperm2f128 + vpermilps
-      {TTI::SK_Broadcast, MVT::v4i64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
-      {TTI::SK_Broadcast, MVT::v8i32,  {2,2,2,2}}, // vperm2f128 + vpermilps
-      {TTI::SK_Broadcast, MVT::v16i16, {3,3,3,3}}, // vpshuflw + vpshufd + vinsertf128
-      {TTI::SK_Broadcast, MVT::v16f16, {3,3,3,3}}, // vpshuflw + vpshufd + vinsertf128
-      {TTI::SK_Broadcast, MVT::v32i8,  {2,2,2,2}}, // vpshufb + vinsertf128
+      {TTI::SK_Broadcast, MVT::v4f64,  {2,3,2,3}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Broadcast, MVT::v8f32,  {2,3,2,3}}, // vperm2f128 + vpermilps
+      {TTI::SK_Broadcast, MVT::v4i64,  {2,3,2,3}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Broadcast, MVT::v8i32,  {2,3,2,3}}, // vperm2f128 + vpermilps
+      {TTI::SK_Broadcast, MVT::v16i16, {2,3,3,4}}, // vpshuflw + vpshufd + vinsertf128
+      {TTI::SK_Broadcast, MVT::v16f16, {2,3,3,4}}, // vpshuflw + vpshufd + vinsertf128
+      {TTI::SK_Broadcast, MVT::v32i8,  {3,4,3,6}}, // vpshufb + vinsertf128
 
-      {TTI::SK_Reverse, MVT::v4f64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
-      {TTI::SK_Reverse, MVT::v8f32,  {2,2,2,2}}, // vperm2f128 + vpermilps
-      {TTI::SK_Reverse, MVT::v4i64,  {2,2,2,2}}, // vperm2f128 + vpermilpd
-      {TTI::SK_Reverse, MVT::v8i32,  {2,2,2,2}}, // vperm2f128 + vpermilps
-      {TTI::SK_Reverse, MVT::v16i16, {4,4,4,4}}, // vextractf128 + 2*pshufb
+      {TTI::SK_Reverse, MVT::v4f64,  {2,6,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Reverse, MVT::v8f32,  {2,7,2,4}}, // vperm2f128 + vpermilps
+      {TTI::SK_Reverse, MVT::v4i64,  {2,6,2,2}}, // vperm2f128 + vpermilpd
+      {TTI::SK_Reverse, MVT::v8i32,  {2,7,2,4}}, // vperm2f128 + vpermilps
+      {TTI::SK_Reverse, MVT::v16i16, {2,9,5,5}}, // vextractf128 + 2*pshufb
                                                  // + vinsertf128
-      {TTI::SK_Reverse, MVT::v16f16, {4,4,4,4}}, // vextractf128 + 2*pshufb
+      {TTI::SK_Reverse, MVT::v16f16, {2,9,5,5}}, // vextractf128 + 2*pshufb
                                                  // + vinsertf128
-      {TTI::SK_Reverse, MVT::v32i8,  {4,4,4,4}}, // vextractf128 + 2*pshufb
+      {TTI::SK_Reverse, MVT::v32i8,  {2,9,5,5}}, // vextractf128 + 2*pshufb
                                                  // + vinsertf128
 
       {TTI::SK_Select, MVT::v4i64,  {1,1,1,1}}, // vblendpd
@@ -2139,13 +2233,13 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return LT.first * *KindCost;
 
   static const CostKindTblEntry SSSE3ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v8i16, {1, 1, 1, 1}}, // pshufb
-      {TTI::SK_Broadcast, MVT::v8f16, {1, 1, 1, 1}}, // pshufb
-      {TTI::SK_Broadcast, MVT::v16i8, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Broadcast, MVT::v8i16, {1, 3, 2, 2}}, // pshufb
+      {TTI::SK_Broadcast, MVT::v8f16, {1, 3, 2, 2}}, // pshufb
+      {TTI::SK_Broadcast, MVT::v16i8, {1, 3, 2, 2}}, // pshufb
 
-      {TTI::SK_Reverse, MVT::v8i16, {1, 1, 1, 1}}, // pshufb
-      {TTI::SK_Reverse, MVT::v8f16, {1, 1, 1, 1}}, // pshufb
-      {TTI::SK_Reverse, MVT::v16i8, {1, 1, 1, 1}}, // pshufb
+      {TTI::SK_Reverse, MVT::v8i16, {1, 2, 1, 2}}, // pshufb
+      {TTI::SK_Reverse, MVT::v8f16, {1, 2, 1, 2}}, // pshufb
+      {TTI::SK_Reverse, MVT::v16i8, {1, 2, 1, 2}}, // pshufb
 
       {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
       {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
@@ -2175,16 +2269,16 @@ InstructionCost X86TTIImpl::getShuffleCost(
       {TTI::SK_Broadcast, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Broadcast, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
       {TTI::SK_Broadcast, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
-      {TTI::SK_Broadcast, MVT::v8i16, {2, 2, 2, 2}}, // pshuflw + pshufd
-      {TTI::SK_Broadcast, MVT::v8f16, {2, 2, 2, 2}}, // pshuflw + pshufd
-      {TTI::SK_Broadcast, MVT::v16i8, {3, 3, 3, 3}}, // unpck + pshuflw + pshufd
+      {TTI::SK_Broadcast, MVT::v8i16, {1, 2, 2, 2}}, // pshuflw + pshufd
+      {TTI::SK_Broadcast, MVT::v8f16, {1, 2, 2, 2}}, // pshuflw + pshufd
+      {TTI::SK_Broadcast, MVT::v16i8, {2, 3, 3, 4}}, // unpck + pshuflw + pshufd
 
       {TTI::SK_Reverse, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Reverse, MVT::v2i64, {1, 1, 1, 1}}, // pshufd
       {TTI::SK_Reverse, MVT::v4i32, {1, 1, 1, 1}}, // pshufd
-      {TTI::SK_Reverse, MVT::v8i16, {3, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
-      {TTI::SK_Reverse, MVT::v8f16, {3, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
-      {TTI::SK_Reverse, MVT::v16i8, {9, 9, 9, 9}}, // 2*pshuflw + 2*pshufhw
+      {TTI::SK_Reverse, MVT::v8i16, {2, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
+      {TTI::SK_Reverse, MVT::v8f16, {2, 3, 3, 3}}, // pshuflw + pshufhw + pshufd
+      {TTI::SK_Reverse, MVT::v16i8, {5, 6,11,11}}, // 2*pshuflw + 2*pshufhw
                                                    // + 2*pshufd + 2*unpck + packus
 
       {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
@@ -2229,7 +2323,7 @@ InstructionCost X86TTIImpl::getShuffleCost(
     if (ST->hasSSE3() && IsLoad)
       if (const auto *Entry =
               CostTableLookup(SSE3BroadcastLoadTbl, Kind, LT.second)) {
-        assert(isLegalBroadcastLoad(BaseTp->getElementType(),
+        assert(isLegalBroadcastLoad(SrcTy->getElementType(),
                                     LT.second.getVectorElementCount()) &&
                "Table entry missing from isLegalBroadcastLoad()");
         return LT.first * Entry->Cost;
@@ -2263,7 +2357,8 @@ InstructionCost X86TTIImpl::getShuffleCost(
         return LT.first * *KindCost;
   }
 
-  return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
@@ -3090,6 +3185,20 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // Attempt to map directly to (simple) MVT types to let us match custom entries.
   EVT SrcTy = TLI->getValueType(DL, Src);
   EVT DstTy = TLI->getValueType(DL, Dst);
+
+  // If we're sign-extending a vector comparison result back to the comparison
+  // width, this will be free without AVX512 (or for 8/16-bit types without
+  // BWI).
+  if (!ST->hasAVX512() || (!ST->hasBWI() && DstTy.getScalarSizeInBits() < 32)) {
+    if (I && Opcode == Instruction::CastOps::SExt &&
+        SrcTy.isFixedLengthVectorOf(MVT::i1)) {
+      if (auto *CmpI = dyn_cast<CmpInst>(I->getOperand(0))) {
+        Type *CmpTy = CmpI->getOperand(0)->getType();
+        if (CmpTy->getScalarSizeInBits() == DstTy.getScalarSizeInBits())
+          return TTI::TCC_Free;
+      }
+    }
+  }
 
   // The function getSimpleVT only handles simple value types.
   if (SrcTy.isSimple() && DstTy.isSimple()) {
@@ -4350,12 +4459,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  1,  2,  3,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ,       MVT::i16,     {  2,  2,  3,  3 } }, // MOV+BSR+XOR
     { ISD::CTLZ,       MVT::i8,      {  2,  2,  4,  3 } }, // MOV+BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i64,{  1,  2,  2,  2 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i64,     {  1,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i32,     {  1,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  2 } }, // MOV+BSF
     { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  2 } }, // MOV+BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i64,{  1,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i64,     {  2,  3,  1,  3 } },
@@ -4386,15 +4495,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTLZ,       MVT::i32,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i16,     {  2,  2,  4,  5 } }, // BSR+XOR or BSR+XOR+CMOV
     { ISD::CTLZ,       MVT::i8,      {  2,  2,  5,  6 } }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
-    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i32,{  1,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i16,{  2,  2,  2,  2 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_POISON,MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
     { ISD::CTTZ,       MVT::i32,     {  2,  2,  3,  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i16,     {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
     { ISD::CTTZ,       MVT::i8,      {  2,  2,  2,  3 } }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  2,  1,  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  2 } }, // BSF
-    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i32,{  1,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i16,{  2,  2,  1,  2 } }, // BSF
+    { ISD::CTTZ_ZERO_POISON,MVT::i8, {  2,  2,  1,  2 } }, // BSF
     { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
     { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
     { ISD::CTPOP,      MVT::i8,      {  7,  6,  6,  6 } },
@@ -4602,14 +4711,15 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
     MVT MTy = LT.second;
 
-    // Without BMI/LZCNT see if we're only looking for a *_ZERO_UNDEF cost.
+    // Without BMI/LZCNT see if we're only looking for a *_ZERO_POISON cost.
     if (((ISD == ISD::CTTZ && !ST->hasBMI()) ||
          (ISD == ISD::CTLZ && !ST->hasLZCNT())) &&
         !MTy.isVector() && !ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
       if (auto *Cst = dyn_cast<ConstantInt>(Args[1]))
         if (Cst->isAllOnesValue())
-          ISD = ISD == ISD::CTTZ ? ISD::CTTZ_ZERO_UNDEF : ISD::CTLZ_ZERO_UNDEF;
+          ISD =
+              ISD == ISD::CTTZ ? ISD::CTTZ_ZERO_POISON : ISD::CTLZ_ZERO_POISON;
     }
 
     // FSQRT is a single instruction.
@@ -4765,10 +4875,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost X86TTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4777,6 +4886,10 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
    };
 
   assert(Val->isVectorTy() && "This must be a vector type");
+  auto *VT = cast<VectorType>(Val);
+  if (VT->isScalableTy())
+    return InstructionCost::getInvalid();
+
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
 
@@ -4903,21 +5016,22 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       EVT VT = TLI->getValueType(DL, Val);
       if (VT.getScalarType() != MScalarTy || VT.getSizeInBits() >= 128)
         SubTy = FixedVectorType::get(ScalarType, SubNumElts);
-      ShuffleCost =
-          getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, {}, CostKind, 0, SubTy);
+      ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, SubTy, {},
+                                   CostKind, 0, SubTy);
     }
     int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;
     return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
+                                   VIC) +
          RegisterFileMoveCost;
 }
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4949,7 +5063,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
         continue;
       Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
                                  Constant::getNullValue(Ty),
-                                 VL.empty() ? nullptr : VL[I]);
+                                 VL.empty() ? nullptr : VL[I],
+                                 TTI::VectorInstrContext::None);
     }
     return Cost;
   }
@@ -4999,8 +5114,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
           // FIXME: we don't need to extract if all non-demanded elements
           //        are legalization-inserted padding.
           if (!LaneEltMask.isAllOnes())
-            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, {}, CostKind,
-                                   I * NumEltsPerLane, LaneTy);
+            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
+                                   CostKind, I * NumEltsPerLane, LaneTy);
           Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, Insert,
                                                   /*Extract*/ false, CostKind);
         }
@@ -5017,8 +5132,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
             if (!AffectedLanes[I] ||
                 (Lane == 0 && FullyAffectedLegalVectors[LegalVec]))
               continue;
-            Cost += getShuffleCost(TTI::SK_InsertSubvector, Ty, {}, CostKind,
-                                   I * NumEltsPerLane, LaneTy);
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, Ty, Ty, {},
+                                   CostKind, I * NumEltsPerLane, LaneTy);
           }
         }
       }
@@ -5077,7 +5192,7 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
               NumEltsPerLane, I * NumEltsPerLane);
           if (LaneEltMask.isZero())
             continue;
-          Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, {}, CostKind,
+          Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {}, CostKind,
                                  I * NumEltsPerLane, LaneTy);
           Cost += BaseT::getScalarizationOverhead(
               LaneTy, LaneEltMask, /*Insert*/ false, Extract, CostKind);
@@ -5195,9 +5310,10 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
       DemandedDstElts.zext(NumDstVectors * NumEltsPerDstVec), NumDstVectors);
   unsigned NumDstVectorsDemanded = DemandedDstVectors.popcount();
 
-  InstructionCost SingleShuffleCost = getShuffleCost(
-      TTI::SK_PermuteSingleSrc, SingleDstVecTy, /*Mask=*/{}, CostKind,
-      /*Index=*/0, /*SubTp=*/nullptr);
+  InstructionCost SingleShuffleCost =
+      getShuffleCost(TTI::SK_PermuteSingleSrc, SingleDstVecTy, SingleDstVecTy,
+                     /*Mask=*/{}, CostKind,
+                     /*Index=*/0, /*SubTp=*/nullptr);
   return NumDstVectorsDemanded * SingleShuffleCost;
 }
 
@@ -5207,6 +5323,11 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
@@ -5338,9 +5459,10 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         SubVecEltsLeft += CurrVecTy->getNumElements();
         // And that's free only for the 0'th subvector of a legalized vector.
         if (!Is0thSubVec)
-          Cost += getShuffleCost(IsLoad ? TTI::ShuffleKind::SK_InsertSubvector
-                                        : TTI::ShuffleKind::SK_ExtractSubvector,
-                                 VTy, {}, CostKind, NumEltDone(), CurrVecTy);
+          Cost +=
+              getShuffleCost(IsLoad ? TTI::ShuffleKind::SK_InsertSubvector
+                                    : TTI::ShuffleKind::SK_ExtractSubvector,
+                             VTy, VTy, {}, CostKind, NumEltDone(), CurrVecTy);
       }
 
       // While we can directly load/store ZMM, YMM, and 64-bit halves of XMM,
@@ -5371,9 +5493,28 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
-                                  unsigned AddressSpace,
+X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
+X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
+  Type *SrcTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
+
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
 
@@ -5394,7 +5535,7 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
-    InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
+    InstructionCost BranchCost = getCFInstrCost(Instruction::CondBr, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
     InstructionCost ValueSplitCost = getScalarizationOverhead(
         SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);
@@ -5416,17 +5557,18 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   if (VT.isSimple() && Ty != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
-    Cost +=
-        getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, {}, CostKind, 0,
-                       nullptr) +
-        getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, {}, CostKind, 0, nullptr);
+    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, SrcVTy, {}, CostKind,
+                           0, nullptr) +
+            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, MaskTy, {}, CostKind,
+                           0, nullptr);
 
   else if (LT.first * Ty.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
-                                           Ty.getVectorNumElements());
+                                           (unsigned)LT.first.getValue() *
+                                               Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
-    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, {}, CostKind, 0,
-                           MaskTy);
+    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, NewMaskTy, {},
+                           CostKind, 0, MaskTy);
   }
 
   // Pre-AVX512 - each maskmov load costs 2 + store costs ~8.
@@ -5456,9 +5598,10 @@ InstructionCost X86TTIImpl::getPointersChainCost(
   return BaseT::getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
-InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
-                                                      ScalarEvolution *SE,
-                                                      const SCEV *Ptr) const {
+InstructionCost
+X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                      const SCEV *Ptr,
+                                      TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -5472,7 +5615,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
     // TODO: AVX2 is the current cut-off because we don't have correct
     //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
@@ -5481,7 +5624,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
       return 1;
   }
 
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 InstructionCost
@@ -5634,6 +5777,17 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Handle bool allof/anyof patterns.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
+    if (ISD == ISD::ADD) {
+      // vXi1 addition reduction will bitcast to scalar and perform a popcount.
+      auto *IntTy = IntegerType::getIntNTy(ValVTy->getContext(),
+                                           ValVTy->getNumElements());
+      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy});
+      return getCastInstrCost(Instruction::BitCast, IntTy, ValVTy,
+                              TargetTransformInfo::CastContextHint::None,
+                              CostKind) +
+             getIntrinsicInstrCost(ICA, CostKind);
+    }
+
     InstructionCost ArithmeticCost = 0;
     if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValVTy->getNumElements()) {
@@ -5690,7 +5844,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     // If we're reducing from 256/512 bits, use an extract_subvector.
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
-      ReductionCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, {},
+      ReductionCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
                                       CostKind, NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
@@ -5702,8 +5856,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       else
         ShufTy =
             FixedVectorType::get(Type::getInt64Ty(ValVTy->getContext()), 2);
-      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, {},
-                                      CostKind, 0, nullptr);
+      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
+                                      {}, CostKind, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
       FixedVectorType *ShufTy;
@@ -5713,8 +5867,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       else
         ShufTy =
             FixedVectorType::get(Type::getInt32Ty(ValVTy->getContext()), 4);
-      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, {},
-                                      CostKind, 0, nullptr);
+      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy,
+                                      {}, CostKind, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
       auto *ShiftTy = FixedVectorType::get(
@@ -5731,7 +5885,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Add the final extract element to the cost.
   return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                            CostKind, 0, nullptr, nullptr);
+                                            CostKind, 0, nullptr, nullptr,
+                                            TTI::VectorInstrContext::None);
 }
 
 InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
@@ -5749,7 +5904,7 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
 
   MVT MTy = LT.second;
 
-  int ISD;
+  ISD::NodeType ISD;
   if (ValTy->isIntOrIntVectorTy()) {
     ISD = (IID == Intrinsic::umin || IID == Intrinsic::umax) ? ISD::UMIN
                                                              : ISD::SMIN;
@@ -5761,44 +5916,103 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
               : ISD::FMINIMUM;
   }
 
-  // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
-  // and make it as the cost.
-
-  static const CostTblEntry SSE2CostTbl[] = {
-      {ISD::UMIN, MVT::v2i16, 5}, // need pxors to use pminsw/pmaxsw
-      {ISD::UMIN, MVT::v4i16, 7}, // need pxors to use pminsw/pmaxsw
-      {ISD::UMIN, MVT::v8i16, 9}, // need pxors to use pminsw/pmaxsw
+  // We use llvm-mca across all supported CPUs to measure the cost stats.
+  static const CostKindTblEntry SSE2CostTbl[] = {
+      {ISD::SMIN, MVT::v2i64, {3, 4, 5, 6}},
+      {ISD::UMIN, MVT::v2i64, {3, 4, 5, 6}},
+      {ISD::SMIN, MVT::v2i32, {2, 2, 5, 6}},
+      {ISD::UMIN, MVT::v2i32, {2, 2, 5, 6}},
+      {ISD::SMIN, MVT::v4i32, {3, 7,11,12}},
+      {ISD::UMIN, MVT::v4i32, {4, 7,14,15}},
+      {ISD::SMIN, MVT::v2i16, {2, 3, 4, 4}},
+      {ISD::UMIN, MVT::v2i16, {2, 3, 4, 6}},
+      {ISD::SMIN, MVT::v4i16, {3, 5, 6, 6}},
+      {ISD::UMIN, MVT::v4i16, {3, 5, 8, 10}},
+      {ISD::SMIN, MVT::v8i16, {3, 8, 8, 8}},
+      {ISD::UMIN, MVT::v8i16, {4, 8,12,14}},
+      {ISD::SMIN, MVT::v2i8,  {2, 3, 5, 6}},
+      {ISD::UMIN, MVT::v2i8,  {2, 3, 4, 4}},
+      {ISD::SMIN, MVT::v4i8,  {4, 6,12,13}},
+      {ISD::UMIN, MVT::v4i8,  {3, 6, 7, 7}},
+      {ISD::SMIN, MVT::v8i8,  {5, 9,18,19}},
+      {ISD::UMIN, MVT::v8i8,  {4, 8, 9, 9}},
+      {ISD::SMIN, MVT::v16i8, {7,13,24,25}},
+      {ISD::UMIN, MVT::v16i8, {3,10,11,11}},
   };
 
-  static const CostTblEntry SSE41CostTbl[] = {
-      {ISD::SMIN, MVT::v2i16, 3}, // same as sse2
-      {ISD::SMIN, MVT::v4i16, 5}, // same as sse2
-      {ISD::UMIN, MVT::v2i16, 5}, // same as sse2
-      {ISD::UMIN, MVT::v4i16, 7}, // same as sse2
-      {ISD::SMIN, MVT::v8i16, 4}, // phminposuw+xor
-      {ISD::UMIN, MVT::v8i16, 4}, // FIXME: umin is cheaper than umax
-      {ISD::SMIN, MVT::v2i8,  3}, // pminsb
-      {ISD::SMIN, MVT::v4i8,  5}, // pminsb
-      {ISD::SMIN, MVT::v8i8,  7}, // pminsb
-      {ISD::SMIN, MVT::v16i8, 6},
-      {ISD::UMIN, MVT::v2i8,  3}, // same as sse2
-      {ISD::UMIN, MVT::v4i8,  5}, // same as sse2
-      {ISD::UMIN, MVT::v8i8,  7}, // same as sse2
-      {ISD::UMIN, MVT::v16i8, 6}, // FIXME: umin is cheaper than umax
+  static const CostKindTblEntry SSE41CostTbl[] = {
+      {ISD::SMIN, MVT::v2i64, {3, 4, 4, 6}},
+      {ISD::UMIN, MVT::v2i64, {3, 4, 4, 6}},
+      {ISD::SMIN, MVT::v2i32, {2, 2, 3, 3}},
+      {ISD::UMIN, MVT::v2i32, {2, 2, 3, 3}},
+      {ISD::SMIN, MVT::v4i32, {3, 4, 5, 5}},
+      {ISD::UMIN, MVT::v4i32, {3, 4, 5, 5}},
+      {ISD::UMIN, MVT::v2i16, {2, 3, 4, 4}},
+      {ISD::SMIN, MVT::v4i16, {3, 5, 6, 6}},
+      {ISD::UMIN, MVT::v4i16, {3, 5, 6, 6}},
+      {ISD::SMIN, MVT::v8i16, {2, 8, 4, 5}},
+      {ISD::UMIN, MVT::v8i16, {2, 5, 2, 2}},
+      {ISD::SMIN, MVT::v2i8,  {2, 3, 4, 4}},
+      {ISD::SMIN, MVT::v4i8,  {3, 6, 7, 7}},
+      {ISD::SMIN, MVT::v8i8,  {4, 8, 9, 9}},
+      {ISD::SMIN, MVT::v16i8, {3,10, 7, 8}},
+      {ISD::UMIN, MVT::v16i8, {3, 8, 5, 5}},
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-      {ISD::SMIN, MVT::v16i16, 6},
-      {ISD::UMIN, MVT::v16i16, 6}, // FIXME: umin is cheaper than umax
-      {ISD::SMIN, MVT::v32i8, 8},
-      {ISD::UMIN, MVT::v32i8, 8},
+  static const CostKindTblEntry AVX1CostTbl[] = {
+      {ISD::SMIN, MVT::v4i64,  {5,11, 7,10}},
+      {ISD::UMIN, MVT::v4i64,  {6,12,10,13}},
+      {ISD::SMIN, MVT::v8i32,  {4, 9, 7, 7}},
+      {ISD::UMIN, MVT::v8i32,  {4, 9, 7, 7}},
+      {ISD::SMIN, MVT::v16i16, {3,15, 6, 7}},
+      {ISD::UMIN, MVT::v16i16, {2, 9, 4, 4}},
+      {ISD::SMIN, MVT::v32i8,  {4,17, 8, 9}},
+      {ISD::UMIN, MVT::v32i8,  {3,11, 6, 6}},
   };
 
-  static const CostTblEntry AVX512BWCostTbl[] = {
-      {ISD::SMIN, MVT::v32i16, 8},
-      {ISD::UMIN, MVT::v32i16, 8}, // FIXME: umin is cheaper than umax
-      {ISD::SMIN, MVT::v64i8, 10},
-      {ISD::UMIN, MVT::v64i8, 10},
+  static const CostKindTblEntry AVX2CostTbl[] = {
+      {ISD::SMIN, MVT::v4i64,  {4,11, 7,10}},
+      {ISD::UMIN, MVT::v4i64,  {4,12,10,13}},
+      {ISD::SMIN, MVT::v2i32,  {1, 2, 3, 3}},
+      {ISD::UMIN, MVT::v2i32,  {1, 2, 3, 3}},
+      {ISD::UMIN, MVT::v4i32,  {2, 4, 5, 5}},
+      {ISD::SMIN, MVT::v4i32,  {2, 4, 5, 5}},
+      {ISD::SMIN, MVT::v8i32,  {3, 9, 7, 7}},
+      {ISD::UMIN, MVT::v8i32,  {3, 9, 7, 7}},
+      {ISD::SMIN, MVT::v4i16,  {2, 4, 5, 5}},
+      {ISD::UMIN, MVT::v4i16,  {2, 4, 5, 5}},
+      {ISD::SMIN, MVT::v16i16, {2,15, 6, 7}},
+      {ISD::SMIN, MVT::v8i8,   {3, 6, 7, 7}},
+      {ISD::UMIN, MVT::v8i8,   {3, 6, 7, 7}},
+      {ISD::SMIN, MVT::v32i8,  {3,17, 8, 9}},
+  };
+
+  static const CostKindTblEntry AVX512FCostTbl[] = {
+      {ISD::SMIN, MVT::v2i64,  {2, 4, 3, 3}},
+      {ISD::UMIN, MVT::v2i64,  {2, 4, 3, 3}},
+      {ISD::SMIN, MVT::v4i64,  {3,10, 5, 5}},
+      {ISD::UMIN, MVT::v4i64,  {3,10, 5, 5}},
+      {ISD::SMIN, MVT::v8i64,  {5,16, 7, 7}},
+      {ISD::UMIN, MVT::v8i64,  {5,16, 7, 7}},
+      {ISD::SMIN, MVT::v16i32, {4,12, 9, 9}},
+      {ISD::UMIN, MVT::v16i32, {4,12, 9, 9}},
+  };
+
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+      {ISD::SMIN, MVT::v2i16,  {1, 2, 3, 3}},
+      {ISD::UMIN, MVT::v2i16,  {1, 2, 3, 3}},
+      {ISD::SMIN, MVT::v32i16, {2,19, 8, 9}},
+      {ISD::UMIN, MVT::v32i16, {2,12, 6, 6}},
+      {ISD::SMIN, MVT::v2i8,   {1, 2, 3, 3}},
+      {ISD::UMIN, MVT::v2i8,   {1, 2, 3, 3}},
+      {ISD::SMIN, MVT::v4i8,   {2, 4, 5, 5}},
+      {ISD::UMIN, MVT::v4i8,   {2, 4, 5, 5}},
+      {ISD::SMIN, MVT::v16i8,  {2,10, 6, 7}},
+      {ISD::UMIN, MVT::v16i8,  {2, 6, 4, 4}},
+      {ISD::SMIN, MVT::v32i8,  {2,17, 8, 9}},
+      {ISD::UMIN, MVT::v32i8,  {2,10, 6, 6}},
+      {ISD::SMIN, MVT::v64i8,  {2,21,10,11}},
+      {ISD::UMIN, MVT::v64i8,  {2,14, 8, 8}},
   };
 
   // Before legalizing the type, give a chance to look up illegal narrow types
@@ -5809,19 +6023,33 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
+
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE41())
       if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return Entry->Cost;
+        if (auto KindCost = Entry->Cost[CostKind])
+          return *KindCost;
   }
 
   auto *ValVTy = cast<FixedVectorType>(ValTy);
@@ -5841,19 +6069,33 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      return MinMaxCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
+
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
+
+  if (ST->hasAVX2())
+    if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return MinMaxCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-      return MinMaxCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return MinMaxCost + Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return MinMaxCost + *KindCost;
 
   unsigned ScalarSize = ValTy->getScalarSizeInBits();
 
@@ -5872,8 +6114,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
     // If we're reducing from 256/512 bits, use an extract_subvector.
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
-      MinMaxCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, {}, CostKind,
-                                   NumVecElts, SubTy);
+      MinMaxCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, Ty, {},
+                                   CostKind, NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
@@ -5883,7 +6125,7 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
             FixedVectorType::get(Type::getDoubleTy(ValTy->getContext()), 2);
       else
         ShufTy = FixedVectorType::get(Type::getInt64Ty(ValTy->getContext()), 2);
-      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, {},
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy, {},
                                    CostKind, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
@@ -5892,7 +6134,7 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
         ShufTy = FixedVectorType::get(Type::getFloatTy(ValTy->getContext()), 4);
       else
         ShufTy = FixedVectorType::get(Type::getInt32Ty(ValTy->getContext()), 4);
-      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, {},
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, ShufTy, {},
                                    CostKind, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
@@ -5910,7 +6152,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
 
   // Add the final extract element to the cost.
   return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                         CostKind, 0, nullptr, nullptr);
+                                         CostKind, 0, nullptr, nullptr,
+                                         TTI::VectorInstrContext::None);
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -5993,12 +6236,19 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // This is an imperfect hack to prevent constant hoisting of
     // compares that might be trying to check if a 64-bit value fits in
     // 32-bits. The backend can optimize these cases using a right shift by 32.
-    // Ideally we would check the compare predicate here. There also other
-    // similar immediates the backend can use shifts for.
+    // There are other predicates and immediates the backend can use shifts for.
     if (Idx == 1 && ImmBitWidth == 64) {
       uint64_t ImmVal = Imm.getZExtValue();
       if (ImmVal == 0x100000000ULL || ImmVal == 0xffffffff)
         return TTI::TCC_Free;
+
+      if (auto *Cmp = dyn_cast_or_null<CmpInst>(Inst)) {
+        if (Cmp->isEquality()) {
+          KnownBits Known = computeKnownBits(Cmp->getOperand(0), DL);
+          if (Known.countMinTrailingZeros() >= 32)
+            return TTI::TCC_Free;
+        }
+      }
     }
     ImmIdx = 1;
     break;
@@ -6149,7 +6399,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   // and that there's at most one variable index.
   auto getIndexSizeInBits = [](const Value *Ptr, const DataLayout &DL) {
     unsigned IndexSize = DL.getPointerSizeInBits();
-    const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
     if (IndexSize < 64 || !GEP)
       return IndexSize;
 
@@ -6204,10 +6454,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
 }
 
 /// Calculate the cost of Gather / Scatter operation
-InstructionCost X86TTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind,
-    const Instruction *I = nullptr) const {
+InstructionCost
+X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                   TTI::TargetCostKind CostKind) const {
+  bool IsLoad = MICA.getID() == Intrinsic::masked_gather ||
+                MICA.getID() == Intrinsic::vp_gather;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
+  Type *SrcVTy = MICA.getDataType();
+  const Value *Ptr = MICA.getPointer();
+  Align Alignment = MICA.getAlignment();
   if ((Opcode == Instruction::Load &&
        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
@@ -6216,16 +6471,10 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
                                     Align(Alignment)))))
-    return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
-  PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy && Ptr->getType()->isVectorTy())
-    PtrTy = dyn_cast<PointerType>(
-        cast<VectorType>(Ptr->getType())->getElementType());
-  assert(PtrTy && "Unexpected type for Ptr argument");
-  unsigned AddressSpace = PtrTy->getAddressSpace();
+  unsigned AddressSpace = MICA.getAddressSpace();
   return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
                          AddressSpace);
 }
@@ -6268,7 +6517,8 @@ static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned AddressSpace) const {
+                                   unsigned AddressSpace,
+                                   TTI::MaskKind MaskKind) const {
   Type *ScalarTy = DataTy->getScalarType();
 
   // The backend can't handle a single element vector w/o CFCMOV.
@@ -6281,7 +6531,8 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
 }
 
 bool X86TTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
-                                    unsigned AddressSpace) const {
+                                    unsigned AddressSpace,
+                                    TTI::MaskKind MaskKind) const {
   Type *ScalarTy = DataTy->getScalarType();
 
   // The backend can't handle a single element vector w/o CFCMOV.
@@ -6486,8 +6737,8 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
-      // Having more target features is fine for inline ASM.
-      if (CB->isInlineAsm())
+      // Having more target features is fine for inline ASM and intrinsics.
+      if (CB->isInlineAsm() || CB->getIntrinsicID() != Intrinsic::not_intrinsic)
         continue;
 
       SmallVector<Type *, 8> Types;
@@ -6503,19 +6754,9 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
       if (all_of(Types, IsSimpleTy))
         continue;
 
-      if (Function *NestedCallee = CB->getCalledFunction()) {
-        // Assume that intrinsics are always ABI compatible.
-        if (NestedCallee->isIntrinsic())
-          continue;
-
-        // Do a precise compatibility check.
-        if (!areTypesABICompatible(Caller, NestedCallee, Types))
-          return false;
-      } else {
-        // We don't know the target features of the callee,
-        // assume it is incompatible.
+      // Do a precise compatibility check.
+      if (!areTypesABICompatible(Caller, Callee, Types))
         return false;
-      }
     }
   }
   return true;
@@ -6523,7 +6764,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
@@ -6554,7 +6795,7 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+    if (PreferredWidth >= 512 && ST->hasAVX512())
       Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
@@ -6583,6 +6824,18 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() const {
   return !(ST->isAtom());
 }
 
+bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  default:
+    return true;
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+    return false;
+  }
+}
+
 // Get estimation for interleaved load/store operations and strided load.
 // \p Indices contains indices for strided load.
 // \p Factor - the factor of interleaving.
@@ -6608,10 +6861,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
   bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
-  if (UseMaskedMemOp)
-    MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
-                                      AddressSpace, CostKind);
-  else
+  if (UseMaskedMemOp) {
+    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                               : Intrinsic::masked_store;
+    MemOpCost = getMaskedMemoryOpCost(
+        {IID, SingleMemOpTy, Alignment, AddressSpace}, CostKind);
+  } else
     MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace,
                                 CostKind);
 
@@ -6671,8 +6926,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     TTI::ShuffleKind ShuffleKind =
         (NumOfMemOps > 1) ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc;
 
-    InstructionCost ShuffleCost =
-        getShuffleCost(ShuffleKind, SingleMemOpTy, {}, CostKind, 0, nullptr);
+    InstructionCost ShuffleCost = getShuffleCost(
+        ShuffleKind, SingleMemOpTy, SingleMemOpTy, {}, CostKind, 0, nullptr);
 
     unsigned NumOfLoadsInInterleaveGrp =
         Indices.size() ? Indices.size() : Factor;
@@ -6728,8 +6983,9 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   // There is no strided stores meanwhile. And store can't be folded in
   // shuffle.
   unsigned NumOfSources = Factor; // The number of values to be merged.
-  InstructionCost ShuffleCost = getShuffleCost(
-      TTI::SK_PermuteTwoSrc, SingleMemOpTy, {}, CostKind, 0, nullptr);
+  InstructionCost ShuffleCost =
+      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, SingleMemOpTy, {},
+                     CostKind, 0, nullptr);
   unsigned NumOfShufflesPerStore = NumOfSources - 1;
 
   // The SK_MergeTwoSrc shuffle clobbers one of src operands.
@@ -7120,16 +7376,40 @@ bool X86TTIImpl::isVectorShiftByScalarCheap(Type *Ty) const {
 }
 
 unsigned X86TTIImpl::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                       Type *ScalarValTy) const {
+                                       Type *ScalarValTy, Align Alignment,
+                                       unsigned AddrSpace) const {
   if (ST->hasF16C() && ScalarMemTy->isHalfTy()) {
     return 4;
   }
-  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+  return BaseT::getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                  AddrSpace);
 }
 
 bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
                                             SmallVectorImpl<Use *> &Ops) const {
   using namespace llvm::PatternMatch;
+
+  if (I->getOpcode() == Instruction::And &&
+      (ST->hasBMI() || (I->getType()->isVectorTy() && ST->hasSSE2()))) {
+    for (auto &Op : I->operands()) {
+      // (and X, (not Y)) -> (andn X, Y)
+      if (match(Op.get(), m_Not(m_Value())) && !I->getType()->isIntegerTy(8)) {
+        Ops.push_back(&Op);
+        return true;
+      }
+      // (and X, (splat (not Y))) -> (andn X, (splat Y))
+      if (match(Op.get(),
+                m_Shuffle(m_InsertElt(m_Value(), m_Not(m_Value()), m_ZeroInt()),
+                          m_Value(), m_ZeroMask()))) {
+        Use &InsertElt = cast<Instruction>(Op)->getOperandUse(0);
+        Use &Not = cast<Instruction>(InsertElt)->getOperandUse(1);
+        Ops.push_back(&Not);
+        Ops.push_back(&InsertElt);
+        Ops.push_back(&Op);
+        return true;
+      }
+    }
+  }
 
   FixedVectorType *VTy = dyn_cast<FixedVectorType>(I->getType());
   if (!VTy)
@@ -7182,4 +7462,20 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   }
 
   return false;
+}
+
+bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
+  bool HasEGPR = ST->hasEGPR();
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  for (User *U : F.users()) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getFunction();
+    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+      return false;
+  }
+
+  return true;
 }

@@ -8,6 +8,7 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -120,6 +121,19 @@ const Scope *FindOpenACCConstructContaining(const Scope *scope) {
                        return s.kind() == Scope::Kind::OpenACCConstruct;
                      })
                : nullptr;
+}
+
+bool HasOpenACCRoutineDirective(const Scope *scope) {
+  if (!scope) {
+    return false;
+  }
+  const Scope &progUnit{GetProgramUnitContaining(*scope)};
+  if (const Symbol *symbol{progUnit.symbol()}) {
+    if (const auto *subpDetails{symbol->detailsIf<SubprogramDetails>()}) {
+      return !subpDetails->openACCRoutineInfos().empty();
+    }
+  }
+  return false;
 }
 
 // 7.5.2.4 "same derived type" test -- rely on IsTkCompatibleWith() and its
@@ -249,7 +263,7 @@ bool DoesScopeContain(const Scope *maybeAncestor, const Symbol &symbol) {
   return DoesScopeContain(maybeAncestor, symbol.owner());
 }
 
-static const Symbol &FollowHostAssoc(const Symbol &symbol) {
+const Symbol &FollowHostAssoc(const Symbol &symbol) {
   for (const Symbol *s{&symbol};;) {
     const auto *details{s->detailsIf<HostAssocDetails>()};
     if (!details) {
@@ -317,7 +331,13 @@ const Symbol *FindExternallyVisibleObject(
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
   const Symbol &ultimate{GetAssociationRoot(object)};
-  if (IsDummy(ultimate)) {
+  if (ultimate.owner().IsDerivedType()) {
+    return nullptr;
+  } else if (!IsDummy(ultimate) &&
+      (IsUseAssociated(object, scope) ||
+          IsHostAssociatedIntoSubprogram(object, scope))) {
+    return &object;
+  } else if (IsDummy(ultimate)) {
     if (IsIntentIn(ultimate)) {
       return &ultimate;
     }
@@ -325,12 +345,7 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
-  } else if (ultimate.owner().IsDerivedType()) {
-    return nullptr;
-  } else if (&GetProgramUnitContaining(ultimate) !=
-      &GetProgramUnitContaining(scope)) {
-    return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
@@ -344,18 +359,6 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
     }
   }
   return symbol;
-}
-
-const Symbol &GetCrayPointer(const Symbol &crayPointee) {
-  const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
-      found = &pointer.get();
-      break;
-    }
-  }
-  return DEREF(found);
 }
 
 bool ExprHasTypeCategory(
@@ -582,6 +585,18 @@ bool IsOrContainsEventOrLockComponent(const Symbol &original) {
   return false;
 }
 
+bool IsOrContainsNotifyComponent(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+  if (evaluate::IsVariable(symbol)) {
+    if (const DeclTypeSpec *type{symbol.GetType()}) {
+      if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+        return IsNotifyType(derived) || FindNotifyPotentialComponent(*derived);
+      }
+    }
+  }
+  return false;
+}
+
 // Check this symbol suitable as a type-bound procedure - C769
 bool CanBeTypeBoundProc(const Symbol &symbol) {
   if (IsDummy(symbol) || IsProcedurePointer(symbol)) {
@@ -705,7 +720,7 @@ SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &spec) {
 
 const Symbol *IsFinalizable(const Symbol &symbol,
     std::set<const DerivedTypeSpec *> *inProgress, bool withImpureFinalizer) {
-  if (IsPointer(symbol) || evaluate::IsAssumedRank(symbol)) {
+  if (IsPointer(symbol) || IsAssumedRank(symbol)) {
     return nullptr;
   }
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -741,7 +756,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
         if (const SubprogramDetails *
             subp{symbol->detailsIf<SubprogramDetails>()}) {
           if (const auto &args{subp->dummyArgs()}; !args.empty() &&
-              args.at(0) && !evaluate::IsAssumedRank(*args.at(0)) &&
+              args.at(0) && !IsAssumedRank(*args.at(0)) &&
               args.at(0)->Rank() != *rank) {
             continue; // not a finalizer for this rank
           }
@@ -759,7 +774,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   if (elemental && (!withImpureFinalizer || !IsPureProcedure(*elemental))) {
     return elemental;
   }
-  // Check components (including ancestors)
+  // Check components (including ancestors via parent component recursion)
   std::set<const DerivedTypeSpec *> basis;
   if (inProgress) {
     if (inProgress->find(&derived) != inProgress->end()) {
@@ -770,10 +785,14 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
   }
   auto iterator{inProgress->insert(&derived).first};
   const Symbol *result{nullptr};
-  for (const Symbol &component : PotentialComponentIterator{derived}) {
-    result = IsFinalizable(component, inProgress, withImpureFinalizer);
-    if (result) {
-      break;
+  // Iterate only the type's own scope to avoid exponential traversal
+  // when combined with recursion through derived-type components.
+  if (const Scope *scope{derived.GetScope()}) {
+    for (const auto &[_, symbolRef] : *scope) {
+      result = IsFinalizable(*symbolRef, inProgress, withImpureFinalizer);
+      if (result) {
+        break;
+      }
     }
   }
   inProgress->erase(iterator);
@@ -790,7 +809,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-        if (evaluate::IsAssumedRank(symbol)) {
+        if (IsAssumedRank(symbol)) {
           // finalizable assumed-rank not allowed (C839)
           return nullptr;
         } else {
@@ -811,6 +830,38 @@ bool MayRequireFinalization(const DerivedTypeSpec &derived) {
 bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   DirectComponentIterator directs{derived};
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
+}
+
+static bool MayHaveDefinedAssignment(
+    const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
+  if (const Scope *scope{derived.GetScope()};
+      scope && checked.find(scope) == checked.end()) {
+    checked.insert(scope);
+    for (const auto &[_, symbolRef] : *scope) {
+      if (const auto *generic{symbolRef->detailsIf<GenericDetails>()}) {
+        if (generic->kind().IsAssignment()) {
+          return true;
+        }
+      } else if (symbolRef->has<ObjectEntityDetails>() &&
+          !IsPointer(*symbolRef)) {
+        if (const DeclTypeSpec *type{symbolRef->GetType()}) {
+          if (type->IsPolymorphic()) {
+            return true;
+          } else if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+            if (MayHaveDefinedAssignment(*derived, checked)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+bool MayHaveDefinedAssignment(const DerivedTypeSpec &derived) {
+  std::set<const Scope *> checked;
+  return MayHaveDefinedAssignment(derived, checked);
 }
 
 bool IsAssumedLengthCharacter(const Symbol &symbol) {
@@ -909,13 +960,13 @@ public:
     return false;
   }
   bool operator()(const parser::CallStmt &stmt) {
+    const auto &call{std::get<parser::Call>(stmt.t)};
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.call.t)};
+        std::get<parser::ProcedureDesignator>(call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{
-            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
+        const auto &args{std::get<std::list<parser::ActualArgSpec>>(call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};
@@ -1049,10 +1100,89 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
   });
 }
 
+bool IsDeviceAllocatable(const Symbol &symbol) {
+  if (IsAllocatable(symbol)) {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool HasCUDAComponent(const Symbol &symbol) {
+  if (const auto *details{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
+}
+
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
+  UltimateComponentIterator ultimates{derived};
+  return std::find_if(ultimates.begin(), ultimates.end(), IsDeviceAllocatable);
+}
+
+bool CanCUDASymbolBeGlobal(const Symbol &sym) {
+  const Symbol &symbol{GetAssociationRoot(sym)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
+  if (features.IsEnabled(common::LanguageFeature::CUDA) &&
+      scopeKind == Scope::Kind::MainProgram) {
+    if (const auto *details{
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      const Fortran::semantics::DeclTypeSpec *type{details->type()};
+      const Fortran::semantics::DerivedTypeSpec *derived{
+          type ? type->AsDerived() : nullptr};
+      if (derived) {
+        if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+          return false;
+        }
+      }
+      if (details->cudaDataAttr())
+        return false;
+    }
+  }
+  return true;
+}
+
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *object{
+  const auto *details{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  return object ? object->cudaDataAttr() : std::nullopt;
+  if (details) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return common::CUDADataAttr::Managed;
+      }
+    }
+    return details->cudaDataAttr();
+  }
+  return std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {
@@ -1066,7 +1196,7 @@ bool IsAccessible(const Symbol &original, const Scope &scope) {
 }
 
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &scope, const Symbol &symbol) {
+    const Scope &scope, const Symbol &symbol, bool inStructureConstructor) {
   if (IsAccessible(symbol, scope)) {
     return std::nullopt;
   } else if (FindModuleFileContaining(scope)) {
@@ -1075,10 +1205,20 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     // whose structure constructors reference private components.
     return std::nullopt;
   } else {
+    const Scope &module{DEREF(FindModuleContaining(symbol.owner()))};
+    // Subtlety: Sometimes we want to be able to convert a generated
+    // module file back into Fortran, perhaps to convert it into a
+    // hermetic module file.  Don't emit a fatal error for things like
+    // "__builtin_c_ptr(__address=0)" that came from expansions of
+    // "cptr_null()"; specifically, just warn about structure constructor
+    // component names from intrinsic modules when in a module.
+    parser::MessageFixedText text{FindModuleContaining(scope) &&
+                module.parent().IsIntrinsicModules() &&
+                inStructureConstructor && symbol.owner().IsDerivedType()
+            ? "PRIVATE name '%s' is accessible only within module '%s'"_warn_en_US
+            : "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US};
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is only accessible within module '%s'"_err_en_US,
-        symbol.name(),
-        DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
+        std::move(text), symbol.name(), module.GetName().value()};
   }
 }
 
@@ -1375,6 +1515,32 @@ PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
   return iter;
 }
 
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &derived, bool ignoreCoarrays) {
+  PotentialComponentIterator potentials{derived};
+  auto iter{potentials.begin()};
+  for (auto end{potentials.end()}; iter != end; ++iter) {
+    const Symbol &component{*iter};
+    if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec *type{object->type()}) {
+        if (IsNotifyType(type->AsDerived())) {
+          if (!ignoreCoarrays) {
+            break; // found one
+          }
+          auto path{iter.GetComponentPath()};
+          path.pop_back();
+          if (std::find_if(path.begin(), path.end(), [](const Symbol &sym) {
+                return evaluate::IsCoarray(sym);
+              }) == path.end()) {
+            break; // found one not in a coarray
+          }
+        }
+      }
+    }
+  }
+  return iter;
+}
+
 UltimateComponentIterator::const_iterator FindAllocatableUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
@@ -1651,7 +1817,7 @@ std::forward_list<std::string> GetOperatorNames(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
+  if (!name.empty() && name.back() == ')' &&
       name.ToString().rfind("operator(", 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, common::LogicalOperator{i})};
@@ -1756,4 +1922,9 @@ bool HadUseError(
   }
 }
 
+bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
+  return symbol.name() == other.name() && symbol.owner().IsModule() &&
+      other.owner().IsModule() && symbol.owner().GetName() &&
+      symbol.owner().GetName() == other.owner().GetName();
+}
 } // namespace Fortran::semantics

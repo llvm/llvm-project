@@ -50,6 +50,7 @@
 //        to use WZR/XZR directly in some cases.
 //===----------------------------------------------------------------------===//
 #include "AArch64.h"
+#include "AArch64InstrInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
@@ -65,7 +66,11 @@ using namespace llvm;
 STATISTIC(NumCopiesRemoved, "Number of copies removed.");
 
 namespace {
-class AArch64RedundantCopyElimination : public MachineFunctionPass {
+class AArch64RedundantCopyEliminationImpl {
+public:
+  bool run(MachineFunction &MF);
+
+private:
   const MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
 
@@ -75,10 +80,6 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
 
   // OptBBClobberedRegs is used when optimizing away redundant copies/moves.
   LiveRegUnits OptBBClobberedRegs, OptBBUsedRegs;
-
-public:
-  static char ID;
-  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   struct RegImm {
     MCPhysReg Reg;
@@ -90,19 +91,26 @@ public:
                           SmallVectorImpl<RegImm> &KnownRegs,
                           MachineBasicBlock::iterator &FirstUse);
   bool optimizeBlock(MachineBasicBlock *MBB);
+};
+
+class AArch64RedundantCopyEliminationLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  AArch64RedundantCopyEliminationLegacy() : MachineFunctionPass(ID) {}
+
   bool runOnMachineFunction(MachineFunction &MF) override;
+
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
   StringRef getPassName() const override {
     return "AArch64 Redundant Copy Elimination";
   }
 };
-char AArch64RedundantCopyElimination::ID = 0;
-}
+char AArch64RedundantCopyEliminationLegacy::ID = 0;
+} // end anonymous namespace
 
-INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
+INITIALIZE_PASS(AArch64RedundantCopyEliminationLegacy, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)
 
 /// It's possible to determine the value of a register based on a dominating
@@ -117,7 +125,7 @@ INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",
 /// the constant in \p MBB for some cases.  If we find any constant values, push
 /// a physical register and constant value pair onto the KnownRegs vector and
 /// return true.  Otherwise, return false if no known values were found.
-bool AArch64RedundantCopyElimination::knownRegValInBlock(
+bool AArch64RedundantCopyEliminationImpl::knownRegValInBlock(
     MachineInstr &CondBr, MachineBasicBlock *MBB,
     SmallVectorImpl<RegImm> &KnownRegs, MachineBasicBlock::iterator &FirstUse) {
   unsigned Opc = CondBr.getOpcode();
@@ -272,7 +280,8 @@ bool AArch64RedundantCopyElimination::knownRegValInBlock(
   return false;
 }
 
-bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
+bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
+    MachineBasicBlock *MBB) {
   // Check if the current basic block has a single predecessor.
   if (MBB->pred_size() != 1)
     return false;
@@ -470,12 +479,10 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
   return true;
 }
 
-bool AArch64RedundantCopyElimination::runOnMachineFunction(
-    MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
+bool AArch64RedundantCopyEliminationImpl::run(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   // Resize the clobbered and used register unit trackers.  We do this once per
   // function.
@@ -485,11 +492,31 @@ bool AArch64RedundantCopyElimination::runOnMachineFunction(
   OptBBUsedRegs.init(*TRI);
 
   bool Changed = false;
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
+    Changed |= optimizeTerminators(&MBB, TII);
     Changed |= optimizeBlock(&MBB);
+  }
   return Changed;
 }
 
+bool AArch64RedundantCopyEliminationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return AArch64RedundantCopyEliminationImpl().run(MF);
+}
+
+PreservedAnalyses
+AArch64RedundantCopyEliminationPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64RedundantCopyEliminationImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 FunctionPass *llvm::createAArch64RedundantCopyEliminationPass() {
-  return new AArch64RedundantCopyElimination();
+  return new AArch64RedundantCopyEliminationLegacy();
 }

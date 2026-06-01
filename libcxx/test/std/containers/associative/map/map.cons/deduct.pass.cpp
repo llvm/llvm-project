@@ -40,7 +40,10 @@
 #include <climits> // INT_MAX
 #include <functional>
 #include <map>
+#include <utility>
+#include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
@@ -188,6 +191,23 @@ int main(int, char**) {
       std::map c(std::from_range, Range(), Alloc());
       static_assert(std::is_same_v<decltype(c), std::map<int, long, DefaultComp, Alloc>>);
     }
+  }
+  {
+    std::vector<std::pair<const int, float>> pair_vec = {{1, 1.1f}, {2, 2.2f}, {3, 3.3f}};
+    std::map m1(pair_vec.begin(), pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(m1), std::map<int, float>);
+
+    std::vector<std::tuple<int, double>> tuple_vec = {{10, 1.1}, {20, 2.2}, {30, 3.3}};
+    std::map m2(tuple_vec.begin(), tuple_vec.end());
+    ASSERT_SAME_TYPE(decltype(m2), std::map<int, double>);
+
+    std::vector<std::array<long, 2>> array_vec = {{100L, 101L}, {200L, 201L}, {300L, 301L}};
+    std::map m3(array_vec.begin(), array_vec.end());
+    ASSERT_SAME_TYPE(decltype(m3), std::map<long, long>);
+
+    std::vector<std::pair<int, char>> non_const_key_pair_vec = {{5, 'a'}, {6, 'b'}};
+    std::map m4(non_const_key_pair_vec.begin(), non_const_key_pair_vec.end());
+    ASSERT_SAME_TYPE(decltype(m4), std::map<int, char>);
   }
 #endif
 

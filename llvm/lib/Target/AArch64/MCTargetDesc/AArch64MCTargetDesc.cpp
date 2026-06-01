@@ -13,6 +13,7 @@
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCLFIRewriter.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -347,15 +349,16 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
-    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32);
+    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32,
+                                     Options);
+  else if (TheTriple.isOSBinFormatELF())
+    MAI = new AArch64MCAsmInfoELF(TheTriple, Options);
   else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
   else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoGNUCOFF();
-  else {
-    assert(TheTriple.isOSBinFormatELF() && "Invalid target");
-    MAI = new AArch64MCAsmInfoELF(TheTriple);
-  }
+    MAI = new AArch64MCAsmInfoGNUCOFF(Options);
+  else
+    reportFatalUsageError("unsupported object format");
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(AArch64::SP, true);
@@ -436,7 +439,7 @@ public:
       // architecturally defined to zero extend the upper 32 bits on a write.
       if (GPR32RC.contains(Reg))
         return true;
-      // SIMD&FP instructions operating on scalar data only acccess the lower
+      // SIMD&FP instructions operating on scalar data only access the lower
       // bits of a register, the upper bits are zero extended on a write. For
       // SIMD vector registers smaller than 128-bits, the upper 64-bits of the
       // register are zero extended on a write.
@@ -502,8 +505,16 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
   return new AArch64MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createAArch64MCLFIRewriter(MCContext &Ctx,
+                           std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                           std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new AArch64MCLFIRewriter(Ctx, std::move(RegInfo), std::move(InstInfo));
+}
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64TargetMC() {
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
                     &getTheAArch64_32Target(), &getTheARM64Target(),
                     &getTheARM64_32Target()}) {
@@ -529,6 +540,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createAArch64ELFStreamer);
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createAArch64WinCOFFStreamer);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createAArch64MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(

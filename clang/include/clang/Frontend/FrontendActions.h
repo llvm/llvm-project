@@ -96,6 +96,8 @@ protected:
 
   bool shouldEraseOutputFiles() override;
 
+  bool SetOnlyIfDifferent;
+
 public:
   /// Compute the AST consumer arguments that will be used to
   /// create the PCHGenerator instance returned by CreateASTConsumer.
@@ -108,12 +110,24 @@ public:
   /// into. On error, returns null.
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                   std::string &OutputFile);
+                   std::string &OutputFile, bool SetOnlyIfDifferent = false);
 
   bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  GeneratePCHAction(bool SetOnlyIfDifferent = false)
+      : SetOnlyIfDifferent(SetOnlyIfDifferent) {}
 };
 
 class GenerateModuleAction : public ASTFrontendAction {
+public:
+  /// When \c OS is non-null, uses it for outputting the PCM file instead of
+  /// automatically creating an output file.
+  explicit GenerateModuleAction(std::unique_ptr<raw_pwrite_stream> OS = nullptr)
+      : OS(std::move(OS)) {}
+
+private:
+  std::unique_ptr<raw_pwrite_stream> OS;
+
   virtual std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) = 0;
 
@@ -145,11 +159,20 @@ protected:
 };
 
 class GenerateModuleFromModuleMapAction : public GenerateModuleAction {
+public:
+  using GenerateModuleAction::GenerateModuleAction;
+
 private:
   bool BeginSourceFileAction(CompilerInstance &CI) override;
 
   std::unique_ptr<raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+
+  bool SetOnlyIfDifferent;
+
+public:
+  GenerateModuleFromModuleMapAction(bool SetOnlyIfDifferent = false)
+      : SetOnlyIfDifferent(SetOnlyIfDifferent) {}
 };
 
 /// Generates full BMI (which contains full information to generate the object
@@ -320,13 +343,16 @@ protected:
   bool hasPCHSupport() const override { return true; }
 };
 
-class GetDependenciesByModuleNameAction : public PreprocessOnlyAction {
-  StringRef ModuleName;
+//===----------------------------------------------------------------------===//
+// HLSL Specific Actions
+//===----------------------------------------------------------------------===//
+
+class HLSLFrontendAction : public WrapperFrontendAction {
+protected:
   void ExecuteAction() override;
 
 public:
-  GetDependenciesByModuleNameAction(StringRef ModuleName)
-      : ModuleName(ModuleName) {}
+  HLSLFrontendAction(std::unique_ptr<FrontendAction> WrappedAction);
 };
 
 }  // end namespace clang

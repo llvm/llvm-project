@@ -121,10 +121,18 @@ static const char kStdSuppressions[] =
 #  if SANITIZER_APPLE
     // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
     "leak:*_os_trace*\n"
+#    if SANITIZER_ARM64
+    // Apple Aarch64 leaks in dyld on startup.
+    // See https://github.com/llvm/llvm-project/issues/115992.
+    "leak:*_fetchInitializingClassList*\n"
+    // Apple Aarch64 leaks when using thread locals.
+    "leak:*dyld4::RuntimeState::_instantiateTLVs*\n"
+#    endif
 #  endif
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-    "leak:*tls_get_addr*\n";
+    "leak:*tls_get_addr*\n"
+    "leak:*dlerror*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -411,7 +419,7 @@ void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
 #  if SANITIZER_FUCHSIA
 
 // Fuchsia handles all threads together with its own callback.
-static void ProcessThreads(SuspendedThreadsList const &, Frontier *, tid_t,
+static void ProcessThreads(SuspendedThreadsList const &, Frontier *, ThreadID,
                            uptr) {}
 
 #  else
@@ -444,7 +452,7 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 
 // Scans thread data (stacks and TLS) for heap pointers.
 template <class Accessor>
-static void ProcessThread(tid_t os_id, uptr sp,
+static void ProcessThread(ThreadID os_id, uptr sp,
                           const InternalMmapVector<uptr> &registers,
                           InternalMmapVector<Range> &extra_ranges,
                           Frontier *frontier, Accessor &accessor) {
@@ -555,16 +563,16 @@ static void ProcessThread(tid_t os_id, uptr sp,
 }
 
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
-                           Frontier *frontier, tid_t caller_tid,
+                           Frontier *frontier, ThreadID caller_tid,
                            uptr caller_sp) {
-  InternalMmapVector<tid_t> done_threads;
+  InternalMmapVector<ThreadID> done_threads;
   InternalMmapVector<uptr> registers;
   InternalMmapVector<Range> extra_ranges;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     registers.clear();
     extra_ranges.clear();
 
-    const tid_t os_id = suspended_threads.GetThreadID(i);
+    const ThreadID os_id = suspended_threads.GetThreadID(i);
     uptr sp = 0;
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
@@ -588,10 +596,10 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
 
   if (flags()->use_detached) {
     CopyMemoryAccessor accessor;
-    InternalMmapVector<tid_t> known_threads;
+    InternalMmapVector<ThreadID> known_threads;
     GetRunningThreadsLocked(&known_threads);
     Sort(done_threads.data(), done_threads.size());
-    for (tid_t os_id : known_threads) {
+    for (ThreadID os_id : known_threads) {
       registers.clear();
       extra_ranges.clear();
 
@@ -711,7 +719,7 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
 
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
-                              Frontier *frontier, tid_t caller_tid,
+                              Frontier *frontier, ThreadID caller_tid,
                               uptr caller_sp) {
   const InternalMmapVector<u32> &suppressed_stacks =
       GetSuppressionContext()->GetSortedSuppressedStacks();
@@ -789,13 +797,13 @@ static bool ReportUnsuspendedThreads(const SuspendedThreadsList &) {
 
 static bool ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
-  InternalMmapVector<tid_t> threads(suspended_threads.ThreadCount());
+  InternalMmapVector<ThreadID> threads(suspended_threads.ThreadCount());
   for (uptr i = 0; i < suspended_threads.ThreadCount(); ++i)
     threads[i] = suspended_threads.GetThreadID(i);
 
   Sort(threads.data(), threads.size());
 
-  InternalMmapVector<tid_t> known_threads;
+  InternalMmapVector<ThreadID> known_threads;
   GetRunningThreadsLocked(&known_threads);
 
   bool succeded = true;
@@ -805,7 +813,7 @@ static bool ReportUnsuspendedThreads(
       succeded = false;
       Report(
           "Running thread %zu was not suspended. False leaks are possible.\n",
-          os_id);
+          (usize)os_id);
     }
   }
   return succeded;

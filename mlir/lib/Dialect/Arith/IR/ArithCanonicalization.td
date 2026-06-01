@@ -24,6 +24,15 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
+// Bitwise-and two integer attributes and create a new one with the result.
+def AndIntAttrs : NativeCodeCall<"andIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-or two integer attributes and create a new one with the result.
+def OrIntAttrs : NativeCodeCall<"orIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-xor two integer attributes and create a new one with the result.
+def XorIntAttrs : NativeCodeCall<"xorIntegerAttrs($_builder, $0, $1, $2)">;
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
 
@@ -31,6 +40,18 @@ def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
 
 class cast<string type> : NativeCodeCall<"::mlir::cast<" # type # ">($0)">;
+
+// Check that two values have the same type.
+def TypesMatch : Constraint<CPred<"$0.getType() == $1.getType()">>;
+
+// Check that an IntegerAttr's type matches the result value's type.
+def IntAttrTypeMatchesResult :
+    Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">>;
+
+// Check that a CmpIPredicateAttr is eq or ne.
+def IsEqualityCmpIPredicate :
+    Constraint<CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
+                     "$0.getValue() == arith::CmpIPredicate::ne">>;
 
 //===----------------------------------------------------------------------===//
 // AddIOp
@@ -91,8 +112,8 @@ def MulIMulIConstant :
           (ConstantLikeMatcher APIntAttr:$c1), $ovf2),
         (Arith_MulIOp $x, (Arith_ConstantOp (MulIntAttrs $res, $c0, $c1)),
             (MergeOverflow $ovf1, $ovf2)),
-             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
-              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
 
 //===----------------------------------------------------------------------===//
 // AddUIExtendedOp
@@ -103,6 +124,17 @@ def MulIMulIConstant :
 def AddUIExtendedToAddI:
     Pattern<(Arith_AddUIExtendedOp:$res $x, $y),
              [(Arith_AddIOp $x, $y, DefOverflow), (replaceWithValue $x)],
+             [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
+
+//===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+// subui_extended(x, y) -> [subi(x, y), x], when the `borrow` result has no
+// uses. Since the 'borrow' result is unused, any replacement value will do.
+def SubUIExtendedToSubI:
+    Pattern<(Arith_SubUIExtendedOp:$res $x, $y),
+             [(Arith_SubIOp $x, $y, DefOverflow), (replaceWithValue $x)],
              [(Constraint<CPred<"$0.getUses().empty()">> $res__1)]>;
 
 //===----------------------------------------------------------------------===//
@@ -209,6 +241,15 @@ def MulUIExtendedToMulI :
 // xori is commutative and will be canonicalized to have its constants appear
 // as the second operand.
 
+// xori(xori(x, c0), c1) -> xori(x, c0 ^ c1)
+def XOrIXOrIConstant :
+    Pat<(Arith_XOrIOp:$res
+          (Arith_XOrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_XOrIOp $x, (Arith_ConstantOp (XorIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
+
 // not(cmpi(pred, a, b)) -> cmpi(~pred, a, b), where not(x) is xori(x, 1)
 def InvertPredicate : NativeCodeCall<"invertPredicate($0)">;
 def XOrINotCmpI :
@@ -218,14 +259,18 @@ def XOrINotCmpI :
         (Arith_CmpIOp (InvertPredicate $pred), $a, $b)>;
 
 // xor extui(x), extui(y) -> extui(xor(x,y))
+// XOR preserves nneg only if both operands are non-negative: xor of two values
+// with sign bit 0 has sign bit 0.
 def XOrIOfExtUI :
-    Pat<(Arith_XOrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)), (Arith_ExtUIOp (Arith_XOrIOp $x, $y)),
-      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_XOrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_XOrIOp $x, $y),
+                       (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
+      [(TypesMatch $x, $y)]>;
 
 // xor extsi(x), extsi(y) -> extsi(xor(x,y))
 def XOrIOfExtSI :
     Pat<(Arith_XOrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)), (Arith_ExtSIOp (Arith_XOrIOp $x, $y)),
-      [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+      [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // CmpIOp
@@ -237,21 +282,15 @@ def CmpIExtSI :
           (Arith_ExtSIOp $a),
           (Arith_ExtSIOp $b)),
         (Arith_CmpIOp $pred, $a, $b),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
-         (Constraint<
-            CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
-                  "$0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+        [(TypesMatch $a, $b), (IsEqualityCmpIPredicate $pred)]>;
 
 // cmpi(== or !=, a ext iNN, b ext iNN) == cmpi(== or !=, a, b)
 def CmpIExtUI :
     Pat<(Arith_CmpIOp $pred,
-          (Arith_ExtUIOp $a),
-          (Arith_ExtUIOp $b)),
+          (Arith_ExtUIOp $a, $nneg1),
+          (Arith_ExtUIOp $b, $nneg2)),
         (Arith_CmpIOp $pred, $a, $b),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $a, $b),
-         (Constraint<
-            CPred<"$0.getValue() == arith::CmpIPredicate::eq || "
-                  "$0.getValue() == arith::CmpIPredicate::ne">> $pred)]>;
+        [(TypesMatch $a, $b), (IsEqualityCmpIPredicate $pred)]>;
 
 //===----------------------------------------------------------------------===//
 // SelectOp
@@ -273,7 +312,7 @@ def RedundantSelectFalse :
     Pat<(SelectOp $pred, $a, (SelectOp $pred, $b, $c)),
         (SelectOp $pred, $a, $c)>;
 
-// select(pred, false, true) => not(pred) 
+// select(pred, false, true) => not(pred)
 def SelectI1ToNot :
     Pat<(SelectOp $pred,
                   (ConstantLikeMatcher ConstantAttr<I1Attr, "0">),
@@ -284,12 +323,6 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x)) -> x, if dstType == srcType.
-def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x)),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
-
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
     Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
@@ -298,24 +331,19 @@ def IndexCastOfExtSI :
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
-// index_castui(index_castui(x)) -> x, if dstType == srcType.
-def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x)),
-        (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
-
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
-    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x)), (Arith_IndexCastUIOp $x)>;
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_IndexCastUIOp $x, $nneg1)>;
 
 
 //===----------------------------------------------------------------------===//
 // BitcastOp
 //===----------------------------------------------------------------------===//
 
-// bitcast(bitcast(x)) -> x
+// bitcast(type1, bitcast(type2, x)) -> bitcast(type1, x)
 def BitcastOfBitcast :
-    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (replaceWithValue $x)>;
+    Pat<(Arith_BitcastOp (Arith_BitcastOp $x)), (Arith_BitcastOp $x)>;
 
 //===----------------------------------------------------------------------===//
 // ExtSIOp
@@ -323,47 +351,68 @@ def BitcastOfBitcast :
 
 // extsi(extui(x iN : iM) : iL) -> extui(x : iL)
 def ExtSIOfExtUI :
-    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x)), (Arith_ExtUIOp $x)>;
+    Pat<(Arith_ExtSIOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_ExtUIOp $x, $nneg)>;
 
 //===----------------------------------------------------------------------===//
 // AndIOp
 //===----------------------------------------------------------------------===//
 
+// andi(andi(x, c0), c1) -> andi(x, c0 & c1)
+def AndIAndIConstant :
+    Pat<(Arith_AndIOp:$res
+          (Arith_AndIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_AndIOp $x, (Arith_ConstantOp (AndIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
+
 // and extui(x), extui(y) -> extui(and(x,y))
+// AND can only clear bits, so if either operand is non-negative (sign bit 0),
+// the result also has sign bit 0. Preserves nneg if either operand has it.
 def AndOfExtUI :
-    Pat<(Arith_AndIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)),
-        (Arith_ExtUIOp (Arith_AndIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_AndIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_AndIOp $x, $y),
+                       (NativeCodeCall<"$0 ? $0 : $1"> $nneg1, $nneg2)),
+        [(TypesMatch $x, $y)]>;
 
 // and extsi(x), extsi(y) -> extsi(and(x,y))
 def AndOfExtSI :
     Pat<(Arith_AndIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
         (Arith_ExtSIOp (Arith_AndIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // OrIOp
 //===----------------------------------------------------------------------===//
 
+// ori(ori(x, c0), c1) -> ori(x, c0 | c1)
+def OrIOrIConstant :
+    Pat<(Arith_OrIOp:$res
+          (Arith_OrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_OrIOp $x, (Arith_ConstantOp (OrIntAttrs $res, $c0, $c1))),
+             [(IntAttrTypeMatchesResult $res, $c0),
+              (IntAttrTypeMatchesResult $res, $c1)]>;
+
 // or extui(x), extui(y) -> extui(or(x,y))
+// OR preserves nneg only if both operands are non-negative: or of two values
+// with sign bit 0 has sign bit 0.
 def OrOfExtUI :
-    Pat<(Arith_OrIOp (Arith_ExtUIOp $x), (Arith_ExtUIOp $y)),
-        (Arith_ExtUIOp (Arith_OrIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_OrIOp (Arith_ExtUIOp $x, $nneg1), (Arith_ExtUIOp $y, $nneg2)),
+        (Arith_ExtUIOp (Arith_OrIOp $x, $y),
+                       (NativeCodeCall<"($0 && $1) ? $0 : UnitAttr()"> $nneg1, $nneg2)),
+        [(TypesMatch $x, $y)]>;
 
 // or extsi(x), extsi(y) -> extsi(or(x,y))
 def OrOfExtSI :
     Pat<(Arith_OrIOp (Arith_ExtSIOp $x), (Arith_ExtSIOp $y)),
         (Arith_ExtSIOp (Arith_OrIOp $x, $y)),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+        [(TypesMatch $x, $y)]>;
 
 //===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
-
-def ValuesWithSameType :
-    Constraint<
-      CPred<"llvm::all_equal({$0.getType(), $1.getType(), $2.getType()})">>;
 
 def ValueWiderThan :
     Constraint<And<[
@@ -378,67 +427,106 @@ def TruncationMatchesShiftAmount :
 
 // trunci(extsi(x)) -> extsi(x), when only the sign-extension bits are truncated
 def TruncIExtSIToExtSI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x)),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtSIOp:$ext $x), $overflow),
         (Arith_ExtSIOp $x),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(extui(x)) -> extui(x), when only the zero-extension bits are truncated
 def TruncIExtUIToExtUI :
-    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x)),
-        (Arith_ExtUIOp $x),
+    Pat<(Arith_TruncIOp:$tr (Arith_ExtUIOp:$ext $x, $nneg), $overflow),
+        (Arith_ExtUIOp $x, $nneg),
         [(ValueWiderThan $ext, $tr),
          (ValueWiderThan $tr, $x)]>;
 
 // trunci(shrsi(x, c)) -> trunci(shrui(x, c))
 def TruncIShrSIToTrunciShrUI :
     Pat<(Arith_TruncIOp:$tr
-          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0))),
-        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)))),
+          (Arith_ShRSIOp $x, (ConstantLikeMatcher TypedAttrInterface:$c0), $exact), $overflow),
+        (Arith_TruncIOp (Arith_ShRUIOp $x, (Arith_ConstantOp (cast<"TypedAttr"> $c0)), $exact), $overflow),
         [(TruncationMatchesShiftAmount $x, $tr, $c0)]>;
 
-// trunci(shrui(mul(sext(x), sext(y)), c)) -> mulsi_extended(x, y)
-def TruncIShrUIMulIToMulSIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtSIOp $x), (Arith_ExtSIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulSIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+//===----------------------------------------------------------------------===//
+// TruncFOp
+//===----------------------------------------------------------------------===//
 
-// trunci(shrui(mul(zext(x), zext(y)), c)) -> mului_extended(x, y)
-def TruncIShrUIMulIToMulUIExtended :
-    Pat<(Arith_TruncIOp:$tr (Arith_ShRUIOp
-                              (Arith_MulIOp:$mul
-                                (Arith_ExtUIOp $x), (Arith_ExtUIOp $y), $ovf1),
-                              (ConstantLikeMatcher AnyAttr:$c0))),
-        (Arith_MulUIExtendedOp:$res__1 $x, $y),
-      [(ValuesWithSameType $tr, $x, $y),
-       (ValueWiderThan $mul, $x),
-       (TruncationMatchesShiftAmount $mul, $x, $c0)]>;
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+def TruncFSIToFPToSIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
+        (Arith_SIToFPOp $x),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+def TruncFUIToFPToUIToFP :
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf),
+        (Arith_UIToFPOp $x, $nneg),
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+
+//===----------------------------------------------------------------------===//
+// SIToFPOp
+//===----------------------------------------------------------------------===//
+
+// sitofp(extsi(x)) -> sitofp(x)
+def SIToFPOfExtSI :
+    Pat<(Arith_SIToFPOp (Arith_ExtSIOp $x)),
+        (Arith_SIToFPOp $x)>;
+
+// sitofp(extui(x)) -> uitofp(x)
+def SIToFPOfExtUI :
+    Pat<(Arith_SIToFPOp (Arith_ExtUIOp $x, $nneg)),
+        (Arith_UIToFPOp $x, $nneg)>;
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
+
+// uitofp(extui(x)) -> uitofp(x)
+def UIToFPOfExtUI :
+    Pat<(Arith_UIToFPOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_UIToFPOp $x, $nneg1)>;
+
+//===----------------------------------------------------------------------===//
+// SubFOp
+//===----------------------------------------------------------------------===//
+
+// Match a constant (scalar or splat) -0.0 float.
+def IsNegZeroFloat :
+    Constraint<CPred<"m_NegZeroFloat().match($0)">,
+               "is negative-zero float constant">;
+
+// subf(-0, x) -> negf(x)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
+def SubFOfNegZero :
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+        (Arith_NegFOp $x, $fmf),
+        [(IsNegZeroFloat $c),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp
 //===----------------------------------------------------------------------===//
 
 // mulf(negf(x), negf(y)) -> mulf(x,y)
-// (retain fastmath flags of original mulf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_MulFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_MulFOp $x, $y, $fmf, $rm),
+        [(TypesMatch $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // DivFOp
 //===----------------------------------------------------------------------===//
 
 // divf(negf(x), negf(y)) -> divf(x,y)
-// (retain fastmath flags of original divf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_DivFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_DivFOp $x, $y, $fmf, $rm),
+        [(TypesMatch $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 #endif // ARITH_PATTERNS

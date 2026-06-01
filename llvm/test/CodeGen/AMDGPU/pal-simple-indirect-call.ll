@@ -5,11 +5,10 @@
 ; Check that it doesn't crash
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -global-isel < %s | FileCheck -check-prefixes=GFX10 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -global-isel -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX10 %s
 
 define amdgpu_cs void @test_simple_indirect_call() {
-; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
-; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {
+; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call() {
 ; ATTRIBUTOR_GCN-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
 ; ATTRIBUTOR_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to ptr
 ; ATTRIBUTOR_GCN-NEXT:    call amdgpu_gfx void [[FUN]]()
@@ -58,7 +57,5 @@ declare i64 @llvm.amdgcn.s.getpc() #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 ;.
-;.
-; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; ATTRIBUTOR_GCN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

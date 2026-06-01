@@ -1,11 +1,23 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -DIS_DARWIN -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 
-#if !__has_extension(ptrauth_qualifier)
+#if defined(IS_DARWIN) && !__has_extension(ptrauth_qualifier)
 // This error means that the __ptrauth qualifier availability test says  that it
 // is not available. This error is not expected in the output, if it is seen
 // there is a feature detection regression.
 #error __ptrauth qualifier not enabled
+#endif
+
+#if defined(IS_DARWIN) && !__has_feature(ptrauth_qualifier)
+// This error means that the __has_feature test for ptrauth_qualifier has
+// failed, despite it being expected on darwin.
+#error __ptrauth qualifier not enabled
+#elif !defined(IS_DARWIN) && (__has_feature(ptrauth_qualifier) || __has_extension(ptrauth_qualifier))
+#error ptrauth_qualifier labeled a feature on a non-darwin platform
+#endif
+
+#if !defined (__PTRAUTH__)
+#error __PTRAUTH__ test macro not defined when ptrauth is enabled
 #endif
 
 #if __aarch64__
@@ -24,10 +36,10 @@ typedef int *intp;
 int nonConstantGlobal = 5;
 
 __ptrauth(INVALID_KEY) int invalid2; // expected-error{{200 does not identify a valid pointer authentication key for the current target}}
-__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
-__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
 int * (__ptrauth(VALID_DATA_KEY) invalid5); // expected-error{{expected identifier or '('}} expected-error{{expected ')'}} expected-note {{to match this '('}}
-int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already __ptrauth-qualified}}
+int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already '__ptrauth'-qualified}}
 int * __ptrauth(VALID_DATA_KEY, 2) invalid7; // expected-error {{invalid address discrimination flag '2'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, -1) invalid8; // expected-error {{invalid address discrimination flag '-1'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error {{invalid extra discriminator flag '-1'; '__ptrauth' requires a value between '0' and '65535'}}
@@ -102,7 +114,7 @@ __attribute__((overloadable)) float overload_func(int * __ptrauth(VALID_DATA_KEY
 static_assert(_Generic(typeof(overload_func(&ptr0)), int : 1, default : 0));
 static_assert(_Generic(typeof(overload_func(&valid0)), float : 1, default : 0));
 
-void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int[10]' is invalid}}
+void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int[10]' is invalid}}
 
 struct S0 { // expected-note 4 {{struct S0' has subobjects that are non-trivial to copy}}
   intp __ptrauth(1, 1, 50) f0; // expected-note 4 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}

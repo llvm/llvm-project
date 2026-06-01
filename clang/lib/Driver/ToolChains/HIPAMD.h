@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_HIPAMD_H
 
 #include "AMDGPU.h"
+#include "clang/Driver/SyclInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -36,7 +37,7 @@ private:
   void constructLldCommand(Compilation &C, const JobAction &JA,
                            const InputInfoList &Inputs, const InputInfo &Output,
                            const llvm::opt::ArgList &Args) const;
-  void constructLlvmLinkCommand(Compilation &C, const JobAction &JA,
+  void constructLLVMLinkCommand(Compilation &C, const JobAction &JA,
                                 const InputInfoList &Inputs,
                                 const InputInfo &Output,
                                 const llvm::opt::ArgList &Args) const;
@@ -63,6 +64,7 @@ public:
   llvm::opt::DerivedArgList *
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
+
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
@@ -80,9 +82,8 @@ public:
   void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                          llvm::opt::ArgStringList &CC1Args) const override;
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args) const override;
-
-  SanitizerMask getSupportedSanitizers() const override;
+  getDeviceLibs(const llvm::opt::ArgList &Args,
+                Action::OffloadKind DeviceOffloadKind) const override;
 
   VersionTuple
   computeMSVCVersion(const Driver *D,
@@ -92,6 +93,15 @@ public:
 
   const ToolChain &HostTC;
   void checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
+
+protected:
+  Tool *buildLinker() const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRVAMDToolChain final : public ROCMToolChain {
+public:
+  SPIRVAMDToolChain(const Driver &D, const llvm::Triple &Triple,
+                    const llvm::opt::ArgList &Args);
 
 protected:
   Tool *buildLinker() const override;

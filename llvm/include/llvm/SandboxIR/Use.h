@@ -14,6 +14,7 @@
 #define LLVM_SANDBOXIR_USE_H
 
 #include "llvm/IR/Use.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
@@ -44,16 +45,20 @@ class Use {
   friend class OperandUseIterator; // For constructor
   friend class UserUseIterator;    // For accessing members
   friend class CallBase;           // For LLVMUse
-  friend class CallBrInst;         // For constructor
   friend class PHINode;            // For LLVMUse
+  // Friend instructions so that they can call the constructor if needed.
+#define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
 
 public:
   operator Value *() const { return get(); }
-  Value *get() const;
-  void set(Value *V);
+  LLVM_ABI Value *get() const;
+  LLVM_ABI void set(Value *V);
   class User *getUser() const { return Usr; }
-  unsigned getOperandNo() const;
-  void swap(Use &OtherUse);
+  LLVM_ABI unsigned getOperandNo() const;
+  LLVM_ABI void swap(Use &OtherUse);
   Context *getContext() const { return Ctx; }
   bool operator==(const Use &Other) const {
     assert(Ctx == Other.Ctx && "Contexts differ!");
@@ -61,7 +66,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  void dumpOS(raw_ostream &OS) const;
+  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };

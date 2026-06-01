@@ -31,7 +31,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -109,7 +109,7 @@ AMDGPUPreloadKernArgProlog::AMDGPUPreloadKernArgProlog(MachineFunction &MF)
       TRI(*ST.getRegisterInfo()) {}
 
 bool AMDGPUPreloadKernArgProlog::run() {
-  if (!ST.hasKernargPreload())
+  if (!ST.needsKernArgPreloadProlog())
     return false;
 
   unsigned NumKernArgPreloadSGPRs = MFI.getNumKernargPreloadedSGPRs();

@@ -35,15 +35,9 @@ template <class _Container>
 using __insert_iterator_iter_t _LIBCPP_NODEBUG = typename _Container::iterator;
 #endif
 
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Container>
 class insert_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<output_iterator_tag, void, void, void, void>
-#endif
-{
-  _LIBCPP_SUPPRESS_DEPRECATED_POP
-
+    : public __iterator_base<insert_iterator<_Container>, output_iterator_tag, void, void, void, void> {
 protected:
   _Container* container;
   __insert_iterator_iter_t<_Container> iter;
@@ -77,13 +71,13 @@ public:
     return *this;
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator& operator*() { return *this; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator& operator*() { return *this; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator& operator++() { return *this; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator& operator++(int) { return *this; }
 };
 
 template <class _Container>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator<_Container>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 insert_iterator<_Container>
 inserter(_Container& __x, __insert_iterator_iter_t<_Container> __i) {
   return insert_iterator<_Container>(__x, __i);
 }

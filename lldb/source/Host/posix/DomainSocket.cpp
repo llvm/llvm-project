@@ -13,9 +13,11 @@
 #endif
 
 #include "llvm/Support/Errno.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
 #include <cstddef>
+#include <fcntl.h>
 #include <memory>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -74,6 +76,41 @@ DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
                            bool should_close)
     : Socket(protocol, should_close) {
   m_socket = socket;
+}
+
+llvm::Expected<DomainSocket::Pair> DomainSocket::CreatePair() {
+  int sockets[2];
+  int type = SOCK_STREAM;
+#ifdef SOCK_CLOEXEC
+  type |= SOCK_CLOEXEC;
+#endif
+  if (socketpair(AF_UNIX, type, 0, sockets) == -1)
+    return llvm::errorCodeToError(llvm::errnoAsErrorCode());
+
+#ifndef SOCK_CLOEXEC
+  for (int s : sockets) {
+    int r = fcntl(s, F_SETFD, FD_CLOEXEC | fcntl(s, F_GETFD));
+    assert(r == 0);
+    (void)r;
+  }
+#endif
+
+#if defined(SO_NOSIGPIPE)
+  Log *log = GetLog(LLDBLog::Host);
+  if (Socket::SetOption(sockets[0], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[0],
+             llvm::sys::StrError());
+  if (Socket::SetOption(sockets[1], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
+    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[1],
+             llvm::sys::StrError());
+#endif
+
+  return Pair(std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[0],
+                                   /*should_close=*/true)),
+              std::unique_ptr<DomainSocket>(
+                  new DomainSocket(ProtocolUnixDomain, sockets[1],
+                                   /*should_close=*/true)));
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {
@@ -200,7 +237,7 @@ DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
   if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1)
     return llvm::createStringError("not a socket or error occurred");
   if (addr.sun_family != AF_UNIX)
-    return llvm::createStringError("Bad socket type");
+    return llvm::createStringError("bad socket type");
 #ifdef __linux__
   if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
       addr.sun_path[0] == '\0')

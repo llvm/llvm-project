@@ -3,6 +3,7 @@
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=arith" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
@@ -136,6 +137,49 @@ func.func @vector_index_castui(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
 // CHECK-NEXT: = llvm.zext %{{.*}} : vector<2xi1> to vector<2xi{{.*}}>
   %1 = arith.index_castui %arg1: vector<2xi1> to vector<2xindex>
   return
+}
+
+// -----
+
+// CHECK-LABEL: @index_castui_nneg
+func.func @index_castui_nneg(%arg0: i1) {
+// CHECK: llvm.zext nneg %{{.*}} : i1 to i{{.*}}
+  %0 = arith.index_castui %arg0 nneg : i1 to index
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @index_castui_nneg_not_set
+func.func @index_castui_nneg_not_set(%arg0: i1) {
+// CHECK: llvm.zext %{{.*}} : i1 to i{{.*}}
+// CHECK-NOT: nneg
+  %0 = arith.index_castui %arg0 : i1 to index
+  return
+}
+
+// -----
+
+// Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+// pointers and all memrefs with integer or index element types convert to the
+// same struct type. Verify that no sext/zext/trunc is generated.
+
+// CHECK-LABEL: @memref_index_cast
+// CHECK-NOT: llvm.sext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_cast(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_cast %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @memref_index_castui
+// CHECK-NOT: llvm.zext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_castui(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_castui %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
 }
 
 // -----
@@ -357,6 +401,101 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: experimental_constrained_addf
+func.func @experimental_constrained_addf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 downward ignore
+  %1 = arith.addf %arg0, %arg1 downward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 upward ignore
+  %2 = arith.addf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 towardzero ignore
+  %3 = arith.addf %arg0, %arg1 toward_zero : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearestaway ignore
+  %4 = arith.addf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_subf
+func.func @experimental_constrained_subf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 tonearest ignore
+  %0 = arith.subf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 downward ignore
+  %1 = arith.subf %arg0, %arg1 downward : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_mulf
+func.func @experimental_constrained_mulf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 upward ignore
+  %0 = arith.mulf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 towardzero ignore
+  %1 = arith.mulf %arg0, %arg1 toward_zero : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_divf
+func.func @experimental_constrained_divf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearest ignore
+  %0 = arith.divf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearestaway ignore
+  %1 = arith.divf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// Verify that fastmath flags are stripped when lowering to constrained
+// intrinsics (constrained FP and fastmath are contradictory).
+// CHECK-LABEL: constrained_addf_with_fastmath
+func.func @constrained_addf_with_fastmath(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore : f64
+// CHECK-NOT: fastmath
+  %0 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_f16_to_bf16
+func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to bf16
+  %0 = arith.convertf %arg0 : f16 to bf16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : bf16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_bf16_to_f16
+func.func @convertf_bf16_to_f16(%arg0 : bf16) -> f16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : bf16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : f32 to f16
+  %0 = arith.convertf %arg0 : bf16 to f16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : f16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_vector
+func.func @convertf_vector(%arg0 : vector<2xf16>) -> vector<2xbf16> {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : vector<2xf32> to vector<2xbf16>
+  %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xbf16>
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : vector<2xbf16>
+}
+
+// -----
+
 // Check sign and zero extension and truncation of integers.
 // CHECK-LABEL: @integer_extension_and_truncation
 func.func @integer_extension_and_truncation(%arg0 : i3) {
@@ -373,12 +512,11 @@ func.func @integer_extension_and_truncation(%arg0 : i3) {
 
 // CHECK-LABEL: @integer_cast_0d_vector
 func.func @integer_cast_0d_vector(%arg0 : vector<i3>) {
-// CHECK: %[[ARG0:.*]] = builtin.unrealized_conversion_cast
-// CHECK-NEXT: = llvm.sext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+// CHECK: = llvm.sext %{{.*}}: vector<1xi3> to vector<1xi6>
   %0 = arith.extsi %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.zext %[[ARG0]] : vector<1xi3> to vector<1xi6>
+// CHECK-NEXT: = llvm.zext %{{.*}} : vector<1xi3> to vector<1xi6>
   %1 = arith.extui %arg0 : vector<i3> to vector<i6>
-// CHECK-NEXT: = llvm.trunc %[[ARG0]] : vector<1xi3> to vector<1xi2>
+// CHECK-NEXT: = llvm.trunc %{{.*}} : vector<1xi3> to vector<1xi2>
   %2 = arith.trunci %arg0 : vector<i3> to vector<i2>
   return
 }
@@ -731,6 +869,48 @@ func.func @ops_supporting_overflow(%arg0: i64, %arg1: i64) {
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
   // CHECK: %{{.*}} = llvm.shl %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
+  // CHECK: %{{.*}} = llvm.trunc %{{.*}} overflow<nsw, nuw> : i64 to i32
+  %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_supporting_exact
+func.func @ops_supporting_exact(i32, i32) {
+^bb0(%arg0: i32, %arg1: i32):
+// CHECK: = llvm.ashr exact %arg0, %arg1 : i32
+  %0 = arith.shrsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.lshr exact %arg0, %arg1 : i32
+  %1 = arith.shrui %arg0, %arg1 exact : i32
+// CHECK: = llvm.sdiv exact %arg0, %arg1 : i32
+  %2 = arith.divsi %arg0, %arg1 exact : i32
+// CHECK: = llvm.udiv exact %arg0, %arg1 : i32
+  %3 = arith.divui %arg0, %arg1 exact : i32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_supporting_nneg
+func.func @ops_supporting_nneg(%arg0: i32) {
+  // CHECK: llvm.zext nneg %{{.*}} : i32 to i64
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  // CHECK: llvm.uitofp nneg %{{.*}} : i32 to f32
+  %1 = arith.uitofp %arg0 nneg : i32 to f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_nneg_not_set
+func.func @ops_nneg_not_set(%arg0: i32) {
+  // CHECK: llvm.zext %{{.*}} : i32 to i64
+  // CHECK-NOT: nneg
+  %0 = arith.extui %arg0 : i32 to i64
+  // CHECK: llvm.uitofp %{{.*}} : i32 to f32
+  // CHECK-NOT: nneg
+  %1 = arith.uitofp %arg0 : i32 to f32
   return
 }
 
@@ -745,3 +925,36 @@ func.func @memref_bitcast(%1: memref<?xi16>) -> memref<?xbf16> {
   %2 = arith.bitcast %1 : memref<?xi16> to memref<?xbf16>
   func.return %2 : memref<?xbf16>
 }
+
+// -----
+
+// CHECK-LABEL: func @unsupported_fp_type
+//       CHECK:   arith.addf {{.*}} : f4E2M1FN
+//       CHECK:   arith.addf {{.*}} : vector<4xf4E2M1FN>
+//       CHECK:   arith.addf {{.*}} : vector<8x4xf4E2M1FN>
+//       CHECK:   arith.cmpf {{.*}} : f4E2M1FN
+//       CHECK:   llvm.select {{.*}} : i1, i4
+func.func @unsupported_fp_type(%arg0: f4E2M1FN, %arg1: vector<4xf4E2M1FN>, %arg2: vector<8x4xf4E2M1FN>, %arg3: f4E2M1FN, %arg4: i1) {
+  %0 = arith.addf %arg0, %arg0 : f4E2M1FN
+  %1 = arith.addf %arg1, %arg1 : vector<4xf4E2M1FN>
+  %2 = arith.addf %arg2, %arg2 : vector<8x4xf4E2M1FN>
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f4E2M1FN
+  %4 = arith.select %arg4, %arg0, %arg3 : f4E2M1FN
+  return
+}
+
+// -----
+
+//   CHECK-LABEL: func @supported_fp_type
+//         CHECK:   llvm.fadd {{.*}} : f32
+//         CHECK:   llvm.fadd {{.*}} : vector<4xf32>
+// CHECK-COUNT-4:   llvm.fadd {{.*}} : vector<8xf32>
+//         CHECK:   llvm.fcmp {{.*}} : f32
+func.func @supported_fp_type(%arg0: f32, %arg1: vector<4xf32>, %arg2: vector<4x8xf32>, %arg3: f32) {
+  %0 = arith.addf %arg0, %arg0 : f32
+  %1 = arith.addf %arg1, %arg1 : vector<4xf32>
+  %2 = arith.addf %arg2, %arg2 : vector<4x8xf32>
+  %3 = arith.cmpf oeq, %arg0, %arg3 : f32
+  return
+}
+

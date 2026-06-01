@@ -307,7 +307,7 @@ def DirectiveTypeZOperandInvalidI : TestFormat_Op<[{
 def LiteralInvalidA : TestFormat_Op<[{
   `a:`
 }]>;
-// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+*'
+// CHECK: error: expected valid literal but got '1': single character literal must be a letter or one of '_:,=<>()[]{}?+-*'
 def LiteralInvalidB : TestFormat_Op<[{
   `1`
 }]>;
@@ -354,6 +354,12 @@ def OIListStartingToken : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//
+
+// CHECK: error: optional attribute 'attr' cannot be used outside of an optional group
+// CHECK: note: to conditionally print the attribute, use '($attr^)?'
+def OptionalAttrOutsideGroup : TestFormat_Op<[{
+  $attr attr-dict
+}]>, Arguments<(ins OptionalAttr<I64Attr>:$attr)>;
 
 // CHECK: error: optional groups can only be used as top-level elements
 def OptionalInvalidA : TestFormat_Op<[{

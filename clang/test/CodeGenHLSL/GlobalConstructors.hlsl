@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
 
 RWBuffer<float> Buffer;
 
@@ -10,7 +10,8 @@ void main(unsigned GI : SV_GroupIndex) {}
 // CHECK-NOT:@llvm.global_dtors
 //CHECK:      define void @main()
 //CHECK-NEXT: entry:
+//CHECK-NEXT:   %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 //CHECK-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructors.hlsl()
-//CHECK-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
-//CHECK-NEXT:   call void @_Z4mainj(i32 %0)
+//CHECK-NEXT:   %[[#THREAD_ID:]] = call i32 @llvm.dx.flattened.thread.id.in.group()
+//CHECK-NEXT:   call void @_Z4mainj(i32 %[[#THREAD_ID]])
 //CHECK-NEXT:   ret void

@@ -17,6 +17,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {
@@ -28,6 +29,7 @@ namespace llvm {
 /// below for details.
 class ValueHandleBase {
   friend class Value;
+  template <typename ValueTy> friend class PoisoningVH;
 
 protected:
   /// This indicates what sub class the handle actually is.
@@ -43,6 +45,15 @@ protected:
       : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
     if (isValid(getValPtr()))
       AddToExistingUseList(RHS.getPrevPtr());
+  }
+
+  ValueHandleBase(HandleBaseKind Kind, ValueHandleBase &&RHS)
+      : PrevPair(nullptr, Kind), Val(RHS.getValPtr()) {
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
   }
 
 private:
@@ -88,6 +99,26 @@ public:
     return getValPtr();
   }
 
+  Value *operator=(ValueHandleBase &&RHS) {
+    if (getValPtr() == RHS.getValPtr()) {
+      if (this != &RHS) {
+        if (isValid(RHS.getValPtr()))
+          RHS.RemoveFromUseList();
+        RHS.clearValPtr();
+      }
+      return getValPtr();
+    }
+    if (isValid(getValPtr()))
+      RemoveFromUseList();
+    setValPtr(RHS.getValPtr());
+    if (isValid(getValPtr())) {
+      AddToExistingUseList(RHS.getPrevPtr());
+      RHS.RemoveFromUseList();
+      RHS.clearValPtr();
+    }
+    return getValPtr();
+  }
+
   Value *operator->() const { return getValPtr(); }
   Value &operator*() const {
     Value *V = getValPtr();
@@ -105,7 +136,7 @@ protected:
   }
 
   /// Remove this ValueHandle from its current use list.
-  void RemoveFromUseList();
+  LLVM_ABI void RemoveFromUseList();
 
   /// Clear the underlying pointer without clearing the use list.
   ///
@@ -115,8 +146,8 @@ protected:
 
 public:
   // Callbacks made from Value.
-  static void ValueIsDeleted(Value *V);
-  static void ValueIsRAUWd(Value *Old, Value *New);
+  LLVM_ABI static void ValueIsDeleted(Value *V);
+  LLVM_ABI static void ValueIsRAUWd(Value *Old, Value *New);
 
 private:
   // Internal implementation details.
@@ -128,13 +159,13 @@ private:
   ///
   /// List is the address of either the head of the list or a Next node within
   /// the existing use list.
-  void AddToExistingUseList(ValueHandleBase **List);
+  LLVM_ABI void AddToExistingUseList(ValueHandleBase **List);
 
   /// Add this ValueHandle to the use list after Node.
   void AddToExistingUseListAfter(ValueHandleBase *Node);
 
   /// Add this ValueHandle to the use list for V.
-  void AddToUseList();
+  LLVM_ABI void AddToUseList();
 };
 
 /// A nullable Value handle that is nullable.
@@ -284,10 +315,12 @@ public:
   AssertingVH() : ValueHandleBase(Assert) {}
   AssertingVH(ValueTy *P) : ValueHandleBase(Assert, GetAsValue(P)) {}
   AssertingVH(const AssertingVH &RHS) : ValueHandleBase(Assert, RHS) {}
+  AssertingVH(AssertingVH &&RHS) : ValueHandleBase(Assert, std::move(RHS)) {}
 #else
   AssertingVH() : ThePtr(nullptr) {}
   AssertingVH(ValueTy *P) : ThePtr(GetAsValue(P)) {}
   AssertingVH(const AssertingVH &) = default;
+  AssertingVH(AssertingVH &&RHS) : ThePtr(std::exchange(RHS.ThePtr, nullptr)) {}
 #endif
 
   operator ValueTy*() const {
@@ -302,6 +335,17 @@ public:
     setValPtr(RHS.getValPtr());
     return getValPtr();
   }
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ValueHandleBase::operator=(std::move(RHS));
+    return getValPtr();
+  }
+#else
+  ValueTy *operator=(AssertingVH<ValueTy> &&RHS) {
+    ThePtr = std::exchange(RHS.ThePtr, nullptr);
+    return getValPtr();
+  }
+#endif
 
   ValueTy *operator->() const { return getValPtr(); }
   ValueTy &operator*() const { return *getValPtr(); }
@@ -380,7 +424,7 @@ public:
 /// class can be used as the key of a map, as long as the user takes it out of
 /// the map before calling setValPtr() (since the map has to rearrange itself
 /// when the pointer changes).  Unlike ValueHandleBase, this class has a vtable.
-class CallbackVH : public ValueHandleBase {
+class LLVM_ABI CallbackVH : public ValueHandleBase {
   virtual void anchor();
 protected:
   ~CallbackVH() = default;
@@ -497,8 +541,15 @@ public:
   PoisoningVH() = default;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   PoisoningVH(ValueTy *P) : CallbackVH(GetAsValue(P)) {}
-  PoisoningVH(const PoisoningVH &RHS)
-      : CallbackVH(RHS), Poisoned(RHS.Poisoned) {}
+  // A poisoned handle is detached from its use list but keeps its raw value
+  // pointer, so its use-list pointers are stale; a copy must not relink through
+  // them.
+  PoisoningVH(const PoisoningVH &RHS) : CallbackVH(), Poisoned(RHS.Poisoned) {
+    if (Poisoned)
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    else
+      setRawValPtr(RHS.getRawValPtr());
+  }
 
   ~PoisoningVH() {
     if (Poisoned)
@@ -508,7 +559,14 @@ public:
   PoisoningVH &operator=(const PoisoningVH &RHS) {
     if (Poisoned)
       clearValPtr();
-    CallbackVH::operator=(RHS);
+    if (RHS.Poisoned) {
+      // Detach *this and copy only the raw pointer; see the copy constructor.
+      if (isValid(getRawValPtr()))
+        RemoveFromUseList();
+      ValueHandleBase::setValPtr(RHS.getRawValPtr());
+    } else {
+      CallbackVH::operator=(RHS);
+    }
     Poisoned = RHS.Poisoned;
     return *this;
   }

@@ -9,9 +9,6 @@
 #include <cerrno>
 #include <cstdlib>
 
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Threading.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,6 +26,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/UUID.h"
+#include "llvm/Support/MathExtras.h"
 
 #include "ProcessMachCore.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
@@ -44,7 +42,6 @@
 #include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 
 #include <memory>
-#include <mutex>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -69,11 +66,13 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
     auto data_sp = FileSystem::Instance().CreateDataBuffer(
         crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size) {
-      DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
+      DataExtractorSP extractor_sp =
+          std::make_shared<DataExtractor>(data_sp, lldb::eByteOrderLittle, 4);
 
       lldb::offset_t data_offset = 0;
       llvm::MachO::mach_header mach_header;
-      if (ObjectFileMachO::ParseHeader(data, &data_offset, mach_header)) {
+      if (ObjectFileMachO::ParseHeader(extractor_sp, &data_offset,
+                                       mach_header)) {
         if (mach_header.filetype == llvm::MachO::MH_CORE)
           process_sp = std::make_shared<ProcessMachCore>(target_sp, listener_sp,
                                                          *crash_file);
@@ -95,8 +94,9 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // header but we should still try to use it -
     // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
 
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -658,7 +658,6 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
       std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
@@ -781,45 +780,56 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
       region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
       const Flags permissions(permission_entry->data);
-      region_info.SetReadable(permissions.Test(ePermissionsReadable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
-      region_info.SetWritable(permissions.Test(ePermissionsWritable)
-                                  ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
+      region_info.SetReadable(
+          permissions.Test(ePermissionsReadable) ? eLazyBoolYes : eLazyBoolNo);
+      region_info.SetWritable(
+          permissions.Test(ePermissionsWritable) ? eLazyBoolYes : eLazyBoolNo);
       region_info.SetExecutable(permissions.Test(ePermissionsExecutable)
-                                    ? MemoryRegionInfo::eYes
-                                    : MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eYes);
+                                    ? eLazyBoolYes
+                                    : eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolYes);
     } else if (load_addr < permission_entry->GetRangeBase()) {
       region_info.GetRange().SetRangeBase(load_addr);
       region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
-      region_info.SetReadable(MemoryRegionInfo::eNo);
-      region_info.SetWritable(MemoryRegionInfo::eNo);
-      region_info.SetExecutable(MemoryRegionInfo::eNo);
-      region_info.SetMapped(MemoryRegionInfo::eNo);
+      region_info.SetReadable(eLazyBoolNo);
+      region_info.SetWritable(eLazyBoolNo);
+      region_info.SetExecutable(eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolNo);
     }
     return Status();
+  } else {
+    // The corefile has no LC_SEGMENT at this virtual address,
+    // but see if there is a binary whose Section has been
+    // loaded at that address in the current Target.
+    Address addr;
+    if (GetTarget().ResolveLoadAddress(load_addr, addr)) {
+      SectionSP section_sp(addr.GetSection());
+      if (section_sp) {
+        region_info.GetRange().SetRangeBase(
+            section_sp->GetLoadBaseAddress(&GetTarget()));
+        region_info.GetRange().SetByteSize(section_sp->GetByteSize());
+        if (region_info.GetRange().Contains(load_addr)) {
+          region_info.SetLLDBPermissions(section_sp->GetPermissions());
+          return Status();
+        }
+      }
+    }
   }
 
   region_info.GetRange().SetRangeBase(load_addr);
   region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-  region_info.SetReadable(MemoryRegionInfo::eNo);
-  region_info.SetWritable(MemoryRegionInfo::eNo);
-  region_info.SetExecutable(MemoryRegionInfo::eNo);
-  region_info.SetMapped(MemoryRegionInfo::eNo);
+  region_info.SetReadable(eLazyBoolNo);
+  region_info.SetWritable(eLazyBoolNo);
+  region_info.SetExecutable(eLazyBoolNo);
+  region_info.SetMapped(eLazyBoolNo);
   return Status();
 }
 
 void ProcessMachCore::Clear() { m_thread_list.Clear(); }
 
 void ProcessMachCore::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 addr_t ProcessMachCore::GetImageInfoAddress() {

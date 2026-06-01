@@ -104,8 +104,8 @@ func.func @test_signature_conversion_no_converter() {
   "test.signature_conversion_no_converter"() ({
   // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f32') that remained live after conversion}}
   ^bb0(%arg0: f32):
-    "test.type_consumer"(%arg0) : (f32) -> ()
     // expected-note@below{{see existing live user here}}
+    "test.type_consumer"(%arg0) : (f32) -> ()
     "test.return"(%arg0) : (f32) -> ()
   }) : () -> ()
   return
@@ -141,4 +141,62 @@ func.func @test_signature_conversion_no_converter() {
     "test.return"() : () -> ()
   }) : () -> ()
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @test_unstructured_cf_conversion(
+//  CHECK-SAME:     %[[arg0:.*]]: f64, %[[c:.*]]: i1)
+//       CHECK:   %[[cast1:.*]] = "test.cast"(%[[arg0]]) : (f64) -> f32
+//       CHECK:   "test.foo"(%[[cast1]])
+//       CHECK:   cf.br ^[[bb1:.*]](%[[arg0]] : f64)
+//       CHECK: ^[[bb1]](%[[arg1:.*]]: f64):
+//       CHECK:   cf.cond_br %[[c]], ^[[bb1]](%[[arg1]] : f64), ^[[bb2:.*]](%[[arg1]] : f64)
+//       CHECK: ^[[bb2]](%[[arg2:.*]]: f64):
+//       CHECK:   %[[cast2:.*]] = "test.cast"(%[[arg2]]) : (f64) -> f32
+//       CHECK:   "test.bar"(%[[cast2]])
+//       CHECK: return
+func.func @test_unstructured_cf_conversion(%arg0: f32, %c: i1) {
+  "test.foo"(%arg0) : (f32) -> ()
+  cf.br ^bb1(%arg0: f32)
+^bb1(%arg1: f32):
+  cf.cond_br %c, ^bb1(%arg1 : f32), ^bb2(%arg1 : f32)
+^bb2(%arg2: f32):
+  "test.bar"(%arg2) : (f32) -> ()
+  return
+}
+
+// -----
+
+// Test that gpu.func with workgroup arguments (which are extra block arguments
+// beyond the function type inputs) does not crash during signature conversion.
+// See https://github.com/llvm/llvm-project/issues/184744
+
+// CHECK-LABEL: gpu.func @func_with_workgroup_args
+// CHECK-SAME: (%{{.*}}: memref<?xi32>, %{{.*}}: i32) workgroup(%{{.*}} : memref<512xi32>)
+gpu.module @cuda_events {
+  gpu.func @func_with_workgroup_args(%arg0: memref<?xi32>, %arg1: i32)
+      workgroup(%workgroup_mem: memref<512xi32>)
+      kernel {
+    %idx = arith.constant 0 : index
+    %val = memref.load %arg0[%idx] : memref<?xi32>
+    memref.store %val, %arg0[%idx] : memref<?xi32>
+    gpu.return
+  }
+}
+
+// -----
+
+// Test that the order of materialization legalization is deterministic.
+// Multiple unresolvable materializations are created; the first one (in
+// insertion/walk order) should always fail first. With a DenseMap for
+// unresolvedMaterializations, the processing order would depend on pointer
+// hashes and could differ with LLVM_ENABLE_REVERSE_ITERATION.
+
+func.func @test_deterministic_materialization_order() {
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
+  %a = "test.type_producer"() : () -> f16
+  %b = "test.type_producer"() : () -> f16
+  // expected-note@below {{see existing live user here}}
+  "foo.return"(%a, %b) : (f16, f16) -> ()
 }

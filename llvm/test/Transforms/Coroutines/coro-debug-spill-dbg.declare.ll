@@ -17,17 +17,17 @@
 ;
 ; We want to make sure that the "this" pointer is accessable in debugger before and after the suspension point.
 ;
-; CHECK: define internal fastcc void @foo.resume(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL:.*]])
+; CHECK: define internal void @foo.resume(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL:.*]])
 ; CHECK-NEXT: entry.resume:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
 ;
-; CHECK: define internal fastcc void @foo.destroy(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
+; CHECK: define internal void @foo.destroy(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
 ; CHECK-NEXT: entry.destroy:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_DESTROY:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
 ;
-; CHECK: define internal fastcc void @foo.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
+; CHECK: define internal void @foo.cleanup(ptr noundef nonnull align 8 dereferenceable(32) %[[HDL]])
 ; CHECK-NEXT: entry.cleanup:
 ; CHECK-NEXT:   %[[HDL]].debug = alloca ptr, align 8
 ; CHECK-NEXT:   #dbg_declare(ptr %[[HDL]].debug, ![[THIS_CLEANUP:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24),
@@ -44,8 +44,7 @@ entry:
   store ptr %this, ptr %this.addr, align 8
   call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !20, metadata !DIExpression()), !dbg !22
   %this1 = load ptr, ptr %this.addr, align 8
-  %0 = bitcast ptr %__promise to ptr
-  %id = call token @llvm.coro.id(i32 16, ptr %0, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 16, ptr %__promise, ptr @foo, ptr null)
   %need.dyn.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.dyn.alloc, label %dyn.alloc, label %coro.begin
 
@@ -74,7 +73,7 @@ cleanup:                                          ; preds = %resume, %coro.begin
   br label %suspend
 
 suspend:                                          ; preds = %cleanup, %coro.begin
-  %2 = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -104,7 +103,7 @@ declare i1 @llvm.coro.alloc(token) #4
 declare ptr @llvm.coro.begin(token, ptr writeonly) #4
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token) #4
+declare void @llvm.coro.end(ptr, i1, token) #4
 
 declare noalias ptr @malloc(i32)
 

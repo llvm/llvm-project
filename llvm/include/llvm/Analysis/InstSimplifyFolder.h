@@ -25,6 +25,7 @@
 #include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Constant;
@@ -32,11 +33,11 @@ class Constant;
 /// InstSimplifyFolder - Use InstructionSimplify to fold operations to existing
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
-class InstSimplifyFolder final : public IRBuilderFolder {
+class LLVM_ABI InstSimplifyFolder final : public IRBuilderFolder {
   TargetFolder ConstFolder;
   SimplifyQuery SQ;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   explicit InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
@@ -82,8 +83,9 @@ public:
     return simplifyGEPInst(Ty, Ptr, IdxList, NW, SQ);
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
-    return simplifySelectInst(C, True, False, SQ);
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifySelectInst(C, True, False, FMF, SQ);
   }
 
   Value *FoldExtractValue(Value *Agg,
@@ -118,10 +120,16 @@ public:
     return simplifyCastInst(Op, V, DestTy, SQ);
   }
 
-  Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ,
-                                   dyn_cast_if_present<CallBase>(FMFSource));
+  Value *
+  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                     FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifyUnaryIntrinsic(ID, Op, FMF, SQ);
+  }
+
+  Value *
+  FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
+                      FastMathFlags FMF = FastMathFlags()) const override {
+    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, FMF, SQ);
   }
 
   //===--------------------------------------------------------------------===//

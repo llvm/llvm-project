@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/ParallelCombiningOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -111,6 +112,10 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+
+/// Helper function to compute the difference between two values. This is used
+/// by the loop implementations to compute the trip count.
+std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub, bool isSigned);
 
 } // namespace scf
 } // namespace mlir

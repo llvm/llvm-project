@@ -13,6 +13,7 @@
 #include "LoongArchTargetMachine.h"
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
+#include "LoongArchTargetObjectFile.h"
 #include "LoongArchTargetTransformInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
@@ -22,6 +23,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -29,7 +31,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loongarch"
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchTarget() {
   // Register the target.
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
@@ -55,15 +58,17 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(false));
 
-static std::string computeDataLayout(const Triple &TT) {
-  if (TT.isArch64Bit())
-    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
-  assert(TT.isArch32Bit() && "only LA32 and LA64 are currently supported");
-  return "e-m:e-p:32:32-i64:64-n32-S128";
-}
+static cl::opt<bool>
+    EnableMergeBaseOffset("loongarch-enable-merge-offset",
+                          cl::desc("Enable the merge base offset pass"),
+                          cl::init(true), cl::Hidden);
 
-static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           std::optional<Reloc::Model> RM) {
+static cl::opt<bool>
+    EnableSinkFold("loongarch-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(true), cl::Hidden);
+
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -75,11 +80,11 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
 
   switch (*CM) {
   case CodeModel::Small:
-    return *CM;
   case CodeModel::Medium:
+    return *CM;
   case CodeModel::Large:
     if (!TT.isArch64Bit())
-      report_fatal_error("Medium/Large code model requires LA64");
+      report_fatal_error("Large code model requires LA64");
     return *CM;
   default:
     report_fatal_error(
@@ -91,10 +96,10 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+                               getEffectiveRelocModel(RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<LoongArchELFTargetObjectFile>()) {
   initAsmInfo();
 }
 
@@ -147,7 +152,9 @@ namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
   LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    setEnableSinkAndFold(EnableSinkFold);
+  }
 
   LoongArchTargetMachine &getLoongArchTargetMachine() const {
     return getTM<LoongArchTargetMachine>();
@@ -189,7 +196,7 @@ void LoongArchPassConfig::addCodeGenPrepare() {
 }
 
 bool LoongArchPassConfig::addInstSelector() {
-  addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
+  addPass(createLoongArchISelDag(getLoongArchTargetMachine(), getOptLevel()));
 
   return false;
 }
@@ -219,7 +226,7 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 
 void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
     addPass(createLoongArchMergeBaseOffsetOptPass());
 }
 

@@ -10,52 +10,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
-TEST_F(AArch64GISelMITest, TestKnownBitsCst) {
-  StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 1\n"
-                        "  %4:_(s8) = COPY %3\n";
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-  unsigned CopyReg = Copies[Copies.size() - 1];
-  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
-  unsigned SrcReg = FinalCopy->getOperand(1).getReg();
-  unsigned DstReg = FinalCopy->getOperand(0).getReg();
-  GISelValueTracking Info(*MF);
-  KnownBits Res = Info.getKnownBits(SrcReg);
-  EXPECT_EQ((uint64_t)1, Res.One.getZExtValue());
-  EXPECT_EQ((uint64_t)0xfe, Res.Zero.getZExtValue());
-
-  KnownBits Res2 = Info.getKnownBits(DstReg);
-  EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
-  EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
-}
-
-TEST_F(AArch64GISelMITest, TestKnownBitsCstWithClass) {
-  StringRef MIRString = "  %10:gpr32 = MOVi32imm 1\n"
-                        "  %4:_(s32) = COPY %10\n";
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-  unsigned CopyReg = Copies[Copies.size() - 1];
-  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
-  unsigned SrcReg = FinalCopy->getOperand(1).getReg();
-  unsigned DstReg = FinalCopy->getOperand(0).getReg();
-  GISelValueTracking Info(*MF);
-  KnownBits Res = Info.getKnownBits(SrcReg);
-  // We can't analyze %3 due to the register class constraint. We will get a
-  // default-constructed KnownBits back.
-  EXPECT_EQ((uint64_t)1, Res.getBitWidth());
-  EXPECT_EQ((uint64_t)0, Res.One.getZExtValue());
-  EXPECT_EQ((uint64_t)0, Res.Zero.getZExtValue());
-
-  KnownBits Res2 = Info.getKnownBits(DstReg);
-  // We still don't know the values due to the register class constraint but %4
-  // did reveal the size of %3.
-  EXPECT_EQ((uint64_t)32, Res2.getBitWidth());
-  EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());
-  EXPECT_EQ(Res.Zero.getZExtValue(), Res2.Zero.getZExtValue());
-}
-
 // Check that we are able to track bits through PHIs
 // and get the intersections of everything we know on each operand.
 TEST_F(AArch64GISelMITest, TestKnownBitsCstPHI) {
@@ -236,7 +190,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
   // Therefore, %14's known zero are 0x80 shifted by one 0xC0.
   // If we had simulated the loop we could have more zero bits, basically
   // up to 0xFC (count leading zero of 5, + 1).
-  EXPECT_EQ((uint64_t)0xC0, Res.Zero.getZExtValue());
+  EXPECT_EQ((uint64_t)0xFC, Res.Zero.getZExtValue());
 
   KnownBits Res2 = Info.getKnownBits(DstReg);
   EXPECT_EQ(Res.One.getZExtValue(), Res2.One.getZExtValue());

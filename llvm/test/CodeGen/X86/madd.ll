@@ -76,11 +76,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf15 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx16 = add <4 x i32> %11, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <4 x i32> %bin.rdx16, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <4 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <4 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
   ret i32 %13
 }
 
@@ -182,13 +178,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %11, %rdx.shuf
-  %rdx.shuf15 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <8 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <8 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %11)
   ret i32 %13
 }
 
@@ -334,15 +324,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf1 = shufflevector <16 x i32> %11, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <16 x i32> %11, %rdx.shuf1
-  %rdx.shuf = shufflevector <16 x i32> %bin.rdx1, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <16 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <16 x i32> %bin.rdx16, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <16 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <16 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %11)
   ret i32 %13
 }
 
@@ -556,17 +538,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf2 = shufflevector <32 x i32> %11, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = add <32 x i32> %11, %rdx.shuf2
-  %rdx.shuf1 = shufflevector <32 x i32> %bin.rdx2, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <32 x i32> %bin.rdx2, %rdx.shuf1
-  %rdx.shuf = shufflevector <32 x i32> %bin.rdx1, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <32 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <32 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <32 x i32> %bin.rdx16, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <32 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <32 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %11)
   ret i32 %13
 }
 
@@ -644,11 +616,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf17 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx18 = add <4 x i32> %11, %rdx.shuf17
-  %rdx.shuf19 = shufflevector <4 x i32> %bin.rdx18, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %bin.rdx20 = add <4 x i32> %bin.rdx18, %rdx.shuf19
-  %13 = extractelement <4 x i32> %bin.rdx20, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
   ret i32 %13
 }
 
@@ -756,13 +724,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf15 = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <8 x i32> %11, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
-  %rdx.shuf19 = shufflevector <8 x i32> %bin.rdx18, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx20 = add <8 x i32> %bin.rdx18, %rdx.shuf19
-  %13 = extractelement <8 x i32> %bin.rdx20, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %11)
   ret i32 %13
 }
 
@@ -918,15 +880,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <16 x i32> %11, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %11, %rdx.shuf
-  %rdx.shuf15 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <16 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <16 x i32> %bin.rdx16, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <16 x i32> %bin.rdx16, %rdx.shuf17
-  %rdx.shuf19 = shufflevector <16 x i32> %bin.rdx18, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx20 = add <16 x i32> %bin.rdx18, %rdx.shuf19
-  %13 = extractelement <16 x i32> %bin.rdx20, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %11)
   ret i32 %13
 }
 
@@ -1161,17 +1115,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf1 = shufflevector <32 x i32> %11, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <32 x i32> %11, %rdx.shuf1
-  %rdx.shuf = shufflevector <32 x i32> %bin.rdx1, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <32 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx32 = add <32 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <32 x i32> %bin.rdx32, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <32 x i32> %bin.rdx32, %rdx.shuf17
-  %rdx.shuf19 = shufflevector <32 x i32> %bin.rdx18, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx20 = add <32 x i32> %bin.rdx18, %rdx.shuf19
-  %13 = extractelement <32 x i32> %bin.rdx20, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %11)
   ret i32 %13
 }
 
@@ -1246,11 +1190,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf15 = shufflevector <4 x i32> %11, <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx16 = add <4 x i32> %11, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <4 x i32> %bin.rdx16, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <4 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <4 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %11)
   ret i32 %13
 }
 
@@ -1365,13 +1305,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <8 x i32> %11, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %11, %rdx.shuf
-  %rdx.shuf15 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <8 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <8 x i32> %bin.rdx16, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <8 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <8 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %11)
   ret i32 %13
 }
 
@@ -1480,15 +1414,15 @@ define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readon
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmulld %ymm2, %ymm4, %ymm2
-; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmulld %ymm3, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    addq $16, %rcx
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB10_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -1548,15 +1482,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf1 = shufflevector <16 x i32> %11, <16 x i32> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <16 x i32> %11, %rdx.shuf1
-  %rdx.shuf = shufflevector <16 x i32> %bin.rdx1, <16 x i32> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <16 x i32> %bin.rdx, <16 x i32> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <16 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <16 x i32> %bin.rdx16, <16 x i32> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <16 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <16 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %11)
   ret i32 %13
 }
 
@@ -1728,10 +1654,10 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm4, %ymm2
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmulld %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vpaddd %ymm1, %ymm4, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm4, %ymm0
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmulld %ymm6, %ymm4, %ymm4
-; AVX2-NEXT:    vpaddd %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vpaddd %ymm1, %ymm4, %ymm1
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX2-NEXT:    vpmulld %ymm7, %ymm4, %ymm4
 ; AVX2-NEXT:    vpaddd %ymm3, %ymm4, %ymm3
@@ -1739,9 +1665,9 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ; AVX2-NEXT:    cmpq %rcx, %rax
 ; AVX2-NEXT:    jne .LBB11_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -1765,15 +1691,15 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; AVX512-NEXT:    vpmulld %zmm2, %zmm4, %zmm2
-; AVX512-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
+; AVX512-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
 ; AVX512-NEXT:    vpmulld %zmm3, %zmm2, %zmm2
-; AVX512-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
+; AVX512-NEXT:    vpaddd %zmm1, %zmm2, %zmm1
 ; AVX512-NEXT:    addq $16, %rcx
 ; AVX512-NEXT:    cmpq %rcx, %rax
 ; AVX512-NEXT:    jne .LBB11_1
 ; AVX512-NEXT:  # %bb.2: # %middle.block
-; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
 ; AVX512-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -1807,17 +1733,7 @@ vector.body:
   br i1 %12, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf2 = shufflevector <32 x i32> %11, <32 x i32> undef, <32 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = add <32 x i32> %11, %rdx.shuf2
-  %rdx.shuf1 = shufflevector <32 x i32> %bin.rdx2, <32 x i32> undef, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx1 = add <32 x i32> %bin.rdx2, %rdx.shuf1
-  %rdx.shuf = shufflevector <32 x i32> %bin.rdx1, <32 x i32> undef, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <32 x i32> %bin.rdx1, %rdx.shuf
-  %rdx.shuf15 = shufflevector <32 x i32> %bin.rdx, <32 x i32> undef, <32 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx16 = add <32 x i32> %bin.rdx, %rdx.shuf15
-  %rdx.shuf17 = shufflevector <32 x i32> %bin.rdx16, <32 x i32> undef, <32 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx18 = add <32 x i32> %bin.rdx16, %rdx.shuf17
-  %13 = extractelement <32 x i32> %bin.rdx18, i32 0
+  %13 = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %11)
   ret i32 %13
 }
 
@@ -2057,10 +1973,10 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
 ; SSE2-NEXT:    psrad $16, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [4294934528,4294934528,0,0]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,0,7,0,42,0,32,0]
-; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [32768,4294934528,0,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[1,3]
 ; SSE2-NEXT:    paddd %xmm2, %xmm1
@@ -2071,15 +1987,15 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm1
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
-; AVX1-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,7,42,32]
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [32768,4294934528,0,0]
 ; AVX1-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX256-LABEL: pmaddwd_negative2:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpmovsxwd %xmm0, %ymm0
-; AVX256-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX256-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [32768,4294934528,0,0,1,7,42,32]
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vzeroupper
@@ -2640,13 +2556,7 @@ define i32 @madd_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
   %tmp23 = sext <8 x i16> %tmp21 to <8 x i32>
   %tmp25 = mul nsw <8 x i32> %tmp22, %tmp23
   %tmp26 = add nuw nsw <8 x i32> %tmp25, %tmp19
-  %tmp29 = shufflevector <8 x i32> %tmp26, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp30 = add <8 x i32> %tmp26, %tmp29
-  %tmp31 = shufflevector <8 x i32> %tmp30, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp32 = add <8 x i32> %tmp30, %tmp31
-  %tmp33 = shufflevector <8 x i32> %tmp32, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp34 = add <8 x i32> %tmp32, %tmp33
-  %tmp35 = extractelement <8 x i32> %tmp34, i64 0
+  %tmp35 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %tmp26)
   ret i32 %tmp35
 }
 
@@ -2724,13 +2634,7 @@ define i32 @madd_quad_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %
   %tmp55 = mul nsw <8 x i32> %tmp52, %tmp53
   %tmp57 = add nuw nsw <8 x i32> %tmp55, %tmp56
 
-  %tmp29 = shufflevector <8 x i32> %tmp57, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp30 = add <8 x i32> %tmp57, %tmp29
-  %tmp31 = shufflevector <8 x i32> %tmp30, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp32 = add <8 x i32> %tmp30, %tmp31
-  %tmp33 = shufflevector <8 x i32> %tmp32, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp34 = add <8 x i32> %tmp32, %tmp33
-  %tmp35 = extractelement <8 x i32> %tmp34, i64 0
+  %tmp35 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %tmp57)
   ret i32 %tmp35
 }
 
@@ -2872,20 +2776,8 @@ vector.body:
   br i1 %7, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf35 = shufflevector <8 x i32> %4, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx36 = add <8 x i32> %4, %rdx.shuf35
-  %rdx.shuf37 = shufflevector <8 x i32> %bin.rdx36, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx38 = add <8 x i32> %bin.rdx36, %rdx.shuf37
-  %rdx.shuf39 = shufflevector <8 x i32> %bin.rdx38, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx40 = add <8 x i32> %bin.rdx38, %rdx.shuf39
-  %8 = extractelement <8 x i32> %bin.rdx40, i32 0
-  %rdx.shuf = shufflevector <8 x i32> %6, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %6, %rdx.shuf
-  %rdx.shuf31 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx32 = add <8 x i32> %bin.rdx, %rdx.shuf31
-  %rdx.shuf33 = shufflevector <8 x i32> %bin.rdx32, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx34 = add <8 x i32> %bin.rdx32, %rdx.shuf33
-  %9 = extractelement <8 x i32> %bin.rdx34, i32 0
+  %8 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %9 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %6)
   %tmp = zext i32 %8 to i64
   %tmp28 = shl nuw i64 %tmp, 32
   %tmp29 = zext i32 %9 to i64
@@ -2999,13 +2891,7 @@ vector.body:
   br i1 %10, label %middle.block, label %vector.body
 
 middle.block:
-  %rdx.shuf = shufflevector <8 x i32> %9, <8 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <8 x i32> %9, %rdx.shuf
-  %rdx.shuf31 = shufflevector <8 x i32> %bin.rdx, <8 x i32> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx32 = add <8 x i32> %bin.rdx, %rdx.shuf31
-  %rdx.shuf33 = shufflevector <8 x i32> %bin.rdx32, <8 x i32> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx34 = add <8 x i32> %bin.rdx32, %rdx.shuf33
-  %11 = extractelement <8 x i32> %bin.rdx34, i32 0
+  %11 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %9)
   ret i32 %11
 }
 
@@ -3254,14 +3140,6 @@ loop:
 
 afterloop:
   %.lcssa = phi <16 x i32> [ %3, %loop ]
-  %rdx.shuf = shufflevector <16 x i32> %.lcssa, <16 x i32> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = add <16 x i32> %.lcssa, %rdx.shuf
-  %rdx.shuf90 = shufflevector <16 x i32> %bin.rdx, <16 x i32> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx91 = add <16 x i32> %bin.rdx, %rdx.shuf90
-  %rdx.shuf92 = shufflevector <16 x i32> %bin.rdx91, <16 x i32> poison, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx93 = add <16 x i32> %bin.rdx91, %rdx.shuf92
-  %rdx.shuf94 = shufflevector <16 x i32> %bin.rdx93, <16 x i32> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx95 = add <16 x i32> %bin.rdx93, %rdx.shuf94
-  %sum = extractelement <16 x i32> %bin.rdx95, i32 0
+  %sum = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %.lcssa)
   ret i32 %sum
 }

@@ -123,14 +123,16 @@ bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
 
   // Transform mem* intrinsic calls.
   for (MemIntrinsic *MemCall : MemCalls) {
+    bool Expanded = true;
     if (MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(MemCall)) {
       expandMemCpyAsLoop(Memcpy, TTI);
     } else if (MemMoveInst *Memmove = dyn_cast<MemMoveInst>(MemCall)) {
-      expandMemMoveAsLoop(Memmove, TTI);
+      Expanded = expandMemMoveAsLoop(Memmove, TTI);
     } else if (MemSetInst *Memset = dyn_cast<MemSetInst>(MemCall)) {
-      expandMemSetAsLoop(Memset);
+      expandMemSetAsLoop(Memset, TTI);
     }
-    MemCall->eraseFromParent();
+    if (Expanded)
+      MemCall->eraseFromParent();
   }
 
   return true;

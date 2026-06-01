@@ -97,12 +97,12 @@ TwoFloats case3(int Val) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}}'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int2':'vector<int, 2>' lvalue ParmVar {{.*}} 'TwoVals' 'int2':'vector<int, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int2':'vector<int, 2>' lvalue ParmVar {{.*}} 'TwoVals' 'int2':'vector<int, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 TwoFloats case4(int2 TwoVals) {
   TwoFloats TF4 = {TwoVals};
   return TF4;
@@ -115,11 +115,11 @@ TwoFloats case4(int2 TwoVals) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int2':'vector<int, 2>' lvalue ParmVar {{.*}} 'TwoVals' 'int2':'vector<int, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int2':'vector<int, 2>' lvalue ParmVar {{.*}} 'TwoVals' 'int2':'vector<int, 2>'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 TwoInts case5(int2 TwoVals) {
   TwoInts TI1 = {TwoVals};
   return TI1;
@@ -147,8 +147,8 @@ TwoInts case6(TwoFloats TF4) {
 // conversions from a collection of scalar values, and structures.
 // CHECK-LABEL: Dumping case7
 // CHECK: VarDecl {{.*}} used D1 'Doggo' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'Doggo'
-// CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'Doggo' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .Z {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoInts' lvalue ParmVar {{.*}} 'TI1' 'TwoInts'
@@ -166,8 +166,8 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'Val' 'int'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4[2]'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4[2]' implicit
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF1' 'TwoFloats'
@@ -180,7 +180,7 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .Y {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF2' 'TwoFloats'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF3' 'TwoFloats'
@@ -203,28 +203,28 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // significantly different element types and grouping.
 // CHECK-LABEL: Dumping case8
 // CHECK: VarDecl {{.*}} used A1 'AnimalBits' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'AnimalBits'
-// CHECK-NEXT: InitListExpr {{.*}} 'int[4]'
+// CHECK-NEXT: InitListExpr {{.*}} 'AnimalBits' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'int[4]' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <IntegralCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .TailState {{.*}}
@@ -233,72 +233,72 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .HairCount {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 AnimalBits case8(Doggo D1) {
   AnimalBits A1 = {D1};
   return A1;
@@ -317,22 +317,22 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .TailState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
@@ -347,32 +347,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
@@ -380,32 +380,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'Doggo'
 // CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -413,25 +413,25 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <IntegralCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'uint':'unsigned int' lvalue .State {{.*}}
@@ -446,43 +446,43 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'Kitteh[4]'
 // CHECK-NEXT: InitListExpr {{.*}} 'Kitteh'
 // CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
@@ -490,22 +490,22 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .TailState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
@@ -520,32 +520,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
@@ -553,32 +553,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'Kitteh'
 // CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -586,25 +586,25 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <IntegralCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'uint':'unsigned int' lvalue .State {{.*}}
@@ -619,65 +619,65 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'Kitteh'
 // CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .TailState {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
@@ -692,32 +692,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
@@ -725,32 +725,32 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4 *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'float4[2]' lvalue .EarDirection {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'Kitteh'
 // CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -758,25 +758,25 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
 // CHECK-NEXT: MemberExpr {{.*}} 'int[4]' lvalue .Legs {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <IntegralCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'uint':'unsigned int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'uint':'unsigned int' lvalue .State {{.*}}
@@ -791,43 +791,43 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .LeftDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 // CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'float4':'vector<float, 4>' lvalue .RightDir {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'AnimalBits' lvalue ParmVar {{.*}} 'A1' 'AnimalBits'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 Zoo case9(Doggo D1, AnimalBits A1) {
   Zoo Z1 = {D1, A1, D1, A1, D1, A1};
   return Z1;
@@ -836,8 +836,8 @@ Zoo case9(Doggo D1, AnimalBits A1) {
 // Case 10: Initialize an object with a base class from two objects.
 // CHECK-LABEL: Dumping case10
 // CHECK: | `-VarDecl {{.*}} used FF1 'FourFloats' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats'
-// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF1' 'TwoFloats'
@@ -867,28 +867,28 @@ FourFloats case10(TwoFloats TF1, TwoFloats TF2) {
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<float, 4>' xxxx
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'F' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'vector<float, 4>' xvalue
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<float, 4>' xxxx
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'F' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'vector<float, 4>' xvalue
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<float, 4>' xxxx
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'F' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 2
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' xvalue vectorcomponent
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'vector<float, 4>' xvalue
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<float, 4>' xxxx
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 1>' lvalue <VectorSplat>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue ParmVar {{.*}} 'F' 'float'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 3
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 FourFloats case11(float F) {
   FourFloats FF1 = {F.xxxx};
   return FF1;
@@ -1008,54 +1008,181 @@ FourFloats case16() {
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 0
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .A {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .B {{.*}}
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'IntAndFloat' lvalue
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'IntAndFloat *' <ArrayToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'IntAndFloat[2]' lvalue Var {{.*}} 'Structs' 'IntAndFloat[2]'
-// CHECK-NEXT: IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 float case17() {
   IntAndFloat Structs[] = {1,2,3,4};
   float Floats[] = {Structs, Structs};
   return Floats[7];
+}
+
+// Tests which use explicit casts
+
+// CHECK-LABEL: Dumping case18
+// CHECK: VarDecl {{.*}} used TF 'TwoFloats' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'TwoInts'
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: OpaqueValueExpr [[OPV0:0x[0-9a-f]+]] {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: OpaqueValueExpr [[OPV0]] {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
+int case18() {
+  TwoFloats TF = {1.0,2.0};
+  TwoInts TI = {(TwoInts)TF};
+  return TI.Z;
+}
+
+// CHECK-LABEL: Dumping case19
+// CHECK: VarDecl {{.*}} used FF 'FourFloats' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats'
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 3.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 4.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used Ints 'int[4]' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'int[4]'
+// CHECK-NEXT: InitListExpr {{.*}} 'int[4]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1:0x[0-9a-f]+]] {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' xvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
+// CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
+int case19() {
+  FourFloats FF = {1.0,2.0,3.0,4.0};
+  int Ints[4] = {(int[4])FF};
+  return Ints[0];
+}
+
+// CHECK-LABEL: Dumping case20
+// CHECK: VarDecl {{.*}} used Arr 'float[4]' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'float[4]'
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 2.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 3.000000e+00
+// CHECK-NEXT: FloatingLiteral {{.*}} 'float' 4.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used TI 'TwoInts' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'TwoInts'
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoInts'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .Z
+// CHECK-NEXT: OpaqueValueExpr [[OPV2:0x[0-9a-f]+]] {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue Var {{.*}} 'Arr' 'float[4]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
+// CHECK-NEXT: OpaqueValueExpr [[OPV2]] {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float[4]' <HLSLArrayRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float[4]' lvalue Var {{.*}} 'Arr' 'float[4]'
+int case20() {
+  float Arr[4] = {1.0,2.0,3.0,4.0};
+  TwoInts TI = {(TwoInts)Arr};
+  return TI.Z;
+}
+
+// CHECK-LABEL: Dumping case21
+// CHECK: VarDecl {{.*}} used F 'float' cinit
+// CHECK-NEXT: {{.*}} 'float' 1.000000e+00
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} used SB 'SlicyBits' cinit
+// CHECK-NEXT: InitListExpr {{.*}} 'SlicyBits'
+// CHECK-NEXT: CStyleCastExpr {{.*}} 'int' <NoOp>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral> part_of_explicit_cast
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue> part_of_explicit_cast
+// CHECK-NEXT: DeclRefExpr {{.*}} 'float' lvalue Var {{.*}} 'F' 'float'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+int case21() {
+  float F = 1.0;
+  SlicyBits SB = {(int)F, 2};
+  return SB.Z;
 }

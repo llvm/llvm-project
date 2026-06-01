@@ -11,6 +11,8 @@
 #define _LIBCPP___FORMAT_FORMAT_FUNCTIONS
 
 #include <__algorithm/clamp.h>
+#include <__algorithm/find_first_of.h>
+#include <__chrono/statically_widen.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -24,7 +26,7 @@
 #include <__format/format_string.h>
 #include <__format/format_to_n_result.h>
 #include <__format/formatter.h>
-#include <__format/formatter_bool.h>
+#include <__format/formatter_bool_impl.h>
 #include <__format/formatter_char.h>
 #include <__format/formatter_floating_point.h>
 #include <__format/formatter_integer.h>
@@ -36,6 +38,7 @@
 #include <__iterator/iterator_traits.h> // iter_value_t
 #include <__variant/monostate.h>
 #include <array>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -339,7 +342,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr typename _Ctx::iterator __vformat_to(_ParseCtx&&
 
 #  if _LIBCPP_STD_VER >= 26
 template <class _CharT>
-struct __runtime_format_string {
+struct __dynamic_format_string {
 private:
   basic_string_view<_CharT> __str_;
 
@@ -347,15 +350,15 @@ private:
   friend struct basic_format_string;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __runtime_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
+  _LIBCPP_HIDE_FROM_ABI __dynamic_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
 
-  __runtime_format_string(const __runtime_format_string&)            = delete;
-  __runtime_format_string& operator=(const __runtime_format_string&) = delete;
+  __dynamic_format_string(const __dynamic_format_string&)            = delete;
+  __dynamic_format_string& operator=(const __dynamic_format_string&) = delete;
 };
 
-_LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<char> runtime_format(string_view __fmt) noexcept { return __fmt; }
+_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<char> dynamic_format(string_view __fmt) noexcept { return __fmt; }
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_HIDE_FROM_ABI inline __runtime_format_string<wchar_t> runtime_format(wstring_view __fmt) noexcept {
+_LIBCPP_HIDE_FROM_ABI inline __dynamic_format_string<wchar_t> dynamic_format(wstring_view __fmt) noexcept {
   return __fmt;
 }
 #    endif
@@ -372,7 +375,7 @@ struct basic_format_string {
 
   _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<_CharT> get() const noexcept { return __str_; }
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI basic_format_string(__runtime_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
+  _LIBCPP_HIDE_FROM_ABI basic_format_string(__dynamic_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
 #  endif
 
 private:
@@ -447,10 +450,51 @@ format_to(_OutIt __out_it, wformat_string<_Args...> __fmt, _Args&&... __args) {
 }
 #  endif
 
+// Try constant folding the format string instead of going through the whole formatting machinery. If there is no
+// constant folding no extra code should be emitted (with optimizations enabled) and the function returns nullopt. When
+// constant folding is successful, the formatting is performed and the resulting string is returned.
+namespace __format {
+template <class _CharT>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<basic_string<_CharT>> __try_constant_folding(
+    basic_string_view<_CharT> __fmt,
+    basic_format_args<basic_format_context<back_insert_iterator<__format::__output_buffer<_CharT>>, _CharT>> __args) {
+  // Fold strings not containing '{' or '}' to just return the string
+  if (bool __is_identity =
+          [&] [[__gnu__::__pure__]] // Make sure the compiler knows this call can be eliminated
+      {
+        char __vals[] = {'{', '}'};
+        return std::find_first_of(__fmt.begin(), __fmt.end(), std::begin(__vals), std::end(__vals)) == __fmt.end();
+      }();
+      __builtin_constant_p(__is_identity) && __is_identity)
+    return basic_string<_CharT>{__fmt};
+
+  // Fold '{}' to the appropriate conversion function
+  if (auto __only_first_arg = __fmt == _LIBCPP_STATICALLY_WIDEN(_CharT, "{}");
+      __builtin_constant_p(__only_first_arg) && __only_first_arg) {
+    if (auto __arg = __args.get(0); __builtin_constant_p(__arg.__type_)) {
+      return std::__visit_format_arg(
+          []<class _Tp>(_Tp&& __argument) -> optional<basic_string<_CharT>> {
+            if constexpr (is_same_v<remove_cvref_t<_Tp>, basic_string_view<_CharT>>) {
+              return basic_string<_CharT>{__argument};
+            } else {
+              return nullopt;
+            }
+          },
+          __arg);
+    }
+  }
+
+  return nullopt;
+}
+} // namespace __format
+
 // TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
 // fires too eagerly, see http://llvm.org/PR61563.
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI string vformat(string_view __fmt, format_args __args) {
+  auto __result = __format::__try_constant_folding(__fmt, __args);
+  if (__result.has_value())
+    return *std::move(__result);
   __format::__allocating_buffer<char> __buffer;
   std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
   return string{__buffer.__view()};
@@ -462,6 +506,9 @@ template <class = void>
 template <class = void>
 [[nodiscard]] _LIBCPP_ALWAYS_INLINE inline _LIBCPP_HIDE_FROM_ABI wstring
 vformat(wstring_view __fmt, wformat_args __args) {
+  auto __result = __format::__try_constant_folding(__fmt, __args);
+  if (__result.has_value())
+    return *std::move(__result);
   __format::__allocating_buffer<wchar_t> __buffer;
   std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
   return wstring{__buffer.__view()};

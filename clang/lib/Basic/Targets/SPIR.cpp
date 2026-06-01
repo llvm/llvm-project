@@ -12,10 +12,9 @@
 
 #include "SPIR.h"
 #include "AMDGPU.h"
-#include "Targets.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -24,19 +23,48 @@ static constexpr int NumBuiltins =
     clang::SPIRV::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
 #define GET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsSPIRV.inc"
+#include "clang/Basic/BuiltinsSPIRVCommon.inc"
 #undef GET_BUILTIN_STR_TABLE
 
 static constexpr Builtin::Info BuiltinInfos[] = {
 #define GET_BUILTIN_INFOS
-#include "clang/Basic/BuiltinsSPIRV.inc"
+#include "clang/Basic/BuiltinsSPIRVCommon.inc"
 #undef GET_BUILTIN_INFOS
 };
-static_assert(std::size(BuiltinInfos) == NumBuiltins);
+
+namespace CL {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSPIRVCL.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSPIRVCL.inc"
+#undef GET_BUILTIN_INFOS
+};
+} // namespace CL
+
+namespace VK {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSPIRVVK.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSPIRVVK.inc"
+#undef GET_BUILTIN_INFOS
+};
+} // namespace VK
+
+static_assert(std::size(BuiltinInfos) + std::size(CL::BuiltinInfos) +
+                  std::size(VK::BuiltinInfos) ==
+              NumBuiltins);
 
 llvm::SmallVector<Builtin::InfosShard>
-SPIRVTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+BaseSPIRVTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&VK::BuiltinStrings, VK::BuiltinInfos},
+          {&CL::BuiltinStrings, CL::BuiltinInfos}};
 }
 
 void SPIRTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -59,7 +87,10 @@ void SPIR64TargetInfo::getTargetDefines(const LangOptions &Opts,
 void BaseSPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                            MacroBuilder &Builder) const {
   DefineStd(Builder, "SPIRV", Opts);
-  DefineStd(Builder, "spirv", Opts);
+  if (Opts.HLSL)
+    DefineStd(Builder, "spirv", Opts);
+  if (getTriple().isVulkanOS())
+    Builder.defineMacro("__VULKAN__");
 }
 
 void SPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -79,7 +110,10 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV64", Opts);
 }
 
-static const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
+static const AMDGPUTargetInfo
+    AMDGPUTI(llvm::Triple(llvm::Triple::amdgcn, llvm::Triple::NoSubArch,
+                          llvm::Triple::AMD, llvm::Triple::AMDHSA),
+             {});
 
 ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
   return AMDGPUTI.getGCCRegNames();
@@ -116,6 +150,9 @@ void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
   Builder.defineMacro("__AMDGCN__");
+
+  if (Opts.AtomicIgnoreDenormalMode)
+    Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 }
 
 void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
@@ -151,4 +188,13 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
     HasFloat128 = true;
     Float128Format = DoubleFormat;
   }
+}
+
+bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
+  return AMDGPUTI.isValidCPUName(CPU);
+}
+
+void SPIRV64AMDGCNTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  return AMDGPUTI.fillValidCPUList(Values);
 }

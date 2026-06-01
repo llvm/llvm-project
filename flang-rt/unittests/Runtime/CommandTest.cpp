@@ -26,7 +26,7 @@ template <std::size_t n = 64>
 static OwningPtr<Descriptor> CreateEmptyCharDescriptor() {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(
       sizeof(char), n, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncId) != 0) {
+  if (descriptor->Allocate(kNoAsyncObject) != 0) {
     return nullptr;
   }
   return descriptor;
@@ -36,7 +36,7 @@ static OwningPtr<Descriptor> CharDescriptor(const char *value) {
   std::size_t n{std::strlen(value)};
   OwningPtr<Descriptor> descriptor{Descriptor::Create(
       sizeof(char), n, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncId) != 0) {
+  if (descriptor->Allocate(kNoAsyncObject) != 0) {
     return nullptr;
   }
   std::memcpy(descriptor->OffsetElement(), value, n);
@@ -47,7 +47,7 @@ template <int kind = sizeof(std::int64_t)>
 static OwningPtr<Descriptor> EmptyIntDescriptor() {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
       kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncId) != 0) {
+  if (descriptor->Allocate(kNoAsyncObject) != 0) {
     return nullptr;
   }
   return descriptor;
@@ -57,7 +57,7 @@ template <int kind = sizeof(std::int64_t)>
 static OwningPtr<Descriptor> IntDescriptor(const int &value) {
   OwningPtr<Descriptor> descriptor{Descriptor::Create(TypeCategory::Integer,
       kind, nullptr, 0, nullptr, CFI_attribute_allocatable)};
-  if (descriptor->Allocate(kNoAsyncId) != 0) {
+  if (descriptor->Allocate(kNoAsyncObject) != 0) {
     return nullptr;
   }
   std::memcpy(descriptor->OffsetElement<int>(), &value, sizeof(int));
@@ -349,13 +349,8 @@ TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-#if defined(_WIN32)
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
-#else
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command line execution failed");
-#endif
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsg.get(), "cmd msg buffer XXXXXXXXXXXXXX");
 }
 
 TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
@@ -365,18 +360,23 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
-  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXX")};
+  // Use longer character string to check padding
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor(
+      "Command cannot be executed with exit code: XXXXXXXXXXX.")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
+  CheckDescriptorEqStr(
+      cmdMsg.get(), GetPaddedStr("Command not found.", cmdMsg->ElementBytes()));
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command cannot be execu");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command cannot be executed with exit code: 126.",
+          cmdMsg->ElementBytes()));
   // removing the file only on Linux (file is not created on Win)
   OwningPtr<Descriptor> commandClean{
       CharDescriptor("rm -f NotExecutedCommandFile")};
@@ -399,13 +399,15 @@ TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXX");
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
+  CheckDescriptorEqStr(
+      cmdMsg.get(), GetPaddedStr("Command not found.", cmdMsg->ElementBytes()));
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
-  CheckDescriptorEqStr(cmdMsg.get(), "Command not found with exit");
+  CheckDescriptorEqStr(cmdMsg.get(),
+      GetPaddedStr("Command not found with exit", cmdMsg->ElementBytes()));
 #endif
 }
 
@@ -417,7 +419,7 @@ TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
 #ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
                    *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
-      "Invalid command quit with exit status code: 1");
+      "Command not found.");
 #else
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
                    *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
@@ -495,7 +497,7 @@ TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
 #ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 9009);
 #else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
 #endif

@@ -54,7 +54,7 @@ Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
 }
 
 Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMV, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMV);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();
@@ -113,9 +113,15 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
           std::unique_ptr<InsertValueInst>(new InsertValueInst(LLVMIns, *this));
       return It->second.get();
     }
-    case llvm::Instruction::Br: {
-      auto *LLVMBr = cast<llvm::BranchInst>(LLVMV);
-      It->second = std::unique_ptr<BranchInst>(new BranchInst(LLVMBr, *this));
+    case llvm::Instruction::UncondBr: {
+      auto *LLVMBr = cast<llvm::UncondBrInst>(LLVMV);
+      It->second =
+          std::unique_ptr<UncondBrInst>(new UncondBrInst(LLVMBr, *this));
+      return It->second.get();
+    }
+    case llvm::Instruction::CondBr: {
+      auto *LLVMBr = cast<llvm::CondBrInst>(LLVMV);
+      It->second = std::unique_ptr<CondBrInst>(new CondBrInst(LLVMBr, *this));
       return It->second.get();
     }
     case llvm::Instruction::Load: {
@@ -256,6 +262,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     case llvm::Instruction::FPToUI:
     case llvm::Instruction::FPToSI:
     case llvm::Instruction::FPExt:
+    case llvm::Instruction::PtrToAddr:
     case llvm::Instruction::PtrToInt:
     case llvm::Instruction::IntToPtr:
     case llvm::Instruction::SIToFP:
@@ -432,7 +439,7 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
 }
 
 Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
-  auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
+  auto Pair = LLVMValueToValueMap.try_emplace(LLVMArg);
   auto It = Pair.first;
   if (Pair.second) {
     It->second = std::unique_ptr<Argument>(new Argument(LLVMArg, *this));
@@ -442,7 +449,7 @@ Argument *Context::getOrCreateArgument(llvm::Argument *LLVMArg) {
 }
 
 Constant *Context::getOrCreateConstant(llvm::Constant *LLVMC) {
-  return cast<Constant>(getOrCreateValueInternal(LLVMC, 0));
+  return cast<Constant>(getOrCreateValueInternal(LLVMC, nullptr));
 }
 
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
@@ -507,9 +514,14 @@ InsertValueInst *Context::createInsertValueInst(llvm::InsertValueInst *IVI) {
   return cast<InsertValueInst>(registerValue(std::move(NewPtr)));
 }
 
-BranchInst *Context::createBranchInst(llvm::BranchInst *BI) {
-  auto NewPtr = std::unique_ptr<BranchInst>(new BranchInst(BI, *this));
-  return cast<BranchInst>(registerValue(std::move(NewPtr)));
+UncondBrInst *Context::createUncondBrInst(llvm::UncondBrInst *UBI) {
+  auto NewPtr = std::unique_ptr<UncondBrInst>(new UncondBrInst(UBI, *this));
+  return cast<UncondBrInst>(registerValue(std::move(NewPtr)));
+}
+
+CondBrInst *Context::createCondBrInst(llvm::CondBrInst *CBI) {
+  auto NewPtr = std::unique_ptr<CondBrInst>(new CondBrInst(CBI, *this));
+  return cast<CondBrInst>(registerValue(std::move(NewPtr)));
 }
 
 LoadInst *Context::createLoadInst(llvm::LoadInst *LI) {
@@ -636,7 +648,7 @@ Context::Context(LLVMContext &LLVMCtx)
     : LLVMCtx(LLVMCtx), IRTracker(*this),
       LLVMIRBuilder(LLVMCtx, ConstantFolder()) {}
 
-Context::~Context() {}
+Context::~Context() = default;
 
 void Context::clear() {
   // TODO: Ideally we should clear only function-scope objects, and keep global
@@ -652,7 +664,7 @@ Module *Context::getModule(llvm::Module *LLVMM) const {
 }
 
 Module *Context::getOrCreateModule(llvm::Module *LLVMM) {
-  auto Pair = LLVMModuleToModuleMap.insert({LLVMM, nullptr});
+  auto Pair = LLVMModuleToModuleMap.try_emplace(LLVMM);
   auto It = Pair.first;
   if (!Pair.second)
     return It->second.get();
@@ -728,7 +740,7 @@ Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "EraseInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  EraseInstrCallbacks[ID] = CB;
+  EraseInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterEraseInstrCallback(CallbackID ID) {
@@ -742,7 +754,7 @@ Context::registerCreateInstrCallback(CreateInstrCallback CB) {
   assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "CreateInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  CreateInstrCallbacks[ID] = CB;
+  CreateInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterCreateInstrCallback(CallbackID ID) {
@@ -755,7 +767,7 @@ Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "MoveInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  MoveInstrCallbacks[ID] = CB;
+  MoveInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
@@ -768,7 +780,7 @@ Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
   assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
          "SetUseCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  SetUseCallbacks[ID] = CB;
+  SetUseCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterSetUseCallback(CallbackID ID) {

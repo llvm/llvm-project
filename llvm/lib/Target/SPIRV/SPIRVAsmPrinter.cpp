@@ -16,6 +16,7 @@
 #include "SPIRVInstrInfo.h"
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
+#include "SPIRVNonSemanticDebugHandler.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
@@ -24,7 +25,6 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -36,6 +36,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -50,7 +51,9 @@ class SPIRVAsmPrinter : public AsmPrinter {
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
+        ST(nullptr), TII(nullptr), MAI(nullptr) {}
+  static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -76,9 +79,12 @@ public:
   void outputExecutionModeFromNumthreadsAttribute(
       const MCRegister &Reg, const Attribute &Attr,
       SPIRV::ExecutionMode::ExecutionMode EM);
+  void outputExecutionModeFromEnableMaximalReconvergenceAttr(
+      const MCRegister &Reg, const SPIRVSubtarget &ST);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
+  void outputFPFastMathDefaultInfo();
   bool isHidden() {
     return MF->getFunction()
         .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
@@ -100,6 +106,11 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   SPIRV::ModuleAnalysisInfo *MAI;
 
+  // Non-owning pointer to the NSDI handler registered via addAsmPrinterHandler.
+  // The handler's lifetime is managed by AsmPrinter (the base class of this
+  // object), so this pointer cannot dangle.
+  SPIRVNonSemanticDebugHandler *NSDebugHandler = nullptr;
+
 protected:
   void cleanUp(Module &M);
 };
@@ -113,12 +124,18 @@ void SPIRVAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // If the module has no functions, we need output global info anyway.
 void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
 
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
+  // SPIRVModuleAnalysis sets GR->Bound = MAI->MaxID before printing. Any IDs
+  // allocated by AsmPrinter handlers (e.g. SPIRVNonSemanticDebugHandler) during
+  // outputModuleSections() are not counted. Refresh the bound here so the
+  // formula below sees the final allocation count.
+  if (MAI)
+    ST->getSPIRVGlobalRegistry()->setBound(MAI->MaxID);
   VersionTuple SPIRVVersion = ST->getSPIRVVersion();
   uint32_t Major = SPIRVVersion.getMajor();
   uint32_t Minor = SPIRVVersion.getMinor().value_or(0);
@@ -136,15 +153,15 @@ void SPIRVAsmPrinter::emitEndOfAsmFile(Module &M) {
 // anymore.
 void SPIRVAsmPrinter::cleanUp(Module &M) {
   // Verifier disallows uses of intrinsic global variables.
-  for (StringRef GVName : {"llvm.global_ctors", "llvm.global_dtors",
-                           "llvm.used", "llvm.compiler.used"}) {
+  for (StringRef GVName :
+       {"llvm.global_ctors", "llvm.global_dtors", "llvm.used"}) {
     if (GlobalVariable *GV = M.getNamedGlobal(GVName))
       GV->setName("");
   }
 }
 
 void SPIRVAsmPrinter::emitFunctionHeader() {
-  if (ModuleSectionsEmitted == false) {
+  if (!ModuleSectionsEmitted) {
     outputModuleSections();
     ModuleSectionsEmitted = true;
   }
@@ -161,6 +178,15 @@ void SPIRVAsmPrinter::emitFunctionHeader() {
 
   auto Section = getObjFileLowering().SectionForGlobal(&F, TM);
   MF->setSection(Section);
+
+  // SPIRVAsmPrinter::emitFunctionHeader() does not call the base class,
+  // so handlers never receive beginFunction() from the normal path. Drive the
+  // per-function lifecycle here, matching what AsmPrinter::emitFunctionHeader()
+  // does for other targets.
+  for (auto &Handler : Handlers) {
+    Handler->beginFunction(MF);
+    Handler->beginBasicBlockSection(MF->front());
+  }
 }
 
 void SPIRVAsmPrinter::outputOpFunctionEnd() {
@@ -189,7 +215,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Do not emit anything if it's an internal service function.
-  if (MBB.empty())
+  if (MBB.empty() || isHidden())
     return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so
@@ -311,6 +337,13 @@ void SPIRVAsmPrinter::outputDebugSourceAndStrings(const Module &M) {
   Inst.addOperand(
       MCOperand::createImm(static_cast<unsigned>(MAI->SrcLangVersion)));
   outputMCInst(Inst);
+  // Emit OpString instructions for NSDI file paths and type names here, in
+  // section 7. OpString must precede type/constant declarations per the SPIR-V
+  // module layout (section 2.4). The OpExtInst instructions that reference
+  // these strings are emitted later at section 10 by
+  // emitNonSemanticGlobalDebugInfo().
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticDebugStrings(*MAI);
 }
 
 void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
@@ -444,7 +477,7 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
       if (ConstantInt *Const = dyn_cast<ConstantInt>(C)) {
         Inst.addOperand(MCOperand::createImm(Const->getZExtValue()));
       } else if (auto *CE = dyn_cast<Function>(C)) {
-        MCRegister FuncReg = MAI->getFuncReg(CE);
+        MCRegister FuncReg = MAI->getGlobalObjReg(CE);
         assert(FuncReg.isValid());
         Inst.addOperand(MCOperand::createReg(FuncReg));
       }
@@ -492,15 +525,48 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
+    const MCRegister &Reg, const SPIRVSubtarget &ST) {
+  assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
+         "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
+
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  unsigned EM =
+      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
+  Inst.addOperand(MCOperand::createImm(EM));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      const auto EM =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                  ->getValue())
+              ->getZExtValue();
+      // Skip ArithmeticPoisonKHR to avoid a duplicate.
+      if (EM == SPIRV::ExecutionMode::ArithmeticPoisonKHR)
+        continue;
+      // If SPV_KHR_float_controls2 is enabled and we find any of
+      // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
+      // modes, skip it, it'll be done somewhere else.
+      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+        if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
+            EM == SPIRV::ExecutionMode::ContractionOff ||
+            EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
+          continue;
+      }
+
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
       addOpsFromMDNode(cast<MDNode>(Node->getOperand(i)), Inst, MAI);
       outputMCInst(Inst);
     }
+    outputFPFastMathDefaultInfo();
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -508,20 +574,48 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // <Entry Point> operands of OpExecutionMode
     if (F.isDeclaration() || !isEntryPoint(F))
       continue;
-    MCRegister FReg = MAI->getFuncReg(&F);
+    MCRegister FReg = MAI->getGlobalObjReg(&F);
     assert(FReg.isValid());
+
+    if (Attribute Attr = F.getFnAttribute("hlsl.shader"); Attr.isValid()) {
+      // SPIR-V common validation: Fragment requires OriginUpperLeft or
+      // OriginLowerLeft.
+      // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
+      // OriginUpperLeft.
+      if (Attr.getValueAsString() == "pixel") {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionMode);
+        Inst.addOperand(MCOperand::createReg(FReg));
+        unsigned EM =
+            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
+        Inst.addOperand(MCOperand::createImm(EM));
+        outputMCInst(Inst);
+      }
+    }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
       outputExecutionModeFromMDNode(FReg, Node, SPIRV::ExecutionMode::LocalSize,
                                     3, 1);
     if (Attribute Attr = F.getFnAttribute("hlsl.numthreads"); Attr.isValid())
       outputExecutionModeFromNumthreadsAttribute(
           FReg, Attr, SPIRV::ExecutionMode::LocalSize);
+    if (Attribute Attr = F.getFnAttribute("enable-maximal-reconvergence");
+        Attr.getValueAsBool()) {
+      outputExecutionModeFromEnableMaximalReconvergenceAttr(FReg, *ST);
+    }
     if (MDNode *Node = F.getMetadata("work_group_size_hint"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::LocalSizeHint, 3, 1);
+    if (MDNode *Node = F.getMetadata("reqd_sub_group_size"))
+      outputExecutionModeFromMDNode(FReg, Node,
+                                    SPIRV::ExecutionMode::SubgroupSize, 0, 0);
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
+    if (MDNode *Node = F.getMetadata("max_work_group_size")) {
+      if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_kernel_attributes))
+        outputExecutionModeFromMDNode(
+            FReg, Node, SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, 3, 1);
+    }
     if (MDNode *Node = F.getMetadata("vec_type_hint")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -532,14 +626,99 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       Inst.addOperand(MCOperand::createImm(TypeCode));
       outputMCInst(Inst);
     }
-    if (ST->isOpenCLEnv() && !M.getNamedMetadata("spirv.ExecutionMode") &&
-        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+    // Per SPV_KHR_poison_freeze description of PoisonFreezeKHR "If declared,
+    // all entry points must use the ArithmeticPoisonKHR execution mode".
+    if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                           SPIRV::Capability::PoisonFreezeKHR)) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
       Inst.addOperand(MCOperand::createReg(FReg));
-      unsigned EM = static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
+      unsigned EM =
+          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
       Inst.addOperand(MCOperand::createImm(EM));
       outputMCInst(Inst);
+    }
+    if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
+        !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
+      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+        // When SPV_KHR_float_controls2 is enabled, ContractionOff is
+        // deprecated. We need to use FPFastMathDefault with the appropriate
+        // flags instead. Since FPFastMathDefault takes a target type, we need
+        // to emit it for each floating-point type that exists in the module
+        // to match the effect of ContractionOff. As of now, there are 3 FP
+        // types: fp16, fp32 and fp64.
+
+        // We only end up here because there is no "spirv.ExecutionMode"
+        // metadata, so that means no FPFastMathDefault. Therefore, we only
+        // need to make sure AllowContract is set to 0, as the rest of flags.
+        // We still need to emit the OpExecutionMode instruction, otherwise
+        // it's up to the client API to define the flags. Therefore, we need
+        // to find the constant with 0 value.
+
+        // Collect the SPIRVTypes for fp16, fp32, and fp64 and the constant of
+        // type int32 with 0 value to represent the FP Fast Math Mode.
+        std::vector<const MachineInstr *> SPIRVFloatTypes;
+        const MachineInstr *ConstZeroInt32 = nullptr;
+        for (const MachineInstr *MI :
+             MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+          unsigned OpCode = MI->getOpcode();
+
+          // Collect the SPIRV type if it's a float.
+          if (OpCode == SPIRV::OpTypeFloat) {
+            // Skip if the target type is not fp16, fp32, fp64.
+            const unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
+            if (OpTypeFloatSize != 16 && OpTypeFloatSize != 32 &&
+                OpTypeFloatSize != 64) {
+              continue;
+            }
+            SPIRVFloatTypes.push_back(MI);
+            continue;
+          }
+
+          if (OpCode == SPIRV::OpConstantNull) {
+            // Check if the constant is int32, if not skip it.
+            const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+            MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
+            bool IsInt32Ty = TypeMI &&
+                             TypeMI->getOpcode() == SPIRV::OpTypeInt &&
+                             TypeMI->getOperand(1).getImm() == 32;
+            if (IsInt32Ty)
+              ConstZeroInt32 = MI;
+          }
+        }
+
+        // When SPV_KHR_float_controls2 is enabled, ContractionOff is
+        // deprecated. We need to use FPFastMathDefault with the appropriate
+        // flags instead. Since FPFastMathDefault takes a target type, we need
+        // to emit it for each floating-point type that exists in the module
+        // to match the effect of ContractionOff. As of now, there are 3 FP
+        // types: fp16, fp32 and fp64.
+        for (const MachineInstr *MI : SPIRVFloatTypes) {
+          MCInst Inst;
+          Inst.setOpcode(SPIRV::OpExecutionModeId);
+          Inst.addOperand(MCOperand::createReg(FReg));
+          unsigned EM =
+              static_cast<unsigned>(SPIRV::ExecutionMode::FPFastMathDefault);
+          Inst.addOperand(MCOperand::createImm(EM));
+          const MachineFunction *MF = MI->getMF();
+          MCRegister TypeReg =
+              MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+          Inst.addOperand(MCOperand::createReg(TypeReg));
+          assert(ConstZeroInt32 && "There should be a constant zero.");
+          MCRegister ConstReg = MAI->getRegisterAlias(
+              ConstZeroInt32->getMF(), ConstZeroInt32->getOperand(0).getReg());
+          Inst.addOperand(MCOperand::createReg(ConstReg));
+          outputMCInst(Inst);
+        }
+      } else {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionMode);
+        Inst.addOperand(MCOperand::createReg(FReg));
+        unsigned EM =
+            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
+        Inst.addOperand(MCOperand::createImm(EM));
+        outputMCInst(Inst);
+      }
     }
   }
 }
@@ -557,15 +736,13 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
       // The first field of the struct contains a pointer to
       // the annotated variable.
       Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
-      if (!isa<Function>(AnnotatedVar))
-        report_fatal_error("Unsupported value in llvm.global.annotations");
-      Function *Func = cast<Function>(AnnotatedVar);
-      MCRegister Reg = MAI->getFuncReg(Func);
+      auto *GO = dyn_cast<GlobalObject>(AnnotatedVar);
+      MCRegister Reg = GO ? MAI->getGlobalObjReg(GO) : MCRegister();
       if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
         AnnotatedVar->print(OS);
-        DiagMsg = "Unknown function in llvm.global.annotations: " + DiagMsg;
+        DiagMsg = "Unsupported value in llvm.global.annotations: " + DiagMsg;
         report_fatal_error(DiagMsg.c_str());
       }
 
@@ -574,7 +751,9 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
           cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
 
       StringRef AnnotationString;
-      getConstantStringInfo(GV, AnnotationString);
+      [[maybe_unused]] bool Success =
+          getConstantStringInfo(GV, AnnotationString);
+      assert(Success && "Failed to get annotation string");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpDecorate);
       Inst.addOperand(MCOperand::createReg(Reg));
@@ -586,15 +765,117 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   }
 }
 
+void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
+  // Collect the SPIRVTypes that are OpTypeFloat and the constants of type
+  // int32, that might be used as FP Fast Math Mode.
+  std::vector<const MachineInstr *> SPIRVFloatTypes;
+  // Hashtable to associate immediate values with the constant holding them.
+  std::unordered_map<int, const MachineInstr *> ConstMap;
+  for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+    // Skip if the instruction is not OpTypeFloat or OpConstant.
+    unsigned OpCode = MI->getOpcode();
+    if (OpCode != SPIRV::OpTypeFloat && OpCode != SPIRV::OpConstantI &&
+        OpCode != SPIRV::OpConstantNull)
+      continue;
+
+    // Collect the SPIRV type if it's a float.
+    if (OpCode == SPIRV::OpTypeFloat) {
+      SPIRVFloatTypes.push_back(MI);
+    } else {
+      // Check if the constant is int32, if not skip it.
+      const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+      MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
+      if (!TypeMI || TypeMI->getOpcode() != SPIRV::OpTypeInt ||
+          TypeMI->getOperand(1).getImm() != 32)
+        continue;
+
+      if (OpCode == SPIRV::OpConstantI)
+        ConstMap[MI->getOperand(2).getImm()] = MI;
+      else
+        ConstMap[0] = MI;
+    }
+  }
+
+  for (const auto &[Func, FPFastMathDefaultInfoVec] :
+       MAI->FPFastMathDefaultInfoMap) {
+    if (FPFastMathDefaultInfoVec.empty())
+      continue;
+
+    for (const MachineInstr *MI : SPIRVFloatTypes) {
+      unsigned OpTypeFloatSize = MI->getOperand(1).getImm();
+      unsigned Index = SPIRV::FPFastMathDefaultInfoVector::
+          computeFPFastMathDefaultInfoVecIndex(OpTypeFloatSize);
+      assert(Index < FPFastMathDefaultInfoVec.size() &&
+             "Index out of bounds for FPFastMathDefaultInfoVec");
+      const auto &FPFastMathDefaultInfo = FPFastMathDefaultInfoVec[Index];
+      assert(FPFastMathDefaultInfo.Ty &&
+             "Expected target type for FPFastMathDefaultInfo");
+      assert(FPFastMathDefaultInfo.Ty->getScalarSizeInBits() ==
+                 OpTypeFloatSize &&
+             "Mismatched float type size");
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionModeId);
+      MCRegister FuncReg = MAI->getGlobalObjReg(Func);
+      assert(FuncReg.isValid());
+      Inst.addOperand(MCOperand::createReg(FuncReg));
+      Inst.addOperand(
+          MCOperand::createImm(SPIRV::ExecutionMode::FPFastMathDefault));
+      MCRegister TypeReg =
+          MAI->getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
+      Inst.addOperand(MCOperand::createReg(TypeReg));
+      unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
+      if (FPFastMathDefaultInfo.ContractionOff &&
+          (Flags & SPIRV::FPFastMathMode::AllowContract))
+        report_fatal_error(
+            "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
+
+      if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !(Flags &
+            (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+             SPIRV::FPFastMathMode::NSZ))) {
+        if (FPFastMathDefaultInfo.FPFastMathDefault)
+          report_fatal_error("Conflicting FPFastMathFlags: "
+                             "SignedZeroInfNanPreserve but at least one of "
+                             "NotNaN/NotInf/NSZ is enabled.");
+      }
+
+      // Don't emit if none of the execution modes was used.
+      if (Flags == SPIRV::FPFastMathMode::None &&
+          !FPFastMathDefaultInfo.ContractionOff &&
+          !FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !FPFastMathDefaultInfo.FPFastMathDefault)
+        continue;
+
+      // Retrieve the constant instruction for the immediate value.
+      auto It = ConstMap.find(Flags);
+      if (It == ConstMap.end())
+        report_fatal_error("Expected constant instruction for FP Fast Math "
+                           "Mode operand of FPFastMathDefault execution mode.");
+      const MachineInstr *ConstMI = It->second;
+      MCRegister ConstReg = MAI->getRegisterAlias(
+          ConstMI->getMF(), ConstMI->getOperand(0).getReg());
+      Inst.addOperand(MCOperand::createReg(ConstReg));
+      outputMCInst(Inst);
+    }
+  }
+}
+
 void SPIRVAsmPrinter::outputModuleSections() {
   const Module *M = MMI->getModule();
   // Get the global subtarget to output module-level info.
   ST = static_cast<const SPIRVTargetMachine &>(TM).getSubtargetImpl();
   TII = ST->getInstrInfo();
-  MAI = &SPIRVModuleAnalysis::MAI;
+  MAI = &getAnalysis<SPIRVModuleAnalysis>().MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
+
+  // Let the NSDI handler add its extension and ext inst import entry to MAI
+  // before the module header sections are emitted.
+  if (NSDebugHandler)
+    NSDebugHandler->prepareModuleOutput(*ST, *MAI);
+
   // Output instructions according to the Logical Layout of a Module:
-  // 1,2. All OpCapability instructions, then optional OpExtension instructions.
+  // 1,2. All OpCapability instructions, then optional OpExtension
+  // instructions.
   outputGlobalRequirements();
   // 3. Optional OpExtInstImport instructions.
   outputOpExtInstImports(*M);
@@ -602,7 +883,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputOpMemoryModel();
   // 5. All entry point declarations, using OpEntryPoint.
   outputEntryPoints();
-  // 6. Execution-mode declarations, using OpExecutionMode or OpExecutionModeId.
+  // 6. Execution-mode declarations, using OpExecutionMode or
+  // OpExecutionModeId.
   outputExecutionMode(*M);
   // 7a. Debug: all OpString, OpSourceExtension, OpSource, and
   // OpSourceContinued, without forward references.
@@ -621,8 +903,11 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // the first section to allow use of: OpLine and OpNoLine debug information;
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
-  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions.
-  outputModuleSection(SPIRV::MB_NonSemanticGlobalDI);
+  // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
+  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
+  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  if (NSDebugHandler)
+    NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   // 11. All function declarations (functions without a body).
   outputExtFuncDecls();
   // 12. All function definitions (functions with a body).
@@ -631,12 +916,25 @@ void SPIRVAsmPrinter::outputModuleSections() {
 
 bool SPIRVAsmPrinter::doInitialization(Module &M) {
   ModuleSectionsEmitted = false;
+  // Register the NSDI handler before calling the base class so that
+  // AsmPrinter::doInitialization() calls Handler->beginModule(M) for it.
+  if (M.getNamedMetadata("llvm.dbg.cu")) {
+    auto Handler = std::make_unique<SPIRVNonSemanticDebugHandler>(*this);
+    NSDebugHandler = Handler.get();
+    addAsmPrinterHandler(std::move(Handler));
+  }
   // We need to call the parent's one explicitly.
   return AsmPrinter::doInitialization(M);
 }
 
+char SPIRVAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
+                false, false)
+
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSPIRVAsmPrinter() {
   RegisterAsmPrinter<SPIRVAsmPrinter> X(getTheSPIRV32Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Y(getTheSPIRV64Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Z(getTheSPIRVLogicalTarget());

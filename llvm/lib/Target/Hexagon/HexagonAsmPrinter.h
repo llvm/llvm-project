@@ -27,6 +27,10 @@ class raw_ostream;
 class TargetMachine;
 
   class HexagonAsmPrinter : public AsmPrinter {
+  public:
+    static char ID;
+
+  private:
     const HexagonSubtarget *Subtarget = nullptr;
 
     void emitAttributes();
@@ -34,7 +38,7 @@ class TargetMachine;
   public:
     explicit HexagonAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)) {}
+        : AsmPrinter(TM, std::move(Streamer), ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override {
       Subtarget = &Fn.getSubtarget<HexagonSubtarget>();
@@ -61,6 +65,7 @@ class TargetMachine;
     void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
     void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
     void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+    void LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI, bool Typed);
     void EmitSled(const MachineInstr &MI, SledKind Kind);
 
     void HexagonProcessInstruction(MCInst &Inst, const MachineInstr &MBB);

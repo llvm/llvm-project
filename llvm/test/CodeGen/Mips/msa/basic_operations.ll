@@ -1442,8 +1442,8 @@ define i64 @extract_sext_v2i64_vidx() nounwind {
 ; O32-BE-NEXT:    addu $1, $2, $25
 ; O32-BE-NEXT:    lw $2, %got(i32)($1)
 ; O32-BE-NEXT:    lw $2, 0($2)
-; O32-BE-NEXT:    addu $2, $2, $2
-; O32-BE-NEXT:    addiu $3, $2, 1
+; O32-BE-NEXT:    sll $2, $2, 1
+; O32-BE-NEXT:    ori $3, $2, 1
 ; O32-BE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-BE-NEXT:    ld.d $w0, 0($1)
 ; O32-BE-NEXT:    addv.d $w0, $w0, $w0
@@ -1461,8 +1461,8 @@ define i64 @extract_sext_v2i64_vidx() nounwind {
 ; O32-LE-NEXT:    addu $1, $2, $25
 ; O32-LE-NEXT:    lw $2, %got(i32)($1)
 ; O32-LE-NEXT:    lw $2, 0($2)
-; O32-LE-NEXT:    addu $2, $2, $2
-; O32-LE-NEXT:    addiu $3, $2, 1
+; O32-LE-NEXT:    sll $2, $2, 1
+; O32-LE-NEXT:    ori $3, $2, 1
 ; O32-LE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-LE-NEXT:    ld.d $w0, 0($1)
 ; O32-LE-NEXT:    addv.d $w0, $w0, $w0
@@ -1669,8 +1669,8 @@ define i64 @extract_zext_v2i64_vidx() nounwind {
 ; O32-BE-NEXT:    addu $1, $2, $25
 ; O32-BE-NEXT:    lw $2, %got(i32)($1)
 ; O32-BE-NEXT:    lw $2, 0($2)
-; O32-BE-NEXT:    addu $2, $2, $2
-; O32-BE-NEXT:    addiu $3, $2, 1
+; O32-BE-NEXT:    sll $2, $2, 1
+; O32-BE-NEXT:    ori $3, $2, 1
 ; O32-BE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-BE-NEXT:    ld.d $w0, 0($1)
 ; O32-BE-NEXT:    addv.d $w0, $w0, $w0
@@ -1688,8 +1688,8 @@ define i64 @extract_zext_v2i64_vidx() nounwind {
 ; O32-LE-NEXT:    addu $1, $2, $25
 ; O32-LE-NEXT:    lw $2, %got(i32)($1)
 ; O32-LE-NEXT:    lw $2, 0($2)
-; O32-LE-NEXT:    addu $2, $2, $2
-; O32-LE-NEXT:    addiu $3, $2, 1
+; O32-LE-NEXT:    sll $2, $2, 1
+; O32-LE-NEXT:    ori $3, $2, 1
 ; O32-LE-NEXT:    lw $1, %got(v2i64)($1)
 ; O32-LE-NEXT:    ld.d $w0, 0($1)
 ; O32-LE-NEXT:    addv.d $w0, $w0, $w0
@@ -1904,7 +1904,7 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v16i8_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 15
 ; N64-NEXT:    ld $1, %got_disp(v16i8)($1)
 ; N64-NEXT:    daddu $1, $1, $2
@@ -1953,7 +1953,7 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v8i16_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 7
 ; N64-NEXT:    ld $1, %got_disp(v8i16)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 1
@@ -2002,7 +2002,7 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v4i32_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 3
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 2
@@ -2053,7 +2053,7 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v2i64_vidx)))
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
-; N64-NEXT:    lw $2, 0($2)
+; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    andi $2, $2, 1
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
 ; N64-NEXT:    dlsa $1, $2, $1, 3

@@ -12,17 +12,16 @@
 
 namespace llvm {
 
-class BranchFolderPass : public PassInfoMixin<BranchFolderPass> {
+class BranchFolderPass : public OptionalPassInfoMixin<BranchFolderPass> {
   bool EnableTailMerge;
 
 public:
   BranchFolderPass(bool EnableTailMerge) : EnableTailMerge(EnableTailMerge) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 

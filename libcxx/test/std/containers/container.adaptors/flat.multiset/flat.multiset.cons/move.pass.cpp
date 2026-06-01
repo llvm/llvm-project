@@ -25,11 +25,12 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     using C = test_less<int>;
     using A = test_allocator<int>;
-    using M = std::flat_multiset<int, C, std::deque<int, A>>;
+    using M = std::flat_multiset<int, C, KeyContainer<int, A>>;
     M mo    = M({1, 2, 1, 3}, C(5), A(7));
     M m     = std::move(mo);
     assert((m == M{1, 1, 2, 3}));
@@ -43,7 +44,7 @@ void test() {
   {
     using C = test_less<int>;
     using A = min_allocator<int>;
-    using M = std::flat_multiset<int, C, std::vector<int, A>>;
+    using M = std::flat_multiset<int, C, KeyContainer<int, A>>;
     M mo    = M({1, 2, 1, 3}, C(5), A());
     M m     = std::move(mo);
     assert((m == M{1, 1, 2, 3}));
@@ -54,9 +55,9 @@ void test() {
     assert(mo.key_comp() == C(5));
     assert(std::move(mo).extract().get_allocator() == A());
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // A moved-from flat_multiset maintains its class invariant in the presence of moved-from comparators.
-    using M = std::flat_multiset<int, std::function<bool(int, int)>>;
+    using M = std::flat_multiset<int, std::function<bool(int, int)>, KeyContainer<int>>;
     M mo    = M({1, 2, 1, 3}, std::less<int>());
     M m     = std::move(mo);
     assert(m.size() == 4);
@@ -79,6 +80,16 @@ void test() {
     LIBCPP_ASSERT(m1.empty());
     LIBCPP_ASSERT(m1.size() == 0);
   }
+}
+
+constexpr bool test() {
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
 }
 
 template <class T>
@@ -134,7 +145,6 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_multiset<int, ThrowingMoveComp>;
@@ -142,12 +152,15 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
+#endif // _LIBCPP_VERSION
 }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 static int countdown = 0;
 
 struct EvilContainer : std::vector<int> {
+  using std::vector<int>::vector;
+
   EvilContainer() = default;
   EvilContainer(EvilContainer&& rhs) {
     // Throw on move-construction.
@@ -156,6 +169,11 @@ struct EvilContainer : std::vector<int> {
       rhs.insert(rhs.end(), 0);
       throw 42;
     }
+  }
+
+  EvilContainer& operator=(std::initializer_list<int> il) {
+    std::vector<int>::operator=(il);
+    return *this;
   }
 };
 
@@ -179,6 +197,9 @@ void test_move_exception() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   test_move_noexcept();
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   test_move_exception();

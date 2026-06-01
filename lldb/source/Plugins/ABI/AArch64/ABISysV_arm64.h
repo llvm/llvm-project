@@ -30,10 +30,6 @@ public:
   SetReturnValueObject(lldb::StackFrameSP &frame_sp,
                        lldb::ValueObjectSP &new_value) override;
 
-  lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() override;
-
-  lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
-
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
   // The arm64 ABI requires that stack frames be 16 byte aligned.
@@ -84,6 +80,14 @@ public:
 
   lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
   lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
+
+  // If the Permission Overlay Extension is present, use the protection key
+  // to look up overlay permissions in por_el0 and apply them to the original
+  // permissions.
+  virtual std::optional<MemoryPermissions>
+  GetMemoryPermissions(lldb_private::RegisterContext &reg_ctx,
+                       unsigned protection_key,
+                       uint32_t original_permissions) override;
 
 protected:
   lldb::ValueObjectSP

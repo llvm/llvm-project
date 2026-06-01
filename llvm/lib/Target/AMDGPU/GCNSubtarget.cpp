@@ -66,7 +66,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
+  SmallString<256> FullFS("+load-store-opt,+enable-ds128,");
 
   // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
   // default
@@ -119,15 +119,15 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // that do not support ADDR64 variants of MUBUF instructions. Such targets
   // cannot use a 64 bit offset with a MUBUF instruction to access the global
   // address space
-  if (!hasAddr64() && !FS.contains("flat-for-global") && !FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = true;
+  if (!hasAddr64() && !FS.contains("flat-for-global") && !UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = true;
   }
   // Unless +-flat-for-global is specified, use MUBUF instructions for global
   // address space access if flat operations are not available.
-  if (!hasFlat() && !FS.contains("flat-for-global") && FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = false;
+  if (!hasFlat() && !FS.contains("flat-for-global") && UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = false;
   }
 
   // Set defaults if needed.
@@ -137,16 +137,25 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
-  LocalMemorySize = AddressableLocalMemorySize;
-  if (AMDGPU::isGFX10Plus(*this) &&
-      !getFeatureBits().test(AMDGPU::FeatureCuMode))
-    LocalMemorySize *= 2;
+  if (FlatOffsetBitWidth == 0)
+    FlatOffsetBitWidth = 13;
+
+  LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
+
+  // InstCacheLineSize is set from TableGen subtarget features
+  // (FeatureInstCacheLineSize64 / FeatureInstCacheLineSize128).
+  // Fall back to 64 if no feature was specified (e.g. generic targets).
+  if (InstCacheLineSize == 0)
+    InstCacheLineSize = 64;
+
+  assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
+         "InstCacheLineSize must be a power of 2");
 
   TargetID.setTargetIDFromFeaturesString(FS);
 
@@ -165,6 +174,10 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
+  if (hasFeature(AMDGPU::FeatureXNACKAnyOnly) && TargetID.isXnackOnOrOff()) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "target only supports xnack 'Any'; '+/-xnack' is not allowed"));
+  }
 }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
@@ -172,15 +185,16 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetTriple(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
-    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
+    // Frame index expansion sometimes assumes the low bit of SP is 0
+    FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0,
+                  /*TransAl=*/Align(4)) {
   // clang-format on
-  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
-  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
+  MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(*this);
+  EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(*this);
 
   TSInfo = std::make_unique<AMDGPUSelectionDAGInfo>();
 
@@ -324,11 +338,18 @@ bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
 }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                       unsigned NumRegionInstrs) const {
+                                       const SchedRegion &Region) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by
   // SIRegisterInfo::getRegPressureSetLimit()
   Policy.ShouldTrackPressure = true;
+
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  if (AMDGPU::getSchedStrategy(F) == "coexec") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+    return;
+  }
 
   // Enabling both top down and bottom up scheduling seems to give us less
   // register spills than just using one of these approaches on its own.
@@ -338,6 +359,43 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
   if (!enableSIScheduler())
     Policy.ShouldTrackLaneMasks = true;
+}
+
+void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                             const SchedRegion &Region) const {
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  Attribute PostRADirectionAttr = F.getFnAttribute("amdgpu-post-ra-direction");
+  if (!PostRADirectionAttr.isValid())
+    return;
+
+  StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+  if (PostRADirectionStr == "topdown") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+  } else if (PostRADirectionStr == "bottomup") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = true;
+  } else if (PostRADirectionStr == "bidirectional") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+  } else {
+    DiagnosticInfoOptimizationFailure Diag(
+        F, F.getSubprogram(), "invalid value for postRA direction attribute");
+    F.getContext().diagnose(Diag);
+  }
+
+  LLVM_DEBUG({
+    const char *DirStr = "default";
+    if (Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "topdown";
+    else if (!Policy.OnlyTopDown && Policy.OnlyBottomUp)
+      DirStr = "bottomup";
+    else if (!Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "bidirectional";
+
+    dbgs() << "Post-MI-sched direction (" << F.getName() << "): " << DirStr
+           << '\n';
+  });
 }
 
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
@@ -366,8 +424,11 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
                                                    getGeneration());
 }
 
-unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
-  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(this, NumVGPRs);
+unsigned
+GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs,
+                                       unsigned DynamicVGPRBlockSize) const {
+  return AMDGPU::IsaInfo::getNumWavesPerEUWithNumVGPRs(*this, NumVGPRs,
+                                                       DynamicVGPRBlockSize);
 }
 
 unsigned
@@ -403,9 +464,15 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
 std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  // Temporarily check both the attribute and the subtarget feature until the
+  // latter is removed.
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
+
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
-  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs);
+  unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
   MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
@@ -466,7 +533,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
                             getReservedNumSGPRs(MF));
 }
 
-static unsigned getMaxNumPreloadedSGPRs() {
+unsigned GCNSubtarget::getMaxNumPreloadedSGPRs() const {
   using USI = GCNUserSGPRUsageInfo;
   // Max number of user SGPRs
   const unsigned MaxUserSGPRs =
@@ -497,42 +564,200 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 }
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
-    const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-  // Compute maximum number of VGPRs function can use using default/requested
-  // minimum number of waves per execution unit.
-  unsigned MaxNumVGPRs = getMaxNumVGPRs(WavesPerEU.first);
+    const Function &F, std::pair<unsigned, unsigned> NumVGPRBounds) const {
+  const auto [Min, Max] = NumVGPRBounds;
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-  if (Requested != MaxNumVGPRs) {
-    if (hasGFX90AInsts())
-      Requested *= 2;
 
-    // Make sure requested value is compatible with values implied by
-    // default/requested minimum/maximum number of waves per execution unit.
-    if (Requested && Requested > getMaxNumVGPRs(WavesPerEU.first))
-      Requested = 0;
-    if (WavesPerEU.second && Requested &&
-        Requested < getMinNumVGPRs(WavesPerEU.second))
-      Requested = 0;
+  unsigned Requested = F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", Max);
+  if (Requested != Max && hasGFX90AInsts())
+    Requested *= 2;
 
-    if (Requested)
-      MaxNumVGPRs = Requested;
-  }
-
-  return MaxNumVGPRs;
+  // Make sure requested value is inside the range of possible VGPR usage.
+  return std::clamp(Requested, Min, Max);
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
-  return getBaseMaxNumVGPRs(F, getWavesPerEU(F));
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is removed.
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
+
+  std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  return getBaseMaxNumVGPRs(
+      F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
+          getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
 }
 
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
+  return getMaxNumVGPRs(MF.getFunction());
+}
+
+std::pair<unsigned, unsigned>
+GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
+  const unsigned MaxVectorRegs = getMaxNumVGPRs(F);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
+  unsigned NumArchVGPRs = getAddressableNumArchVGPRs();
+
+  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
+  // a wave may have up to 512 total vector registers combining together both
+  // VGPRs and AGPRs. Hence, in an entry function without calls and without
+  // AGPRs used within it, it is possible to use the whole vector register
+  // budget for VGPRs.
+  //
+  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (hasGFX90AInsts()) {
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
+                                        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+    } else {
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+    }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
+           "invalid register counts");
+  } else if (hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
+  }
+
+  return std::pair(MaxNumVGPRs, MaxNumAGPRs);
+}
+
+// Check to which source operand UseOpIdx points to and return a pointer to the
+// operand of the corresponding source modifier.
+// Return nullptr if UseOpIdx either doesn't point to src0/1/2 or if there is no
+// operand for the corresponding source modifier.
+static const MachineOperand *
+getVOP3PSourceModifierFromOpIdx(const MachineInstr &UseI, int UseOpIdx,
+                                const SIInstrInfo &InstrInfo) {
+  AMDGPU::OpName UseName =
+      AMDGPU::getOperandIdxName(UseI.getOpcode(), UseOpIdx);
+  switch (UseName) {
+  case AMDGPU::OpName::src0:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src0_modifiers);
+  case AMDGPU::OpName::src1:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src1_modifiers);
+  case AMDGPU::OpName::src2:
+    return InstrInfo.getNamedOperand(UseI, AMDGPU::OpName::src2_modifiers);
+  default:
+    return nullptr;
+  }
+}
+
+// Get the subreg idx of the subreg that is used by the given instruction
+// operand, considering the given op_sel modifier.
+// Return 0 if the whole register is used or as a conservative fallback.
+static unsigned getEffectiveSubRegIdx(const SIRegisterInfo &TRI,
+                                      const SIInstrInfo &InstrInfo,
+                                      const MachineInstr &I,
+                                      const MachineOperand &Op) {
+  if (!InstrInfo.isVOP3P(I) || InstrInfo.isWMMA(I) || InstrInfo.isSWMMAC(I))
+    return AMDGPU::NoSubRegister;
+
+  const MachineOperand *OpMod =
+      getVOP3PSourceModifierFromOpIdx(I, Op.getOperandNo(), InstrInfo);
+  if (!OpMod)
+    return AMDGPU::NoSubRegister;
+
+  // Note: the FMA_MIX* and MAD_MIX* instructions have different semantics for
+  // the op_sel and op_sel_hi source modifiers:
+  // - op_sel: selects low/high operand bits as input to the operation;
+  //           has only meaning for 16-bit source operands
+  // - op_sel_hi: specifies the size of the source operands (16 or 32 bits);
+  //              a value of 0 indicates 32 bit, 1 indicates 16 bit
+  // For the other VOP3P instructions, the semantics are:
+  // - op_sel: selects low/high operand bits as input to the operation which
+  //           results in the lower-half of the destination
+  // - op_sel_hi: selects the low/high operand bits as input to the operation
+  //              which results in the higher-half of the destination
+  int64_t OpSel = OpMod->getImm() & SISrcMods::OP_SEL_0;
+  int64_t OpSelHi = OpMod->getImm() & SISrcMods::OP_SEL_1;
+
+  // Check if all parts of the register are being used (= op_sel and op_sel_hi
+  // differ for VOP3P or op_sel_hi=0 for VOP3PMix). In that case we can return
+  // early.
+  if ((!InstrInfo.isVOP3PMix(I) && (!OpSel || !OpSelHi) &&
+       (OpSel || OpSelHi)) ||
+      (InstrInfo.isVOP3PMix(I) && !OpSelHi))
+    return AMDGPU::NoSubRegister;
+
+  const MachineRegisterInfo &MRI = I.getParent()->getParent()->getRegInfo();
+  const TargetRegisterClass *RC = TRI.getRegClassForOperandReg(MRI, Op);
+
+  if (unsigned SubRegIdx = OpSel ? AMDGPU::sub1 : AMDGPU::sub0;
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
+    return SubRegIdx;
+  if (unsigned SubRegIdx = OpSel ? AMDGPU::hi16 : AMDGPU::lo16;
+      TRI.getSubClassWithSubReg(RC, SubRegIdx) == RC)
+    return SubRegIdx;
+
+  return AMDGPU::NoSubRegister;
+}
+
+Register GCNSubtarget::getRealSchedDependency(const MachineInstr &DefI,
+                                              int DefOpIdx,
+                                              const MachineInstr &UseI,
+                                              int UseOpIdx) const {
+  const SIRegisterInfo *TRI = getRegisterInfo();
+  const MachineOperand &DefOp = DefI.getOperand(DefOpIdx);
+  const MachineOperand &UseOp = UseI.getOperand(UseOpIdx);
+  Register DefReg = DefOp.getReg();
+  Register UseReg = UseOp.getReg();
+
+  // If the registers aren't restricted to a sub-register, there is no point in
+  // further analysis. This check makes only sense for virtual registers because
+  // physical registers may form a tuple and thus be part of a superregister
+  // although they are not a subregister themselves (vgpr0 is a "subreg" of
+  // vgpr0_vgpr1 without being a subreg in itself).
+  unsigned DefSubRegIdx = DefOp.getSubReg();
+  if (DefReg.isVirtual() && DefSubRegIdx == AMDGPU::NoSubRegister)
+    return DefReg;
+  unsigned UseSubRegIdx = getEffectiveSubRegIdx(*TRI, InstrInfo, UseI, UseOp);
+  if (UseReg.isVirtual() && UseSubRegIdx == AMDGPU::NoSubRegister)
+    return DefReg;
+
+  if (!TRI->checkSubRegInterference(DefReg, DefSubRegIdx, UseReg, UseSubRegIdx))
+    return Register(); // No real dependency
+
+  // UseReg might be smaller or larger than DefReg, depending on the subreg and
+  // on whether DefReg is a subreg, too. -> Find the smaller one.  This does not
+  // apply to virtual registers because we cannot construct a subreg for them.
+  if (DefReg.isVirtual())
+    return DefReg;
+  MCRegister DefMCReg =
+      DefSubRegIdx ? TRI->getSubReg(DefReg, DefSubRegIdx) : DefReg.asMCReg();
+  MCRegister UseMCReg =
+      UseSubRegIdx ? TRI->getSubReg(UseReg, UseSubRegIdx) : UseReg.asMCReg();
+  return TRI->isSubRegisterEq(DefMCReg, UseMCReg) ? UseMCReg : DefMCReg;
 }
 
 void GCNSubtarget::adjustSchedDependency(
@@ -545,6 +770,13 @@ void GCNSubtarget::adjustSchedDependency(
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
 
+  if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
+    Dep.setReg(Reg);
+  } else {
+    Dep = SDep(Def, SDep::Artificial);
+    return; // This is not a data dependency anymore.
+  }
+
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
     auto Reg = Dep.getReg();
@@ -552,6 +784,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(DefI->getParent()->instr_end());
     unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->modifiesRegister(Reg, TRI))
         Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *I);
       else if (Lat)
@@ -565,6 +799,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(UseI->getParent()->instr_end());
     unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *DefI);
     for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->readsRegister(Reg, TRI))
         break;
       --Lat;
@@ -606,7 +842,7 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
     KernargSegmentPtr = true;
 
   bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
-  if (IsAmdHsaOrMesa && !ST.enableFlatScratch())
+  if (IsAmdHsaOrMesa && !ST.hasFlatScratchEnabled())
     PrivateSegmentBuffer = true;
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
@@ -624,13 +860,13 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   }
 
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
-      (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch()
-      // is false.
-      (ST.enableFlatScratch() ||
+      (IsAmdHsaOrMesa || ST.hasFlatScratchEnabled()) &&
+      // FlatScratchInit cannot be true for graphics CC if
+      // hasFlatScratchEnabled() is false.
+      (ST.hasFlatScratchEnabled() ||
        (!AMDGPU::isGraphics(CC) &&
         !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
-      !ST.flatScratchIsArchitected()) {
+      !ST.hasArchitectedFlatScratch()) {
     FlatScratchInit = true;
   }
 

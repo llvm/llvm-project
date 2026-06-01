@@ -130,6 +130,12 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagInheritTCCFromParent =
         (1u << 12), ///< Don't make the inferior responsible for its own TCC
                     ///< permissions but instead inherit them from its parent.
+    eLaunchFlagMemoryTagging =
+        (1u << 13), ///< Launch process with memory tagging explicitly enabled.
+    eLaunchFlagUsePipes =
+        (1u << 14), ///< Use anonymous pipes for stdio instead of a ConPTY on
+                    ///< Windows. Useful when terminal emulation is not needed
+                    ///< (e.g. lldb-dap internalConsole mode).
 };
 
 /// Thread Run Modes.
@@ -198,11 +204,15 @@ enum Format {
                          ///< character arrays that can contain non printable
                          ///< characters
   eFormatAddressInfo,    ///< Describe what an address points to (func + offset
-                      ///< with file/line, symbol + offset, data, etc)
-  eFormatHexFloat,    ///< ISO C99 hex float string
-  eFormatInstruction, ///< Disassemble an opcode
-  eFormatVoid,        ///< Do not print this
+                         ///< with file/line, symbol + offset, data, etc)
+  eFormatHexFloat,       ///< ISO C99 hex float string
+  eFormatInstruction,    ///< Disassemble an opcode
+  eFormatVoid,           ///< Do not print this
   eFormatUnicode8,
+  eFormatFloat128, ///< Disambiguate between 128-bit `long double` (which uses
+                   ///< `eFormatFloat`) and `__float128` (which uses
+                   ///< `eFormatFloat128`). If the value being formatted is not
+                   ///< 128 bits, then this is identical to `eFormatFloat`.
   kNumFormats
 };
 
@@ -320,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable
@@ -333,6 +343,12 @@ enum ValueType {
   eValueTypeVTable = 9,              ///< virtual function table
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
+
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
 
 /// Token size/granularities for Input Readers.
 
@@ -518,6 +534,7 @@ enum LanguageType {
   eLanguageTypeAssembly = 0x0031,
   eLanguageTypeC_sharp = 0x0032,
   eLanguageTypeMojo = 0x0033,
+  eLanguageTypeLastStandardLanguage = eLanguageTypeMojo,
 
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
@@ -525,8 +542,6 @@ enum LanguageType {
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
   eLanguageTypeMipsAssembler, ///< Mips_Assembler.
-  // Mojo will move to the common list of languages once the DWARF committee
-  // creates a language code for it.
   eNumLanguageTypes
 };
 
@@ -537,7 +552,14 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
   eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
+  eInstrumentationRuntimeTypeBoundsSafety = 0x0006,
   eNumInstrumentationRuntimeTypes
+};
+
+enum PluginDomainKind {
+  ePluginDomainKindGlobal = 0x1,
+  ePluginDomainKindDebugger = 0x2,
+  ePluginDomainKindTarget = 0x4,
 };
 
 enum DynamicValueType {
@@ -586,6 +608,7 @@ enum CommandArgumentType {
   eArgTypeFilename,
   eArgTypeFormat,
   eArgTypeFrameIndex,
+  eArgTypeFrameProviderIDRange,
   eArgTypeFullName,
   eArgTypeFunctionName,
   eArgTypeFunctionOrSymbol,
@@ -663,6 +686,11 @@ enum CommandArgumentType {
   eArgTypeModule,
   eArgTypeCPUName,
   eArgTypeCPUFeatures,
+  eArgTypeManagedPlugin,
+  eArgTypeProtocol,
+  eArgTypeExceptionStage,
+  eArgTypeNameMatchStyle,
+  eArgTypePluginDomain,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -772,6 +800,7 @@ enum SectionType {
   eSectionTypeLLDBTypeSummaries,
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
+  eSectionTypeWasmName,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -837,7 +866,8 @@ enum BasicType {
   eBasicTypeObjCClass,
   eBasicTypeObjCSel,
   eBasicTypeNullPtr,
-  eBasicTypeOther
+  eBasicTypeOther,
+  eBasicTypeFloat128
 };
 
 /// Deprecated
@@ -914,7 +944,8 @@ FLAGS_ENUM(TypeOptions){eTypeOptionNone = (0u),
                         eTypeOptionHideNames = (1u << 6),
                         eTypeOptionNonCacheable = (1u << 7),
                         eTypeOptionHideEmptyAggregates = (1u << 8),
-                        eTypeOptionFrontEndWantsDereference = (1u << 9)};
+                        eTypeOptionFrontEndWantsDereference = (1u << 9),
+                        eTypeOptionCustomSubscripting = (1u << 10)};
 
 /// This is the return value for frame comparisons.  If you are comparing frame
 /// A to frame B the following cases arise:
@@ -1204,7 +1235,14 @@ FLAGS_ENUM(CommandFlags){
     ///
     /// Verifies that the process is being traced by a Trace plug-in, if it
     /// isn't the command will fail with an appropriate error message.
-    eCommandProcessMustBeTraced = (1u << 8)};
+    eCommandProcessMustBeTraced = (1u << 8),
+    /// eCommandAllowsDummyTarget
+    ///
+    /// Indicates that the command can legitimately operate on the dummy target
+    /// (e.g. `breakpoint set` priming future targets). Without this flag,
+    /// CommandObject::GetTarget filters the dummy target out and returns null
+    /// when no real target is selected.
+    eCommandAllowsDummyTarget = (1u << 9)};
 
 /// Whether a summary should cap how much data it returns to users or not.
 enum TypeSummaryCapping {
@@ -1319,10 +1357,11 @@ enum CompletionType {
   eTypeCategoryNameCompletion = (1ul << 24),
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
+  eManagedPluginCompletion = (1ul << 27),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 27)
+  eTerminatorCompletion = (1ul << 28)
 };
 
 /// Specifies if children need to be re-computed
@@ -1338,6 +1377,13 @@ enum SymbolDownload {
   eSymbolDownloadOff = 0,
   eSymbolDownloadBackground = 1,
   eSymbolDownloadForeground = 2,
+};
+
+enum SymbolSharedCacheUse {
+  eSymbolSharedCacheUseHostLLDBMemory = 1,
+  eSymbolSharedCacheUseHostSharedCache = 2,
+  eSymbolSharedCacheUseHostAndInferiorSharedCache = 3,
+  eSymbolSharedCacheUseInferiorSharedCacheOnly = 4,
 };
 
 /// Used in the SBProcess AddressMask/FixAddress methods.
@@ -1389,6 +1435,48 @@ enum StopDisassemblyType {
   eStopDisassemblyTypeNoDebugInfo,
   eStopDisassemblyTypeNoSource,
   eStopDisassemblyTypeAlways
+};
+
+enum ExceptionStage {
+  eExceptionStageCreate = (1 << 0),
+  eExceptionStageThrow = (1 << 1),
+  eExceptionStageReThrow = (1 << 2),
+  eExceptionStageCatch = (1 << 3)
+};
+
+enum NameMatchStyle {
+  eNameMatchStyleAuto = eFunctionNameTypeAuto,
+  eNameMatchStyleFull = eFunctionNameTypeFull,
+  eNameMatchStyleBase = eFunctionNameTypeBase,
+  eNameMatchStyleMethod = eFunctionNameTypeMethod,
+  eNameMatchStyleSelector = eFunctionNameTypeSelector,
+  eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
+};
+
+/// Data Inspection Language (DIL) evaluation modes.
+/// DIL will only attempt evaluating expressions that contain tokens
+/// allowed by a selected mode.
+enum DILMode {
+  /// Allowed: identifiers, operators: '.'.
+  eDILModeSimple,
+  /// Allowed: identifiers, integers, operators: '.', '->', '*', '&', '[]'.
+  eDILModeLegacy,
+  /// Allowed: everything supported by DIL.
+  /// \see lldb/docs/dil-expr-lang.ebnf
+  eDILModeFull
+};
+
+/// When the Process plugin can retrieve information
+/// about all binaries loaded in the target process,
+/// or given a list of binary load addresses, this
+/// enum specifies how much information needed from
+/// the Process plugin; there may be performance reasons
+/// to limit the amount of information returned.
+enum BinaryInformationLevel {
+  eBinaryInformationLevelAddrOnly,
+  eBinaryInformationLevelAddrName,
+  eBinaryInformationLevelAddrNameUUID,
+  eBinaryInformationLevelFull
 };
 
 } // namespace lldb

@@ -80,7 +80,6 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
   store <16 x i8> %c, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1)
 
 define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v8i16:
@@ -157,7 +156,6 @@ define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1)
 
 define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v4i32:
@@ -240,7 +238,6 @@ define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
 
 define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RV32I-LABEL: ctlz_v2i64:
@@ -305,10 +302,10 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -393,7 +390,6 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
 
 define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v32i8:
@@ -471,7 +467,6 @@ define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
   store <32 x i8> %c, ptr %x
   ret void
 }
-declare <32 x i8> @llvm.ctlz.v32i8(<32 x i8>, i1)
 
 define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v16i16:
@@ -548,7 +543,6 @@ define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.ctlz.v16i16(<16 x i16>, i1)
 
 define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v8i32:
@@ -631,7 +625,6 @@ define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
   store <8 x i32> %c, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.ctlz.v8i32(<8 x i32>, i1)
 
 define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RV32I-LABEL: ctlz_v4i64:
@@ -696,10 +689,10 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -784,10 +777,9 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
   store <4 x i64> %c, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1)
 
-define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v16i8:
+define void @ctlz_zero_poison_v16i8(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v16i8:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RVI-NEXT:    vle8.v v8, (a0)
@@ -813,7 +805,7 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse8.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v16i8:
+; RVF-LABEL: ctlz_zero_poison_v16i8:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RVF-NEXT:    vle8.v v8, (a0)
@@ -827,7 +819,7 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v16i8:
+; RVD-LABEL: ctlz_zero_poison_v16i8:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RVD-NEXT:    vle8.v v8, (a0)
@@ -841,7 +833,7 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v16i8:
+; ZVBB-LABEL: ctlz_zero_poison_v16i8:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; ZVBB-NEXT:    vle8.v v8, (a0)
@@ -855,8 +847,8 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v8i16:
+define void @ctlz_zero_poison_v8i16(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v8i16:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RVI-NEXT:    vle16.v v8, (a0)
@@ -891,7 +883,7 @@ define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse16.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v8i16:
+; RVF-LABEL: ctlz_zero_poison_v8i16:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RVF-NEXT:    vle16.v v10, (a0)
@@ -902,7 +894,7 @@ define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse16.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v8i16:
+; RVD-LABEL: ctlz_zero_poison_v8i16:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RVD-NEXT:    vle16.v v10, (a0)
@@ -913,7 +905,7 @@ define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse16.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v8i16:
+; ZVBB-LABEL: ctlz_zero_poison_v8i16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVBB-NEXT:    vle16.v v8, (a0)
@@ -927,8 +919,8 @@ define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v4i32:
+define void @ctlz_zero_poison_v4i32(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v4i32:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVI-NEXT:    vle32.v v8, (a0)
@@ -966,7 +958,7 @@ define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse32.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v4i32:
+; RVF-LABEL: ctlz_zero_poison_v4i32:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVF-NEXT:    vle32.v v8, (a0)
@@ -979,7 +971,7 @@ define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse32.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v4i32:
+; RVD-LABEL: ctlz_zero_poison_v4i32:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVD-NEXT:    vle32.v v10, (a0)
@@ -991,7 +983,7 @@ define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse32.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v4i32:
+; ZVBB-LABEL: ctlz_zero_poison_v4i32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVBB-NEXT:    vle32.v v8, (a0)
@@ -1005,8 +997,8 @@ define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
-; RV32I-LABEL: ctlz_zero_undef_v2i64:
+define void @ctlz_zero_poison_v2i64(ptr %x, ptr %y) nounwind {
+; RV32I-LABEL: ctlz_zero_poison_v2i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32I-NEXT:    vle64.v v8, (a0)
@@ -1060,7 +1052,7 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RV32I-NEXT:    vse64.v v8, (a0)
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: ctlz_zero_undef_v2i64:
+; RV64I-LABEL: ctlz_zero_poison_v2i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64I-NEXT:    vle64.v v8, (a0)
@@ -1068,10 +1060,10 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -1110,7 +1102,7 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    vse64.v v8, (a0)
 ; RV64I-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v2i64:
+; RVF-LABEL: ctlz_zero_poison_v2i64:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RVF-NEXT:    vle64.v v8, (a0)
@@ -1124,7 +1116,7 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse64.v v10, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v2i64:
+; RVD-LABEL: ctlz_zero_poison_v2i64:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RVD-NEXT:    vle64.v v8, (a0)
@@ -1138,7 +1130,7 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse64.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v2i64:
+; ZVBB-LABEL: ctlz_zero_poison_v2i64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; ZVBB-NEXT:    vle64.v v8, (a0)
@@ -1152,8 +1144,8 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v32i8:
+define void @ctlz_zero_poison_v32i8(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v32i8:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    li a1, 32
 ; RVI-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -1180,7 +1172,7 @@ define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse8.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v32i8:
+; RVF-LABEL: ctlz_zero_poison_v32i8:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    li a1, 32
 ; RVF-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
@@ -1195,7 +1187,7 @@ define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse8.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v32i8:
+; RVD-LABEL: ctlz_zero_poison_v32i8:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    li a1, 32
 ; RVD-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
@@ -1210,7 +1202,7 @@ define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse8.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v32i8:
+; ZVBB-LABEL: ctlz_zero_poison_v32i8:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    li a1, 32
 ; ZVBB-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
@@ -1225,8 +1217,8 @@ define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v16i16:
+define void @ctlz_zero_poison_v16i16(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v16i16:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RVI-NEXT:    vle16.v v8, (a0)
@@ -1261,7 +1253,7 @@ define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse16.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v16i16:
+; RVF-LABEL: ctlz_zero_poison_v16i16:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RVF-NEXT:    vle16.v v12, (a0)
@@ -1272,7 +1264,7 @@ define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse16.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v16i16:
+; RVD-LABEL: ctlz_zero_poison_v16i16:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RVD-NEXT:    vle16.v v12, (a0)
@@ -1283,7 +1275,7 @@ define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse16.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v16i16:
+; ZVBB-LABEL: ctlz_zero_poison_v16i16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVBB-NEXT:    vle16.v v8, (a0)
@@ -1297,8 +1289,8 @@ define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
-; RVI-LABEL: ctlz_zero_undef_v8i32:
+define void @ctlz_zero_poison_v8i32(ptr %x, ptr %y) nounwind {
+; RVI-LABEL: ctlz_zero_poison_v8i32:
 ; RVI:       # %bb.0:
 ; RVI-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVI-NEXT:    vle32.v v8, (a0)
@@ -1336,7 +1328,7 @@ define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
 ; RVI-NEXT:    vse32.v v8, (a0)
 ; RVI-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v8i32:
+; RVF-LABEL: ctlz_zero_poison_v8i32:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVF-NEXT:    vle32.v v8, (a0)
@@ -1349,7 +1341,7 @@ define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse32.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v8i32:
+; RVD-LABEL: ctlz_zero_poison_v8i32:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RVD-NEXT:    vle32.v v12, (a0)
@@ -1361,7 +1353,7 @@ define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse32.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v8i32:
+; ZVBB-LABEL: ctlz_zero_poison_v8i32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; ZVBB-NEXT:    vle32.v v8, (a0)
@@ -1375,8 +1367,8 @@ define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
   ret void
 }
 
-define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
-; RV32I-LABEL: ctlz_zero_undef_v4i64:
+define void @ctlz_zero_poison_v4i64(ptr %x, ptr %y) nounwind {
+; RV32I-LABEL: ctlz_zero_poison_v4i64:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32I-NEXT:    vle64.v v8, (a0)
@@ -1430,7 +1422,7 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RV32I-NEXT:    vse64.v v8, (a0)
 ; RV32I-NEXT:    ret
 ;
-; RV64I-LABEL: ctlz_zero_undef_v4i64:
+; RV64I-LABEL: ctlz_zero_poison_v4i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64I-NEXT:    vle64.v v8, (a0)
@@ -1438,10 +1430,10 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -1480,7 +1472,7 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    vse64.v v8, (a0)
 ; RV64I-NEXT:    ret
 ;
-; RVF-LABEL: ctlz_zero_undef_v4i64:
+; RVF-LABEL: ctlz_zero_poison_v4i64:
 ; RVF:       # %bb.0:
 ; RVF-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RVF-NEXT:    vle64.v v8, (a0)
@@ -1494,7 +1486,7 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RVF-NEXT:    vse64.v v8, (a0)
 ; RVF-NEXT:    ret
 ;
-; RVD-LABEL: ctlz_zero_undef_v4i64:
+; RVD-LABEL: ctlz_zero_poison_v4i64:
 ; RVD:       # %bb.0:
 ; RVD-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RVD-NEXT:    vle64.v v8, (a0)
@@ -1508,7 +1500,7 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RVD-NEXT:    vse64.v v8, (a0)
 ; RVD-NEXT:    ret
 ;
-; ZVBB-LABEL: ctlz_zero_undef_v4i64:
+; ZVBB-LABEL: ctlz_zero_poison_v4i64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; ZVBB-NEXT:    vle64.v v8, (a0)

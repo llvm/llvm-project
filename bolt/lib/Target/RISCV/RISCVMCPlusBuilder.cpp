@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -28,13 +28,21 @@ using namespace bolt;
 namespace {
 
 class RISCVMCPlusBuilder : public MCPlusBuilder {
+  bool isRV64() const { return STI->hasFeature(RISCV::Feature64Bit); }
+  unsigned regSize() const { return isRV64() ? 8 : 4; }
+  unsigned loadOpc() const { return isRV64() ? RISCV::LD : RISCV::LW; }
+  unsigned storeOpc() const { return isRV64() ? RISCV::SD : RISCV::SW; }
+  unsigned atomicAddOpc() const {
+    return isRV64() ? RISCV::AMOADD_D : RISCV::AMOADD_W;
+  }
+
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
-  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
-    const auto &RISCVExprA = cast<RISCVMCExpr>(A);
-    const auto &RISCVExprB = cast<RISCVMCExpr>(B);
+    const auto &RISCVExprA = cast<MCSpecifierExpr>(A);
+    const auto &RISCVExprB = cast<MCSpecifierExpr>(B);
     if (RISCVExprA.getSpecifier() != RISCVExprB.getSpecifier())
       return false;
 
@@ -171,8 +179,8 @@ public:
     (void)Result;
     assert(Result && "unimplemented branch");
 
-    Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    Inst.getOperand(SymOpIndex) =
+        MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   IndirectBranchType analyzeIndirectBranch(
@@ -233,8 +241,7 @@ public:
     Inst.setOpcode(RISCV::JAL);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
   }
 
   StringRef getTrapFillValue() const override {
@@ -245,9 +252,8 @@ public:
                   MCContext *Ctx) {
     Inst.setOpcode(Opcode);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        RISCVMCExpr::VK_CALL, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
+        MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -342,7 +348,7 @@ public:
   }
 
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    auto *RISCVExpr = dyn_cast<RISCVMCExpr>(Expr);
+    auto *RISCVExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (RISCVExpr && RISCVExpr->getSubExpr())
       return getTargetSymbol(RISCVExpr->getSubExpr());
 
@@ -380,7 +386,7 @@ public:
 
     assert(I != End);
     auto &LD = *I++;
-    assert(LD.getOpcode() == RISCV::LD);
+    assert(LD.getOpcode() == loadOpc());
     assert(LD.getOperand(0).getReg() == RISCV::X28);
     assert(LD.getOperand(1).getReg() == RISCV::X28);
 
@@ -435,19 +441,19 @@ public:
     case ELF::R_RISCV_TLS_GD_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_HI, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_PCREL_LO, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_LO, Ctx);
     case ELF::R_RISCV_HI20:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_HI, Ctx);
+      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_HI20, Ctx);
     case ELF::R_RISCV_LO12_I:
     case ELF::R_RISCV_LO12_S:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_LO, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return RISCVMCExpr::create(Expr, RISCVMCExpr::VK_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     }
   }
 
@@ -466,14 +472,14 @@ public:
       return false;
 
     const auto *ImmExpr = ImmOp.getExpr();
-    if (!isa<RISCVMCExpr>(ImmExpr))
+    if (!isa<MCSpecifierExpr>(ImmExpr))
       return false;
 
-    switch (cast<RISCVMCExpr>(ImmExpr)->getSpecifier()) {
+    switch (cast<MCSpecifierExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
-    case RISCVMCExpr::VK_CALL:
-    case RISCVMCExpr::VK_CALL_PLT:
+    case RISCV::S_CALL_PLT:
+    case ELF::R_RISCV_CALL_PLT:
       return true;
     }
   }
@@ -513,24 +519,24 @@ public:
 
   void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From,
                int64_t offset) const {
-    Inst = MCInstBuilder(RISCV::LD).addReg(To).addReg(From).addImm(offset);
+    Inst = MCInstBuilder(loadOpc()).addReg(To).addReg(From).addImm(offset);
   }
 
   void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To,
                 int64_t offset) const {
-    Inst = MCInstBuilder(RISCV::SD).addReg(From).addReg(To).addImm(offset);
+    Inst = MCInstBuilder(storeOpc()).addReg(From).addReg(To).addImm(offset);
   }
 
   void spillRegs(InstructionListType &Insts,
                  const SmallVector<unsigned> &Regs) const {
     Insts.emplace_back();
-    createStackPointerIncrement(Insts.back(), Regs.size() * 8);
+    createStackPointerIncrement(Insts.back(), Regs.size() * regSize());
 
     int64_t Offset = 0;
     for (auto Reg : Regs) {
       Insts.emplace_back();
       storeReg(Insts.back(), Reg, RISCV::X2, Offset);
-      Offset += 8;
+      Offset += regSize();
     }
   }
 
@@ -540,38 +546,42 @@ public:
     for (auto Reg : Regs) {
       Insts.emplace_back();
       loadReg(Insts.back(), Reg, RISCV::X2, Offset);
-      Offset += 8;
+      Offset += regSize();
     }
 
     Insts.emplace_back();
-    createStackPointerDecrement(Insts.back(), Regs.size() * 8);
+    createStackPointerDecrement(Insts.back(), Regs.size() * regSize());
   }
 
   void atomicAdd(MCInst &Inst, MCPhysReg RegAtomic, MCPhysReg RegTo,
                  MCPhysReg RegCnt) const {
-    Inst = MCInstBuilder(RISCV::AMOADD_D)
+    Inst = MCInstBuilder(atomicAddOpc())
                .addReg(RegAtomic)
                .addReg(RegTo)
                .addReg(RegCnt);
   }
 
-  InstructionListType createRegCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
-                                     const MCSymbol *Target,
+  InstructionListType createRegCmpJE(MCPhysReg RegNo, const MCSymbol *Target,
                                      MCContext *Ctx) const {
     InstructionListType Insts;
-    Insts.emplace_back(
-        MCInstBuilder(RISCV::SUB).addReg(RegTmp).addReg(RegNo).addReg(RegNo));
     Insts.emplace_back(MCInstBuilder(RISCV::BEQ)
                            .addReg(RegNo)
-                           .addReg(RegTmp)
-                           .addExpr(MCSymbolRefExpr::create(
-                               Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                           .addReg(RISCV::X0)
+                           .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Insts;
   }
 
   void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(RISCV::EBREAK);
+  }
+
+  void createNoop(MCInst &Inst) const override {
+    Inst.clear();
+    Inst = MCInstBuilder(RISCV::ADDI)
+               .addReg(RISCV::X0)
+               .addReg(RISCV::X0)
+               .addImm(0);
   }
 
   void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
@@ -630,9 +640,9 @@ public:
     return Insts;
   }
 
-  InstructionListType
-  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
-                       unsigned CodePointerSize) const override {
+  InstructionListType createInstrIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx, bool IsLeaf,
+                                           unsigned CodePointerSize) override {
     // We need 2 scratch registers: one for the target address (x10), and one
     // for the increment value (x11).
     // addi sp, sp, -16
@@ -664,14 +674,12 @@ public:
     if (IsTailCall) {
       Inst.addOperand(MCOperand::createReg(RISCV::X0));
       Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-          Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-          *Ctx, 0)));
+          Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
       convertJmpToTailCall(Inst);
     } else {
       Inst.addOperand(MCOperand::createReg(RISCV::X1));
       Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-          Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-          *Ctx, 0)));
+          Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     }
   }
 
@@ -718,7 +726,7 @@ public:
     Insts.emplace_back();
     loadReg(Insts.back(), RISCV::X10, RISCV::X10, 0);
     InstructionListType cmpJmp =
-        createRegCmpJE(RISCV::X10, RISCV::X11, IndCallHandler, Ctx);
+        createRegCmpJE(RISCV::X10, IndCallHandler, Ctx);
     Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
     Insts.emplace_back();
     createStackPointerIncrement(Insts.back(), 16);
@@ -784,7 +792,6 @@ public:
     Inst.setOpcode(RISCV::ADD);
     Inst.insert(Inst.begin(), MCOperand::createReg(Reg));
     Inst.insert(Inst.begin() + 1, MCOperand::createReg(RISCV::X0));
-    return;
   }
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
@@ -827,7 +834,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Code sequence used to enter indirect call instrumentation helper:
     //   addi  sp, sp, -0x10

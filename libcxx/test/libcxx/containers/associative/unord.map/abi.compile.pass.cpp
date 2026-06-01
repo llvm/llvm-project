@@ -12,8 +12,6 @@
 // unordered containers changes when bounded unique_ptr is enabled.
 // UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <unordered_map>
 
@@ -66,10 +64,68 @@ public:
   friend bool operator!=(final_small_iter_allocator, final_small_iter_allocator) { return false; }
 };
 
+struct allocator_base {};
+
+// Make sure that types with a common base type don't get broken. See https://llvm.org/PR154146
+template <class T>
+struct common_base_allocator : allocator_base {
+  using value_type = T;
+
+  common_base_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  common_base_allocator(common_base_allocator<U>) TEST_NOEXCEPT {}
+
+  T* allocate(std::size_t n);
+  void deallocate(T* p, std::size_t);
+
+  friend bool operator==(common_base_allocator, common_base_allocator) { return true; }
+  friend bool operator!=(common_base_allocator, common_base_allocator) { return false; }
+};
+
 template <class T, class Alloc>
 using unordered_map_alloc = std::unordered_map<T, T, std::hash<T>, std::equal_to<T>, Alloc>;
 
+struct user_struct {
+  unordered_map_alloc<int, common_base_allocator<std::pair<const int, int> > > v;
+  [[no_unique_address]] common_base_allocator<int> a;
+};
+
+struct TEST_ALIGNAS(32) AlignedHash {};
+struct FinalHash final {};
+struct NonEmptyHash final {
+  int i;
+  char c;
+};
+struct UnalignedEqualTo {};
+struct FinalEqualTo final {};
+struct NonEmptyEqualTo {
+  int i;
+  char c;
+};
+
+static_assert(std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, std::hash<int>, int> >::value,
+              "");
+static_assert(std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, AlignedHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, FinalHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_hasher<int, std::pair<const int, int>, NonEmptyHash, int> >::value,
+              "");
+
+static_assert(std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, std::hash<int>, int> >::value,
+              "");
+static_assert(std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, AlignedHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, FinalHash, int> >::value, "");
+static_assert(!std::is_empty<std::__unordered_map_equal<int, std::pair<const int, int>, NonEmptyHash, int> >::value,
+              "");
+
 #if __SIZE_WIDTH__ == 64
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
+static_assert(sizeof(user_struct) == 48, "");
+#  else
+static_assert(sizeof(user_struct) == 40, "");
+#  endif
+static_assert(TEST_ALIGNOF(user_struct) == 8, "");
 
 static_assert(sizeof(unordered_map_alloc<int, std::allocator<std::pair<const int, int> > >) == 40, "");
 static_assert(sizeof(unordered_map_alloc<int, min_allocator<std::pair<const int, int> > >) == 40, "");
@@ -96,14 +152,36 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, small_iter_allocator<std::p
 static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 4,
               "");
 
-struct TEST_ALIGNAS(32) AlignedHash {};
-struct UnalignedEqualTo {};
+#ifdef TEST_COMPILER_GCC
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 40, "");
+#else
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 48, "");
+#endif
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 48, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 48, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 56, "");
 
-// This part of the ABI has been broken between LLVM 19 and LLVM 20.
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 8, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 8, "");
+
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 64, "");
+#  else
+static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 96, "");
+#  endif
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
+static_assert(sizeof(user_struct) == 24, "");
+#  else
+static_assert(sizeof(user_struct) == 20, "");
+#  endif
+static_assert(TEST_ALIGNOF(user_struct) == 4, "");
 
 static_assert(sizeof(unordered_map_alloc<int, std::allocator<std::pair<const int, int> > >) == 20, "");
 static_assert(sizeof(unordered_map_alloc<int, min_allocator<std::pair<const int, int> > >) == 20, "");
@@ -130,10 +208,22 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, small_iter_allocator<std::p
 static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<std::pair<const char, char> > >) == 4,
               "");
 
-struct TEST_ALIGNAS(32) AlignedHash {};
-struct UnalignedEqualTo {};
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 24, "");
+static_assert(sizeof(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 28, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 32, "");
+static_assert(sizeof(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 36, "");
 
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, UnalignedEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, FinalHash, FinalEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, FinalEqualTo>) == 4, "");
+static_assert(TEST_ALIGNOF(std::unordered_map<int, int, NonEmptyHash, NonEmptyEqualTo>) == 4, "");
+
+// TODO: Fix the ABI for GCC as well once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121637 is fixed
+#  ifdef TEST_COMPILER_GCC
 static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 64);
+#  else
+static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 96);
+#  endif
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 32);
 
 #else

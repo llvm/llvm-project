@@ -12,16 +12,15 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class SILowerSGPRSpillsPass : public PassInfoMixin<SILowerSGPRSpillsPass> {
+class SILowerSGPRSpillsPass
+    : public OptionalPassInfoMixin<SILowerSGPRSpillsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getClearedProperties() const {
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setIsSSA().setNoVRegs();
   }
 };
 } // namespace llvm

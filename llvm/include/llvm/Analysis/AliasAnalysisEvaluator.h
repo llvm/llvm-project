@@ -25,12 +25,13 @@
 #define LLVM_ANALYSIS_ALIASANALYSISEVALUATOR_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class AAResults;
 class Function;
 
-class AAEvaluator : public PassInfoMixin<AAEvaluator> {
+class AAEvaluator : public OptionalPassInfoMixin<AAEvaluator> {
   int64_t FunctionCount = 0;
   int64_t NoAliasCount = 0, MayAliasCount = 0, PartialAliasCount = 0;
   int64_t MustAliasCount = 0;
@@ -47,10 +48,10 @@ public:
         ModRefCount(Arg.ModRefCount) {
     Arg.FunctionCount = 0;
   }
-  ~AAEvaluator();
+  LLVM_ABI ~AAEvaluator();
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
   void runInternal(Function &F, AAResults &AA);

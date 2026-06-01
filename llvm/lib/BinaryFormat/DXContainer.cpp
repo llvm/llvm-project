@@ -18,11 +18,104 @@
 using namespace llvm;
 using namespace llvm::dxbc;
 
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidParameterType(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+bool llvm::dxbc::isValidRangeType(uint32_t V) {
+  return V <= llvm::to_underlying(dxil::ResourceClass::LastEntry);
+}
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define FILTER(Val, Enum)                                                      \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidSamplerFilter(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum)                                        \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidAddress(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define COMPARISON_FUNC(Val, Enum)                                             \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidComparisonFunc(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+#define STATIC_BORDER_COLOR(Val, Enum)                                         \
+  case Val:                                                                    \
+    return true;
+bool llvm::dxbc::isValidBorderColor(uint32_t V) {
+  switch (V) {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+  }
+  return false;
+}
+
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
+      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
+}
+
+bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
+}
+
+bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
+}
+
 dxbc::PartType dxbc::parsePartType(StringRef S) {
 #define CONTAINER_PART(PartName) .Case(#PartName, PartType::PartName)
   return StringSwitch<dxbc::PartType>(S)
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       .Default(dxbc::PartType::Unknown);
+}
+
+bool dxbc::isDebugProgramPart(PartType PT) { return PT == PartType::ILDB; }
+
+const char *dxbc::getProgramPartName(bool IsDebug) {
+  return IsDebug ? "ILDB" : "DXIL";
 }
 
 bool ShaderHash::isPopulated() {
@@ -60,6 +153,44 @@ ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
   return ArrayRef(SigComponentTypes);
 }
 
+static const EnumEntry<RootFlags> RootFlagNames[] = {
+#define ROOT_SIGNATURE_FLAG(Val, Enum) {#Enum, RootFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootFlags>> dxbc::getRootFlags() {
+  return ArrayRef(RootFlagNames);
+}
+
+static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
+#define ROOT_DESCRIPTOR_FLAG(Val, Enum, Flag)                                  \
+  {#Enum, RootDescriptorFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootDescriptorFlags>> dxbc::getRootDescriptorFlags() {
+  return ArrayRef(RootDescriptorFlagNames);
+}
+
+static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
+#define DESCRIPTOR_RANGE_FLAG(Val, Enum, Flag)                                 \
+  {#Enum, DescriptorRangeFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<DescriptorRangeFlags>> dxbc::getDescriptorRangeFlags() {
+  return ArrayRef(DescriptorRangeFlagNames);
+}
+
+static const EnumEntry<StaticSamplerFlags> StaticSamplerFlagNames[] = {
+#define STATIC_SAMPLER_FLAG(Val, Enum, Flag) {#Enum, StaticSamplerFlags::Enum},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticSamplerFlags>> dxbc::getStaticSamplerFlags() {
+  return ArrayRef(StaticSamplerFlagNames);
+}
+
 #define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
 
 static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
@@ -68,6 +199,46 @@ static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
 
 ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
   return ArrayRef(ShaderVisibilityValues);
+}
+
+#define FILTER(Val, Enum) {#Enum, SamplerFilter::Enum},
+
+static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SamplerFilter>> dxbc::getSamplerFilters() {
+  return ArrayRef(SamplerFilterNames);
+}
+
+#define TEXTURE_ADDRESS_MODE(Val, Enum) {#Enum, TextureAddressMode::Enum},
+
+static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<TextureAddressMode>> dxbc::getTextureAddressModes() {
+  return ArrayRef(TextureAddressModeNames);
+}
+
+#define COMPARISON_FUNC(Val, Enum) {#Enum, ComparisonFunc::Enum},
+
+static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ComparisonFunc>> dxbc::getComparisonFuncs() {
+  return ArrayRef(ComparisonFuncNames);
+}
+
+#define STATIC_BORDER_COLOR(Val, Enum) {#Enum, StaticBorderColor::Enum},
+
+static const EnumEntry<StaticBorderColor> StaticBorderColorValues[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<StaticBorderColor>> dxbc::getStaticBorderColors() {
+  return ArrayRef(StaticBorderColorValues);
 }
 
 #define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},

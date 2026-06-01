@@ -21,27 +21,27 @@ using namespace clang;
 ProgramPointTag::~ProgramPointTag() {}
 
 ProgramPoint ProgramPoint::getProgramPoint(const Stmt *S, ProgramPoint::Kind K,
-                                           const LocationContext *LC,
-                                           const ProgramPointTag *tag){
+                                           const StackFrame *SF,
+                                           const ProgramPointTag *tag) {
   switch (K) {
     default:
       llvm_unreachable("Unhandled ProgramPoint kind");
     case ProgramPoint::PreStmtKind:
-      return PreStmt(S, LC, tag);
+      return PreStmt(S, SF, tag);
     case ProgramPoint::PostStmtKind:
-      return PostStmt(S, LC, tag);
+      return PostStmt(S, SF, tag);
     case ProgramPoint::PreLoadKind:
-      return PreLoad(S, LC, tag);
+      return PreLoad(S, SF, tag);
     case ProgramPoint::PostLoadKind:
-      return PostLoad(S, LC, tag);
+      return PostLoad(S, SF, tag);
     case ProgramPoint::PreStoreKind:
-      return PreStore(S, LC, tag);
+      return PreStore(S, SF, tag);
     case ProgramPoint::PostLValueKind:
-      return PostLValue(S, LC, tag);
+      return PostLValue(S, SF, tag);
     case ProgramPoint::PostStmtPurgeDeadSymbolsKind:
-      return PostStmtPurgeDeadSymbols(S, LC, tag);
+      return PostStmtPurgeDeadSymbols(S, SF, tag);
     case ProgramPoint::PreStmtPurgeDeadSymbolsKind:
-      return PreStmtPurgeDeadSymbols(S, LC, tag);
+      return PreStmtPurgeDeadSymbols(S, SF, tag);
   }
 }
 
@@ -166,7 +166,7 @@ std::optional<SourceLocation> ProgramPoint::getSourceLocation() const {
 
 void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   const ASTContext &Context =
-      getLocationContext()->getAnalysisDeclContext()->getASTContext();
+      getStackFrame()->getAnalysisDeclContext()->getASTContext();
   const SourceManager &SM = Context.getSourceManager();
   const PrintingPolicy &PP = Context.getPrintingPolicy();
   const bool AddQuotes = true;
@@ -199,7 +199,7 @@ void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {
   case ProgramPoint::CallEnterKind:
     Out << "CallEnter\", \"callee_decl\": \"";
     Out << AnalysisDeclContext::getFunctionName(
-               castAs<CallEnter>().getCalleeContext()->getDecl())
+               castAs<CallEnter>().getCalleeStackFrame()->getDecl())
         << '\"';
     break;
   case ProgramPoint::CallExitBeginKind:
@@ -357,6 +357,4 @@ SimpleProgramPointTag::SimpleProgramPointTag(StringRef MsgProvider,
                                              StringRef Msg)
   : Desc((MsgProvider + " : " + Msg).str()) {}
 
-StringRef SimpleProgramPointTag::getTagDescription() const {
-  return Desc;
-}
+StringRef SimpleProgramPointTag::getDebugTag() const { return Desc; }

@@ -21,7 +21,7 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 namespace llvm {
-class BPFTTIImpl : public BasicTTIImplBase<BPFTTIImpl> {
+class BPFTTIImpl final : public BasicTTIImplBase<BPFTTIImpl> {
   typedef BasicTTIImplBase<BPFTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -79,8 +79,6 @@ public:
     Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
     return Options;
   }
-
-  unsigned getMaxNumArgs() const override { return 5; }
 };
 
 } // end namespace llvm

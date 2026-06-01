@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::CIRGen;
 
@@ -17,9 +21,10 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
   const auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
-    const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
-    return create<cir::CastOp>(loc, flatPtrTy, cir::CastKind::array_to_ptrdecay,
-                               arrayPtr);
+    const cir::PointerType flatPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
+    return cir::CastOp::create(*this, loc, flatPtrTy,
+                               cir::CastKind::array_to_ptrdecay, arrayPtr);
   }
 
   assert(arrayPtrTy.getPointee() == eltTy &&
@@ -32,9 +37,191 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
                                              mlir::Value arrayPtr,
                                              mlir::Type eltTy, mlir::Value idx,
                                              bool shouldDecay) {
+  auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(arrayPtr.getType());
+  assert(arrayPtrTy && "expected pointer type");
+  // If the array pointer is not decayed, emit a GetElementOp.
+  auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  assert(mlir::isa<cir::IntType>(idx.getType()) &&
+         cir::isValidFundamentalIntWidth(
+             mlir::cast<cir::IntType>(idx.getType()).getWidth()));
+
+  if (shouldDecay && arrayTy && arrayTy == eltTy) {
+    auto eltPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
+    return cir::GetElementOp::create(*this, arrayLocEnd, eltPtrTy, arrayPtr,
+                                     idx);
+  }
+
+  // If we don't have sufficient type information, emit a PtrStrideOp.
   mlir::Value basePtr = arrayPtr;
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
   const mlir::Type flatPtrTy = basePtr.getType();
-  return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
+  return cir::PtrStrideOp::create(*this, arrayLocEnd, flatPtrTy, basePtr, idx);
+}
+
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APSInt intVal) {
+  bool isSigned = intVal.isSigned();
+  unsigned width = intVal.getBitWidth();
+  cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
+  return getConstInt(loc, t,
+                     isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
+}
+
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
+                                             llvm::APInt intVal,
+                                             bool isUnsigned) {
+  return getConstInt(loc, llvm::APSInt(intVal, isUnsigned));
+}
+
+cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
+                                             uint64_t c) {
+  assert(mlir::isa<cir::IntType>(t) && "expected cir::IntType");
+  return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(t, c));
+}
+
+cir::ConstantOp
+clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
+                                           llvm::APFloat fpVal) {
+  assert(mlir::isa<cir::FPTypeInterface>(t) && "expected floating point type");
+  return cir::ConstantOp::create(*this, loc, cir::FPAttr::get(t, fpVal));
+}
+
+void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
+    int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+    llvm::SmallVectorImpl<int64_t> &indices) {
+  if (!offset)
+    return;
+
+  // Compute floor-division and a non-negative remainder. A negative flat
+  // offset (e.g. from a pointer one element before the start of an array)
+  // must translate to a negative array index with a non-negative remainder
+  // so that the recursive call can descend into the element type without
+  // a negative offset flowing into the record case below.
+  auto getIndexAndNewOffset =
+      [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
+    int64_t divRet = offset / eltSize;
+    int64_t modRet = offset % eltSize;
+    if (modRet < 0) {
+      divRet -= 1;
+      modRet += eltSize;
+    }
+    return {divRet, modRet};
+  };
+
+  mlir::Type subType =
+      llvm::TypeSwitch<mlir::Type, mlir::Type>(ty)
+          .Case<cir::ArrayType>([&](auto arrayTy) {
+            int64_t eltSize = layout.getTypeAllocSize(arrayTy.getElementType());
+            const auto [index, newOffset] =
+                getIndexAndNewOffset(offset, eltSize);
+            indices.push_back(index);
+            offset = newOffset;
+            return arrayTy.getElementType();
+          })
+          .Case<cir::RecordType>([&](auto recordTy) {
+            ArrayRef<mlir::Type> elts = recordTy.getMembers();
+            int64_t pos = 0;
+            for (size_t i = 0; i < elts.size(); ++i) {
+              int64_t eltSize =
+                  (int64_t)layout.getTypeAllocSize(elts[i]).getFixedValue();
+              unsigned alignMask = layout.getABITypeAlign(elts[i]).value() - 1;
+              if (recordTy.getPacked())
+                alignMask = 0;
+              // Union's fields have the same offset, so no need to change pos
+              // here, we just need to find eltSize that is greater then the
+              // required offset. The same is true for the similar union type
+              // check below
+              if (!recordTy.isUnion())
+                pos = (pos + alignMask) & ~alignMask;
+              assert(offset >= 0);
+              if (offset < pos + eltSize) {
+                indices.push_back(i);
+                offset -= pos;
+                return elts[i];
+              }
+              // No need to update pos here, see the comment above.
+              if (!recordTy.isUnion())
+                pos += eltSize;
+            }
+            llvm_unreachable("offset was not found within the record");
+          })
+          .Default([](mlir::Type otherTy) {
+            llvm_unreachable("unexpected type");
+            return otherTy; // Even though this is unreachable, we need to
+                            // return a type to satisfy the return type of the
+                            // lambda.
+          });
+
+  assert(subType);
+  computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+}
+
+uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
+    const cir::CIRDataLayout &layout, mlir::Type ty,
+    llvm::ArrayRef<int64_t> indices) {
+  int64_t offset = 0;
+  for (int64_t idx : indices) {
+    if (auto recordTy = dyn_cast<cir::RecordType>(ty)) {
+      offset += recordTy.getElementOffset(layout.layout, idx);
+      const llvm::Align tyAlign = llvm::Align(
+          recordTy.getPacked() ? 1 : layout.layout.getTypeABIAlignment(ty));
+      offset = llvm::alignTo(offset, tyAlign);
+      assert(idx < (int64_t)recordTy.getMembers().size());
+      ty = recordTy.getMembers()[idx];
+    } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
+      ty = arrayTy.getElementType();
+      offset += layout.getTypeAllocSize(ty) * idx;
+    } else {
+      llvm_unreachable("unexpected type");
+    }
+  }
+  return offset;
+}
+
+cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
+    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
+  assert(!cir::MissingFeatures::astRecordDeclAttr());
+  llvm::SmallVector<mlir::Type> members;
+  members.reserve(fields.size());
+  llvm::transform(fields, std::back_inserter(members),
+                  [](mlir::Attribute attr) {
+                    return mlir::cast<mlir::TypedAttr>(attr).getType();
+                  });
+
+  if (name.empty())
+    return getAnonRecordTy(members, packed, padded);
+
+  return getCompleteNamedRecordType(members, packed, padded, name);
+}
+
+mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
+    mlir::ArrayAttr arrayAttr, bool packed, bool padded, mlir::Type type) {
+  auto recordTy = mlir::cast_or_null<cir::RecordType>(type);
+
+  // Record type not specified: create anon record type from members.
+  if (!recordTy) {
+    recordTy = getCompleteRecordType(arrayAttr, packed, padded);
+  }
+
+  // Return zero or anonymous constant record.
+  const bool isZero = llvm::all_of(
+      arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });
+  if (isZero)
+    return cir::ZeroAttr::get(recordTy);
+  return cir::ConstRecordAttr::get(recordTy, arrayAttr);
+}
+
+// This can't be defined in Address.h because that file is included by
+// CIRGenBuilder.h
+Address Address::withElementType(CIRGenBuilderTy &builder,
+                                 mlir::Type elemTy) const {
+  assert(!cir::MissingFeatures::addressOffset());
+  assert(!cir::MissingFeatures::addressIsKnownNonNull());
+  assert(!cir::MissingFeatures::addressPointerAuthInfo());
+
+  return Address(builder.createPtrBitcast(getBasePointer(), elemTy), elemTy,
+                 getAlignment());
 }

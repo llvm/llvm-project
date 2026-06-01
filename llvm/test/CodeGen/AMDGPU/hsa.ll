@@ -43,7 +43,7 @@
 ; ELF:   00E0: 6E616D65 A673696D 706C65BB 2E707269
 ; ELF:   00F0: 76617465 5F736567 6D656E74 5F666978
 ; ELF:   0100: 65645F73 697A6500 AB2E7367 70725F63
-; ELF:   0110: 6F756E74 0EB12E73 6770725F 7370696C
+; ELF:   0110: 6F756E74 10B12E73 6770725F 7370696C
 ; ELF:   0120: 6C5F636F 756E7400 A72E7379 6D626F6C
 ; ELF:   0130: A973696D 706C652E 6B64AB2E 76677072
 ; ELF:   0140: 5F636F75 6E7403B1 2E766770 725F7370
@@ -59,7 +59,7 @@
 ; ELF:   01E0: 73696D70 6C655F6E 6F5F6B65 726E6172
 ; ELF:   01F0: 6773BB2E 70726976 6174655F 7365676D
 ; ELF:   0200: 656E745F 66697865 645F7369 7A6500AB
-; ELF:   0210: 2E736770 725F636F 756E740C B12E7367
+; ELF:   0210: 2E736770 725F636F 756E740E B12E7367
 ; ELF:   0220: 70725F73 70696C6C 5F636F75 6E7400A7
 ; ELF:   0230: 2E73796D 626F6CB5 73696D70 6C655F6E
 ; ELF:   0240: 6F5F6B65 726E6172 67732E6B 64AB2E76
@@ -96,15 +96,18 @@
 ; PRE-GFX10: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}
 ; GFX10: global_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, off
 
+; HSA: s_endpgm
+; HSA-NEXT: .Lfunc_end0:
+; HSA-NEXT: .size   simple, .Lfunc_end0-simple
+
+; HSA: .section .rodata,"a",@progbits
+
 ; HSA: .amdhsa_user_sgpr_private_segment_buffer 1
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 
 ; PRE-GFX10-NOT: .amdhsa_wavefront_size32
 ; GFX10-W32: .amdhsa_wavefront_size32 1
 ; GFX10-W64: .amdhsa_wavefront_size32 0
-
-; HSA: .Lfunc_end0:
-; HSA: .size   simple, .Lfunc_end0-simple
 
 define amdgpu_kernel void @simple(ptr addrspace(1) %out) #0 {
 entry:

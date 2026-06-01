@@ -12,9 +12,7 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
-#include "CIRGenOpenACCClause.h"
 
-#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -24,13 +22,43 @@ using namespace clang::CIRGen;
 using namespace cir;
 using namespace mlir::acc;
 
+void CIRGenFunction::updateLoopOpParallelism(mlir::acc::LoopOp &op,
+                                             bool isOrphan,
+                                             OpenACCDirectiveKind dk) {
+  // Check that at least one of auto, independent, or seq is present
+  // for the device-independent default clauses.
+  if (op.hasParallelismFlag(mlir::acc::DeviceType::None))
+    return;
+
+  switch (dk) {
+  default:
+    llvm_unreachable("Invalid parent directive kind");
+  case OpenACCDirectiveKind::Invalid:
+  case OpenACCDirectiveKind::Parallel:
+  case OpenACCDirectiveKind::ParallelLoop:
+    op.addIndependent(builder.getContext(), {});
+    return;
+  case OpenACCDirectiveKind::Kernels:
+  case OpenACCDirectiveKind::KernelsLoop:
+    op.addAuto(builder.getContext(), {});
+    return;
+  case OpenACCDirectiveKind::Serial:
+  case OpenACCDirectiveKind::SerialLoop:
+    if (op.hasDefaultGangWorkerVector())
+      op.addAuto(builder.getContext(), {});
+    else
+      op.addSeq(builder.getContext(), {});
+    return;
+  };
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = builder.create<LoopOp>(start, retTy, operands);
+  auto op = LoopOp::create(builder, start, retTy, operands);
 
   // TODO(OpenACC): In the future we are going to need to come up with a
   // transformation here that can teach the acc.loop how to figure out the
@@ -89,15 +117,10 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   //
 
   // Emit all clauses.
-  {
-    mlir::OpBuilder::InsertionGuard guardCase(builder);
-    // Sets insertion point before the 'op', since every new expression needs to
-    // be before the operation.
-    builder.setInsertionPoint(op);
-    makeClauseEmitter(op, *this, builder, s.getDirectiveKind(),
-                      s.getDirectiveLoc())
-        .VisitClauseList(s.clauses());
-  }
+  emitOpenACCClauses(op, s.getDirectiveKind(), s.clauses());
+
+  updateLoopOpParallelism(op, s.isOrphanedLoopConstruct(),
+                          s.getParentComputeConstructKind());
 
   mlir::LogicalResult stmtRes = mlir::success();
   // Emit body.
@@ -106,9 +129,10 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPointToEnd(&block);
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
+    ActiveOpenACCLoopRAII activeLoop{*this, &op};
 
     stmtRes = emitStmt(s.getLoop(), /*useCurrentScope=*/true);
-    builder.create<mlir::acc::YieldOp>(end);
+    mlir::acc::YieldOp::create(builder, end);
   }
 
   return stmtRes;

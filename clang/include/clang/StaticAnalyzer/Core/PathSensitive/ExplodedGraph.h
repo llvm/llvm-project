@@ -64,13 +64,9 @@ class ExplodedGraph;
 // successors to it at any time after creating it.
 
 class ExplodedNode : public llvm::FoldingSetNode {
-  friend class BranchNodeBuilder;
   friend class CoreEngine;
-  friend class EndOfFunctionNodeBuilder;
   friend class ExplodedGraph;
-  friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
-  friend class SwitchNodeBuilder;
 
   /// Efficiently stores a list of ExplodedNodes, or an optional flag.
   ///
@@ -144,26 +140,22 @@ public:
   /// getLocation - Returns the edge associated with the given node.
   ProgramPoint getLocation() const { return Location; }
 
-  const LocationContext *getLocationContext() const {
-    return getLocation().getLocationContext();
-  }
-
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocation().getStackFrame();
   }
 
-  const Decl &getCodeDecl() const { return *getLocationContext()->getDecl(); }
+  const Decl &getCodeDecl() const { return *getStackFrame()->getDecl(); }
 
-  CFG &getCFG() const { return *getLocationContext()->getCFG(); }
+  CFG &getCFG() const { return *getStackFrame()->getCFG(); }
 
   const CFGBlock *getCFGBlock() const;
 
   const ParentMap &getParentMap() const {
-    return getLocationContext()->getParentMap();
+    return getStackFrame()->getParentMap();
   }
 
   template <typename T> T &getAnalysis() const {
-    return *getLocationContext()->getAnalysis<T>();
+    return *getStackFrame()->getAnalysis<T>();
   }
 
   const ProgramStateRef &getState() const { return State; }
@@ -173,8 +165,8 @@ public:
   }
 
   /// Get the value of an arbitrary expression at this node.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getStackFrame());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID,
@@ -307,11 +299,9 @@ protected:
   // Type definitions.
   using NodeVector = std::vector<ExplodedNode *>;
 
-  /// The roots of the simulation graph. Usually there will be only
-  /// one, but clients are free to establish multiple subgraphs within a single
-  /// SimulGraph. Moreover, these subgraphs can often merge when paths from
-  /// different roots reach the same state at the same program location.
-  NodeVector Roots;
+  /// The root of the simulation graph. Can be nullptr if the graph is empty or
+  /// if it was populated by `createUncachedNode()`.
+  ExplodedNode *Root = nullptr;
 
   /// The nodes in the simulation graph which have been
   /// specially marked as the endpoint of an abstract simulation path.
@@ -345,31 +335,31 @@ public:
   ExplodedGraph();
   ~ExplodedGraph();
 
-  /// Retrieve the node associated with a (Location,State) pair,
-  ///  where the 'Location' is a ProgramPoint in the CFG.  If no node for
-  ///  this pair exists, it is created. IsNew is set to true if
-  ///  the node was freshly created.
+  /// Get the root node of the graph. This may return nullptr if the graph is
+  /// empty or under construction.
+  ExplodedNode *getRoot() const { return Root; }
+
+  /// Retrieve the node associated with a (Location, State) pair, where the
+  /// 'Location' is a ProgramPoint in the CFG. If no node for this pair exists,
+  /// it is created. IsNew is set to true if the node was freshly created.
   ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
                         bool IsSink = false,
                         bool* IsNew = nullptr);
 
-  /// Create a node for a (Location, State) pair,
-  ///  but don't store it for deduplication later.  This
-  ///  is useful when copying an already completed
-  ///  ExplodedGraph for further processing.
+  /// Create a node for a (Location, State) pair, but don't store it for
+  /// deduplication later. This is useful when copying some nodes from an
+  /// already completed ExplodedGraph for further processing.
   ExplodedNode *createUncachedNode(const ProgramPoint &L,
     ProgramStateRef State,
     int64_t Id,
     bool IsSink = false);
 
-  std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
-    return std::make_unique<ExplodedGraph>();
-  }
-
-  /// addRoot - Add an untyped node to the set of roots.
-  ExplodedNode *addRoot(ExplodedNode *V) {
-    Roots.push_back(V);
-    return V;
+  /// Mark a node as the root of the graph. Calling this is an error if the
+  /// graph already has a root node.
+  void designateAsRoot(ExplodedNode *V) {
+    assert(V && "Cannot designate nullptr as root!");
+    assert(!Root && "The graph already has a root, cannot designate another!");
+    Root = V;
   }
 
   /// addEndOfPath - Add an untyped node to the set of EOP nodes.
@@ -378,7 +368,6 @@ public:
     return V;
   }
 
-  unsigned num_roots() const { return Roots.size(); }
   unsigned num_eops() const { return EndNodes.size(); }
 
   bool empty() const { return NumNodes == 0; }
@@ -389,8 +378,6 @@ public:
   // Iterators.
   using NodeTy = ExplodedNode;
   using AllNodesTy = llvm::FoldingSet<ExplodedNode>;
-  using roots_iterator = NodeVector::iterator;
-  using const_roots_iterator = NodeVector::const_iterator;
   using eop_iterator = NodeVector::iterator;
   using const_eop_iterator = NodeVector::const_iterator;
   using node_iterator = AllNodesTy::iterator;
@@ -399,14 +386,6 @@ public:
   llvm::iterator_range<node_iterator> nodes() { return Nodes; }
 
   llvm::iterator_range<const_node_iterator> nodes() const { return Nodes; }
-
-  roots_iterator roots_begin() { return Roots.begin(); }
-
-  roots_iterator roots_end() { return Roots.end(); }
-
-  const_roots_iterator roots_begin() const { return Roots.begin(); }
-
-  const_roots_iterator roots_end() const { return Roots.end(); }
 
   eop_iterator eop_begin() { return EndNodes.begin(); }
 
@@ -455,21 +434,22 @@ private:
   void collectNode(ExplodedNode *node);
 };
 
+/// ExplodedNodeSet is a set of `ExplodedNode *` elements with the invariant
+/// that its elements cannot be nullpointers or sink nodes. Insertion of null
+/// or sink nodes is silently ignored (which is comfortable in many use cases).
+/// Note that `ExplodedNode *` is implicitly convertible to an
+/// `ExplodedNodeSet` containing 0 or 1 elements (where null pointers and sink
+/// nodes converted to the empty set).
+/// This type has set semantics (repeated insertions are ignored), but the
+/// iteration order is always the order of (first) insertion.
 class ExplodedNodeSet {
   using ImplTy = llvm::SmallSetVector<ExplodedNode *, 4>;
   ImplTy Impl;
 
 public:
-  ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !static_cast<ExplodedNode*>(N)->isSink());
-    Impl.insert(N);
-  }
+  ExplodedNodeSet(ExplodedNode *N) { insert(N); }
 
   ExplodedNodeSet() = default;
-
-  void Add(ExplodedNode *N) {
-    if (N && !static_cast<ExplodedNode*>(N)->isSink()) Impl.insert(N);
-  }
 
   using iterator = ImplTy::iterator;
   using const_iterator = ImplTy::const_iterator;
@@ -480,8 +460,14 @@ public:
 
   void clear() { Impl.clear(); }
 
+  void insert(ExplodedNode *N) {
+    if (N && !N->isSink())
+      Impl.insert(N);
+  }
+
   void insert(const ExplodedNodeSet &S) {
-    assert(&S != this);
+    if (&S == this)
+      return;
     if (empty())
       Impl = S.Impl;
     else
@@ -508,9 +494,7 @@ namespace llvm {
     using ChildIteratorType = clang::ento::ExplodedNode::succ_iterator;
     using nodes_iterator = llvm::df_iterator<GraphTy>;
 
-    static NodeRef getEntryNode(const GraphTy G) {
-      return *G->roots_begin();
-    }
+    static NodeRef getEntryNode(const GraphTy G) { return G->getRoot(); }
 
     static bool predecessorOfTrivial(NodeRef N) {
       return N->succ_size() == 1 && N->getFirstSucc()->isTrivial();

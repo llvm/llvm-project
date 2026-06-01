@@ -27,7 +27,8 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/Debuginfod/HTTPClient.h"
+#include "llvm/HTTP/HTTPClient.h"
+#include "llvm/HTTP/StreamedHTTPResponseHandler.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/CachePruning.h"
@@ -174,53 +175,6 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
                                      getDefaultDebuginfodTimeout());
 }
 
-namespace {
-
-/// A simple handler which streams the returned data to a cache file. The cache
-/// file is only created if a 200 OK status is observed.
-class StreamedHTTPResponseHandler : public HTTPResponseHandler {
-  using CreateStreamFn =
-      std::function<Expected<std::unique_ptr<CachedFileStream>>()>;
-  CreateStreamFn CreateStream;
-  HTTPClient &Client;
-  std::unique_ptr<CachedFileStream> FileStream;
-
-public:
-  StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
-      : CreateStream(CreateStream), Client(Client) {}
-
-  /// Must be called exactly once after the writes have been completed
-  /// but before the StreamedHTTPResponseHandler object is destroyed.
-  Error commit();
-
-  virtual ~StreamedHTTPResponseHandler() = default;
-
-  Error handleBodyChunk(StringRef BodyChunk) override;
-};
-
-} // namespace
-
-Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
-  if (!FileStream) {
-    unsigned Code = Client.responseCode();
-    if (Code && Code != 200)
-      return Error::success();
-    Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
-        CreateStream();
-    if (!FileStreamOrError)
-      return FileStreamOrError.takeError();
-    FileStream = std::move(*FileStreamOrError);
-  }
-  *FileStream->OS << BodyChunk;
-  return Error::success();
-}
-
-Error StreamedHTTPResponseHandler::commit() {
-  if (FileStream)
-    return FileStream->commit();
-  return Error::success();
-}
-
 // An over-accepting simplification of the HTTP RFC 7230 spec.
 static bool isHeader(StringRef S) {
   StringRef Name;
@@ -245,8 +199,7 @@ static SmallVector<std::string, 0> getHeaders() {
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
-    if (!Line.empty() && Line.back() == '\r')
-      Line = Line.drop_back();
+    Line.consume_back("\r");
     if (!isHeader(Line)) {
       if (!all_of(Line, llvm::isSpace))
         WithColor::warning()
@@ -321,7 +274,13 @@ Expected<std::string> getCachedOrDownloadArtifact(
         parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
     if (!PruningPolicyOrErr)
       return PruningPolicyOrErr.takeError();
-    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+
+    Expected<bool> PrunedOrErr =
+        pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+    // Log the error but continue execution: failure to prune the cache is not
+    // fatal.
+    if (!PrunedOrErr)
+      logAllUnhandledErrors(PrunedOrErr.takeError(), WithColor::warning());
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

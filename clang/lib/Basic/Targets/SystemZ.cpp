@@ -24,18 +24,23 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::SystemZ::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr llvm::StringTable BuiltinStrings =
-    CLANG_BUILTIN_STR_TABLE_START
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
-#include "clang/Basic/BuiltinsSystemZ.def"
-    ;
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
-#define BUILTIN CLANG_BUILTIN_ENTRY
-#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsSystemZ.def"
-});
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumBuiltins);
 
 const char *const SystemZTargetInfo::GCCRegNames[] = {
     "r0",  "r1",  "r2",  "r3",  "r4",  "r5",  "r6",  "r7",
@@ -99,6 +104,16 @@ bool SystemZTargetInfo::validateAsmConstraint(
   case 'T': // Likewise, plus an index
     Info.setAllowsMemory();
     return true;
+  case '@':
+    // CC condition changes.
+    if (StringRef(Name) == "@cc") {
+      Name += 2;
+      Info.setAllowsRegister();
+      // SystemZ has 2-bits CC, and hence Interval [0, 4).
+      Info.setOutputOperandBounds(0, 4);
+      return true;
+    }
+    return false;
   }
 }
 
@@ -161,6 +176,9 @@ unsigned SystemZTargetInfo::getMinGlobalAlign(uint64_t Size,
 
 void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
+  // Inline assembly supports SystemZ flag outputs.
+  Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
+
   Builder.defineMacro("__s390__");
   Builder.defineMacro("__s390x__");
   Builder.defineMacro("__zarch__");
@@ -188,15 +206,16 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
     std::string Str("0x");
     unsigned int Librel = 0x40000000;
     Librel |= V.getMajor() << 24;
-    Librel |= (V.getMinor() ? V.getMinor().value() : 1) << 16;
-    Librel |= V.getSubminor() ? V.getSubminor().value() : 0;
+    Librel |= V.getMinor().value_or(1) << 16;
+    Librel |= V.getSubminor().value_or(0);
     Str += llvm::utohexstr(Librel);
 
-    Builder.defineMacro("__TARGET_LIB__", Str.c_str());
+    Builder.defineMacro("__TARGET_LIB__", Str);
   }
 }
 
 llvm::SmallVector<Builtin::InfosShard>
 SystemZTargetInfo::getTargetBuiltins() const {
-  return {{&BuiltinStrings, BuiltinInfos}};
+  return {{&BuiltinStrings, BuiltinInfos},
+          {&BuiltinStrings, PrefixedBuiltinInfos, "__builtin_s390_"}};
 }

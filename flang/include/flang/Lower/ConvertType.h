@@ -23,6 +23,7 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Support/Fortran.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 namespace mlir {
@@ -118,6 +119,9 @@ public:
   /// Advance iterator to the last components of the current type parent.
   const Fortran::semantics::DerivedTypeSpec &advanceToParentType();
 
+  /// Get the parent component symbol for the current type.
+  const Fortran::semantics::Symbol *getParentComponent() const;
+
 private:
   void setCurrentType(const Fortran::semantics::DerivedTypeSpec &derived);
   const Fortran::semantics::DerivedTypeSpec *currentParentType = nullptr;
@@ -127,6 +131,13 @@ private:
   name_iterator componentIt{};
   name_iterator componentItEnd{};
 };
+
+mlir::arith::CmpIPredicate
+translateSignedRelational(Fortran::common::RelationalOperator rop);
+mlir::arith::CmpIPredicate
+translateUnsignedRelational(Fortran::common::RelationalOperator rop);
+mlir::arith::CmpFPredicate
+translateFloatRelational(Fortran::common::RelationalOperator rop);
 } // namespace lower
 } // namespace Fortran
 

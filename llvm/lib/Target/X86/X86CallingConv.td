@@ -832,6 +832,7 @@ def CC_X86_32_Common : CallingConv<[
   CCIfType<[f64], CCAssignToStack<8, 4>>,
 
   // Long doubles get slots whose size and alignment depends on the subtarget.
+  CCIfSubtarget<"isTargetDarwin()", CCIfType<[f80], CCAssignToStack<0, 4>>>,
   CCIfType<[f80], CCAssignToStack<0, 0>>,
 
   // Boolean vectors of AVX-512 are passed in SIMD registers.
@@ -857,6 +858,11 @@ def CC_X86_32_C : CallingConv<[
 
   // The 'nest' parameter, if any, is passed in ECX.
   CCIfNest<CCAssignToReg<[ECX]>>,
+
+  // i128 and fp128 need to be passed on the stack with a higher alignment than
+  // their legal types. Handle this with a custom function.
+  CCIfType<[i32],
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_32_I128_FP128">>>,
 
   // On swifttailcc pass swiftself in ECX.
   CCIfCC<"CallingConv::SwiftTail",
@@ -1027,6 +1033,11 @@ def CC_Intel_OCL_BI : CallingConv<[
 ]>;
 
 def CC_X86_64_Preserve_None : CallingConv<[
+  // Byval arguments must be passed on the stack as required by the x86-64 ABI. 
+  // This must come before the register assignment rules to prevent byval arguments 
+  // from being incorrectly assigned to registers, which would cause the required 
+  // caller-side copy to not be emitted.
+  CCIfByVal<CCPassByVal<8, 8>>,
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
   //   - RBP        frame pointer
@@ -1211,8 +1222,10 @@ def CSR_Win32_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_32_RegCall_NoSSE, E
 def CSR_Win32_CFGuard_Check       : CalleeSavedRegs<(add CSR_32_RegCall, ECX)>;
 def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                               (sequence "R%u", 10, 15))>;
-def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,                                  
+def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
                                               (sequence "XMM%u", 8, 15))>;
+def CSR_Win64_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, RCX)>;
+def CSR_Win64_CFGuard_Check       : CalleeSavedRegs<(add CSR_Win64_RegCall, RCX)>;
 def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               

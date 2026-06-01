@@ -19,7 +19,6 @@
 #include <cstddef>
 #include <climits>
 #include <mdspan>
-#include <span> // dynamic_extent
 
 void invalid_index_types() {
   // expected-error@*:* {{static assertion failed: extents::index_type must be a signed or unsigned integer type}}

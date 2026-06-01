@@ -141,7 +141,7 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    add v4.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v4.16b
 ; CHECK-NEXT:    str q4, [x0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    zip1 v2.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip2 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip1 v3.8b, v1.8b, v0.8b
@@ -278,8 +278,8 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    fmov s0, w13
 ; CHECK-NEXT:    mov v0.s[1], w10
 ; CHECK-NEXT:    ldr x10, [sp]
-; CHECK-NEXT:    stp x8, x9, [x10, #16]
 ; CHECK-NEXT:    stp x11, x12, [x10]
+; CHECK-NEXT:    stp x8, x9, [x10, #16]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret

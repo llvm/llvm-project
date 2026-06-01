@@ -173,7 +173,7 @@ namespace test73 {
 // CHECK-HIDDEN: @_ZN6Test143varE = external global
 // CHECK: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
 // CHECK-HIDDEN: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
-// CHECK: @_ZTVN6test701BE = external hidden unnamed_addr constant { [5 x ptr] }, align 8
+// CHECK: @_ZTVN6test701BE = external hidden constant { [5 x ptr] }, align 8
 // CHECK: @_ZTTN6test701BE = external hidden unnamed_addr constant [2 x ptr], align 8
 
 namespace test27 {
@@ -191,13 +191,13 @@ namespace test27 {
 
   void C<int>::D::g() {
   }
-  // CHECK: _ZTVN6test271CIiE1DE = unnamed_addr constant
-  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = unnamed_addr constant
+  // CHECK: _ZTVN6test271CIiE1DE = constant
+  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = constant
 }
 
-// CHECK: @_ZTVN5Test63fooE = linkonce_odr hidden unnamed_addr constant
+// CHECK: @_ZTVN5Test63fooE = linkonce_odr hidden constant
 
-// CHECK-HIDDEN: @_ZTVN6Test161AIcEE = external unnamed_addr constant
+// CHECK-HIDDEN: @_ZTVN6Test161AIcEE = external constant
 // CHECK-HIDDEN: @_ZTTN6Test161AIcEE = external unnamed_addr constant
 
 // CHECK: @_ZZN6test681fC1EvE4test = linkonce_odr global
@@ -206,7 +206,7 @@ namespace test27 {
 // CHECK: @_ZGVZN6test681fC1EvE4test = linkonce_odr global
 // CHECK-HIDDEN: @_ZGVZN6test681fC1EvE4test = linkonce_odr hidden global
 
-// CHECK-HIDDEN: @_ZTVN6test701DE = linkonce_odr hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZTIN6test701DE] }, align 8
+// CHECK-HIDDEN: @_ZTVN6test701DE = linkonce_odr hidden constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr null, ptr @_ZTIN6test701DE] }, align 8
 // CHECK-HIDDEN: @_ZTTN6test701DE = linkonce_odr hidden unnamed_addr constant [1 x ptr] [ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTVN6test701DE, i32 0, i32 0, i32 3)], align 8
 
 // CHECK: @_ZZN6Test193fooIiEEvvE1a = linkonce_odr global
@@ -218,7 +218,7 @@ namespace test27 {
 namespace Test1 {
   // CHECK-LABEL: define hidden void @_ZN5Test11fEv
   void HIDDEN f() { }
-  
+
 }
 
 namespace Test2 {
@@ -230,7 +230,7 @@ namespace Test2 {
   // CHECK-LABEL: define hidden void @_ZN5Test21A1fEv
   void A::f() { }
 }
- 
+
 namespace Test3 {
   struct HIDDEN A {
     struct B {
@@ -240,7 +240,7 @@ namespace Test3 {
 
   // B is a nested class where its parent class is hidden.
   // CHECK-LABEL: define hidden void @_ZN5Test31A1B1fEv
-  void A::B::f() { }  
+  void A::B::f() { }
 }
 
 namespace Test4 HIDDEN {
@@ -248,15 +248,15 @@ namespace Test4 HIDDEN {
 
   // Test4::g is in a hidden namespace.
   // CHECK-LABEL: define hidden void @_ZN5Test41gEv
-  void g() { } 
-  
+  void g() { }
+
   struct DEFAULT A {
     void f();
   };
-  
+
   // A has default visibility.
   // CHECK-LABEL: define void @_ZN5Test41A1fEv
-  void A::f() { } 
+  void A::f() { }
 }
 
 namespace Test5 {
@@ -266,7 +266,7 @@ namespace Test5 {
     // CHECK-LABEL: define hidden void @_ZN5Test52NS1fEv()
     void f() { }
   }
-  
+
   namespace NS {
     // g is in NS, but this NS decl is not hidden.
     // CHECK-LABEL: define void @_ZN5Test52NS1gEv
@@ -1536,3 +1536,49 @@ namespace test75 {
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
   // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
 }
+
+#pragma clang attribute push([[gnu::visibility("hidden")]], apply_to=function)
+
+namespace pragma_test {
+  struct S {
+    S();
+  };
+
+  S::S() = default;
+  // CHECK-LABEL: define hidden void @_ZN11pragma_test1SC2Ev(
+  // CHECK-HIDDEN-LABEL: define hidden void @_ZN11pragma_test1SC2Ev(
+}
+
+#pragma clang attribute pop
+
+namespace no_pragma_test {
+  struct S {
+    S();
+  };
+
+  S::S() = default;
+  // CHECK-LABEL: define void @_ZN14no_pragma_test1SC2Ev(
+  // CHECK-HIDDEN-LABEL: define hidden void @_ZN14no_pragma_test1SC2Ev(
+}
+
+namespace FunctionTemplateRedecl1 {
+  template <class> void f();
+  extern template DEFAULT void f<int>();
+  template <class> void f() {}
+  template void f<int>();
+  // CHECK-LABEL: define weak_odr void @_ZN23FunctionTemplateRedecl11fIiEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN23FunctionTemplateRedecl11fIiEEvv(
+} // namespace FunctionTemplateRedecl1
+
+namespace SpecOutOfLine1 {
+  template <class> struct A {
+    A<void> f();
+  };
+  template <>
+  struct DEFAULT A<void> {
+    ~A();
+  };
+  A<void>::~A() {}
+  // CHECK-LABEL: define void @_ZN14SpecOutOfLine11AIvED1Ev(
+  // CHECK-HIDDEN-LABEL: define void @_ZN14SpecOutOfLine11AIvED1Ev(
+} // namespace SpecOutOfLine1

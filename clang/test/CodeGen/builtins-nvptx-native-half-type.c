@@ -41,7 +41,7 @@ __device__ void nvvm_ex2_sm75() {
 #if __CUDA_ARCH__ >= 750
   // CHECK_PTX70_SM75: call half @llvm.nvvm.ex2.approx.f16
   __nvvm_ex2_approx_f16(0.1f16);
-  // CHECK_PTX70_SM75: call <2 x half> @llvm.nvvm.ex2.approx.f16x2
+  // CHECK_PTX70_SM75: call <2 x half> @llvm.nvvm.ex2.approx.v2f16
   __nvvm_ex2_approx_f16x2({0.1f16, 0.7f16});
 #endif
   // CHECK: ret void
@@ -174,16 +174,16 @@ __device__ void nvvm_min_max_sm86() {
 }
 
 // CHECK-LABEL: nvvm_fabs_f16
-__device__ void nvvm_fabs_f16() {
+__device__ void nvvm_fabs_f16(const __fp16 *p, const __fp16 *q) {
 #if __CUDA_ARCH__ >= 530
   // CHECK: call half @llvm.nvvm.fabs.f16
-  __nvvm_fabs_f16(0.1f16);
+  __nvvm_fabs_f16(*p);
   // CHECK: call half @llvm.nvvm.fabs.ftz.f16
-  __nvvm_fabs_ftz_f16(0.1f16);
+  __nvvm_fabs_ftz_f16(*p);
   // CHECK: call <2 x half> @llvm.nvvm.fabs.v2f16
-  __nvvm_fabs_f16x2({0.1f16, 0.7f16});
+  __nvvm_fabs_f16x2({*p, *q});
   // CHECK: call <2 x half> @llvm.nvvm.fabs.ftz.v2f16
-  __nvvm_fabs_ftz_f16x2({0.1f16, 0.7f16});
+  __nvvm_fabs_ftz_f16x2({*p, *q});
 #endif
   // CHECK: ret void
 }

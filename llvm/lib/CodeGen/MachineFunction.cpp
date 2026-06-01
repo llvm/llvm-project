@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -38,7 +39,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
@@ -63,6 +63,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -154,17 +155,32 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function &F) {
+static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
+                                        const Function &F) {
   if (auto MA = F.getFnStackAlign())
     return *MA;
-  return STI->getFrameLowering()->getStackAlign();
+  return STI.getFrameLowering()->getStackAlign();
+}
+
+static FramePointerKind getFramePointerPolicy(const Function &F) {
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
+    return FramePointerKind::None;
+
+  StringRef FP = FPAttr.getValueAsString();
+  return StringSwitch<FramePointerKind>(FP)
+      .Case("all", FramePointerKind::All)
+      .Case("non-leaf", FramePointerKind::NonLeaf)
+      .Case("non-leaf-no-reserve", FramePointerKind::NonLeafNoReserve)
+      .Case("reserved", FramePointerKind::Reserved)
+      .Case("none", FramePointerKind::None)
+      .Default(FramePointerKind::None);
 }
 
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
-    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
+    : F(F), Target(Target), STI(STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -187,21 +203,22 @@ void MachineFunction::handleChangeDesc(MachineInstr &MI,
 
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
-  Properties.set(MachineFunctionProperties::Property::IsSSA);
-  Properties.set(MachineFunctionProperties::Property::TracksLiveness);
+  Properties.setIsSSA();
+  Properties.setTracksLiveness();
   RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
-  bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
+  bool CanRealignSP = STI.getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
   bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
                         F.hasFnAttribute("stackrealign");
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
       /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
+  FrameInfo->setFramePointerPolicy(getFramePointerPolicy(F));
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -209,13 +226,7 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
-
-  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
-  // FIXME: Use Function::hasOptSize().
-  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
-    Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+  Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
@@ -235,14 +246,14 @@ void MachineFunction::init() {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
   }
 
-  if (isScopedEHPersonality(classifyEHPersonality(
-          F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
-    WasmEHInfo = new (Allocator) WasmEHFuncInfo();
+  if (!Target.isCompatibleDataLayout(getDataLayout())) {
+    report_fatal_error(
+        formatv("Can't create a MachineFunction using a Module with a "
+                "Target-incompatible DataLayout attached\n  Target "
+                "DataLayout: {0}\n  Module DataLayout: {1}\n",
+                Target.createDataLayout().getStringRepresentation(),
+                getDataLayout().getStringRepresentation()));
   }
-
-  assert(Target.isCompatibleDataLayout(getDataLayout()) &&
-         "Can't create a MachineFunction using a Module with a "
-         "Target-incompatible DataLayout attached\n");
 
   PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());
 }
@@ -259,6 +270,15 @@ MachineFunction::~MachineFunction() {
 
 void MachineFunction::clear() {
   Properties.reset();
+
+  // Clear JumpTableInfo first. Otherwise, every MBB we delete would do a
+  // linear search over the jump table entries to find and erase itself.
+  if (JumpTableInfo) {
+    JumpTableInfo->~MachineJumpTableInfo();
+    Allocator.Deallocate(JumpTableInfo);
+    JumpTableInfo = nullptr;
+  }
+
   // Don't call destructors on MachineInstr and MachineOperand. All of their
   // memory comes from the BumpPtrAllocator which is about to be purged.
   //
@@ -287,19 +307,9 @@ void MachineFunction::clear() {
   ConstantPool->~MachineConstantPool();
   Allocator.Deallocate(ConstantPool);
 
-  if (JumpTableInfo) {
-    JumpTableInfo->~MachineJumpTableInfo();
-    Allocator.Deallocate(JumpTableInfo);
-  }
-
   if (WinEHInfo) {
     WinEHInfo->~WinEHFuncInfo();
     Allocator.Deallocate(WinEHInfo);
-  }
-
-  if (WasmEHInfo) {
-    WasmEHInfo->~WasmEHFuncInfo();
-    Allocator.Deallocate(WasmEHInfo);
   }
 }
 
@@ -327,10 +337,33 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
+Align MachineFunction::getPreferredAlignment() const {
+  Align PrefAlignment;
+
+  if (MaybeAlign A = F.getPreferredAlignment())
+    PrefAlignment = *A;
+  else if (!F.hasOptSize())
+    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
+  else
+    PrefAlignment = Align(1);
+
+  return std::max(PrefAlignment, getAlignment());
+}
+
 [[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
+}
+
+void MachineFunction::replaceFrameInstRegister(MCRegister FromReg,
+                                               MCRegister ToReg) {
+  const MCRegisterInfo *MCRI = Ctx.getRegisterInfo();
+  unsigned DwarfFromReg = MCRI->getDwarfRegNum(FromReg, false);
+  unsigned DwarfToReg = MCRI->getDwarfRegNum(ToReg, false);
+
+  for (MCCFIInstruction &Inst : FrameInstructions)
+    Inst.replaceRegister(DwarfFromReg, DwarfToReg);
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
@@ -372,7 +405,6 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
   MBBNumbering.resize(BlockNo);
-  MBBNumberingEpoch++;
 }
 
 int64_t MachineFunction::estimateFunctionSizeInBytes() {
@@ -606,10 +638,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
     MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
-    uint32_t CFIType, MDNode *MMRAs) {
+    uint32_t CFIType, MDNode *MMRAs, Value *DS) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
                                          PostInstrSymbol, HeapAllocMarker,
-                                         PCSections, CFIType, MMRAs);
+                                         PCSections, CFIType, MMRAs, DS);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
@@ -696,43 +728,64 @@ bool MachineFunction::needsFrameMoves() const {
          !F.getParent()->debug_compile_units().empty();
 }
 
-namespace llvm {
+MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
+  if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
+    CallTarget = Node;
 
-  template<>
-  struct DOTGraphTraits<const MachineFunction*> : public DefaultDOTGraphTraits {
-    DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  // Numeric callee_type ids are only for indirect calls.
+  if (!CB.isIndirectCall())
+    return;
 
-    static std::string getGraphName(const MachineFunction *F) {
-      return ("CFG for '" + F->getName() + "' function").str();
+  MDNode *CalleeTypeList = CB.getMetadata(LLVMContext::MD_callee_type);
+  if (!CalleeTypeList)
+    return;
+
+  for (const MDOperand &Op : CalleeTypeList->operands()) {
+    MDNode *TypeMD = cast<MDNode>(Op);
+    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
+    // Compute numeric type id from generalized type id string
+    uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
+    IntegerType *Int64Ty = Type::getInt64Ty(CB.getContext());
+    CalleeTypeIds.push_back(
+        ConstantInt::get(Int64Ty, TypeIdVal, /*IsSigned=*/false));
+  }
+}
+
+template <>
+struct llvm::DOTGraphTraits<const MachineFunction *>
+    : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+
+  static std::string getGraphName(const MachineFunction *F) {
+    return ("CFG for '" + F->getName() + "' function").str();
+  }
+
+  std::string getNodeLabel(const MachineBasicBlock *Node,
+                           const MachineFunction *Graph) {
+    std::string OutStr;
+    {
+      raw_string_ostream OSS(OutStr);
+
+      if (isSimple()) {
+        OSS << printMBBReference(*Node);
+        if (const BasicBlock *BB = Node->getBasicBlock())
+          OSS << ": " << BB->getName();
+      } else
+        Node->print(OSS);
     }
 
-    std::string getNodeLabel(const MachineBasicBlock *Node,
-                             const MachineFunction *Graph) {
-      std::string OutStr;
-      {
-        raw_string_ostream OSS(OutStr);
+    if (OutStr[0] == '\n')
+      OutStr.erase(OutStr.begin());
 
-        if (isSimple()) {
-          OSS << printMBBReference(*Node);
-          if (const BasicBlock *BB = Node->getBasicBlock())
-            OSS << ": " << BB->getName();
-        } else
-          Node->print(OSS);
+    // Process string output to make it nicer...
+    for (unsigned i = 0; i != OutStr.length(); ++i)
+      if (OutStr[i] == '\n') { // Left justify
+        OutStr[i] = '\\';
+        OutStr.insert(OutStr.begin() + i + 1, 'l');
       }
-
-      if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
-
-      // Process string output to make it nicer...
-      for (unsigned i = 0; i != OutStr.length(); ++i)
-        if (OutStr[i] == '\n') {                            // Left justify
-          OutStr[i] = '\\';
-          OutStr.insert(OutStr.begin()+i+1, 'l');
-        }
-      return OutStr;
-    }
-  };
-
-} // end namespace llvm
+    return OutStr;
+  }
+};
 
 void MachineFunction::viewCFG() const
 {
@@ -788,7 +841,7 @@ MCSymbol *MachineFunction::getJTISymbol(unsigned JTI, MCContext &Ctx,
   assert(JTI < JumpTableInfo->getJumpTables().size() && "Invalid JTI!");
 
   StringRef Prefix = isLinkerPrivate ? DL.getLinkerPrivateGlobalPrefix()
-                                     : DL.getPrivateGlobalPrefix();
+                                     : DL.getInternalSymbolPrefix();
   SmallString<60> Name;
   raw_svector_ostream(Name)
     << Prefix << "JTI" << getFunctionNumber() << '_' << JTI;
@@ -798,7 +851,7 @@ MCSymbol *MachineFunction::getJTISymbol(unsigned JTI, MCContext &Ctx,
 /// Return a function-local symbol to represent the PIC base.
 MCSymbol *MachineFunction::getPICBaseSymbol() const {
   const DataLayout &DL = getDataLayout();
-  return Ctx.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return Ctx.getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                Twine(getFunctionNumber()) + "$pb");
 }
 
@@ -917,7 +970,7 @@ MachineFunction::getCallSiteInfo(const MachineInstr *MI) {
   assert(MI->isCandidateForAdditionalCallInfo() &&
          "Call site info refers only to call (MI) candidates");
 
-  if (!Target.Options.EmitCallSiteInfo)
+  if (!Target.Options.EmitCallSiteInfo && !Target.Options.EmitCallGraphSection)
     return CallSitesInfo.end();
   return CallSitesInfo.find(MI);
 }
@@ -1098,8 +1151,8 @@ auto MachineFunction::salvageCopySSAImpl(MachineInstr &MI)
       SubReg = Cpy.getOperand(1).getSubReg();
     } else if (Cpy.isSubregToReg()) {
       OldReg = Cpy.getOperand(0).getReg();
-      NewReg = Cpy.getOperand(2).getReg();
-      SubReg = Cpy.getOperand(3).getImm();
+      NewReg = Cpy.getOperand(1).getReg();
+      SubReg = Cpy.getOperand(2).getImm();
     } else {
       auto CopyDetails = *TII.isCopyInstr(Cpy);
       const MachineOperand &Src = *CopyDetails.Source;
@@ -1418,8 +1471,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
     OS << printJumpTableEntryReference(i) << ':';
     for (const MachineBasicBlock *MBB : JumpTables[i].MBBs)
       OS << ' ' << printMBBReference(*MBB);
-    if (i != e)
-      OS << '\n';
+    OS << '\n';
   }
 
   OS << '\n';

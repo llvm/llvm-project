@@ -19,6 +19,7 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace mlir {
@@ -58,6 +59,25 @@ void setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
 /// Get the target CPU string from the Module or return a null reference.
 llvm::StringRef getTargetCPU(mlir::ModuleOp mod);
 
+/// Sets whether Denormal Mode can be ignored or not for lowering of floating
+/// point atomic operations.
+void setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value);
+/// Gets whether Denormal Mode can be ignored or not for lowering of floating
+/// point atomic operations.
+bool getAtomicIgnoreDenormalMode(mlir::ModuleOp mod);
+/// Sets whether fine grained memory can be used or not for lowering of atomic
+/// operations.
+void setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value);
+/// Gets whether fine grained memory can be used or not for lowering of atomic
+/// operations.
+bool getAtomicFineGrainedMemory(mlir::ModuleOp mod);
+/// Sets whether remote memory can be used or not for lowering of atomic
+/// operations.
+void setAtomicRemoteMemory(mlir::ModuleOp mod, bool value);
+/// Gets whether remote memory can be used or not for lowering of atomic
+/// operations.
+bool getAtomicRemoteMemory(mlir::ModuleOp mod);
+
 /// Set the tune CPU for the module. `cpu` must not be deallocated while
 /// module `mod` is still live.
 void setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
@@ -82,6 +102,18 @@ void setCommandline(mlir::ModuleOp mod, llvm::StringRef cmdLine);
 
 /// Get the command line used in this invocation.
 llvm::StringRef getCommandline(mlir::ModuleOp mod);
+
+/// Set the relocation model for the module.
+void setRelocationModel(mlir::ModuleOp mod, llvm::Reloc::Model rm);
+
+/// Get the relocation model from the Module (defaults to PIC).
+llvm::Reloc::Model getRelocationModel(mlir::ModuleOp mod);
+
+/// Set whether the module is compiled as a position-independent executable.
+void setIsPIE(mlir::ModuleOp mod, bool value);
+
+/// Get whether the module is compiled as a position-independent executable.
+bool getIsPIE(mlir::ModuleOp mod);
 
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`

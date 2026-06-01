@@ -22,7 +22,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -246,6 +245,8 @@ public:
 
   unsigned GetNumToksToSkip() const { return NumToksToSkip; }
   void ResetSkipToks() { NumToksToSkip = 0; }
+
+  const Token &GetPrevToken() const { return PrevTok; }
 };
 }  // end anonymous namespace
 
@@ -569,8 +570,7 @@ void PrintPPOutputPPCallbacks::MacroDefined(const Token &MacroNameTok,
   SourceLocation DefLoc = MI->getDefinitionLoc();
   if (DirectivesOnly && !MI->isUsed()) {
     SourceManager &SM = PP.getSourceManager();
-    if (SM.isWrittenInBuiltinFile(DefLoc) ||
-        SM.isWrittenInCommandLineFile(DefLoc))
+    if (SM.isInPredefinedFile(DefLoc))
       return;
   }
   MoveToLine(DefLoc, /*RequireStartOfLine=*/true);
@@ -760,7 +760,8 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
        !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
-       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed)))
+       !Tok.is(tok::annot_repl_input_end) && !Tok.is(tok::annot_embed) &&
+       !Tok.is(tok::annot_module_name)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -895,6 +896,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
                       !PP.getCommentRetentionState();
 
   bool IsStartOfLine = false;
+  bool IsCXXModuleDirective = false;
   char Buffer[256];
   while (true) {
     // Two lines joined with line continuation ('\' as last character on the
@@ -980,9 +982,36 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
         *Callbacks->OS << static_cast<int>(Byte);
         PrintComma = true;
       }
+    } else if (Tok.is(tok::annot_module_name)) {
+      auto *NameLoc = static_cast<ModuleNameLoc *>(Tok.getAnnotationValue());
+      *Callbacks->OS << NameLoc->str();
     } else if (Tok.isAnnotation()) {
       // Ignore annotation tokens created by pragmas - the pragmas themselves
       // will be reproduced in the preprocessed output.
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && Tok.is(tok::kw_import) &&
+               !Callbacks->GetPrevToken().is(tok::at)) {
+      assert(!IsCXXModuleDirective && "Is an import directive being printed?");
+      IsCXXModuleDirective = true;
+      IsStartOfLine = false;
+      *Callbacks->OS << tok::getPPKeywordSpelling(
+          tok::pp___preprocessed_import);
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && Tok.is(tok::kw_module)) {
+      assert(!IsCXXModuleDirective && "Is an module directive being printed?");
+      IsCXXModuleDirective = true;
+      IsStartOfLine = false;
+      *Callbacks->OS << tok::getPPKeywordSpelling(
+          tok::pp___preprocessed_module);
+      PP.Lex(Tok);
+      continue;
+    } else if (PP.getLangOpts().CPlusPlusModules && IsCXXModuleDirective &&
+               Tok.is(tok::semi)) {
+      IsCXXModuleDirective = false;
+      IsStartOfLine = true;
+      *Callbacks->OS << ';';
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {
@@ -1052,11 +1081,10 @@ static void DoPrintMacros(Preprocessor &PP, raw_ostream *OS) {
   PP.LexTokensUntilEOF();
 
   SmallVector<id_macro_pair, 128> MacrosByID;
-  for (Preprocessor::macro_iterator I = PP.macro_begin(), E = PP.macro_end();
-       I != E; ++I) {
-    auto *MD = I->second.getLatest();
+  for (const auto &M : PP.macros()) {
+    auto *MD = M.second.getLatest();
     if (MD && MD->isDefined())
-      MacrosByID.push_back(id_macro_pair(I->first, MD->getMacroInfo()));
+      MacrosByID.push_back(id_macro_pair(M.first, MD->getMacroInfo()));
   }
   llvm::array_pod_sort(MacrosByID.begin(), MacrosByID.end(), MacroIDCompare);
 

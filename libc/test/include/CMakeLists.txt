@@ -1,5 +1,5 @@
 add_custom_target(libc_include_tests)
-add_dependencies(check-libc libc_include_tests)
+add_dependencies(check-libc libc_include_tests-build)
 
 add_libc_test(
   assert_test
@@ -85,6 +85,17 @@ add_libc_test(
     stdckdint_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.stdckdint_macros
+)
+
+add_libc_test(
+  sched_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    sched_test.cpp
+  DEPENDS
+    libc.include.sched
 )
 
 add_libc_test(
@@ -205,6 +216,16 @@ add_libc_test(
     iszerol_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  netinet_in_test
+  SUITE
+    libc_include_tests
+  SRCS
+    netinet_in_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.netinet_in_macros
 )
 
 add_libc_test(
@@ -482,6 +503,21 @@ add_libc_test(
     -Werror
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  math_constants_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    math_constants_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_macros
 )
 
 # Test `#include <...>` of each header in each available language mode.

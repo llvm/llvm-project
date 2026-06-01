@@ -11,8 +11,9 @@
 
 #include "Cuda.h"
 #include "Gnu.h"
-#include "LazyDetector.h"
-#include "ROCm.h"
+#include "clang/Driver/CudaInstallationDetector.h"
+#include "clang/Driver/LazyDetector.h"
+#include "clang/Driver/RocmInstallationDetector.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Support/ErrorOr.h"
@@ -72,7 +73,9 @@ public:
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   llvm::ExceptionHandling GetExceptionModel(
       const llvm::opt::ArgList &Args) const override;

@@ -80,11 +80,12 @@
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/CodeGen/WasmEHInfo.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -247,8 +248,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // we depend on CoalesceFeaturesAndStripAtomics to downgrade it to
   // non-thread-local ones, in which case we don't allow this object to be
   // linked with other objects using shared memory.
-  LPadContextGV = cast<GlobalVariable>(
-      M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy));
+  LPadContextGV = M.getOrInsertGlobal("__wasm_lpad_context", LPadContextTy);
   LPadContextGV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
 
   LPadIndexField = LPadContextGV;
@@ -274,8 +274,13 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
   // instruction selection.
   CatchF = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch);
 
+  // FIXME: Verify this is really supported for current module.
+  StringRef UnwindCallPersonalityName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+          RTLIB::impl__Unwind_CallPersonality);
+
   // _Unwind_CallPersonality() wrapper function, which calls the personality
-  CallPersonalityF = M.getOrInsertFunction("_Unwind_CallPersonality",
+  CallPersonalityF = M.getOrInsertFunction(UnwindCallPersonalityName,
                                            IRB.getInt32Ty(), IRB.getPtrTy());
   if (Function *F = dyn_cast<Function>(CallPersonalityF.getCallee()))
     F->setDoesNotThrow();
@@ -376,28 +381,4 @@ void WasmEHPrepareImpl::prepareEHPad(BasicBlock *BB, bool NeedPersonality,
   assert(GetSelectorCI && "wasm.get.ehselector() call does not exist");
   GetSelectorCI->replaceAllUsesWith(Selector);
   GetSelectorCI->eraseFromParent();
-}
-
-void llvm::calculateWasmEHInfo(const Function *F, WasmEHFuncInfo &EHInfo) {
-  // If an exception is not caught by a catchpad (i.e., it is a foreign
-  // exception), it will unwind to its parent catchswitch's unwind destination.
-  // We don't record an unwind destination for cleanuppads because every
-  // exception should be caught by it.
-  for (const auto &BB : *F) {
-    if (!BB.isEHPad())
-      continue;
-    const Instruction *Pad = &*BB.getFirstNonPHIIt();
-
-    if (const auto *CatchPad = dyn_cast<CatchPadInst>(Pad)) {
-      const auto *UnwindBB = CatchPad->getCatchSwitch()->getUnwindDest();
-      if (!UnwindBB)
-        continue;
-      const Instruction *UnwindPad = &*UnwindBB->getFirstNonPHIIt();
-      if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(UnwindPad))
-        // Currently there should be only one handler per a catchswitch.
-        EHInfo.setUnwindDest(&BB, *CatchSwitch->handlers().begin());
-      else // cleanuppad
-        EHInfo.setUnwindDest(&BB, UnwindBB);
-    }
-  }
 }

@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
@@ -19,12 +20,13 @@ using namespace mlir::affine;
 FailureOr<OpFoldResult> mlir::affine::reifyValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type,
     const ValueBoundsConstraintSet::Variable &var,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
+    ValueBoundsConstraintSet::StopConditionFn stopCondition,
+    ValueBoundsOptions options) {
   // Compute bound.
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, var, stopCondition, closedUB)))
+          boundMap, mapOperands, type, var, stopCondition, options)))
     return failure();
 
   // Reify bound.
@@ -41,8 +43,12 @@ OpFoldResult affine::materializeComputedBound(
     std::optional<int64_t> dim = valueDim.second;
 
     if (!dim.has_value()) {
-      // This is an index-typed value.
-      assert(value.getType().isIndex() && "expected index type");
+      // This is an index-typed/integer-typed value.
+      assert(
+          (value.getType().isIndex() || value.getType().isSignlessInteger()) &&
+          "expected index or signless integer type");
+      if (value.getType().isSignlessInteger())
+        value = arith::IndexCastOp::create(b, loc, b.getIndexType(), value);
       operands.push_back(value);
       continue;
     }
@@ -51,10 +57,10 @@ OpFoldResult affine::materializeComputedBound(
            "expected dynamic dim");
     if (isa<RankedTensorType>(value.getType())) {
       // A tensor dimension is used: generate a tensor.dim.
-      operands.push_back(b.create<tensor::DimOp>(loc, value, *dim));
+      operands.push_back(tensor::DimOp::create(b, loc, value, *dim));
     } else if (isa<MemRefType>(value.getType())) {
       // A memref dimension is used: generate a memref.dim.
-      operands.push_back(b.create<memref::DimOp>(loc, value, *dim));
+      operands.push_back(memref::DimOp::create(b, loc, value, *dim));
     } else {
       llvm_unreachable("cannot generate DimOp for unsupported shaped type");
     }
@@ -76,13 +82,13 @@ OpFoldResult affine::materializeComputedBound(
         operands[expr.getPosition() + boundMap.getNumDims()]);
   // General case: build affine.apply op.
   return static_cast<OpFoldResult>(
-      b.create<affine::AffineApplyOp>(loc, boundMap, operands).getResult());
+      affine::AffineApplyOp::create(b, loc, boundMap, operands).getResult());
 }
 
 FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
     int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
-    bool closedUB) {
+    ValueBoundsOptions options) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
     // We are trying to reify a bound for `value` in terms of the owning op's
@@ -94,17 +100,18 @@ FailureOr<OpFoldResult> mlir::affine::reifyShapedValueDimBound(
   };
   return reifyValueBound(b, loc, type, {value, dim},
                          stopCondition ? stopCondition : reifyToOperands,
-                         closedUB);
+                         options);
 }
 
 FailureOr<OpFoldResult> mlir::affine::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
+    ValueBoundsConstraintSet::StopConditionFn stopCondition,
+    ValueBoundsOptions options) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
     return v != value;
   };
   return reifyValueBound(b, loc, type, value,
                          stopCondition ? stopCondition : reifyToOperands,
-                         closedUB);
+                         options);
 }

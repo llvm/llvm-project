@@ -47,8 +47,16 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Get the raw address type of the memory described by the box.
+  /// When \p dropHeapOrPtr is true, the returned type is always a
+  /// fir::ReferenceType.
+  mlir::Type getBaseAddressType(bool dropHeapOrPtr = false) const;
+
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
+
+  // Get the element type or the fir.array
+  mlir::Type getElementOrSequenceType() const;
 
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
@@ -56,10 +64,25 @@ public:
   /// Is this a box for a pointer?
   bool isPointer() const;
 
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
+  /// Is this a box describing volatile memory?
+  bool isVolatile() const;
+
+  /// Is this a box describing an array or assumed-rank?
+  bool isArray() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
   BaseBoxType getBoxTypeWithNewShape(int rank) const;
+
+  /// Return a box type with the same attributes and shape, except that the
+  /// element type that is changed to the provided one. The returned box will be
+  /// a fir.class if \p polymorphic is true and a fir.box otherwise.
+  BaseBoxType getBoxTypeWithNewElementType(mlir::Type elementType,
+                                           bool polymorphic) const;
 
   /// Return the same type, except for the attribute (fir.heap/fir.ptr).
   BaseBoxType getBoxTypeWithNewAttr(Attribute attr) const;
@@ -134,11 +157,12 @@ inline bool conformsWithPassByRef(mlir::Type t) {
 /// Is `t` a derived (record) type?
 inline bool isa_derived(mlir::Type t) { return mlir::isa<fir::RecordType>(t); }
 
-/// Is `t` type(c_ptr) or type(c_funptr)?
+/// Is `t` type(c_ptr), type(c_funptr), or type(c_devptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
     return recTy.getName().ends_with("T__builtin_c_ptr") ||
-           recTy.getName().ends_with("T__builtin_c_funptr");
+           recTy.getName().ends_with("T__builtin_c_funptr") ||
+           recTy.getName().ends_with("T__builtin_c_devptr");
   return false;
 }
 
@@ -380,6 +404,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an assumed type. In FIR,
 /// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
 /// or `fir.ref|ptr|heap<[fir.array]none>`.
@@ -400,9 +427,6 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
 
 /// Get the rank from a !fir.box type.
 unsigned getBoxRank(mlir::Type boxTy);
-
-/// Return the inner type of the given type.
-mlir::Type unwrapInnerType(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
@@ -542,6 +566,7 @@ std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

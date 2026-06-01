@@ -33,14 +33,15 @@
 #include "Common/GlobalISel/CodeExpander.h"
 #include "Common/GlobalISel/CodeExpansions.h"
 #include "Common/GlobalISel/CombinerUtils.h"
-#include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchTable/Matchers.h"
 #include "Common/GlobalISel/PatternParser.h"
 #include "Common/GlobalISel/Patterns.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -48,6 +49,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -60,23 +62,22 @@ using namespace llvm::gi;
 
 #define DEBUG_TYPE "gicombiner-emitter"
 
-namespace {
-cl::OptionCategory
+static cl::OptionCategory
     GICombinerEmitterCat("Options for -gen-global-isel-combiner");
-cl::opt<bool> StopAfterParse(
+static cl::opt<bool> StopAfterParse(
     "gicombiner-stop-after-parse",
     cl::desc("Stop processing after parsing rules and dump state"),
     cl::cat(GICombinerEmitterCat));
-cl::list<std::string>
+static cl::list<std::string>
     SelectedCombiners("combiners", cl::desc("Emit the specified combiners"),
                       cl::cat(GICombinerEmitterCat), cl::CommaSeparated);
-cl::opt<bool> DebugCXXPreds(
+static cl::opt<bool> DebugCXXPreds(
     "gicombiner-debug-cxxpreds",
     cl::desc("Add Contextual/Debug comments to all C++ predicates"),
     cl::cat(GICombinerEmitterCat));
-cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
-                             cl::desc("Print type inference debug logs"),
-                             cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> DebugTypeInfer("gicombiner-debug-typeinfer",
+                                    cl::desc("Print type inference debug logs"),
+                                    cl::cat(GICombinerEmitterCat));
 
 constexpr StringLiteral CXXCustomActionPrefix = "GICXXCustomAction_";
 constexpr StringLiteral CXXPredPrefix = "GICXXPred_MI_Predicate_";
@@ -84,20 +85,20 @@ constexpr StringLiteral MatchDataClassName = "GIDefMatchData";
 
 //===- CodeExpansions Helpers  --------------------------------------------===//
 
-void declareInstExpansion(CodeExpansions &CE, const InstructionMatcher &IM,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE,
+                                 const InstructionMatcher &IM, StringRef Name) {
   CE.declare(Name, "State.MIs[" + to_string(IM.getInsnVarID()) + "]");
 }
 
-void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
-                          StringRef Name) {
+static void declareInstExpansion(CodeExpansions &CE, const BuildMIAction &A,
+                                 StringRef Name) {
   // Note: we use redeclare here because this may overwrite a matcher inst
   // expansion.
   CE.redeclare(Name, "OutMIs[" + to_string(A.getInsnID()) + "]");
 }
 
-void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
-                             StringRef Name) {
+static void declareOperandExpansion(CodeExpansions &CE,
+                                    const OperandMatcher &OM, StringRef Name) {
   if (OM.isVariadic()) {
     CE.declare(Name, "getRemainingOperands(*State.MIs[" +
                          to_string(OM.getInsnVarID()) + "], " +
@@ -108,33 +109,34 @@ void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
   }
 }
 
-void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
-                             StringRef Name) {
+static void declareTempRegExpansion(CodeExpansions &CE, unsigned TempRegID,
+                                    StringRef Name) {
   CE.declare(Name, "State.TempRegisters[" + to_string(TempRegID) + "]");
 }
 
 //===- Misc. Helpers  -----------------------------------------------------===//
 
-template <typename Container> auto keys(Container &&C) {
+template <typename Container> static auto keys(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.first; });
 }
 
-template <typename Container> auto values(Container &&C) {
+template <typename Container> static auto values(Container &&C) {
   return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
 }
 
-std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
+static std::string getIsEnabledPredicateEnumName(unsigned CombinerRuleID) {
   return "GICXXPred_Simple_IsRule" + to_string(CombinerRuleID) + "Enabled";
 }
 
 //===- MatchTable Helpers  ------------------------------------------------===//
 
-LLTCodeGen getLLTCodeGen(const PatternType &PT) {
+static LLTCodeGen getLLTCodeGen(const PatternType &PT) {
   return *MVTToLLT(getValueType(PT.getLLTRecord()));
 }
 
 //===- PrettyStackTrace Helpers  ------------------------------------------===//
 
+namespace {
 class PrettyStackTraceParse : public PrettyStackTraceEntry {
   const Record &Def;
 
@@ -277,6 +279,7 @@ private:
 
   const OperandTable &MatchOpTable;
 };
+} // namespace
 
 bool CombineRuleOperandTypeChecker::processMatchPattern(InstructionPattern &P) {
   MatchPats.push_back(&P);
@@ -567,7 +570,6 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
 
 CombineRuleOperandTypeChecker::TypeEquivalenceClasses
 CombineRuleOperandTypeChecker::getRuleEqClasses() const {
-  StringMap<unsigned> OpNameToEqClassIdx;
   TypeEquivalenceClasses TECs;
 
   if (DebugTypeInfer)
@@ -1162,7 +1164,7 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.count(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
         NewPerm[Pat.get()] = K;
@@ -1278,8 +1280,9 @@ bool CombineRuleBuilder::checkSemantics() {
                    "patterns");
         return false;
       }
-    } else
+    } else {
       IsUsingCXXPatterns = isa<CXXPattern>(Pat);
+    }
 
     assert(Pat);
     const auto *IP = dyn_cast<InstructionPattern>(Pat);
@@ -1404,7 +1407,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
     return true;
 
   const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
-  for (const Init *PI : Preds->getValues()) {
+  for (const Init *PI : Preds->getElements()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
       continue;
@@ -1611,8 +1614,9 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       return false;
   } else if (isa<BuiltinPattern>(&IP)) {
     llvm_unreachable("No match builtins known!");
-  } else
+  } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
+  }
 
   // Emit remaining patterns
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
@@ -1661,8 +1665,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
   for (const CodeGenInstruction *CGI : AOP.insts()) {
-    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" +
-                                       CGI->TheDef->getName() + "'");
+    auto &M = addRuleMatcher(Alts, "wip_match_opcode '" + CGI->getName() + "'");
 
     InstructionMatcher &IM = M.addInstructionMatcher(AOP.getName());
     declareInstExpansion(CE, IM, AOP.getName());
@@ -2200,7 +2203,7 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
 
 bool isLiteralImm(const InstructionPattern &P, unsigned OpIdx) {
   if (const auto *CGP = dyn_cast<CodeGenInstructionPattern>(&P)) {
-    StringRef InstName = CGP->getInst().TheDef->getName();
+    StringRef InstName = CGP->getInst().getName();
     return (InstName == "G_CONSTANT" || InstName == "G_FCONSTANT") &&
            OpIdx == 1;
   }
@@ -2402,6 +2405,9 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   // combine rule used to disable/enable it.
   std::vector<std::pair<unsigned, std::string>> AllCombineRules;
 
+  // Opcodes handled by the generated matcher.
+  SmallSetVector<const CodeGenInstruction *, 32> MatchOpcodes;
+
   // Keep track of all rules we've seen so far to ensure we don't process
   // the same rule twice.
   StringSet<> RulesSeen;
@@ -2409,10 +2415,13 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   MatchTable buildMatchTable(MutableArrayRef<RuleMatcher> Rules);
 
   void emitRuleConfigImpl(raw_ostream &OS);
+  void collectMatchOpcodes(ArrayRef<RuleMatcher> Rules);
+  void emitCanMatchOpcodeFn(raw_ostream &OS, StringRef FnName) const;
 
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -2439,12 +2448,13 @@ public:
   explicit GICombinerEmitter(const RecordKeeper &RK,
                              const CodeGenTarget &Target, StringRef Name,
                              const Record *Combiner);
-  ~GICombinerEmitter() {}
+  ~GICombinerEmitter() override = default;
 
   void run(raw_ostream &OS);
 };
 
 void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
+  IfDefGuardEmitter If(OS, "GET_GICOMBINER_TYPES");
   OS << "struct " << getRuleConfigClassName() << " {\n"
      << "  SparseBitVector<> DisabledRules;\n\n"
      << "  bool isRuleEnabled(unsigned RuleID) const;\n"
@@ -2553,18 +2563,48 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
      << "}\n\n";
 }
 
+void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
+  for (const RuleMatcher &Rule : Rules) {
+    for (const CodeGenInstruction *I :
+         Rule.insnmatchers_front().getOpcodeMatcher().getAlternativeOpcodes())
+      MatchOpcodes.insert(I);
+  }
+}
+
+void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
+                                             StringRef FnName) const {
+  OS << "static bool " << FnName << "(unsigned Opc) {\n";
+  if (MatchOpcodes.empty()) {
+    OS << "  (void)Opc;\n"
+       << "  return false;\n"
+       << "}\n\n";
+    return;
+  }
+
+  OS << "  switch (Opc) {\n";
+  for (const CodeGenInstruction *I : MatchOpcodes)
+    OS << "  case " << I->Namespace << "::" << I->getName() << ":\n";
+  OS << "    return true;\n"
+     << "  default:\n"
+     << "    return false;\n"
+     << "  }\n"
+     << "}\n\n";
+}
+
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
+  std::string CanMatchOpcodeFnName = (getClassName() + "_canMatchOpcode").str();
+  emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
-     << "  const TargetSubtargetInfo &ST = MF.getSubtarget();\n"
+     << "  if (!" << CanMatchOpcodeFnName << "(I.getOpcode()))\n"
+     << "    return false;\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
-     << "  B.setInstrAndDebugLoc(I);\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n"
      << "  if (executeMatchTable(*this, State, ExecInfo, B"
-     << ", getMatchTable(), *ST.getInstrInfo(), MRI, "
-        "*MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures"
+     << ", getMatchTable(), Helper.getTII(), MRI, Helper.getTRI(), "
+        "Helper.getRBI(), AvailableFeatures"
      << ", /*CoverageInfo*/ nullptr)) {\n"
      << "    return true;\n"
      << "  }\n\n"
@@ -2578,6 +2618,12 @@ void GICombinerEmitter::emitMIPredicateFns(raw_ostream &OS) {
       OS, "", ArrayRef<const CXXPredicateCode *>(MatchCode),
       [](const CXXPredicateCode *C) -> StringRef { return C->BaseEnumName; },
       [](const CXXPredicateCode *C) -> StringRef { return C->Code; });
+}
+
+void GICombinerEmitter::emitLeafPredicateFns(raw_ostream &OS) {
+  // Unused, but still needs to be called.
+  emitLeafPredicateFnsImpl<unsigned>(
+      OS, "", {}, [](unsigned) { return ""; }, [](unsigned) { return ""; });
 }
 
 void GICombinerEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
@@ -2608,10 +2654,10 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
     // To avoid emitting a switch, we expect that all those rules are in order.
     // That way we can just get the RuleID from the enum by subtracting
     // (GICXXPred_Invalid + 1).
-    unsigned ExpectedID = 0;
-    (void)ExpectedID;
+    [[maybe_unused]] unsigned ExpectedID = 0;
     for (const auto &ID : keys(AllCombineRules)) {
-      assert(ExpectedID++ == ID && "combine rules are not ordered!");
+      assert(ExpectedID == ID && "combine rules are not ordered!");
+      ++ExpectedID;
       OS << "  " << getIsEnabledPredicateEnumName(ID) << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
@@ -2666,43 +2712,10 @@ GICombinerEmitter::GICombinerEmitter(const RecordKeeper &RK,
 
 MatchTable
 GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
-  std::vector<Matcher *> InputRules;
-  for (Matcher &Rule : Rules)
-    InputRules.push_back(&Rule);
-
-  unsigned CurrentOrdering = 0;
-  StringMap<unsigned> OpcodeOrder;
-  for (RuleMatcher &Rule : Rules) {
-    const StringRef Opcode = Rule.getOpcode();
-    assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
-      ++CurrentOrdering;
-  }
-
-  llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
-                                               const Matcher *B) {
-    auto *L = static_cast<const RuleMatcher *>(A);
-    auto *R = static_cast<const RuleMatcher *>(B);
-    return std::tuple(OpcodeOrder[L->getOpcode()],
-                      L->insnmatchers_front().getNumOperandMatchers()) <
-           std::tuple(OpcodeOrder[R->getOpcode()],
-                      R->insnmatchers_front().getNumOperandMatchers());
-  });
-
-  for (Matcher *Rule : InputRules)
-    Rule->optimize();
-
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
-  std::vector<Matcher *> OptRules =
-      optimizeRules<GroupMatcher>(InputRules, MatcherStorage);
-
-  for (Matcher *Rule : OptRules)
-    Rule->optimize();
-
-  OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
-
-  return MatchTable::buildTable(OptRules, /*WithCoverage*/ false,
-                                /*IsCombiner*/ true);
+  std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
+  return ::buildMatchTable(OptRules, /*WithCoverage*/ false,
+                           /*IsCombiner*/ true);
 }
 
 /// Recurse into GICombineGroup's and flatten the ruleset into a simple list.
@@ -2772,6 +2785,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     return false;
   });
 
+  collectMatchOpcodes(Rules);
   const MatchTable Table = buildMatchTable(Rules);
 
   Timer.startTimer("Emit combiner");
@@ -2787,18 +2801,16 @@ void GICombinerEmitter::run(raw_ostream &OS) {
     TypeObjects.push_back(LLT::scalar(1));
 
   // GET_GICOMBINER_DEPS, which pulls in extra dependencies.
-  OS << "#ifdef GET_GICOMBINER_DEPS\n"
-     << "#include \"llvm/ADT/SparseBitVector.h\"\n"
-     << "namespace llvm {\n"
-     << "extern cl::OptionCategory GICombinerOptionCategory;\n"
-     << "} // end namespace llvm\n"
-     << "#endif // ifdef GET_GICOMBINER_DEPS\n\n";
+  {
+    IfDefGuardEmitter If(OS, "GET_GICOMBINER_DEPS");
+    OS << "#include \"llvm/ADT/SparseBitVector.h\"\n";
+    NamespaceEmitter LlvmNS(OS, "llvm");
+    OS << "extern cl::OptionCategory GICombinerOptionCategory;\n";
+  }
 
   // GET_GICOMBINER_TYPES, which needs to be included before the declaration of
   // the class.
-  OS << "#ifdef GET_GICOMBINER_TYPES\n";
   emitRuleConfigImpl(OS);
-  OS << "#endif // ifdef GET_GICOMBINER_TYPES\n\n";
   emitPredicateBitset(OS, "GET_GICOMBINER_TYPES");
 
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.
@@ -2814,8 +2826,6 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitPredicatesInit(OS, "GET_GICOMBINER_CONSTRUCTOR_INITS");
   emitTemporariesInit(OS, MaxTemporaries, "GET_GICOMBINER_CONSTRUCTOR_INITS");
 }
-
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 

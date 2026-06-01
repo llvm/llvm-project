@@ -9,11 +9,13 @@
 #include "clang/Basic/TargetID.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Path.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <optional>
+#include <string>
 
 namespace clang {
 
@@ -87,6 +89,8 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
 
   while (!Features.empty()) {
     auto Splits = Features.split(':');
+    if (Splits.first.empty())
+      return std::nullopt;
     auto Sign = Splits.first.back();
     auto Feature = Splits.first.drop_back();
     if (Sign != '+' && Sign != '-')
@@ -182,6 +186,13 @@ bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested) {
       return false;
   }
   return true;
+}
+
+std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID) {
+  std::string FileName = TargetID.str();
+  if (llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
+    llvm::replace(FileName, ':', '@');
+  return FileName;
 }
 
 } // namespace clang

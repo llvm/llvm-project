@@ -25,6 +25,7 @@ add_llvm_component_library(LLVMDWARFLinkerParallel
   BinaryFormat
   CodeGen
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   DWARFLinker
   MC
   Object

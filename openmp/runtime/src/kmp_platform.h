@@ -27,6 +27,7 @@
 #define KMP_OS_SOLARIS 0
 #define KMP_OS_WASI 0
 #define KMP_OS_EMSCRIPTEN 0
+#define KMP_OS_AIX 0
 #define KMP_OS_UNIX 0 /* disjunction of KMP_OS_LINUX, KMP_OS_DARWIN etc. */
 
 #ifdef _WIN32
@@ -118,6 +119,7 @@
 #define KMP_ARCH_X86_64 0
 #define KMP_ARCH_AARCH64 0
 #define KMP_ARCH_AARCH64_32 0
+#define KMP_ARCH_ARM64EC 0
 #define KMP_ARCH_PPC64_ELFv1 0
 #define KMP_ARCH_PPC64_ELFv2 0
 #define KMP_ARCH_PPC64_XCOFF 0
@@ -132,7 +134,10 @@
 #define KMP_ARCH_SPARC 0
 
 #if KMP_OS_WINDOWS
-#if defined(_M_AMD64) || defined(__x86_64)
+#if defined(_M_ARM64EC) || defined(__arm64ec__)
+#undef KMP_ARCH_ARM64EC
+#define KMP_ARCH_ARM64EC 1
+#elif defined(_M_AMD64) || defined(__x86_64)
 #undef KMP_ARCH_X86_64
 #define KMP_ARCH_X86_64 1
 #elif defined(__aarch64__) || defined(_M_ARM64)
@@ -163,11 +168,11 @@
 #undef KMP_ARCH_PPC64_ELFv1
 #define KMP_ARCH_PPC64_ELFv1 1
 #endif
-#elif defined KMP_OS_AIX
+#elif KMP_OS_AIX
 #undef KMP_ARCH_PPC64_XCOFF
 #define KMP_ARCH_PPC64_XCOFF 1
 #endif
-#elif defined(__powerpc__) && defined(KMP_OS_AIX)
+#elif defined(__powerpc__) && KMP_OS_AIX
 #undef KMP_ARCH_PPC_XCOFF
 #define KMP_ARCH_PPC_XCOFF 1
 #undef KMP_ARCH_PPC
@@ -290,7 +295,7 @@
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
               KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
               KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +                  \
-              KMP_ARCH_AARCH64_32 + KMP_ARCH_SPARC)
+              KMP_ARCH_AARCH64_32 + KMP_ARCH_SPARC + KMP_ARCH_ARM64EC)
 #error Unknown or unsupported architecture
 #endif
 

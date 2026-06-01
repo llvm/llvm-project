@@ -149,6 +149,11 @@ bool CXXTypeidExpr::isPotentiallyEvaluated() const {
 bool CXXTypeidExpr::isMostDerived(const ASTContext &Context) const {
   assert(!isTypeOperand() && "Cannot call isMostDerived for typeid(type)");
   const Expr *E = getExprOperand()->IgnoreParenNoopCasts(Context);
+
+  if (const CXXRecordDecl *RD = E->getType()->getAsCXXRecordDecl())
+    if (RD->isEffectivelyFinal())
+      return true;
+
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
     QualType Ty = DRE->getDecl()->getType();
     if (!Ty->isPointerOrReferenceType())
@@ -261,9 +266,8 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
     getTrailingObjects<Stmt *>()[arraySizeOffset()] = *ArraySize;
   if (Initializer)
     getTrailingObjects<Stmt *>()[initExprOffset()] = Initializer;
-  for (unsigned I = 0; I != PlacementArgs.size(); ++I)
-    getTrailingObjects<Stmt *>()[placementNewArgsOffset() + I] =
-        PlacementArgs[I];
+  llvm::copy(PlacementArgs,
+             getTrailingObjects<Stmt *>() + placementNewArgsOffset());
   if (IsParenTypeId)
     getTrailingObjects<SourceRange>()[0] = TypeIdParens;
 
@@ -397,6 +401,16 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
+static bool UnresolvedLookupExprIsVariableOrConceptParameterPack(
+    UnresolvedSetIterator Begin, UnresolvedSetIterator End) {
+  if (std::distance(Begin, End) != 1)
+    return false;
+  NamedDecl *ND = *Begin;
+  if (const auto *TTP = llvm::dyn_cast<TemplateTemplateParmDecl>(ND))
+    return TTP->isParameterPack();
+  return false;
+}
+
 // UnresolvedLookupExpr
 UnresolvedLookupExpr::UnresolvedLookupExpr(
     const ASTContext &Context, CXXRecordDecl *NamingClass,
@@ -405,9 +419,11 @@ UnresolvedLookupExpr::UnresolvedLookupExpr(
     const TemplateArgumentListInfo *TemplateArgs, UnresolvedSetIterator Begin,
     UnresolvedSetIterator End, bool KnownDependent,
     bool KnownInstantiationDependent)
-    : OverloadExpr(UnresolvedLookupExprClass, Context, QualifierLoc,
-                   TemplateKWLoc, NameInfo, TemplateArgs, Begin, End,
-                   KnownDependent, KnownInstantiationDependent, false),
+    : OverloadExpr(
+          UnresolvedLookupExprClass, Context, QualifierLoc, TemplateKWLoc,
+          NameInfo, TemplateArgs, Begin, End, KnownDependent,
+          KnownInstantiationDependent,
+          UnresolvedLookupExprIsVariableOrConceptParameterPack(Begin, End)),
       NamingClass(NamingClass) {
   UnresolvedLookupExprBits.RequiresADL = RequiresADL;
 }
@@ -594,14 +610,15 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
                                          QualType Ty, ExprValueKind VK,
                                          SourceLocation OperatorLoc,
                                          FPOptionsOverride FPFeatures,
-                                         ADLCallKind UsesADL)
+                                         ADLCallKind UsesADL, bool IsReversed)
     : CallExpr(CXXOperatorCallExprClass, Fn, /*PreArgs=*/{}, Args, Ty, VK,
                OperatorLoc, FPFeatures, /*MinNumArgs=*/0, UsesADL) {
   CXXOperatorCallExprBits.OperatorKind = OpKind;
+  CXXOperatorCallExprBits.IsReversed = IsReversed;
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
-  Range = getSourceRangeImpl();
+  BeginLoc = getSourceRangeImpl().getBegin();
 }
 
 CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures,
@@ -609,20 +626,21 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures,
     : CallExpr(CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs,
                HasFPFeatures, Empty) {}
 
-CXXOperatorCallExpr *
-CXXOperatorCallExpr::Create(const ASTContext &Ctx,
-                            OverloadedOperatorKind OpKind, Expr *Fn,
-                            ArrayRef<Expr *> Args, QualType Ty,
-                            ExprValueKind VK, SourceLocation OperatorLoc,
-                            FPOptionsOverride FPFeatures, ADLCallKind UsesADL) {
+CXXOperatorCallExpr *CXXOperatorCallExpr::Create(
+    const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
+    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
+    SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
+    ADLCallKind UsesADL, bool IsReversed) {
   // Allocate storage for the trailing objects of CallExpr.
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CXXOperatorCallExpr) + SizeOfTrailingObjects,
-                           alignof(CXXOperatorCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXOperatorCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(OpKind, Fn, Args, Ty, VK, OperatorLoc,
-                                       FPFeatures, UsesADL);
+                                       FPFeatures, UsesADL, IsReversed);
 }
 
 CXXOperatorCallExpr *CXXOperatorCallExpr::CreateEmpty(const ASTContext &Ctx,
@@ -632,8 +650,10 @@ CXXOperatorCallExpr *CXXOperatorCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CXXOperatorCallExpr) + SizeOfTrailingObjects,
-                           alignof(CXXOperatorCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXOperatorCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CXXOperatorCallExpr));
   return new (Mem) CXXOperatorCallExpr(NumArgs, HasFPFeatures, Empty);
 }
 
@@ -655,6 +675,8 @@ SourceRange CXXOperatorCallExpr::getSourceRangeImpl() const {
   } else if (getNumArgs() == 1) {
     return SourceRange(getOperatorLoc(), getArg(0)->getEndLoc());
   } else if (getNumArgs() == 2) {
+    if (CXXOperatorCallExprBits.IsReversed)
+      return SourceRange(getArg(1)->getBeginLoc(), getArg(0)->getEndLoc());
     return SourceRange(getArg(0)->getBeginLoc(), getArg(1)->getEndLoc());
   } else {
     return getOperatorLoc();
@@ -684,7 +706,8 @@ CXXMemberCallExpr *CXXMemberCallExpr::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CXXMemberCallExpr) + SizeOfTrailingObjects,
+  void *Mem = Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXMemberCallExpr>(
+                               SizeOfTrailingObjects),
                            alignof(CXXMemberCallExpr));
   return new (Mem)
       CXXMemberCallExpr(Fn, Args, Ty, VK, RP, FPFeatures, MinNumArgs);
@@ -697,7 +720,8 @@ CXXMemberCallExpr *CXXMemberCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CXXMemberCallExpr) + SizeOfTrailingObjects,
+  void *Mem = Ctx.Allocate(sizeToAllocateForCallExprSubclass<CXXMemberCallExpr>(
+                               SizeOfTrailingObjects),
                            alignof(CXXMemberCallExpr));
   return new (Mem) CXXMemberCallExpr(NumArgs, HasFPFeatures, Empty);
 }
@@ -772,8 +796,8 @@ CXXStaticCastExpr::Create(const ASTContext &C, QualType T, ExprValueKind VK,
   auto *E = new (Buffer) CXXStaticCastExpr(T, VK, K, Op, PathSize, WrittenTy,
                                            FPO, L, RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -800,8 +824,7 @@ CXXDynamicCastExpr *CXXDynamicCastExpr::Create(const ASTContext &C, QualType T,
       new (Buffer) CXXDynamicCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                       RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath, E->getTrailingObjects());
   return E;
 }
 
@@ -863,8 +886,7 @@ CXXReinterpretCastExpr::Create(const ASTContext &C, QualType T,
       new (Buffer) CXXReinterpretCastExpr(T, VK, K, Op, PathSize, WrittenTy, L,
                                           RParenLoc, AngleBrackets);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath, E->getTrailingObjects());
   return E;
 }
 
@@ -911,8 +933,8 @@ CXXFunctionalCastExpr *CXXFunctionalCastExpr::Create(
   auto *E = new (Buffer)
       CXXFunctionalCastExpr(T, VK, Written, K, Op, PathSize, FPO, L, R);
   if (PathSize)
-    std::uninitialized_copy_n(BasePath->data(), BasePath->size(),
-                              E->getTrailingObjects<CXXBaseSpecifier *>());
+    llvm::uninitialized_copy(*BasePath,
+                             E->getTrailingObjects<CXXBaseSpecifier *>());
   return E;
 }
 
@@ -958,8 +980,10 @@ UserDefinedLiteral *UserDefinedLiteral::Create(const ASTContext &Ctx, Expr *Fn,
   unsigned NumArgs = Args.size();
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/0, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(UserDefinedLiteral) + SizeOfTrailingObjects,
-                           alignof(UserDefinedLiteral));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<UserDefinedLiteral>(
+                       SizeOfTrailingObjects),
+                   alignof(UserDefinedLiteral));
   return new (Mem)
       UserDefinedLiteral(Fn, Args, Ty, VK, LitEndLoc, SuffixLoc, FPFeatures);
 }
@@ -971,8 +995,10 @@ UserDefinedLiteral *UserDefinedLiteral::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects =
       CallExpr::sizeOfTrailingObjects(/*NumPreArgs=*/0, NumArgs, HasFPOptions);
-  void *Mem = Ctx.Allocate(sizeof(UserDefinedLiteral) + SizeOfTrailingObjects,
-                           alignof(UserDefinedLiteral));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<UserDefinedLiteral>(
+                       SizeOfTrailingObjects),
+                   alignof(UserDefinedLiteral));
   return new (Mem) UserDefinedLiteral(NumArgs, HasFPOptions, Empty);
 }
 
@@ -1057,7 +1083,7 @@ CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx,
   CXXDefaultInitExprBits.HasRewrittenInit = RewrittenInitExpr != nullptr;
 
   if (CXXDefaultInitExprBits.HasRewrittenInit)
-    *getTrailingObjects<Expr *>() = RewrittenInitExpr;
+    *getTrailingObjects() = RewrittenInitExpr;
 
   assert(Field->hasInClassInitializer());
 
@@ -1200,10 +1226,8 @@ CXXConstructExpr::CXXConstructExpr(
   CXXConstructExprBits.Loc = Loc;
 
   Stmt **TrailingArgs = getTrailingArgs();
-  for (unsigned I = 0, N = Args.size(); I != N; ++I) {
-    assert(Args[I] && "NULL argument in CXXConstructExpr!");
-    TrailingArgs[I] = Args[I];
-  }
+  llvm::copy(Args, TrailingArgs);
+  assert(!llvm::is_contained(Args, nullptr));
 
   // CXXTemporaryObjectExpr does this itself after setting its TypeSourceInfo.
   if (SC == CXXConstructExprClass)
@@ -1302,7 +1326,7 @@ LambdaExpr *LambdaExpr::Create(const ASTContext &Context, CXXRecordDecl *Class,
                                bool ContainsUnexpandedParameterPack) {
   // Determine the type of the expression (i.e., the type of the
   // function object we're creating).
-  QualType T = Context.getTypeDeclType(Class);
+  CanQualType T = Context.getCanonicalTagType(Class);
 
   unsigned Size = totalSizeToAlloc<Stmt *>(CaptureInits.size() + 1);
   void *Mem = Context.Allocate(Size);
@@ -1427,8 +1451,7 @@ ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
     : FullExpr(ExprWithCleanupsClass, subexpr) {
   ExprWithCleanupsBits.CleanupsHaveSideEffects = CleanupsHaveSideEffects;
   ExprWithCleanupsBits.NumObjects = objects.size();
-  for (unsigned i = 0, e = objects.size(); i != e; ++i)
-    getTrailingObjects<CleanupObject>()[i] = objects[i];
+  llvm::copy(objects, getTrailingObjects());
 }
 
 ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C, Expr *subexpr,
@@ -1464,9 +1487,8 @@ CXXUnresolvedConstructExpr::CXXUnresolvedConstructExpr(
       TypeAndInitForm(TSI, IsListInit), LParenLoc(LParenLoc),
       RParenLoc(RParenLoc) {
   CXXUnresolvedConstructExprBits.NumArgs = Args.size();
-  auto **StoredArgs = getTrailingObjects<Expr *>();
-  for (unsigned I = 0; I != Args.size(); ++I)
-    StoredArgs[I] = Args[I];
+  auto **StoredArgs = getTrailingObjects();
+  llvm::copy(Args, StoredArgs);
   setDependence(computeDependence(this));
 }
 
@@ -1672,10 +1694,9 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // It can't be dependent: after all, we were actually able to do the
   // lookup.
   CXXRecordDecl *Record = nullptr;
-  auto *NNS = getQualifier();
-  if (NNS && NNS->getKind() != NestedNameSpecifier::Super) {
-    const Type *T = getQualifier()->getAsType();
-    assert(T && "qualifier in member expression does not name type");
+  if (NestedNameSpecifier Qualifier = getQualifier();
+      Qualifier.getKind() == NestedNameSpecifier::Kind::Type) {
+    const Type *T = getQualifier().getAsType();
     Record = T->getAsCXXRecordDecl();
     assert(Record && "qualifier in member expression does not name record");
   }
@@ -1713,7 +1734,7 @@ SizeOfPackExpr *SizeOfPackExpr::CreateDeserialized(ASTContext &Context,
 
 NonTypeTemplateParmDecl *SubstNonTypeTemplateParmExpr::getParameter() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 PackIndexingExpr *PackIndexingExpr::Create(
@@ -1735,9 +1756,7 @@ PackIndexingExpr *PackIndexingExpr::Create(
 
 NamedDecl *PackIndexingExpr::getPackDecl() const {
   if (auto *D = dyn_cast<DeclRefExpr>(getPackIdExpression()); D) {
-    NamedDecl *ND = dyn_cast<NamedDecl>(D->getDecl());
-    assert(ND && "exected a named decl");
-    return ND;
+    return D->getDecl();
   }
   assert(false && "invalid declaration kind in pack indexing expression");
   return nullptr;
@@ -1755,9 +1774,12 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
     const ASTContext &Context) const {
   // Note that, for a class type NTTP, we will have an lvalue of type 'const
   // T', so we can't just compute this from the type and value category.
+
+  QualType Type = getType();
+
   if (isReferenceParameter())
-    return Context.getLValueReferenceType(getType());
-  return getType().getUnqualifiedType();
+    return Context.getLValueReferenceType(Type);
+  return Type.getUnqualifiedType();
 }
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
@@ -1776,11 +1798,11 @@ SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
 NonTypeTemplateParmDecl *
 SubstNonTypeTemplateParmPackExpr::getParameterPack() const {
   return cast<NonTypeTemplateParmDecl>(
-      getReplacedTemplateParameterList(getAssociatedDecl())->asArray()[Index]);
+      std::get<0>(getReplacedTemplateParameter(getAssociatedDecl(), Index)));
 }
 
 TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
-  return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
+  return TemplateArgument(ArrayRef(Arguments, NumArguments));
 }
 
 FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
@@ -1790,8 +1812,7 @@ FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
-    std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<ValueDecl *>());
+    std::uninitialized_copy(Params, Params + NumParams, getTrailingObjects());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
@@ -1879,8 +1900,7 @@ TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
          "TypeTraitExprBits.NumArgs overflow!");
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
-  for (unsigned I = 0, N = Args.size(); I != N; ++I)
-    ToArgs[I] = Args[I];
+  llvm::copy(Args, ToArgs);
 
   setDependence(computeDependence(this));
 
@@ -1924,6 +1944,24 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
+CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
+    : Expr(CXXReflectExprClass, Empty) {}
+
+CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
+                               const TypeSourceInfo *TSI)
+    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
+
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
+                                       SourceLocation CaretCaretLoc,
+                                       TypeSourceInfo *TSI) {
+  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
+}
+
+CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {
+  return new (C) CXXReflectExpr(EmptyShell());
+}
+
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
                                        ArrayRef<Expr *> Args, QualType Ty,
                                        ExprValueKind VK, SourceLocation RP,
@@ -1946,8 +1984,10 @@ CUDAKernelCallExpr::Create(const ASTContext &Ctx, Expr *Fn, CallExpr *Config,
   unsigned NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/END_PREARG, NumArgs, FPFeatures.requiresTrailingStorage());
-  void *Mem = Ctx.Allocate(sizeof(CUDAKernelCallExpr) + SizeOfTrailingObjects,
-                           alignof(CUDAKernelCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CUDAKernelCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CUDAKernelCallExpr));
   return new (Mem)
       CUDAKernelCallExpr(Fn, Config, Args, Ty, VK, RP, FPFeatures, MinNumArgs);
 }
@@ -1959,8 +1999,10 @@ CUDAKernelCallExpr *CUDAKernelCallExpr::CreateEmpty(const ASTContext &Ctx,
   // Allocate storage for the trailing objects of CallExpr.
   unsigned SizeOfTrailingObjects = CallExpr::sizeOfTrailingObjects(
       /*NumPreArgs=*/END_PREARG, NumArgs, HasFPFeatures);
-  void *Mem = Ctx.Allocate(sizeof(CUDAKernelCallExpr) + SizeOfTrailingObjects,
-                           alignof(CUDAKernelCallExpr));
+  void *Mem =
+      Ctx.Allocate(sizeToAllocateForCallExprSubclass<CUDAKernelCallExpr>(
+                       SizeOfTrailingObjects),
+                   alignof(CUDAKernelCallExpr));
   return new (Mem) CUDAKernelCallExpr(NumArgs, HasFPFeatures, Empty);
 }
 
@@ -1989,11 +2031,13 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
                          UnsignedOrNone NumExpansions)
     : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
       EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-      NumExpansions(NumExpansions), Opcode(Opcode) {
+      NumExpansions(NumExpansions) {
+  CXXFoldExprBits.Opcode = Opcode;
   // We rely on asserted invariant to distinguish left and right folds.
-  assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
-          (RHS && RHS->containsUnexpandedParameterPack())) &&
-         "Exactly one of LHS or RHS should contain an unexpanded pack");
+  if (LHS && RHS)
+    assert(LHS->containsUnexpandedParameterPack() !=
+               RHS->containsUnexpandedParameterPack() &&
+           "Exactly one of LHS or RHS should contain an unexpanded pack");
   SubExprs[SubExpr::Callee] = Callee;
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;

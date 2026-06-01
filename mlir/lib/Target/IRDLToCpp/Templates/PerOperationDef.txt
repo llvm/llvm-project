@@ -1,0 +1,57 @@
+R"(
+
+//===----------------------------------------------------------------------===//
+// __NAMESPACE_PATH__::__OP_CPP_NAME__ definitions
+//===----------------------------------------------------------------------===//
+
+__NAMESPACE_OPEN__
+
+__OP_VERIFIER_HELPERS__
+
+__OP_BUILD_DEFS__
+
+void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder,
+                            ::mlir::OperationState &odsState,
+                            ::mlir::TypeRange resultTypes,
+                            ::mlir::ValueRange operands,
+                            ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  assert(operands.size() == __OP_OPERAND_COUNT__);
+  assert(resultTypes.size() == __OP_RESULT_COUNT__);
+  odsState.addOperands(operands);
+  odsState.addAttributes(attributes);
+  odsState.addTypes(resultTypes);
+  for (unsigned i = 0; i != __OP_REGION_COUNT__; ++i) {
+    (void)odsState.addRegion();
+  }
+}
+
+__OP_CPP_NAME__
+__OP_CPP_NAME__::create(::mlir::OpBuilder &odsBuilder,
+                        ::mlir::Location location,
+                        ::mlir::TypeRange resultTypes,
+                        ::mlir::ValueRange operands,
+                        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  ::mlir::OperationState state(location, getOperationName());
+  build(odsBuilder, state, resultTypes, operands, attributes);
+  auto res = ::llvm::dyn_cast<__OP_CPP_NAME__>(odsBuilder.create(state));
+  assert(res && "builder didn't return the right type");
+  return res;
+}
+
+__OP_CPP_NAME__
+__OP_CPP_NAME__::create(::mlir::ImplicitLocOpBuilder &odsBuilder,
+                        ::mlir::TypeRange resultTypes,
+                        ::mlir::ValueRange operands,
+                        ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
+  return create(odsBuilder, odsBuilder.getLoc(), resultTypes, operands, attributes);
+}
+
+__OP_VERIFIER__
+
+__NAMESPACE_CLOSE__
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__OP_CPP_NAME__)
+)"

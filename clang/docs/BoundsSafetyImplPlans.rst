@@ -154,7 +154,7 @@ verify its bounds safety. The implementation relies on LLVM optimizations to
 remove redundant run-time checks. Using this optimization strategy, if the
 original source code already has bounds checks, the fewer additional checks
 ``-fbounds-safety`` will introduce. The LLVM ``ConstraintElimination`` pass is
-design to remove provable redundant checks (please check Florian Hahn’s
+designed to remove provable redundant checks (please check Florian Hahn’s
 presentation in 2021 LLVM Dev Meeting and the implementation to learn more). In
 the following example, ``-fbounds-safety`` implicitly adds the redundant bounds
 checks that the optimizer can remove:

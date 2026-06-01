@@ -4,11 +4,11 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyZirconModule STATIC
-  TemporaryObjectsCheck.cpp
   ZirconTidyModule.cpp
 
   LINK_LIBS
   clangTidy
+  clangTidyFuchsiaModule
   clangTidyUtils
 
   DEPENDS

@@ -1,11 +1,14 @@
-// RUN: %clang_cc1 -triple i686-windows-msvc -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -triple i686-windows-gnu  -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple i686-windows-msvc  -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=MSVC
+// RUN: %clang_cc1 -triple i686-windows-gnu   -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple x86_64-windows-gnu -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple i686-pc-cygwin     -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm -std=c++1y -fms-extensions -O1 -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=GNU
 
 struct __declspec(dllimport) S {
   virtual void f() {}
 } s;
-// MSVC: [[VF_S:.*]] = private unnamed_addr constant { [2 x ptr] }
-// MSVC-DAG: @"??_SS@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VF_S]], i32 0, i32 0, i32 1)
+// MSVC: [[VF_S:.*]] = private constant { [2 x ptr] }
+// MSVC-DAG: @"??_SS@@6B@" = alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[VF_S]], i32 0, i32 0, i32 1)
 // MSVC-DAG: @"??_R0?AUS@@@8" = linkonce_odr
 // MSVC-DAG: @"??_R1A@?0A@EA@S@@8" = linkonce_odr
 // MSVC-DAG: @"??_R2S@@8" = linkonce_odr

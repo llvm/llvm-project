@@ -22,7 +22,7 @@
 // CHECK-NOVEC:       }
 //
 // CHECK-VEC-LABEL: func.func @sum_reduction
-// CHECK-VEC:       vector.insertelement
+// CHECK-VEC:       vector.insert
 // CHECK-VEC:       scf.for
 // CHECK-VEC:         vector.create_mask
 // CHECK-VEC:         vector.maskedload

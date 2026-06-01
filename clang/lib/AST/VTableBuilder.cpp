@@ -312,11 +312,12 @@ ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
     return BaseOffset();
   }
 
-  const CXXRecordDecl *DerivedRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl());
+  const auto *DerivedRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl())
+          ->getDefinitionOrSelf();
 
-  const CXXRecordDecl *BaseRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
+  const auto *BaseRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
 
   return ComputeBaseOffset(Context, BaseRD, DerivedRD);
 }
@@ -536,8 +537,6 @@ public:
     VBaseOffsetOffsetsMapTy;
 
 private:
-  const ItaniumVTableContext &VTables;
-
   /// MostDerivedClass - The most derived class for which we're building vcall
   /// and vbase offsets.
   const CXXRecordDecl *MostDerivedClass;
@@ -586,15 +585,13 @@ private:
   CharUnits getCurrentOffsetOffset() const;
 
 public:
-  VCallAndVBaseOffsetBuilder(const ItaniumVTableContext &VTables,
-                             const CXXRecordDecl *MostDerivedClass,
+  VCallAndVBaseOffsetBuilder(const CXXRecordDecl *MostDerivedClass,
                              const CXXRecordDecl *LayoutClass,
                              const FinalOverriders *Overriders,
                              BaseSubobject Base, bool BaseIsVirtual,
                              CharUnits OffsetInLayoutClass)
-      : VTables(VTables), MostDerivedClass(MostDerivedClass),
-        LayoutClass(LayoutClass), Context(MostDerivedClass->getASTContext()),
-        Overriders(Overriders) {
+      : MostDerivedClass(MostDerivedClass), LayoutClass(LayoutClass),
+        Context(MostDerivedClass->getASTContext()), Overriders(Overriders) {
 
     // Add vcall and vbase offsets.
     AddVCallAndVBaseOffsets(Base, BaseIsVirtual, OffsetInLayoutClass);
@@ -674,7 +671,7 @@ CharUnits VCallAndVBaseOffsetBuilder::getCurrentOffsetOffset() const {
   // Under the relative ABI, the offset widths are 32-bit ints instead of
   // pointer widths.
   CharUnits OffsetWidth = Context.toCharUnitsFromBits(
-      VTables.isRelativeLayout()
+      Context.getLangOpts().RelativeCXXABIVTables
           ? 32
           : Context.getTargetInfo().getPointerWidth(LangAS::Default));
   CharUnits OffsetOffset = OffsetWidth * OffsetIndex;
@@ -998,7 +995,7 @@ private:
 public:
   /// Component indices of the first component of each of the vtables in the
   /// vtable group.
-  SmallVector<size_t, 4> VTableIndices;
+  VTableLayout::VTableIndicesTy VTableIndices;
 
   ItaniumVTableBuilder(ItaniumVTableContext &VTables,
                        const CXXRecordDecl *MostDerivedClass,
@@ -1317,7 +1314,7 @@ ThisAdjustment ItaniumVTableBuilder::ComputeThisAdjustment(
       // We don't have vcall offsets for this virtual base, go ahead and
       // build them.
       VCallAndVBaseOffsetBuilder Builder(
-          VTables, MostDerivedClass, MostDerivedClass,
+          MostDerivedClass, MostDerivedClass,
           /*Overriders=*/nullptr,
           BaseSubobject(Offset.VirtualBase, CharUnits::Zero()),
           /*BaseIsVirtual=*/true,
@@ -1595,8 +1592,8 @@ void ItaniumVTableBuilder::AddMethods(
       NewVirtualFunctions.push_back(MD);
   }
 
-  std::stable_sort(
-      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+  llvm::stable_sort(
+      NewImplicitVirtualFunctions,
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
         if (A == B)
           return false;
@@ -1694,9 +1691,9 @@ void ItaniumVTableBuilder::LayoutPrimaryAndSecondaryVTables(
   VTableIndices.push_back(VTableIndex);
 
   // Add vcall and vbase offsets for this vtable.
-  VCallAndVBaseOffsetBuilder Builder(
-      VTables, MostDerivedClass, LayoutClass, &Overriders, Base,
-      BaseIsVirtualInLayoutClass, OffsetInLayoutClass);
+  VCallAndVBaseOffsetBuilder Builder(MostDerivedClass, LayoutClass, &Overriders,
+                                     Base, BaseIsVirtualInLayoutClass,
+                                     OffsetInLayoutClass);
   Components.append(Builder.components_begin(), Builder.components_end());
 
   // Check if we need to add these vcall offsets.
@@ -2305,18 +2302,19 @@ MakeAddressPointIndices(const VTableLayout::AddressPointsMapTy &addressPoints,
   return indexMap;
 }
 
-VTableLayout::VTableLayout(ArrayRef<size_t> VTableIndices,
+VTableLayout::VTableLayout(VTableIndicesTy VTableIndices,
                            ArrayRef<VTableComponent> VTableComponents,
                            ArrayRef<VTableThunkTy> VTableThunks,
                            const AddressPointsMapTy &AddressPoints)
-    : VTableComponents(VTableComponents), VTableThunks(VTableThunks),
-      AddressPoints(AddressPoints), AddressPointIndices(MakeAddressPointIndices(
-                                        AddressPoints, VTableIndices.size())) {
-  if (VTableIndices.size() <= 1)
-    assert(VTableIndices.size() == 1 && VTableIndices[0] == 0);
-  else
-    this->VTableIndices = OwningArrayRef<size_t>(VTableIndices);
-
+    : VTableIndices(std::move(VTableIndices)),
+      VTableComponents(VTableComponents), VTableThunks(VTableThunks),
+      AddressPoints(AddressPoints),
+      AddressPointIndices(
+          MakeAddressPointIndices(AddressPoints, this->VTableIndices.size())) {
+  assert(!this->VTableIndices.empty() &&
+         "VTableLayout requires at least one index.");
+  assert(this->VTableIndices.front() == 0 &&
+         "VTableLayout requires the first index is 0.");
   llvm::sort(this->VTableThunks, [](const VTableLayout::VTableThunkTy &LHS,
                                     const VTableLayout::VTableThunkTy &RHS) {
     assert((LHS.first != RHS.first || LHS.second == RHS.second) &&
@@ -2331,9 +2329,8 @@ bool VTableContextBase::hasVtableSlot(const CXXMethodDecl *MD) {
   return MD->isVirtual() && !MD->isImmediateFunction();
 }
 
-ItaniumVTableContext::ItaniumVTableContext(
-    ASTContext &Context, VTableComponentLayout ComponentLayout)
-    : VTableContextBase(/*MS=*/false), ComponentLayout(ComponentLayout) {}
+ItaniumVTableContext::ItaniumVTableContext(ASTContext &Context)
+    : VTableContextBase(/*MS=*/false) {}
 
 ItaniumVTableContext::~ItaniumVTableContext() {}
 
@@ -2362,7 +2359,7 @@ ItaniumVTableContext::getVirtualBaseOffsetOffset(const CXXRecordDecl *RD,
   if (I != VirtualBaseClassOffsetOffsets.end())
     return I->second;
 
-  VCallAndVBaseOffsetBuilder Builder(*this, RD, RD, /*Overriders=*/nullptr,
+  VCallAndVBaseOffsetBuilder Builder(RD, RD, /*Overriders=*/nullptr,
                                      BaseSubobject(RD, CharUnits::Zero()),
                                      /*BaseIsVirtual=*/false,
                                      /*OffsetInLayoutClass=*/CharUnits::Zero());
@@ -2657,7 +2654,12 @@ private:
       MethodVFTableLocation Loc(MI.VBTableIndex, WhichVFPtr.getVBaseWithVPtr(),
                                 WhichVFPtr.NonVirtualOffset, MI.VFTableIndex);
       if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-        MethodVFTableLocations[GlobalDecl(DD, Dtor_Deleting)] = Loc;
+        // In Microsoft ABI vftable always references vector deleting dtor.
+        CXXDtorType DtorTy = Context.getTargetInfo().emitVectorDeletingDtors(
+                                 Context.getLangOpts())
+                                 ? Dtor_VectorDeleting
+                                 : Dtor_Deleting;
+        MethodVFTableLocations[GlobalDecl(DD, DtorTy)] = Loc;
       } else {
         MethodVFTableLocations[MD] = Loc;
       }
@@ -3287,7 +3289,11 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
       const CXXDestructorDecl *DD = Component.getDestructorDecl();
 
       DD->printQualifiedName(Out);
-      Out << "() [scalar deleting]";
+      if (Context.getTargetInfo().emitVectorDeletingDtors(
+              Context.getLangOpts()))
+        Out << "() [vector deleting]";
+      else
+        Out << "() [scalar deleting]";
 
       if (DD->isPureVirtual())
         Out << " [pure]";
@@ -3304,11 +3310,9 @@ void VFTableBuilder::dumpLayout(raw_ostream &Out) {
 
     default:
       DiagnosticsEngine &Diags = Context.getDiagnostics();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "Unexpected vftable component type %0 for component number %1");
-      Diags.Report(MostDerivedClass->getLocation(), DiagID)
-          << I << Component.getKind();
+      Diags.Report(MostDerivedClass->getLocation(),
+                   diag::err_unexpected_vftable_component)
+          << Component.getKind() << I;
     }
 
     Out << '\n';
@@ -3720,8 +3724,8 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     SmallVector<VTableLayout::VTableThunkTy, 1> VTableThunks(
         Builder.vtable_thunks_begin(), Builder.vtable_thunks_end());
     VFTableLayouts[id] = std::make_unique<VTableLayout>(
-        ArrayRef<size_t>{0}, Builder.vtable_components(), VTableThunks,
-        EmptyAddressPointsMap);
+        VTableLayout::VTableIndicesTy{0}, Builder.vtable_components(),
+        VTableThunks, EmptyAddressPointsMap);
     Thunks.insert(Builder.thunks_begin(), Builder.thunks_end());
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
@@ -3757,7 +3761,7 @@ void MicrosoftVTableContext::dumpMethodLocations(
         PredefinedIdentKind::PrettyFunctionNoVirtual, MD);
 
     if (isa<CXXDestructorDecl>(MD)) {
-      IndicesMap[I.second] = MethodName + " [scalar deleting]";
+      IndicesMap[I.second] = MethodName + " [vector deleting]";
     } else {
       IndicesMap[I.second] = MethodName;
     }
@@ -3873,7 +3877,8 @@ MicrosoftVTableContext::getMethodVFTableLocation(GlobalDecl GD) {
   assert(hasVtableSlot(cast<CXXMethodDecl>(GD.getDecl())) &&
          "Only use this method for virtual methods or dtors");
   if (isa<CXXDestructorDecl>(GD.getDecl()))
-    assert(GD.getDtorType() == Dtor_Deleting);
+    assert(GD.getDtorType() == Dtor_VectorDeleting ||
+           GD.getDtorType() == Dtor_Deleting);
 
   GD = GD.getCanonicalDecl();
 

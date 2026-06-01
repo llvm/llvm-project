@@ -297,12 +297,11 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
 
   CodeGenFunction CGF(CGM);
 
-  FunctionArgList Args;
-  ImplicitParamDecl IPD(CGM.getContext(), CGM.getContext().IntTy,
-                        ImplicitParamKind::Other);
-  Args.push_back(&IPD);
+  auto *IPD = ImplicitParamDecl::Create(
+      CGM.getContext(), CGM.getContext().IntTy, ImplicitParamKind::Other);
   QualType ResTy = CGM.getContext().IntTy;
 
+  FunctionArgList Args{IPD};
   CGF.StartFunction(GlobalDecl(&D, DynamicInitKind::AtExit), ResTy, DtorStub,
                     FI, Args, D.getLocation(), D.getInit()->getExprLoc());
 
@@ -707,7 +706,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   llvm::SmallSetVector<Module *, 8> AllImports;
   // Ones that we export
   for (auto I : Primary->Exports)
-    AllImports.insert(I.getPointer());
+    AllImports.insert(I.first);
   // Ones that we only import.
   AllImports.insert_range(Primary->Imports);
   // Ones that we import in the global module fragment or the private module
@@ -748,7 +747,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   // Add any initializers with specified priority; this uses the same  approach
   // as EmitCXXGlobalInitFunc().
   if (!PrioritizedCXXGlobalInits.empty()) {
-    SmallVector<llvm::Function *, 8> LocalCXXGlobalInits;
     llvm::array_pod_sort(PrioritizedCXXGlobalInits.begin(),
                          PrioritizedCXXGlobalInits.end());
     for (SmallVectorImpl<GlobalInitData>::iterator
@@ -1122,9 +1120,9 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       EmitObjCAutoreleasePoolCleanup(token);
     }
 
-    for (unsigned i = 0, e = Decls.size(); i != e; ++i)
-      if (Decls[i])
-        EmitRuntimeCall(Decls[i]);
+    for (llvm::Function *Decl : Decls)
+      if (Decl)
+        EmitRuntimeCall(Decl);
 
     Scope.ForceCleanup();
 
@@ -1197,11 +1195,10 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
 llvm::Function *CodeGenFunction::generateDestroyHelper(
     Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const VarDecl *VD) {
-  FunctionArgList args;
-  ImplicitParamDecl Dst(getContext(), getContext().VoidPtrTy,
-                        ImplicitParamKind::Other);
-  args.push_back(&Dst);
+  auto *Dst = ImplicitParamDecl::Create(getContext(), getContext().VoidPtrTy,
+                                        ImplicitParamKind::Other);
 
+  FunctionArgList args{Dst};
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, args);
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);

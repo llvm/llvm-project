@@ -30,6 +30,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
@@ -49,6 +50,13 @@ static cl::opt<bool>
     DisableLoadStoreVectorizer("disable-nvptx-load-store-vectorizer",
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
+
+// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// we encounter some issues.
+static cl::opt<bool>
+    DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
+                           cl::desc("Disable NVPTX IR Peephole"),
+                           cl::init(false), cl::Hidden);
 
 // TODO: Remove this flag when we are confident with no regressions.
 static cl::opt<bool> DisableRequireStructuredCFG(
@@ -87,7 +95,7 @@ static cl::opt<bool> EarlyByValArgsCopy(
     cl::desc("Create a copy of byval function arguments early."),
     cl::init(false), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // Register the target.
   RegisterTargetMachine<NVPTXTargetMachine32> X(getTheNVPTXTarget32());
   RegisterTargetMachine<NVPTXTargetMachine64> Y(getTheNVPTXTarget64());
@@ -99,9 +107,12 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVVMIntrRangePass(PR);
   initializeGenericToNVVMLegacyPassPass(PR);
   initializeNVPTXAllocaHoistingPass(PR);
+  initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesPass(PR);
   initializeNVPTXAtomicLowerPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
+  initializeNVPTXSetByValParamAlignLegacyPassPass(PR);
+  initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
   initializeNVPTXLowerAllocaPass(PR);
   initializeNVPTXLowerUnreachablePass(PR);
   initializeNVPTXCtorDtorLoweringLegacyPass(PR);
@@ -113,24 +124,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
-}
-
-static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
-  std::string Ret = "e";
-
-  // Tensor Memory (addrspace:6) is always 32-bits.
-  // Distributed Shared Memory (addrspace:7) follows shared memory
-  // (addrspace:3).
-  if (!is64Bit)
-    Ret += "-p:32:32-p6:32:32-p7:32:32";
-  else if (UseShortPointers) {
-    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
-  } else
-    Ret += "-p6:32:32";
-
-  Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
-
-  return Ret;
+  initializeNVPTXIRPeepholePass(PR);
+  initializeNVPTXPrologEpilogPassPass(PR);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -141,10 +136,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(T,
-                               computeDataLayout(is64bit, UseShortPointersOpt),
-                               TT, CPU, FS, Options, Reloc::PIC_,
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(UseShortPointersOpt ? "shortptr" : ""), TT,
+          CPU, FS, Options, Reloc::PIC_,
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
@@ -233,7 +228,7 @@ MachineFunctionInfo *NVPTXTargetMachine::createMachineFunctionInfo(
                                                                     F, STI);
 }
 
-void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
+void NVPTXTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
@@ -296,7 +291,8 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
-    addPass(createGVNPass());
+    // Disable scalar PRE due to Register Pressure increase
+    addPass(createGVNPass(/*ScalarPRE=*/false));
   else
     addPass(createEarlyCSEPass());
 }
@@ -348,10 +344,7 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
   addPass(createNVPTXAAWrapperPass());
-  addPass(createExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
-    if (auto *WrapperPass = P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
-      AAR.addAAResult(WrapperPass->getResult());
-  }));
+  addPass(createNVPTXExternalAAWrapperPass());
 
   // NVVMReflectPass is added in addEarlyAsPossiblePasses, so hopefully running
   // it here does nothing.  But since we need it for correctness when lowering
@@ -367,6 +360,9 @@ void NVPTXPassConfig::addIRPasses() {
 
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
+  if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
+    addPass(createNVPTXMarkKernelPtrsGlobalPass());
+  addPass(createNVPTXSetByValParamAlignPass());
   addPass(createNVPTXLowerArgsPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
@@ -397,6 +393,8 @@ void NVPTXPassConfig::addIRPasses() {
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
     addPass(createNVPTXTagInvariantLoadsPass());
+    if (!DisableNVPTXIRPeephole)
+      addPass(createNVPTXIRPeepholePass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {

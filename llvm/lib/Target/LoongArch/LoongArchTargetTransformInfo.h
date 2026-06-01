@@ -53,7 +53,19 @@ public:
   unsigned getPrefetchDistance() const override;
   bool enableWritePrefetching() const override;
 
-  // TODO: Implement more hooks to provide TTI machinery for LoongArch.
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
+  TTI::MemCmpExpansionOptions
+  enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // end namespace llvm

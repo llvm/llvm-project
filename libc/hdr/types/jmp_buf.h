@@ -1,4 +1,4 @@
-//===-- Definition of jmp_buf.h ------------------------------------------===//
+//===-- Definition of jmp_buf.h -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apahce License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,6 +17,6 @@
 
 #include <setjmp.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_TYPES_JMP_BUF_H

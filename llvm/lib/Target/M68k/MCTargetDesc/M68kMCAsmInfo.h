@@ -23,8 +23,24 @@ class M68kELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit M68kELFMCAsmInfo(const Triple &Triple);
+  explicit M68kELFMCAsmInfo(const Triple &Triple,
+                            const MCTargetOptions &Options);
 };
+
+namespace M68k {
+enum Specifier {
+  S_None,
+  S_GOT,
+  S_GOTOFF,
+  S_GOTPCREL,
+  S_GOTTPOFF,
+  S_PLT,
+  S_TLSGD,
+  S_TLSLD,
+  S_TLSLDM,
+  S_TPOFF,
+};
+}
 
 } // namespace llvm
 

@@ -35,13 +35,22 @@ using namespace llvm;
 #define DEBUG_TYPE "gcn-vopd-utils"
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
-                                   const MachineInstr &FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &MIX,
+                                   const MachineInstr &MIY, bool IsVOPD3,
+                                   bool AllowSameVGPR) {
   namespace VOPD = AMDGPU::VOPD;
 
-  const MachineFunction *MF = FirstMI.getMF();
+  const MachineFunction *MF = MIX.getMF();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
+
+  if (IsVOPD3 && !ST.hasVOPD3())
+    return false;
+  if (!IsVOPD3 && (TII.isVOP3(MIX) || TII.isVOP3(MIY)))
+    return false;
+  if (TII.isDPP(MIX) || TII.isDPP(MIY))
+    return false;
+
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
   SmallVector<const MachineOperand *> UniqueLiterals;
@@ -52,51 +61,75 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     }
     UniqueLiterals.push_back(&Op);
   };
-  SmallVector<Register> UniqueScalarRegs;
-  assert([&]() -> bool {
-    for (auto MII = MachineBasicBlock::const_iterator(&FirstMI);
-         MII != FirstMI.getParent()->instr_end(); ++MII) {
-      if (&*MII == &SecondMI)
-        return true;
-    }
-    return false;
-  }() && "Expected FirstMI to precede SecondMI");
-  // Cannot pair dependent instructions
-  for (const auto &Use : SecondMI.uses())
-    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), TRI))
-      return false;
+  SmallSet<Register, 4> UniqueScalarRegs;
 
   auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {
-    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? FirstMI : SecondMI;
+    const MachineInstr &MI = (OpcodeIdx == VOPD::X) ? MIX : MIY;
     const MachineOperand &Operand = MI.getOperand(OperandIdx);
     if (Operand.isReg() && TRI->isVectorRegister(MRI, Operand.getReg()))
       return Operand.getReg();
     return Register();
   };
 
-  auto InstInfo =
-      AMDGPU::getVOPDInstInfo(FirstMI.getDesc(), SecondMI.getDesc());
+  auto InstInfo = AMDGPU::getVOPDInstInfo(MIX.getDesc(), MIY.getDesc());
 
   for (auto CompIdx : VOPD::COMPONENTS) {
-    const MachineInstr &MI = (CompIdx == VOPD::X) ? FirstMI : SecondMI;
+    const MachineInstr &MI = (CompIdx == VOPD::X) ? MIX : MIY;
 
-    const MachineOperand &Src0 = MI.getOperand(VOPD::Component::SRC0);
+    const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
     if (Src0.isReg()) {
       if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
-        if (!is_contained(UniqueScalarRegs, Src0.getReg()))
-          UniqueScalarRegs.push_back(Src0.getReg());
+        UniqueScalarRegs.insert(Src0.getReg());
       }
-    } else {
-      if (!TII.isInlineConstant(MI, VOPD::Component::SRC0))
-        addLiteral(Src0);
+    } else if (!TII.isInlineConstant(Src0)) {
+      if (IsVOPD3)
+        return false;
+      addLiteral(Src0);
     }
 
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
+      if (IsVOPD3)
+        return false;
+
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
       addLiteral(MI.getOperand(CompOprIdx));
     }
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
-      UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
+      UniqueScalarRegs.insert(AMDGPU::VCC_LO);
+
+    if (IsVOPD3) {
+      for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
+        const MachineOperand *Src = TII.getNamedOperand(MI, OpName);
+        if (!Src)
+          continue;
+        if (OpName == AMDGPU::OpName::src2) {
+          if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
+            continue;
+          if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
+            UniqueScalarRegs.insert(Src->getReg());
+            continue;
+          }
+        }
+        if (!Src->isReg() || !TRI->isVGPR(MRI, Src->getReg()))
+          return false;
+      }
+
+      for (auto OpName : {AMDGPU::OpName::clamp, AMDGPU::OpName::omod,
+                          AMDGPU::OpName::op_sel}) {
+        if (TII.hasModifiersSet(MI, OpName))
+          return false;
+      }
+
+      // Neg is allowed, other modifiers are not. NB: even though sext has the
+      // same value as neg, there are no combinable instructions with sext.
+      for (auto OpName :
+           {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
+            AMDGPU::OpName::src2_modifiers}) {
+        const MachineOperand *Mods = TII.getNamedOperand(MI, OpName);
+        if (Mods && (Mods->getImm() & ~SISrcMods::NEG))
+          return false;
+      }
+    }
   }
 
   if (UniqueLiterals.size() > 1)
@@ -104,17 +137,93 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if ((UniqueLiterals.size() + UniqueScalarRegs.size()) > 2)
     return false;
 
-  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
-  bool SkipSrc = ST.getGeneration() >= AMDGPUSubtarget::GFX12 &&
-                 FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
-                 SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
+  // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
+  // source-cache.
+  bool SkipSrc = (ST.hasGFX11_7Insts() || ST.hasGFX12Insts()) &&
+                 MIX.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
+                 MIY.getOpcode() == AMDGPU::V_MOV_B32_e32;
 
-  if (InstInfo.hasInvalidOperand(getVRegIdx, SkipSrc))
+  if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
+                                 IsVOPD3))
     return false;
 
-  LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
-                    << "\n\tY: " << SecondMI << "\n");
+  if (IsVOPD3) {
+    // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
+    // MIX check is only relevant to scheduling?
+    if (AMDGPU::hasNamedOperand(MIX.getOpcode(), AMDGPU::OpName::bitop3)) {
+      const MachineOperand &Src2 =
+          *TII.getNamedOperand(MIX, AMDGPU::OpName::src2);
+      if (!Src2.isImm() || Src2.getImm())
+        return false;
+    }
+    if (AMDGPU::hasNamedOperand(MIY.getOpcode(), AMDGPU::OpName::bitop3)) {
+      const MachineOperand &Src2 =
+          *TII.getNamedOperand(MIY, AMDGPU::OpName::src2);
+      if (!Src2.isImm() || Src2.getImm())
+        return false;
+    }
+  }
+
+  LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << MIX
+                    << "\n\tY: " << MIY << "\n");
   return true;
+}
+
+/// Core pair-eligibility check for a single VOPD encoding variant (VOPD or
+/// VOPD3).  Returns the X/Y assignment on success, or std::nullopt otherwise.
+static std::optional<VOPDMatchInfo>
+tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
+                        MachineInstr &FirstMI, MachineInstr &SecondMI,
+                        bool IsVOPD3) {
+  unsigned Opc = FirstMI.getOpcode();
+  unsigned Opc2 = SecondMI.getOpcode();
+  AMDGPU::CanBeVOPD FirstCanBeVOPD =
+      AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3);
+  AMDGPU::CanBeVOPD SecondCanBeVOPD =
+      AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
+
+  if (!(FirstCanBeVOPD.X && SecondCanBeVOPD.Y) &&
+      !(FirstCanBeVOPD.Y && SecondCanBeVOPD.X))
+    return std::nullopt;
+
+  // If SecondMI depends on FirstMI they cannot execute at the same time.
+  if (TII.hasRAWDependency(FirstMI, SecondMI))
+    return std::nullopt;
+
+  const GCNSubtarget &ST = TII.getSubtarget();
+  bool AllowSameVGPR = ST.hasGFX12Insts();
+
+  if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
+    if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
+      return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
+  }
+
+  if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
+    // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
+    // Only enable it when there is no antidependency.
+    bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
+    AllowSameVGPR &= !IsAntiDep;
+    if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
+      return std::nullopt;
+    if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR))
+      return VOPDMatchInfo{&SecondMI, &FirstMI, IsVOPD3};
+  }
+
+  return std::nullopt;
+}
+
+std::optional<VOPDMatchInfo> llvm::tryMatchVOPDPair(const SIInstrInfo &TII,
+                                                    MachineInstr &FirstMI,
+                                                    MachineInstr &SecondMI) {
+  const GCNSubtarget &ST = TII.getSubtarget();
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+  if (auto Match = tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI,
+                                           SecondMI, /*IsVOPD3=*/false))
+    return Match;
+  if (ST.hasVOPD3())
+    return tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI, SecondMI,
+                                   /*IsVOPD3=*/true);
+  return std::nullopt;
 }
 
 /// Check if the instr pair, FirstMI and SecondMI, should be scheduled
@@ -125,21 +234,34 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const MachineInstr *FirstMI,
                                        const MachineInstr &SecondMI) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
-  unsigned Opc2 = SecondMI.getOpcode();
-  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
+  const GCNSubtarget &ST = STII.getSubtarget();
 
-  // One instruction case
-  if (!FirstMI)
-    return SecondCanBeVOPD.Y;
+  // One instruction case: just check whether SecondMI is eligible at all.
+  if (!FirstMI) {
+    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
+    unsigned Opc2 = SecondMI.getOpcode();
+    auto checkCanBeVOPD = [&](bool VOPD3) {
+      AMDGPU::CanBeVOPD CanBeVOPD =
+          AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
+      return CanBeVOPD.Y || CanBeVOPD.X;
+    };
+    return checkCanBeVOPD(false) || (ST.hasVOPD3() && checkCanBeVOPD(true));
+  }
 
-  unsigned Opc = FirstMI->getOpcode();
-  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
-
-  if (!((FirstCanBeVOPD.X && SecondCanBeVOPD.Y) ||
-        (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
+#ifdef EXPENSIVE_CHECKS
+  assert([&]() -> bool {
+    for (auto MII = MachineBasicBlock::const_iterator(FirstMI);
+         MII != FirstMI->getParent()->instr_end(); ++MII) {
+      if (&*MII == &SecondMI)
+        return true;
+    }
     return false;
+  }() && "Expected FirstMI to precede SecondMI");
+#endif
 
-  return checkVOPDRegConstraints(STII, *FirstMI, SecondMI);
+  return tryMatchVOPDPair(STII, *const_cast<MachineInstr *>(FirstMI),
+                          const_cast<MachineInstr &>(SecondMI))
+      .has_value();
 }
 
 namespace {

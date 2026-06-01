@@ -25,7 +25,7 @@ namespace llvm {
 
 class InstCombiner;
 
-class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
+class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
   typedef BasicTTIImplBase<X86TTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -37,6 +37,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
   const X86TargetLowering *getTLI() const { return TLI; }
 
   const FeatureBitset InlineFeatureIgnoreList = {
+      // clang-format off
       // This indicates the CPU is 64 bit capable not that we are in 64-bit
       // mode.
       X86::FeatureX86_64,
@@ -78,6 +79,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningSlowDivide32,
       X86::TuningSlowDivide64,
       X86::TuningSlowIncDec,
+      X86::TuningSlowIndirectCall,
       X86::TuningSlowLEA,
       X86::TuningSlowPMADDWD,
       X86::TuningSlowPMULLD,
@@ -107,6 +109,7 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
 
       // CPU name enums. These just follow CPU string.
       X86::ProcIntelAtom
+      // clang-format on
   };
 
 public:
@@ -132,6 +135,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector, Type *Ty) const override;
   bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
@@ -149,9 +153,9 @@ public:
                                   TTI::TargetCostKind CostKind) const override;
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
   InstructionCost
   getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
@@ -164,14 +168,18 @@ public:
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
-  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                     TTI::TargetCostKind CostKind,
-                                     unsigned Index, const Value *Op0,
-                                     const Value *Op1) const override;
-  InstructionCost getScalarizationOverhead(
-      VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-      TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const override;
+  InstructionCost
+  getVectorInstrCost(unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+                     unsigned Index, const Value *Op0, const Value *Op1,
+                     TTI::VectorInstrContext VIC =
+                         TTI::VectorInstrContext::None) const override;
+  InstructionCost
+  getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                           bool Insert, bool Extract,
+                           TTI::TargetCostKind CostKind,
+                           bool ForPoisonSrc = true, ArrayRef<Value *> VL = {},
+                           TTI::VectorInstrContext VIC =
+                               TTI::VectorInstrContext::None) const override;
   InstructionCost
   getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
                             const APInt &DemandedDstElts,
@@ -182,20 +190,19 @@ public:
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const override;
   InstructionCost
-  getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
-                        unsigned AddressSpace,
-                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override;
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const override;
+  InstructionCost getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
+                                        TTI::TargetCostKind CostKind) const;
+  InstructionCost getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                         TTI::TargetCostKind CostKind) const;
   InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
                        const TTI::PointersChainInfo &Info, Type *AccessTy,
                        TTI::TargetCostKind CostKind) const override;
-  InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   std::optional<Instruction *>
   instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const override;
@@ -219,6 +226,15 @@ public:
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                              std::optional<FastMathFlags> FMF,
                              TTI::TargetCostKind CostKind) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 
   InstructionCost getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                 TTI::TargetCostKind CostKind,
@@ -266,10 +282,14 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
   bool canMacroFuseCmp() const override;
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                         unsigned AddressSpace) const override;
-  bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                          unsigned AddressSpace) const override;
+  bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    TTI::MaskKind MaskKind =
+                        TTI::MaskKind::VariableOrConstantMask) const override;
+  bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     TTI::MaskKind MaskKind =
+                         TTI::MaskKind::VariableOrConstantMask) const override;
   bool isLegalNTLoad(Type *DataType, Align Alignment) const override;
   bool isLegalNTStore(Type *DataType, Align Alignment) const override;
   bool isLegalBroadcastLoad(Type *ElementTy,
@@ -294,7 +314,7 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override;
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
-                             const ArrayRef<Type *> &Type) const override;
+                             ArrayRef<Type *> Type) const override;
 
   uint64_t getMaxMemIntrinsicInlineSizeThreshold() const override {
     return ST->getMaxInlineSizeThreshold();
@@ -307,6 +327,8 @@ public:
   bool supportsEfficientVectorElementLoadStore() const override;
   bool enableInterleavedAccessVectorization() const override;
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
   InstructionCost getBranchMispredictPenalty() const override;
 
   bool isProfitableToSinkOperands(Instruction *I,
@@ -314,8 +336,11 @@ public:
 
   bool isVectorShiftByScalarCheap(Type *Ty) const override;
 
-  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                             Type *ScalarValTy) const override;
+  unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy, Type *ScalarValTy,
+                             Align Alignment,
+                             unsigned AddrSpace) const override;
+
+  bool useFastCCForInternalCall(Function &F) const override;
 
 private:
   bool supportsGather() const;

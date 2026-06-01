@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -53,6 +52,14 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override {
     OS << "\t.variant_pcs\t" << Symbol->getName() << "\n";
+  }
+
+  void emitDirectiveArch(StringRef Name) override {
+    OS << "\t.arch\t" << Name << "\n";
+  }
+
+  void emitDirectiveArchExtension(StringRef Name) override {
+    OS << "\t.arch_extension\t" << Name << "\n";
   }
 
   void emitARM64WinCFIAllocStack(unsigned Size) override {
@@ -223,7 +230,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\n";
   }
 
-  void emitAtributesSubsection(
+  void emitAttributesSubsection(
       StringRef SubsectionName,
       AArch64BuildAttributes::SubsectionOptional Optional,
       AArch64BuildAttributes::SubsectionType ParameterType) override {
@@ -270,7 +277,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
        << ", " << ParameterStr;
     // Keep the data structure consistent with the case of ELF emission
     // (important for llvm-mc asm parsing)
-    AArch64TargetStreamer::emitAtributesSubsection(SubsectionName, Optional,
+    AArch64TargetStreamer::emitAttributesSubsection(SubsectionName, Optional,
                                                    ParameterType);
     OS << "\n";
   }
@@ -309,8 +316,7 @@ public:
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
         LastEMS(EMS_None) {
-    auto *TO = getContext().getTargetOptions();
-    ImplicitMapSyms = TO && TO->ImplicitMapSyms;
+    ImplicitMapSyms = getContext().getTargetOptions().ImplicitMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
@@ -410,7 +416,8 @@ private:
   }
 
   MCSymbol *emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     return Symbol;
   }
@@ -425,10 +432,10 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
 
-void AArch64TargetELFStreamer::emitAtributesSubsection(
+void AArch64TargetELFStreamer::emitAttributesSubsection(
     StringRef VendorName, AArch64BuildAttributes::SubsectionOptional IsOptional,
     AArch64BuildAttributes::SubsectionType ParameterType) {
-  AArch64TargetStreamer::emitAtributesSubsection(VendorName, IsOptional,
+  AArch64TargetStreamer::emitAttributesSubsection(VendorName, IsOptional,
                                                  ParameterType);
 }
 
@@ -447,7 +454,7 @@ void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
 
 void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
   getStreamer().getAssembler().registerSymbol(*Symbol);
-  cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
+  static_cast<MCSymbolELF *>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 
 void AArch64TargetELFStreamer::finish() {
@@ -479,7 +486,6 @@ void AArch64TargetELFStreamer::finish() {
     }
     if (Syms.size() != NumSyms) {
       SmallVector<const MCSymbol *, 0> NewSyms;
-      DenseMap<MCSection *, size_t> Cnt;
       Syms.truncate(NumSyms);
       // Find the last symbol index for each candidate section.
       for (auto [I, Sym] : llvm::enumerate(Syms)) {
@@ -516,17 +522,16 @@ void AArch64TargetELFStreamer::finish() {
   // mark it execute-only if it is empty and there is at least one
   // execute-only section in the object.
   if (any_of(Asm, [](const MCSection &Sec) {
-        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_AARCH64_PURECODE;
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_AARCH64_PURECODE;
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     bool Empty = true;
     for (auto &F : *Text) {
-      if (auto *DF = dyn_cast<MCDataFragment>(&F)) {
-        if (!DF->getContents().empty()) {
-          Empty = false;
-          break;
-        }
+      if (F.getSize()) {
+        Empty = false;
+        break;
       }
     }
     if (Empty)
@@ -535,7 +540,7 @@ void AArch64TargetELFStreamer::finish() {
 
   MCSectionELF *MemtagSec = nullptr;
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (Sym.isMemtag()) {
       MemtagSec = Ctx.getELFSection(".memtag.globals.static",
                                     ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
@@ -550,12 +555,11 @@ void AArch64TargetELFStreamer::finish() {
   S.switchSection(MemtagSec);
   const auto *Zero = MCConstantExpr::create(0, Ctx);
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (!Sym.isMemtag())
       continue;
     auto *SRE = MCSymbolRefExpr::create(&Sym, Ctx);
-    (void)S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE, SMLoc(),
-                               *Ctx.getSubtargetInfo());
+    S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE);
   }
 }
 
