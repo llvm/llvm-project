@@ -687,8 +687,13 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
                          iterator_range<MachineInstr::const_mop_iterator> Ops,
                          BitVector &DefSet, BitVector &UseSet) {
   for (const MachineOperand &Op : Ops) {
-    if (Op.isReg())
-      addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
+    if (!Op.isReg())
+      continue;
+    // ASYNCcnt is a class-less fake register used for dependency modeling;
+    // it has no soft-clause def/use semantics.
+    if (Op.getReg() == AMDGPU::ASYNCcnt)
+      continue;
+    addRegUnits(TRI, Op.isDef() ? DefSet : UseSet, Op.getReg().asMCReg());
   }
 }
 
@@ -814,6 +819,10 @@ int GCNHazardRecognizer::checkVMEMHazards(MachineInstr *VMEM) const {
   };
   for (const MachineOperand &Use : VMEM->uses()) {
     if (!Use.isReg() || TRI.isVectorRegister(MF.getRegInfo(), Use.getReg()))
+      continue;
+    // ASYNCcnt is a class-less fake register used for dependency modeling;
+    // it isn't a real SGPR and has no VALU-write hazard.
+    if (Use.getReg() == AMDGPU::ASYNCcnt)
       continue;
 
     int WaitStatesNeededForUse =
@@ -1464,7 +1473,12 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
   const MachineOperand *SDST = TII->getNamedOperand(*MI, SDSTName);
   if (!SDST) {
     for (const auto &MO : MI->implicit_operands()) {
-      if (MO.isDef() && TRI->isSGPRClass(TRI->getPhysRegBaseClass(MO.getReg()))) {
+      // ASYNCcnt is a class-less fake register used for dependency modeling;
+      // getPhysRegBaseClass returns null for it.
+      if (MO.getReg() == AMDGPU::ASYNCcnt)
+        continue;
+      if (MO.isDef() &&
+          TRI->isSGPRClass(TRI->getPhysRegBaseClass(MO.getReg()))) {
         SDST = &MO;
         break;
       }

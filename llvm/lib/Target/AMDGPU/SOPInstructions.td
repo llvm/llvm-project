@@ -1728,16 +1728,16 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 }
 
 let SubtargetPredicate = HasAsyncMark in {
-def ASYNCMARK : SPseudoInstSI<(outs), (ins),
-  [(int_amdgcn_asyncmark)]> {
-   let maybeAtomic = 0;
-   let isMeta = 1;
-}
 def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
     [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
     let maybeAtomic = 0;
     let Size = 0;
     let isMeta = 1;
+    // Mirrors ASYNCMARK's async-counter Use/Def so the scheduler can chain
+    // the wait against prior ASYNCMARKs and async LDS-DMA loads via ASYNCcnt
+    // (real on gfx12+, reused as a pseudo dep-tracking reg on gfx9/gfx10).
+    let Uses = [ASYNCcnt];
+    let Defs = [ASYNCcnt];
 }
 }
 
@@ -1822,6 +1822,16 @@ def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$si
 }
 
 } // End hasSideEffects
+
+let SubtargetPredicate = HasAsyncMark in
+def ASYNCMARK : SPseudoInstSI<(outs), (ins)> {
+   let maybeAtomic = 0;
+   let isMeta = 1;
+   let hasSideEffects = 0;
+   // Serializes async LDS-DMA loads via the async counter.
+   let Uses = [ASYNCcnt];
+   let Defs = [ASYNCcnt];
+}
 
 let SubtargetPredicate = HasVGPRIndexMode in {
 def S_SET_GPR_IDX_MODE : SOPP_Pseudo<"s_set_gpr_idx_mode", (ins GPRIdxMode:$simm16),

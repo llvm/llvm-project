@@ -1274,8 +1274,6 @@ def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
 def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
 def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
 
-def IsAsync : NamedBitOperand<"isasync">;
-
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;
 def DA : NamedBitOperand<"da">;
@@ -3415,6 +3413,30 @@ def getIfAddr64Inst : InstrMapping {
   let ColFields = ["IsAddr64"];
   let KeyCol = ["1"];
   let ValueCols = [["1"]];
+}
+
+// Pairs each MUBUF/FLAT load-to-LDS pseudo with its PreGFX12Async sibling.
+class PreGFX12AsyncTable<string opName, bit is_async = 0> {
+  string PreGFX12AsyncOpName = opName;
+  bit IsPreGFX12Async = is_async;
+}
+
+// Maps a load-to-LDS pseudo to its PreGFX12Async _ASYNC sibling.
+def getPreGFX12AsyncOp : InstrMapping {
+  let FilterClass = "PreGFX12AsyncTable";
+  let RowFields = ["PreGFX12AsyncOpName"];
+  let ColFields = ["IsPreGFX12Async"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
+// Inverse of getPreGFX12AsyncOp.
+def getPreGFX12NonAsyncOp : InstrMapping {
+  let FilterClass = "PreGFX12AsyncTable";
+  let RowFields = ["PreGFX12AsyncOpName"];
+  let ColFields = ["IsPreGFX12Async"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
 }
 
 // Maps a GLOBAL to its SADDR form.
