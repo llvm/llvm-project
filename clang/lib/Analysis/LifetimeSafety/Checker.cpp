@@ -133,7 +133,8 @@ public:
         return;
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
         // Track that this lifetimebound parameter correctly escapes.
-        VerifiedLiftimeboundEscapes.insert(PVD);
+        if (isa<ReturnEscapeFact>(OEF))
+          VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
         // return or a field in constructor.
@@ -147,9 +148,10 @@ public:
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
-      if (implicitObjectParamIsLifetimeBound(MD))
-        VerifiedLiftimeboundEscapes.insert(MD);
-      else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+      if (implicitObjectParamIsLifetimeBound(MD)) {
+        if (isa<ReturnEscapeFact>(OEF))
+          VerifiedLiftimeboundEscapes.insert(MD);
+      } else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
