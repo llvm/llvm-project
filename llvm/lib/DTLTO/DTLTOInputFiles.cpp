@@ -1,4 +1,4 @@
-//===- DTLTOInputFiles.cpp - Distributed ThinLTO implementation -----------===//
+//===- DTLTOInputFiles.cpp - Integrated Distributed ThinLTO implementation ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// This file implements support functions for Distributed ThinLTO, focusing on
-// preparing input files for distribution.
+// This file implements support functions for Integrated Distributed ThinLTO,
+// focusing on preparing input files for distribution.
 //
 //===----------------------------------------------------------------------===//
 
@@ -203,7 +203,7 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
 
 // Save the contents of ThinLTO-enabled input files that must be serialized for
 // distribution.
-Error lto::DTLTO::handleArchiveInputs() {
+Error lto::DTLTO::serializeBitcodeArchiveMembers() {
   for (auto &Input : InputFiles) {
     if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
       continue;

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// This file implements the Distributed ThinLTO driver that prepares the
-// compilation job descriptions and invokes the external distributor.
+// This file implements the Integrated Distributed ThinLTO driver that prepares
+// the compilation job descriptions and invokes the external distributor.
 //
 //===----------------------------------------------------------------------===//
 

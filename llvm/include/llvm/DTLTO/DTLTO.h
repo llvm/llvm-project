@@ -1,4 +1,4 @@
-//===- DTLTO.h - Distributed ThinLTO implementation -----------------------===//
+//===- DTLTO.h - Integrated Distributed ThinLTO implementation ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// Declarations for Distributed ThinLTO, including the DTLTO class and the
-// distribution driver. The implementation focuses on preparing input files for
-// distribution.
+// Declarations for Integrated Distributed ThinLTO, including the DTLTO class
+// and the distribution driver. The implementation focuses on preparing input
+// files for distribution.
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,7 +42,7 @@ namespace lto {
 /// normalize module ID for standalone bitcode; (3) for thin archive members,
 /// set module ID to the on-disk member path; (4) for other archives and FatLTO,
 /// set module ID to a unique path and serialize content in
-/// handleArchiveInputs().
+/// serializeBitcodeArchiveMembers().
 class DTLTO : public LTO {
   using Base = LTO;
 
@@ -55,14 +55,21 @@ public:
                  ArrayRef<StringRef> RemoteCompilerPrependArgs,
                  ArrayRef<StringRef> RemoteCompilerArgs,
                  AddBufferFn AddBufferArg, bool SaveTempsArg)
-      : Base(std::move(Conf), {}, ParallelCodeGenParallelismLevel, LTOMode),
+      : Base(std::move(Conf), writeIndexesBackendInstance(),
+             ParallelCodeGenParallelismLevel, LTOMode),
         AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
         ShouldEmitIndexFiles(EmitIndexFiles),
-        ShouldEmitImportFiles(EmitImportsFiles), OnWriteCb(OnWrite),
+        ShouldEmitImportFiles(EmitImportsFiles), OnIndexWriteCb(OnWrite),
         DistributorParams{Distributor,        DistributorArgs,
                           RemoteCompiler,     RemoteCompilerPrependArgs,
                           RemoteCompilerArgs, LinkerOutputFile} {
     assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
+  }
+
+  // Create an instance of WriteIndexesBackend class.
+  static lto::ThinBackend writeIndexesBackendInstance() {
+    return lto::createWriteIndexesThinBackend(hardware_concurrency(), "", "",
+                                              "", true, nullptr, nullptr);
   }
 
   /// Add an input file and prepare it for distribution.
@@ -70,8 +77,7 @@ public:
   /// This function performs the following tasks:
   /// 1. Add the input file to the LTO object's list of input files.
   /// 2. For individual bitcode file inputs on Windows only, overwrite the
-  /// module
-  ///    ID with a normalized path to remove short 8.3 form components.
+  ///    module ID with a normalized path to remove short 8.3 form components.
   /// 3. For thin archive members, overwrite the module ID with the path
   ///    (normalized on Windows) to the member file on disk.
   /// 4. For archive members and FatLTO objects, overwrite the module ID with a
@@ -102,7 +108,7 @@ private:
   /// Must be called after all input files are added but before optimization
   /// begins. If a file with that name already exists, it is likely a leftover
   /// from a previously terminated linker process and can be safely overwritten.
-  LLVM_ABI Error handleArchiveInputs();
+  LLVM_ABI Error serializeBitcodeArchiveMembers();
 
   // Remove temporary files created to enable distribution.
   LLVM_ABI void cleanup() override;
@@ -173,7 +179,7 @@ private:
   // Keep summary import files when true.
   bool ShouldEmitImportFiles = false;
   // On index file write callback.
-  IndexWriteCallback OnWriteCb;
+  IndexWriteCallback OnIndexWriteCb;
 
   /// Probes the LTO cache for a compiled native object for the given job.
   ///
@@ -273,7 +279,7 @@ private:
   // Per-task summary index shards from the thin link (in-memory buffers).
   std::vector<SmallString<0>> SummaryIndexFiles;
   // Per-task imported bitcode paths from the thin link.
-  std::vector<std::vector<std::string>> ImportsFilesLists;
+  std::vector<std::vector<std::string>> ImportsFiles;
   // Per-task cache keys for incremental builds from the thin link.
   std::vector<std::string> CacheKeysList;
 
@@ -285,7 +291,7 @@ private:
   /// references and produces:
   ///
   /// - SummaryIndexFiles: per-module summary index shards (in-memory buffers)
-  /// - ImportsFilesLists: per-module lists of imported bitcode files
+  /// - ImportsFiles: per-module lists of imported bitcode files
   /// - CacheKeysList: per-module cache keys for incremental builds
   /// - ModuleNames: per-module identifiers
   ///

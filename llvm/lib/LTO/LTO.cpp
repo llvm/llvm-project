@@ -1299,6 +1299,8 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  // Call the base class cleanup() explicitly since run() may be invoked on a
+  // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
 
   // Compute "dead" symbols, we don't want to import/export these!
@@ -1532,33 +1534,34 @@ Error ThinBackendProc::emitFiles(
   gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
                                    ImportList, ModuleToSummariesForIndex,
                                    DeclarationSummaries);
-
-  if (!Conf.OnSummaryIndexStoreCb) {
-    raw_fd_ostream OS(SummaryPath, EC, sys::fs::OpenFlags::OF_None);
+  // Resolve the output stream (either file-backed or callback-provided) for the
+  // index file.
+  std::unique_ptr<raw_pwrite_stream> OS;
+  if (Conf.GetSummaryIndexOutputStream) {
+    OS = Conf.GetSummaryIndexOutputStream(Task);
+    assert(OS && "GetSummaryIndexOutputStream returned null");
+  } else {
+    auto FileOS = std::make_unique<raw_fd_ostream>(SummaryPath, EC,
+                                                   sys::fs::OpenFlags::OF_None);
     if (EC)
       return createFileError("cannot open " + Twine(SummaryPath), EC);
+    OS = std::move(FileOS);
+  }
 
-    writeIndexToFile(CombinedIndex, OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
+  writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
+                   &DeclarationSummaries);
 
-    if (ShouldEmitImportsFiles) {
-      Error ImportsFilesError = EmitImportsFiles(
-          ModulePath, NewModulePath + ".imports", ModuleToSummariesForIndex);
-      if (ImportsFilesError)
-        return ImportsFilesError;
-    }
-  } else {
-    std::unique_ptr<raw_pwrite_stream> OS = Conf.OnSummaryIndexStoreCb(Task);
-    writeIndexToFile(CombinedIndex, *OS, &ModuleToSummariesForIndex,
-                     &DeclarationSummaries);
-
-    if (Conf.OnImportsListStoreCb) {
-      std::vector<std::string> &ImportsListRef =
-          Conf.OnImportsListStoreCb(Task);
-      processImportsFiles(
-          ModulePath, ModuleToSummariesForIndex,
-          [&](StringRef M) { ImportsListRef.push_back(M.str()); });
-    }
+  // Emit imports files if requested, using callback if provided.
+  if (Conf.GetImportsListOutputArray) {
+    std::vector<std::string> &ImportsListRef =
+        Conf.GetImportsListOutputArray(Task);
+    processImportsFiles(
+        ModulePath, ModuleToSummariesForIndex,
+        [&](StringRef M) { ImportsListRef.push_back(M.str()); });
+  } else if (ShouldEmitImportsFiles) {
+    if (Error E = EmitImportsFiles(ModulePath, NewModulePath + ".imports",
+                                   ModuleToSummariesForIndex))
+      return E;
   }
   return Error::success();
 }
@@ -1992,8 +1995,9 @@ public:
           const GVSummaryMapTy &DefinedGlobals =
               ModuleToDefinedGVSummaries.find(ModulePath)->second;
 
-          if (Conf.OnCacheKeyStoreCb) {
-            std::string &CacheKey = Conf.OnCacheKeyStoreCb(Task);
+          // DTLTO needs the per-module LTO cache key to probe the cache.
+          if (Conf.GetCacheKeyOutputString) {
+            std::string &CacheKey = Conf.GetCacheKeyOutputString(Task);
             CacheKey = computeLTOCacheKey(
                 Conf, CombinedIndex, ModulePath, ImportList, ExportList,
                 ResolvedODR, DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);

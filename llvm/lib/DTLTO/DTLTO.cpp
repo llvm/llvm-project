@@ -1,4 +1,4 @@
-//===- DTLTO.cpp - Distributed ThinLTO implementation ---------------------===//
+//===- DTLTO.cpp - Integrated Distributed ThinLTO implementation ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 // \file
-// This file implements support functions for Distributed ThinLTO, focusing on
-// preparing complilation jobs for distribution.
+// This file implements support functions for Integrated Distributed ThinLTO,
+// focusing on preparing complilation jobs for distribution.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,35 +45,35 @@ void lto::DTLTO::cleanup() {
     TimeTraceScope JobScope("Remove DTLTO temporary files");
     for (const auto &Name : CleanupList)
       removeFile(Name);
+    // Clean the CleanupList for safety.
+    CleanupList.clear();
   }
-  Base::cleanup();
 }
 
 // Runs the DTLTO thin link phase, producing per-module summary indices,
 // import lists, and cache keys for distribution.
 Error lto::DTLTO::performThinLink() {
-  auto ThinIndexBackend = lto::createWriteIndexesThinBackend(
-      hardware_concurrency(), "", "", "", true, nullptr, nullptr);
-  setThinBackend(ThinIndexBackend);
   setLTOMode(lto::LTO::LTOKind::LTOK_UnifiedThin);
 
   size_t NumTasks = getMaxTasks();
   SummaryIndexFiles.resize(NumTasks);
-  ImportsFilesLists.resize(NumTasks);
+  ImportsFiles.resize(NumTasks);
   CacheKeysList.resize(NumTasks);
 
   lto::Config &Cfg = getConfig();
-  Cfg.OnSummaryIndexStoreCb =
+  Cfg.GetSummaryIndexOutputStream =
       [&](size_t task) -> std::unique_ptr<raw_svector_ostream> {
     return std::make_unique<raw_svector_ostream>(SummaryIndexFiles[task]);
   };
-  Cfg.OnCacheKeyStoreCb = [&](size_t task) -> std::string & {
+  Cfg.GetCacheKeyOutputString = [&](size_t task) -> std::string & {
     return CacheKeysList[task];
   };
-  Cfg.OnImportsListStoreCb = [&](size_t task) -> std::vector<std::string> & {
-    return ImportsFilesLists[task];
-  };
-
+  if (ShouldEmitImportFiles) {
+    Cfg.GetImportsListOutputArray =
+        [&](size_t task) -> std::vector<std::string> & {
+      return ImportsFiles[task];
+    };
+  }
   return Base::run(AddStreamFunc, {});
 }
 
@@ -94,7 +94,7 @@ LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
 
   if (Error Err = prepareDtltoJobs())
     return Err;
-  if (Error Err = handleArchiveInputs())
+  if (Error Err = serializeBitcodeArchiveMembers())
     return Err;
   if (Error Err = performCodegen())
     return Err;
@@ -148,7 +148,7 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
        Saver.save(ObjFilePath.str()),
        Saver.save(SummaryIndexPathStr.str()),
        Saver.save(ImportsPathStr.str()),
-       ImportsFilesLists[Task],
+       ImportsFiles[Task],
        CacheKeysList[Task],
        nullptr,
        false};
@@ -161,11 +161,11 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
     if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
       return Err;
   }
-  if (OnWriteCb)
-    OnWriteCb(J.SummaryIndexPath.str());
+  if (OnIndexWriteCb)
+    OnIndexWriteCb(J.SummaryIndexPath.str());
 
   if (ShouldEmitImportFiles)
-    if (Error Err = save(join(ImportsFilesLists[Task], "\n"), J.ImportsPath))
+    if (Error Err = save(join(ImportsFiles[Task], "\n"), J.ImportsPath))
       return Err;
 
   if (!SaveTemps) {
