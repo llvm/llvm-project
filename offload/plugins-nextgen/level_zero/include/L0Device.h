@@ -74,26 +74,6 @@ struct L0DeviceIdTy {
       : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
 };
 
-class L0DeviceTLSTy {
-public:
-  L0DeviceTLSTy() = default;
-  ~L0DeviceTLSTy() {}
-  L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
-  L0DeviceTLSTy(L0DeviceTLSTy &&Other) {}
-
-  Error deinit() { return Plugin::success(); }
-};
-
-struct L0DeviceTLSTableTy
-    : public PerThreadContainer<std::vector<L0DeviceTLSTy>, 8> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0DeviceTLSTy &Entry) { return Entry.deinit(); });
-  }
-};
-
 class L0DeviceTy final : public GenericDeviceTy {
   // Level Zero Context for this Device.
   L0ContextTy &l0Context;
@@ -187,8 +167,6 @@ public:
   LevelZeroPluginTy &getPlugin() {
     return reinterpret_cast<LevelZeroPluginTy &>(Plugin);
   }
-
-  L0DeviceTLSTy &getTLS();
 
   Error setContext() override { return Plugin::success(); }
   Error initImpl(GenericPluginTy &Plugin) override;

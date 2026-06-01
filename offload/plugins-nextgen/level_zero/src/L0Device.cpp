@@ -24,10 +24,6 @@
 
 namespace llvm::omp::target::plugin {
 
-L0DeviceTLSTy &L0DeviceTy::getTLS() {
-  return getPlugin().getDeviceTLS(getDeviceId());
-}
-
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
 static struct {
