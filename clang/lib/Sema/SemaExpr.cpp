@@ -3737,6 +3737,20 @@ ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, int64_t Val) {
                                 Context.IntTy, Loc);
 }
 
+ExprResult Sema::BuildBoolLiteral(SourceLocation Loc, bool Value) {
+  ExprResult Inner;
+  if (getLangOpts().CPlusPlus) {
+    Inner = ActOnCXXBoolLiteral(Loc, Value ? tok::kw_true : tok::kw_false);
+  } else {
+    // C doesn't actually have a way to represent literal values of type
+    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
+    Inner = ActOnIntegerConstant(Loc, Value ? 1 : 0);
+    Inner =
+        ImpCastExprToType(Inner.get(), Context.BoolTy, CK_IntegralToBoolean);
+  }
+  return Inner;
+}
+
 static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
                                   QualType Ty, SourceLocation Loc) {
   const llvm::fltSemantics &Format = S.Context.getFloatTypeSemantics(Ty);
@@ -14643,15 +14657,7 @@ void Sema::DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc) {
   // The listed locations are the initialization and increment portions
   // of a for loop.  The additional checks are on the condition of
   // if statements, do/while loops, and for loops.
-  // Differences in scope flags for C89 mode requires the extra logic.
-  const unsigned ForIncrementFlags =
-      getLangOpts().C99 || getLangOpts().CPlusPlus
-          ? Scope::ControlScope | Scope::ContinueScope | Scope::BreakScope
-          : Scope::ContinueScope | Scope::BreakScope;
-  const unsigned ForInitFlags = Scope::ControlScope | Scope::DeclScope;
-  const unsigned ScopeFlags = getCurScope()->getFlags();
-  if ((ScopeFlags & ForIncrementFlags) == ForIncrementFlags ||
-      (ScopeFlags & ForInitFlags) == ForInitFlags)
+  if (getCurScope()->isControlScope())
     return;
 
   // If there are multiple comma operators used together, get the RHS of the
@@ -18494,6 +18500,11 @@ static void RemoveNestedImmediateInvocation(
       // Lambdas have already been processed inside their eval contexts.
       return E;
     }
+
+    // We do not have enough information to transform opaque expressions and
+    // assume they do not contain immediate subexpressions.
+    ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return E; }
+
     bool AlwaysRebuild() { return false; }
     bool ReplacingOriginal() { return true; }
     bool AllowSkippingCXXConstructExpr() {

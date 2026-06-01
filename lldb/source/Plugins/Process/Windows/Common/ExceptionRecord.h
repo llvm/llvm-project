@@ -50,7 +50,7 @@ public:
         m_arguments(record.ExceptionInformation,
                     record.ExceptionInformation + record.NumberParameters) {}
 
-  virtual ~ExceptionRecord() {}
+  virtual ~ExceptionRecord() = default;
 
   DWORD
   GetExceptionCode() const { return m_code; }

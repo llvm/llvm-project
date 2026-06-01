@@ -35,4 +35,23 @@ bool queue::is_in_order() const { return impl->isInOrder(); }
 
 void queue::wait() { impl->wait(); }
 
+event queue::getLastEvent() {
+  return detail::createSyclObjFromImpl<event>(impl->getLastEvent());
+}
+
+void queue::setKernelParameters(const std::vector<event> &Events,
+                                const detail::UnifiedRangeView &Range) {
+  std::vector<detail::EventImplPtr> DepEventImplRefs;
+  DepEventImplRefs.reserve(Events.size());
+  for (const auto &Event : Events) {
+    DepEventImplRefs.push_back(detail::getSyclObjImpl(Event));
+  }
+  return impl->setKernelParameters(std::move(DepEventImplRefs), Range);
+}
+
+void queue::submitKernelImpl(detail::DeviceKernelInfo &KernelInfo,
+                             void *ArgData, size_t ArgSize) {
+  impl->submitKernelImpl(KernelInfo, ArgData, ArgSize);
+}
+
 _LIBSYCL_END_NAMESPACE_SYCL

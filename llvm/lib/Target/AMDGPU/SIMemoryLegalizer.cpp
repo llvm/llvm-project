@@ -28,7 +28,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -442,17 +442,26 @@ public:
                              SIAtomicAddrSpace AddrSpace,
                              Position Pos) const = 0;
 
-  /// Inserts any necessary instructions at position \p Pos relative to
-  /// instruction \p MI to ensure previous memory instructions by this thread
-  /// with address spaces \p AddrSpace have completed and can be observed by
-  /// subsequent memory instructions by any thread executing in memory scope \p
-  /// Scope. \p IsCrossAddrSpaceOrdering indicates if the memory ordering is
-  /// between address spaces. Returns true iff any instructions inserted.
-  virtual bool insertRelease(MachineBasicBlock::iterator &MI,
-                             SIAtomicScope Scope,
-                             SIAtomicAddrSpace AddrSpace,
-                             bool IsCrossAddrSpaceOrdering,
-                             Position Pos) const = 0;
+  /// Inserts any necessary writeback instructions at position \p Pos relative
+  /// to instruction \p MI to make previous memory operations by this thread
+  /// with address spaces \p AddrSpace available to other threads in memory
+  /// scope \p Scope. Does not insert waits; callers must call insertWait
+  /// separately. Returns true iff any instructions inserted.
+  virtual bool insertWriteback(MachineBasicBlock::iterator &MI,
+                               SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace,
+                               Position Pos) const = 0;
+
+  /// Inserts writeback followed by an unconditional wait to implement a
+  /// release operation.
+  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
+                     Position Pos) const {
+    bool Changed = insertWriteback(MI, Scope, AddrSpace, Pos);
+    Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                          IsCrossAddrSpaceOrdering, Pos,
+                          AtomicOrdering::Release, /*AtomicsOnly=*/false);
+    return Changed;
+  }
 
   /// Handle operations that are considered non-volatile.
   /// See \ref isNonVolatileMemoryAccess
@@ -496,11 +505,9 @@ public:
                      SIAtomicAddrSpace AddrSpace,
                      Position Pos) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override;
 };
 
 /// Generates code sequences for the memory model of GFX10/11.
@@ -537,12 +544,10 @@ public:
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override {
-    return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                      IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                      /*AtomicsOnly=*/false);
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override {
+    return false;
   }
 };
 
@@ -594,9 +599,9 @@ public:
 
   bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override;
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -1464,67 +1469,56 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx6CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                       SIAtomicScope Scope,
-                                       SIAtomicAddrSpace AddrSpace,
-                                       bool IsCrossAddrSpaceOrdering,
-                                       Position Pos) const {
+bool SIGfx6CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
+                                         SIAtomicScope Scope,
+                                         SIAtomicAddrSpace AddrSpace,
+                                         Position Pos) const {
+  if (!ST.hasGFX90AInsts())
+    return false;
+
   bool Changed = false;
+  MachineBasicBlock &MBB = *MI->getParent();
+  const DebugLoc &DL = MI->getDebugLoc();
 
-  if (ST.hasGFX90AInsts()) {
-    MachineBasicBlock &MBB = *MI->getParent();
-    const DebugLoc &DL = MI->getDebugLoc();
+  if (Pos == Position::AFTER)
+    ++MI;
 
-    if (Pos == Position::AFTER)
-      ++MI;
-
-    if (canAffectGlobalAddrSpace(AddrSpace)) {
-      switch (Scope) {
-      case SIAtomicScope::SYSTEM:
-        // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
-        // hardware does not reorder memory operations by the same wave with
-        // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
-        // to initiate writeback of any dirty cache lines of earlier writes by
-        // the same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
-        // writeback has completed.
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+      // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
+      // hardware does not reorder memory operations by the same wave with
+      // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
+      // to initiate writeback of any dirty cache lines of earlier writes by
+      // the same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
+      // writeback has completed.
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
+          // Set SC bits to indicate system scope.
+          .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
+      Changed = true;
+      break;
+    case SIAtomicScope::AGENT:
+      if (ST.hasGFX940Insts()) {
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-            // Set SC bits to indicate system scope.
-            .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
+            // Set SC bits to indicate agent scope.
+            .addImm(AMDGPU::CPol::SC1);
         Changed = true;
-        break;
-      case SIAtomicScope::AGENT:
-        if (ST.hasGFX940Insts()) {
-          BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-              // Set SC bits to indicate agent scope.
-              .addImm(AMDGPU::CPol::SC1);
-
-          // Since AddrSpace contains SIAtomicAddrSpace::GLOBAL and Scope is
-          // SIAtomicScope::AGENT, the following insertWait will generate the
-          // required "S_WAITCNT vmcnt(0)".
-          Changed = true;
-        }
-        break;
-      case SIAtomicScope::WORKGROUP:
-      case SIAtomicScope::WAVEFRONT:
-      case SIAtomicScope::SINGLETHREAD:
-        // For GFX940, do not generate "BUFFER_WBL2" as there are no caches it
-        // would writeback, and would require an otherwise unnecessary
-        // "S_WAITCNT vmcnt(0)".
-        break;
-      default:
-        llvm_unreachable("Unsupported synchronization scope");
       }
+      break;
+    case SIAtomicScope::WORKGROUP:
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // For GFX940, do not generate "BUFFER_WBL2" as there are no caches it
+      // would writeback, and would require an otherwise unnecessary
+      // "S_WAITCNT vmcnt(0)".
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
     }
-
-    if (Pos == Position::AFTER)
-      --MI;
   }
 
-  // Ensure the necessary S_WAITCNT needed by any "BUFFER_WBL2" as well as other
-  // S_WAITCNT needed.
-  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                        /*AtomicsOnly=*/false);
+  if (Pos == Position::AFTER)
+    --MI;
 
   return Changed;
 }
@@ -2068,75 +2062,67 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return true;
 }
 
-bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                        SIAtomicScope Scope,
-                                        SIAtomicAddrSpace AddrSpace,
-                                        bool IsCrossAddrSpaceOrdering,
-                                        Position Pos) const {
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  const DebugLoc &DL = MI->getDebugLoc();
-
+bool SIGfx12CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
+                                          SIAtomicScope Scope,
+                                          SIAtomicAddrSpace AddrSpace,
+                                          Position Pos) const {
   // The scratch address space does not need the global memory cache
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
   // memory.
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    if (Pos == Position::AFTER)
-      ++MI;
+  if (!canAffectGlobalAddrSpace(AddrSpace))
+    return false;
 
-    // global_wb is only necessary at system scope for GFX12.0,
-    // they're also necessary at device scope for GFX12.5 as stores
-    // cannot report completion earlier than L2.
-    //
-    // Emitting it for lower scopes is a slow no-op, so we omit it
-    // for performance.
-    std::optional<AMDGPU::CPol::CPol> NeedsWB;
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-      NeedsWB = AMDGPU::CPol::SCOPE_SYS;
-      break;
-    case SIAtomicScope::AGENT:
-      // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
-      if (ST.hasGFX1250Insts())
-        NeedsWB = AMDGPU::CPol::SCOPE_DEV;
-      break;
-    case SIAtomicScope::CLUSTER:
-    case SIAtomicScope::WORKGROUP:
-      // No WB necessary, but we still have to wait.
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No WB or wait necessary here, but insertWait takes care of that.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
+  bool Changed = false;
+  MachineBasicBlock &MBB = *MI->getParent();
+  const DebugLoc &DL = MI->getDebugLoc();
 
-    if (NeedsWB) {
-      // Target requires a waitcnt to ensure that the proceeding store
-      // proceeding store/rmw operations have completed in L2 so their data will
-      // be written back by the WB instruction.
-      if (ST.hasINVWBL2WaitCntRequirement())
-        insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                   /*IsCrossAddrSpaceOrdering=*/false, Pos,
-                   AtomicOrdering::Release,
-                   /*AtomicsOnly=*/false);
+  if (Pos == Position::AFTER)
+    ++MI;
 
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
-      Changed = true;
-    }
-
-    if (Pos == Position::AFTER)
-      --MI;
+  // global_wb is only necessary at system scope for GFX12.0,
+  // they're also necessary at device scope for GFX12.5 as stores
+  // cannot report completion earlier than L2.
+  //
+  // Emitting it for lower scopes is a slow no-op, so we omit it
+  // for performance.
+  std::optional<AMDGPU::CPol::CPol> NeedsWB;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    NeedsWB = AMDGPU::CPol::SCOPE_SYS;
+    break;
+  case SIAtomicScope::AGENT:
+    // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
+    if (ST.hasGFX1250Insts())
+      NeedsWB = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::CLUSTER:
+  case SIAtomicScope::WORKGROUP:
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    break;
+  case SIAtomicScope::NONE:
+    llvm_unreachable("Unsupported synchronization scope");
+    break;
   }
 
-  // We always have to wait for previous memory operations (load/store) to
-  // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
-  // we of course need to wait for that as well.
-  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                        /*AtomicsOnly=*/false);
+  if (NeedsWB) {
+    // Target requires a waitcnt to ensure that the proceeding store
+    // proceeding store/rmw operations have completed in L2 so their data will
+    // be written back by the WB instruction.
+    if (ST.hasINVWBL2WaitCntRequirement()) {
+      insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                 /*IsCrossAddrSpaceOrdering=*/false, Pos,
+                 AtomicOrdering::Release,
+                 /*AtomicsOnly=*/false);
+    }
+
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
+    Changed = true;
+  }
+
+  if (Pos == Position::AFTER)
+    --MI;
 
   return Changed;
 }

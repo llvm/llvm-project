@@ -4189,6 +4189,11 @@ Changing the MSVC compatibility version makes clang behave more like that
 version of MSVC. For example, ``-fms-compatibility-version=19`` will enable
 C++14 features and define ``char16_t`` and ``char32_t`` as builtin types.
 
+For compatibility with existing MSVC behavior, ``-fms-compatibility`` also
+implicitly enables several other options, including ``-fno-strict-aliasing``,
+``-fwrapv`` and ``-fdelayed-template-parsing``. When MSVC compatibility is
+set to a version earlier than 19, it also enables ``-fno-threadsafe-statics``.
+
 .. _cxx:
 
 C++ Language Features

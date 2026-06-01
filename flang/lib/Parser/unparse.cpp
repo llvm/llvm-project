@@ -152,6 +152,12 @@ public:
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
   }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
+  }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
   }
@@ -2636,7 +2642,7 @@ public:
   void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPAssumeConstruct &x) {
+  void Unparse(const OmpAssumeDirective &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPAtomicConstruct &x) {
@@ -2659,7 +2665,7 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPDeclarativeAssumes &x) {
+  void Unparse(const OmpAssumesDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2749,7 +2755,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPSectionConstruct &x) {
+  void Unparse(const OmpSectionDirective &x) {
     if (auto &&dirSpec{
             std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();

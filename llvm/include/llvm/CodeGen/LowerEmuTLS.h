@@ -21,7 +21,7 @@ namespace llvm {
 
 class LowerEmuTLSPass : public RequiredPassInfoMixin<LowerEmuTLSPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

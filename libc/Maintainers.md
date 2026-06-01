@@ -29,7 +29,7 @@ This file is a list of the [maintainers](https://llvm.org/docs/DeveloperPolicy.h
 - Nicolas Celik
 - its.overmighty@gmail.com (email), [OverMighty](https://github.com/overmighty) (github)
 
-## Threading
+## Threading, FreeBSD
 - Yifan Zhu
 - yifanzhu@rochester.edu (email), [Schrodinger ZHU Yifan](https://github.com/schrodingerzhu) (github)
 

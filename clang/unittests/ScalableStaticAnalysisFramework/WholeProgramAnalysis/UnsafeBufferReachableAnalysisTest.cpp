@@ -19,7 +19,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisDriver.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/WPASuite.h"
-#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "gtest/gtest.h"
 #include <map>
 #include <memory>
@@ -73,21 +73,29 @@ protected:
             buildUnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
   }
 
-  /// Create \p N entities in \p LU and return their EntityIds.
-  std::vector<EntityId> createEntities(LUSummary &LU, unsigned N) {
-    std::vector<EntityId> Ids;
-    for (unsigned I = 0; I < N; ++I)
-      Ids.push_back(addEntity(LU, ("E" + llvm::Twine(I)).str()));
-    return Ids;
-  }
+  class LetterEntityBiMap {
+    std::map<char, EntityId> Forward;
+    std::map<EntityId, char> Reverse;
 
-  /// Create \p N EPLs, one per entity.
-  std::vector<EntityPointerLevel>
-  createEPLs(llvm::ArrayRef<EntityId> Entities) {
-    std::vector<EntityPointerLevel> EPLs;
-    for (const auto &Id : Entities)
-      EPLs.push_back(buildEntityPointerLevel(Id, 1));
-    return EPLs;
+  public:
+    void insert(char C, EntityId Id) {
+      Forward.try_emplace(C, Id);
+      Reverse[Id] = C;
+    }
+
+    EntityId operator[](char C) const { return Forward.at(C); }
+    char operator[](EntityId Id) const { return Reverse.at(Id); }
+    size_t size() const { return Forward.size(); }
+  };
+
+  /// Create entities for the entity domain \p EntDom in \p LU. For simplicity,
+  /// entities are given by letters in \p EntDom.  Return a "bi-directional map"
+  /// between letters and EntityIds.
+  LetterEntityBiMap createEntities(LUSummary &LU, llvm::ArrayRef<char> EntDom) {
+    LetterEntityBiMap Result;
+    for (char Name : EntDom)
+      Result.insert(Name, addEntity(LU, ("E" + llvm::Twine(Name)).str()));
+    return Result;
   }
 
   /// Insert both PointerFlow and UnsafeBufferUsage summaries for an entity
@@ -128,6 +136,9 @@ protected:
     return Result;
   }
 
+  using Node = std::pair<char, unsigned>;
+  using Edge = std::pair<Node, Node>;
+
   // FIXME: When we use more advanced search algorithms, it may involve
   // a divide-and-conquer approach on sub-graphs organized by contributors.
   // In that case, we may want to enumerate all possible partitions of
@@ -135,244 +146,436 @@ protected:
   // `singlePartition`.
 
   /// Compute reachables from \p StarterLayout in the graph defined by \p
-  /// EdgeLayout.  Edges and starters are all belong to Entity 0.
-  std::optional<std::set<unsigned>>
-  singlePartition(unsigned NumEnt,
-                  llvm::ArrayRef<std::pair<unsigned, unsigned>> EdgeLayout,
-                  llvm::ArrayRef<unsigned> StarterLayout, unsigned Line) {
+  /// EdgeLayout.  Edges and starters are all belong to one contributor.
+  std::set<Node> singlePartition(llvm::ArrayRef<char> EntityDomain,
+                                 llvm::ArrayRef<Edge> EdgeLayout,
+                                 llvm::ArrayRef<Node> StarterLayout,
+                                 unsigned Line) {
     auto LU = makeLUSummary();
-    auto Entities = createEntities(*LU, NumEnt);
-    auto N = createEPLs(Entities);
+    auto Entities = createEntities(*LU, EntityDomain);
+    auto GetEPL = [&Entities](const Node &N) -> EntityPointerLevel {
+      return buildEntityPointerLevel(Entities[N.first], N.second);
+    };
+    auto GetNode = [&Entities](const EntityPointerLevel &N) -> Node {
+      return {Entities[N.getEntity()], N.getPointerLevel()};
+    };
 
     std::vector<EPLEdge> Edges;
     for (const auto &[F, T] : EdgeLayout)
-      Edges.push_back({N[F], N[T]});
+      Edges.push_back({GetEPL(F), GetEPL(T)});
 
     std::vector<EntityPointerLevel> Starters;
-    for (unsigned Idx : StarterLayout)
-      Starters.push_back(N[Idx]);
+    for (const Node &N : StarterLayout)
+      Starters.push_back(GetEPL(N));
 
-    insertSummaries(*LU, Entities[0], Edges, Starters);
-    for (unsigned Idx = 1; Idx < NumEnt; ++Idx)
-      insertSummaries(*LU, Entities[Idx], {}, {});
+    insertSummaries(*LU, Entities[EntityDomain[0]], Edges, Starters);
+    for (size_t Idx = 1; Idx < EntityDomain.size(); ++Idx)
+      insertSummaries(*LU, Entities[EntityDomain[Idx]], {}, {});
 
     auto Reachables = computeReachables(std::move(LU), Line);
-    if (!Reachables.has_value())
-      return std::nullopt;
+    if (!Reachables)
+      return {};
 
-    std::set<unsigned> ReachableIndices;
-    for (unsigned I : llvm::seq(0U, NumEnt))
-      if (Reachables->count(N[I]))
-        ReachableIndices.insert(I);
+    std::set<Node> Result;
+    for (auto &EPL : *Reachables)
+      Result.insert(GetNode(EPL));
 
-    return ReachableIndices;
+    return Result;
   }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-//  Tests below are written in a manner that focuses on pointer flow graph
-//  topology and the starter set, where numbers are used to represent distinct
-//  nodes (pointers).
-//  For example, `LinearChain` tests a graph forming a
-//  linear chain with 4 distinct nodes: 0 -> 1 -> 2 -> 3 with a starter set {0},
-//  where, for example, 0 -> 1 represents an edge where node 0 is the source and
-//  node 1 is the destination. Thus, {0, 1, 2, 3} is the expected reachable set.
+//  Tests below focus on pointer flow graph topology and the starter set.
+//  Letters represent distinct entities; numbers represent pointer levels.
+//
+//  For example, `LinearChain` tests a graph forming a linear chain with 3
+//  edges: (a,1) -> (b,1) -> (c,1) -> (d,1) with starter {(a,1)}.  Thus, {(a,1),
+//  (b,1), (c,1), (d,1)} is the expected reachable set.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Linear chain: 0 -> 1 -> 2 -> 3.
-// Start from {0} => {0, 1, 2, 3}
+// Linear chain: (a,1) -> (b,1) -> (c,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}}, {{'b', 1}, {'c', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Linear chain: 0 -> 1 -> 2 -> 3.
-// Start from mid-chain {2} => {2, 3}
+// Linear chain: (a,1) -> (b,2), (b,1) -> (c,2), (c,1) -> (d,2).
+// Start from {(a,2)} => {(a,2), (b,3), (c,4), (d,5)}
+TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}}, {{'b', 1}, {'c', 2}}, {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 4}, {'d', 5}}));
+}
+
+// Linear chain: (a,1) -> (b,2), (b,4) -> (c,1) -> (d,1).
+// Start from {(a,2)} => {(a,2), (b,3)} (halted at (b,3) — no key (b,j<=3))
+TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain3) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}}, {{'b', 4}, {'c', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'b', 3}}));
+}
+
+// Linear chain: (a,1) -> (b,1) -> (c,1) -> (d,1).
+// Start from mid-chain {(c,1)} => {(c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, LinearChainFromMiddle) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}},
-      /* StarterLayout */ {2}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 2u);
-  EXPECT_TRUE(Reachables->count(2));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}}, {{'b', 1}, {'c', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'c', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_TRUE(Reachables.count({'c', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Diamond: 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3.
-// Start from {0} => {0, 1, 2, 3}
+// Diamond: (a,1) -> (b,1), (a,1) -> (c,1), (b,1) -> (d,1), (c,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, Diamond) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {0, 2}, {1, 3}, {2, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'a', 1}, {'c', 1}},
+       {{'b', 1}, {'d', 1}},
+       {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Diamond: 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3.
-// Start from one branch {1} => {1, 3}
+// Diamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,1) -> (d,2), (c,1) -> (d,2).
+// Start from {(a,2)} => {(a,2), (b,3), (c,3), (d,4)}
+TEST_F(UnsafeBufferReachableAnalysisTest, Diamond2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}},
+       {{'a', 1}, {'c', 2}},
+       {{'b', 1}, {'d', 2}},
+       {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}, {'d', 4}}));
+}
+
+// DisconnectedDiamond: (a,1) -> (b,2), (a,1) -> (c,2), (b,5) -> (d,1), (c,5) ->
+// (d,1). Start from {(a,2)} => {(a,2), (b,3), (c,3)}
+TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedDiamond) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}},
+       {{'a', 1}, {'c', 2}},
+       {{'b', 5}, {'d', 1}},
+       {{'c', 5}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}}));
+}
+
+// Diamond: (a,1) -> (b,1), (a,1) -> (c,1), (b,1) -> (d,1), (c,1) -> (d,1).
+// Start from one branch {(b,1)} => {(b,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, DiamondFromBranch) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {0, 2}, {1, 3}, {2, 3}},
-      /* StarterLayout */ {1}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 2u);
-  EXPECT_TRUE(Reachables->count(1));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'a', 1}, {'c', 1}},
+       {{'b', 1}, {'d', 1}},
+       {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'b', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_TRUE(Reachables.count({'b', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Disconnected subgraphs: 0 -> 1, 2 -> 3.
-// Start from {0} => {0, 1}
+// Disconnected subgraphs: (a,1) -> (b,1), (c,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (b,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {2, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 2u);
-  EXPECT_TRUE(Reachables->count(0));
-  EXPECT_TRUE(Reachables->count(1));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_TRUE(Reachables.count({'a', 1}));
+  EXPECT_TRUE(Reachables.count({'b', 1}));
 }
 
-// Disconnected subgraphs: 0 -> 1, 2 -> 3.
-// Start from tail {1} => {1}
-TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphsFromTail) {
+// Disconnected subgraphs: (a,1) -> (b,1), (c,1) -> (d,1).
+// Start from tail {(b,1)} => {(b,1)}
+TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs2) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {2, 3}},
-      /* StarterLayout */ {1}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 1u);
-  EXPECT_TRUE(Reachables->count(1));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'b', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 1u);
+  EXPECT_TRUE(Reachables.count({'b', 1}));
 }
 
-// Cycle: 0 -> 1 -> 2 -> 3 -> 0.
-// Start from {2} => {0, 1, 2, 3}
+// Cycle: (a,1) -> (b,1) -> (c,1) -> (d,1) -> (a,1).
+// Start from {(c,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, Cycle) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}, {3, 0}},
-      /* StarterLayout */ {2}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
-  EXPECT_TRUE(Reachables->count(0));
-  EXPECT_TRUE(Reachables->count(1));
-  EXPECT_TRUE(Reachables->count(2));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 1}},
+       {{'c', 1}, {'d', 1}},
+       {{'d', 1}, {'a', 1}}},
+      /* StarterLayout */ {{'c', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
+  EXPECT_TRUE(Reachables.count({'a', 1}));
+  EXPECT_TRUE(Reachables.count({'b', 1}));
+  EXPECT_TRUE(Reachables.count({'c', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Empty graph: no edges, start from {0} => {0}
+// Cycle: (a,1) -> (b,1) -> (c,1) -> (d,1) -> (a,1).
+// Start from {(c,2)} => {(a,2), (b,2), (c,2), (d,2)}
+TEST_F(UnsafeBufferReachableAnalysisTest, Cycle2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 1}},
+       {{'c', 1}, {'d', 1}},
+       {{'d', 1}, {'a', 1}}},
+      /* StarterLayout */ {{'c', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 2}, {'c', 2}, {'d', 2}}));
+}
+
+// Cycle: (a,1) -> (b,2) -> (c,3) -> (d,4) -> (a,1).
+// Start from {(a,2)} => {(a,2), (b,3), (c,4), (d,5)}
+TEST_F(UnsafeBufferReachableAnalysisTest, Cycle3) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}},
+       {{'b', 2}, {'c', 3}},
+       {{'c', 3}, {'d', 4}},
+       {{'d', 4}, {'a', 1}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 4}, {'d', 5}}));
+}
+
+// Empty graph: no edges, start from {(a,1)} => {(a,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, EmptyGraph) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
+      /* EntityDomain */ {'a'},
       /* EdgeLayout */ {},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 1u);
-  EXPECT_TRUE(Reachables->count(0));
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 1u);
+  EXPECT_TRUE(Reachables.count({'a', 1}));
 }
 
-// Star: 0 -> 1, 0 -> 2, 0 -> 3.
-// Start from {0} => {0, 1, 2, 3}
+// Star: (a,1) -> (b,1), (a,1) -> (c,1), (a,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {0, 2}, {0, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}}, {{'a', 1}, {'c', 1}}, {{'a', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Star: 0 -> 1, 0 -> 2, 0 -> 3.
-// Start from leaf {2} => {2}
+// Star: (a,1) -> (b,2), (a,1) -> (c,2), (a,1) -> (d,2).
+// Start from {(a,2)} => {(a,2), (b,3), (c,3), (d,3)}
+TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 2}}, {{'a', 1}, {'c', 2}}, {{'a', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 3}, {'d', 3}}));
+}
+
+// Star: (a,2) -> (b,1), (a,2) -> (c,1), (a,2) -> (d,1).
+// Start from {(a,1)} => {(a,1)}
+TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub3) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 2}, {'b', 1}}, {{'a', 2}, {'c', 1}}, {{'a', 2}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 1}}));
+}
+
+// Star: (a,1) -> (b,1), (a,1) -> (c,1), (a,1) -> (d,1).
+// Start from leaf {(c,1)} => {(c,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, StarFromLeaf) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {0, 2}, {0, 3}},
-      /* StarterLayout */ {2}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 1u);
-  EXPECT_TRUE(Reachables->count(2));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}}, {{'a', 1}, {'c', 1}}, {{'a', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'c', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 1u);
+  EXPECT_TRUE(Reachables.count({'c', 1}));
 }
 
-// Reverse star: 0 -> 3, 1 -> 3, 2 -> 3.
-// Start from {0} => {0, 3}
+// Reverse star: (a,1) -> (d,1), (b,1) -> (d,1), (c,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 3}, {1, 3}, {2, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 2u);
-  EXPECT_TRUE(Reachables->count(0));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'d', 1}}, {{'b', 1}, {'d', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_TRUE(Reachables.count({'a', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Reverse star: 0 -> 3, 1 -> 3, 2 -> 3.
-// Start from sink {3} => {3}
+// Reverse star: (a,1) -> (d,2), (b,1) -> (d,2), (c,1) -> (d,2).
+// Start from {(a,2)} => {(a,2), (d,3)}
+TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'d', 2}}, {{'b', 1}, {'d', 2}}, {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 2}, {'d', 3}}));
+}
+
+// Reverse star: (a,1) -> (d,1), (b,1) -> (d,1), (c,1) -> (d,1).
+// Start from sink {(d,1)} => {(d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 3}, {1, 3}, {2, 3}},
-      /* StarterLayout */ {3}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 1u);
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'d', 1}}, {{'b', 1}, {'d', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'d', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 1u);
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Self-loop: 0 -> 1, 1 -> 1, 1 -> 2, 2 -> 3.
-// Start from {0} => {0, 1, 2, 3}
+// Reverse star: (a,1) -> (d,1), (b,1) -> (d,1), (c,1) -> (d,1).
+// Start from sink {(d,2)} => {(d,2)}
+TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'d', 1}}, {{'b', 1}, {'d', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'d', 2}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'d', 2}}));
+}
+
+// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,1) -> (d,1).
+// Start from {(a,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {1, 1}, {1, 2}, {2, 3}},
-      /* StarterLayout */ {0}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 1}},
+       {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Self-loop: 0 -> 1, 1 -> 1, 1 -> 2, 2 -> 3.
-// Start from {1} => {1, 2, 3}
+// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,2) -> (d,2).
+// Start from {(a,2)} => {(a,2), (b,2), (c,3), (d,4)}
+TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 2}},
+       {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 2}, {'c', 3}, {'d', 4}}));
+}
+
+// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,1) -> (d,1).
+// Start from {(b,1)} => {(b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {1, 1}, {1, 2}, {2, 3}},
-      /* StarterLayout */ {1}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 3u);
-  EXPECT_TRUE(Reachables->count(1));
-  EXPECT_TRUE(Reachables->count(2));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 1}},
+       {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'b', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 3u);
+  EXPECT_TRUE(Reachables.count({'b', 1}));
+  EXPECT_TRUE(Reachables.count({'c', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
 }
 
-// Multiple starters: 0 -> 1, 2 -> 3 (disconnected).
-// Start from {0, 2} => {0, 1, 2, 3}
+// Self-loop: (a,1) -> (b,1) -> (b,1) -> (c,2) -> (d,2).
+// Start from {(b,2)} => {(b,2), (c,3), (d,4)}
+TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */
+      {{{'a', 1}, {'b', 1}},
+       {{'b', 1}, {'b', 1}},
+       {{'b', 1}, {'c', 2}},
+       {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'b', 2}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'b', 2}, {'c', 3}, {'d', 4}}));
+}
+
+// Multiple starters: (a,1) -> (b,1), (c,1) -> (d,1) (disconnected).
+// Start from {(a,1), (c,1)} => {(a,1), (b,1), (c,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {2, 3}},
-      /* StarterLayout */ {0, 2}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 4u);
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'a', 1}, {'c', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 4u);
 }
 
-// Multiple starters: 0 -> 1, 2 -> 3 (disconnected).
-// Start from leaves {1, 3} => {1, 3}
+// Multiple starters: (a,1) -> (b,2), (c,1) -> (d,2).
+// Start from {(a,2), (c,2)} => {(a,2), (b,3), (c,2), (d,3)}
+TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains2) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 2}}, {{'c', 1}, {'d', 2}}},
+      /* StarterLayout */ {{'a', 2}, {'c', 2}}, __LINE__);
+  EXPECT_EQ(Reachables,
+            (std::set<Node>{{'a', 2}, {'b', 3}, {'c', 2}, {'d', 3}}));
+}
+
+// Multiple starters: (a,1) -> (b,1), (c,1) -> (d,1) (disconnected).
+// Start from leaves {(b,1), (d,1)} => {(b,1), (d,1)}
 TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersLeaves) {
   auto Reachables = singlePartition(
-      /* NumEnt */ 4,
-      /* EdgeLayout */ {{0, 1}, {2, 3}},
-      /* StarterLayout */ {1, 3}, __LINE__);
-  ASSERT_TRUE(Reachables.has_value());
-  EXPECT_EQ(Reachables->size(), 2u);
-  EXPECT_TRUE(Reachables->count(1));
-  EXPECT_TRUE(Reachables->count(3));
+      /* EntityDomain */ {'a', 'b', 'c', 'd'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'c', 1}, {'d', 1}}},
+      /* StarterLayout */ {{'b', 1}, {'d', 1}}, __LINE__);
+  EXPECT_EQ(Reachables.size(), 2u);
+  EXPECT_TRUE(Reachables.count({'b', 1}));
+  EXPECT_TRUE(Reachables.count({'d', 1}));
+}
+
+// Multi-key, same source entity: (a,1) -> (b,1), (a,2) -> (c,1).
+// Start from {(a,3)} => {(a,3), (b,3), (c,2)}
+TEST_F(UnsafeBufferReachableAnalysisTest, MultipleKeysSameEntity) {
+  auto Reachables = singlePartition(
+      /* EntityDomain */ {'a', 'b', 'c'},
+      /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'a', 2}, {'c', 1}}},
+      /* StarterLayout */ {{'a', 3}}, __LINE__);
+  EXPECT_EQ(Reachables, (std::set<Node>{{'a', 3}, {'b', 3}, {'c', 2}}));
 }
 
 } // namespace

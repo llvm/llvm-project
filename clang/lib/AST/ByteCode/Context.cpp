@@ -161,6 +161,22 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
+                                  APValue Value) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto Res = C.interpretDestructor(VD, Value);
+
+  if (Res.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
 template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {

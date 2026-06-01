@@ -797,24 +797,29 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[BSTRIDE]], 1
-; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_SCEVCHECK]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP0]]
-; CHECK-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP2]]
+; CHECK-NEXT:    store i16 42, ptr [[TMP1]], align 4
+; CHECK-NEXT:    store i16 42, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 1024, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MULB:%.*]] = mul nsw i32 [[IV]], [[BSTRIDE]]
 ; CHECK-NEXT:    [[GEPOFB:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[MULB]]
 ; CHECK-NEXT:    store i16 42, ptr [[GEPOFB]], align 4
@@ -829,24 +834,29 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; PGSO-NEXT:  [[ENTRY:.*:]]
 ; PGSO-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; PGSO:       [[VECTOR_SCEVCHECK]]:
-; PGSO-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[BSTRIDE]], 1
-; PGSO-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; PGSO:       [[VECTOR_PH]]:
+; PGSO-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[BSTRIDE]], i64 0
+; PGSO-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PGSO:       [[VECTOR_BODY]]:
-; PGSO-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_SCEVCHECK]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[TMP5:%.*]] = mul nsw <2 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PGSO-NEXT:    [[TMP0:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
+; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP5]], i64 1
 ; PGSO-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP0]]
-; PGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
-; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
+; PGSO-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[TMP2]]
+; PGSO-NEXT:    store i16 42, ptr [[TMP1]], align 4
+; PGSO-NEXT:    store i16 42, ptr [[TMP4]], align 4
+; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; PGSO-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i32> [[VEC_IND]], splat (i32 2)
 ; PGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
-; PGSO-NEXT:    br label %[[SCALAR_PH]]
+; PGSO-NEXT:    br label %[[SCALAR_PH:.*]]
 ; PGSO:       [[SCALAR_PH]]:
-; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; PGSO:       [[FOR_BODY]]:
-; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 1024, %[[SCALAR_PH]] ]
 ; PGSO-NEXT:    [[MULB:%.*]] = mul nsw i32 [[IV]], [[BSTRIDE]]
 ; PGSO-NEXT:    [[GEPOFB:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[MULB]]
 ; PGSO-NEXT:    store i16 42, ptr [[GEPOFB]], align 4
@@ -1072,7 +1082,7 @@ exit:
 ; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]], [[META17]]}
 ; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]], [[META17]]}
 ; CHECK: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]]}
-; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]]}
+; CHECK: [[LOOP23]] = distinct !{[[LOOP23]], [[META17]], [[META16]]}
 ;.
 ; PGSO: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; PGSO: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]]}
@@ -1083,7 +1093,7 @@ exit:
 ; PGSO: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]], [[META17]]}
 ; PGSO: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]], [[META17]]}
 ; PGSO: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]]}
-; PGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]]}
+; PGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META17]], [[META16]]}
 ;.
 ; NPGSO: [[PROF14]] = !{!"function_entry_count", i64 0}
 ; NPGSO: [[LOOP15]] = distinct !{[[LOOP15]], [[META16:![0-9]+]], [[META17:![0-9]+]]}
