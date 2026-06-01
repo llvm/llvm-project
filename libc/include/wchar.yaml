@@ -438,4 +438,3 @@ functions:
       - type: size_t
       - type: const wchar_t *__restrict
       - type: '...'
-
