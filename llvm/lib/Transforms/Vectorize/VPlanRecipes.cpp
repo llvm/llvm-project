@@ -320,6 +320,45 @@ InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
     }
   }
 
+  // General split cost floor.  When a recipe's result type legalizes into
+  // NumParts > 1 register parts, enforce a cost floor of
+  // NumParts * computeCost(per-part VF).  This prevents TTI from
+  // underpricing wide types that exceed register width -- some TTI cost
+  // functions (e.g. for selects, intrinsics) may lack accurate split
+  // models and return optimistic costs for illegal types.  The floor
+  // is a no-op when TTI already returns a correctly scaled cost
+  // (e.g. arithmetic, which uses LT.first * OpCost internally).
+  //
+  // VPWidenCallRecipe is excluded because its computeCost looks up a
+  // vectorized variant whose signature is tied to the original VF;
+  // calling computeCost with a reduced per-part VF would assert-fail
+  // or return a meaningless cost for a non-existent variant.
+  //
+  // VPReplicateRecipe is excluded because it uses scalar or
+  // uniform-per-lane costing (scalarization) that is unrelated to
+  // vector-type legalization; applying a split multiplier would
+  // incorrectly inflate its already-correct per-lane cost.
+  if (VF.isVector() && VF.isFixed() && RecipeCost > 0) {
+    if (auto *SDR = dyn_cast<VPSingleDefRecipe>(this)) {
+      if (!isa<VPWidenCallRecipe, VPReplicateRecipe>(this)) {
+        Type *ScalarTy = SDR->getScalarType();
+        if (VectorType::isValidElementType(ScalarTy)) {
+          auto *VecTy = dyn_cast<FixedVectorType>(toVectorTy(ScalarTy, VF));
+          if (VecTy) {
+            unsigned NumParts = Ctx.TTI.getNumberOfParts(VecTy);
+            if (NumParts > 1) {
+              ElementCount LegalVF = VF.divideCoefficientBy(NumParts);
+              InstructionCost PerPartCost = computeCost(LegalVF, Ctx);
+              InstructionCost SplitCost = NumParts * PerPartCost;
+              if (SplitCost.isValid() && RecipeCost.isValid())
+                RecipeCost = std::max(RecipeCost, SplitCost);
+            }
+          }
+        }
+      }
+    }
+  }
+
   LLVM_DEBUG({
     dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
     dump();
