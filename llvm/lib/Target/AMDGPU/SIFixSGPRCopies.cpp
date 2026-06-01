@@ -884,13 +884,8 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
   const TargetRegisterClass *SrcRC =
       MRI->getRegClass(MaybeVGPRConstMO.getReg());
   unsigned MoveSize = TRI->getRegSizeInBits(*SrcRC);
-  unsigned MoveOp;
-  if (MoveSize == 32)
-    MoveOp = AMDGPU::S_MOV_B32;
-  else if (MoveSize == 64)
-    MoveOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
-  else
-    return false;
+  unsigned MoveOp =
+      MoveSize == 64 ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::S_MOV_B32;
   BuildMI(*BlockToInsertTo, PointToInsertTo, DL, TII->get(MoveOp), DstReg)
       .add(*SrcConst);
   if (MRI->hasOneUse(MaybeVGPRConstMO.getReg()))
