@@ -1074,6 +1074,56 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   return Changed;
 }
 
+static InsertElementInst *canBypassInsert(InsertElementInst *CurrIns,
+                                          Loop *CurLoop,
+                                          bool IsHoistedInstruction,
+                                          SmallSet<uint64_t, 4> &SeenIndices) {
+  // Instruction being hoisted past must only have one use
+  if (!IsHoistedInstruction && !CurrIns->hasOneUse())
+    return nullptr;
+
+  // Must have constant insertion lane
+  auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
+  if (!InsertedIdxCI)
+    return nullptr;
+  auto *VecTy = cast<VectorType>(CurrIns->getType());
+
+  // Avoid hoisting past out of bounds inserts
+  if (InsertedIdxCI->isNegative() ||
+      InsertedIdxCI->getValue().uge(
+          VecTy->getElementCount().getKnownMinValue()))
+    return nullptr;
+
+  // Make sure not hoisting past insertions into the same lane
+  if (!SeenIndices.insert(InsertedIdxCI->getValue().getLimitedValue()).second)
+    return nullptr;
+
+  // The instruction we are hoisting must have invariant insertion data
+  Value *InsertedElt = CurrIns->getOperand(1);
+  if (IsHoistedInstruction && !CurLoop->isLoopInvariant(InsertedElt))
+    return nullptr;
+
+  // Only hoist past other insertions
+  Value *InnerVal = CurrIns->getOperand(0);
+  auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
+  if (IsHoistedInstruction && !InnerIns)
+    return nullptr;
+
+  // If the value we are inserting into is not invariant/poison, recurse
+  // if it is another insert
+  if (!CurLoop->isLoopInvariant(InnerVal) && !isa<PoisonValue>(InnerVal)) {
+    if (InnerIns && InnerIns->getParent() == CurrIns->getParent())
+      return canBypassInsert(InnerIns, CurLoop, /*IsHoistedInstruction*/ false,
+                             SeenIndices);
+    return nullptr;
+  }
+  // Hoists of Insertions with fully invariant operands are handled in base
+  // logic
+  if (!IsHoistedInstruction)
+    return CurrIns;
+  return nullptr;
+}
+
 static bool hoistInsertPastInsert(
     InsertElementInst *Ins, Loop *CurLoop, AAResults *AA, DominatorTree *DT,
     const TargetLibraryInfo *TLI, BasicBlock *Preheader, BasicBlock *HoistDest,
@@ -1082,53 +1132,6 @@ static bool hoistInsertPastInsert(
     OptimizationRemarkEmitter *ORE,
     SmallVectorImpl<Instruction *> &HoistedInstructions,
     bool AllowSpeculation) {
-  SmallSet<uint64_t, 4> SeenIndexes;
-  InsertElementInst *Inner;
-  auto CanBypass = [&](auto &CanBypass, InsertElementInst *CurrIns,
-                       bool IsHoistedInstruction) -> bool {
-    // Instruction being hoisted past must only have one use
-    if (!IsHoistedInstruction && !CurrIns->hasOneUse())
-      return false;
-
-    // Must have constant insertion lane
-    auto *InsertedIdxCI = dyn_cast<ConstantInt>(CurrIns->getOperand(2));
-    if (!InsertedIdxCI)
-      return false;
-    auto *VecTy = cast<VectorType>(CurrIns->getType());
-
-    // Avoid hoisting past out of bounds inserts
-    if (InsertedIdxCI->isNegative() ||
-        InsertedIdxCI->getValue().uge(
-            VecTy->getElementCount().getKnownMinValue()))
-      return false;
-
-    // Make sure not hoisting past insertions into the same lane
-    if (!SeenIndexes.insert(InsertedIdxCI->getValue().getLimitedValue()).second)
-      return false;
-
-    // The instruction we are hoisting must have invariant insertion data
-    Value *InsertedElt = CurrIns->getOperand(1);
-    if (IsHoistedInstruction && !CurLoop->isLoopInvariant(InsertedElt))
-      return false;
-
-    // Only hoist past other insertions
-    Value *InnerVal = CurrIns->getOperand(0);
-    auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
-    if (IsHoistedInstruction && !InnerIns)
-      return false;
-
-    // If the value we are inserting into is not invariant/poison, recurse
-    // if it is another insert
-    if (!CurLoop->isLoopInvariant(InnerVal) && !isa<PoisonValue>(InnerVal)) {
-      return InnerIns && InnerIns->getParent() == CurrIns->getParent() &&
-             CanBypass(CanBypass, InnerIns, /*IsHoistedInstruction*/ false);
-    }
-    Inner = CurrIns;
-    // Hoists of Insertions with fully invariant operands are handled in base
-    // logic
-    return !IsHoistedInstruction;
-  };
-
   // Canonicalize:
   //   %inner = insertelement %base, %variant, C1
   //   %outer = insertelement %inner, %invariant, C2
@@ -1136,7 +1139,10 @@ static bool hoistInsertPastInsert(
   //   %inner' = insertelement %base, %invariant, C2
   //   %outer' = insertelement %inner', %variant, C1
   // so we can push the variant insertelement through the shuffle.
-  if (!CanBypass(CanBypass, Ins, /*IsHoistedInstruction*/ true))
+  SmallSet<uint64_t, 4> SeenIndices;
+  InsertElementInst *Inner =
+      canBypassInsert(Ins, CurLoop, /*IsHoistedInstruction*/ true, SeenIndices);
+  if (!Inner)
     return false;
 
   Value *IOp1 = Ins->getOperand(1);
