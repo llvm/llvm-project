@@ -93,6 +93,10 @@ static bool WantsCooperativeMultithreading(const llvm::Triple &Triple,
   return Triple.getOS() == llvm::Triple::WASIp3;
 }
 
+static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
+  return WantsPthread(Triple, Args) && !WantsCooperativeMultithreading(Triple, Args);
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -177,7 +181,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (WantsCooperativeMultithreading(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--cooperative-multithreading");
 
-  if (WantsPthread(ToolChain.getTriple(), Args))
+  if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {

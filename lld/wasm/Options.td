@@ -240,7 +240,7 @@ def initial_memory: JJ<"initial-memory=">,
 
 def cooperative_multithreading: FF<"cooperative-multithreading">,
   HelpText<"Enable cooperative multithreading.">;
-
+  
 def max_memory: JJ<"max-memory=">,
   HelpText<"Maximum size of the linear memory">;
 

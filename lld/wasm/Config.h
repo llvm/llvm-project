@@ -66,6 +66,7 @@ struct Config {
   bool gcSections;
   llvm::StringSet<> keepSections;
   bool cooperativeMultithreading;
+  bool libcallThreadContext;
   std::optional<std::pair<llvm::StringRef, llvm::StringRef>> memoryImport;
   std::optional<llvm::StringRef> memoryExport;
   bool sharedMemory;

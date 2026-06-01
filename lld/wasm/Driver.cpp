@@ -556,13 +556,12 @@ static void readConfigs(opt::InputArgList &args) {
   } else if (args.hasArg(OPT_export_memory)) {
     ctx.arg.memoryExport = memoryName;
   }
-
   ctx.arg.sharedMemory = args.hasArg(OPT_shared_memory);
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
   ctx.arg.cooperativeMultithreading =
-      args.hasArg(OPT_cooperative_multithreading);
+      args.hasArg(OPT_cooperative_multithreading);;
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
@@ -757,6 +756,11 @@ static void setConfigs() {
     ctx.arg.memoryExport = memoryName;
   }
 
+  if (ctx.arg.cooperativeMultithreading) {
+    if (ctx.arg.sharedMemory)
+      error("--cooperative-multithreading is incompatible with --shared-memory");
+    ctx.arg.libcallThreadContext = true;
+  }
 }
 
 // Some command line options or some combinations of them are not allowed.

@@ -7,6 +7,10 @@
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-print-imm-hex --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
 
+# Test that --cooperative-multithreading and --shared-memory are mutually exclusive.
+# RUN: not wasm-ld --cooperative-multithreading --shared-memory %t.o -o %t2.wasm 2>&1 | FileCheck %s --check-prefix=INCOMPAT
+# INCOMPAT: --cooperative-multithreading is incompatible with --shared-memory
+
 .globl         __wasm_get_tls_base
 __wasm_get_tls_base:
     .functype   __wasm_get_tls_base () -> (i32)
