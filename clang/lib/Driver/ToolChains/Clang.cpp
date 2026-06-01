@@ -6673,7 +6673,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 
-  if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))
+  if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter) ||
+      CLANG_USE_EXPERIMENTAL_CONST_INTERP)
     CmdArgs.push_back("-fexperimental-new-constant-interpreter");
 
   if (Arg *A = Args.getLastArg(options::OPT_fbracket_depth_EQ)) {
