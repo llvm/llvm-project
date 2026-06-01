@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================

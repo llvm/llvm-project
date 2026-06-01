@@ -6621,11 +6621,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
       TLI.getTypeToTransformTo(*DAG.getContext(), LD->getValueType(0));
   EVT LdVT = LD->getMemoryVT();
   SDLoc dl(LD);
-  assert(LdVT.isVector() && WidenVT.isVector() && "Expected vectors");
-  assert(LdVT.isScalableVector() == WidenVT.isScalableVector() &&
-         "Must be scalable");
-  assert(LdVT.getVectorElementType() == WidenVT.getVectorElementType() &&
-         "Expected equivalent element types");
 
   // Load information
   SDValue Chain = LD->getChain();

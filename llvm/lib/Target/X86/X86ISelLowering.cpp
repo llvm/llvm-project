@@ -12930,7 +12930,7 @@ static int matchShuffleAsVSHLD(MVT &ShiftVT, SDValue &V1, SDValue &V2,
         MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
         ShiftVT = MVT::getVectorVT(ShiftSVT, Size / Scale);
         std::swap(V1, V2);
-        return Shift * 8;
+        return Shift * ScalarSizeInBits;
       }
     }
   }

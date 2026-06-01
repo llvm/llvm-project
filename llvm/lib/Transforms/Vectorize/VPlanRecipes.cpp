@@ -3197,7 +3197,10 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
+                        cast<VPReductionRecipe>(ExpressionRecipes.back())
+                            ->getChainOp()
+                            ->getScalarType()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
