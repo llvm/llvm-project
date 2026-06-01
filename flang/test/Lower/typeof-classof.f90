@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! Test that TYPEOF and CLASSOF type specifiers from F2023 lower correctly.
 ! Semantics resolves TYPEOF/CLASSOF to the concrete type of the referenced
