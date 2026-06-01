@@ -8756,8 +8756,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use we can handle, avoid hurting compile time with
-    // long uselists
+    // Find the first same-block use with a UB-triggering opcode, skipping
+    // cross-block or before-I uses.
     auto FindUse = llvm::find_if(I->uses(), [I](auto &U) {
       auto *Use = cast<Instruction>(U.getUser());
       // Only same-block uses after I can witness UB at I's program point.
