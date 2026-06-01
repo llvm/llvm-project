@@ -3448,6 +3448,9 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                          MLIRContext *context) {
   patterns.add<ConvertFsubToFnegFadd>(context);
 }
+//===----------------------------------------------------------------------===//
+// getIntrinsicID/getIntrinsicIDAndArgs methods
+//===----------------------------------------------------------------------===//
 
 /// Maps the (aligned, hasCount) pair to the `@llvm.nvvm.barrier.cta.sync.*`
 /// intrinsic ID.
