@@ -140,6 +140,10 @@ Makes programs 10x faster by doing Special New Thing.
   Use the new ``remove_if`` member to erase matching elements in a single pass
   instead of erasing while iterating.
 
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
