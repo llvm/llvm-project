@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s performance-expensive-value-or %t -- \
+// RUN: %check_clang_tidy %s performance-expensive-value-or %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     performance-expensive-value-or.SizeThreshold: 8, \
 // RUN:     performance-expensive-value-or.WarnOnOwnershipTaking: true \

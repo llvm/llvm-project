@@ -1,9 +1,9 @@
-// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=NON-OWNING %s \
+// RUN: %check_clang_tidy -check-suffixes=NON-OWNING %s \
 // RUN:   performance-expensive-value-or %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional" \
 // RUN:   }}'
-// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=OWNING %s \
+// RUN: %check_clang_tidy -check-suffixes=OWNING %s \
 // RUN:   performance-expensive-value-or %t -- \
 // RUN:   -config='{CheckOptions: { \
 // RUN:     performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional", \
