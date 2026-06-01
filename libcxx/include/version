@@ -71,6 +71,7 @@ __cpp_lib_constexpr_bitset                              202207L <bitset>
 __cpp_lib_constexpr_charconv                            202207L <charconv>
 __cpp_lib_constexpr_cmath                               202202L <cmath> <cstdlib>
 __cpp_lib_constexpr_complex                             201711L <complex>
+__cpp_lib_constexpr_deque                               202502L <deque>
 __cpp_lib_constexpr_dynamic_alloc                       201907L <memory>
 __cpp_lib_constexpr_flat_map                            202502L <flat_map>
 __cpp_lib_constexpr_flat_set                            202502L <flat_set>
@@ -564,6 +565,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constant_wrapper                     202603L
 # undef  __cpp_lib_constexpr_algorithms
 # define __cpp_lib_constexpr_algorithms                 202306L
+# define __cpp_lib_constexpr_deque                      202502L
 # define __cpp_lib_constexpr_flat_map                   202502L
 # define __cpp_lib_constexpr_flat_set                   202502L
 # define __cpp_lib_constexpr_forward_list               202502L

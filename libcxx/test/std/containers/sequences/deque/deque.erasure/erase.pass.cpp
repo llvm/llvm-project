@@ -11,11 +11,14 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template <class T, class Allocator, class U>
 //   typename deque<T, Allocator>::size_type
 //   erase(deque<T, Allocator>& c, const U& value);
 
 #include "asan_testing.h"
+#include <cassert>
 #include <deque>
 #include <optional>
 
@@ -66,7 +69,21 @@ void test() {
   test0(S({1, 2, 1}), opt(3), S({1, 2, 1}), 0);
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 1, 3};
+  assert(std::erase(d, 1) == 2);
+  assert((d == std::deque<int>{2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();

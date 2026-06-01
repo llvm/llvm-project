@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque(const deque& c, const allocator_type& a);
 
 #include "asan_testing.h"
@@ -26,7 +28,21 @@ void test(const C& x, const typename C::allocator_type& a) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 3};
+  std::deque<int> copy(d, std::allocator<int>());
+  assert(copy == d);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);

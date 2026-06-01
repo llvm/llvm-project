@@ -9,8 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // template<container-compatible-range<T> R>
-//   constexpr void assign_range(R&& rg); // C++23
+//   constexpr void assign_range(R&& rg); // C++23; constexpr since C++26
 
+#include <cassert>
 #include <deque>
 
 #include "../../insert_range_sequence_containers.h"
@@ -21,7 +22,23 @@
 //   {empty/one-element/full} container);
 // - assigning move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[] = {1, 2, 3};
+  std::deque<int> d;
+  d.assign_range(input);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   static_assert(test_constraints_assign_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {

@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 //       reference operator[](size_type __i);
 // const_reference operator[](size_type __i) const;
 //
@@ -47,7 +49,23 @@ C make(int size, int start = 0) {
   return c;
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 3};
+  assert(d[0] == 1);
+  assert(d.at(2) == 3);
+  assert(d.front() == 1);
+  assert(d.back() == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     typedef std::deque<int> C;
     C c = make<std::deque<int> >(10);

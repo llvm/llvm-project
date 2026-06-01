@@ -10,6 +10,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // void push_back(value_type&& v);
 // void pop_back();
 // void pop_front();
@@ -54,7 +56,22 @@ void test(int size) {
   }
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d;
+  int value = 1;
+  d.push_back(static_cast<int&&>(value));
+  assert((d == std::deque<int>{1}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049, 4094, 4095, 4096};
     const int N = sizeof(rng) / sizeof(rng[0]);

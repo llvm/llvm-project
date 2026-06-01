@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // iterator insert (const_iterator p, value_type&& v);
 
 // UNSUPPORTED: c++03
@@ -80,7 +82,23 @@ void testN(int start, int N) {
   }
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 3};
+  int value         = 2;
+  auto it           = d.insert(d.begin() + 1, static_cast<int&&>(value));
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

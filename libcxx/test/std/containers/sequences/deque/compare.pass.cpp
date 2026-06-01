@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template<class T, class Alloc>
 // bool operator==(const std::deque<T, Alloc>& lhs,
 //                 const std::deque<T,Alloc>& rhs);
@@ -36,8 +38,28 @@
 #include <cassert>
 
 #include "test_comparisons.h"
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> a = {1, 2, 3};
+  std::deque<int> b = {1, 2, 4};
+  assert(a == a);
+  assert(a != b);
+  assert(a < b);
+  assert(a <= b);
+  assert(b > a);
+  assert(b >= a);
+  return true;
+}
+#endif
 
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     const std::deque<int> d1, d2;
     assert(testComparisons(d1, d2, true, false));

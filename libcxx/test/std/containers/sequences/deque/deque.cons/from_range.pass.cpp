@@ -9,15 +9,30 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
+#include <cassert>
 #include <deque>
 
 #include "../../from_range_sequence_containers.h"
 #include "test_macros.h"
 
 // template<container-compatible-range<T> R>
-//   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
+//   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23; constexpr since C++26
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[] = {1, 2, 3};
+  std::deque<int> d(std::from_range, input);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
 
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {
     test_sequence_container<std::deque, int, Iter, Sent, Alloc>([]([[maybe_unused]] const auto& c) {
       LIBCPP_ASSERT(c.__invariants());

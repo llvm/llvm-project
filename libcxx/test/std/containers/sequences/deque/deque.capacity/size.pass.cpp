@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // class deque
 
 // size_type size() const noexcept;
@@ -19,7 +21,20 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d = {1, 2, 3};
+  assert(d.size() == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     typedef std::deque<int> C;
     C c;

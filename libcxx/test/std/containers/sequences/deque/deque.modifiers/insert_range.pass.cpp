@@ -14,8 +14,9 @@
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<container-compatible-range<T> R>
-//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
+//   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23; constexpr since C++26
 
+#include <cassert>
 #include <deque>
 
 #include "../../insert_range_sequence_containers.h"
@@ -26,7 +27,24 @@
 //   {empty/one-element/full} container at the {beginning/middle/end});
 // - inserting move-only elements;
 // - an exception is thrown when copying the elements or when allocating new elements.
+
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[]       = {2, 3};
+  std::deque<int> d = {1, 4};
+  auto it           = d.insert_range(d.begin() + 1, input);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3, 4}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   static_assert(test_constraints_insert_range<std::deque, int, double>());
 
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {

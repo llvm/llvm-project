@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // ~deque() // implied noexcept;
 
 // UNSUPPORTED: c++03
@@ -28,7 +30,32 @@ struct some_alloc {
   void allocate(std::size_t);
 };
 
+#if TEST_STD_VER >= 26
+struct NonTrivial {
+  int value;
+
+  constexpr NonTrivial(int v = 0) : value(v) {}
+  constexpr NonTrivial(const NonTrivial&) = default;
+  constexpr ~NonTrivial() {}
+};
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<NonTrivial> d;
+  for (int i = 0; i != 50; ++i)
+    d.emplace_back(i);
+  assert(d.size() == 50);
+  assert(d.front().value == 0);
+  assert(d.back().value == 49);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     typedef std::deque<MoveOnly> C;
     static_assert(std::is_nothrow_destructible<C>::value, "");

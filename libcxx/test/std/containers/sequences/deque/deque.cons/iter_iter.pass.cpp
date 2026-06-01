@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template <class InputIterator> deque(InputIterator f, InputIterator l);
 
 #include "asan_testing.h"
@@ -101,7 +103,22 @@ void test_emplacable_concept() {
 #endif
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  int input[] = {1, 2, 3};
+  std::deque<int> d(input, input + 3);
+  assert(d.size() == 3);
+  assert(d[2] == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   basic_test();
   test_emplacable_concept();
 

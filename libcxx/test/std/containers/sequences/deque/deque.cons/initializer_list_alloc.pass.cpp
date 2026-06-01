@@ -10,6 +10,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque(initializer_list<value_type> il, const Allocator& a = allocator_type());
 
 #include "asan_testing.h"
@@ -20,7 +22,21 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d({1, 2, 3}, std::allocator<int>());
+  assert(d.size() == 3);
+  assert(d.front() == 1);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     std::deque<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));

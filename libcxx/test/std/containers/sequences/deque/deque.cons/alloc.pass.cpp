@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // explicit deque(const allocator_type& a);
 
 #include "asan_testing.h"
@@ -27,7 +29,20 @@ void test(const Allocator& a) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d((std::allocator<int>()));
+  assert(d.empty());
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   test<int>(std::allocator<int>());
   test<NotConstructible>(test_allocator<NotConstructible>(3));
 #if TEST_STD_VER >= 11

@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // void push_front(const value_type& v);
 
 #include "asan_testing.h"
@@ -58,7 +60,22 @@ void testN(int start, int N) {
   test(c1, -10);
 }
 
+#if TEST_STD_VER >= 26
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d;
+  d.push_front(2);
+  d.push_front(1);
+  assert((d == std::deque<int>{1, 2}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  assert(test_constexpr());
+  static_assert(test_constexpr());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
