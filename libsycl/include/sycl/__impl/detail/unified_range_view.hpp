@@ -16,7 +16,6 @@
 #define _LIBSYCL___IMPL_DETAIL_UNIFIED_RANGE_VIEW_HPP
 
 #include <sycl/__impl/detail/config.hpp>
-
 #include <sycl/__impl/index_space_classes.hpp>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
@@ -26,7 +25,7 @@ namespace detail {
 /// The structure to keep dimension and references to ranges unified for
 /// all dimensions.
 struct UnifiedRangeView {
-  /// Default contructed view matches the single task execution range.
+  /// Default constructed view matches the single task execution range.
   UnifiedRangeView() = default;
   UnifiedRangeView(const UnifiedRangeView &Desc) = default;
   UnifiedRangeView(UnifiedRangeView &&Desc) = default;

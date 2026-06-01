@@ -76,7 +76,8 @@ public:
   /// calling setKernelParameters.
   /// \param KernelInfo a kernel info that is uniform between different
   /// submissions of the same kernel.
-  /// \param TypelessArgs data about kernel arguments to be used for enqueue.
+  /// \param ArgData a pointer to kernel argument.
+  /// \param ArgSize a size of kernel argument in bytes.
   void submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                         size_t ArgSize);
 

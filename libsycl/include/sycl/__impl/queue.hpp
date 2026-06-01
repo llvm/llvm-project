@@ -33,6 +33,28 @@ class context;
 
 namespace detail {
 class QueueImpl;
+
+template <typename, typename T> struct CheckFunctionCallOperator {
+  static_assert(std::integral_constant<T, false>::value,
+                "Second template parameter is required to be of function type");
+};
+
+template <typename F, typename RetT, typename... Args>
+struct CheckFunctionCallOperator<F, RetT(Args...)> {
+private:
+  template <typename T>
+  static constexpr auto check(T *) ->
+      typename std::is_same<decltype(std::declval<std::add_const_t<T>>()
+                                         .operator()(std::declval<Args>()...)),
+                            RetT>::type;
+
+  template <typename> static constexpr std::false_type check(...);
+
+  using type = decltype(check<F>(0));
+
+public:
+  static constexpr bool value = type::value;
+};
 } // namespace detail
 
 // SYCL 2020 4.6.5. Queue class.
@@ -174,11 +196,10 @@ public:
   template <typename KernelName = detail::AutoName, typename KernelType>
   event single_task(const std::vector<event> &depEvents,
                     const KernelType &kernelFunc) {
-    static_assert(
-        (detail::CheckFunctionSignature<std::remove_reference_t<KernelType>,
-                                        void()>::value),
-        "sycl::queue::single_task() requires a kernel instead of a command "
-        "group");
+     static_assert(
+        detail::CheckFunctionCallOperator<std::remove_reference_t<KernelType>,
+                                          void()>::value,
+        "Invalid kernel function signature.");
 
     setKernelParameters(depEvents);
     using NameT =

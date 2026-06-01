@@ -32,6 +32,8 @@ static void setKernelLaunchArgs(const detail::UnifiedRangeView &Range,
   uint32_t GroupSize[3] = {1, 1, 1};
   if (Range.MLocalSize) {
     for (size_t I = 0; I < Range.MDims; ++I) {
+      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max() &&
+             Range.MLocalSize[I] != 0);
       GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
     }
   }
