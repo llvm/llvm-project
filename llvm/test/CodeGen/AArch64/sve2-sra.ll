@@ -255,6 +255,86 @@ define <vscale x 2 x i64> @ssra_intr_u_i64(<vscale x 2 x i1> %pg, <vscale x 2 x 
   ret <vscale x 2 x i64> %add
 }
 
+define <vscale x 16 x i8> @usra_disjoint_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 16 x i8> %b, splat(i8 4)
+  %add = or disjoint <vscale x 16 x i8> %a, %shift
+  ret <vscale x 16 x i8> %add
+}
+
+define <vscale x 8 x i16> @usra_disjoint_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.h, z1.h, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 8 x i16> %b, splat(i16 4)
+  %add = or disjoint <vscale x 8 x i16> %a, %shift
+  ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 4 x i32> @usra_disjoint_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.s, z1.s, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 4 x i32> %b, splat(i32 4)
+  %add = or disjoint <vscale x 4 x i32> %a, %shift
+  ret <vscale x 4 x i32> %add
+}
+
+define <vscale x 2 x i64> @usra_disjoint_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: usra_disjoint_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    usra z0.d, z1.d, #4
+; CHECK-NEXT:    ret
+  %shift = lshr <vscale x 2 x i64> %b, splat(i64 4)
+  %add = or disjoint <vscale x 2 x i64> %a, %shift
+  ret <vscale x 2 x i64> %add
+}
+
+define <vscale x 16 x i8> @ssra_disjoint_or16xi8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or16xi8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.b, z1.b, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 16 x i8> %b, splat(i8 4)
+  %add = or disjoint <vscale x 16 x i8> %a, %shift
+  ret <vscale x 16 x i8> %add
+}
+
+define <vscale x 8 x i16> @ssra_disjoint_or8xi16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or8xi16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.h, z1.h, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 8 x i16> %b, splat(i16 4)
+  %add = or disjoint <vscale x 8 x i16> %a, %shift
+  ret <vscale x 8 x i16> %add
+}
+
+define <vscale x 4 x i32> @ssra_disjoint_or4xi32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or4xi32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.s, z1.s, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 4 x i32> %b, splat(i32 4)
+  %add = or disjoint <vscale x 4 x i32> %a, %shift
+  ret <vscale x 4 x i32> %add
+}
+
+define <vscale x 2 x i64> @ssra_disjoint_or2xi64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #0 {
+; CHECK-LABEL: ssra_disjoint_or2xi64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ssra z0.d, z1.d, #4
+; CHECK-NEXT:    ret
+  %shift = ashr <vscale x 2 x i64> %b, splat(i64 4)
+  %add = or disjoint <vscale x 2 x i64> %a, %shift
+  ret <vscale x 2 x i64> %add
+}
+
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)

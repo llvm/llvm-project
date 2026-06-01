@@ -135,6 +135,21 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
   return
 }
 
+// CHECK-LABEL: @float32_clamp_scalar
+func.func @float32_clamp_scalar(%value: f32, %min: f32, %max: f32) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : f32
+  %0 = math.clampf %value to [%min, %max] : f32
+  return
+}
+
+// CHECK-LABEL: @float32_clamp_vector
+func.func @float32_clamp_vector(%value: vector<4xf32>, %min: vector<4xf32>,
+                                %max: vector<4xf32>) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = math.clampf %value to [%min, %max] : vector<4xf32>
+  return
+}
+
 // CHECK-LABEL: @int_unary
 func.func @int_unary(%arg0: i32) {
   // CHECK: spirv.GL.SAbs %{{.*}}
@@ -180,6 +195,28 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
   // CHECK: %[[CMP:.+]] = spirv.ULessThanEqual %[[VAL]], %[[V1]] : vector<2xi32>
   // CHECK: %[[R:.+]] = spirv.Select %[[CMP]], %[[SUB2]], %[[SUB1]] : vector<2xi1>, vector<2xi32>
   %0 = math.ctlz %val : vector<2xi32>
+  return %0 : vector<2xi32>
+}
+
+// CHECK-LABEL: @cttz_scalar
+//  CHECK-SAME: (%[[VAL:.+]]: i32)
+func.func @cttz_scalar(%val: i32) -> i32 {
+  // CHECK-DAG: %[[V0:.+]] = spirv.Constant 0 : i32
+  // CHECK-DAG: %[[V32:.+]] = spirv.Constant 32 : i32
+  // CHECK: %[[LSB:.+]] = spirv.GL.FindILsb %[[VAL]] : i32
+  // CHECK: %[[CMP:.+]] = spirv.IEqual %[[VAL]], %[[V0]] : i32
+  // CHECK: %[[R:.+]] = spirv.Select %[[CMP]], %[[V32]], %[[LSB]] : i1, i32
+  // CHECK: return %[[R]]
+  %0 = math.cttz %val : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @cttz_vector
+func.func @cttz_vector(%val: vector<2xi32>) -> vector<2xi32> {
+  // CHECK: spirv.GL.FindILsb
+  // CHECK: spirv.IEqual
+  // CHECK: spirv.Select
+  %0 = math.cttz %val : vector<2xi32>
   return %0 : vector<2xi32>
 }
 

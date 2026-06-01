@@ -61,9 +61,9 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 [[TMP12]]
 ; RV32-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP13]], i64 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; RV32-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV32-NEXT:    [[TMP15:%.*]] = shl nuw nsw <vscale x 2 x i64> [[VEC_IND]], splat (i64 1)
-; RV32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, ptr [[B]], <vscale x 2 x i64> [[TMP15]]
-; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.vp.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP16]], <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]]
+; RV32-NEXT:    [[TMP16:%.*]] = shl i64 [[INDEX]], 8
+; RV32-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
+; RV32-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP20]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META5:![0-9]+]]
 ; RV32-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV32-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
 ; RV32-NEXT:    [[TMP19:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]
@@ -131,9 +131,9 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[TRIGGER]], i64 [[TMP5]]
 ; RV64-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i32> @llvm.experimental.vp.strided.load.nxv2i32.p0.i64(ptr align 4 [[TMP6]], i64 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP10]]), !alias.scope [[META0:![0-9]+]]
 ; RV64-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 2 x i32> [[WIDE_MASKED_GATHER]], splat (i32 100)
-; RV64-NEXT:    [[TMP15:%.*]] = shl nuw nsw <vscale x 2 x i64> [[VEC_IND]], splat (i64 1)
-; RV64-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, ptr [[B]], <vscale x 2 x i64> [[TMP15]]
-; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.vp.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP16]], <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
+; RV64-NEXT:    [[TMP9:%.*]] = shl i64 [[INDEX]], 8
+; RV64-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
+; RV64-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP11]], i64 256, <vscale x 2 x i1> [[TMP14]], i32 [[TMP10]]), !alias.scope [[META3:![0-9]+]]
 ; RV64-NEXT:    [[TMP17:%.*]] = sitofp <vscale x 2 x i32> [[WIDE_MASKED_GATHER]] to <vscale x 2 x double>
 ; RV64-NEXT:    [[TMP18:%.*]] = fadd <vscale x 2 x double> [[WIDE_MASKED_GATHER6]], [[TMP17]]
 ; RV64-NEXT:    [[TMP19:%.*]] = getelementptr inbounds double, ptr [[A]], <vscale x 2 x i64> [[VEC_IND]]

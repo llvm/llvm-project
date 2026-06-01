@@ -158,6 +158,7 @@
 
 using namespace llvm;
 using namespace SCEVPatternMatch;
+using namespace LoopVectorizationUtils;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -717,82 +718,11 @@ static DebugLoc getDebugLocFromInstOrOperands(Instruction *I) {
   return I->getDebugLoc();
 }
 
-/// Write a \p DebugMsg about vectorization to the debug output stream. If \p I
-/// is passed, the message relates to that particular instruction.
-#ifndef NDEBUG
-static void debugVectorizationMessage(const StringRef Prefix,
-                                      const StringRef DebugMsg,
-                                      Instruction *I) {
-  dbgs() << "LV: " << Prefix << DebugMsg;
-  if (I != nullptr)
-    dbgs() << " " << *I;
-  else
-    dbgs() << '.';
-  dbgs() << '\n';
-}
-#endif
-
-/// Create an analysis remark that explains why vectorization failed
-///
-/// \p PassName is the name of the pass (e.g. can be AlwaysPrint).  \p
-/// RemarkName is the identifier for the remark.  If \p I is passed it is an
-/// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
-/// the location of the remark. If \p DL is passed, use it as debug location for
-/// the remark. \return the remark object that can be streamed to.
-static OptimizationRemarkAnalysis
-createLVAnalysis(const char *PassName, StringRef RemarkName,
-                 const Loop *TheLoop, Instruction *I, DebugLoc DL = {}) {
-  BasicBlock *CodeRegion = I ? I->getParent() : TheLoop->getHeader();
-  // If debug location is attached to the instruction, use it. Otherwise if DL
-  // was not provided, use the loop's.
-  if (I && I->getDebugLoc())
-    DL = I->getDebugLoc();
-  else if (!DL)
-    DL = TheLoop->getStartLoc();
-
-  return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
-}
-
 namespace llvm {
 
 /// Return the runtime value for VF.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF) {
   return B.CreateElementCount(Ty, VF);
-}
-
-void reportVectorizationFailure(const StringRef DebugMsg,
-                                const StringRef OREMsg, const StringRef ORETag,
-                                OptimizationRemarkEmitter *ORE,
-                                const Loop *TheLoop, Instruction *I) {
-  LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I)
-            << "loop not vectorized: " << OREMsg);
-}
-
-void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE,
-                             const Loop *TheLoop, Instruction *I, DebugLoc DL) {
-  LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
-  ORE->emit(createLVAnalysis(LV_NAME, ORETag, TheLoop, I, DL) << Msg);
-}
-
-/// Report successful vectorization of the loop. In case an outer loop is
-/// vectorized, prepend "outer" to the vectorization remark.
-static void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                                VectorizationFactor VF, unsigned IC) {
-  LLVM_DEBUG(debugVectorizationMessage(
-      "Vectorizing: ", TheLoop->isInnermost() ? "innermost loop" : "outer loop",
-      nullptr));
-  StringRef LoopType = TheLoop->isInnermost() ? "" : "outer ";
-  ORE->emit([&]() {
-    return OptimizationRemark(LV_NAME, "Vectorized", TheLoop->getStartLoc(),
-                              TheLoop->getHeader())
-           << "vectorized " << LoopType << "loop (vectorization width: "
-           << ore::NV("VectorizationFactor", VF.Width)
-           << ", interleaved count: " << ore::NV("InterleaveCount", IC) << ")";
-  });
 }
 
 } // end namespace llvm
@@ -3026,7 +2956,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
   if (TC.isScalar()) {
-    reportVectorizationFailure("Single iteration (non) loop",
+    reportVectorizationFailure(
+        "Single iteration (non) loop",
         "loop trip count is one, irrelevant for vectorization",
         "SingleIterationLoop", ORE, TheLoop);
     return FixedScalableVFPair::getNone();
@@ -5740,12 +5671,23 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (!MaxFactors) // Cases that should not to be vectorized nor interleaved.
     return;
 
+  Config.collectInLoopReductions();
+  // Cases that may be vectorized may be optimized by unit stride predicates.
+  // TODO: Currently unit stride predicates are added unconditionally, even if
+  // they are not used for the selected VF (e.g. when only interleaving).
+  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
+    Legal->collectUnitStridePredicates();
+
+  auto VPlan1 = tryToBuildVPlan1();
+  if (!VPlan1)
+    return;
+
   if (!OrigLoop->isInnermost()) {
     // For outer loops, computeMaxVF returns a single non-scalar VF; build a
-    // plan for only that VF.
+    // plan for that VF only.
     ElementCount VF =
         MaxFactors.FixedVF ? MaxFactors.FixedVF : MaxFactors.ScalableVF;
-    buildVPlans(VF, VF);
+    buildVPlans(*VPlan1, VF, VF);
     LLVM_DEBUG(printPlans(dbgs()));
     return;
   }
@@ -5771,12 +5713,6 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();
 
-  // Cases that may be vectorized may be optimized by unit stride predicates.
-  // TODO: Currently unit stride predicates are added unconditionally, even if
-  // they are not used for the selected VF (e.g. when only interleaving).
-  if (MaxFactors.FixedVF.isVector() || MaxFactors.ScalableVF.isVector())
-    Legal->collectUnitStridePredicates();
-
   ElementCount MaxUserVF =
       UserVF.isScalable() ? MaxFactors.ScalableVF : MaxFactors.FixedVF;
   if (UserVF) {
@@ -5789,16 +5725,15 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
              "VF needs to be a power of two");
       // Collect the instructions (and their associated costs) that will be more
       // profitable to scalarize.
-      Config.collectInLoopReductions();
       CM.collectNonVectorizedAndSetWideningDecisions(UserVF);
       ElementCount EpilogueUserVF =
           ElementCount::getFixed(EpilogueVectorizationForceVF);
       if (EpilogueUserVF.isVector() &&
           ElementCount::isKnownLT(EpilogueUserVF, UserVF)) {
         CM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
-        buildVPlans(EpilogueUserVF, EpilogueUserVF);
+        buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF);
       }
-      buildVPlans(UserVF, UserVF);
+      buildVPlans(*VPlan1, UserVF, UserVF);
       if (!VPlans.empty() && VPlans.back()->getSingleVF() == UserVF) {
         // For scalar VF, skip VPlan cost check as VPlan cost is designed for
         // vector VFs only.
@@ -5824,14 +5759,13 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
        ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
     VFCandidates.push_back(VF);
 
-  Config.collectInLoopReductions();
   for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectNonVectorizedAndSetWideningDecisions(VF);
   }
 
-  buildVPlans(ElementCount::getFixed(1), MaxFactors.FixedVF);
-  buildVPlans(ElementCount::getScalable(1), MaxFactors.ScalableVF);
+  buildVPlans(*VPlan1, ElementCount::getFixed(1), MaxFactors.FixedVF);
+  buildVPlans(*VPlan1, ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
   LLVM_DEBUG(printPlans(dbgs()));
 }
@@ -6273,6 +6207,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       CM.requiresScalarEpilogue(BestVF.isVector()), &BestVPlan.getVFxUF(),
       MaxRuntimeStep);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
+  // Limit expansions to VPInstruction to when not vectorizing the epilogue.
+  // Currently this code path still relies on code re-using SCEVs expanded
+  // directly to IR instructions.
+  if (EpilogueVecKind == EpilogueVectorizationKind::None)
+    VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE());
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
@@ -6644,12 +6583,11 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = vputils::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      assert(
-          vputils::findUserOf<VPReductionPHIRecipe>(Val)->getBackedgeValue() ==
-              Val &&
-          "Store isn't backedge value?");
+      assert(VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val)
+                     ->getBackedgeValue() == Val &&
+             "Store isn't backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
           VPI->getDebugLoc());
@@ -6754,10 +6692,12 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   if (!shouldWiden(Instr, Range))
     return nullptr;
 
-  if (VPI->getOpcode() == Instruction::GetElementPtr)
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr),
+  if (VPI->getOpcode() == Instruction::GetElementPtr) {
+    auto *GEP = cast<GetElementPtrInst>(Instr);
+    return new VPWidenGEPRecipe(GEP->getSourceElementType(),
                                 VPI->operandsWithoutMask(), *VPI,
-                                VPI->getDebugLoc());
+                                VPI->getDebugLoc(), GEP);
+  }
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
@@ -6774,11 +6714,7 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 // optimizations.
 static void printOptimizedVPlan(VPlan &) {}
 
-void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
-                                           ElementCount MaxVF) {
-  if (ElementCount::isKnownGT(MinVF, MaxVF))
-    return;
-
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
   // Set up loop versioning for inner loops with memory runtime checks.
@@ -6809,8 +6745,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                       *OrigLoop, Legal->getInductionVars(),
                       Legal->getReductionVars(),
                       Legal->getFixedOrderRecurrences(),
-                      Config.getInLoopReductions(), Hints.allowReordering()))
-    return;
+                      Config.getInLoopReductions(), Hints.allowReordering())) {
+    return nullptr;
+  }
 
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
@@ -6829,8 +6766,9 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
                   : UncountableExitStyle::ReadOnly;
 
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleEarlyExits, *VPlan0, EEStyle,
-                      OrigLoop, PSE, *DT, Legal->getAssumptionCache()))
-    return;
+                      OrigLoop, PSE, *DT, Legal->getAssumptionCache())) {
+    return nullptr;
+  }
 
   RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
                  CM.foldTailByMasking());
@@ -6840,11 +6778,19 @@ void LoopVectorizationPlanner::buildVPlans(ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
+  return VPlan0;
+}
+
+void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
+                                           ElementCount MaxVF) {
+  if (ElementCount::isKnownGT(MinVF, MaxVF))
+    return;
+
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     auto Plan =
-        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange);
+        tryToBuildVPlan(std::unique_ptr<VPlan>(VPlan1.duplicate()), SubRange);
     VF = SubRange.End;
 
     if (!Plan)
@@ -8235,8 +8181,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     reportVectorizationFailure(
         "Potentially unsafe FP op prevents vectorization",
-        "loop not vectorized due to unsafe FP support.",
-        "UnsafeFP", ORE, L);
+        "loop not vectorized due to unsafe FP support.", "UnsafeFP", ORE, L);
     Hints.emitRemarkWithHints();
     return false;
   }
@@ -8479,7 +8424,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     });
   } else {
     // Report the vectorization decision.
-    reportVectorization(ORE, L, VF, IC);
+    reportVectorization(ORE, L, VF.Width, IC);
   }
   if (ORE->allowExtraAnalysis(LV_NAME))
     checkMixedPrecision(L, ORE);
