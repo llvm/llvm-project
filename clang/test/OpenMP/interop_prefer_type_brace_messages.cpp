@@ -27,6 +27,11 @@ static void foo() {
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr(1)}), targetsync: obj)
 
+  // Empty attr() — at least one ext-string-literal is required.
+  // expected-error@+2 {{expected <string_literal>}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({attr()}), targetsync: obj)
+
   // expected-error@+2 {{expected '(' after 'fr'}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({fr "sycl"}), targetsync: obj)
@@ -36,7 +41,22 @@ static void foo() {
   #pragma omp interop init(prefer_type({attr "ompx_propX"}), targetsync: obj)
 
   // Anything that is not 'fr' or 'attr' is rejected by the brace parser.
-  // expected-error@+2 {{expected interop type: 'target' and/or 'targetsync'}}
+  // expected-error@+2 {{expected 'fr' or 'attr' selector in 'prefer_type'}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({foo}), targetsync: obj)
+
+  // A non-identifier where a selector is expected is rejected too.
+  // expected-error@+2 {{expected 'fr' or 'attr' selector in 'prefer_type'}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({42}), targetsync: obj)
+
+  // An empty pref-spec '{}' requires at least one 'fr'/'attr' selector.
+  // expected-error@+2 {{expected 'fr' or 'attr' selector in 'prefer_type'}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type({}), targetsync: obj)
+
+  // An empty prefer_type() requires at least one preference-specification.
+  // expected-error@+2 {{expected preference-specification in 'prefer_type'}}
+  // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
+  #pragma omp interop init(prefer_type(), targetsync: obj)
 }

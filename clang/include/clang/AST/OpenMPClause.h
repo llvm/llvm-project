@@ -8863,8 +8863,8 @@ class OMPInitClause final
   bool IsTargetSync = false;
   bool HasPreferAttrs = false;
 
-  /// Total number of attr() exprs across all pref-specs (sum of the
-  /// per-pref-spec counts in the trailing unsigned[]).
+  /// Total number of attr() exprs across all pref-specs; equals the last entry
+  /// of the trailing unsigned[] of cumulative end offsets (or 0 if no prefs).
   unsigned NumAttrs = 0;
 
   /// Trailing-objects layout (single contiguous Expr* array):
@@ -8874,7 +8874,10 @@ class OMPInitClause final
   ///     [varlist_size() ..]    = flat list of attr exprs, concatenated in
   ///                              pref-spec order
   ///   unsigned[ NumPrefs ]:
-  ///     [i]                    = number of attr() exprs in pref-spec i
+  ///     [i]                    = end offset of pref-spec i's attrs in the flat
+  ///                              attr block (inclusive cumulative attr count);
+  ///                              spec i's attrs are [ends[i-1], ends[i]), with
+  ///                              an implicit 0 before ends[0]
   ///
   /// varlist_size() = 1 + NumPrefs, so OMPVarListClause iteration covers
   /// InteropVar + the Fr block.
@@ -8976,20 +8979,26 @@ public:
   /// Total attrs across all pref-specs.
   unsigned getNumAttrs() const { return NumAttrs; }
 
-  /// Per-pref-spec attr counts (one entry per pref-spec).
-  ArrayRef<unsigned> getAttrCounts() const {
+  /// All attr() exprs across every pref-spec, in pref-spec order (flat block).
+  ArrayRef<Expr *> getAttrs() const {
+    return ArrayRef<Expr *>(getTrailingObjects<Expr *>() + varlist_size(),
+                            NumAttrs);
+  }
+
+  /// Per-pref-spec attr end offsets: entry i is the inclusive cumulative attr
+  /// count through pref-spec i (one past its last attr in the flat attr block).
+  ArrayRef<unsigned> getAttrEnds() const {
     return getTrailingObjects<unsigned>(getNumPrefs());
   }
 
   PrefView getPref(unsigned I) {
     assert(I < getNumPrefs() && "pref-spec index out of range");
     Expr **E = getTrailingObjects<Expr *>();
-    ArrayRef<unsigned> Counts = getAttrCounts();
-    unsigned AttrStart = 0;
-    for (unsigned K = 0; K < I; ++K)
-      AttrStart += Counts[K];
-    return PrefView{
-        E[1 + I], ArrayRef<Expr *>(E + varlist_size() + AttrStart, Counts[I])};
+    ArrayRef<unsigned> AttrEnds = getAttrEnds();
+    unsigned Start = (I == 0) ? 0 : AttrEnds[I - 1];
+    unsigned Count = AttrEnds[I] - Start;
+    return PrefView{E[1 + I],
+                    ArrayRef<Expr *>(E + varlist_size() + Start, Count)};
   }
   PrefView getPref(unsigned I) const {
     return const_cast<OMPInitClause *>(this)->getPref(I);

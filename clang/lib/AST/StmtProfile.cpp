@@ -40,6 +40,9 @@ namespace {
 
     void VisitStmt(const Stmt *S);
 
+    /// Fold a scalar value into the profile
+    void VisitInteger(uint64_t Value) { ID.AddInteger(Value); }
+
     void VisitStmtNoChildren(const Stmt *S) {
       HandleStmtClass(S->getStmtClass());
     }
@@ -658,7 +661,19 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
-  VisitOMPClauseList(C);
+  // Enumerate per pref-spec so the {fr, attr} grouping is part of the profile.
+  Profiler->VisitStmt(C->getInteropVar());
+  unsigned NumPrefs = C->getNumPrefs();
+  Profiler->VisitInteger(NumPrefs);
+  for (unsigned I = 0; I < NumPrefs; ++I) {
+    OMPInitClause::PrefView P = C->getPref(I);
+    Profiler->VisitInteger(P.Fr ? 1 : 0); // Fr may be null for an attr-only spec
+    if (P.Fr)
+      Profiler->VisitStmt(P.Fr);
+    Profiler->VisitInteger(P.Attrs.size()); // pref-spec boundary
+    for (const Expr *A : P.Attrs)
+      Profiler->VisitStmt(A);
+  }
 }
 
 void OMPClauseProfiler::VisitOMPUseClause(const OMPUseClause *C) {

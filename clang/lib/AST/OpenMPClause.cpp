@@ -1823,12 +1823,13 @@ OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
   E[0] = InteropVar;
   for (unsigned I = 0; I < NumPrefs; ++I)
     E[1 + I] = InteropInfo.Prefs[I].Fr;
-  unsigned *Counts = Clause->getTrailingObjects<unsigned>();
-  unsigned AttrPos = 1 + NumPrefs;
+  unsigned *AttrEnds = Clause->getTrailingObjects<unsigned>();
+  unsigned AttrBase = 1 + NumPrefs; 
+  unsigned AttrPos = AttrBase;
   for (unsigned I = 0; I < NumPrefs; ++I) {
-    Counts[I] = InteropInfo.Prefs[I].Attrs.size();
     for (Expr *A : InteropInfo.Prefs[I].Attrs)
       E[AttrPos++] = A;
+    AttrEnds[I] = AttrPos - AttrBase; 
   }
   return Clause;
 }
@@ -1849,7 +1850,13 @@ void OMPInitClause::setAttrs(ArrayRef<unsigned> Counts,
          "attr-count vector size must match number of pref-specs");
   assert(Attrs.size() == NumAttrs &&
          "attr-expr count must match preallocated NumAttrs");
-  llvm::copy(Counts, getTrailingObjects<unsigned>());
+  // Store inclusive cumulative counts (end offsets)
+  unsigned *AttrEnds = getTrailingObjects<unsigned>();
+  unsigned Run = 0;
+  for (unsigned I = 0, E = Counts.size(); I < E; ++I) {
+    Run += Counts[I];
+    AttrEnds[I] = Run;
+  }
   llvm::copy(Attrs, getTrailingObjects<Expr *>() + varlist_size());
 }
 

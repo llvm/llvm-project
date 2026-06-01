@@ -3710,6 +3710,12 @@ bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
     return true;
   }
   bool HasError = false;
+  // attr() requires at least one ext-string-literal argument; an empty list is
+  // not permitted by the prefer_type grammar.
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok, diag::err_expected) << tok::string_literal;
+    HasError = true;
+  }
   while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::annot_pragma_openmp_end)) {
     if (Tok.is(tok::string_literal)) {
@@ -3762,9 +3768,22 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       if (PT.expectAndConsume(diag::err_expected_lparen_after, "prefer_type"))
         HasError = true;
 
-      while (Tok.isNot(tok::r_paren)) {
+      // prefer_type requires at least one preference-specification.
+      if (Tok.is(tok::r_paren)) {
+        Diag(Tok, diag::err_omp_expected_pref_spec);
+        HasError = true;
+      }
+
+      while (Tok.isNot(tok::r_paren) &&
+             Tok.isNot(tok::annot_pragma_openmp_end)) {
         // OMP 6.0: { fr(...), attr(...) } brace-grouped pref-spec
         if (Tok.is(tok::l_brace)) {
+          // The brace-grouped form was introduced in OpenMP 6.0; earlier
+          // versions only allow the flat foreign-runtime-id list.
+          if (getLangOpts().OpenMP < 60) {
+            Diag(Tok, diag::err_omp_prefer_type_brace_60);
+            HasError = true;
+          }
           BalancedDelimiterTracker BT(*this, tok::l_brace,
                                       tok::annot_pragma_openmp_end);
           BT.consumeOpen();
@@ -3772,13 +3791,17 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
           SmallVector<Expr *, 2> AttrExprs;
           bool SeenFr = false;
 
+          // A pref-spec requires at least one 'fr'/'attr' selector; {} is not
+          // permitted by the grammar.
+          if (Tok.is(tok::r_brace)) {
+            Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
+            HasError = true;
+          }
+
           while (Tok.isNot(tok::r_brace) &&
                  Tok.isNot(tok::annot_pragma_openmp_end)) {
-            if (!Tok.is(tok::identifier)) {
-              HasError = true;
-              Diag(Tok, diag::err_omp_expected_interop_type);
-              ConsumeToken();
-            } else if (Tok.getIdentifierInfo()->isStr("fr")) {
+            if (Tok.is(tok::identifier) &&
+                Tok.getIdentifierInfo()->isStr("fr")) {
               if (SeenFr) {
                 Diag(Tok, diag::err_omp_interop_multiple_fr);
                 HasError = true;
@@ -3794,12 +3817,14 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
                 FrExpr = Fr.get();
               else
                 HasError = true;
-            } else if (Tok.getIdentifierInfo()->isStr("attr")) {
+            } else if (Tok.is(tok::identifier) &&
+                       Tok.getIdentifierInfo()->isStr("attr")) {
               if (ParseOMPInteropAttrSelector(AttrExprs))
                 HasError = true;
             } else {
+              // Neither 'fr' nor 'attr' (a non-identifier or some other word).
               HasError = true;
-              Diag(Tok, diag::err_omp_expected_interop_type);
+              Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
               ConsumeToken();
             }
             if (Tok.is(tok::comma))
