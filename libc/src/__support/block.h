@@ -94,7 +94,8 @@ class Block {
   // Masks for the contents of the next_ field.
   static constexpr size_t PREV_FREE_MASK = 1 << 0;
   static constexpr size_t LAST_MASK = 1 << 1;
-  static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK);
+  static constexpr size_t FREE_MASK = 1 << 2;
+  static constexpr size_t SIZE_MASK = ~(PREV_FREE_MASK | LAST_MASK | FREE_MASK);
 
 public:
   // To ensure block sizes have two lower unused bits, ensure usable space is
@@ -213,17 +214,19 @@ public:
   }
 
   /// @returns Whether the block is unavailable for allocation.
-  LIBC_INLINE bool used() const { return !next() || !next()->prev_free(); }
+  LIBC_INLINE bool used() const { return !(next_ & FREE_MASK); }
 
   /// Marks this block as in use.
   LIBC_INLINE void mark_used() {
     LIBC_ASSERT(next() && "last block is always considered used");
+    next_ &= ~FREE_MASK;
     next()->next_ &= ~PREV_FREE_MASK;
   }
 
   /// Marks this block as free.
   LIBC_INLINE void mark_free() {
     LIBC_ASSERT(next() && "last block is always considered used");
+    next_ |= FREE_MASK;
     next()->next_ |= PREV_FREE_MASK;
     // The next block's prev_ field becomes alive, as it is no longer part of
     // this block's used space.
@@ -239,6 +242,8 @@ public:
                 "usable space must be aligned to a multiple of MIN_ALIGN");
     if (is_last)
       next_ |= LAST_MASK;
+    else
+      next_ |= FREE_MASK;
   }
 
   LIBC_INLINE bool is_usable_space_aligned(size_t alignment) const {
