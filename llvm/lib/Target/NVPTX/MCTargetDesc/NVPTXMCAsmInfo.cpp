@@ -60,4 +60,7 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple,
   // ptxas does not support DWARF `.file fileno directory filename'
   // syntax as of v11.X.
   EnableDwarfFileDirectoryDefault = false;
+
+  // ptx does not support the .addrsig directive
+  HasAddrsigDirective = false;
 }

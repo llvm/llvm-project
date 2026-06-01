@@ -3111,7 +3111,7 @@ bool AsmPrinter::doFinalization(Module &M) {
   if (S)
     OutStreamer->switchSection(S);
 
-  if (TM.Options.EmitAddrsig) {
+  if (TM.Options.EmitAddrsig && MAI.hasAddrsigDirective()) {
     // Emit address-significance attributes for all globals.
     OutStreamer->emitAddrsig();
     for (const GlobalValue &GV : M.global_values()) {
