@@ -29,6 +29,21 @@ subroutine test_construct_no_match()
   !$omp end parallel
 end subroutine
 
+! CHECK-LABEL: func.func @_QPtest_construct_for(
+! CHECK:         omp.wsloop
+! CHECK-NOT:     omp.taskyield
+! CHECK:         return
+subroutine test_construct_for(n)
+  integer :: i, n
+  !$omp do
+  do i = 1, n
+    !$omp metadirective &
+    !$omp & when(construct={for}: nothing) &
+    !$omp & default(taskyield)
+  end do
+  !$omp end do
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_begin_construct_parallel()
 ! CHECK:         omp.parallel
 ! CHECK:           omp.parallel

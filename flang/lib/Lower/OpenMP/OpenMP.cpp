@@ -4590,11 +4590,10 @@ namespace {
 struct TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(mlir::ModuleOp module,
                    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
-      // DeviceNum is set to -1 (unknown) because the
-      // target_device={device_num()} selector is not yet supported. OMPContext
-      // uses DeviceNum > -1 to activate target_device traits from the offload
-      // triple; without a concrete device number those traits are left
-      // inactive.
+      // Metadirective lowering has no selected target device, so construct the
+      // context with an unknown device number. Target-device selectors are
+      // rejected before matching because OMPContext would otherwise describe
+      // the host device in this mode.
       : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
                    getOffloadTargetTriple(module),
                    /*DeviceNum=*/-1),
@@ -4645,8 +4644,6 @@ struct MetadirectiveCandidate {
 static void appendConstructTraits(
     mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  if (mlir::isa<mlir::omp::SimdOp>(op))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
   if (mlir::isa<mlir::omp::WsloopOp>(op))
     constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
   if (mlir::isa<mlir::omp::ParallelOp>(op))
