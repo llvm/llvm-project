@@ -447,14 +447,16 @@ private:
       if (PrevNonComment->isAttribute()) {
         OpeningParen.setType(TT_AttributeLParen);
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
-                                         tok::kw_typeof,
+                                         tok::kw_typeof, tok::kw_typeof_unqual,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
-        if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof))
+        if (PrevNonComment->isOneOf(tok::kw_decltype, tok::kw_typeof,
+                                    tok::kw_typeof_unqual)) {
           Contexts.back().IsExpression = true;
+        }
       }
     }
 

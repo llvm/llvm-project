@@ -847,6 +847,24 @@ TEST_F(QualifierFixerTest, LeftQualifier) {
   verifyFormat("const float (C::*p)(int);", "float const (C::*p)(int);", Style);
 }
 
+TEST_F(QualifierFixerTest, TypeofUnqualC) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_C);
+  Style.QualifierAlignment = FormatStyle::QAS_Right;
+  Style.QualifierOrder = {"type", "const", "volatile"};
+
+  // Don't move past typeof_unqual or its alternate spellings.
+  verifyFormat("const typeof_unqual(foo)", Style);
+  verifyFormat("const __typeof_unqual(foo)", Style);
+  verifyFormat("const __typeof_unqual__(foo)", Style);
+
+  Style.QualifierAlignment = FormatStyle::QAS_Left;
+  Style.QualifierOrder = {"const", "volatile", "type"};
+
+  verifyFormat("typeof_unqual(foo) const", Style);
+  verifyFormat("__typeof_unqual(foo) const", Style);
+  verifyFormat("__typeof_unqual__(foo) const", Style);
+}
+
 TEST_F(QualifierFixerTest, ConstVolatileQualifiersOrder) {
   FormatStyle Style = getLLVMStyle();
   Style.QualifierAlignment = FormatStyle::QAS_Left;

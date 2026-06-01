@@ -289,9 +289,12 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   if (TypeToken->isTypeName(LangOpts)) {
     // The case `const decltype(foo)` -> `const decltype(foo)`
     // The case `const typeof(foo)` -> `const typeof(foo)`
+    // The case `const typeof_unqual(foo)` -> `const typeof_unqual(foo)`
     // The case `const _Atomic(foo)` -> `const _Atomic(foo)`
-    if (TypeToken->isOneOf(tok::kw_decltype, tok::kw_typeof, tok::kw__Atomic))
+    if (TypeToken->isOneOf(tok::kw_decltype, tok::kw_typeof,
+                           tok::kw_typeof_unqual, tok::kw__Atomic)) {
       return Tok;
+    }
 
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isQualifierOrType(LastSimpleTypeSpecifier->getNextNonComment(),

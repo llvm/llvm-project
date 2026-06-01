@@ -120,6 +120,7 @@ bool Token::isSimpleTypeSpecifier(const LangOptions &LangOpts) const {
   case tok::kw_char16_t:
   case tok::kw_char32_t:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw_decltype:
   case tok::kw_char8_t:
     return getIdentifierInfo()->isKeyword(LangOpts);
