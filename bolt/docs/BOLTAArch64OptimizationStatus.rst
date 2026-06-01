@@ -8,7 +8,7 @@ Overview
 This page summarizes default-off BOLT optimization flags that users may
 explicitly enable when optimizing AArch64 binaries.
 
-Ideally, BOLT is to be used with binaries linked with
+BOLT is to be used with binaries linked with
 relocations (``--emit-relocs`` or ``-Wl,-q``) and representative profile data.
 
 Supported Flags
@@ -22,15 +22,23 @@ The following flags are supported for AArch64.
 
      * - Flag
        - Optimization
+     * - | ``--reorder-functions=exec-count|hfsort|cdsort|pettis-hansen|random|user``
+         | ``--function-order=<file>``
+       - Reorder functions
+     * - ``--reorder-blocks=normal|ext-tsp|cache|branch-predictor|reverse|cluster-shuffle``
+       - Reorder basic blocks
+     * - | ``--split-functions``
+         | ``--split-strategy=profile2|random2|randomN|all``
+         | ``--split-all-cold``
+         | ``--split-eh``
+       - Split hot and cold code
+     * - | ``--align-blocks``
+         | ``--block-alignment=<uint>``
+       - Align basic blocks
      * - ``--tail-duplication=aggressive|moderate|cache``
        - Duplicate branch tails
      * - ``--peepholes=double-jumps|tailcall-traps|useless-branches|all``
        - Run peephole optimizations
-     * - ``--reorder-blocks=normal|ext-tsp|cache|branch-predictor|reverse|cluster-shuffle``
-       - Reorder basic blocks
-     * - | ``--align-blocks``
-         | ``--block-alignment=<uint>``
-       - Align basic blocks
      * - | ``--inline-all``
          | ``--inline-small-functions``
          | Related options:
@@ -40,9 +48,6 @@ The following flags are supported for AArch64.
        - Inline functions
      * - ``--icf=safe|all``
        - Fold identical functions
-     * - | ``--reorder-functions=exec-count|hfsort|cdsort|pettis-hansen|random|user``
-         | ``--function-order=<file>``
-       - Reorder functions
 
 Supported Flags With Limitations
 --------------------------------
@@ -71,12 +76,9 @@ an error or perform no transformation.
          | ``--reorder-data-algo=count|funcs``
        - Reorder data sections
        - ``move``, ``split`` and ``aggressive`` disable data reordering.
-     * - | ``--split-functions``
-         | ``--split-strategy=profile2|cdsplit|random2|randomN|all``
-         | ``--split-all-cold``
-         | ``--split-eh``
-       - Split hot and cold code
-       - ``--split-strategy=cdsplit`` requires ``--compact-code-model`` on AArch64.
+     * - ``--split-strategy=cdsplit``
+       - Split functions using cache-directed splitting
+       - Requires ``--compact-code-model`` on AArch64.
 
 Unsupported Flags
 -----------------
@@ -101,21 +103,24 @@ target.
      * - ``--three-way-branch``
        - Reorder three-way branches
        - Not implemented for AArch64.
-     * - ``--cmov-conversion``
-       - Convert branches to conditional moves
-       - Not applicable to AArch64.
+     * - ``--simplify-rodata-loads``
+       - Replace read-only data loads with constants
+       - Not implemented for AArch64.
      * - ``--frame-opt=hot|all``
        - Optimize stack-frame accesses
        - Not implemented for AArch64.
      * - ``--indirect-call-promotion=calls|jump-tables|all``
        - Promote indirect calls
        - Not implemented for AArch64.
+     * - ``--memcpy1-spec=<func1,func2:cs1:cs2,...>``
+       - Specialize one-byte ``memcpy`` calls
+       - Not implemented for AArch64.
      * - ``--reg-reassign``
        - Reassign registers to reduce encoding size
        - Not applicable to AArch64.
-     * - ``--simplify-rodata-loads``
-       - Replace read-only data loads with constants
-       - Not implemented for AArch64.
+     * - ``--cmov-conversion``
+       - Convert branches to conditional moves
+       - Not applicable to AArch64.
      * - | ``--stoke``
          | ``--stoke-out``
        - Emit STOKE optimization data
@@ -123,6 +128,3 @@ target.
      * - ``--insert-retpolines``
        - Insert retpolines
        - Not applicable to AArch64.
-     * - ``--memcpy1-spec=<func1,func2:cs1:cs2,...>``
-       - Specialize one-byte ``memcpy`` calls
-       - Not implemented for AArch64.
