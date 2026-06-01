@@ -340,9 +340,13 @@ void SendContinuedEvent(DAP &dap) {
   llvm::json::Object event(CreateEventObject("continued"));
   llvm::json::Object body;
   body.try_emplace("threadId", (int64_t)dap.focus_tid);
-  body.try_emplace("allThreadsContinued", true);
+  body.try_emplace("allThreadsContinued", dap.all_threads_continued);
   event.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(event)));
+
+  // Reset to default so that any unexpected resume (e.g. expression evaluation
+  // running a command) defaults to reporting all threads continued.
+  dap.all_threads_continued = true;
 }
 
 // Send a "exited" event to indicate the process has exited.
