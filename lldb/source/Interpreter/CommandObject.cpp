@@ -856,9 +856,13 @@ void CommandObjectParsed::Execute(const char *args_string,
           Cleanup();
           return;
         }
-        m_interpreter.IncreaseCommandUsage(*this);
         DoExecuteStatusCheck check(result);
-        DoExecute(cmd_args, result);
+        StatsDuration duration;
+        {
+          ElapsedTime measure(duration);
+          DoExecute(cmd_args, result);
+        }
+        m_interpreter.IncreaseCommandUsage(*this, duration);
       }
     }
 

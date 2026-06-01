@@ -1089,25 +1089,29 @@ protected:
                  CommandReturnObject &result) override {
     ScriptInterpreter *scripter = GetDebugger().GetScriptInterpreter();
 
-    m_interpreter.IncreaseCommandUsage(*this);
-
     Status error;
 
     result.SetStatus(eReturnStatusInvalid);
 
-    if (!scripter || !scripter->RunScriptBasedCommand(
-                         m_function_name.c_str(), raw_command_line, m_synchro,
-                         result, error, m_exe_ctx)) {
-      result.AppendError(error.AsCString());
-    } else {
-      // Don't change the status if the command already set it...
-      if (result.GetStatus() == eReturnStatusInvalid) {
-        if (result.GetOutputString().empty())
-          result.SetStatus(eReturnStatusSuccessFinishNoResult);
-        else
-          result.SetStatus(eReturnStatusSuccessFinishResult);
+    StatsDuration duration;
+    {
+      ElapsedTime measure(duration);
+      if (!scripter || !scripter->RunScriptBasedCommand(
+                           m_function_name.c_str(), raw_command_line, m_synchro,
+                           result, error, m_exe_ctx)) {
+        result.AppendError(error.AsCString());
+      } else {
+        // Don't change the status if the command already set it...
+        if (result.GetStatus() == eReturnStatusInvalid) {
+          if (result.GetOutputString().empty())
+            result.SetStatus(eReturnStatusSuccessFinishNoResult);
+          else
+            result.SetStatus(eReturnStatusSuccessFinishResult);
+        }
       }
     }
+
+    m_interpreter.IncreaseCommandUsage(*this, duration);
   }
 
 private:
