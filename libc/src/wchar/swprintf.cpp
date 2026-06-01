@@ -23,11 +23,9 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, swprintf,
-                   (wchar_t *__restrict buffer, size_t bufsz,
-                    const wchar_t *__restrict format, ...)) {
-  (void)buffer;
-  (void)bufsz;
-  (void)format;
+                   ([[maybe_unused]] wchar_t *__restrict buffer,
+                    [[maybe_unused]] size_t bufsz,
+                    [[maybe_unused]] const wchar_t *__restrict format, ...)) {
   // Always returns -1 for now
   return -1;
 }
