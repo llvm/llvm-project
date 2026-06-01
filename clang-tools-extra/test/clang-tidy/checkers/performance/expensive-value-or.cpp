@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
+// RUN:   -config='{CheckOptions: {performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::custom::CamelOptional;::custom::PascalOptional"}}'
 
 #include <string>
 #include <utility>
@@ -118,6 +119,28 @@ public:
 };
 } // namespace absl
 
-void negativeAbslNoConfig(absl::optional<std::string> opt) {
+void positiveAbslDefault(absl::optional<std::string> opt) {
   auto val = opt.value_or("default");
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+namespace custom {
+template <typename T> class CamelOptional {
+public:
+  T valueOr(T default_value) const;
+};
+template <typename T> class PascalOptional {
+public:
+  T ValueOr(T default_value) const;
+};
+} // namespace custom
+
+void positiveValueOr(custom::CamelOptional<std::string> opt) {
+  auto val = opt.valueOr("default");
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'valueOr' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+}
+
+void positiveValueOrPascal(custom::PascalOptional<std::string> opt) {
+  auto val = opt.ValueOr("default");
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'ValueOr' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
 }

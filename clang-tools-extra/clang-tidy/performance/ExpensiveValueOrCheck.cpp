@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExpensiveValueOrCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "../utils/TypeTraits.h"
 #include "clang/AST/ASTContext.h"
@@ -22,7 +23,8 @@ ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
       SizeThreshold(Options.get("SizeThreshold", 8U)),
       WarnOnRvalueOptional(Options.get("WarnOnRvalueOptional", false)),
       OptionalTypes(utils::options::parseStringList(
-          Options.get("OptionalTypes", "::std::optional"))) {}
+          Options.get("OptionalTypes",
+                      "::std::optional;::absl::optional;::boost::optional"))) {}
 
 void ExpensiveValueOrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "SizeThreshold", SizeThreshold);
@@ -32,11 +34,13 @@ void ExpensiveValueOrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ExpensiveValueOrCheck::registerMatchers(MatchFinder *Finder) {
-  auto OptionalTypesMatcher = hasAnyName(OptionalTypes);
+  auto OptionalTypesMatcher =
+      matchers::matchesAnyListedRegexName(OptionalTypes);
+  auto ValueOrMatcher = hasAnyName("value_or", "valueOr", "ValueOr");
 
   Finder->addMatcher(
-      cxxMemberCallExpr(callee(cxxMethodDecl(hasName("value_or"),
-                                             ofClass(OptionalTypesMatcher))))
+      cxxMemberCallExpr(
+          callee(cxxMethodDecl(ValueOrMatcher, ofClass(OptionalTypesMatcher))))
           .bind("call"),
       this);
 }
@@ -62,10 +66,12 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
   if (!IsExpensive)
     return;
 
+  const CXXMethodDecl *Method = Call->getMethodDecl();
+
   diag(Call->getExprLoc(),
-       "'value_or' copies expensive type %0; consider using 'operator*' or "
+       "'%0' copies expensive type %1; consider using 'operator*' or "
        "'value()' with a separate fallback")
-      << ValueType;
+      << Method->getName() << ValueType;
 }
 
 } // namespace clang::tidy::performance

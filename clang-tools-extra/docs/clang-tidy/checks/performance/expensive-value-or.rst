@@ -3,10 +3,11 @@
 performance-expensive-value-or
 ==============================
 
-Finds calls to ``value_or`` on optional types where the underlying value type
-is expensive to copy. While ``value()`` and ``operator*`` return references,
-``value_or`` always returns by value, which involves copying the contained
-value.
+Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
+``ValueOr``) on optional types where the return type is expensive to copy.
+These methods return by value, which involves copying the contained value.
+``value()`` and ``operator*`` return references and can be used to avoid the
+copy when appropriate.
 
 The check is applied to types that are not trivially copyable or whose size
 exceeds a configurable threshold. It supports ``std::optional``,
@@ -42,16 +43,17 @@ Options
 
 .. option:: OptionalTypes
 
-   Semicolon-separated list of fully-qualified names of optional-like class
-   templates to check. The check matches calls to ``value_or`` on
-   specializations of these templates. Default is `::std::optional`.
+   Semicolon-separated list of regular expressions matching fully-qualified
+   names of optional-like class templates to check. The check matches calls to
+   ``value_or`` on specializations of these templates. Default is
+   `::std::optional;::absl::optional;::boost::optional`.
 
-   Example configuration to also check ``absl::optional``:
+   Example configuration to also check a project-local optional type:
 
    .. code-block:: yaml
 
        CheckOptions:
-         performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional"
+         performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional;::boost::optional;::myproject::.*Optional"
 
 .. option:: WarnOnRvalueOptional
 

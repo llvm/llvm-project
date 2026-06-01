@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t \
-// RUN:   -config='{CheckOptions: {performance-expensive-value-or.OptionalTypes: "::std::optional;::absl::optional"}}'
+// RUN: %check_clang_tidy -std=c++11-or-later %s performance-expensive-value-or %t
 
 #include <string>
 
