@@ -11674,17 +11674,16 @@ static SDValue lowerShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                       SDValue V2, ArrayRef<int> Mask,
                                       SelectionDAG &DAG) {
   assert(VT.isInteger() && "Only supports integer vector types!");
-  MVT EltVT = VT.getVectorElementType();
-  SDValue Zero = DAG.getConstant(0, DL, EltVT);
-  SDValue AllOnes = DAG.getAllOnesConstant(DL, EltVT);
-  SmallVector<SDValue, 16> MaskOps;
+  unsigned EltSizeInBIts = VT.getScalarSizeInBits();
+  APInt Zero = APInt::getZero(EltSizeInBIts);
+  APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  SmallVector<APInt, 16> MaskOps;
   for (int i = 0, Size = Mask.size(); i < Size; ++i) {
     if (Mask[i] >= 0 && Mask[i] != i && Mask[i] != i + Size)
       return SDValue(); // Shuffled input!
     MaskOps.push_back(Mask[i] < Size ? AllOnes : Zero);
   }
-
-  SDValue V1Mask = DAG.getBuildVector(VT, DL, MaskOps);
+  SDValue V1Mask = getConstVector(MaskOps, VT, DAG, DL);
   return getBitSelect(DL, VT, V1, V2, V1Mask, DAG);
 }
 
