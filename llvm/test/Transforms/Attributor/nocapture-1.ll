@@ -323,13 +323,13 @@ declare void @external(ptr readonly) nounwind argmemonly
 define void @nc4(ptr %p) {
 ; TUNIT: Function Attrs: nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@nc4
-; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR6:[0-9]+]] {
+; TUNIT-SAME: (ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; TUNIT-NEXT:    call void @external(ptr nofree readonly [[P]]) #[[ATTR21:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@nc4
-; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (ptr [[P:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    call void @external(ptr nofree readonly [[P]]) #[[ATTR24:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
@@ -533,13 +533,13 @@ define void @test6_2(ptr %x6_2, ptr %y6_2, ptr %z6_2) {
 }
 
 define void @test_cmpxchg(ptr %p) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test_cmpxchg
 ; TUNIT-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test_cmpxchg
 ; CGSCC-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
@@ -550,15 +550,15 @@ define void @test_cmpxchg(ptr %p) {
 }
 
 define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test_cmpxchg_ptr
-; TUNIT-SAME: (ptr nofree noundef nonnull align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR8]] {
+; TUNIT-SAME: (ptr nofree noundef nonnull align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test_cmpxchg_ptr
-; CGSCC-SAME: (ptr nofree noundef nonnull align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR11]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR11]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; CGSCC-NEXT:    ret void
 ;
@@ -567,13 +567,13 @@ define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; TUNIT: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test_atomicrmw
 ; TUNIT-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR8]] {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CGSCC: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test_atomicrmw
 ; CGSCC-SAME: (ptr nofree noundef nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR11]] {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
@@ -828,13 +828,13 @@ declare void @val_use(i8 %ptr) readonly nounwind willreturn
 define void @ptr_uses(ptr %ptr, ptr %wptr) {
 ; TUNIT: Function Attrs: mustprogress nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@ptr_uses
-; TUNIT-SAME: (ptr nofree [[PTR:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[WPTR:%.*]]) #[[ATTR15:[0-9]+]] {
+; TUNIT-SAME: (ptr [[PTR:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[WPTR:%.*]]) #[[ATTR15:[0-9]+]] {
 ; TUNIT-NEXT:    store i8 0, ptr [[WPTR]], align 1
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@ptr_uses
-; CGSCC-SAME: (ptr nofree [[PTR:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[WPTR:%.*]]) #[[ATTR18:[0-9]+]] {
+; CGSCC-SAME: (ptr [[PTR:%.*]], ptr nofree noundef nonnull writeonly captures(none) dereferenceable(1) [[WPTR:%.*]]) #[[ATTR18:[0-9]+]] {
 ; CGSCC-NEXT:    store i8 0, ptr [[WPTR]], align 1
 ; CGSCC-NEXT:    ret void
 ;
@@ -856,7 +856,7 @@ declare ptr @llvm.strip.invariant.group.p0(ptr)
 ; TUNIT: attributes #[[ATTR5]] = { mustprogress nofree norecurse nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR6]] = { nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR8]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR8]] = { mustprogress norecurse nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
@@ -884,7 +884,7 @@ declare ptr @llvm.strip.invariant.group.p0(ptr)
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind memory(write) }
-; CGSCC: attributes #[[ATTR11]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR11]] = { mustprogress norecurse nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR12]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR13]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
