@@ -2143,20 +2143,21 @@ protected:
 /// lanes, which is handled by the llvm.experimental.vector.histogram family
 /// of intrinsics. The only update operations currently supported are
 /// 'add' and 'sub' where the other term is loop-invariant.
-class VPHistogramRecipe : public VPRecipeBase {
+class VPHistogramRecipe : public VPRecipeBase, public VPIRMetadata {
   /// Opcode of the update operation, currently either add or sub.
   unsigned Opcode;
 
 public:
   VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                    const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPRecipeBase::VPHistogramSC, Operands, DL),
-        Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   ~VPHistogramRecipe() override = default;
 
   VPHistogramRecipe *clone() override {
-    return new VPHistogramRecipe(Opcode, operands(), getDebugLoc());
+    return new VPHistogramRecipe(Opcode, operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPHistogramSC);
@@ -2908,7 +2909,8 @@ public:
   /// all other incoming values are merged into it.
   VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPRecipeBase::VPBlendSC, Operands, Flags, DL) {
+      : VPRecipeWithIRFlags(VPRecipeBase::VPBlendSC, Operands,
+                            Operands[0]->getScalarType(), Flags, DL) {
     assert(Operands.size() >= 2 && "Expected at least two operands!");
     setUnderlyingValue(Phi);
   }
@@ -3176,8 +3178,9 @@ protected:
                     FastMathFlags FMFs, Instruction *I,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     ReductionStyle Style, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, FMFs, DL), RdxKind(RdxKind),
-        Style(Style) {
+      : VPRecipeWithIRFlags(SC, Operands, Operands[0]->getScalarType(), FMFs,
+                            DL),
+        RdxKind(RdxKind), Style(Style) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
@@ -4272,10 +4275,10 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
-                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
-                                  VPWidenCallRecipe, VPReplicateRecipe,
-                                  VPInterleaveBase, VPWidenMemoryRecipe> {};
+    : vpdetail::CastInfoMixinImpl<
+          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+          VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
+          VPInterleaveBase, VPWidenMemoryRecipe, VPHistogramRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>

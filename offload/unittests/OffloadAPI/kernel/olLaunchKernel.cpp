@@ -27,6 +27,7 @@ KERNEL_TEST(LocalMemStatic, localmem_static)
 KERNEL_TEST(SingleCounterSyncEvent, single_counter)
 KERNEL_TEST(GlobalCtor, global_ctor)
 KERNEL_TEST(GlobalDtor, global_dtor)
+KERNEL_TEST(GridSize, gridsize)
 
 struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
   void SetUpKernels(const char *program, std::vector<const char *> kernels) {
@@ -457,4 +458,44 @@ TEST_P(olLaunchKernelGlobalDtorTest, Success) {
   ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 0,
                                 nullptr, nullptr));
   ASSERT_SUCCESS(olSyncQueue(Queue));
+}
+
+TEST_P(olLaunchKernelGridSizeTest, Success) {
+  void *Mem;
+  ASSERT_SUCCESS(
+      olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, 6 * sizeof(uint32_t), &Mem));
+
+  uint32_t *NumBlocks = static_cast<uint32_t *>(Mem);
+  uint32_t *NumThreads = static_cast<uint32_t *>(Mem) + 3;
+
+  void *ArgPtrs[] = {&NumBlocks, &NumThreads};
+  size_t ArgSizes[] = {sizeof(NumBlocks), sizeof(NumThreads)};
+
+  const uint32_t BaseBlocks[3] = {64, 16, 8};
+  const uint32_t BaseThreads[3] = {32, 4, 2};
+
+  for (uint32_t Dim = 1; Dim <= 3; ++Dim) {
+    NumBlocks[0] = NumBlocks[1] = NumBlocks[2] = 0;
+    NumThreads[0] = NumThreads[1] = NumThreads[2] = 0;
+
+    LaunchArgs.Dimensions = 3;
+    LaunchArgs.NumGroups = {BaseBlocks[0], Dim >= 2 ? BaseBlocks[1] : 1,
+                            Dim >= 3 ? BaseBlocks[2] : 1};
+    LaunchArgs.GroupSize = {BaseThreads[0], Dim >= 2 ? BaseThreads[1] : 1,
+                            Dim >= 3 ? BaseThreads[2] : 1};
+
+    ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                  std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+    ASSERT_SUCCESS(olSyncQueue(Queue));
+
+    ASSERT_EQ(NumBlocks[0], LaunchArgs.NumGroups.x);
+    ASSERT_EQ(NumBlocks[1], LaunchArgs.NumGroups.y);
+    ASSERT_EQ(NumBlocks[2], LaunchArgs.NumGroups.z);
+    ASSERT_EQ(NumThreads[0], LaunchArgs.GroupSize.x);
+    ASSERT_EQ(NumThreads[1], LaunchArgs.GroupSize.y);
+    ASSERT_EQ(NumThreads[2], LaunchArgs.GroupSize.z);
+  }
+
+  ASSERT_SUCCESS(olMemFree(Mem));
 }
