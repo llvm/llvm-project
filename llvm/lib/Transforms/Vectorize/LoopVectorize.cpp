@@ -2118,6 +2118,7 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
   SmallVector<Type *, 4> Tys;
   for (auto &ArgOp : CI->args())
     Tys.push_back(ArgOp->getType());
+
   InstructionCost ScalarCallCost = TTI.getCallInstrCost(
       CI->getCalledFunction(), RetTy, Tys, Config.CostKind);
 
@@ -2132,7 +2133,6 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
     InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
     return std::min(Cost, IntrinsicCost);
   }
-
   return Cost;
 }
 
