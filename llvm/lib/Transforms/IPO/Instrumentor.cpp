@@ -1812,7 +1812,7 @@ void NumericIO::init(InstrumentationConfig &IConf,
       IRTArg::POTENTIALLY_INDIRECT |
       (Config.has(PassSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
   if (Config.has(PassTypeId))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "type_id",
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "type_id",
                              "The operation's type id.", IRTArg::NONE,
                              getTypeId));
   if (Config.has(PassSize))
