@@ -72,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
+          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen -no-man-pages
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

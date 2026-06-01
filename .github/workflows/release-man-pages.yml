@@ -1,4 +1,4 @@
-name: Release Doxygen
+name: Release man pages
 
 permissions:
   contents: read
@@ -35,11 +35,11 @@ on:
 
 jobs:
   # This job checks permissions and validates inputs to prevent potential
-  # malicious actions.  Since the release-doxygen job has contents: write
+  # malicious actions.  Since the release-manpages job has contents: write
   # permissions we need to be extra careful about who can run the job and
   # what inputs can be provided.
-  release-doxygen-validate-input:
-    name: Release Doxygen Validate Input
+  release-man-pages-validate-input:
+    name: Release Manpage Validate Input
     runs-on: ubuntu-24.04
     environment:
       name: release
@@ -65,8 +65,8 @@ jobs:
         with:
           release-version: ${{ inputs.release-version }}
 
-  release-doxygen:
-    name: Build and Upload Release Doxygen
+  release-man-pages:
+    name: Build and Upload Release man pages
     runs-on: ubuntu-24.04
     environment:
       name: release
@@ -74,7 +74,7 @@ jobs:
     permissions:
       contents: write
     needs:
-      - release-doxygen-validate-input
+      - release-man-pages-validate-input
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
@@ -93,18 +93,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-              doxygen \
-              graphviz \
               python3-github \
               ninja-build \
-              texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
-      - name: Build Doxygen
+      - name: Build man pages
         env:
           RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx -no-man-pages
+          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx -no-doxygen
 
       - id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
@@ -114,11 +111,11 @@ jobs:
           owner: ${{ github.repository_owner }}
           permission-members: read
 
-      - name: Upload Doxygen
+      - name: Upload man pages
         if: env.upload
         env:
           GITHUB_TOKEN: ${{ github.token }}
           USER_TOKEN: ${{ steps.app-token.outputs.token }}
           RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" upload --files ./*doxygen*.tar.xz
+          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" upload --files ./llvm_man_pages-*.tar.xz
