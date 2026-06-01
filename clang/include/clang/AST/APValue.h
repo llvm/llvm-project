@@ -328,10 +328,10 @@ private:
   struct MemberPointerData;
 
   // We ensure elsewhere that Data is big enough for LV and MemberPointerData.
-  typedef llvm::AlignedCharArrayUnion<void *, APSInt, APFloat, ComplexAPSInt,
-                                      ComplexAPFloat, Vec, Mat, Arr, StructData,
-                                      UnionData, AddrLabelDiffData, ReflectionData>
-  DataType;
+  typedef llvm::AlignedCharArrayUnion<
+      void *, APSInt, APFloat, ComplexAPSInt, ComplexAPFloat, Vec, Mat, Arr,
+      StructData, UnionData, AddrLabelDiffData, ReflectionData>
+      DataType;
   static const size_t DataSize = sizeof(DataType);
 
   DataType Data;

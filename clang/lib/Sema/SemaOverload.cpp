@@ -9111,12 +9111,9 @@ public:
   typedef TypeSet::iterator iterator;
 
   BuiltinCandidateTypeSet(Sema &SemaRef)
-    : HasNonRecordTypes(false),
-      HasArithmeticOrEnumeralTypes(false),
-      HasNullPtrType(false),
-      HasReflectionType(false),
-      SemaRef(SemaRef),
-      Context(SemaRef.Context) { }
+      : HasNonRecordTypes(false), HasArithmeticOrEnumeralTypes(false),
+        HasNullPtrType(false), HasReflectionType(false), SemaRef(SemaRef),
+        Context(SemaRef.Context) {}
 
   void AddTypesConvertedFrom(QualType Ty,
                              SourceLocation Loc,
