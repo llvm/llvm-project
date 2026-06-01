@@ -3287,13 +3287,15 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
-        } else if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
-          Error = 21;
-          break;
         }
 
         if (!SemaRef.getLangOpts().CPlusPlus20)
           SemaRef.Diag(AutoRange.getBegin(), diag::ext_auto_arg);
+
+        if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
+          Error = 21;
+          break;
+        }
 
         Info = &SemaRef.InventedParameterInfos.back();
       } else {
