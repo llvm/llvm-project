@@ -628,3 +628,21 @@ namespace VariadicOperator {
   constexpr S s;
   static_assert(s() == 42);
 }
+
+namespace DynamicCast {
+
+  struct A {virtual ~A();};
+  struct B : A {};
+  void f(A& a) { // all20-note 2{{declared here}}
+    constexpr B* b = dynamic_cast<B*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                           // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                           // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    constexpr void* b2 = dynamic_cast<void*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                                  // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                                  // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
+  struct S {};
+  constexpr S s;
+  constexpr int foo = (dynamic_cast<const S &>(s), 0);
+}
