@@ -1138,10 +1138,6 @@ static bool hoistInsertPastInsert(
   // so we can push the variant insertelement through the shuffle.
   if (!CanBypass(CanBypass, Ins, /*IsHoistedInstruction*/ true))
     return false;
-  if (!isSafeToExecuteUnconditionally(*Ins, DT, TLI, CurLoop, SafetyInfo, ORE,
-                                      Preheader->getTerminator(), AC,
-                                      AllowSpeculation))
-    return false;
 
   Value *IOp1 = Ins->getOperand(1);
   Value *IOp2 = Ins->getOperand(2);
