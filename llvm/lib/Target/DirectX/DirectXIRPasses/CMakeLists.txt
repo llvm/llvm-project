@@ -5,6 +5,7 @@ add_llvm_component_library(LLVMDirectXIRPasses
   LINK_COMPONENTS
   Core
   Support
+  TransformUtils
 
   ADD_TO_COMPONENT
   DirectX

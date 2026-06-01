@@ -7,16 +7,14 @@
 define <16 x i8> @combine_vpshld_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 ; VLX-LABEL: combine_vpshld_vpshufb:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4,5,6,7,16,9,10,11,12,13,14,15,24]
-; VLX-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
+; VLX-NEXT:    vpshldq $56, %xmm0, %xmm1, %xmm0
 ; VLX-NEXT:    ret{{[l|q]}}
 ;
 ; NOVLX-LABEL: combine_vpshld_vpshufb:
 ; NOVLX:       # %bb.0:
 ; NOVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLX-NEXT:    vmovdqa {{.*#+}} xmm2 = [1,2,3,4,5,6,7,64,9,10,11,12,13,14,15,72]
-; NOVLX-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0
+; NOVLX-NEXT:    vpshldq $56, %zmm0, %zmm1, %zmm0
 ; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVLX-NEXT:    vzeroupper
 ; NOVLX-NEXT:    ret{{[l|q]}}
@@ -33,18 +31,15 @@ define <16 x i8> @combine_vpshld_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 define <16 x i8> @combine_vpshrd_vpshufb(<16 x i8> %x, <16 x i8> %y) {
 ; VLX-LABEL: combine_vpshrd_vpshufb:
 ; VLX:       # %bb.0:
-; VLX-NEXT:    vmovdqa {{.*#+}} xmm2 = [19,0,1,2,23,4,5,6,27,8,9,10,31,12,13,14]
-; VLX-NEXT:    vpermi2b %xmm0, %xmm1, %xmm2
-; VLX-NEXT:    vmovdqa %xmm2, %xmm0
+; VLX-NEXT:    vpshldd $8, %xmm0, %xmm1, %xmm0
 ; VLX-NEXT:    ret{{[l|q]}}
 ;
 ; NOVLX-LABEL: combine_vpshrd_vpshufb:
 ; NOVLX:       # %bb.0:
 ; NOVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLX-NEXT:    vmovdqa {{.*#+}} xmm2 = [67,0,1,2,71,4,5,6,75,8,9,10,79,12,13,14]
-; NOVLX-NEXT:    vpermi2b %zmm0, %zmm1, %zmm2
-; NOVLX-NEXT:    vmovdqa %xmm2, %xmm0
+; NOVLX-NEXT:    vpshldd $8, %zmm0, %zmm1, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; NOVLX-NEXT:    vzeroupper
 ; NOVLX-NEXT:    ret{{[l|q]}}
   %rx = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %x, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
@@ -55,4 +50,56 @@ define <16 x i8> @combine_vpshrd_vpshufb(<16 x i8> %x, <16 x i8> %y) {
   %bf = bitcast <4 x i32> %fsh to <16 x i8>
   %r = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %bf, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
   ret <16 x i8> %r
+}
+
+define <16 x i16> @combine_vpshldq_v16i16_shuffle(<16 x i16> %a, <16 x i16> %b) {
+; VLX-LABEL: combine_vpshldq_v16i16_shuffle:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpshldq $16, %ymm1, %ymm0, %ymm0
+; VLX-NEXT:    ret{{[l|q]}}
+;
+; NOVLX-LABEL: combine_vpshldq_v16i16_shuffle:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; NOVLX-NEXT:    vpshldq $16, %zmm1, %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; NOVLX-NEXT:    ret{{[l|q]}}
+  %r = shufflevector <16 x i16> %a, <16 x i16> %b, <16 x i32> <i32 19, i32 0, i32 1, i32 2, i32 23, i32 4, i32 5, i32 6, i32 27, i32 8, i32 9, i32 10, i32 31, i32 12, i32 13, i32 14>
+  ret <16 x i16> %r
+}
+
+define <8 x i32> @combine_vpshld_v8i32_shuffle(<8 x i32> %a, <8 x i32> %b) {
+; VLX-LABEL: combine_vpshld_v8i32_shuffle:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpshldq $32, %ymm0, %ymm1, %ymm0
+; VLX-NEXT:    ret{{[l|q]}}
+;
+; NOVLX-LABEL: combine_vpshld_v8i32_shuffle:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; NOVLX-NEXT:    vpshldq $32, %zmm0, %zmm1, %zmm0
+; NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; NOVLX-NEXT:    ret{{[l|q]}}
+  %r = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 1, i32 8, i32 3, i32 10, i32 5, i32 12, i32 7, i32 14>
+  ret <8 x i32> %r
+}
+
+define <8 x i8> @PR145276(<8 x i8> %a0, <8 x i8> %a1) {
+; VLX-LABEL: PR145276:
+; VLX:       # %bb.0:
+; VLX-NEXT:    vpshldq $8, %xmm1, %xmm0, %xmm0
+; VLX-NEXT:    ret{{[l|q]}}
+;
+; NOVLX-LABEL: PR145276:
+; NOVLX:       # %bb.0:
+; NOVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NOVLX-NEXT:    vpshldq $8, %zmm1, %zmm0, %zmm0
+; NOVLX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; NOVLX-NEXT:    vzeroupper
+; NOVLX-NEXT:    ret{{[l|q]}}
+  %r = shufflevector <8 x i8> %a0, <8 x i8> %a1, <8 x i32> <i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+  ret <8 x i8> %r
 }

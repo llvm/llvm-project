@@ -133,12 +133,12 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
   const auto &Elem = Call.getCFGElementRef();
   auto State = C.getState();
   auto &SVB = C.getSValBuilder();
-  const auto *LCtx = C.getLocationContext();
+  const auto *SF = C.getStackFrame();
 
-  SVal RetVal = SVB.conjureSymbolVal(nullptr, Elem, LCtx, C.blockCount());
-  SVal Param = State->getSVal(CE->getArg(paramNum), LCtx);
+  SVal RetVal = SVB.conjureSymbolVal(nullptr, Elem, SF, C.blockCount());
+  SVal Param = State->getSVal(CE->getArg(paramNum), SF);
 
-  auto StateFound = State->BindExpr(CE, LCtx, RetVal);
+  auto StateFound = State->BindExpr(CE, SF, RetVal);
 
   // If we have an iterator position for the range-begin argument then we can
   // assume that in case of successful search the position of the found element
@@ -147,7 +147,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
   const auto *Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        Elem, LCtx, C.blockCount());
+                                        Elem, SF, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -160,7 +160,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
     StateFound = StateFound->assume(GreaterOrEqual.castAs<DefinedSVal>(), true);
   }
 
-  Param = State->getSVal(CE->getArg(paramNum + 1), LCtx);
+  Param = State->getSVal(CE->getArg(paramNum + 1), SF);
 
   // If we have an iterator position for the range-end argument then we can
   // assume that in case of successful search the position of the found element
@@ -169,7 +169,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
   Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        Elem, LCtx, C.blockCount());
+                                        Elem, SF, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -185,7 +185,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallEvent &Call,
   C.addTransition(StateFound);
 
   if (AggressiveStdFindModeling) {
-    auto StateNotFound = State->BindExpr(CE, LCtx, Param);
+    auto StateNotFound = State->BindExpr(CE, SF, Param);
     C.addTransition(StateNotFound);
   }
 }
