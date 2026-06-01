@@ -222,9 +222,8 @@ public:
     // We don't check elements recursively.
     case StorageKind::Aggregate:
       return Ty->isAggregateType() || Ty->isVectorTy();
-    default:
-      llvm_unreachable("Unhandled storage kind.");
     }
+    llvm_unreachable("Unhandled storage kind.");
   }
 
   const APInt &asInteger() const {
