@@ -1,14 +1,10 @@
-; RUN: opt %s -o /dev/null -S 2>&1 | FileCheck %s
+; RUN: not opt %s -o /dev/null -S 2>&1 | FileCheck %s
 ;
 ; The last dbg.declare intrinsic in this file has an illegal DILocation -- this
 ; needs to pass through the autoupgrade to #dbg_declare process and then get
-; caught by the verifier.
+; caught at the end of the parser.
 ;
-; CHECK:      invalid #dbg record DILocation
-; CHECK-NEXT: #dbg_declare(ptr %1, ![[VAR:[0-9]+]], !DIExpression(), ![[PROG:[0-9]+]])
-; CHECK-NEXT: ![[PROG]] = distinct !DISubprogram(name: "IgnoreIntrinsicTest",
-; CHECK-NEXT: label %0
-; CHECK-NEXT: ptr @IgnoreIntrinsicTest
+; CHECK: invalid !dbg metadata
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

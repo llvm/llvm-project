@@ -614,6 +614,68 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   return dos_path;
 }
 
+// Determine how many bytes can be read at `addr` in `hProcess` before crossing
+// out of the committed memory region containing it. Returns 0 if the address is
+// not within a committed region.
+static SIZE_T BytesReadableAt(HANDLE hProcess, LPCVOID addr) {
+  MEMORY_BASIC_INFORMATION mbi{};
+  if (!::VirtualQueryEx(hProcess, addr, &mbi, sizeof(mbi)))
+    return 0;
+  if (mbi.State != MEM_COMMIT)
+    return 0;
+  uintptr_t region_end =
+      reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+  uintptr_t a = reinterpret_cast<uintptr_t>(addr);
+  assert(a < region_end);
+  return region_end - a;
+}
+
+static std::optional<std::string> ReadRemotePathStringW(HANDLE hProcess,
+                                                        LPCVOID addr) {
+  SIZE_T to_read = std::min<SIZE_T>((MAX_PATH + 1) * sizeof(wchar_t),
+                                    BytesReadableAt(hProcess, addr));
+  to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
+  if (to_read < sizeof(wchar_t))
+    return std::nullopt;
+
+  std::array<wchar_t, MAX_PATH + 1> buf{};
+  SIZE_T bytes_read = 0;
+  if (!::ReadProcessMemory(hProcess, addr, buf.data(), to_read, &bytes_read))
+    return std::nullopt;
+
+  size_t max_chars = bytes_read / sizeof(wchar_t);
+  size_t len = ::wcsnlen(buf.data(), max_chars);
+  if (len == max_chars) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
+    return std::nullopt;
+
+  std::string result;
+  llvm::convertWideToUTF8(std::wstring(buf.data(), len), result);
+  return result;
+}
+
+static std::optional<std::string> ReadRemotePathStringA(HANDLE hProcess,
+                                                        LPCVOID addr) {
+  SIZE_T to_read =
+      std::min<SIZE_T>(MAX_PATH + 1, BytesReadableAt(hProcess, addr));
+  if (to_read == 0)
+    return std::nullopt;
+
+  std::array<char, MAX_PATH + 1> buf{};
+  SIZE_T bytes_read = 0;
+  if (!::ReadProcessMemory(hProcess, addr, buf.data(), to_read, &bytes_read))
+    return std::nullopt;
+
+  size_t len = ::strnlen(buf.data(), bytes_read);
+  if (len == bytes_read) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
+    return std::nullopt;
+
+  return std::string(buf.data(), len);
+}
+
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
 static std::optional<std::string>
 GetFileNameFromImageNameField(HANDLE hProcess,
@@ -621,37 +683,16 @@ GetFileNameFromImageNameField(HANDLE hProcess,
   if (info.lpImageName == nullptr)
     return std::nullopt;
 
-  LPVOID name_addr = nullptr;
+  LPVOID string_addr = nullptr;
   SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(hProcess, info.lpImageName, &name_addr,
-                           sizeof(name_addr), &bytes_read) ||
-      bytes_read != sizeof(name_addr) || name_addr == nullptr)
+  if (!::ReadProcessMemory(hProcess, info.lpImageName, &string_addr,
+                           sizeof(string_addr), &bytes_read) ||
+      bytes_read != sizeof(string_addr))
     return std::nullopt;
 
-  if (info.fUnicode) {
-    std::array<wchar_t, MAX_PATH + 1> wbuf{};
-    if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(),
-                             wbuf.size() * sizeof(wchar_t), &bytes_read))
-      return std::nullopt;
-    if (wbuf[MAX_PATH] != L'\0')
-      return std::nullopt;
-    std::string path_utf8;
-    llvm::convertWideToUTF8(wbuf.data(), path_utf8);
-    if (path_utf8.empty())
-      return std::nullopt;
-    return path_utf8;
-  }
-
-  std::array<char, MAX_PATH + 1> abuf{};
-  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size(),
-                           &bytes_read))
-    return std::nullopt;
-  if (abuf[MAX_PATH] != '\0')
-    return std::nullopt;
-  std::string path(abuf.data());
-  if (path.empty())
-    return std::nullopt;
-  return path;
+  if (info.fUnicode)
+    return ReadRemotePathStringW(hProcess, string_addr);
+  return ReadRemotePathStringA(hProcess, string_addr);
 }
 
 DWORD
