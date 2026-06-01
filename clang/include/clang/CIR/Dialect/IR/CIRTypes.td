@@ -669,7 +669,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
   );
 
   // StorageClass is defined in C++ for mutability.
-  let storageClass = "RecordTypeStorage";
+  let storageClass = "StructTypeStorage";
   let genStorageClass = 0;
 
   let skipDefaultBuilders = 1;
@@ -685,7 +685,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "bool":$is_class
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
-                   is_class, /*padding=*/mlir::Type{});
+                   is_class);
     }]>,
 
     // Create an identified and incomplete struct/class type.
@@ -695,7 +695,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
     ), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
                    /*incomplete=*/true, /*packed=*/false,
-                   /*padded=*/false, is_class, /*padding=*/mlir::Type{});
+                   /*padded=*/false, is_class);
     }]>,
 
     // Create an anonymous struct/class type (always complete).
@@ -706,7 +706,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
       "bool":$is_class
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, padded, is_class, /*padding=*/mlir::Type{});
+                   packed, padded, is_class);
     }]>
   ];
 
@@ -811,7 +811,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
   );
 
   // StorageClass is defined in C++ for mutability.
-  let storageClass = "RecordTypeStorage";
+  let storageClass = "UnionTypeStorage";
   let genStorageClass = 0;
 
   let skipDefaultBuilders = 1;
@@ -826,14 +826,14 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, name, /*incomplete=*/false, packed,
-                   /*padded=*/false, /*is_class=*/false, padding);
+                   padding);
     }]>,
 
     // Create an identified and incomplete union type.
     TypeBuilder<(ins "mlir::StringAttr":$name), [{
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<mlir::Type>{}, name,
-                   /*incomplete=*/true, /*packed=*/false, /*padded=*/false,
-                   /*is_class=*/false, /*padding=*/mlir::Type{});
+                   /*incomplete=*/true, /*packed=*/false,
+                   /*padding=*/mlir::Type{});
     }]>,
 
     // Create an anonymous union type (always complete).
@@ -843,7 +843,7 @@ def CIR_UnionType : CIR_Type<"Union", "union", [
       CArg<"mlir::Type", "{}">:$padding
     ), [{
       return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
-                   packed, /*padded=*/false, /*is_class=*/false, padding);
+                   packed, padding);
     }]>
   ];
 

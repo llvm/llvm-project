@@ -312,7 +312,7 @@ void StructType::removeABIConversionNamePrefix() {
 
 void StructType::complete(ArrayRef<Type> members, bool packed, bool padded) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, padded, /*padding=*/mlir::Type{}).failed())
+  if (mutate(members, packed, padded).failed())
     llvm_unreachable("failed to complete struct");
 }
 
@@ -435,7 +435,7 @@ mlir::StringAttr UnionType::getName() const { return getImpl()->name; }
 bool UnionType::isIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getIncomplete() const { return getImpl()->incomplete; }
 bool UnionType::getPacked() const { return getImpl()->packed; }
-bool UnionType::getPadded() const { return static_cast<bool>(getPadding()); }
+bool UnionType::getPadded() const { return getPadding() ? true : false; }
 mlir::Type UnionType::getPadding() const { return getImpl()->padding; }
 
 bool UnionType::isABIConvertedRecord() const {
@@ -459,7 +459,7 @@ void UnionType::removeABIConversionNamePrefix() {
 void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  if (mutate(members, packed, /*padded=*/false, padding).failed())
+  if (mutate(members, packed, padding).failed())
     llvm_unreachable("failed to complete union");
 }
 
@@ -536,8 +536,9 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded,
                           mlir::Type padding) {
   if (auto s = mlir::dyn_cast<StructType>(*this))
     return s.complete(members, packed, padded);
-  // For unions, padded is derived from padding; assert the caller is consistent.
-  assert((!padded || padding) && "padded=true requires a non-null padding type");
+  // Unions derive padded from padding; assert the caller is consistent.
+  assert((!padded || padding) &&
+         "padded=true requires a non-null padding type");
   return mlir::cast<UnionType>(*this).complete(members, packed, padding);
 }
 uint64_t RecordType::getElementOffset(const mlir::DataLayout &dataLayout,

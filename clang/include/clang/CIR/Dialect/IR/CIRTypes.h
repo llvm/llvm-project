@@ -27,7 +27,8 @@
 namespace cir {
 
 namespace detail {
-struct RecordTypeStorage;
+struct StructTypeStorage;
+struct UnionTypeStorage;
 } // namespace detail
 
 bool isValidFundamentalIntWidth(unsigned width);
