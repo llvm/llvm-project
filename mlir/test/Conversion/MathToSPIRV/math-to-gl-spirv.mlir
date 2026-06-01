@@ -319,6 +319,40 @@ func.func @powf_const_mixed_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32>
   return %0: vector<4xf32>
 }
 
+// CHECK-LABEL: @fpowi_scalar
+//  CHECK-SAME: (%[[BASE:.+]]: f32, %[[POW:.+]]: i32)
+func.func @fpowi_scalar(%base: f32, %power: i32) -> f32 {
+  // CHECK: %[[EXP:.+]] = spirv.ConvertSToF %[[POW]] : i32 to f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[BASE]] : f32
+  // CHECK: %[[POWF:.+]] = spirv.GL.Pow %[[ABS]], %[[EXP]] : f32
+  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
+  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[BASE]], %[[F0]] : f32
+  // CHECK: %[[I1:.+]] = spirv.Constant 1 : i32
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[POW]], %[[I1]] : i32
+  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[AND]], %[[I1]] : i32
+  // CHECK: %[[NEG_C:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
+  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POWF]] : f32
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[NEG_C]], %[[NEG]], %[[POWF]] : i1, f32
+  %0 = math.fpowi %base, %power : f32, i32
+  // CHECK: return %[[SEL]]
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fpowi_vector
+func.func @fpowi_vector(%base: vector<4xf32>, %power: vector<4xi32>) -> vector<4xf32> {
+  // CHECK: spirv.ConvertSToF %{{.*}} : vector<4xi32> to vector<4xf32>
+  // CHECK: spirv.GL.FAbs %{{.*}} : vector<4xf32>
+  // CHECK: spirv.GL.Pow %{{.*}} : vector<4xf32>
+  // CHECK: spirv.FOrdLessThan %{{.*}} : vector<4xf32>
+  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
+  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
+  // CHECK: spirv.LogicalAnd %{{.*}} : vector<4xi1>
+  // CHECK: spirv.FNegate %{{.*}} : vector<4xf32>
+  // CHECK: spirv.Select %{{.*}} : vector<4xi1>, vector<4xf32>
+  %0 = math.fpowi %base, %power : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @round_scalar
 func.func @round_scalar(%x: f32) -> f32 {
   // CHECK: %[[ZERO:.+]] = spirv.Constant 0.000000e+00
