@@ -6498,6 +6498,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
+  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+    return false;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
