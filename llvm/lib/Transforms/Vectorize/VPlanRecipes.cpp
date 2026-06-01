@@ -3250,7 +3250,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
     bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
-    getOperand(1)->printAsOperand(O, SlotTracker);
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
     if (Negated)

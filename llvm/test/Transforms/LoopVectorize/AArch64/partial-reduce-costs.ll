@@ -714,29 +714,29 @@ define i32 @reduce_sub_add_chain_without_mul(ptr %a, ptr noalias %b) {
 ; NEON-LABEL: 'reduce_sub_add_chain_without_mul'
 ; SVE-LABEL: 'reduce_sub_add_chain_without_mul'
 ; SVE2-LABEL: 'reduce_sub_add_chain_without_mul'
-; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
 ;
 ; SVE2p1-LABEL: 'reduce_sub_add_chain_without_mul'
-; SVE2p1:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p1:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SVE2p1:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
-; SVE2p1:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p1:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SVE2p1:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
 ;
 ; SVE2p3-LABEL: 'reduce_sub_add_chain_without_mul'
-; SVE2p3:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p3:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SVE2p3:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
-; SVE2p3:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p3:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SVE2p3:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
 ;
 ; SME2-LABEL: 'reduce_sub_add_chain_without_mul'
-; SME2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SME2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SME2:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
-; SME2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SME2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
 ;
 ; I8MM-LABEL: 'reduce_sub_add_chain_without_mul'
-; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<0> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
 ; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
 ;
 entry:
