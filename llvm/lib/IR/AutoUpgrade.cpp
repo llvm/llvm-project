@@ -3257,20 +3257,20 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                             CI->getArgOperand(2), Aligned);
   } else if (Name.starts_with("avx512.mask.expand.load.")) {
     auto *ResultTy = cast<FixedVectorType>(CI->getType());
+    auto *PtrTy = CI->getOperand(0)->getType();
     Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                    ResultTy->getNumElements());
-
     Rep = Builder.CreateIntrinsic(
-        Intrinsic::masked_expandload, ResultTy,
+        Intrinsic::masked_expandload, {ResultTy, PtrTy},
         {CI->getOperand(0), MaskVec, CI->getOperand(1)});
   } else if (Name.starts_with("avx512.mask.compress.store.")) {
     auto *ResultTy = cast<VectorType>(CI->getArgOperand(1)->getType());
+    auto *PtrTy = CI->getArgOperand(0)->getType();
     Value *MaskVec =
         getX86MaskVec(Builder, CI->getArgOperand(2),
                       cast<FixedVectorType>(ResultTy)->getNumElements());
-
     Rep = Builder.CreateIntrinsic(
-        Intrinsic::masked_compressstore, ResultTy,
+        Intrinsic::masked_compressstore, {ResultTy, PtrTy},
         {CI->getArgOperand(1), CI->getArgOperand(0), MaskVec});
   } else if (Name.starts_with("avx512.mask.compress.") ||
              Name.starts_with("avx512.mask.expand.")) {

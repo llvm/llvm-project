@@ -4836,18 +4836,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         E->getType()->getAs<VectorType>()->getElementType(), nullptr);
 
     llvm::Value *Result;
-    if (BuiltinID == Builtin::BI__builtin_masked_load) {
+    if (BuiltinID == Builtin::BI__builtin_masked_load)
       Result = Builder.CreateMaskedLoad(RetTy, Ptr, Align.getAsAlign(), Mask,
                                         PassThru, "masked_load");
-    } else {
-      Function *F = CGM.getIntrinsic(Intrinsic::masked_expandload, {RetTy});
-      int PtrArgIdx = 0;
-      llvm::Type *PtrArgTy = F->getArg(PtrArgIdx)->getType();
-      if (PtrArgTy != Ptr->getType())
-        Ptr = Builder.CreateAddrSpaceCast(Ptr, PtrArgTy);
-      Result =
-          Builder.CreateCall(F, {Ptr, Mask, PassThru}, "masked_expand_load");
-    }
+    else
+      Result = Builder.CreateMaskedExpandLoad(
+          RetTy, Ptr, Align.getAsAlign(), Mask, PassThru, "masked_expand_load");
+
     return RValue::get(Result);
   };
   case Builtin::BI__builtin_masked_gather: {
@@ -4877,24 +4872,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(2));
 
-    QualType ValTy = E->getArg(1)->getType();
-    llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
-
     CharUnits Align = CGM.getNaturalTypeAlignment(
         E->getArg(1)->getType()->getAs<VectorType>()->getElementType(),
         nullptr);
 
-    if (BuiltinID == Builtin::BI__builtin_masked_store) {
+    if (BuiltinID == Builtin::BI__builtin_masked_store)
       Builder.CreateMaskedStore(Val, Ptr, Align.getAsAlign(), Mask);
-    } else {
-      llvm::Function *F =
-          CGM.getIntrinsic(llvm::Intrinsic::masked_compressstore, {ValLLTy});
-      int PtrArgIdx = 1;
-      llvm::Type *PtrArgTy = F->getArg(PtrArgIdx)->getType();
-      if (PtrArgTy != Ptr->getType())
-        Ptr = Builder.CreateAddrSpaceCast(Ptr, PtrArgTy);
-      Builder.CreateCall(F, {Val, Ptr, Mask});
-    }
+    else
+      Builder.CreateMaskedCompressStore(Val, Ptr, Align.getAsAlign(), Mask);
+
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_masked_scatter: {
