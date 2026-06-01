@@ -48,12 +48,21 @@ static cl::opt<bool> EnableLocalReassignment(
 
 static cl::opt<float> MinUseDefFreqRatioToIgnoreSize(
     "min-use-def-freq-ratio-to-ignore-size", cl::Hidden,
-    cl::desc("if live range A wants to evict live range B and A's use-def frequency divided by B's use-def frequency is outside of the range `(1 / MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize)` ignore the sizes of A dn B when making the eviction decision."),
+    cl::desc(
+        "if live range A wants to evict live range B and A's use-def frequency "
+        "divided by B's use-def frequency is outside of the range `(1 / "
+        "MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize)` "
+        "ignore the sizes of A dn B when making the eviction decision."),
     cl::init(5.0));
 
 static cl::opt<float> MinSizeRatioNeededToEvict(
     "min-size-ratio-needed-to-evict", cl::Hidden,
-    cl::desc("if live range A wants to evict live range B and A's use-def frequency divided by B's use-def frequency is in the renge `[1 / MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize]` then evict B only if size of A divided by the size of B is smaller than `MinSizeRatioNeededToEvict`"),
+    cl::desc(
+        "if live range A wants to evict live range B and A's use-def frequency "
+        "divided by B's use-def frequency is in the renge `[1 / "
+        "MinUseDefFreqRatioToIgnoreSize,  MinUseDefFreqRatioToIgnoreSize]` "
+        "then evict B only if size of A divided by the size of B is smaller "
+        "than `MinSizeRatioNeededToEvict`"),
     cl::init(0.05));
 
 namespace llvm {
@@ -247,12 +256,13 @@ bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
   if (FreqRatio < 1.0f / MinUseDefFreqRatioToIgnoreSize)
     return false;
   // use-def frequencies are comparable. Evict B only if
-  // its size is much larger, so eviction can provide some register pressure relief.
+  // its size is much larger, so eviction can provide some register pressure
+  // relief.
   int ASize = A.getSize();
   int BSize = B.getSize();
   if (BSize == 0)
     return false;
-  if ((float) ASize / (float) BSize < MinSizeRatioNeededToEvict)
+  if ((float)ASize / (float)BSize < MinSizeRatioNeededToEvict)
     return true;
   return false;
 }
@@ -346,7 +356,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Apply the eviction policy for non-urgent evictions.
       if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint))
         return false;
-      LLVM_DEBUG(dbgs() << "should evict: " << *Intf << " w= " << Intf->weight() << '\n');
+      LLVM_DEBUG(dbgs() << "should evict: " << *Intf << " w= " << Intf->weight()
+                        << '\n');
 
       // If !MaxCost.isMax(), then we're just looking for a cheap register.
       // Evicting another local live range in this case could lead to suboptimal
