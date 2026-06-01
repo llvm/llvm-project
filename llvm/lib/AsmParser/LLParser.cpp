@@ -331,6 +331,30 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
                  "use of undefined comdat '$" +
                      ForwardRefComdats.begin()->first + "'");
 
+  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
+    dropUnknownMetadataReferences();
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  // Set debug locations.
+  for (auto [Loc, DR, MD] : PendingDbgRecords) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      DR->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid debug location");
+  }
+  PendingDbgRecords.clear();
+  for (auto [Loc, I, MD] : PendingDbgInsts) {
+    if (auto *DI = dyn_cast<DILocation>(MD))
+      I->setDebugLoc(DebugLoc(DI));
+    else
+      return error(Loc, "invalid !dbg metadata");
+  }
+  PendingDbgInsts.clear();
+
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
@@ -421,28 +445,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     return error(ForwardRefValIDs.begin()->second.second,
                  "use of undefined value '@" +
                      Twine(ForwardRefValIDs.begin()->first) + "'");
-
-  if (AllowIncompleteIR && !ForwardRefMDNodes.empty())
-    dropUnknownMetadataReferences();
-
-  if (!ForwardRefMDNodes.empty())
-    return error(ForwardRefMDNodes.begin()->second.second,
-                 "use of undefined metadata '!" +
-                     Twine(ForwardRefMDNodes.begin()->first) + "'");
-
-  // Set debug locations.
-  for (auto [Loc, DR, MD] : PendingDbgRecords) {
-    if (auto *DI = dyn_cast<DILocation>(MD))
-      DR->setDebugLoc(DebugLoc(DI));
-    else
-      return error(Loc, "invalid debug location");
-  }
-  for (auto [Loc, I, MD] : PendingDbgInsts) {
-    if (auto *DI = dyn_cast<DILocation>(MD))
-      I->setDebugLoc(DebugLoc(DI));
-    else
-      return error(Loc, "invalid !dbg metadata");
-  }
 
   // Resolve metadata cycles.
   for (auto &N : NumberedMetadata) {
