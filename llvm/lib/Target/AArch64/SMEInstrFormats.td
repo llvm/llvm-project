@@ -3942,7 +3942,7 @@ multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
 //===----------------------------------------------------------------------===//
 // Lookup table read with 6-bit indices (8-bit)
 class sme2_luti6_zt_base<RegisterOperand zd_ty, string asm>
-  : I<(outs zd_ty:$Zd), (ins ZTR:$ZTt, ZZZ_Any:$Zn),
+  : I<(outs zd_ty:$Zd), (ins ZTR:$ZTt, ZZZ_Any_Z0Z7:$Zn),
     asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<3> Zd;

@@ -1321,6 +1321,17 @@ class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
   let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_ZReg, " # NumRegs # ">";
 }
 
+class ZPRVectorListZ0Z7<int ElementWidth, int NumRegs>
+  : ZPRVectorList<ElementWidth, NumRegs> {
+  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # "Z0Z7";
+  let DiagnosticType = "Invalid" # Name;
+  let PredicateMethod =
+      "isTypedVectorListMultiple<RegKind::SVEDataVector, "
+                                 # NumRegs # ", 0, "
+                                 # ElementWidth #  ", "
+                                 # "AArch64::ZPR_3bRegClassID" # ">";
+}
+
 def Z_b  : RegisterOperand<ZPR,  "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 1>;
 }
@@ -1367,6 +1378,10 @@ def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
 
 def ZZZ_Any  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
   let ParserMatchClass = ZPRVectorList<0, 3>;
+}
+
+def ZZZ_Any_Z0Z7  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorListZ0Z7<0, 3>;
 }
 
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
