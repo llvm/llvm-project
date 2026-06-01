@@ -136,7 +136,9 @@ struct Config {
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 
-  bool isMultithreaded() const { return sharedMemory || cooperativeMultithreading; }
+  bool isMultithreaded() const {
+    return sharedMemory || cooperativeMultithreading;
+  }
 };
 
 // The Ctx object hold all other (non-configuration) global state.

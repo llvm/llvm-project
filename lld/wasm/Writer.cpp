@@ -431,8 +431,7 @@ void Writer::layoutMemory() {
   }
 
   // Make space for the memory initialization flag
-  if (ctx.arg.sharedMemory &&
-      hasPassiveInitializedSegments()) {
+  if (ctx.arg.sharedMemory && hasPassiveInitializedSegments()) {
     memoryPtr = alignTo(memoryPtr, 4);
     ctx.sym.initMemoryFlag = symtab->addSyntheticDataSymbol(
         "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
@@ -1063,9 +1062,9 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // threads. In the non-shared memory case, we use passive segments only for
   // TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all.
-  bool needsPassiveInit = ctx.arg.sharedMemory ||
-                          (ctx.arg.cooperativeMultithreading &&
-                           (s->isTLS() || s->name.starts_with(".bss")));
+  bool needsPassiveInit =
+      ctx.arg.sharedMemory || (ctx.arg.cooperativeMultithreading &&
+                               (s->isTLS() || s->name.starts_with(".bss")));
   if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))

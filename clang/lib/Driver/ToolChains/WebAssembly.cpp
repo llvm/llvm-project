@@ -94,7 +94,8 @@ static bool WantsCooperativeMultithreading(const llvm::Triple &Triple,
 }
 
 static bool WantsSharedMemory(const llvm::Triple &Triple, const ArgList &Args) {
-  return WantsPthread(Triple, Args) && !WantsCooperativeMultithreading(Triple, Args);
+  return WantsPthread(Triple, Args) &&
+         !WantsCooperativeMultithreading(Triple, Args);
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,

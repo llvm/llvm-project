@@ -265,8 +265,7 @@ void ImportSection::writeBody() {
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
-    if (out.memorySec->maxMemoryPages != 0 ||
-        ctx.arg.sharedMemory) {
+    if (out.memorySec->maxMemoryPages != 0 || ctx.arg.sharedMemory) {
       import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
       import.Memory.Maximum = out.memorySec->maxMemoryPages;
     }
@@ -407,8 +406,7 @@ void TableSection::assignIndexes() {
 void MemorySection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  bool hasMax =
-      maxMemoryPages != 0 || ctx.arg.sharedMemory;
+  bool hasMax = maxMemoryPages != 0 || ctx.arg.sharedMemory;
   writeUleb128(os, 1, "memory count");
   unsigned flags = 0;
   if (hasMax)
