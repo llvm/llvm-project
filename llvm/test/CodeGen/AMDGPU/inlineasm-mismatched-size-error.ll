@@ -56,6 +56,27 @@ define void @inline_asm_scalar_read_too_narrow() {
   ret void
 }
 
+; A single named register cannot hold a scalar wider than 32 bits; this must be
+; diagnosed instead of silently synthesising the missing high bits.
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define i64 @inline_asm_i64_in_single_v_def() {
+  %asm = call i64 asm sideeffect "; def $0", "={v0}"()
+  ret i64 %asm
+}
+
+; ERR: error: could not allocate output register for constraint '{s4}'
+define i64 @inline_asm_i64_in_single_s_def() {
+  %asm = call i64 asm sideeffect "; def $0", "={s4}"()
+  ret i64 %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_i64_in_single_v_use(i64 %val) {
+  call void asm sideeffect "; use $0", "{v0}"(i64 %val)
+  ret void
+}
+
 ; Single registers for vector types that are too wide or too narrow should be
 ; diagnosed.
 

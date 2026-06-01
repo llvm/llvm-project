@@ -53,7 +53,6 @@ define i64 @return_type_is_too_big_scalar() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $vgpr8
   %reg = call i64 asm sideeffect "; def $0", "={v8}" ()
   ret i64 %reg
 }
@@ -74,7 +73,6 @@ define ptr addrspace(1) @return_type_is_too_big_pointer() {
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"; def $0", sideeffect attdialect, regdef, implicit-def $vgpr8
   %reg = call ptr addrspace(1) asm sideeffect "; def $0", "={v8}" ()
   ret ptr addrspace(1) %reg
 }
