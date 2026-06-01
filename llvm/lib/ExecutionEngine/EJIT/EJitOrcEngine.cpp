@@ -70,7 +70,9 @@ EJitOrcEngine::Create(const Config &config,
   Builder.setJITTargetMachineBuilder(*JTMBOrErr);
   Builder.setNumCompileThreads(0);
   // Bare-metal: no host process to search for symbols (avoids dlopen/dlsym).
+  #ifdef EJIT_BARE_METAL
   Builder.setLinkProcessSymbolsByDefault(false);
+#endif
 
   auto J = Builder.create();
   if (!J)
