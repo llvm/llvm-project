@@ -443,8 +443,11 @@ class DAPTestCaseBase(TestBase):
             return self.dap_server.wait_for_stopped()
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True):
-        self.dap_server.request_stepOut(threadId=threadId)
+    def stepOut(self, threadId=None, waitForStop=True, singleThread=None):
+        response = self.dap_server.request_stepOut(
+            threadId=threadId, singleThread=singleThread
+        )
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None

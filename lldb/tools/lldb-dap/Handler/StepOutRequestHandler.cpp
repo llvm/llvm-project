@@ -41,7 +41,9 @@ Error StepOutRequestHandler::Run(const StepOutArguments &arguments) const {
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
   lldb::SBError error;
-  thread.StepOut(error);
+  thread.StepOut(arguments.singleThread.value_or(false) ? eOnlyThisThread
+                                                        : eOnlyDuringStepping,
+                 error);
 
   return ToError(error);
 }

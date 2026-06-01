@@ -1294,10 +1294,12 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_stepOut(self, threadId):
+    def request_stepOut(self, threadId, singleThread=None):
         if self.exit_status is not None:
             raise ValueError("request_stepOut called after process exited")
         args_dict = {"threadId": threadId}
+        if singleThread is not None:
+            args_dict["singleThread"] = singleThread
         command_dict = {"command": "stepOut", "type": "request", "arguments": args_dict}
         return self._send_recv(command_dict)
 
