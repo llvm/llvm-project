@@ -48,7 +48,7 @@ exit:
 ; CHECK-LABEL: @g.resume(
 ; CHECK:         %[[FRAME:[0-9]+]] = call ptr @await_suspend_function(ptr null, ptr null)
 ; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr(ptr %[[FRAME]], i8 0)
-; CHECK:         musttail call fastcc void %[[RESUMEADDR]](ptr %[[FRAME]])
+; CHECK:         musttail call void %[[RESUMEADDR]](ptr %[[FRAME]])
 ; CHECK-NEXT:    ret void
 
 ; It has a cleanup bb.
@@ -98,7 +98,7 @@ exit:
 ; CHECK-LABEL: @f.resume(
 ; CHECK:         %[[FRAME:[0-9]+]] = call ptr @await_suspend_function(ptr null, ptr null)
 ; CHECK:         %[[RESUMEADDR:[0-9]+]] = call ptr @llvm.coro.subfn.addr(ptr %[[FRAME]], i8 0)
-; CHECK:         musttail call fastcc void %[[RESUMEADDR]](ptr %[[FRAME]])
+; CHECK:         musttail call void %[[RESUMEADDR]](ptr %[[FRAME]])
 ; CHECK-NEXT:    ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1
