@@ -891,10 +891,7 @@ void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
     return;
 
   if (is_unicode) {
-    if (buffer.size() % 2 != 0) {
-      LLDB_LOG(log, "Read debug string had uneven size: {0}", buffer.size());
-      return;
-    }
+    assert(buffer.size() % 2 == 0);
     llvm::ArrayRef<unsigned short> utf16(
         reinterpret_cast<const unsigned short *>(buffer.data()),
         buffer.size() / 2);
@@ -914,17 +911,16 @@ llvm::Error
 ProcessWindows::ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                                 uint16_t length_lower_word,
                                 llvm::SmallVectorImpl<char> &output) {
-  if (is_unicode && length_lower_word % 2 != 0) {
+  if (is_unicode && length_lower_word % 2 != 0)
     return llvm::createStringError(
         "Utf16 string can't have uneven size in bytes");
-  }
 
   const auto is_zero_terminated = [&] {
     // The zero terminator is always at the end of the buffer.
-    if (is_unicode) {
+    if (is_unicode)
       return output.size() >= 2 && output.back() == 0 &&
              output[output.size() - 2] == 0;
-    }
+
     return !output.empty() && output.back() == 0;
   };
 
