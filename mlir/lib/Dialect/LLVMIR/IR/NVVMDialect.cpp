@@ -3448,6 +3448,7 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                          MLIRContext *context) {
   patterns.add<ConvertFsubToFnegFadd>(context);
 }
+
 //===----------------------------------------------------------------------===//
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
