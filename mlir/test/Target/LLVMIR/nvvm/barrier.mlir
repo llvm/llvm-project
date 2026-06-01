@@ -33,5 +33,27 @@ llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32, %redOperand :
   // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %{{.*}} id = %{{.*}} -> i32
   %3 = nvvm.barrier.reduction #nvvm.reduction<and> %redOperand id = %barID -> i32
 
+  // Non-aligned sync variants.
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.all(i32 0)
+  // CHECK: nvvm.barrier {aligned = false}
+  nvvm.barrier {aligned = false}
+  // LLVM: call void @llvm.nvvm.barrier.cta.sync.count(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} {aligned = false}
+  nvvm.barrier id = %barID number_of_threads = %numberOfThreads {aligned = false}
+
+  // Non-aligned reduction variants.
+  // LLVM: %[[redOperandCmp5:.*]] = icmp ne i32 %[[redOperand]], 0
+  // LLVM: %{{.*}} = call i1 @llvm.nvvm.barrier.cta.red.and.all(i32 0, i1 %[[redOperandCmp5]])
+  // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<and> %{{.*}} -> i32 {aligned = false}
+  %4 = nvvm.barrier.reduction #nvvm.reduction<and> %redOperand -> i32 {aligned = false}
+  // LLVM: %[[redOperandCmp6:.*]] = icmp ne i32 %[[redOperand]], 0
+  // LLVM: %{{.*}} = call i1 @llvm.nvvm.barrier.cta.red.or.all(i32 0, i1 %[[redOperandCmp6]])
+  // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<or> %{{.*}} -> i32 {aligned = false}
+  %5 = nvvm.barrier.reduction #nvvm.reduction<or> %redOperand -> i32 {aligned = false}
+  // LLVM: %[[redOperandCmp7:.*]] = icmp ne i32 %[[redOperand]], 0
+  // LLVM: %{{.*}} = call i32 @llvm.nvvm.barrier.cta.red.popc.all(i32 0, i1 %[[redOperandCmp7]])
+  // CHECK: %{{.*}} = nvvm.barrier.reduction #nvvm.reduction<popc> %{{.*}} -> i32 {aligned = false}
+  %6 = nvvm.barrier.reduction #nvvm.reduction<popc> %redOperand -> i32 {aligned = false}
+
   llvm.return
 }
