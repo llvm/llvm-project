@@ -106,6 +106,7 @@ _set_min_libs() {
     ${_l}/libLLVMDebugInfoCodeView.a ${_l}/libLLVMDebugInfoDWARF.a
     ${_l}/libLLVMDebugInfoDWARFLowLevel.a ${_l}/libLLVMMCParser.a
     ${_l}/libLLVMCGData.a ${_l}/libLLVMObjCARCOpts.a
+    ${_l}/libLLVMGlobalISel.a
     ${_l}/libLLVMOrcTargetProcess.a ${_l}/libLLVMRuntimeDyld.a
     ${_l}/libLLVMBitWriter.a
   "
