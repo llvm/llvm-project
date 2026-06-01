@@ -19011,6 +19011,24 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
   return true;
 }
 
+static bool hasSingleWideningUIToFPUse(Value *V) {
+  using namespace llvm::PatternMatch;
+  if (!V->hasOneUse())
+    return false;
+  auto *UserInst = dyn_cast<Instruction>(V->user_back());
+  return UserInst && match(UserInst, m_UIToFP(m_Specific(V))) &&
+         V->getType()->getScalarSizeInBits() * 4 ==
+             UserInst->getType()->getScalarSizeInBits();
+}
+
+static bool areAllDeinterleaveUsersWideningUIToFP(IntrinsicInst *DI,
+                                                  VectorType *VTy) {
+  return all_of(DI->users(), [VTy](User *U) {
+    auto *EV = dyn_cast<ExtractValueInst>(U);
+    return EV && EV->getType() == VTy && hasSingleWideningUIToFPUse(EV);
+  });
+}
+
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI,
     const APInt &GapMask) const {
@@ -19039,6 +19057,12 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
   // TODO: Add support for using SVE instructions with fixed types later, using
   // the code from lowerInterleavedLoad to obtain the correct container type.
   if (UseScalable && !VTy->isScalableTy())
+    return false;
+
+  // When all deinterleaved results feed into widening uitofp operations,
+  // avoid lowering through ld4 so existing shuffle lowering can optimize them.
+  if (Factor == 4 && !VTy->isScalableTy() &&
+      areAllDeinterleaveUsersWideningUIToFP(DI, VTy))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);

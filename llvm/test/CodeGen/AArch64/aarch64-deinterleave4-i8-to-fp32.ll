@@ -18,30 +18,39 @@ define void @deinterleave_intrinsic_uitofp(ptr %src, ptr %dst0, ptr %dst1,
 ; CHECK-NEXT:    cmp x8, x5
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x11, x2, x9
-; CHECK-NEXT:    ld4 { v2.8b, v3.8b, v4.8b, v5.8b }, [x10]
+; CHECK-NEXT:    ldp q2, q3, [x10]
 ; CHECK-NEXT:    add x10, x1, x9
-; CHECK-NEXT:    tbl v6.16b, { v2.16b }, v0.16b
-; CHECK-NEXT:    tbl v7.16b, { v2.16b }, v1.16b
-; CHECK-NEXT:    tbl v16.16b, { v3.16b }, v0.16b
-; CHECK-NEXT:    tbl v17.16b, { v3.16b }, v1.16b
-; CHECK-NEXT:    tbl v18.16b, { v4.16b }, v0.16b
-; CHECK-NEXT:    tbl v19.16b, { v4.16b }, v1.16b
-; CHECK-NEXT:    tbl v20.16b, { v5.16b }, v0.16b
-; CHECK-NEXT:    tbl v2.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    uzp1 v4.16b, v2.16b, v3.16b
+; CHECK-NEXT:    uzp2 v5.16b, v3.16b, v0.16b
+; CHECK-NEXT:    uzp2 v6.16b, v2.16b, v0.16b
+; CHECK-NEXT:    xtn v3.8b, v3.8h
+; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    xtn v4.8b, v4.8h
+; CHECK-NEXT:    uzp1 v7.8b, v6.8b, v5.8b
+; CHECK-NEXT:    uzp2 v5.8b, v6.8b, v5.8b
+; CHECK-NEXT:    uzp2 v2.8b, v2.8b, v3.8b
+; CHECK-NEXT:    tbl v3.16b, { v4.16b }, v0.16b
+; CHECK-NEXT:    tbl v4.16b, { v4.16b }, v1.16b
+; CHECK-NEXT:    tbl v6.16b, { v7.16b }, v0.16b
+; CHECK-NEXT:    tbl v7.16b, { v7.16b }, v1.16b
+; CHECK-NEXT:    tbl v16.16b, { v2.16b }, v0.16b
+; CHECK-NEXT:    tbl v2.16b, { v2.16b }, v1.16b
+; CHECK-NEXT:    tbl v17.16b, { v5.16b }, v0.16b
+; CHECK-NEXT:    tbl v5.16b, { v5.16b }, v1.16b
+; CHECK-NEXT:    ucvtf v3.4s, v3.4s
+; CHECK-NEXT:    ucvtf v4.4s, v4.4s
 ; CHECK-NEXT:    ucvtf v6.4s, v6.4s
 ; CHECK-NEXT:    ucvtf v7.4s, v7.4s
 ; CHECK-NEXT:    ucvtf v16.4s, v16.4s
-; CHECK-NEXT:    ucvtf v3.4s, v17.4s
-; CHECK-NEXT:    ucvtf v4.4s, v18.4s
-; CHECK-NEXT:    ucvtf v5.4s, v19.4s
 ; CHECK-NEXT:    ucvtf v2.4s, v2.4s
-; CHECK-NEXT:    stp q7, q6, [x10]
-; CHECK-NEXT:    ucvtf v6.4s, v20.4s
+; CHECK-NEXT:    stp q4, q3, [x10]
+; CHECK-NEXT:    ucvtf v3.4s, v17.4s
+; CHECK-NEXT:    ucvtf v4.4s, v5.4s
 ; CHECK-NEXT:    add x10, x3, x9
 ; CHECK-NEXT:    add x9, x4, x9
-; CHECK-NEXT:    stp q3, q16, [x11]
-; CHECK-NEXT:    stp q5, q4, [x10]
-; CHECK-NEXT:    stp q2, q6, [x9]
+; CHECK-NEXT:    stp q7, q6, [x11]
+; CHECK-NEXT:    stp q2, q16, [x10]
+; CHECK-NEXT:    stp q4, q3, [x9]
 ; CHECK-NEXT:    b.lo .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %exit
 ; CHECK-NEXT:    ret
