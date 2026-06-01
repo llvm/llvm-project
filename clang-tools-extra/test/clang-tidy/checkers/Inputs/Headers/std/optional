@@ -22,6 +22,18 @@ public:
 
   template <class U = remove_cv_t<T>>
   constexpr T value_or(U &&default_value) &&;
+
+  const T *operator->() const noexcept;
+  T *operator->() noexcept;
+  const T &operator*() const & noexcept;
+  T &operator*() & noexcept;
+  const T &&operator*() const && noexcept;
+  T &&operator*() && noexcept;
+
+  T &value() &;
+  const T &value() const &;
+  T &&value() &&;
+  const T &&value() const &&;
 };
 
 } // namespace std

@@ -17,6 +17,44 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
+namespace {
+
+bool hasOperatorStar(const CXXRecordDecl *RD) {
+  return llvm::any_of(RD->methods(), [](const CXXMethodDecl *M) {
+    return M->getOverloadedOperator() == OO_Star;
+  });
+}
+
+StringRef findValueMethod(const CXXRecordDecl *RD) {
+  for (const auto *M : RD->methods()) {
+    if (!M->getDeclName().isIdentifier())
+      continue;
+    StringRef Name = M->getName();
+    if (Name == "value" || Name == "Value")
+      return Name;
+  }
+  return {};
+}
+
+std::string buildSuggestion(const CXXRecordDecl *OptionalClass) {
+  bool HasDeref = hasOperatorStar(OptionalClass);
+  StringRef ValueName = findValueMethod(OptionalClass);
+
+  if (HasDeref && !ValueName.empty())
+    return (llvm::Twine("consider using 'operator*' or '") + ValueName +
+            "()' with a separate fallback")
+        .str();
+  if (HasDeref)
+    return "consider using 'operator*' with a separate fallback";
+  if (!ValueName.empty())
+    return (llvm::Twine("consider using '") + ValueName +
+            "()' with a separate fallback")
+        .str();
+  return "consider avoiding the copy";
+}
+
+} // namespace
+
 ExpensiveValueOrCheck::ExpensiveValueOrCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
@@ -69,10 +107,8 @@ void ExpensiveValueOrCheck::check(const MatchFinder::MatchResult &Result) {
 
   const CXXMethodDecl *Method = Call->getMethodDecl();
 
-  diag(Call->getExprLoc(),
-       "'%0' copies expensive type %1; consider using 'operator*' or "
-       "'value()' with a separate fallback")
-      << Method->getName() << ValueType;
+  diag(Call->getExprLoc(), "'%0' copies expensive type %1; %2")
+      << Method->getName() << ValueType << buildSuggestion(Method->getParent());
 }
 
 } // namespace clang::tidy::performance

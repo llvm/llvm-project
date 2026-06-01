@@ -11,5 +11,5 @@ public:
 
 void positiveAbsl(absl::optional<std::string> opt) {
   auto val = opt.value_or("default");
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider using 'operator*' or 'value()' with a separate fallback [performance-expensive-value-or]
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: 'value_or' copies expensive type 'std::basic_string<char>'; consider avoiding the copy [performance-expensive-value-or]
 }
