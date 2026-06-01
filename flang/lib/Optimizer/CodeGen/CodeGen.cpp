@@ -4663,6 +4663,9 @@ public:
     if (!forcedTargetFeatures.empty())
       fir::setTargetFeatures(mod, forcedTargetFeatures);
 
+    if (!forcedTargetABI.empty())
+      fir::setTargetABI(mod, forcedTargetABI);
+
     if (typeDescriptorsRenamedForAssembly)
       options.typeDescriptorsRenamedForAssembly =
           typeDescriptorsRenamedForAssembly;
