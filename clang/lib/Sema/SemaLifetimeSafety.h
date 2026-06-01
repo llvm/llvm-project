@@ -60,23 +60,21 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void
-  reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                      const Expr *MovedExpr, SourceLocation FreeLoc,
-                      llvm::ArrayRef<const Expr *> OriginExprChain) override {
+  void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
+                           const Expr *MovedExpr, SourceLocation FreeLoc,
+                           llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
-
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
 
-    reportAliasingChain(OriginExprChain);
+    reportAliasingChain(ExprChain);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
@@ -476,60 +474,45 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
+    // FIXME: Ideally, this should use IgnoreParenImpCasts().
+    // However, according to the comment on IgnoreParenImpCasts(),
+    // it is not fully equivalent to IgnoreImpCasts() + IgnoreParens().
+    // Once the FIXME in IgnoreParenImpCasts() is resolved,
+    // this can be switched to use IgnoreParenImpCasts().
+    E = E->IgnoreImpCasts()->IgnoreParens();
     if (isa<MaterializeTemporaryExpr>(E))
       return "local temporary object";
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
     // TODO: Handle other expression types.
-    return "";
-  }
-
-  const Expr *extractExpr(const Expr *E) {
-    // FIXME: Ideally, this should use IgnoreParenImpCasts().
-    // However, according to the comment on IgnoreParenImpCasts(),
-    // it is not fully equivalent to IgnoreImpCasts() + IgnoreParens().
-    // Once the FIXME in IgnoreParenImpCasts() is resolved,
-    // this can be switched to use IgnoreParenImpCasts().
-    const Expr *PureExpr = E->IgnoreImpCasts()->IgnoreParens();
-
-    if (const auto *UO = dyn_cast<UnaryOperator>(PureExpr))
-      return UO->getSubExpr();
-    // For a BinaryOperator, there is only one relevant case: assignment
-    // chains. Therefore, we only need to consider the LHS expression.
-    if (const auto *BO = dyn_cast<BinaryOperator>(PureExpr))
-      return BO->getLHS();
-
-    // TODO: Handle other expression types.
-    return PureExpr;
+    return "expression";
   }
 
   void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
     std::string IssueStr;
+    const Expr *IssueExpr = nullptr;
     const Expr *LastExpr = nullptr;
+
     for (const Expr *CurrExpr : reverse(OriginExprChain)) {
-      if (IssueStr.empty()) {
+      if (!IssueExpr) {
         IssueStr = getDiagSubjectDescription(CurrExpr);
+        IssueExpr = CurrExpr;
         LastExpr = CurrExpr;
         continue;
       }
 
-      const Expr *ExtractedExpr = extractExpr(CurrExpr);
-      if (LastExpr &&
-          ExtractedExpr->getSourceRange() == LastExpr->getSourceRange())
+      if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
+        continue;
+      if (isa<MaterializeTemporaryExpr>(CurrExpr) &&
+          isa<MaterializeTemporaryExpr>(IssueExpr))
         continue;
 
-      // FIXME: Because getDiagSubjectDescription and extractExpr is not fully
-      // implemented yet, some diagnostic that should have been issued are
-      // currently being skipped here.
-      std::string ExprName = getDiagSubjectDescription(ExtractedExpr);
-      if (ExprName.empty())
-        continue;
-
-      S.Diag(ExtractedExpr->getBeginLoc(),
+      S.Diag(CurrExpr->getBeginLoc(),
              diag::note_lifetime_safety_aliases_storage)
-          << ExtractedExpr->getSourceRange() << ExprName << IssueStr;
-      LastExpr = ExtractedExpr;
+          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+          << IssueStr;
+      LastExpr = CurrExpr;
     }
   }
 

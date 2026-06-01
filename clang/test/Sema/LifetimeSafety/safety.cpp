@@ -54,7 +54,8 @@ void simple_case() {
   MyObj* p;
   {
     MyObj s;
-    p = &s;     // expected-warning {{local variable 's' does not live long enough}}
+    p = &s;     // expected-warning {{local variable 's' does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
   }             // expected-note {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
 }
@@ -91,7 +92,8 @@ void pointer_chain() {
   MyObj* q;
   {
     MyObj s;
-    p = &s;     // expected-warning {{does not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
     q = p;      // expected-note {{local variable 'p' aliases the storage of local variable 's'}}
   }             // expected-note {{destroyed here}}
   (void)*q;     // expected-note {{later used here}}
@@ -111,7 +113,8 @@ void multiple_uses_one_warning() {
   MyObj* p;
   {
     MyObj s;
-    p = &s;     // expected-warning {{does not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
   }             // expected-note {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
   // No second warning for the same loan.
@@ -124,9 +127,12 @@ void multiple_pointers() {
   MyObj *p, *q, *r;
   {
     MyObj s;
-    p = &s;     // expected-warning {{does not live long enough}}
-    q = &s;     // expected-warning {{does not live long enough}}
-    r = &s;     // expected-warning {{does not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
+    q = &s;     // expected-warning {{does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
+    r = &s;     // expected-warning {{does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
   }             // expected-note 3 {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
   (void)*q;     // expected-note {{later used here}}
@@ -139,7 +145,7 @@ void multiple_pointers_chained() {
     MyObj s;
     MyObj* obj1, *obj2;
     p = obj1 = obj2 = &s; // expected-warning {{does not live long enough}} \
-                          // expected-note 2 {{aliases the storage of local variable 's'}}
+                          // expected-note 3 {{expression aliases the storage of local variable 's'}}
   }                       // expected-note {{destroyed here}}
   (void)*p;               // expected-note {{later used here}}
 }
@@ -459,7 +465,8 @@ void trivial_int_uaf() {
   int * a;
   {
       int b = 1;
-      a = &b;  // expected-warning {{local variable 'b' does not live long enough}}
+      a = &b;  // expected-warning {{local variable 'b' does not live long enough}} \
+               // expected-note {{expression aliases the storage of local variable 'b'}}
   }            // expected-note {{destroyed here}}
   (void)*a;    // expected-note {{later used here}}
 }
@@ -468,7 +475,8 @@ void trivial_class_uaf() {
   TriviallyDestructedClass* ptr;
   {
       TriviallyDestructedClass s;
-      ptr = &s; // expected-warning {{local variable 's' does not live long enough}}
+      ptr = &s; // expected-warning {{local variable 's' does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 's'}}
   }             // expected-note {{destroyed here}}
   (void)ptr;    // expected-note {{later used here}}
 }
@@ -660,7 +668,8 @@ void test_view_pointer() {
   View* vp;
   {
     View v;
-    vp = &v;     // expected-warning {{local variable 'v' does not live long enough}}
+    vp = &v;     // expected-warning {{local variable 'v' does not live long enough}} \
+                 // expected-note {{expression aliases the storage of local variable 'v'}}
   }              // expected-note {{destroyed here}}
   vp->use();     // expected-note {{later used here}}
 }
@@ -669,7 +678,8 @@ void test_view_double_pointer() {
   View** vpp;
   {
     View* vp = nullptr;
-    vpp = &vp;   // expected-warning {{local variable 'vp' does not live long enough}}
+    vpp = &vp;   // expected-warning {{local variable 'vp' does not live long enough}} \
+                 // expected-note {{expression aliases the storage of local variable 'vp'}}
   }              // expected-note {{destroyed here}}
   (**vpp).use(); // expected-note {{later used here}}
 }
@@ -696,8 +706,10 @@ void test_lifetimebound_multi_level() {
   {
     int* p = nullptr;
     int** pp = &p;  
-    int*** ppp = &pp; // expected-warning {{local variable 'pp' does not live long enough}}
-    result = return_inner_ptr_addr(ppp); // expected-note {{local variable 'ppp' aliases the storage of local variable 'pp'}}
+    int*** ppp = &pp; // expected-warning {{local variable 'pp' does not live long enough}} \
+                      // expected-note {{expression aliases the storage of local variable 'pp'}}
+    result = return_inner_ptr_addr(ppp); // expected-note {{local variable 'ppp' aliases the storage of local variable 'pp'}} \
+                                         // expected-note {{expression aliases the storage of local variable 'pp'}}
   }                   // expected-note {{destroyed here}}
   (void)**result;     // expected-note {{used here}}
 }
@@ -730,7 +742,8 @@ MyObj* uaf_before_uar() {
   MyObj* p;
   {
     MyObj local_obj; 
-    p = &local_obj;  // expected-warning {{local variable 'local_obj' does not live long enough}}
+    p = &local_obj;  // expected-warning {{local variable 'local_obj' does not live long enough}} \
+                     // expected-note {{expression aliases the storage of local variable 'local_obj'}}
   }                  // expected-note {{destroyed here}}
   return p;          // expected-note {{later used here}}
 }
@@ -821,7 +834,7 @@ void lifetimebound_simple_function() {
   {
     MyObj obj;
     v = Identity(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                       // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                       // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                    // expected-note {{destroyed here}}
   v.use();             // expected-note {{later used here}}
 }
@@ -830,8 +843,8 @@ void lifetimebound_multiple_args_definite() {
   View v;
   {
     MyObj obj1, obj2;
-    v = Choose(true,  // expected-note {{local temporary object aliases the storage of local variable 'obj1'}} \
-                      // expected-note {{local temporary object aliases the storage of local variable 'obj2'}}
+    v = Choose(true,  // expected-note {{expression aliases the storage of local variable 'obj1'}} \
+                      // expected-note {{expression aliases the storage of local variable 'obj2'}}
                obj1,  // expected-warning {{local variable 'obj1' does not live long enough}}
                obj2); // expected-warning {{local variable 'obj2' does not live long enough}}
   }                              // expected-note 2 {{destroyed here}}
@@ -859,7 +872,7 @@ void lifetimebound_mixed_args() {
   {
     MyObj obj1, obj2;
     v = SelectFirst(obj1,        // expected-warning {{local variable 'obj1' does not live long enough}} \
-                                 // expected-note {{local temporary object aliases the storage of local variable 'obj1'}}
+                                 // expected-note {{expression aliases the storage of local variable 'obj1'}}
                     obj2);
   }                              // expected-note {{destroyed here}}
   v.use();                       // expected-note {{later used here}}
@@ -876,7 +889,7 @@ void lifetimebound_member_function() {
   {
     MyObj obj;
     v  = obj.getView(); // expected-warning {{local variable 'obj' does not live long enough}} \
-                        // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                        // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                     // expected-note {{destroyed here}}
   v.use();              // expected-note {{later used here}}
 }
@@ -901,7 +914,7 @@ void lifetimebound_chained_calls() {
   {
     MyObj obj;
     v = Identity(Identity(Identity(obj))); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                           // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                                           // expected-note 3 {{expression aliases the storage of local variable 'obj'}}
   }                                        // expected-note {{destroyed here}}
   v.use();                                 // expected-note {{later used here}}
 }
@@ -910,7 +923,8 @@ void lifetimebound_with_pointers() {
   MyObj* ptr;
   {
     MyObj obj;
-    ptr = GetPointer(obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    ptr = GetPointer(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                           // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                        // expected-note {{destroyed here}}
   (void)*ptr;              // expected-note {{later used here}}
 }
@@ -920,7 +934,7 @@ void chained_assignment_lifetimebound_call() {
   {
     MyObj s;
     p = Identity(obj = &s); // expected-warning {{does not live long enough}} \
-                            // expected-note {{local variable 'obj' aliases the storage of local variable 's'}}
+                            // expected-note 3 {{expression aliases the storage of local variable 's'}}
   }                         // expected-note {{destroyed here}}
   (void)*p;                 // expected-note {{later used here}}
 }
@@ -952,8 +966,9 @@ void lifetimebound_return_reference() {
   {
     MyObj obj;
     View temp_v = obj;  // expected-warning {{local variable 'obj' does not live long enough}}
-    const MyObj& ref = GetObject(temp_v); // expected-note {{local variable 'temp_v' aliases the storage of local variable 'obj'}}
-    ptr = &ref;           // expected-note {{local variable 'ref' aliases the storage of local variable 'obj'}}
+    const MyObj& ref = GetObject(temp_v); // expected-note {{local variable 'temp_v' aliases the storage of local variable 'obj'}} \
+                                          // expected-note {{expression aliases the storage of local variable 'obj'}}
+    ptr = &ref;           // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                       // expected-note {{destroyed here}}
   (void)*ptr;             // expected-note {{later used here}}
 }
@@ -980,7 +995,7 @@ void lifetimebound_ctor_functional_cast() {
   {
     MyObj obj;
     v = LifetimeBoundCtor(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                                // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                             // expected-note {{destroyed here}}
   (void)v;                      // expected-note {{later used here}}
 }
@@ -990,7 +1005,8 @@ void lifetimebound_ctor_c_style_cast() {
   {
     MyObj obj;
     v = (LifetimeBoundCtor)(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                  // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                                  // expected-note {{local variable 'obj' aliases the storage of local variable 'obj'}} \
+                                  // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                               // expected-note {{destroyed here}}
   (void)v;                        // expected-note {{later used here}}
 }
@@ -1000,7 +1016,7 @@ void lifetimebound_ctor_static_cast() {
   {
     MyObj obj;
     v = static_cast<LifetimeBoundCtor>(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                             // expected-note {{local temporary object aliases the storage of local variable 'obj'}}
+                                             // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                                          // expected-note {{destroyed here}}
   (void)v;                                   // expected-note {{later used here}}
 }
@@ -1010,7 +1026,7 @@ void lifetimebound_make_unique() {
   {
     MyObj obj;
     ptr = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{local variable 'obj' does not live long enough}} \
-                                                    // tu-note {{local temporary object aliases the storage of local variable 'obj'}}
+                                                    // tu-note {{expression aliases the storage of local variable 'obj'}}
   }                                                 // tu-note {{destroyed here}}
   (void)ptr;                                        // tu-note {{later used here}}
 }
@@ -1027,7 +1043,8 @@ void non_lifetimebound_make_unique() {
 
 void lifetimebound_make_unique_temp() {
   std::unique_ptr<LifetimeBoundCtor> ptr = std::make_unique<LifetimeBoundCtor>(MyObj()); // tu-warning {{local temporary object does not live long enough}} \
-                                                                                         // tu-note {{destroyed here}}
+                                                                                         // tu-note {{destroyed here}} \
+                                                                                         // tu-note {{expression aliases the storage of local temporary object}}
   (void)ptr; // tu-note {{later used here}}
 }
 
@@ -1065,7 +1082,7 @@ void lifetimebound_make_unique_multi_params() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                         // tu-note {{local temporary object aliases the storage of local variable 'obj_short'}}
+                                                                         // tu-note {{expression aliases the storage of local variable 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1076,7 +1093,7 @@ void lifetimebound_make_unique_multi_params2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                            // tu-note {{local temporary object aliases the storage of local variable 'obj_short'}}
+                                                                            // tu-note {{expression aliases the storage of local variable 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1097,7 +1114,7 @@ void lifetimebound_make_unique_multi_params3_1() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_short, obj_long, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{local temporary object aliases the storage of local variable 'obj_short'}}
+                                                                              // tu-note {{expression aliases the storage of local variable 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1108,7 +1125,7 @@ void lifetimebound_make_unique_multi_params3_2() {
   {
     MyObj obj_short;
     ptr = std::make_unique<MultiLifetimeBoundCtor>(obj_long, obj_short, 1.0); // tu-warning {{local variable 'obj_short' does not live long enough}} \
-                                                                              // tu-note {{local temporary object aliases the storage of local variable 'obj_short'}}
+                                                                              // tu-note {{expression aliases the storage of local variable 'obj_short'}}
   } // tu-note {{destroyed here}}
   (void)ptr; // tu-note {{later used here}}
 }
@@ -1254,7 +1271,8 @@ void simpleparen() {
   MyObj* p;
   {
     MyObj a;
-    MyObj* b = &a;   // expected-warning {{local variable 'a' does not live long enough}}
+    MyObj* b = &a;   // expected-warning {{local variable 'a' does not live long enough}} \
+                     // expected-note {{expression aliases the storage of local variable 'a'}}
     p = (((b)));     // expected-note {{local variable 'b' aliases the storage of local variable 'a'}}
   }                  // expected-note {{destroyed here}}
   (void)*p;          // expected-note {{later used here}}
@@ -1264,13 +1282,16 @@ void parentheses(bool cond) {
   MyObj* p;
   {
     MyObj a;
-    p = &((((a))));  // expected-warning {{local variable 'a' does not live long enough}}
+    p = &((((a))));  // expected-warning {{local variable 'a' does not live long enough}} \
+                     // expected-note {{expression aliases the storage of local variable 'a'}}
   }                  // expected-note {{destroyed here}}
   (void)*p;          // expected-note {{later used here}}
 
   {
     MyObj a;
-    p = ((GetPointer((a))));  // expected-warning {{local variable 'a' does not live long enough}}
+    p = ((GetPointer((a))));  // expected-warning {{local variable 'a' does not live long enough}} \
+                              // expected-note {{local variable 'a' aliases the storage of local variable 'a'}} \
+                              // expected-note {{expression aliases the storage of local variable 'a'}}
   }                           // expected-note {{destroyed here}}
   (void)*p;                   // expected-note {{later used here}}
 
@@ -1301,7 +1322,8 @@ void use_temporary_after_destruction() {
 
 void passing_temporary_to_lifetime_bound_function() {
   View a = construct_view(non_trivially_destructed_temporary()); // expected-warning {{local temporary object does not live long enough}} \
-                expected-note {{destroyed here}}
+                expected-note {{destroyed here}} \
+                expected-note {{expression aliases the storage of local temporary object}}
   use(a); // expected-note {{later used here}}
 }
 
@@ -1365,7 +1387,7 @@ void foobar() {
   {
     StatusOr<MyObj> string_or = getStringOr();
     view = string_or. // expected-warning {{local variable 'string_or' does not live long enough}} \
-                      // expected-note {{local temporary object aliases the storage of local variable 'string_or'}}
+                      // expected-note {{expression aliases the storage of local variable 'string_or'}}
             value();
   }                     // expected-note {{destroyed here}}
   (void)view;           // expected-note {{later used here}}
@@ -1439,7 +1461,8 @@ void test_user_defined_deref_uaf() {
   {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
-    p = &(*smart_ptr);  // expected-warning {{local variable 'smart_ptr' does not live long enough}}
+    p = &(*smart_ptr);  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
+                        // expected-note 2 {{expression aliases the storage of local variable 'smart_ptr'}}
   }                     // expected-note {{destroyed here}}
   (void)*p;             // expected-note {{later used here}}
 }
@@ -1457,7 +1480,7 @@ void test_user_defined_deref_with_view() {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
     v = *smart_ptr;  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
-                     // expected-note {{local temporary object aliases the storage of local variable 'smart_ptr'}}
+                     // expected-note {{expression aliases the storage of local variable 'smart_ptr'}}
   }                  // expected-note {{destroyed here}}
   v.use();           // expected-note {{later used here}}
 }
@@ -1467,7 +1490,8 @@ void test_user_defined_deref_arrow() {
   {
     MyObj obj;
     SmartPtr<MyObj> smart_ptr(&obj);
-    p = smart_ptr.operator->();  // expected-warning {{local variable 'smart_ptr' does not live long enough}}
+    p = smart_ptr.operator->();  // expected-warning {{local variable 'smart_ptr' does not live long enough}} \
+                                 // expected-note {{expression aliases the storage of local variable 'smart_ptr'}}
   }                              // expected-note {{destroyed here}}
   (void)*p;                      // expected-note {{later used here}}
 }
@@ -1477,7 +1501,8 @@ void test_user_defined_deref_chained() {
   {
     MyObj obj;
     SmartPtr<SmartPtr<MyObj>> double_ptr;
-    p = &(**double_ptr);  // expected-warning {{local variable 'double_ptr' does not live long enough}}
+    p = &(**double_ptr);  // expected-warning {{local variable 'double_ptr' does not live long enough}} \
+                          // expected-note 3 {{expression aliases the storage of local variable 'double_ptr'}}
   }                       // expected-note {{destroyed here}}
   (void)*p;               // expected-note {{later used here}}
 }
@@ -1664,13 +1689,14 @@ void wrong_use_of_move_is_permissive() {
   {
     MyObj a;
     v = std::move(a); // expected-warning {{local variable 'a' does not live long enough}} \
-                      // expected-note {{local temporary object aliases the storage of local variable 'a'}}
+                      // expected-note {{expression aliases the storage of local variable 'a'}}
   }         // expected-note {{destroyed here}}
   (void)v;  // expected-note {{later used here}}
   const int* p;
   {
     MyObj a;
-    p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}}
+    p = std::move(a).getData(); // expected-warning {{local variable 'a' does not live long enough}} \
+                                // expected-note 2 {{expression aliases the storage of local variable 'a'}}
   }         // expected-note {{destroyed here}}
   (void)p;  // expected-note {{later used here}}
 }
@@ -1681,7 +1707,8 @@ void test_release_no_uaf() {
   // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
   {
     std::unique_ptr<int> p;
-    r = p.get();        // expected-warning {{local variable 'p' may not live long enough. This could be a false positive as the storage may have been moved later}}
+    r = p.get();        // expected-warning {{local variable 'p' may not live long enough. This could be a false positive as the storage may have been moved later}} \
+                        // expected-note {{expression aliases the storage of local variable 'p'}}
     take(p.release());  // expected-note {{potentially moved here}}
   }                     // expected-note {{destroyed here}}
   (void)*r;             // expected-note {{later used here}}
@@ -1704,9 +1731,10 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
-                   // expected-note {{local temporary object aliases the storage of local variable 's'}}
+                   // expected-note {{expression aliases the storage of local variable 's'}}
         View y = S().x(); // expected-warning {{local temporary object does not live long enough}} \
-                             expected-note {{destroyed here}}
+                             expected-note {{destroyed here}} \
+                             expected-note {{expression aliases the storage of local temporary object}}
         (void)y; // expected-note {{used here}}
     } // expected-note {{destroyed here}}
     (void)x; // expected-note {{used here}}
@@ -1794,17 +1822,20 @@ const std::string& identity(const std::string& in [[clang::lifetimebound]]);
 const S& identity(const S& in [[clang::lifetimebound]]);
 
 void test_temporary() {
-  const std::string& x = S().x(); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+  const std::string& x = S().x(); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}} \
+                                  // expected-note {{expression aliases the storage of local temporary object}}
   (void)x; // expected-note {{later used here}}
 
-  const std::string& y = identity(S().x()); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+  const std::string& y = identity(S().x()); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}} \
+                                            // expected-note 2 {{expression aliases the storage of local temporary object}}
   (void)y; // expected-note {{later used here}}
 
   std::string_view z;
   {
     S s;
-    const std::string& zz = s.x(); // expected-warning {{local variable 's' does not live long enough}}
-    z = zz;                        // expected-note {{local temporary object aliases the storage of local variable 's'}}
+    const std::string& zz = s.x(); // expected-warning {{local variable 's' does not live long enough}} \
+                                   // expected-note {{expression aliases the storage of local variable 's'}}
+    z = zz;                        // expected-note {{expression aliases the storage of local variable 's'}}
   } // expected-note {{destroyed here}}
   (void)z; // expected-note {{later used here}}
 }
@@ -1812,12 +1843,14 @@ void test_temporary() {
 void test_lifetime_extension_ok() {
   const S& x = S();
   (void)x;
-  const S& y = identity(S()); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+  const S& y = identity(S()); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}} \
+                              // expected-note {{expression aliases the storage of local temporary object}}
   (void)y; // expected-note {{later used here}}
 }
 
 const std::string& test_return() {
-  const std::string& x = S().x(); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+  const std::string& x = S().x(); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}} \
+                                  // expected-note {{expression aliases the storage of local temporary object}}
   return x; // expected-note {{later used here}}
 }
 } // namespace reference_type_decl_ref_expr
@@ -1833,9 +1866,10 @@ void uaf() {
   std::string_view view;
   {
     S str;
-    S* p = &str;  // expected-warning {{local variable 'str' does not live long enough}}
+    S* p = &str;  // expected-warning {{local variable 'str' does not live long enough}} \
+                  // expected-note {{expression aliases the storage of local variable 'str'}}
     view = p->s;  // expected-note {{local variable 'p' aliases the storage of local variable 'str'}} \
-                  // expected-note {{local temporary object aliases the storage of local variable 'str'}}
+                  // expected-note {{expression aliases the storage of local variable 'str'}}
   } // expected-note {{destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -1860,9 +1894,10 @@ void uaf_union() {
   std::string_view view;
   {
     U u = U{"hello"};
-    U* up = &u;   // expected-warning {{local variable 'u' does not live long enough}}
+    U* up = &u;   // expected-warning {{local variable 'u' does not live long enough}} \
+                  // expected-note {{expression aliases the storage of local variable 'u'}}
     view = up->s; // expected-note {{local variable 'up' aliases the storage of local variable 'u'}} \
-                  // expected-note {{local temporary object aliases the storage of local variable 'u'}}
+                  // expected-note {{expression aliases the storage of local variable 'u'}}
   } // expected-note {{destroyed here}}
   (void)view;  // expected-note {{later used here}}
 }
@@ -1878,8 +1913,10 @@ void uaf_anonymous_union() {
   int* ip;
   {
     AnonymousUnion au;
-    AnonymousUnion* up = &au;  // expected-warning {{local variable 'au' does not live long enough}}
-    ip = &up->x;               // expected-note {{local variable 'up' aliases the storage of local variable 'au'}}
+    AnonymousUnion* up = &au;  // expected-warning {{local variable 'au' does not live long enough}} \
+                               // expected-note {{expression aliases the storage of local variable 'au'}}
+    ip = &up->x;               // expected-note {{local variable 'up' aliases the storage of local variable 'au'}} \
+                               // expected-note 2 {{expression aliases the storage of local variable 'au'}}
   } // expected-note {{destroyed here}}
   (void)ip;  // expected-note {{later used here}}
 }
@@ -1937,9 +1974,12 @@ const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
 
 void test() {
   MemberFuncsTpl<MyObj> mtf;
-  const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{local temporary object does not live long enough}} // expected-note {{destroyed here}}
-  const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{local temporary object does not live long enough}} // tu-note {{destroyed here}}
-  const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{local temporary object does not live long enough}} // expected-note {{destroyed here}}
+  const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{local temporary object does not live long enough}} // expected-note {{destroyed here}} \
+                                            // expected-note {{expression aliases the storage of local temporary object}}
+  const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{local temporary object does not live long enough}} // tu-note {{destroyed here}} \
+                                            // tu-note {{expression aliases the storage of local temporary object}}
+  const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{local temporary object does not live long enough}} // expected-note {{destroyed here}} \
+                                            // expected-note {{expression aliases the storage of local temporary object}}
   (void)pTMA; // expected-note {{later used here}}
   (void)pTMB; // tu-note {{later used here}}
   (void)pTMC; // expected-note {{later used here}}
@@ -1974,7 +2014,8 @@ void test_optional_arrow() {
   const char* p;
   {
     std::optional<std::string> opt;
-    p = opt->data();  // expected-warning {{local variable 'opt' does not live long enough}}
+    p = opt->data();  // expected-warning {{local variable 'opt' does not live long enough}} \
+                      // expected-note 2 {{expression aliases the storage of local variable 'opt'}}
   }                   // expected-note {{destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
@@ -1984,7 +2025,7 @@ void test_optional_arrow_lifetimebound() {
   {
     std::optional<MyObj> opt;
     v = opt->getView();  // expected-warning {{local variable 'opt' does not live long enough}} \
-                         // expected-note {{local temporary object aliases the storage of local variable 'opt'}}
+                         // expected-note 2 {{expression aliases the storage of local variable 'opt'}}
   }                      // expected-note {{destroyed here}}
   v.use();               // expected-note {{later used here}}
 }
@@ -1993,7 +2034,8 @@ void test_unique_ptr_arrow() {
   const char* p;
   {
     std::unique_ptr<std::string> up;
-    p = up->data();  // expected-warning {{local variable 'up' does not live long enough}}
+    p = up->data();  // expected-warning {{local variable 'up' does not live long enough}} \
+                     // expected-note 2 {{expression aliases the storage of local variable 'up'}}
   }                  // expected-note {{destroyed here}}
   (void)*p;          // expected-note {{later used here}}
 }
@@ -2209,7 +2251,8 @@ void element_use_after_scope() {
   int* p;
   {
     int a[10]{};
-    p = &a[2]; // expected-warning {{local variable 'a' does not live long enough}}
+    p = &a[2]; // expected-warning {{local variable 'a' does not live long enough}} \
+               // expected-note 2 {{expression aliases the storage of local variable 'a'}}
   }            // expected-note {{destroyed here}}
   (void)*p;    // expected-note {{later used here}}
 }
@@ -2241,7 +2284,8 @@ void multidimensional_use_after_scope() {
   int* p;
   {
     int a[3][4]{};
-    p = &a[1][2]; // expected-warning {{local variable 'a' does not live long enough}}
+    p = &a[1][2]; // expected-warning {{local variable 'a' does not live long enough}} \
+                  // expected-note 3 {{expression aliases the storage of local variable 'a'}}
   }               // expected-note {{destroyed here}}
   (void)*p;       // expected-note {{later used here}}
 }
@@ -2254,7 +2298,8 @@ void member_array_element_use_after_scope() {
   int* p;
   {
     S s;
-    p = &s.arr[0]; // expected-warning {{local variable 's' does not live long enough}}
+    p = &s.arr[0]; // expected-warning {{local variable 's' does not live long enough}} \
+                   // expected-note 3 {{expression aliases the storage of local variable 's'}}
   }                // expected-note {{destroyed here}}
   (void)*p;        // expected-note {{later used here}}
 }
@@ -2272,7 +2317,8 @@ void reversed_subscript_use_after_scope() {
   int* p;
   {
     int a[10]{};
-    p = &(0[a]); // expected-warning {{local variable 'a' does not live long enough}}
+    p = &(0[a]); // expected-warning {{local variable 'a' does not live long enough}} \
+                 // expected-note 2 {{expression aliases the storage of local variable 'a'}}
   }              // expected-note {{destroyed here}}
   (void)*p;      // expected-note {{later used here}}
 }
@@ -2298,9 +2344,12 @@ void pointer_arithmetic_use_after_scope() {
   int* p3;
   {
     int a[10]{};
-    p = a + 5;  // expected-warning {{local variable 'a' does not live long enough}}
-    p2 = a - 5; // expected-warning {{local variable 'a' does not live long enough}}
-    p3 = 5 + a; // expected-warning {{local variable 'a' does not live long enough}}
+    p = a + 5;  // expected-warning {{local variable 'a' does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 'a'}}
+    p2 = a - 5; // expected-warning {{local variable 'a' does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 'a'}}
+    p3 = 5 + a; // expected-warning {{local variable 'a' does not live long enough}} \
+                // expected-note {{expression aliases the storage of local variable 'a'}}
   }             // expected-note 3 {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
   (void)*p2;    // expected-note {{later used here}}
@@ -2370,13 +2419,15 @@ S getS(const std::string &s [[clang::lifetimebound]]);
 
 void from_free_function() {
   S s = getS(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                   // expected-note {{destroyed here}}
+                                   // expected-note {{destroyed here}} \
+                                   // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                          // expected-note {{later used here}}
 }
 
 void from_constructor() {
   S s(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                            // expected-note {{destroyed here}}
+                            // expected-note {{destroyed here}} \
+                            // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                   // expected-note {{later used here}}
 }
 
@@ -2389,13 +2440,15 @@ struct Factory {
 void from_method() {
   Factory f;
   S s = f.make(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                     // expected-note {{destroyed here}}
+                                     // expected-note {{destroyed here}} \
+                                     // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                            // expected-note {{later used here}}
 }
 
 void from_static_method() {
   S s = Factory::create(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                              // expected-note {{destroyed here}}
+                                              // expected-note {{destroyed here}} \
+                                              // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                                     // expected-note {{later used here}}
 }
 
@@ -2404,7 +2457,7 @@ void from_lifetimebound_this_method() {
   {
     Factory f;
     value = f.makeThis(); // expected-warning {{local variable 'f' does not live long enough}} \
-                          // expected-note {{local temporary object aliases the storage of local variable 'f'}}
+                          // expected-note {{expression aliases the storage of local variable 'f'}}
   }                       // expected-note {{destroyed here}}
   use(value);             // expected-note {{later used here}}
 }
@@ -2414,7 +2467,7 @@ void across_scope() {
   {
     std::string str{"abc"};
     s = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{local temporary object aliases the storage of local variable 'str'}}
+                   // expected-note {{expression aliases the storage of local variable 'str'}}
   }                // expected-note {{destroyed here}}
   use(s);          // expected-note {{later used here}}
 }
@@ -2437,7 +2490,7 @@ void assignment_propagation() {
   {
     std::string str{"abc"};
     a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
-                   // expected-note {{local temporary object aliases the storage of local variable 'str'}}
+                   // expected-note {{expression aliases the storage of local variable 'str'}}
     b = a;         // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
   }                // expected-note {{destroyed here}}
   use(b);          // expected-note {{later used here}}
@@ -2447,8 +2500,10 @@ void chained_defaulted_assignment_propagation() {
   S b, c;
   {
     std::string str{"abc"};
-    S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}}
-    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
+    S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
+                     // expected-note {{expression aliases the storage of local variable 'str'}}
+    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}\
+                     // expected-note {{expression aliases the storage of local variable 'str'}}
   }                  // expected-note {{destroyed here}}
   use(c);            // expected-note {{later used here}}
 }
@@ -2462,7 +2517,8 @@ void no_annotation() {
 
 void mix_annotated_and_not() {
   S s1 = getS(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                    // expected-note {{destroyed here}}
+                                    // expected-note {{destroyed here}} \
+                                    // expected-note {{expression aliases the storage of local temporary object}}
   S s2 = getSNoAnnotation(std::string("temp"));
   use(s1); // expected-note {{later used here}}
   use(s2);
@@ -2474,6 +2530,7 @@ S multiple_lifetimebound_params() {
   std::string str{"abc"};
   S s = getS2(str, std::string("temp")); // expected-warning {{stack memory associated with local variable 'str' is returned}} \
                                          // expected-warning {{local temporary object does not live long enough}} \
+                                         // expected-note {{expression aliases the storage of local temporary object}} \
                                          // expected-note {{destroyed here}}
   return s;                              // expected-note {{returned here}} \
                                          // expected-note {{later used here}}
@@ -2493,7 +2550,8 @@ T make(const std::string &s [[clang::lifetimebound]]);
 
 void from_template_instantiation() {
   S s = make<S>(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                      // expected-note {{destroyed here}}
+                                      // expected-note {{destroyed here}} \
+                                      // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                             // expected-note {{later used here}}
 }
 
@@ -2556,7 +2614,8 @@ SAlias getSAlias(const std::string &s [[clang::lifetimebound]]);
 
 void from_typedef_return() {
   SAlias s = getSAlias(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                             // expected-note {{destroyed here}}
+                                             // expected-note {{destroyed here}} \
+                                             // expected-note {{expression aliases the storage of local temporary object}}
   use(s);                                    // expected-note {{later used here}}
 }
 
@@ -2630,7 +2689,8 @@ std::unique_ptr<S> getUniqueS(const std::string &s [[clang::lifetimebound]]);
 
 void owner_return_unique_ptr_s() {
   auto ptr = getUniqueS(std::string("temp")); // expected-warning {{local temporary object does not live long enough}} \
-                                              // expected-note {{destroyed here}}
+                                              // expected-note {{destroyed here}} \
+                                              // expected-note {{expression aliases the storage of local temporary object}}
   (void)ptr;                                  // expected-note {{later used here}}
 }
 
@@ -2647,7 +2707,7 @@ void owner_outlives_lifetimebound_source() {
   {
     std::string local;
     ups = getUniqueS(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                             // expected-note {{local temporary object aliases the storage of local variable 'local'}}
+                             // expected-note {{expression aliases the storage of local variable 'local'}}
   } // expected-note {{destroyed here}}
   (void)ups; // expected-note {{later used here}}
 }
@@ -2671,7 +2731,7 @@ void local_pointer() {
   {
     int v;
     p = Pointer(v); // expected-warning {{local variable 'v' does not live long enough}} \
-                    // expected-note {{local temporary object aliases the storage of local variable 'v'}}
+                    // expected-note {{expression aliases the storage of local variable 'v'}}
   }                 // expected-note {{destroyed here}}
   use(*p);          // expected-note {{later used here}}
 }
@@ -2683,11 +2743,11 @@ void nested_local_pointer() {
   {
     Bar v;
     p = Pointer(v);     // expected-warning {{local variable 'v' does not live long enough}} \
-                        // expected-note {{local temporary object aliases the storage of local variable 'v'}}
+                        // expected-note {{expression aliases the storage of local variable 'v'}}
     pp = Pointer(p);    // expected-note {{local variable 'p' aliases the storage of local variable 'v'}} \
-                        // expected-note {{local temporary object aliases the storage of local variable 'v'}}
+                        // expected-note {{expression aliases the storage of local variable 'v'}}
     ppp = Pointer(pp);  // expected-note {{local variable 'pp' aliases the storage of local variable 'v'}} \
-                        // expected-note {{local temporary object aliases the storage of local variable 'v'}}
+                        // expected-note {{expression aliases the storage of local variable 'v'}}
   }                     // expected-note {{destroyed here}}
   use(***ppp);          // expected-note {{later used here}}
 }
@@ -2768,7 +2828,8 @@ void new_view_from_dead_scope() {
   View *p;
   {
     MyObj obj;
-    p = new View(obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    p = new View(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                       // expected-note 2 {{expression aliases the storage of local variable 'obj'}}
   }                    // expected-note {{destroyed here}}
   p->use();            // expected-note {{later used here}}
 }
@@ -2831,8 +2892,10 @@ void new_pointer_from_pointer() {
   MyObj **p;
   {
     MyObj obj;
-    MyObj *q = &obj;    // expected-warning {{local variable 'obj' does not live long enough}}
-    p = new MyObj *(q); // expected-note {{local variable 'q' aliases the storage of local variable 'obj'}}
+    MyObj *q = &obj;    // expected-warning {{local variable 'obj' does not live long enough}} \
+                        // expected-note {{expression aliases the storage of local variable 'obj'}}
+    p = new MyObj *(q); // expected-note {{local variable 'q' aliases the storage of local variable 'obj'}} \
+                        // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                     // expected-note {{destroyed here}}
   (void)**p;            // expected-note {{later used here}}
 }
@@ -2841,7 +2904,8 @@ void new_pointer_from_dead_object() {
   MyObj **p;
   {
     MyObj obj;
-    p = new MyObj *(&obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    p = new MyObj *(&obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                           // expected-note 2 {{expression aliases the storage of local variable 'obj'}}
   }                        // expected-note {{destroyed here}}
   (void)**p;               // expected-note {{later used here}}
 }
@@ -2855,7 +2919,8 @@ void new_multiview_from_mixed_scope() {
   MultiView *p;
   {
     MyObj obj2;
-    p = new MultiView(obj1, obj2); // expected-warning {{local variable 'obj2' does not live long enough}}
+    p = new MultiView(obj1, obj2); // expected-warning {{local variable 'obj2' does not live long enough}} \
+                                   // expected-note 2 {{expression aliases the storage of local variable 'obj2'}}
   }                                // expected-note {{destroyed here}}
   (void)p;                         // expected-note {{later used here}}
 }
@@ -3018,7 +3083,8 @@ void placement_new_int_basic() {
   int *p;
   {
     int storage;
-    p = new (&storage) int; // expected-warning {{local variable 'storage' does not live long enough}}
+    p = new (&storage) int; // expected-warning {{local variable 'storage' does not live long enough}} \
+                            // expected-note 2 {{expression aliases the storage of local variable 'storage'}}
   }                         // expected-note {{destroyed here}}
   (void)*p;                 // expected-note {{later used here}}
 }
@@ -3028,7 +3094,8 @@ void placement_new_view_from_dead_scope() {
   View *p = &storage;
   {
     MyObj obj;
-    p = new (&storage) View(obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    p = new (&storage) View(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                                  // expected-note 2 {{expression aliases the storage of local variable 'obj'}}
   }                               // expected-note {{destroyed here}}
   p->use();                       // expected-note {{later used here}}
 }
@@ -3038,7 +3105,8 @@ void placement_new_pointer_from_dead_object() {
   MyObj **p = &slot;
   {
     MyObj obj;
-    p = new (&slot) MyObj *(&obj); // expected-warning {{local variable 'obj' does not live long enough}}
+    p = new (&slot) MyObj *(&obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                                   // expected-note 2 {{expression aliases the storage of local variable 'obj'}}
   }                                // expected-note {{destroyed here}}
   (void)**p;                       // expected-note {{later used here}}
 }
@@ -3047,7 +3115,8 @@ void placement_new_array_basic() {
   int *p;
   {
     int storage[2];
-    p = new (&storage) int[2]; // expected-warning {{local variable 'storage' does not live long enough}}
+    p = new (&storage) int[2]; // expected-warning {{local variable 'storage' does not live long enough}} \
+                               // expected-note 2 {{expression aliases the storage of local variable 'storage'}}
   }                            // expected-note {{destroyed here}}
   (void)p[0];                  // expected-note {{later used here}}
 }
@@ -3056,7 +3125,8 @@ void placement_new_array_braces() {
   int *p;
   {
     int storage[2];
-    p = new (&storage) int[2]{}; // expected-warning {{local variable 'storage' does not live long enough}}
+    p = new (&storage) int[2]{}; // expected-warning {{local variable 'storage' does not live long enough}} \
+                                 // expected-note 2 {{expression aliases the storage of local variable 'storage'}}
   }                              // expected-note {{destroyed here}}
   (void)p[0];                    // expected-note {{later used here}}
 }
@@ -3262,7 +3332,8 @@ struct S {
   void foo() {
     {
       int num;
-      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}} \
+                       // expected-note {{expression aliases the storage of local variable 'num'}}
     }                  // expected-note {{destroyed here}}
     bar();             // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
@@ -3302,7 +3373,8 @@ struct S2 : S {
   void foo2() {
     {
       int num;
-      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}} \
+                       // expected-note {{expression aliases the storage of local variable 'num'}}
     }                  // expected-note {{destroyed here}}
     bar();             // expected-note {{later used here}}
     this->p_ = &GLOBAL_INT;
@@ -3310,7 +3382,8 @@ struct S2 : S {
   void baz2() {
     {
       int num;
-      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+      this->p_ = &num; // expected-warning {{local variable 'num' does not live long enough}} \
+                       // expected-note {{expression aliases the storage of local variable 'num'}}
     }                  // expected-note {{destroyed here}}
     bar2();            // expected-note {{later used here}}
     this->p_ = nullptr;
@@ -3428,7 +3501,7 @@ void uaf_via_lifetimebound() {
   {
     int local;
     f = capture_lifetimebound_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
-                                            // expected-note {{local temporary object aliases the storage of local variable 'local'}}
+                                            // expected-note {{expression aliases the storage of local variable 'local'}}
   } // expected-note {{destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
@@ -3491,7 +3564,9 @@ void deref_use_after_scope() {
   const MyObj* p;
   {
     optional<MyObj> opt;
-    p = &*opt; // expected-warning {{local variable 'opt' does not live long enough}}
+    p = &*opt; // expected-warning {{local variable 'opt' does not live long enough}} \
+               // expected-note {{expression aliases the storage of local variable 'opt'}} \
+               // expected-note {{expression aliases the storage of local variable 'opt'}}
   }            // expected-note {{destroyed here}}
   (void)p->id; // expected-note {{later used here}}
 }

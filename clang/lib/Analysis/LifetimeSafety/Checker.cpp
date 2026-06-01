@@ -277,11 +277,10 @@ public:
               break;
             }
 
-          const llvm::SmallVector<const Expr *> OriginExprChain =
-              buildExprOrDeclChain(OriginFlowChain);
+          const llvm::SmallVector<const Expr *> ExprChain =
+              getExprChain(OriginFlowChain);
           SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc,
-                                          OriginExprChain);
+                                          MovedExpr, ExpiryLoc, ExprChain);
         }
 
       } else if (const auto *OEF =
@@ -514,7 +513,7 @@ public:
   /// extracts the corresponding expressions for each origin. Origins that refer
   /// to declarations (rather than expressions) are skipped.
   llvm::SmallVector<const Expr *>
-  buildExprOrDeclChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
+  getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
     llvm::SmallVector<const Expr *> rs;
     for (const OriginID CurrOID : OriginFlowChain)
       if (const Expr *CurrExpr =

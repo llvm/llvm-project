@@ -27,7 +27,8 @@ void single_block_cfg() {
   MyObj* p;
   {
     MyObj s;
-    p = &s;     // bailout-warning {{local variable 's' does not live long enough}}
+    p = &s;     // bailout-warning {{local variable 's' does not live long enough}} \
+                // bailout-note {{expression aliases the storage of local variable 's'}}
   }             // bailout-note {{destroyed here}}
   (void)*p;     // bailout-note {{later used here}}
 }
