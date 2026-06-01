@@ -10702,6 +10702,10 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_scanf_no_field_width : Warning<
+  "'%%%0' conversion used without a field width, destination buffer has %1 "
+  "element%s2">,
+  InGroup<FormatLibc>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
@@ -10806,6 +10810,9 @@ def warn_printf_narg_not_supported : Warning<
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
   InGroup<Format>;
+def warn_fopen_invalid_mode : Warning<
+  "invalid fopen mode string '%0'">,
+  InGroup<FormatLibc>, DefaultIgnore;
 def warn_format_bool_as_character : Warning<
   "using '%0' format specifier, but argument has boolean value">,
   InGroup<Format>;

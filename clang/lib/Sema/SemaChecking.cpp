@@ -1147,6 +1147,140 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
+static std::optional<uint64_t>
+getScanfDestinationSizeInElements(const Expr *Arg, ASTContext &Context) {
+  const Expr *BaseArg = Arg->IgnoreParenImpCasts();
+  if (const auto *ArrayTy = Context.getAsConstantArrayType(BaseArg->getType());
+      ArrayTy && ArrayTy->getSizeModifier() == ArraySizeModifier::Normal &&
+      ArrayTy->getElementType()->isAnyCharacterType()) {
+    return ArrayTy->getZExtSize();
+  }
+
+  const auto *PointerTy = Arg->getType()->getAs<PointerType>();
+  if (!PointerTy || !PointerTy->getPointeeType()->isAnyCharacterType())
+    return std::nullopt;
+
+  std::optional<uint64_t> ObjectSize = Arg->tryEvaluateObjectSize(Context, 0);
+  if (!ObjectSize)
+    return std::nullopt;
+
+  CharUnits ElementSize = Context.getTypeSizeInChars(PointerTy->getPointeeType());
+  if (ElementSize.isZero())
+    return std::nullopt;
+
+  uint64_t ElementSizeBytes = ElementSize.getQuantity();
+  if (*ObjectSize % ElementSizeBytes != 0)
+    return std::nullopt;
+
+  return *ObjectSize / ElementSizeBytes;
+}
+
+static bool isValidFOpenModeString(StringRef Mode) {
+  if (Mode.empty())
+    return false;
+
+  char MainMode = Mode.front();
+  if (MainMode != 'r' && MainMode != 'w' && MainMode != 'a')
+    return false;
+
+  bool SeenPlus = false;
+  bool SeenBinary = false;
+  bool SeenExclusive = false;
+  bool SeenCloseOnExec = false;
+  bool SeenMMap = false;
+  bool SeenModeC = false;
+  bool SeenModeN = false;
+  bool SeenText = false;
+  bool SeenCommit = false;
+  bool SeenSequential = false;
+  bool SeenShortLived = false;
+  bool SeenTemporary = false;
+  bool SeenNoInherit = false;
+
+  for (size_t I = 1; I < Mode.size(); ++I) {
+    StringRef Remaining = Mode.substr(I);
+    if (Remaining.consume_front(",")) {
+      Remaining = Remaining.ltrim();
+      if (!Remaining.consume_front("ccs="))
+        return false;
+      StringRef Encoding = Remaining;
+      return !Encoding.empty() && Encoding.find(',') == StringRef::npos;
+    }
+
+    switch (Mode[I]) {
+    case '+':
+      if (SeenPlus)
+        return false;
+      SeenPlus = true;
+      break;
+    case 'b':
+      if (SeenBinary)
+        return false;
+      SeenBinary = true;
+      break;
+    case 'x':
+      if (SeenExclusive || MainMode == 'r')
+        return false;
+      SeenExclusive = true;
+      break;
+    case 'c':
+      if (SeenModeC)
+        return false;
+      SeenModeC = true;
+      break;
+    case 'n':
+      if (SeenModeN)
+        return false;
+      SeenModeN = true;
+      break;
+    case 'e':
+      if (SeenCloseOnExec)
+        return false;
+      SeenCloseOnExec = true;
+      break;
+    case 'm':
+      if (SeenMMap)
+        return false;
+      SeenMMap = true;
+      break;
+    case 't':
+      if (SeenText)
+        return false;
+      SeenText = true;
+      break;
+    case 'R':
+      if (SeenCommit)
+        return false;
+      SeenCommit = true;
+      break;
+    case 'S':
+      if (SeenSequential)
+        return false;
+      SeenSequential = true;
+      break;
+    case 'T':
+      if (SeenTemporary)
+        return false;
+      SeenTemporary = true;
+      break;
+    case 'D':
+      if (SeenShortLived)
+        return false;
+      SeenShortLived = true;
+      break;
+    case 'N':
+      if (SeenNoInherit)
+        return false;
+      SeenNoInherit = true;
+      break;
+    default:
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -1249,6 +1383,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     return std::nullopt;
   };
 
+  auto ComputeStringArgument =
+      [&](unsigned Index) -> std::optional<std::string> {
+    std::optional<unsigned> IndexOptional = TranslateIndex(Index);
+    if (!IndexOptional)
+      return std::nullopt;
+    return TheCall->getArg(*IndexOptional)->tryEvaluateString(getASTContext());
+  };
+
   std::optional<llvm::APSInt> SourceSize;
   std::optional<llvm::APSInt> DestinationSize;
   unsigned DiagID = 0;
@@ -1293,6 +1435,21 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DestinationSize = ComputeExplicitObjectSizeArgument(2);
     IsChkVariant = true;
     break;
+  }
+
+  case Builtin::BIfopen: {
+    if (Diags.isIgnored(diag::warn_fopen_invalid_mode, TheCall->getBeginLoc()))
+      return;
+
+    std::optional<unsigned> ModeIndex = TranslateIndex(1);
+    std::optional<std::string> Mode = ComputeStringArgument(1);
+    if (!ModeIndex || !Mode || isValidFOpenModeString(*Mode))
+      return;
+
+    Expr *ModeArg = TheCall->getArg(*ModeIndex);
+    Diag(ModeArg->getBeginLoc(), diag::warn_fopen_invalid_mode)
+        << *Mode << ModeArg->getSourceRange();
+    return;
   }
 
   case Builtin::BIscanf:
@@ -9693,6 +9850,10 @@ public:
                                         unsigned specifierLen) override;
 
   void HandleIncompleteScanList(const char *start, const char *end) override;
+
+  void DiagnoseMissingFieldWidth(const analyze_scanf::ScanfSpecifier &FS,
+                                 const Expr *Arg, const char *startSpecifier,
+                                 unsigned specifierLen);
 };
 
 } // namespace
@@ -9713,6 +9874,43 @@ bool CheckScanfHandler::HandleInvalidScanfConversionSpecifier(
   return HandleInvalidConversionSpecifier(
       FS.getArgIndex(), getLocationOfByte(CS.getStart()), startSpecifier,
       specifierLen, CS.getStart(), CS.getLength());
+}
+
+void CheckScanfHandler::DiagnoseMissingFieldWidth(
+    const analyze_scanf::ScanfSpecifier &FS, const Expr *Arg,
+    const char *startSpecifier, unsigned specifierLen) {
+  using namespace analyze_format_string;
+
+  const ConversionSpecifier &CS = FS.getConversionSpecifier();
+  if (CS.getKind() != ConversionSpecifier::sArg &&
+      CS.getKind() != ConversionSpecifier::ScanListArg)
+    return;
+
+  if (FS.getFieldWidth().getHowSpecified() != OptionalAmount::NotSpecified)
+    return;
+
+  std::optional<uint64_t> BufferElements =
+      getScanfDestinationSizeInElements(Arg, S.Context);
+  if (!BufferElements)
+    return;
+
+  ArrayRef<FixItHint> FixIts;
+  SmallVector<FixItHint, 1> LocalFixIts;
+  if (*BufferElements > 1) {
+    const LengthModifier &LM = FS.getLengthModifier();
+    const char *InsertionPoint = LM.getLength() ? LM.getStart() : CS.getStart();
+    LocalFixIts.push_back(FixItHint::CreateInsertion(
+        getLocationOfByte(InsertionPoint), std::to_string(*BufferElements - 1)));
+    FixIts = LocalFixIts;
+  }
+
+  EmitFormatDiagnostic(S.PDiag(diag::warn_scanf_no_field_width)
+                           << CS.toString() << *BufferElements
+                           << (*BufferElements != 1),
+                       getLocationOfByte(CS.getStart()),
+                       /*IsStringLocation*/ true,
+                       getSpecifierRange(startSpecifier, specifierLen),
+                       FixIts);
 }
 
 bool CheckScanfHandler::HandleScanfSpecifier(
@@ -9799,8 +9997,10 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   analyze_format_string::ArgType::MatchKind Match =
       AT.matchesType(S.Context, Ex->getType());
   Match = handleFormatSignedness(Match, S.getDiagnostics(), Ex->getExprLoc());
-  if (Match == analyze_format_string::ArgType::Match)
+  if (Match == analyze_format_string::ArgType::Match) {
+    DiagnoseMissingFieldWidth(FS, Ex, startSpecifier, specifierLen);
     return true;
+  }
   bool Pedantic = Match == analyze_format_string::ArgType::NoMatchPedantic;
   bool Signedness = Match == analyze_format_string::ArgType::NoMatchSignedness;
 
