@@ -56,6 +56,29 @@ foreach(archive IN ZIP_LISTS
   endif()
 endforeach()
 
+# Add empty archive libraries for compatibility with systems expecting certain
+# bits of libc to be located in separate files (e.g. libpthread).
+if(LLVM_LIBC_FULL_BUILD)
+  set(dummy_source "${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp")
+  if(NOT EXISTS "${dummy_source}")
+    file(WRITE "${dummy_source}" "/* empty static library stub */\n")
+  endif()
+
+  list(APPEND libc_empty_archive_names pthread)
+  list(APPEND libc_empty_archive_targets libpthread)
+  foreach(archive IN ZIP_LISTS
+          libc_empty_archive_names libc_empty_archive_targets)
+    add_library(${archive_1} STATIC "${dummy_source}")
+    set_target_properties(
+      ${archive_1}
+      PROPERTIES
+        ARCHIVE_OUTPUT_NAME ${archive_0}
+        ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
+    )
+    list(APPEND added_archive_targets ${archive_1})
+  endforeach()  
+endif()
+
 install(
   TARGETS ${added_archive_targets}
   ARCHIVE DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
