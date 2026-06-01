@@ -717,7 +717,8 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
     // constructs between the directive and the actual do-loop nest.
     if (nested.getIf<parser::OpenMPConstruct>())
       return getNestedDoConstruct(nested);
-    assert(false && "Unexpected construct in the nested evaluations");
+    // Skip valid intervening code in imperfect loop nests
+    continue;
   }
   llvm_unreachable("Expected do loop to be in the nested evaluations");
 }

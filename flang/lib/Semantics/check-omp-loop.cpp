@@ -111,6 +111,49 @@ private:
   std::int64_t level_;
   std::map<std::string, std::int64_t> constructNamesAndLevels_;
 };
+
+/// Visitor that detects an ordered directive with a doacross clause
+/// (or the pre-5.2 depend(sink/source) equivalent).
+/// Does not descend into nested OpenMP block or loop constructs, since
+/// doacross directives inside them bind to an inner worksharing-loop
+/// region, not the one being checked.
+struct DoacrossFinder {
+  bool found{false};
+  template <typename T> bool Pre(const T &) { return !found; }
+  template <typename T> void Post(const T &) {}
+
+  // Stop descent into nested OpenMP regions that create new binding contexts.
+  bool Pre(const parser::OmpBlockConstruct &) { return false; }
+  bool Pre(const parser::OpenMPLoopConstruct &) { return false; }
+
+  void Post(const parser::OpenMPSimpleStandaloneConstruct &x) {
+    if (found) {
+      return;
+    }
+    if (x.v.DirId() != llvm::omp::Directive::OMPD_ordered) {
+      return;
+    }
+    for (const auto &clause : x.v.Clauses().v) {
+      if (std::holds_alternative<parser::OmpClause::Doacross>(clause.u)) {
+        found = true;
+        return;
+      }
+      if (const auto *depend{
+              std::get_if<parser::OmpClause::Depend>(&clause.u)}) {
+        if (std::holds_alternative<parser::OmpDoacross>(depend->v.u)) {
+          found = true;
+          return;
+        }
+      }
+    }
+  }
+};
+
+bool ContainsDoacrossDirective(const parser::Block &block) {
+  DoacrossFinder finder;
+  parser::Walk(block, finder);
+  return finder.found;
+}
 } // namespace
 
 namespace Fortran::semantics {
@@ -326,6 +369,13 @@ void OmpStructureChecker::CheckNestedConstruct(
     // Check requirements on nest depth.
     auto [needDepth, needPerfect]{
         GetAffectedNestDepthWithReason(beginSpec, version)};
+
+    // In OpenMP 5.2+, perfect nesting is only required for doacross loop
+    // nests (those whose body contains ordered doacross directives).
+    if (!needPerfect && version >= 52 && ContainsDoacrossDirective(body)) {
+      needPerfect = true;
+    }
+
     auto &[haveSema, havePerf]{sequence.depth()};
 
     auto haveDepth{needPerfect ? havePerf : haveSema};

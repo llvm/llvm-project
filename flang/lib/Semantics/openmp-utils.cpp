@@ -990,10 +990,19 @@ std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
       oreason = Reason();
     }
     if (ccount < ocount) {
-      // `ocount` cannot be std::nullopt here (C++ std guarantee).
-      return {{ocount.value_or(1), std::move(oreason)}, true};
+      // Prior to 5.2, ordered(n) requires perfect nesting unconditionally.
+      // In 5.2+, perfect nesting is required only for doacross (checked later
+      // with ContainsDoacrossDirective).
+      return {{ocount.value_or(1), std::move(oreason)}, version < 52};
     }
-    return {{ccount.value_or(1), std::move(creason)}, true};
+    // Prior to 5.2, ordered(n) requires perfect nesting.
+    // In 5.2+, only doacross nests require it (checked separately).
+    // CLN relaxation for collapse is applied retroactively for all versions.
+    bool needPerfect{false};
+    if (version < 52) {
+      needPerfect = ocount.has_value();
+    }
+    return {{ccount.value_or(1), std::move(creason)}, needPerfect};
   }
 
   if (IsLoopTransforming(dir)) {
