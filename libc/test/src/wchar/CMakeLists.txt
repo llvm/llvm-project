@@ -728,7 +728,9 @@ add_libc_test(
   SRCS
     swprintf_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
     libc.src.wchar.swprintf
+    libc.test.UnitTest.ErrnoCheckingTest
 )

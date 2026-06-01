@@ -13,9 +13,11 @@
 
 #include "src/wchar/swprintf.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include <stdarg.h>
@@ -26,6 +28,7 @@ LLVM_LIBC_FUNCTION(int, swprintf,
                    ([[maybe_unused]] wchar_t *__restrict buffer,
                     [[maybe_unused]] size_t bufsz,
                     [[maybe_unused]] const wchar_t *__restrict format, ...)) {
+  libc_errno = ENOSYS;
   // Always returns -1 for now
   return -1;
 }

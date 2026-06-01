@@ -734,6 +734,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.hdr.errno_macros
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.errno.errno
 )
