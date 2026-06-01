@@ -393,8 +393,9 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
-                                static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
+  if (auto Err =
+          enqueueMemCopy(DstPtr, SrcPtr, Size,
+                         static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
 }
