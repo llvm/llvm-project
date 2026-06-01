@@ -220,17 +220,15 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   auto second_insn = insn_list.GetInstructionAtIndex(1);
 
   ExecutionContext exe_ctx(m_process->GetTarget());
-  if (first_insn == nullptr || second_insn == nullptr) {
+  if (first_insn == nullptr || second_insn == nullptr)
     return ThreadPlanSP();
-  }
 
   const char *first_mnemonic = first_insn->GetMnemonic(&exe_ctx);
   const char *second_mnemonic = second_insn->GetMnemonic(&exe_ctx);
   if (!first_mnemonic || !second_mnemonic ||
       strcmp(first_mnemonic, "jmpl") != 0 ||
-      strcmp(second_mnemonic, "nop") != 0) {
+      strcmp(second_mnemonic, "nop") != 0)
     return ThreadPlanSP();
-  }
 
   assert(first_insn->DoesBranch() && !second_insn->DoesBranch());
 
