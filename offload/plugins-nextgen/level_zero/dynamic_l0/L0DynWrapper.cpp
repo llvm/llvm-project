@@ -152,53 +152,50 @@ static ze_result_t zeCommandListAppendLaunchKernelWithArgumentsFallback(
   if (Res != ZE_RESULT_SUCCESS)
     return Res;
 
-  ze_kernel_properties_t kernelProps = {};
-  kernelProps.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
-  Res = zeKernelGetProperties(hKernel, &kernelProps);
+  ze_kernel_properties_t KernelProps = {};
+  KernelProps.stype = ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES;
+  Res = zeKernelGetProperties(hKernel, &KernelProps);
   if (Res != ZE_RESULT_SUCCESS)
     return Res;
 
-  uint32_t NumKernelArgs = kernelProps.numKernelArgs;
+  uint32_t NumKernelArgs = KernelProps.numKernelArgs;
 
-  for (uint32_t i = 0; i < NumKernelArgs; i++) {
-    uint32_t argSize = 0;
+  for (uint32_t KernelArg = 0; KernelArg < NumKernelArgs; KernelArg++) {
+    uint32_t ArgSize = 0;
 
-    Res = zexKernelGetArgumentSize_ptr(hKernel, i, &argSize);
+    Res = zexKernelGetArgumentSize_ptr(hKernel, KernelArg, &ArgSize);
     if (Res != ZE_RESULT_SUCCESS)
       return Res;
 
-    Res = zeKernelSetArgumentValue(hKernel, i, argSize, pArguments[i]);
-    if (Res != ZE_RESULT_SUCCESS) {
+    Res = zeKernelSetArgumentValue(hKernel, KernelArg, ArgSize,
+                                   pArguments[KernelArg]);
+    if (Res != ZE_RESULT_SUCCESS)
       return Res;
-    }
   }
 
   bool IsCooperative = false;
   if (pNext) {
     const ze_command_list_append_launch_kernel_param_cooperative_desc_t
-        *coopDesc = static_cast<
+        *CoopDesc = static_cast<
             const ze_command_list_append_launch_kernel_param_cooperative_desc_t
                 *>(pNext);
-    if (coopDesc->stype ==
-        ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC) {
-      IsCooperative = coopDesc->isCooperative;
-    }
+    if (CoopDesc->stype ==
+        ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC)
+      IsCooperative = CoopDesc->isCooperative;
   }
 
-  if (IsCooperative) {
+  if (IsCooperative)
     return zeCommandListAppendLaunchCooperativeKernel(
         hCommandList, hKernel, &groupCounts, hSignalEvent, numWaitEvents,
         phWaitEvents);
-  } else {
-    return zeCommandListAppendLaunchKernel(hCommandList, hKernel, &groupCounts,
-                                           hSignalEvent, numWaitEvents,
-                                           phWaitEvents);
-  }
+  return zeCommandListAppendLaunchKernel(hCommandList, hKernel, &groupCounts,
+                                         hSignalEvent, numWaitEvents,
+                                         phWaitEvents);
 }
 
 static struct {
-  const char *name;
-  void *fallback_func;
+  const char *Name;
+  void *FallbackFunc;
 } ZeFallbacksTbl[] = {
     {"zeCommandListAppendLaunchKernelWithArguments",
      reinterpret_cast<void *>(
@@ -206,10 +203,10 @@ static struct {
 constexpr size_t ZeFallbacksTblSz =
     sizeof(ZeFallbacksTbl) / sizeof(ZeFallbacksTbl[0]);
 
-static void *findZeFallback(const char *name) {
+static void *findZeFallback(std::string_view Name) {
   for (size_t i = 0; i < ZeFallbacksTblSz; i++) {
-    if (strcmp(name, ZeFallbacksTbl[i].name) == 0)
-      return ZeFallbacksTbl[i].fallback_func;
+    if (Name == ZeFallbacksTbl[i].Name)
+      return ZeFallbacksTbl[i].FallbackFunc;
   }
   return nullptr;
 }
