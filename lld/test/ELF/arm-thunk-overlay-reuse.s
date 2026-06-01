@@ -10,7 +10,7 @@
 
 // CHECK-LABEL: 00001000 <_start>:
 // CHECK-NEXT: 1000: bl 0x1004
-// CHECK-LABEL 00001004 <__Thumbv4ABSLongThunk_far>:
+// CHECK-LABEL: 00001004 <__Thumbv4ABSLongThunk_far>:
 
 // CHECK-LABEL: 00002000 <over1>:
 // CHECK-NEXT: 2000: bl 0x1004

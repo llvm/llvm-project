@@ -1788,17 +1788,21 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
   return ts;
 }
 
-static bool isThunkSectionCompatible(InputSection *source,
-                                     SectionBase *target) {
+static bool isThunkSectionCompatible(InputSection *source, Thunk &thunk) {
+  // Thunks that precede their target section are logically an alternative entry
+  // point and can always compatible.
+  if (thunk.getTargetInputSection())
+    return true;
+
+  SectionBase *target = thunk.getThunkTargetSym()->section;
   OutputSection *sourceOS = source->getOutputSection();
   OutputSection *targetOS = target->getOutputSection();
   assert(sourceOS && targetOS);
+
   // Thunks in a different Overlay Output Section can't be reused
   // as we can't guarantee that the Overlay will be in memory.
-  if (sourceOS != targetOS && targetOS->inOverlay)
-    return false;
-
-  return true;
+  return (source->getOutputSection() == targetOS->getOutputSection() ||
+          !targetOS->inOverlay);
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
@@ -1825,7 +1829,7 @@ std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
 
   // Check existing Thunks for Sym to see if they can be reused
   for (auto &t : *thunkVec)
-    if (isThunkSectionCompatible(isec, t->getThunkTargetSym()->section) &&
+    if (isThunkSectionCompatible(isec, *t) &&
         t->isCompatibleWith(*isec, rel) &&
         ctx.target->inBranchRange(rel.type, src,
                                   t->getThunkTargetSym()->getVA(ctx, -pcBias)))
