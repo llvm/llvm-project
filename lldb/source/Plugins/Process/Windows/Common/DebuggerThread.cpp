@@ -626,13 +626,12 @@ static SIZE_T BytesReadableAt(HANDLE hProcess, LPCVOID addr) {
   uintptr_t region_end =
       reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
   uintptr_t a = reinterpret_cast<uintptr_t>(addr);
-  if (a >= region_end)
-    return 0;
+  assert(a < region_end);
   return region_end - a;
 }
 
-static std::optional<std::string> ReadRemoteStringW(HANDLE hProcess,
-                                                    LPCVOID addr) {
+static std::optional<std::string> ReadRemotePathStringW(HANDLE hProcess,
+                                                        LPCVOID addr) {
   SIZE_T to_read = std::min<SIZE_T>((MAX_PATH + 1) * sizeof(wchar_t),
                                     BytesReadableAt(hProcess, addr));
   to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
@@ -646,7 +645,9 @@ static std::optional<std::string> ReadRemoteStringW(HANDLE hProcess,
 
   size_t max_chars = bytes_read / sizeof(wchar_t);
   size_t len = ::wcsnlen(buf.data(), max_chars);
-  if (len == 0 || len == max_chars) // no null terminator found
+  if (len == max_chars) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
     return std::nullopt;
 
   std::string result;
@@ -654,8 +655,8 @@ static std::optional<std::string> ReadRemoteStringW(HANDLE hProcess,
   return result;
 }
 
-static std::optional<std::string> ReadRemoteStringA(HANDLE hProcess,
-                                                    LPCVOID addr) {
+static std::optional<std::string> ReadRemotePathStringA(HANDLE hProcess,
+                                                        LPCVOID addr) {
   SIZE_T to_read =
       std::min<SIZE_T>(MAX_PATH + 1, BytesReadableAt(hProcess, addr));
   if (to_read == 0)
@@ -667,7 +668,9 @@ static std::optional<std::string> ReadRemoteStringA(HANDLE hProcess,
     return std::nullopt;
 
   size_t len = ::strnlen(buf.data(), bytes_read);
-  if (len == 0 || len == bytes_read) // no null terminator found
+  if (len == bytes_read) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
     return std::nullopt;
 
   return std::string(buf.data(), len);
@@ -688,8 +691,8 @@ GetFileNameFromImageNameField(HANDLE hProcess,
     return std::nullopt;
 
   if (info.fUnicode)
-    return ReadRemoteStringW(hProcess, string_addr);
-  return ReadRemoteStringA(hProcess, string_addr);
+    return ReadRemotePathStringW(hProcess, string_addr);
+  return ReadRemotePathStringA(hProcess, string_addr);
 }
 
 DWORD
