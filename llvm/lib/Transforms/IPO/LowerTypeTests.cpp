@@ -2209,11 +2209,7 @@ bool LowerTypeTestsModule::lower() {
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
-        // Use the stable GUID stored in !cfi.functions (element 2) if
-        // present. Promoted internal functions have a stable GUID in their
-        // !guid metadata that differs from
-        // getGUIDAssumingExternalLinkage(promoted_name), and the combined
-        // index stores entries under the stable GUID.
+        // Use the stable GUID stored in !cfi.functions (element 2).
         assert(FuncMD->getNumOperands() >= 3 &&
                isa<ConstantAsMetadata>(FuncMD->getOperand(2)) &&
                "GUID metadata missing");
