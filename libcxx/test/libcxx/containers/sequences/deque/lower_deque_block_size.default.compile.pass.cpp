@@ -8,7 +8,7 @@
 
 // <deque>
 
-// Test that std::__deque_block_size has default sizes when _LIBCPP_ABI_USE_LOWER_DEQUE_BLOCK_SIZE is not defined.
+// Test that std::__deque_block_size has default sizes when _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE is not defined.
 
 #include <deque>
 #include <cstddef>
@@ -18,7 +18,7 @@ struct TypeOfSize {
   char data[Size];
 };
 
-static_assert(_LIBCPP_ABI_USE_LOWER_DEQUE_BLOCK_SIZE == 0, "");
+static_assert(_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE == 0, "");
 
 static_assert(std::__deque_block_size<char, std::ptrdiff_t>::value == 4096, "");
 static_assert(std::__deque_block_size<int, std::ptrdiff_t>::value == 1024, "");
