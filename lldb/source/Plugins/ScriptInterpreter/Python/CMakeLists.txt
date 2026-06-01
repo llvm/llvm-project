@@ -41,6 +41,7 @@ if (WIN32)
   # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
   # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
   set(PYTHON_SABI_LIBRARY_DIRS ${Python3_LIBRARY_DIRS})
+  set(shared_python_plugin_link_components Support)
 endif()
 
 if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
@@ -49,7 +50,7 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   add_lldb_library(lldbPluginScriptInterpreterPython SHARED
     ${python_plugin_sources}
     LINK_COMPONENTS
-      Support
+      ${shared_python_plugin_link_components}
     LINK_LIBS
       liblldb
       ${Python3_LIBRARIES}
