@@ -4475,7 +4475,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   } else {
     bool isFunctionOrMethod = false;
-    switch (auto context = state.getDeclarator().getContext()) {
+    switch (state.getDeclarator().getContext()) {
     case DeclaratorContext::ObjCParameter:
     case DeclaratorContext::ObjCResult:
     case DeclaratorContext::Prototype:
@@ -4516,12 +4516,24 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         break;
 
       case PointerDeclaratorKind::SingleLevelPointer:
-        // Infer _Nonnull if we are in an assumes-nonnull region.
-        if (inAssumeNonNullRegion) {
+        // Infer nullability based on pragma or default mode
+        // Pragma takes precedence and works in all modes (including
+        // unspecified) Skip -fnullability-default for system headers to avoid
+        // false positives on std library code (e.g. std::chrono, vsnprintf).
+        // Explicit #pragma clang assume_nonnull still works in system headers.
+        if (inAssumeNonNullRegion ||
+            (!S.getSourceManager().isInSystemHeader(D.getBeginLoc()) &&
+             S.getLangOpts().getNullabilityDefault() !=
+                 NullabilityKind::Unspecified)) {
           complainAboutInferringWithinChunk = wrappingKind;
-          inferNullability = NullabilityKind::NonNull;
-          inferNullabilityCS = (context == DeclaratorContext::ObjCParameter ||
-                                context == DeclaratorContext::ObjCResult);
+          if (inAssumeNonNullRegion) {
+            inferNullability = NullabilityKind::NonNull;
+          } else {
+            // Use Unspecified instead of the raw default so the flow checker
+            // can distinguish explicit _Nullable from default-inferred.
+            inferNullability = NullabilityKind::Unspecified;
+          }
+          inferNullabilityCS = false;
         }
         break;
 
@@ -4553,6 +4565,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             }
           }
         }
+        // For double-pointers (T**) without CF attrs, apply the same
+        // Unspecified default as SingleLevelPointer so the flow checker
+        // doesn't treat them as explicitly _Nullable.
+        if (!inferNullability && !inAssumeNonNullRegion &&
+            !S.getSourceManager().isInSystemHeader(D.getBeginLoc()) &&
+            S.getLangOpts().getNullabilityDefault() !=
+                NullabilityKind::Unspecified) {
+          inferNullability = NullabilityKind::Unspecified;
+        }
         break;
       }
       break;
@@ -4581,7 +4602,37 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorContext::FunctionalCast:
     case DeclaratorContext::RequiresExpr:
     case DeclaratorContext::Association:
-      // Don't infer in these contexts.
+      // Upstream: don't infer nullability in these contexts (locals,
+      // template args, casts, etc.).  When flow-sensitive nullability is
+      // active we silently tag single-level pointers as Unspecified so the
+      // flow checker can track them, but we never fire the consistency
+      // warning ("pointer is missing a nullability type specifier") here.
+      if (S.getLangOpts().FlowSensitiveNullability) {
+        auto wrappingKind = PointerWrappingDeclaratorKind::None;
+        switch (classifyPointerDeclarator(S, T, D, wrappingKind)) {
+        case PointerDeclaratorKind::NonPointer:
+        case PointerDeclaratorKind::MultiLevelPointer:
+        case PointerDeclaratorKind::CFErrorRefPointer:
+        case PointerDeclaratorKind::NSErrorPointerPointer:
+          break;
+
+        case PointerDeclaratorKind::SingleLevelPointer:
+          if (!inAssumeNonNullRegion &&
+              !S.getSourceManager().isInSystemHeader(D.getBeginLoc())) {
+            inferNullability = NullabilityKind::Unspecified;
+          }
+          inferNullabilityCS = false;
+          break;
+
+        case PointerDeclaratorKind::MaybePointerToCFRef:
+          if (!inAssumeNonNullRegion &&
+              !S.getSourceManager().isInSystemHeader(D.getBeginLoc())) {
+            inferNullability = NullabilityKind::Unspecified;
+          }
+          inferNullabilityCS = false;
+          break;
+        }
+      }
       break;
     }
   }
@@ -4669,7 +4720,12 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
   if (S.CodeSynthesisContexts.empty()) {
-    if (shouldHaveNullability(T) && !T->getNullability()) {
+    // Skip conversion operators (operator T*()) — their return type is
+    // part of the operator's identity, and applying default nullability
+    // would change the type identity, breaking overload resolution and
+    // causing spurious diagnostics on the conversion result type.
+    if (D.getName().getKind() != UnqualifiedIdKind::IK_ConversionFunctionId &&
+        shouldHaveNullability(T) && !T->getNullability()) {
       if (isVaList(T)) {
         // Record that we've seen a pointer, but do nothing else.
         if (NumPointersRemaining > 0)

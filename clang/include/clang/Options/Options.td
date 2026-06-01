@@ -1637,6 +1637,18 @@ defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Enable Apple gcc-compatible #pragma pack handling">,
   NegFlag<SetFalse>>;
+def fnullability_default_EQ : Joined<["-"], "fnullability-default=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set default nullability for unannotated pointers (unspecified, nullable, nonnull)">,
+  Values<"unspecified,nullable,nonnull">, NormalizedValuesScope<"clang::NullabilityKind">,
+  NormalizedValues<["Unspecified", "Nullable", "NonNull"]>,
+  MarshallingInfoEnum<LangOpts<"NullabilityDefault">, "Unspecified">;
+
+defm flow_sensitive_nullability : BoolFOption<"flow-sensitive-nullability",
+  LangOpts<"FlowSensitiveNullability">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable flow-sensitive nullability analysis">,
+  NegFlag<SetFalse>>;
 defm xl_pragma_pack : BoolFOption<"xl-pragma-pack",
   LangOpts<"XLPragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],

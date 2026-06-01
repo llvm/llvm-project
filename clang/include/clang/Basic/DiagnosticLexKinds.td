@@ -1084,6 +1084,7 @@ def err_pp_include_in_assume_nonnull : Error<
 def err_pp_eof_in_assume_nonnull : Error<
   "'#pragma clang assume_nonnull' was not ended within this file">;
 
+
 }
 
 let CategoryName = "Dependency Directive Source Scanner Issue" in {

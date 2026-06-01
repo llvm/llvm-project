@@ -19,6 +19,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -137,6 +138,16 @@ public:
 
   // We are only collecting the declarations, so do not step into the bodies.
   bool TraverseStmt(Stmt *S) override { return true; }
+
+  // Skip implicit variable template instantiations to avoid an assertion
+  // in RecursiveASTVisitor that fires when getTemplateArgsAsWritten() is
+  // non-null on an implicit instantiation.
+  bool TraverseVarTemplateSpecializationDecl(
+      VarTemplateSpecializationDecl *D) override {
+    if (D->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return true;
+    return DynamicRecursiveASTVisitor::TraverseVarTemplateSpecializationDecl(D);
+  }
 
 private:
   /// Add the given declaration to the call graph.

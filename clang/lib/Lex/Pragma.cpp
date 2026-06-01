@@ -1973,11 +1973,11 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
     PPCallbacks *Callbacks = PP.getPPCallbacks();
 
     if (IsBegin) {
-      // Complain about attempts to re-enter an audit.
       if (BeginLoc.isValid()) {
         PP.Diag(Loc, diag::err_pp_double_begin_of_assume_nonnull);
         PP.Diag(BeginLoc, diag::note_pragma_entered_here);
       }
+
       NewLoc = Loc;
       if (Callbacks)
         Callbacks->PragmaAssumeNonNullBegin(NewLoc);

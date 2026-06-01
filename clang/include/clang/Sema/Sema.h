@@ -1190,9 +1190,16 @@ public:
   NamedDecl *getCurFunctionOrMethodDecl() const;
 
   /// Warn if we're implicitly casting from a _Nullable pointer type to a
-  /// _Nonnull one.
+  /// _Nonnull one. If \p SrcExpr is provided and flow-sensitive nullability
+  /// is enabled, the warning is suppressed when the expression is provably
+  /// non-null despite its declared type.
   void diagnoseNullableToNonnullConversion(QualType DstType, QualType SrcType,
-                                           SourceLocation Loc);
+                                           SourceLocation Loc,
+                                           Expr *SrcExpr = nullptr);
+
+  /// Check if a function has any nullability annotations on its
+  /// parameters or return type.
+  bool functionHasNullabilityAnnotations(const FunctionDecl *FD) const;
 
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);

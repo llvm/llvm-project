@@ -530,6 +530,15 @@ def CXX26Compat : DiagGroup<"c++2c-compat", [DeleteIncomplete]>;
 
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
+def FlowNullableDereference : DiagGroup<"flow-nullable-dereference">;
+def FlowNullableArithmetic : DiagGroup<"flow-nullable-arithmetic">;
+def FlowNullableReturn : DiagGroup<"flow-nullable-return">;
+def FlowNullableAssignment : DiagGroup<"flow-nullable-assignment">;
+def FlowNullableArgument : DiagGroup<"flow-nullable-argument">;
+def FlowNullability : DiagGroup<"flow-nullability", [
+  FlowNullableDereference, FlowNullableArithmetic, FlowNullableReturn,
+  FlowNullableAssignment, FlowNullableArgument]>;
+def NullsafeEvidence : DiagGroup<"nullsafe-evidence">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
 def GlobalConstructors : DiagGroup<"global-constructors"> {
  code Documentation = [{
