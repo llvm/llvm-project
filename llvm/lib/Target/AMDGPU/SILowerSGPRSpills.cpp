@@ -276,8 +276,7 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
     // CSI list so that it's easier to identify the entire spill and CFI
     // can be emitted appropriately.
     if (SpillRetAddrReg) {
-      const TargetRegisterClass *RC =
-          TRI->getMinimalPhysRegClass(RetAddrReg);
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(RetAddrReg);
       int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
                                          TRI->getSpillAlign(*RC), true);
       CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
