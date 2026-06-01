@@ -285,11 +285,10 @@ ConstString Mangled::GetDemangledName() const {
   return GetDemangledNameImpl(/*force=*/false);
 }
 
-std::optional<DemangledNameInfo> const &Mangled::GetDemangledInfo() const {
+const DemangledNameInfo *Mangled::GetDemangledInfo() const {
   if (!m_demangled_info)
     GetDemangledNameImpl(/*force=*/true);
-
-  return m_demangled_info;
+  return m_demangled_info.get();
 }
 
 // Generate the demangled name on demand using this accessor. Code in this
@@ -319,7 +318,8 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
     std::pair<char *, DemangledNameInfo> demangled =
         GetItaniumDemangledStr(m_mangled.GetCString());
     demangled_name = demangled.first;
-    m_demangled_info.emplace(std::move(demangled.second));
+    m_demangled_info =
+        std::make_unique<DemangledNameInfo>(std::move(demangled.second));
     break;
   }
   case eManglingSchemeRustV0:
@@ -556,8 +556,8 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
 }
 
 ConstString Mangled::GetBaseName() const {
-  const auto &demangled_info = GetDemangledInfo();
-  if (!demangled_info.has_value())
+  const auto *demangled_info = GetDemangledInfo();
+  if (demangled_info == nullptr)
     return {};
 
   ConstString demangled_name = GetDemangledName();

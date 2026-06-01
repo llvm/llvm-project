@@ -3570,6 +3570,8 @@ bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
   if (!this->emitCheckDynamicCast(E))
     return false;
 
+  if (DiscardResult)
+    return this->emitPopPtr(E);
   return true;
 }
 
@@ -3829,7 +3831,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
   if (OptPrimType T = classify(Ty))
     return this->visitZeroInitializer(*T, Ty, E);
 
-  if (const auto *CT = Ty->getAs<ComplexType>()) {
+  if (Ty->isAnyComplexType() || Ty->isVectorType()) {
     if (!Initializing) {
       UnsignedOrNone LocalIndex = allocateLocal(E);
       if (!LocalIndex)
@@ -3838,34 +3840,21 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
         return false;
     }
 
-    // Initialize both fields to 0.
-    QualType ElemQT = CT->getElementType();
+    QualType ElemQT;
+    unsigned NumElems;
+    if (const auto *CT = Ty->getAs<ComplexType>()) {
+      NumElems = 2;
+      ElemQT = CT->getElementType();
+    } else {
+      const auto *VT = Ty->castAs<VectorType>();
+      NumElems = VT->getNumElements();
+      ElemQT = VT->getElementType();
+    }
+
     PrimType ElemT = classifyPrim(ElemQT);
-
-    for (unsigned I = 0; I != 2; ++I) {
-      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
-        return false;
-      if (!this->emitInitElem(ElemT, I, E))
-        return false;
-    }
-    return true;
-  }
-
-  if (const auto *VT = Ty->getAs<VectorType>()) {
-    // FIXME: Code duplication with the _Complex case above.
-    if (!Initializing) {
-      UnsignedOrNone LocalIndex = allocateLocal(E);
-      if (!LocalIndex)
-        return false;
-      if (!this->emitGetPtrLocal(*LocalIndex, E))
-        return false;
-    }
 
     // Initialize all fields to 0.
-    QualType ElemQT = VT->getElementType();
-    PrimType ElemT = classifyPrim(ElemQT);
-
-    for (unsigned I = 0, N = VT->getNumElements(); I != N; ++I) {
+    for (unsigned I = 0, N = NumElems; I != N; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -4058,7 +4047,7 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
           if (ILE->hasArrayFiller())
             DynamicInit = ILE->getArrayFiller();
-          else if (isa<StringLiteral>(ILE->getInit(0)))
+          else if (StaticInitElems > 0 && isa<StringLiteral>(ILE->getInit(0)))
             ElemT = classifyPrim(CAT->getElementType());
         }
       }
@@ -5733,7 +5722,9 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       if (FuncDecl->getDeclName().isAnyOperatorNew())
         return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
-      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
+      assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete ||
+             FuncDecl->getDeclName().getCXXOverloadedOperator() ==
+                 OO_Array_Delete);
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_delete);
     }
 
@@ -7169,6 +7160,9 @@ static uint32_t getBitWidth(const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
+  if (E->containsErrors())
+    return false;
+
   const Expr *SubExpr = E->getSubExpr();
   if (SubExpr->getType()->isAnyComplexType())
     return this->VisitComplexUnaryOperator(E);
