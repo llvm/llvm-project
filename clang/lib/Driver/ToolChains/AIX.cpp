@@ -250,8 +250,7 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
 
     const char *CreateExportListExec = Args.MakeArgString(
-        path::parent_path(ToolChain.getDriver().DriverExecutable) +
-        "/llvm-nm");
+        path::parent_path(ToolChain.getDriver().DriverExecutable) + "/llvm-nm");
     ArgStringList CreateExportCmdArgs;
 
     std::string CreateExportListPath =

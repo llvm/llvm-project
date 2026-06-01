@@ -438,9 +438,7 @@ public:
   std::string getTargetTriple() const { return TargetTriple; }
 
   /// Get the path to the main driver executable.
-  const char *getDriverProgramPath() const {
-    return DriverExecutable.c_str();
-  }
+  const char *getDriverProgramPath() const { return DriverExecutable.c_str(); }
 
   StringRef getPreferredLinker() const { return PreferredLinker; }
   void setPreferredLinker(std::string Value) {
