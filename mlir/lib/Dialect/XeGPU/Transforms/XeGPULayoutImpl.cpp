@@ -712,6 +712,21 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Use case 2: Dim split from source to result, for multi-stage reduction
   SmallVector<SmallVector<int64_t>> splitDimGroups;
   if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
+    llvm::dbgs() << "[DEBUG inferShapeCastSourceLayout] case2 split. resLayout="
+                 << resLayout << " srcShape=[";
+    for (auto s : srcShape)
+      llvm::dbgs() << s << ",";
+    llvm::dbgs() << "] resShape=[";
+    for (auto s : resShape)
+      llvm::dbgs() << s << ",";
+    llvm::dbgs() << "] groups=";
+    for (auto &g : splitDimGroups) {
+      llvm::dbgs() << "{";
+      for (auto d : g)
+        llvm::dbgs() << d << ",";
+      llvm::dbgs() << "} ";
+    }
+    llvm::dbgs() << "\n";
     auto srcLayout = resLayout;
     for (const auto &dimGroup : splitDimGroups)
       srcLayout = srcLayout.collapseDims(dimGroup);
@@ -797,6 +812,82 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
   return payloadLayout;
 }
 
+/// Returns true if every dimension of `shape` except the innermost
+/// `numInnerDims` is a unit (size-1) dimension.
+///
+/// Several reduction layout-setup paths (InstData, Lane) only distribute the
+/// innermost one or two dimensions and rely on all the leading dimensions
+/// being degenerate. This helper makes that assumption explicit and checkable
+/// instead of silently leaving leading dimensions undistributed.
+static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
+  int numLeading = static_cast<int>(shape.size()) - numInnerDims;
+  if (numLeading <= 0)
+    return true;
+  return llvm::all_of(shape.take_front(numLeading),
+                      [](int64_t dim) { return dim == 1; });
+}
+
+/// Computes the lane_layout and lane_data for a multi-reduction's source
+/// layout. Only the innermost two dimensions are distributed; all leading
+/// dimensions are assumed to be unit (the caller verifies this via
+/// `leadingDimsAreUnit`).
+///
+/// The layout is chosen to minimize cross-lane reduction: whenever possible a
+/// reduction dimension is reduced *within* a lane (lane_layout == 1, with up to
+/// `maxReduceVectorSize` elements packed into lane_data), and the subgroup's
+/// lanes are spread across a non-reduction dimension instead.
+///
+///   - Exactly one of the innermost two dims is a reduction dim: place
+///     `subgroupSize` lanes on the non-reduction dim and keep lane_layout == 1
+///     on the reduction dim, packing up to `maxReduceVectorSize` reduced
+///     elements into lane_data along that reduction dim.
+///   - Both innermost dims are reduction dims (or the source is rank 1): fall
+///     back to the default of `subgroupSize` lanes on the innermost dim,
+///     packing `maxReduceVectorSize` elements on the second-to-innermost dim.
+///
+/// Returns the (lane_layout, lane_data) pair. The corresponding inst_data is
+/// simply the element-wise product lane_layout * lane_data.
+static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
+computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
+                                  ArrayRef<int64_t> reductionDims,
+                                  int subgroupSize,
+                                  int64_t maxReduceVectorSize) {
+  int srcRank = srcShape.size();
+  SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
+  llvm::dbgs() << "[DEBUG computeReductionLaneLayoutAndData] srcRank=" << srcRank
+               << " srcShape.size()=" << srcShape.size() << " srcShape=[";
+  for (size_t i = 0; i < srcShape.size(); ++i) {
+    if (i > 0) llvm::dbgs() << ", ";
+    llvm::dbgs() << srcShape[i];
+  }
+  llvm::dbgs() << "]\n";
+
+  int innermost = srcRank - 1;
+  int secondInnermost = srcRank - 2;
+
+  // `laneDim` carries the subgroupSize lanes; `vectorDim` packs the reduced
+  // elements into lane_data. Default: lanes on the innermost dim, reduced
+  // vector on the second-to-innermost dim.
+  int laneDim = innermost;
+  int vectorDim = secondInnermost; // negative for rank 1
+
+  // If only the innermost dim is reduced, spread the lanes across the
+  // non-reduction (second-to-innermost) dim and reduce the innermost dim
+  // within each lane instead.
+  // if (srcRank >= 2 && isReduction(innermost) &&
+  // !isReduction(secondInnermost)) {
+  //   laneDim = secondInnermost;
+  //   vectorDim = innermost;
+  // }
+
+  laneLayout[laneDim] =
+      std::min(static_cast<int64_t>(subgroupSize), srcShape[laneDim]);
+  if (vectorDim >= 0)
+    laneData[vectorDim] = std::min(maxReduceVectorSize, srcShape[vectorDim]);
+
+  return {laneLayout, laneData};
+}
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
@@ -813,9 +904,13 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
 /// reuse the slice layout's parent layout for the source to further minimize
 /// potential data redistribution.
 ///
-/// InstData requries {1, ..., min(maxReduceVectorSize, srcShape),subgroupSize}
-/// Lane Layout requires {1, ..., 1, subgroupSize}
-/// Lane data requires {1, ..., min(maxReduceVectorSize, srcShape), 1}
+/// For the InstData and Lane layout kinds only the innermost two dimensions
+/// are distributed; all leading dimensions are assumed to be unit dimensions.
+/// This assumption is checked via `leadingDimsAreUnit`. The lane_layout and
+/// lane_data are computed by `computeReductionLaneLayoutAndData`, which picks
+/// a layout that minimizes cross-lane reduction (reducing within a lane when
+/// only one of the innermost two dims is a reduction dim). The inst_data is
+/// simply the element-wise product lane_layout * lane_data.
 ///
 /// Examples:
 ///   1. Subgroup layout - Row reduction on 2D tensor:
@@ -943,22 +1038,35 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           (!orderAttr || orderAttr.empty()) ? nullptr : toInt32Attr(order));
     }
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-
-    SmallVector<int64_t> instData(srcRank, 1);
-    if (srcRank >= 2)
-      instData[srcRank - 2] =
-          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
-    instData[srcRank - 1] =
-        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
-    srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
+    xegpu::SliceAttr consumerSliceLayout =
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
+    auto reductionDimsOverrideConsumer = consumerSliceLayout? 
+          SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef()): reductionDims;
+    auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
+        srcShape, reductionDimsOverrideConsumer, subgroupSize, maxReduceVectorSize);
+    // inst_data is the per-instruction data, i.e. the element-wise product of
+    // lane_layout and lane_data.
+    SmallVector<int64_t> instData(srcRank);
+    for (int i = 0; i < srcRank; i++)
+      instData[i] = laneLayout[i] * laneData[i];
+    srcLayout = xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
+                                       /*sg_data=*/nullptr,
+                                       /*inst_data=*/toInt32Attr(instData),
+                                       /*lane_layout=*/toInt32Attr(laneLayout),
+                                       /*lane_data=*/toInt32Attr(laneData),
+                                       /*order=*/nullptr);
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-
-    SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
-    laneLayout[srcRank - 1] =
-        std::min(static_cast<int64_t>(subgroupSize), srcShape[srcRank - 1]);
-    if (srcRank >= 2)
-      laneData[srcRank - 2] =
-          std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
+    // Only the innermost two dimensions are distributed; all leading dimensions
+    // are assumed to be unit dimensions.
+    assert(leadingDimsAreUnit(srcShape, /*numInnerDims=*/2) &&
+           "Lane reduction layout assumes all leading (non-innermost-two) "
+           "dimensions are unit dimensions");
+    xegpu::SliceAttr consumerSliceLayout =
+        dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
+    auto reductionDimsOverrideConsumer = consumerSliceLayout? 
+          SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef()): reductionDims;
+    auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
+        srcShape, reductionDimsOverrideConsumer, subgroupSize, maxReduceVectorSize);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
   }
@@ -999,6 +1107,58 @@ xegpu::setupReductionResultLayout(xegpu::LayoutKind layoutKind,
   return result;
 }
 
+/// Adjusts `consumerLayout`'s innermost-dim data field selected by
+/// `layoutKind` so that the source layout can be safely inferred by dividing
+/// that value by `ratio`. Doubles the value until the divisibility constraint
+/// is met, bounded above by result-shape.
+///
+/// Used by ops whose source relates to the result by a fixed factor along the
+/// innermost dim (e.g., bitcast: bitwidth ratio; interleave: 2x).
+///
+/// Divisibility constraints per LayoutKind:
+///   - Subgroup: sgData[innermost] % ratio == 0
+///   - InstData: instData[innermost] % (laneLayout[innermost] * ratio) == 0
+///               (laneLayout falls back to subgroupSize if absent)
+///   - Lane:     laneData[innermost] % ratio == 0
+static xegpu::DistributeLayoutAttr
+adjustInnermostDimForDivisibility(xegpu::DistributeLayoutAttr consumerLayout,
+                                  xegpu::LayoutKind layoutKind,
+                                  size_t innerMostDim, int ratio, int64_t bound,
+                                  const xegpu::uArch::uArch *uArch) {
+  SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> laneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    sgDataValue = sgData[innerMostDim];
+    while ((sgDataValue <= bound) && (sgDataValue % ratio) != 0)
+      sgDataValue *= 2;
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    instDataValue = instData[innerMostDim];
+    const int innermostDimLaneLayout = laneLayout.empty()
+                                           ? uArch->getSubgroupSize()
+                                           : laneLayout[innerMostDim];
+    while ((instDataValue <= bound) &&
+           (instDataValue % (innermostDimLaneLayout * ratio) != 0))
+      instDataValue *= 2;
+    assert((bound % instDataValue) == 0 &&
+           "bound, instData, and laneLayout for innermost must be 2^n!");
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    laneDataValue = laneData[innerMostDim];
+    while ((laneDataValue <= bound) && (laneDataValue % ratio) != 0)
+      laneDataValue *= 2;
+  }
+
+  return consumerLayout.setDimData(innerMostDim, sgDataValue, instDataValue,
+                                   laneDataValue);
+}
+
 /// Sets up the result layout for a bitcast operation.
 /// When casting to a smaller bitwidth, adjusts the layout dimensions (sgData,
 /// instData, or laneData) by multiplying by the bitwidth ratio to ensure the
@@ -1030,53 +1190,23 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   ArrayRef<int64_t> resShape = resVecTy.getShape();
-  SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
-  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> laneLayout =
-      consumerLayout.getEffectiveLaneLayoutAsInt();
 
   assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
          "laneData must be available for all dimensions");
+
+  // Casting to same/larger element type: result has fewer (or equal) elements
+  // along the innermost dim, no adjustment needed.
+  if (srcElemTyBitWidth <= resElemTyBitWidth)
+    return consumerLayout;
+
+  // Casting to smaller element type: result has more elements along innermost
+  // dim. Adjust the innermost data field upward so the source layout can be
+  // recovered by dividing by bitWidthRatio.
   size_t innerMostDim = srcShape.size() - 1;
-  int64_t sgDataValue = -1;
-  int64_t instDataValue = -1;
-  int64_t laneDataValue = -1;
-  if (srcElemTyBitWidth > resElemTyBitWidth) {
-    // When casting to a smaller bitwidth, multiply the result layout
-    // accordingly to ensure it can be divided by the ratio back to the
-    // source layout.
-    int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      sgDataValue = sgData[innerMostDim];
-      while ((sgDataValue <= resShape[innerMostDim]) &&
-             (sgDataValue % bitWidthRatio) != 0)
-        sgDataValue *= 2;
-    } else if (layoutKind == xegpu::LayoutKind::InstData) {
-      instDataValue = instData[innerMostDim];
-      const int innermostDimLaneLayout = laneLayout.empty()
-                                             ? uArch->getSubgroupSize()
-                                             : laneLayout[innerMostDim];
-      // Adjust instDataValue so it still fits within an instruction after
-      // dividing by bitWidthRatio
-      while ((instDataValue <= resShape[innerMostDim]) &&
-             (instDataValue % (innermostDimLaneLayout * bitWidthRatio) != 0))
-        instDataValue *= 2;
-      assert((resShape[innerMostDim] % instDataValue) == 0 &&
-             "resShape, instData, and lanelayout for innermost must be 2^n !");
-    } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneDataValue = laneData[innerMostDim];
-      while ((laneDataValue <= resShape[innerMostDim]) &&
-             (laneDataValue % bitWidthRatio != 0))
-        laneDataValue *= 2;
-    }
-    // Now set only instData and laneData, preserving sgData
-    xegpu::DistributeLayoutAttr resLayout;
-    resLayout = consumerLayout.setDimData(innerMostDim, sgDataValue,
-                                          instDataValue, laneDataValue);
-    return resLayout;
-  }
-  return consumerLayout;
+  int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
+  return adjustInnermostDimForDivisibility(consumerLayout, layoutKind,
+                                           innerMostDim, bitWidthRatio,
+                                           resShape[innerMostDim], uArch);
 }
 
 /// Sets up the result layout for an interleave operation to ensure the source
@@ -1098,52 +1228,18 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
     DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
 
-  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
-  SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
-  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> laneLayout =
-      consumerLayout.getEffectiveLaneLayoutAsInt();
-
-  assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
+  assert(consumerLayout.getRank() == static_cast<int64_t>(resShape.size()) &&
          "consumer layout rank must match source shape rank");
-  const size_t innerMostDim = srcShape.size() - 1;
-  int64_t sgDataValue = -1;
-  int64_t instDataValue = -1;
-  int64_t laneDataValue = -1;
 
-  // Interleave doubles the innermost dimension (ratio = 2)
+  // Interleave doubles the innermost dimension (ratio = 2). Adjust the
+  // innermost data field so the source layout can be recovered by dividing
+  // by 2.
+  const size_t innerMostDim = resShape.size() - 1;
   constexpr int ratio = 2;
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    sgDataValue = sgData[innerMostDim];
-    // Ensure sgDataValue is divisible by ratio so source sgData can be inferred
-    while ((sgDataValue <= srcShape[innerMostDim]) &&
-           (sgDataValue % ratio != 0))
-      sgDataValue *= ratio;
-  } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    instDataValue = instData[innerMostDim];
-    const int innermostDimLaneLayout = laneLayout.empty()
-                                           ? uArch->getSubgroupSize()
-                                           : laneLayout[innerMostDim];
-    // Adjust instDataValue so it can be divided by (innermostDimLaneLayout *
-    // ratio) when inferring the source layout
-    while ((instDataValue <= srcShape[innerMostDim]) &&
-           (instDataValue % (innermostDimLaneLayout * ratio) != 0))
-      instDataValue *= ratio;
-    assert((srcShape[innerMostDim] % instDataValue) == 0 &&
-           "srcShape, instData, and laneLayout for innermost must be 2^n!");
-  } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    laneDataValue = laneData[innerMostDim];
-    // Ensure laneDataValue is at least 2 and divisible by ratio
-    // so that source laneData = laneDataValue/2 is valid
-    while ((laneDataValue <= srcShape[innerMostDim]) &&
-           (laneDataValue % ratio != 0))
-      laneDataValue *= ratio;
-  }
-
-  return consumerLayout.setDimData(innerMostDim, sgDataValue, instDataValue,
-                                   laneDataValue);
+  return adjustInnermostDimForDivisibility(consumerLayout, layoutKind,
+                                           innerMostDim, ratio,
+                                           resShape[innerMostDim], uArch);
 }
 
 /// Sets up the result layout for an insert strided slice operation.
@@ -1162,21 +1258,15 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   SmallVector<int64_t> consumerLaneLayout =
       consumerLayout.getEffectiveLaneLayoutAsInt();
   ArrayRef<int64_t> srcShape = srcVectorTy.getShape();
-  int64_t instDataValue = -1;
   int64_t laneDataValue = -1;
 
   requiredResLayout = consumerLayout;
   int srcRank = srcShape.size();
 
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+  if (layoutKind == xegpu::LayoutKind::Subgroup ||
+      layoutKind == xegpu::LayoutKind::InstData) {
     assert(true &&
            "subgroup layout assignment not supported for insertStridedSlice.");
-  } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    for (int dim = 0; dim < srcRank; dim++) {
-      instDataValue = std::min(srcShape[dim], consumerInstData[dim]);
-      requiredResLayout =
-          requiredResLayout.setDimData(dim, -1, instDataValue, -1);
-    }
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     for (int dim = 0; dim < srcRank; dim++) {
       assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&

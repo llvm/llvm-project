@@ -966,8 +966,6 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     if (valType.isIntOrFloat()) {
       rewriter.replaceOp(op, op.getSource());
-      assert(!inputLayout.dropInstData() && !targetLayout.dropInstData() &&
-             "unexpected layout attributes for scalar type");
       return success();
     }
 

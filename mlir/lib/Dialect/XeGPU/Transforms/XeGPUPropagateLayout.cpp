@@ -684,11 +684,17 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch);
 
+  llvm::dbgs() << "[DEBUG visitMultiRed] op=" << *reduction
+               << " consumer=" << consumerLayoutAttr
+               << " required=" << requiredResLayoutAttr << "\n";
+
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
       requiredResLayoutAttr, reductionDims);
+
+  llvm::dbgs() << "[DEBUG visitMultiRed] srcLayout=" << srcLayoutAttr << "\n";
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
@@ -757,6 +763,10 @@ void LayoutInfoPropagation::visitShapeCastOp(
 
   xegpu::DistributeLayoutAttr srcLayoutAttr =
       xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+
+  llvm::dbgs() << "[DEBUG visitShapeCast] op=" << *shapeCast
+               << " consumer=" << resultLayoutAttr
+               << " src=" << srcLayoutAttr << "\n";
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }

@@ -220,9 +220,9 @@ func.func @scatter_ops_chunksize_slice(%src: memref<1024xf32>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @insert_strided_slice_inst_data_no_packing(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x32xf32>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>} dense<1.000000e+00> : vector<4x16xf32>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>} dense<0.000000e+00> : vector<8x32xf32>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [4, 16]>, offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<1.000000e+00> : vector<4x16xf32>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} dense<0.000000e+00> : vector<8x32xf32>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>, offsets = [0, 0], strides = [1, 1]} : vector<4x16xf32> into vector<8x32xf32>
 // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16]>>
 // CHECK: xegpu.store_nd %[[INSERT]], %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16]>>
 func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
@@ -240,9 +240,9 @@ func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @insert_strided_slice_inst_data_with_packing(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x64xi8>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>} dense<1> : vector<4x64xi8>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>} dense<0> : vector<8x64xi8>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [4, 64]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>} dense<1> : vector<4x64xi8>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>} dense<0> : vector<8x64xi8>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
 func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
   %c0 = arith.constant 0 : index
   %cst_small = arith.constant dense<1> : vector<4x64xi8>
@@ -258,11 +258,11 @@ func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
 // CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<inst_data = [16]>}> : memref<1024xf16>, vector<1024xindex>, vector<1024xi1> -> vector<1024xf16>
-// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16]>} : vector<1024xf16> to vector<8x8x16xf16>
-// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
-// CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16]>, dims = [0]>} dense<0.000000e+00> : vector<16xf16>
-// CHECK: %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[CAST]], %[[CST_0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [0]>} [0] : vector<8x8x16xf16> to vector<8x16xf16>
-// CHECK: %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[REDUCE_0]], %[[CST_1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16]>, dims = [0]>} [0] : vector<8x16xf16> to vector<16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} : vector<1024xf16> to vector<8x8x16xf16>
+// CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
+// CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<16xf16>
+// CHECK: %[[REDUCE_0:.*]] = vector.multi_reduction <add>, %[[CAST]], %[[CST_0]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16], lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0]>} [0] : vector<8x8x16xf16> to vector<8x16xf16>
+// CHECK: %[[REDUCE_1:.*]] = vector.multi_reduction <add>, %[[REDUCE_0]], %[[CST_1]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} [0] : vector<8x16xf16> to vector<16xf16>
 func.func @vector_shape_cast_expand_non_unit_dims(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
     %cst = arith.constant dense<true> : vector<1024xi1>
     %0 = vector.step : vector<1024xindex>
@@ -282,7 +282,7 @@ func.func @vector_shape_cast_expand_non_unit_dims(%arg0: memref<1024xf16>, %arg1
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size(
-// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x16x1xf16> to vector<1xf16>
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 1], lane_layout = [1, 1, 1], lane_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x16x1xf16> to vector<1xf16>
 func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
     %cst = arith.constant dense<true> : vector<16xi1>
     %0 = vector.step : vector<16xindex>
@@ -300,7 +300,7 @@ func.func @vector_2d_reduction_with_fractional_subgroup_size(%arg0: memref<1024x
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(
-// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4]>, dims = [1, 2]>} [1, 2] : vector<1x16x4xf16> to vector<1xf16>
+// CHECK: %[[ReduceVal:.*]] = vector.multi_reduction <add>, %[[Val:.*]], %[[CST:.*]] {layout_result_0 = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 4], lane_layout = [1, 1, 4], lane_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x16x4xf16> to vector<1xf16>
 func.func @vector_2d_reduction_with_fractional_subgroup_size_1x4x1(%arg0: memref<1024xf16>, %arg1: memref<16xf16>) {
     %cst = arith.constant dense<true> : vector<64xi1>
     %0 = vector.step : vector<64xindex>
