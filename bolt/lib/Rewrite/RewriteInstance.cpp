@@ -1027,6 +1027,8 @@ void RewriteInstance::discoverFileObjects() {
     if (SymbolType == SymbolRef::ST_File)
       continue;
 
+    bool IsDuplicate = false;
+
     StringRef SymName = cantFail(Symbol.getName(), "cannot get symbol name");
     if (SymbolAddress == 0) {
       if (opts::Verbosity >= 1 && SymbolType == SymbolRef::ST_Function)
@@ -1080,11 +1082,16 @@ void RewriteInstance::discoverFileObjects() {
           // Ignore duplicate entry - possibly a bug in the linker
           continue;
         }
-        BC->errs() << "BOLT-ERROR: bad input binary, global symbol \"" << Name
+        BC->errs() << "BOLT-WARNING: bad input binary, global symbol \"" << Name
                    << "\" is not unique\n";
-        exit(1);
+        UniqueName = NR.uniquify(Name);
+        IsDuplicate = true;
+        if (BinaryFunction *FirstBF =
+                BC->getBinaryFunctionAtAddress(BD->getAddress()))
+          FirstBF->setIgnored();
+      } else {
+        UniqueName = Name;
       }
-      UniqueName = Name;
     } else {
       // If we have a local file name, we should create 2 variants for the
       // function name. The reason is that perf profile might have been
@@ -1321,6 +1328,9 @@ void RewriteInstance::discoverFileObjects() {
 
     if (!AlternativeName.empty())
       BF->addAlternativeName(AlternativeName);
+
+    if (IsDuplicate)
+      BF->setIgnored();
 
     registerName(SymbolSize);
     PreviousFunction = BF;
