@@ -598,6 +598,10 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Fixed false positive for host-device ambiguities when retrieving the address
+  of specializations of templated functions that have overloads for both host
+  and device.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
