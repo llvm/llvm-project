@@ -32,8 +32,8 @@ define ptx_kernel void @ignore_kernel_noreturn() #0 {
 }
 
 ; CHECK-LABEL: .entry callprototype_noreturn(
-; CHECK: prototype_{{[0-9]+}} : .callprototype ()_ (.param .b32 _) .noreturn;
-; CHECK: prototype_{{[0-9]+}} : .callprototype (.param .b32 _) _ (.param .b32 _);
+; CHECK: {{[$]}}L__prototype_{{[0-9]+}} : .callprototype ()_ (.param .b32 _) .noreturn;
+; CHECK: {{[$]}}L__prototype_{{[0-9]+}} : .callprototype (.param .b32 _) _ (.param .b32 _);
 
 define ptx_kernel void @callprototype_noreturn(i32) {
   %fn = load ptr, ptr addrspace(1) @function_pointer
