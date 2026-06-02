@@ -2083,7 +2083,11 @@ static void emitCallToBadCast(CIRGenFunction &cgf, mlir::Location loc) {
   // TODO(cir): set the calling convention to the runtime function.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 
-  cgf.emitRuntimeCall(loc, getBadCastFn(cgf));
+  mlir::NamedAttrList attrs;
+  attrs.set(cir::CIRDialect::getNoReturnAttrName(),
+            mlir::UnitAttr::get(&cgf.cgm.getMLIRContext()));
+
+  cgf.emitRuntimeCall(loc, getBadCastFn(cgf), {}, attrs);
   cir::UnreachableOp::create(cgf.getBuilder(), loc);
   cgf.getBuilder().clearInsertionPoint();
 }

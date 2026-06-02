@@ -358,7 +358,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let results = (outs
-    CIR_PtrToAnyOf<[CIR_VoidType, CIR_RecordType]>:$result
+    CIR_PtrToAnyOf<[CIR_VoidType, CIR_StructType, CIR_UnionType]>:$result
   );
 
   let assemblyFormat = [{
@@ -4420,7 +4420,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// record type. Otherwise returns the full type size.
     unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
       if (getSkipTailPadding())
-        return mlir::cast<cir::RecordType>(getType().getPointee())
+        return mlir::cast<cir::StructType>(getType().getPointee())
             .computeStructDataSize(dl);
       return dl.getTypeSize(getType().getPointee());
     }
@@ -4668,6 +4668,84 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+}
+
+//===----------------------------------------------------------------------===//
+// LifetimeStartOp & LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LifetimeStartOp : CIR_Op<"lifetime.start"> {
+  let summary = "Marks the start of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.start` operation marks the beginning of the lifetime
+    of the storage pointed to by `$ptr`. Between this operation and a
+    matching `cir.lifetime.end` on the same pointer, the underlying storage
+    is considered live; outside that range it is considered dead, and the
+    optimizer is free to reuse the storage for other purposes.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`. For the
+    lifetime to be meaningful, a matching `cir.lifetime.end` on the same
+    pointer should follow on every control-flow path. This is different from
+    LLVM, where an `llvm.lifetime.start` may appear without a matching
+    `llvm.lifetime.end` -- there the storage is also implicitly marked dead
+    when the function returns (see the
+    [LLVM LangRef](https://llvm.org/docs/LangRef.html#int-lifestart)).
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.start`.
+
+    Example:
+    ```
+    cir.lifetime.start %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
+}
+
+def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
+  let summary = "Marks the end of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.end` operation marks the end of the lifetime of the
+    storage pointed to by `$ptr`. After this operation the underlying storage
+    is considered dead, and the optimizer is free to reuse the storage for
+    other purposes, until a subsequent `cir.lifetime.start` on the same
+    pointer revives it.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`.
+    `cir.lifetime.end` should be preceded by a matching `cir.lifetime.start` on
+    the same pointer on every control-flow path that reaches it.
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.end`.
+
+    Example:
+    ```
+    cir.lifetime.end %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5902,7 +5980,7 @@ def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
 }
 
 def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
@@ -5927,7 +6005,7 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
 }
 
 def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{
@@ -5993,7 +6071,7 @@ def CIR_BitParityOp : CIR_BitOpBase<"parity", CIR_UIntOfWidths<[32, 64]>> {
 }
 
 def CIR_BitPopcountOp : CIR_BitOpBase<"popcount",
-  CIR_UIntOfWidths<[16, 32, 64]>
+  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
 > {
   let summary = "Get the number of 1-bits in input";
   let description = [{
@@ -6166,93 +6244,53 @@ def CIR_IsFPClassOp : CIR_Op<"is_fp_class", [Pure]> {
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AssumeBundleKind : CIR_I32EnumAttr<
+  "AssumeBundleKind", "kind of cir.assume operand bundle", [
+  I32EnumAttrCase<"None", 0>,
+  I32EnumAttrCase<"Align", 1, "align">,
+  I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
+  I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
+]> {
+}
+
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
   let description = [{
-    The `cir.assume` operation takes a single boolean prediate as its only
+    The `cir.assume` operation takes a single boolean predicate as its first
     argument and does not have any results. The operation tells the optimizer
     that the predicate is always true.
 
-    This operation corresponds to the `__assume` and the `__builtin_assume`
-    builtin functions.
+    An optional operand bundle carries additional assumption metadata,
+    mirroring MLIR LLVM dialect's `llvm.assume` operand bundles
+    (`mlir/include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td`).  The bundle
+    kind is a `AssumeBundleKind` enum; bundle operands follow the kind
+    keyword in the assembly form.  For example,
+    `__builtin_assume_dereferenceable(p, n)` lowers to
+    `cir.assume %true dereferenceable(%p, %n : !cir.ptr<!void>, !u64i)
+    : !cir.bool`, which in turn lowers to
+    `call void @llvm.assume(i1 true) [ "dereferenceable"(ptr, i64) ]`.
+
+    This operation corresponds to the `__assume` / `__builtin_assume`
+    builtins (no bundle), as well as `__builtin_assume_aligned`
+    (`align` bundle), `__builtin_assume_separate_storage`
+    (`separate_storage` bundle), and `__builtin_assume_dereferenceable`
+    (`dereferenceable` bundle).
   }];
 
-  let arguments = (ins CIR_BoolType:$predicate);
+  let arguments = (ins
+    CIR_BoolType:$predicate,
+    DefaultValuedAttr<CIR_AssumeBundleKind,
+                      "::cir::AssumeBundleKind::None">:$bundle_kind,
+    Variadic<CIR_AnyType>:$bundle_args
+  );
 
   let assemblyFormat = [{
-    $predicate `:` type($predicate) attr-dict
-  }];
-}
-
-def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
-  Pure, AllTypesMatch<["pointer", "result"]>
-]> {
-  let summary = "Tell the optimizer that a pointer is aligned";
-  let description = [{
-    The `cir.assume_aligned` operation takes two or three arguments. The first
-    argument `pointer` gives the pointer value whose alignment is to be assumed,
-    and the second argument `align` is an integer attribute that gives the
-    assumed alignment.
-
-    The `offset` argument is optional. If given, it represents misalignment
-    offset. When it's present, this operation tells the optimizer that the
-    pointer is always misaligned to the alignment by `offset` bytes, a.k.a. the
-    pointer yielded by `(char *)pointer - offset` is aligned to the specified
-    alignment. Note that the `offset` argument is an SSA value rather than an
-    attribute, which means that you could pass a dynamically determined value
-    as the mialignment offset.
-
-    The result of this operation has the same value as the `pointer` argument,
-    but it additionally carries any alignment information indicated by this
-    operation.
-
-    This operation corresponds to the `__builtin_assume_aligned` builtin
-    function.
-
-    Example:
-
-    ```
-    // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
-    %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
-
-    // With a misalignment offset of 4 bytes:
-    %2 = cir.const #cir.int<4> : !u64i
-    %3 = cir.assume_aligned %0 alignment 16 [offset %2 : !u64i] : !cir.ptr<!s32i>
-    ```
+    $predicate custom<AssumeBundle>($bundle_kind, $bundle_args,
+                                    type($bundle_args))
+    `:` type($predicate) attr-dict
   }];
 
-  let arguments = (ins CIR_PointerType:$pointer,
-                       I64Attr:$alignment,
-                       Optional<CIR_IntType>:$offset);
-  let results = (outs CIR_PointerType:$result);
-
-  let assemblyFormat = [{
-    $pointer
-    `alignment` $alignment
-    (`[` `offset` $offset^ `:` type($offset) `]`)?
-    `:` qualified(type($pointer)) attr-dict
-  }];
-}
-
-def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
-  SameTypeOperands
-]> {
-  let summary =
-      "Tell the optimizer that two pointers point to different allocations";
-  let description = [{
-    The `cir.assume_separate_storage` operation takes two pointers as arguments,
-    and the operation tells the optimizer that these two pointers point to
-    different allocations.
-
-    This operation corresponds to the `__builtin_assume_separate_storage`
-    builtin function.
-  }];
-
-  let arguments = (ins CIR_VoidPtrType:$ptr1, CIR_VoidPtrType:$ptr2);
-
-  let assemblyFormat = [{
-    $ptr1 `,` $ptr2 `:` qualified(type($ptr1)) attr-dict
-  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -7046,10 +7084,34 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ThrowOpBase
+//===----------------------------------------------------------------------===//
+
+// Common base class shared by `cir.throw` and its EH counterpart
+// `cir.try_throw`. Both operations carry the same operands and attributes
+// (an optional exception pointer, an optional RTTI symbol and an optional
+// destructor symbol) and use the same verifier logic; subclasses contribute
+// any additional traits, successors and assembly format pieces.
+class CIR_ThrowOpBase<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, traits> {
+  let arguments = (ins
+    Optional<CIR_PointerType>:$exception_ptr,
+    OptionalAttr<FlatSymbolRefAttr>:$type_info,
+    OptionalAttr<FlatSymbolRefAttr>:$dtor
+  );
+
+  let extraClassDeclaration = [{
+    bool rethrows() { return getNumOperands() == 0; }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ThrowOp
 //===----------------------------------------------------------------------===//
 
-def CIR_ThrowOp : CIR_Op<"throw"> {
+def CIR_ThrowOp : CIR_ThrowOpBase<"throw"> {
   let summary = "(Re)Throws an exception";
   let description = [{
     This operation is equivalent to either __cxa_throw or __cxa_rethrow,
@@ -7084,24 +7146,66 @@ def CIR_ThrowOp : CIR_Op<"throw"> {
     ```
   }];
 
-  let arguments = (ins
-    Optional<CIR_PointerType>:$exception_ptr,
-    OptionalAttr<FlatSymbolRefAttr>:$type_info,
-    OptionalAttr<FlatSymbolRefAttr>:$dtor
-  );
-
   let assemblyFormat = [{
     ($exception_ptr^ `:` type($exception_ptr))?
     (`,` $type_info^)?
     (`,` $dtor^)?
     attr-dict
   }];
+}
 
-  let extraClassDeclaration = [{
-    bool rethrows() { return getNumOperands() == 0; }
+//===----------------------------------------------------------------------===//
+// TryThrowOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TryThrowOp : CIR_ThrowOpBase<"try_throw", [Terminator]> {
+  let summary = "throw an exception with an unwind destination";
+  let description = [{
+    Similar to `cir.throw` but acts as a terminator with two destination
+    blocks: a `normalDest` that should contain a `cir.unreachable`
+    operation (since a throw never returns) and an `unwindDest` that
+    receives control when the throw needs to unwind through an enclosing
+    cleanup or catch handler. This is the EH counterpart of `cir.throw`,
+    analogous to how `cir.try_call` is the EH counterpart of `cir.call`.
+
+    Like `cir.throw`, the absence of operands means rethrow. With operands,
+    it carries the same exception pointer, type info, and optional
+    destructor as `cir.throw`.
+
+    This operation is produced by the FlattenCFG pass for `cir.throw`
+    operations that appear inside a cleanup scope or try region. It is
+    later lowered by the EHABI lowering pass to a `cir.try_call` of
+    `__cxa_throw` (or `__cxa_rethrow`).
+
+    Example:
+
+    ```
+    cir.try_throw %exception_addr : !cir.ptr<!s32i>, @_ZTIi
+        ^normalDest, ^unwindDest
+    ^normalDest:
+      cir.unreachable
+    ^unwindDest:
+      ...
+    ```
   }];
 
-  let hasVerifier = 1;
+  let successors = (successor
+    AnySuccessor:$normalDest,
+    AnySuccessor:$unwindDest
+  );
+
+  let assemblyFormat = [{
+    ($exception_ptr^ `:` type($exception_ptr))?
+    (`,` $type_info^)?
+    (`,` $dtor^)?
+    $normalDest `,` $unwindDest
+    attr-dict
+  }];
+
+  // The EHABI lowering pass replaces every cir.try_throw with a cir.try_call
+  // of __cxa_throw / __cxa_rethrow before the LLVM lowering runs, so no
+  // direct LLVM lowering pattern is needed for this op.
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
