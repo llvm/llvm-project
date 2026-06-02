@@ -441,6 +441,11 @@ Changes in existing checks
   - Avoid false positives when moving object is reinitialized via the base
     class's ``operator=``.
 
+  - Fix a false positive when a moved-from variable is reinitialized
+    via a ``std::tie()`` assignment (e.g. ``std::tie(a, b) = f(std::move(a),
+    std::move(b))``). The tuple assignment writes back through the stored
+    references, which fully reinitializes the captured variables.
+
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by not inheriting
   `CheckedReturnTypes` option from :doc:`bugprone-unused-return-value
