@@ -122,66 +122,66 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.IAddCarry
+// spirv.IAddCarry / spirv.ISubBorrow
 //===----------------------------------------------------------------------===//
 
-struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
-  using Base::Base;
+template <typename Op>
+struct ArithmeticExtendedBinaryFold final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
+  static constexpr bool IsSub = std::is_same_v<Op, spirv::ISubBorrowOp>;
+
+  LogicalResult matchAndRewrite(Op op,
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand1();
     Value rhs = op.getOperand2();
 
-    // iaddcarry (x, 0) = <0, x>
+    // iaddcarry  (x, 0) = <0, x>
+    // isubborrow (x, 0) = <x, 0>
     if (matchPattern(rhs, m_Zero())) {
-      Value constituents[2] = {rhs, lhs};
+      std::array<Value, 2> constituents =
+          IsSub ? std::array{lhs, rhs} : std::array{rhs, lhs};
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                                constituents);
       return success();
     }
 
-    // According to the SPIR-V spec:
-    //
-    //  Result Type must be from OpTypeStruct.  The struct must have two
-    //  members...
-    //
-    //  Member 0 of the result gets the low-order bits (full component width) of
-    //  the addition.
-    //
-    //  Member 1 of the result gets the high-order (carry) bit of the result of
-    //  the addition. That is, it gets the value 1 if the addition overflowed
-    //  the component width, and 0 otherwise.
     Attribute lhsAttr;
     Attribute rhsAttr;
     if (!matchPattern(lhs, m_Constant(&lhsAttr)) ||
         !matchPattern(rhs, m_Constant(&rhsAttr)))
       return failure();
 
-    auto adds = constFoldBinaryOp<IntegerAttr>(
+    auto lowBits = constFoldBinaryOp<IntegerAttr>(
         {lhsAttr, rhsAttr},
-        [](const APInt &a, const APInt &b) { return a + b; });
-    if (!adds)
+        [](const APInt &a, const APInt &b) { return IsSub ? a - b : a + b; });
+    if (!lowBits)
       return failure();
 
-    auto carrys = constFoldBinaryOp<IntegerAttr>(
-        ArrayRef{adds, lhsAttr}, [](const APInt &a, const APInt &b) {
-          APInt zero = APInt::getZero(a.getBitWidth());
-          return a.ult(b) ? (zero + 1) : zero;
+    auto wrapBit = constFoldBinaryOp<IntegerAttr>(
+        {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
+          bool wrapped = IsSub ? a.ult(b) : (a + b).ult(a);
+          return APInt(a.getBitWidth(), wrapped ? 1 : 0);
         });
-
-    if (!carrys)
+    if (!wrapBit)
       return failure();
 
     rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
-        op, op.getType(), rewriter.getArrayAttr({adds, carrys}));
+        op, op.getType(), rewriter.getArrayAttr({lowBits, wrapBit}));
     return success();
   }
 };
 
+using IAddCarryFold = ArithmeticExtendedBinaryFold<spirv::IAddCarryOp>;
 void spirv::IAddCarryOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<IAddCarryFold>(context);
+}
+
+using ISubBorrowFold = ArithmeticExtendedBinaryFold<spirv::ISubBorrowOp>;
+void spirv::ISubBorrowOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<ISubBorrowFold>(context);
 }
 
 //===----------------------------------------------------------------------===//

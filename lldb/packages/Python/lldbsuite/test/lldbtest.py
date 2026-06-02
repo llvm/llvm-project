@@ -783,13 +783,28 @@ class Base(unittest.TestCase):
         """Create the test-specific working directory, optionally deleting any
         previous contents."""
         bdir = self.getBuildDir()
+        if sys.platform == "win32" and len(bdir) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test build directory path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(bdir)
+            )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
         """Return absolute path to an artifact in the test's build directory."""
-        return os.path.join(self.getBuildDir(), name)
+        artifact_path = os.path.join(self.getBuildDir(), name)
+        if sys.platform == "win32" and len(artifact_path) > 256:
+            import warnings
+
+            warnings.warn(
+                "Test artifact path exceeds 256 characters (Windows "
+                "MAX_PATH limit): {}".format(artifact_path)
+            )
+        return artifact_path
 
     def getSourcePath(self, name):
         """Return absolute path to a file in the test's source directory."""
@@ -2004,6 +2019,11 @@ class LLDBTestCaseFactory(type):
             if attrname.startswith("test") and not getattr(
                 attrvalue, "__no_debug_info_test__", False
             ):
+                # Track only the entries created by THIS attrname so that
+                # variant expansion doesn't accidentally double-expand entries
+                # from a sibling test method whose name happens to be a strict
+                # prefix of attrname (e.g. test_foo vs test_foo_bar).
+                this_attr_entries = {}
                 # Create debug info variants unless NO_DEBUG_INFO_TESTCASE
                 if not original_testcase.NO_DEBUG_INFO_TESTCASE:
                     # If any debug info categories were explicitly tagged, assume that list to be
@@ -2052,23 +2072,31 @@ class LLDBTestCaseFactory(type):
                         if skip_reason:
                             test_method = unittest.skip(skip_reason)(test_method)
 
-                        newattrs[method_name] = test_method
+                        this_attr_entries[method_name] = test_method
                 else:
-                    # NO_DEBUG_INFO_TESTCASE — put method in newattrs for variant expansion
-                    newattrs[attrname] = attrvalue
+                    # NO_DEBUG_INFO_TESTCASE — put method in this_attr_entries
+                    # for variant expansion.
+                    this_attr_entries[attrname] = attrvalue
 
-                # Expand test variants (e.g. additional variant dimensions)
+                # Expand test variants only on the entries we just created
+                # for this attrname, not on the whole newattrs dict (which
+                # would double-expand sibling methods whose names share a
+                # prefix).
                 for variant in _test_variants:
                     if variant.should_expand(attrvalue):
                         xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                         skip_fns = getattr(attrvalue, "__variant_skip__", {})
-                        newattrs = _expand_test_variants(
+                        this_attr_entries = _expand_test_variants(
                             attrname,
-                            newattrs,
+                            this_attr_entries,
                             variant,
                             xfail_fns=xfail_fns,
                             skip_fns=skip_fns,
                         )
+
+                # Merge this attrname's variant-expanded entries into
+                # newattrs.
+                newattrs.update(this_attr_entries)
 
             else:
                 newattrs[attrname] = attrvalue
