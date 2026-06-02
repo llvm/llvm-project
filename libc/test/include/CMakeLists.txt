@@ -30,8 +30,6 @@ add_libc_test(
   DEPENDS
     libc.include.llvm-libc-macros.unistd_macros
 )
-
-
 add_libc_test(
   sys_queue_test
   SUITE
