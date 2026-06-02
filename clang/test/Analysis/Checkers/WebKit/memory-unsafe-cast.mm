@@ -80,4 +80,20 @@ void fn_cast_01(Base* base) {
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
   fnArgCast(static_cast<void*>(base));
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d5 = (Derived*)(void*)base;
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d6 = static_cast<Derived*>((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d7 = (Derived*)reinterpret_cast<void*>(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d8 = (Derived*)returnCast(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  fnArgCast(base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d9 = reinterpret_cast<Derived*>(static_cast<void*>(base));
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
+  auto* d10 = reinterpret_cast<Derived*>((void*)base);
+  // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
 }

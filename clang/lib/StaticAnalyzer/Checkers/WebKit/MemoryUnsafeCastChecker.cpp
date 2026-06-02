@@ -122,9 +122,9 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                          .bind(DerivedNode)))))),
             unless(anyOf(hasSourceExpression(hasDescendant(cxxThisExpr())),
                          hasType(templateTypeParmDecl()))));
-  auto MatchExprPtrVoidCast = cxxStaticCastExpr(
+  auto MatchExprPtrVoidCast = allOf(
       anyOf(
-          hasSourceExpression(cxxStaticCastExpr(
+          hasSourceExpression(explicitCastExpr(
               hasType(pointerType(pointee(voidType()))),
               hasSourceExpression(ignoringImpCasts(
                   hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))),
@@ -146,14 +146,16 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, BR, ADC, this, BT);
 
-  // Match calls returning derived type where an argument is static_cast<void*>(Base*)
+  // Match calls returning derived type where an argument is a void pointer
+  auto VoidPtrCast = castExpr(
+      hasType(pointerType(pointee(voidType()))),
+      hasSourceExpression(ignoringImpCasts(
+          hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))
+      .bind(WarnRecordDecl);
   auto MatchCallPtrVoidArgCast = callExpr(
-      hasAnyArgument(
-          cxxStaticCastExpr(
-              hasType(pointerType(pointee(voidType()))),
-              hasSourceExpression(ignoringImpCasts(
-                  hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))
-              .bind(WarnRecordDecl)),
+      hasAnyArgument(anyOf(
+          VoidPtrCast,
+          explicitCastExpr(hasSourceExpression(VoidPtrCast)))),
       hasTypePointingTo(
           cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode))).bind(DerivedNode)));
   auto CallArgCast = stmt(MatchCallPtrVoidArgCast);
