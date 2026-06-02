@@ -9,7 +9,10 @@ load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_import", "cc_library", "objc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
-load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS", "WINDOWS_EXCLUDED_PLUGINS")
+
+_ALL_PLUGIN_DEPS = ["//lldb/source/Plugins:Plugin{}".format(x) for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS]
+_WINDOWS_PLUGIN_DEPS = ["//lldb/source/Plugins:Plugin{}".format(x) for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS if x not in WINDOWS_EXCLUDED_PLUGINS]
 load("//mlir:build_defs.bzl", "cc_headers_only")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
@@ -110,9 +113,6 @@ expand_template(
     name = "ConfigHeader",
     out = "include/lldb/Host/Config.h",
     substitutions = {
-        "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
-        "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
-
         # TODO: Add LZMA support by including the library in bazel
         "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
 
@@ -143,8 +143,6 @@ expand_template(
         # Would cause tests to run with MTE.
         "#cmakedefine01 LLDB_ENABLE_MTE": "#define LLDB_ENABLE_MTE 0",
 
-        # Defaults that could be configurable if needed
-        "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
@@ -155,8 +153,11 @@ expand_template(
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 1",
             "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
+            "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
+            "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
@@ -164,9 +165,24 @@ expand_template(
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
+            "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
             "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
             "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
+            "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
+            "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
+        },
+        "@platforms//os:windows": {
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 0",
+            "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
+            "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 0",
+            "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
+            "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 0",
+            "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 0",
+            "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
     }) | select({
         ":curses_enabled": {
@@ -229,6 +245,10 @@ cc_library(
         "source/API/**/*.h",
     ]),
     hdrs = glob(["include/lldb/API/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
+    defines = select({
+        "@platforms//os:windows": ["LLDB_IN_LIBLLDB"],
+        "//conditions:default": [],
+    }),
     includes = ["include"],
     deps = [
         ":Breakpoint",
@@ -254,10 +274,10 @@ cc_library(
         "//llvm:MCJIT",
         "//llvm:Support",
         "//llvm:config",
-    ] + [
-        "//lldb/source/Plugins:Plugin{}".format(x)
-        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
     ] + select({
+        "@platforms//os:windows": _WINDOWS_PLUGIN_DEPS,
+        "//conditions:default": _ALL_PLUGIN_DEPS,
+    }) + select({
         "@platforms//os:macos": [
             "//lldb/source/Plugins:PluginProcessMacOSXKernel",
             "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
@@ -345,9 +365,15 @@ cc_library(
         ":Utility",
         ":Version",
         "//lldb/source/Plugins:PluginProcessGDBRemote",
-        "//lldb/source/Plugins:PluginProcessPOSIX",
         "//llvm:Support",
-    ],
+    ] + select({
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
+        "//conditions:default": [
+            "//lldb/source/Plugins:PluginProcessPOSIX",
+        ],
+    }),
 )
 
 gentbl_cc_library(
@@ -562,6 +588,11 @@ cc_library(
                 "source/Host/posix/**/*.cpp",
             ],
         ),
+        "@platforms//os:windows": glob([
+            "source/Host/windows/**/*.cpp",
+        ]) + [
+            "source/Host/posix/ConnectionFileDescriptorPosix.cpp",
+        ],
     }) + select({
         ":libedit_enabled": ["source/Host/common/Editline.cpp"],
         "//conditions:default": [],
@@ -583,6 +614,11 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob([
+            "include/lldb/Host/posix/*.h",
+            "include/lldb/Host/windows/*.h",
+            "include/lldb/Host/windows/**/*.h",
+        ]),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],
@@ -596,6 +632,12 @@ cc_library(
             "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
+        ],
+        "@platforms//os:windows": [
+            "rpcrt4.lib",
+            "version.lib",
+            "dbghelp.lib",
+            "pathcch.lib",
         ],
         "//conditions:default": [],
     }) + select({
@@ -943,7 +985,10 @@ cc_binary(
         ":lldb_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
-    ],
+    ] + select({
+        "@platforms//os:windows": [":Host"],
+        "//conditions:default": [],
+    }),
 )
 
 cc_library(
