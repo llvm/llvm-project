@@ -67,7 +67,7 @@ add_clang_library(clangCIR
   clangBasic
   clangLex
   ${dialect_libs}
-  CIRDialectRegistration
+  CIRRegisterAllDialects
   CIROpenACCSupport
   CIROpenMPSupport
   MLIRCIR

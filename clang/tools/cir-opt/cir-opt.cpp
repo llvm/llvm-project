@@ -21,8 +21,8 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-#include "clang/CIR/Dialect/CIRDialectRegistration.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/Passes.h"
 
 struct CIRToLLVMPipelineOptions
@@ -31,7 +31,7 @@ struct CIRToLLVMPipelineOptions
 int main(int argc, char **argv) {
   // TODO: register needed MLIR passes for CIR?
   mlir::DialectRegistry registry;
-  cir::registerCIRDialects(registry);
+  cir::registerAllDialects(registry);
   registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 
   ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
