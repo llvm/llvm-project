@@ -1373,28 +1373,3 @@ def z_vsei32_by_parts : z_vse_by_parts<sext32, 1, 3>;
 def immLSB8 : PatLeaf<(imm), [{
   return N->getAPIntValue().getActiveBits() <= 8;
 }]>;
-
-// Matches constants where all bits except the last byte are 1 (0xFF...XX).
-def immAndLSB8 : PatLeaf<(imm), [{
-  uint64_t Val = N->getZExtValue();
-  uint64_t Mask = 0;
-  uint64_t Size = N->getValueType(0).getSizeInBits();
-
-  switch (Size) {
-  case 16:
-    Mask = 0xff00ULL;
-    break;
-  case 32:
-    // Support both full i32 and zero-extended i16 constant.
-    Mask = ((Val & 0xffffff00ULL) == 0xffffff00ULL) ? 0xffffff00ULL
-                                                    : 0x0000ff00ULL;
-    break;
-  case 64:
-    Mask = 0xffffffffffffff00ULL;
-    break;
-  default:
-    return false;
-  }
-
-  return (Val & Mask) == Mask;
-}]>;

@@ -41,44 +41,9 @@ multiclass ZXB<SDPatternOperator operator, RegisterOperand cls,
 // of the second operand.
 class RMWI<SDPatternOperator load, SDPatternOperator operator,
            SDPatternOperator store, AddressingMode mode,
-           PatFrag imm, Instruction insn>
+           ImmLeaf imm, Instruction insn>
   : Pat<(store (operator (load mode:$addr), imm:$src), mode:$addr),
         (insn mode:$addr, (UIMM8 imm:$src))>;
-
-// Handle RMW operations on the Least Significant Byte (LSB) of wider types.
-// This allows targeting byte-level logical instructions for i16, i32,
-// and i64 memory locations when only the last byte is modified.
-multiclass RMWIByteLSB<SDPatternOperator operator, 
-                       ComplexPattern mode12_1, ComplexPattern mode20_1,
-                       ComplexPattern mode12_3, ComplexPattern mode20_3,
-                       ComplexPattern mode12_7, ComplexPattern mode20_7,
-                       Instruction insn12, Instruction insn20,
-                       PatLeaf mask> {
-  // i16 LSB (+1 offset)
-  def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 mode12_1:$addr)),
-             (i32 mask:$imm))), mode12_1:$addr),
-            (insn12 mode12_1:$addr, (as_i8imm $imm))>;
-  def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 mode20_1:$addr)),
-             (i32 mask:$imm))), mode20_1:$addr),
-            (insn20 mode20_1:$addr, (as_i8imm $imm))>;
-
-
-  // i32 LSB (+3 offset)
-  def : Pat<(store (i32 (operator (i32 (load mode12_3:$addr)),
-             (i32 mask:$imm))), mode12_3:$addr),
-            (insn12 mode12_3:$addr, (as_i8imm $imm))>;
-  def : Pat<(store (i32 (operator (i32 (load mode20_3:$addr)),
-             (i32 mask:$imm))), mode20_3:$addr),
-            (insn20 mode20_3:$addr, (as_i8imm $imm))>;
-
-  // i64 LSB (+7 offset)
-  def : Pat<(store (i64 (operator (i64 (load mode12_7:$addr)),
-             (i64 mask:$imm))), mode12_7:$addr),
-            (insn12 mode12_7:$addr, (as_i8imm $imm))>;
-  def : Pat<(store (i64 (operator (i64 (load mode20_7:$addr)),
-             (i64 mask:$imm))), mode20_7:$addr),
-            (insn20 mode20_7:$addr, (as_i8imm $imm))>;
-}
 
 // Record that INSN performs binary operation OPERATION on a byte
 // memory location.  IMM is the type of the second operand.
@@ -93,13 +58,39 @@ multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
   def : RMWI<z_anyextloadi8, operator, truncstorei8, bdaddr20pair, imm64,
              insn20>;
 
-  // Conditional folding for wider types.
-  defm : RMWIByteLSB<operator,
-                     bdaddr12off1, bdaddr20off1,
-                     bdaddr12off3, bdaddr20off3,
-                     bdaddr12off7, bdaddr20off7,
-                     insn12, insn20,
-                     !if(!eq(operator, and), immAndLSB8, immLSB8)>;
+  // 12-bit instruction variants.
+  def : Pat<(truncstorei16 (i32 (operator
+               (i32 (anyextloadi16 bdaddr12off1:$addr)),
+               (i32 !if(!eq(operator, and), imm32ll8c, immLSB8):$imm))),
+               bdaddr12off1:$addr),
+            (insn12 bdaddr12off1:$addr, (UIMM8 $imm))>;
+
+  def : Pat<(store (i32 (operator (i32 (load bdaddr12off3:$addr)),
+               (i32 !if(!eq(operator, and), imm32ll8c, immLSB8):$imm))),
+               bdaddr12off3:$addr),
+            (insn12 bdaddr12off3:$addr, (UIMM8 $imm))>;
+
+  def : Pat<(store (i64 (operator (i64 (load bdaddr12off7:$addr)),
+               (i64 !if(!eq(operator, and), imm64ll8c, immLSB8):$imm))),
+               bdaddr12off7:$addr),
+            (insn12 bdaddr12off7:$addr, (UIMM8 $imm))>;
+
+  // 20-bit instruction variants.
+  def : Pat<(truncstorei16 (i32 (operator
+               (i32 (anyextloadi16 bdaddr20off1:$addr)),
+               (i32 !if(!eq(operator, and), imm32ll8c, immLSB8):$imm))),
+               bdaddr20off1:$addr),
+            (insn20 bdaddr20off1:$addr, (UIMM8 $imm))>;
+
+  def : Pat<(store (i32 (operator (i32 (load bdaddr20off3:$addr)),
+               (i32 !if(!eq(operator, and), imm32ll8c, immLSB8):$imm))),
+               bdaddr20off3:$addr),
+            (insn20 bdaddr20off3:$addr, (UIMM8 $imm))>;
+
+  def : Pat<(store (i64 (operator (i64 (load bdaddr20off7:$addr)),
+               (i64 !if(!eq(operator, and), imm64ll8c, immLSB8):$imm))),
+               bdaddr20off7:$addr),
+            (insn20 bdaddr20off7:$addr, (UIMM8 $imm))>;
 }
 
 // Record that INSN performs insertion TYPE into a register of class CLS.
