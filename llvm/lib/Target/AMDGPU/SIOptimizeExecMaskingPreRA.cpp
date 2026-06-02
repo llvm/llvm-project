@@ -41,11 +41,12 @@ private:
   MCRegister CondReg;
   MCRegister ExecReg;
 
-  bool matchAndWithExec(MachineInstr &And, MachineOperand *&AndCC) const;
+  bool matchAndWithExec(MachineInstr &And, MachineOperand *&AndCC,
+                        MachineOperand *&AndExec) const;
   SlotIndex replaceAndWithAndN2(MachineBasicBlock &MBB, MachineInstr &And,
+                                const MachineOperand &Exec,
                                 const MachineOperand &CC, MachineInstr *&Andn2,
-                                bool IsDstDead, bool PreserveCCKill,
-                                bool IsSCCDead);
+                                bool IsDstDead, bool IsSCCDead);
 
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeSccSelectBranch(MachineBasicBlock &MBB);
@@ -145,40 +146,65 @@ static bool matchImmOperands(const MachineOperand &Op0,
          Op1.getImm() == Imm1;
 }
 
+static bool isKillFromLiveRange(const SIRegisterInfo &TRI, LiveIntervals &LIS,
+                                Register Reg, const MachineInstr &MI) {
+  SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
+
+  if (Reg.isVirtual())
+    return LIS.getInterval(Reg).Query(Idx).isKill();
+
+  return llvm::all_of(TRI.regunits(Reg.asMCReg()), [&](MCRegUnit Unit) {
+    return LIS.getRegUnit(Unit).Query(Idx).isKill();
+  });
+}
+
+static void updateKillFlagFromLiveRange(const SIRegisterInfo &TRI,
+                                        LiveIntervals &LIS, Register Reg,
+                                        MachineInstr &MI) {
+  int OpIdx = MI.findRegisterUseOperandIdx(Reg, &TRI);
+  if (OpIdx == -1)
+    return;
+
+  MI.getOperand(OpIdx).setIsKill(isKillFromLiveRange(TRI, LIS, Reg, MI));
+}
+
 bool SIOptimizeExecMaskingPreRA::matchAndWithExec(
-    MachineInstr &And, MachineOperand *&AndCC) const {
+    MachineInstr &And, MachineOperand *&AndCC, MachineOperand *&AndExec) const {
   if (And.getOpcode() != LMC.AndOpc || !And.getOperand(1).isReg() ||
       !And.getOperand(2).isReg())
     return false;
 
   MachineOperand *Op0 = &And.getOperand(1);
   MachineOperand *Op1 = &And.getOperand(2);
-  if (Op0->getReg() == Register(ExecReg))
+  if (Op0->getReg() == Register(ExecReg)) {
+    AndExec = Op0;
     AndCC = Op1;
-  else if (Op1->getReg() == Register(ExecReg))
+  } else if (Op1->getReg() == Register(ExecReg)) {
+    AndExec = Op1;
     AndCC = Op0;
-  else
+  } else
     return false;
 
   return true;
 }
 
 SlotIndex SIOptimizeExecMaskingPreRA::replaceAndWithAndN2(
-    MachineBasicBlock &MBB, MachineInstr &And, const MachineOperand &CC,
-    MachineInstr *&Andn2, bool IsDstDead, bool PreserveCCKill, bool IsSCCDead) {
+    MachineBasicBlock &MBB, MachineInstr &And, const MachineOperand &Exec,
+    const MachineOperand &CC, MachineInstr *&Andn2, bool IsDstDead,
+    bool IsSCCDead) {
   assert(And.getOperand(3).getReg() == AMDGPU::SCC);
+  assert(Exec.getReg() == Register(ExecReg));
 
   MachineOperand Dst = And.getOperand(0);
-  Dst.setIsDead(IsDstDead);
+  MachineOperand ExecOp = Exec;
+  MachineOperand CCOp = CC;
 
-  RegState CCRegState = getUndefRegState(CC.isUndef());
-  if (PreserveCCKill)
-    CCRegState |= getKillRegState(CC.isKill());
+  Dst.setIsDead(IsDstDead);
 
   Andn2 = BuildMI(MBB, And, And.getDebugLoc(), TII->get(LMC.AndN2Opc))
               .add(Dst)
-              .addReg(ExecReg)
-              .addReg(CC.getReg(), CCRegState, CC.getSubReg());
+              .add(ExecOp)
+              .add(CCOp);
 
   MachineOperand &Andn2SCC = Andn2->getOperand(3);
   assert(Andn2SCC.getReg() == AMDGPU::SCC);
@@ -213,7 +239,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   MachineInstr *And =
       TRI->findReachingDef(CondReg, AMDGPU::NoSubRegister, *I, *MRI, LIS);
   MachineOperand *AndCmp = nullptr;
-  if (!And || !matchAndWithExec(*And, AndCmp))
+  MachineOperand *AndExec = nullptr;
+  if (!And || !matchAndWithExec(*And, AndCmp, AndExec))
     return false;
 
   Register CmpReg = AndCmp->getReg();
@@ -269,10 +296,13 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
                     << *And);
 
+  MachineOperand CCOp = *CC;
+  if (CC->isKill())
+    CC->setIsKill(false);
+
   MachineInstr *Andn2 = nullptr;
   SlotIndex AndIdx =
-      replaceAndWithAndN2(MBB, *And, *CC, Andn2, /*IsDstDead=*/false,
-                          /*PreserveCCKill=*/false,
+      replaceAndWithAndN2(MBB, *And, *AndExec, CCOp, Andn2, /*IsDstDead=*/false,
                           /*IsSCCDead=*/And->getOperand(3).isDead());
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
@@ -373,8 +403,9 @@ bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
   MachineInstr *And = TRI->findReachingDef(AMDGPU::SCC, AMDGPU::NoSubRegister,
                                            *BoolSel, *MRI, LIS);
   MachineOperand *AndCC = nullptr;
+  MachineOperand *AndExec = nullptr;
   if (!And || And->getParent() != BoolSel->getParent() ||
-      !matchAndWithExec(*And, AndCC))
+      !matchAndWithExec(*And, AndCC, AndExec))
     return false;
 
   Register AndDst = And->getOperand(0).getReg();
@@ -396,8 +427,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
                     << *BoolSel << '\t' << *Cmp);
 
   MachineInstr *Andn2 = nullptr;
-  replaceAndWithAndN2(MBB, *And, *AndCC, Andn2, /*IsDstDead=*/true,
-                      /*PreserveCCKill=*/true, /*IsSCCDead=*/false);
+  replaceAndWithAndN2(MBB, *And, *AndExec, *AndCC, Andn2,
+                      /*IsDstDead=*/true, /*IsSCCDead=*/false);
 
   SlotIndex BoolSelIdx = LIS->getInstructionIndex(*BoolSel);
   LiveInterval &BoolLI = LIS->getInterval(BoolReg);
@@ -411,6 +442,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
     LIS->removeInterval(BoolReg);
 
   LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
+  updateKillFlagFromLiveRange(*TRI, *LIS, AMDGPU::SCC, *I);
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
   return true;
