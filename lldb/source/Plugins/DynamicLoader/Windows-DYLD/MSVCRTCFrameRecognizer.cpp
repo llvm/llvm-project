@@ -21,8 +21,8 @@ using namespace lldb_private;
 
 namespace lldb_private {
 
-void RegisterMSVCRTCFrameRecognizer(ProcessWindows &process) {
-  process.GetTarget().GetFrameRecognizerManager().AddRecognizer(
+void RegisterMSVCRTCFrameRecognizer(Target &target) {
+  target.GetFrameRecognizerManager().AddRecognizer(
       std::make_shared<MSVCRTCFrameRecognizer>(), ConstString(""),
       {ConstString("failwithmessage")}, Mangled::ePreferDemangled,
       /*first_instruction_only=*/false);
@@ -32,13 +32,6 @@ lldb::RecognizedStackFrameSP
 MSVCRTCFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   // failwithmessage calls __debugbreak() which lands at frame 0.
   if (frame_sp->GetFrameIndex() != 0)
-    return RecognizedStackFrameSP();
-  // Only fire on EXCEPTION_BREAKPOINT (0x80000003), not on other exceptions
-  // that might incidentally have failwithmessage somewhere in the call stack.
-  auto *pw =
-      static_cast<ProcessWindows *>(frame_sp->GetThread()->GetProcess().get());
-  auto exc_code = pw->GetActiveExceptionCode();
-  if (!exc_code || *exc_code != EXCEPTION_BREAKPOINT)
     return RecognizedStackFrameSP();
 
   const char *fn_name = frame_sp->GetFunctionName();
