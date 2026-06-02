@@ -1887,6 +1887,14 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Match Cortex-A53 erratum 843419 workaround veneer. Such veneers have
+  /// exactly one BB with two instructions: a load/store and an unconditional
+  /// branch back to the call site. Returns true if BF matches this pattern
+  /// (name e843419* or __CortexA53843419_*, 2-instruction body).
+  virtual bool matchE843419Veneer(const BinaryFunction &BF) const {
+    return false;
+  }
+
   virtual bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const {
     llvm_unreachable("not implemented");
     return false;

@@ -4858,7 +4858,9 @@ bool BinaryFunction::isAArch64Veneer() const {
 
 bool BinaryFunction::isPossibleVeneer() const {
   return BC.isAArch64() &&
-         (isAArch64Veneer() || getOneName().starts_with("__AArch64"));
+         (isAArch64Veneer() || getOneName().starts_with("__AArch64") ||
+          getOneName().starts_with("e843419") ||
+          getOneName().starts_with("__CortexA53843419_"));
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
