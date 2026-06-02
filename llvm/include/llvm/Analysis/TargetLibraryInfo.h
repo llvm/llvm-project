@@ -43,7 +43,7 @@ template <typename T> class ArrayRef;
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 class VecDesc {
-  friend struct VecDescBuilder;
+  template <size_t, size_t> friend struct VecDescTable;
 
   // String offsets are relative to the this pointer.
   uint16_t ScalarFnNameOff = 0;
@@ -58,11 +58,9 @@ class VecDesc {
 
   constexpr VecDesc() {}
 
-  // Due to the relative string offsets, VecDesc is neither copyable nor
-  // movable. The move constructor has to exist to allow assignment to a
-  // variable.
+  // Due to the relative string offsets, VecDesc is not copyable/movable.
   VecDesc(const VecDesc &) = delete;
-  VecDesc(VecDesc &&) = default;
+  VecDesc(VecDesc &&) = delete;
 
 public:
   StringRef getScalarFnName() const {

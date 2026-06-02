@@ -1257,42 +1257,44 @@ struct VecDescData {
 };
 
 namespace llvm {
-struct VecDescBuilder {
-  template <size_t M, size_t N>
-  static constexpr auto build(const char (&StrTab)[M],
-                              const VecDescData (&Data)[N]) {
-    struct {
-      VecDesc Descs[N];
-      char StringTable[M];
+template <size_t M, size_t N> struct VecDescTable {
+  VecDesc Descs[N];
+  char StringTable[M];
 
-      operator ArrayRef<VecDesc>() const { return ArrayRef(Descs, N); }
-    } Ret{};
+  constexpr VecDescTable(const char (&StrTab)[M],
+                         const VecDescData (&Data)[N]) {
     for (size_t i = 0; i != M; i++)
-      Ret.StringTable[i] = StrTab[i];
-    size_t Off = offsetof(decltype(Ret), StringTable);
+      StringTable[i] = StrTab[i];
+    size_t Off = offsetof(VecDescTable, StringTable);
     for (size_t i = 0; i != N; i++) {
       assert(Off < UINT16_MAX);
-      Ret.Descs[i].ScalarFnNameOff = Off;
+      Descs[i].ScalarFnNameOff = Off;
       Off += Data[i].ScalarFnName.size();
-      Ret.Descs[i].ScalarFnNameSize = Data[i].ScalarFnName.size();
-      Ret.Descs[i].VectorFnNameOff = Off;
+      Descs[i].ScalarFnNameSize = Data[i].ScalarFnName.size();
+      Descs[i].VectorFnNameOff = Off;
       Off += Data[i].VectorFnName.size();
-      Ret.Descs[i].VectorFnNameSize = Data[i].VectorFnName.size();
-      Ret.Descs[i].VectorizationFactor = Data[i].VectorizationFactor;
-      Ret.Descs[i].Masked = Data[i].Masked;
-      Ret.Descs[i].VABIPrefixOff = Off;
+      Descs[i].VectorFnNameSize = Data[i].VectorFnName.size();
+      Descs[i].VectorizationFactor = Data[i].VectorizationFactor;
+      Descs[i].Masked = Data[i].Masked;
+      Descs[i].VABIPrefixOff = Off;
       Off += Data[i].VABIPrefix.size();
-      Ret.Descs[i].VABIPrefixSize = Data[i].VABIPrefix.size();
-      Ret.Descs[i].CC = Data[i].CC;
+      Descs[i].VABIPrefixSize = Data[i].VABIPrefix.size();
+      Descs[i].CC = Data[i].CC;
       Off -= sizeof(VecDesc);
     }
-    return Ret;
   }
+
+  operator ArrayRef<VecDesc>() const { return ArrayRef(Descs, N); }
 };
+
+// Silence warning on possibly unintended CTAD.
+template <size_t N, size_t M>
+VecDescTable(const char (&)[M], const VecDescData (&)[N]) -> VecDescTable<M, N>;
+
 } // namespace llvm
 
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
-static constexpr auto VecFuncs_Accelerate = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_Accelerate(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1301,7 +1303,7 @@ static constexpr auto VecFuncs_Accelerate = VecDescBuilder::build(
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
-static constexpr auto VecFuncs_DarwinLibSystemM = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_DarwinLibSystemM(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1310,7 +1312,7 @@ static constexpr auto VecFuncs_DarwinLibSystemM = VecDescBuilder::build(
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
-static constexpr auto VecFuncs_LIBMVEC_X86 = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_LIBMVEC_X86(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1319,7 +1321,7 @@ static constexpr auto VecFuncs_LIBMVEC_X86 = VecDescBuilder::build(
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
-static constexpr auto VecFuncs_LIBMVEC_AARCH64 = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_LIBMVEC_AARCH64(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
@@ -1331,7 +1333,7 @@ static constexpr auto VecFuncs_LIBMVEC_AARCH64 = VecDescBuilder::build(
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 
 #define TLI_DEFINE_MASSV_VECFUNCS
-static constexpr auto VecFuncs_MASSV = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_MASSV(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1340,7 +1342,7 @@ static constexpr auto VecFuncs_MASSV = VecDescBuilder::build(
 #undef TLI_DEFINE_MASSV_VECFUNCS
 
 #define TLI_DEFINE_SVML_VECFUNCS
-static constexpr auto VecFuncs_SVML = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_SVML(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1349,7 +1351,7 @@ static constexpr auto VecFuncs_SVML = VecDescBuilder::build(
 #undef TLI_DEFINE_SVML_VECFUNCS
 
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
-static constexpr auto VecFuncs_SLEEFGNUABI_VF2 = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_SLEEFGNUABI_VF2(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1359,7 +1361,7 @@ static constexpr auto VecFuncs_SLEEFGNUABI_VF2 = VecDescBuilder::build(
       });
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
-static constexpr auto VecFuncs_SLEEFGNUABI_VF4 = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_SLEEFGNUABI_VF4(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX) SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
     , {
@@ -1369,7 +1371,7 @@ static constexpr auto VecFuncs_SLEEFGNUABI_VF4 = VecDescBuilder::build(
       });
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
-static constexpr auto VecFuncs_SLEEFGNUABI_VFScalable = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_SLEEFGNUABI_VFScalable(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
@@ -1381,20 +1383,19 @@ static constexpr auto VecFuncs_SLEEFGNUABI_VFScalable = VecDescBuilder::build(
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
-static constexpr auto VecFuncs_SLEEFGNUABI_VFScalableRISCV =
-    VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_SLEEFGNUABI_VFScalableRISCV(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
-        , {
+    , {
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
 #include "llvm/Analysis/VecFuncs.def"
-          });
+      });
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 
 #define TLI_DEFINE_ARMPL_VECFUNCS
-static constexpr auto VecFuncs_ArmPL = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_ArmPL(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
   SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
@@ -1406,7 +1407,7 @@ static constexpr auto VecFuncs_ArmPL = VecDescBuilder::build(
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
-static constexpr auto VecFuncs_AMDLIBM = VecDescBuilder::build(
+static constexpr VecDescTable VecFuncs_AMDLIBM(
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   SCAL VEC VABI_PREFIX
 #include "llvm/Analysis/VecFuncs.def"
