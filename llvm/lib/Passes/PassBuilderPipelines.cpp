@@ -1372,7 +1372,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   if (!isFullLTOPostLink(LTOPhase)) {
@@ -1464,7 +1473,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   FPM.addPass(InferAlignmentPass());
