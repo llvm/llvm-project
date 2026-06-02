@@ -207,6 +207,7 @@ add_header_macro(
     .inttypes
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.struct_in_addr
+    .llvm-libc-macros.inet_address_macros
 )
 
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
@@ -217,6 +218,7 @@ add_header_macro(
   netinet/in.h
   DEPENDS
     .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-macros.inet_address_macros
     .llvm-libc-types.in_addr_t
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
