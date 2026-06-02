@@ -6965,6 +6965,23 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
     return;
   }
 
+  // std::init / union_marker (paper §6.5): the initialization profile bans the
+  // marker on a union object or a union member, because delayed initialization
+  // by assigning a member would be an erroneous assignment when compiled
+  // without the profile. Unlike the cases above this is profile policy rather
+  // than a meaningless subject, so it is gated on enforcement (and a union may
+  // still legitimately carry the marker when the profile is not enforced).
+  bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
+  bool UnionMember =
+      isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
+  if ((UnionVar || UnionMember) &&
+      S.shouldEmitProfileViolation("std::init", "union_marker", AL.getLoc())) {
+    S.Diag(AL.getLoc(), diag::err_init_union_marker)
+        << "std::init" << (UnionMember ? 1 : 0);
+    AL.setInvalid();
+    return;
+  }
+
   D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
 }
 

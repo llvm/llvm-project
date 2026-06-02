@@ -14154,4 +14154,7 @@ def err_init_uninit_with_initializer : ProfileRuleError<
 def err_uninitialized_attr_invalid_subject : Error<
   "'uninitialized' attribute cannot be applied to %select{a reference|"
   "a function parameter|a structured binding}0">;
+def err_init_union_marker : ProfileRuleError<
+  "'[[uninitialized]]' cannot be applied to %select{a variable of union type|"
+  "a union member}1 under profile '%0'">;
 } // end of sema component.
