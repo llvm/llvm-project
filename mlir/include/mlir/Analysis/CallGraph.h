@@ -121,7 +121,6 @@ private:
         DenseMapInfo<llvm::PointerIntPair<CallGraphNode *, 2, Edge::Kind>>;
 
     static Edge getEmptyKey() { return Edge(BaseInfo::getEmptyKey()); }
-    static Edge getTombstoneKey() { return Edge(BaseInfo::getTombstoneKey()); }
     static unsigned getHashValue(const Edge &edge) {
       return BaseInfo::getHashValue(edge.targetAndKind);
     }

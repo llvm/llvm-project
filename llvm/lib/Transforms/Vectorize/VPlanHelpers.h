@@ -320,9 +320,6 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
-  /// Choice for how to widen a call at a given VF.
-  enum class CallWideningKind { Scalarize, Intrinsic, VectorVariant };
-
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   LLVMContext &LLVMCtx;
@@ -363,11 +360,6 @@ struct VPCostContext {
 
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;
-
-  /// Returns the legacy call widening decision for \p CI at \p VF, or
-  /// std::nullopt if none was recorded. Used only in asserts.
-  std::optional<CallWideningKind> getLegacyCallKind(CallInst *CI,
-                                                    ElementCount VF) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;

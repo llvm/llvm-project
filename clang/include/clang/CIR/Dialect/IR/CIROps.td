@@ -358,7 +358,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   );
 
   let results = (outs
-    CIR_PtrToAnyOf<[CIR_VoidType, CIR_RecordType]>:$result
+    CIR_PtrToAnyOf<[CIR_VoidType, CIR_StructType, CIR_UnionType]>:$result
   );
 
   let assemblyFormat = [{
@@ -4420,7 +4420,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     /// record type. Otherwise returns the full type size.
     unsigned getCopySizeInBytes(const mlir::DataLayout &dl) {
       if (getSkipTailPadding())
-        return mlir::cast<cir::RecordType>(getType().getPointee())
+        return mlir::cast<cir::StructType>(getType().getPointee())
             .computeStructDataSize(dl);
       return dl.getTypeSize(getType().getPointee());
     }
@@ -4668,6 +4668,84 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+}
+
+//===----------------------------------------------------------------------===//
+// LifetimeStartOp & LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+def CIR_LifetimeStartOp : CIR_Op<"lifetime.start"> {
+  let summary = "Marks the start of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.start` operation marks the beginning of the lifetime
+    of the storage pointed to by `$ptr`. Between this operation and a
+    matching `cir.lifetime.end` on the same pointer, the underlying storage
+    is considered live; outside that range it is considered dead, and the
+    optimizer is free to reuse the storage for other purposes.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`. For the
+    lifetime to be meaningful, a matching `cir.lifetime.end` on the same
+    pointer should follow on every control-flow path. This is different from
+    LLVM, where an `llvm.lifetime.start` may appear without a matching
+    `llvm.lifetime.end` -- there the storage is also implicitly marked dead
+    when the function returns (see the
+    [LLVM LangRef](https://llvm.org/docs/LangRef.html#int-lifestart)).
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.start`.
+
+    Example:
+    ```
+    cir.lifetime.start %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
+}
+
+def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
+  let summary = "Marks the end of the lifetime of a variable produced by a cir.alloca operation";
+  let description = [{
+    The `cir.lifetime.end` operation marks the end of the lifetime of the
+    storage pointed to by `$ptr`. After this operation the underlying storage
+    is considered dead, and the optimizer is free to reuse the storage for
+    other purposes, until a subsequent `cir.lifetime.start` on the same
+    pointer revives it.
+
+    The `cir.scope` is the operation that models the block scope of the C/C++
+    source. Once ClangIR is no longer structured, `cir.scope` can no longer express
+    the lifetime of a local variable. This happens, for example, after `FlattenCFG`,
+    where `cir.scope` regions are dissolved into plain basic blocks, or after
+    `HoistAllocas`, where an alloca is moved to the function entry so that its
+    position no longer reflects the scope it was declared in. In that form, these
+    lifetime markers are what delimit the beginning and end of a variable's
+    lifetime.
+
+    The verifier requires `$ptr` to be produced by a `cir.alloca`.
+    `cir.lifetime.end` should be preceded by a matching `cir.lifetime.start` on
+    the same pointer on every control-flow path that reaches it.
+
+    This operation corresponds to the LLVM intrinsic `llvm.lifetime.end`.
+
+    Example:
+    ```
+    cir.lifetime.end %ptr : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

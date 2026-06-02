@@ -1,5 +1,3 @@
-CodeGen/AArch64/selectopt-cast.ll
-CodeGen/AArch64/selectopt.ll
 CodeGen/ARM/sjljeh-swifterror.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
@@ -56,8 +54,6 @@ Transforms/Coroutines/no-suspend.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-si129tofp.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-ui129tofp.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/callbr.ll
