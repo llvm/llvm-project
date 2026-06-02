@@ -7060,9 +7060,9 @@ static bool isSwitchDense(ArrayRef<int64_t> Values) {
 
 static std::optional<unsigned>
 getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base) {
-  assert(llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }) &&
-         "Base must not exceed any switch case value");
   assert(Values.size() > 1 && "expected multiple switch cases");
+  if (!llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }))
+    return std::nullopt;
 
   // First, transform the values by subtracting Base.
   SmallVector<int64_t, 4> ReducedValues(Values);
@@ -7623,13 +7623,9 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // Prefer Base=0 when the case values are still dense after shifting out their
   // common low zero bits without subtracting a base. This avoids creating an
   // unnecessary `(condition - local_min)` expression.
-  if (Base >= 0) {
-    Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0);
-    if (Shift)
-      Base = 0;
-  }
-  // Otherwise, try the local minimum as the base.
-  if (!Shift)
+  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0)))
+    Base = 0;
+  else if (Base != 0)
     Shift = getDenseSwitchRangeReductionShift(Values, Base);
 
   if (!Shift)
