@@ -166,7 +166,8 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
 
 BinaryContext::~BinaryContext() {
   for (BinarySection *Section : Sections)
-    delete Section;
+    if (!Section->isBackupSection())
+      delete Section;
   for (BinaryFunction *InjectedFunction : InjectedBinaryFunctions)
     delete InjectedFunction;
   for (std::pair<const uint64_t, JumpTable *> JTI : JumpTables)

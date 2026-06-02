@@ -488,8 +488,10 @@ public:
   /// BinarySection.
   void updateContents(const uint8_t *NewData, size_t NewSize) {
     if (getOutputData() && !hasValidSectionID() &&
+        !isBackupSection() &&
         (!hasSectionRef() ||
-         OutputContents.data() != getContentsOrQuit(Section).data())) {
+         OutputContents.data() != getContentsOrQuit(Section).data()) &&
+        OutputContents.data() != Contents.data()) {
       delete[] getOutputData();
     }
 
