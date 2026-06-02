@@ -598,10 +598,6 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
-- Fixed false positive for host-device ambiguities in CUDA/HIP when retrieving
-  the address of specializations of templated functions that have overloads for
-  both host and device. (#GH199299)
-
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -820,6 +816,10 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+
+- Fixed a bug where host-device ambiguities in CUDA/HIP when retrieving the
+  address of specializations of templated functions that have overloads for both
+  host and device. (#GH199299)
 
 AIX Support
 ^^^^^^^^^^^
