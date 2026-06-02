@@ -1466,6 +1466,26 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   Value *Val = SI.getOperand(0);
   Value *Ptr = SI.getOperand(1);
 
+  // If the stored value is a zext or sext of an i1 that is implied by a
+  // dominating branch condition, fold to the known constant value.
+  // e.g. given: br i1 %cond, label %true, label %false
+  //      in %false: store i8 (zext i1 %cond to i8) --> store i8 0
+  {
+    Value *Src;
+    bool IsZExt = match(Val, m_ZExt(m_Value(Src)));
+    bool IsSExt = !IsZExt && match(Val, m_SExt(m_Value(Src)));
+    if ((IsZExt || IsSExt) && Src->getType()->isIntegerTy(1)) {
+      if (auto Known = isImpliedByDomCondition(Src, &SI, DL)) {
+        unsigned Width = Val->getType()->getScalarSizeInBits();
+        APInt ConstVal =
+            *Known ? (IsZExt ? APInt(Width, 1) : APInt::getAllOnes(Width))
+                   : APInt::getZero(Width);
+        return replaceOperand(SI, 0,
+                              ConstantInt::get(Val->getType(), ConstVal));
+      }
+    }
+  }
+
   // Try to canonicalize the stored type.
   if (combineStoreToValueType(*this, SI))
     return eraseInstFromFunction(SI);
