@@ -656,6 +656,26 @@ void structTests() {
     assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
+  // unnamed bit fields
+  {
+    struct S {
+      unsigned int b1 : 1;
+      unsigned int : 30;
+      unsigned int b2 : 1;
+    };
+
+    S s1, s2;
+    memset(&s1, 0, sizeof(S));
+    memset(&s2, 42, sizeof(S));
+
+    s1.b1 = 1;
+    s1.b2 = 1;
+    s2.b1 = 1;
+    s2.b2 = 1;
+    __builtin_clear_padding(&s2);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
+  }
+
   testAllStructsForType<32, 16, char>(11, 22, 33, 44);
   testAllStructsForType<64, 32, char>(4, 5, 6, 7);
   testAllStructsForType<32, 16, volatile char>(11, 22, 33, 44);
