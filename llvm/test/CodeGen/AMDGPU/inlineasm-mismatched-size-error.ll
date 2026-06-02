@@ -77,6 +77,42 @@ define void @inline_asm_i64_in_single_v_use(i64 %val) {
   ret void
 }
 
+; ERR: error: could not allocate output register for constraint '{v0}'
+define ptr @inline_asm_ptr_in_single_v_def() {
+  %asm = call ptr asm sideeffect "; def $0", "={v0}"()
+  ret ptr %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_ptr_in_single_v_use(ptr %val) {
+  call void asm sideeffect "; use $0", "{v0}"(ptr %val)
+  ret void
+}
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define double @inline_asm_double_in_single_v_def() {
+  %asm = call double asm sideeffect "; def $0", "={v0}"()
+  ret double %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_double_in_single_v_use(double %val) {
+  call void asm sideeffect "; use $0", "{v0}"(double %val)
+  ret void
+}
+
+; ERR: error: could not allocate output register for constraint '{v0}'
+define <2 x i32> @inline_asm_2xi32_in_single_v_def() {
+  %asm = call <2 x i32> asm sideeffect "; def $0", "={v0}"()
+  ret <2 x i32> %asm
+}
+
+; ERR: error: could not allocate input reg for constraint '{v0}'
+define void @inline_asm_2xi32_in_single_v_use(<2 x i32> %val) {
+  call void asm sideeffect "; use $0", "{v0}"(<2 x i32> %val)
+  ret void
+}
+
 ; Single registers for vector types that are too wide or too narrow should be
 ; diagnosed.
 
