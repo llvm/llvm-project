@@ -23,7 +23,7 @@ namespace fputil {
 struct Float128 {
   UInt128 bits;
 
-  LIBC_INLINE constexpr Float128() = default;
+  LIBC_INLINE Float128() = default;
 
   LIBC_INLINE constexpr explicit Float128(double x) : bits(0) {
     uint64_t x_bits = cpp::bit_cast<uint64_t>(x);
