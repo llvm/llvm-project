@@ -561,11 +561,13 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
         deferredAnnotations[mangledName] = fd;
     }
     if (!fd->doesThisDeclarationHaveABody()) {
-      if (!fd->doesDeclarationForceExternallyVisibleDefinition())
+      if (!fd->doesDeclarationForceExternallyVisibleDefinition() &&
+          (!fd->isMultiVersion() || !getTarget().getTriple().isAArch64()))
         return;
 
-      errorNYI(fd->getSourceRange(),
-               "function declaration that forces code gen");
+      const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+      cir::FuncType ty = getTypes().getFunctionType(fi);
+      getAddrOfFunction(gd, ty, /*ForVTable=*/false, /*DontDefer=*/false);
       return;
     }
   } else {
