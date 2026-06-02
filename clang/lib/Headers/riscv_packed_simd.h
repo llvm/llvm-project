@@ -67,7 +67,7 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return op __rs1;                                                           \
   }
 
-#define __packed_minmax(name, ty, builtin)                                     \
+#define __packed_binary_builtin(name, ty, builtin)                             \
   static __inline__ ty __DEFAULT_FN_ATTRS                                      \
   __riscv_##name(ty __rs1, ty __rs2) {                                         \
     return builtin(__rs1, __rs2);                                              \
@@ -160,29 +160,53 @@ __packed_unary_op(pneg_i8x8, int8x8_t, -)
 __packed_unary_op(pneg_i16x4, int16x4_t, -)
 __packed_unary_op(pneg_i32x2, int32x2_t, -)
 
+/* Packed Saturating Addition and Subtraction (32-bit) */
+__packed_binary_builtin(psadd_i8x4, int8x4_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psadd_i16x2, int16x2_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psaddu_u8x4, uint8x4_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psaddu_u16x2, uint16x2_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(pssub_i8x4, int8x4_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssub_i16x2, int16x2_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssubu_u8x4, uint8x4_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssubu_u16x2, uint16x2_t, __builtin_elementwise_sub_sat)
+
+/* Packed Saturating Addition and Subtraction (64-bit) */
+__packed_binary_builtin(psadd_i8x8, int8x8_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psadd_i16x4, int16x4_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psadd_i32x2, int32x2_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psaddu_u8x8, uint8x8_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psaddu_u16x4, uint16x4_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(psaddu_u32x2, uint32x2_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(pssub_i8x8, int8x8_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssub_i16x4, int16x4_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssub_i32x2, int32x2_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssubu_u8x8, uint8x8_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssubu_u16x4, uint16x4_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(pssubu_u32x2, uint32x2_t, __builtin_elementwise_sub_sat)
+
 /* Packed Minimum and Maximum (32-bit) */
-__packed_minmax(pmin_i8x4, int8x4_t, __builtin_elementwise_min)
-__packed_minmax(pmin_i16x2, int16x2_t, __builtin_elementwise_min)
-__packed_minmax(pminu_u8x4, uint8x4_t, __builtin_elementwise_min)
-__packed_minmax(pminu_u16x2, uint16x2_t, __builtin_elementwise_min)
-__packed_minmax(pmax_i8x4, int8x4_t, __builtin_elementwise_max)
-__packed_minmax(pmax_i16x2, int16x2_t, __builtin_elementwise_max)
-__packed_minmax(pmaxu_u8x4, uint8x4_t, __builtin_elementwise_max)
-__packed_minmax(pmaxu_u16x2, uint16x2_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmin_i8x4, int8x4_t, __builtin_elementwise_min)
+__packed_binary_builtin(pmin_i16x2, int16x2_t, __builtin_elementwise_min)
+__packed_binary_builtin(pminu_u8x4, uint8x4_t, __builtin_elementwise_min)
+__packed_binary_builtin(pminu_u16x2, uint16x2_t, __builtin_elementwise_min)
+__packed_binary_builtin(pmax_i8x4, int8x4_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmax_i16x2, int16x2_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmaxu_u8x4, uint8x4_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmaxu_u16x2, uint16x2_t, __builtin_elementwise_max)
 
 /* Packed Minimum and Maximum (64-bit) */
-__packed_minmax(pmin_i8x8, int8x8_t, __builtin_elementwise_min)
-__packed_minmax(pmin_i16x4, int16x4_t, __builtin_elementwise_min)
-__packed_minmax(pmin_i32x2, int32x2_t, __builtin_elementwise_min)
-__packed_minmax(pminu_u8x8, uint8x8_t, __builtin_elementwise_min)
-__packed_minmax(pminu_u16x4, uint16x4_t, __builtin_elementwise_min)
-__packed_minmax(pminu_u32x2, uint32x2_t, __builtin_elementwise_min)
-__packed_minmax(pmax_i8x8, int8x8_t, __builtin_elementwise_max)
-__packed_minmax(pmax_i16x4, int16x4_t, __builtin_elementwise_max)
-__packed_minmax(pmax_i32x2, int32x2_t, __builtin_elementwise_max)
-__packed_minmax(pmaxu_u8x8, uint8x8_t, __builtin_elementwise_max)
-__packed_minmax(pmaxu_u16x4, uint16x4_t, __builtin_elementwise_max)
-__packed_minmax(pmaxu_u32x2, uint32x2_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmin_i8x8, int8x8_t, __builtin_elementwise_min)
+__packed_binary_builtin(pmin_i16x4, int16x4_t, __builtin_elementwise_min)
+__packed_binary_builtin(pmin_i32x2, int32x2_t, __builtin_elementwise_min)
+__packed_binary_builtin(pminu_u8x8, uint8x8_t, __builtin_elementwise_min)
+__packed_binary_builtin(pminu_u16x4, uint16x4_t, __builtin_elementwise_min)
+__packed_binary_builtin(pminu_u32x2, uint32x2_t, __builtin_elementwise_min)
+__packed_binary_builtin(pmax_i8x8, int8x8_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmax_i16x4, int16x4_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmax_i32x2, int32x2_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmaxu_u8x8, uint8x8_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmaxu_u16x4, uint16x4_t, __builtin_elementwise_max)
+__packed_binary_builtin(pmaxu_u32x2, uint32x2_t, __builtin_elementwise_max)
 
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)
@@ -239,7 +263,7 @@ __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 #undef __packed_scalar_binary_op
 #undef __packed_binary_op
 #undef __packed_unary_op
-#undef __packed_minmax
+#undef __packed_binary_builtin
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)
