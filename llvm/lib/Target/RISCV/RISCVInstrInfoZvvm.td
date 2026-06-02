@@ -29,7 +29,7 @@ def TileLambdaOp : RISCVOp {
   let PrintMethod = "printTileLambda";
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmNonZeroOperand<3>";
-  let OperandType = "OPERAND_UIMM3";
+  let OperandType = "OPERAND_UIMM3_NONZERO";
 }
 
 def VScaleAsmOperand : AsmOperandClass {
