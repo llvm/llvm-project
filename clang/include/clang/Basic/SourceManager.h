@@ -924,7 +924,6 @@ public:
   /// being \#included from the specified IncludePosition.
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
-                      int LoadedID = 0,
                       llvm::TextEncodingConverter *Converter, int LoadedID = 0,
                       SourceLocation::UIntTy LoadedOffset = 0);
 
