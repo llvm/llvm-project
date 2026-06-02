@@ -11,16 +11,10 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPUUnitTests.h"
 #include "GCNSubtarget.h"
-#include "SIProgramInfo.h"
-#include "Utils/AMDGPUPALMetadata.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -34,7 +28,6 @@ protected:
   std::unique_ptr<MachineModuleInfo> MMI;
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<Module> M;
-  AMDGPUPALMetadata MD;
 
   AMDGPUMCExprTest() {
 
@@ -85,7 +78,7 @@ TEST_F(AMDGPUMCExprTest, MaxFoldKnownBitsSignedness) {
 }
 
 // min(((external_unknown & 0) | 0x8000000000000000), 5)
-TEST_F(AMDGPUMCExprTest, MinFolddKnownBitsSignedness) {
+TEST_F(AMDGPUMCExprTest, MinFoldKnownBitsSignedness) {
   MCContext &Ctx = MF->getContext();
 
   // Set up the unknown/undefined part of the expression
