@@ -89,9 +89,8 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
   llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
   TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
                            /*IsDefaulted=*/true);
-  SizeParam->setDefaultArgument(
-      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
-                                                  SourceLocation(), SizeParam));
+  SizeParam->setDefaultArgument(AST, SemaPtr->getTrivialTemplateArgumentLoc(
+                                         Default, AST.IntTy, SourceLocation()));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
@@ -146,7 +145,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   RowsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(RDefault, AST.IntTy,
-                                                  SourceLocation(), RowsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(RowsParam);
 
   auto *ColsParam = NonTypeTemplateParmDecl::Create(
@@ -158,7 +157,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   ColsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(CDefault, AST.IntTy,
-                                                  SourceLocation(), ColsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(ColsParam);
 
   const unsigned MaxMatDim = SemaPtr->getLangOpts().MaxMatrixDimension;
@@ -726,6 +725,10 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   auto It = Completions.find(Record);
   if (It == Completions.end())
     return;
-  It->second(Record);
+  // Move out the callback and erase before invoking it: the callback can
+  // re-enter CompleteType and mutate Completions, which invalidates It under
+  // backward-shift deletion.
+  CompletionFunction Fn = std::move(It->second);
   Completions.erase(It);
+  Fn(Record);
 }

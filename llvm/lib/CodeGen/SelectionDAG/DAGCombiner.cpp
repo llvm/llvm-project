@@ -17386,7 +17386,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (N0.getOpcode() == ISD::BITCAST && !VT.isVector()) {
     SDValue VecSrc = N0.getOperand(0);
     EVT VecSrcVT = VecSrc.getValueType();
-    if (VecSrcVT.isVector() && VecSrcVT.getScalarType() == VT &&
+    if (VecSrcVT.isVectorOf(VT) &&
         (!LegalOperations ||
          TLI.isOperationLegal(ISD::EXTRACT_VECTOR_ELT, VecSrcVT))) {
       unsigned Idx = isLE ? 0 : VecSrcVT.getVectorNumElements() - 1;
@@ -17970,8 +17970,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // If we have frozen and unfrozen users of N0, update so everything uses N.
   if (!N0.isUndef() && !N0.hasOneUse()) {
     SDValue FrozenN0(N, 0);
-    // Unfreeze all uses of N to avoid double deleting N from the CSE map.
-    DAG.ReplaceAllUsesOfValueWith(FrozenN0, N0);
+    // Unfreeze all (possibly nested) uses of N to avoid double deleting N from
+    // the CSE map.
+    while (!N->use_empty())
+      DAG.ReplaceAllUsesOfValueWith(FrozenN0, N0);
     DAG.ReplaceAllUsesOfValueWith(N0, FrozenN0);
     // ReplaceAllUsesOfValueWith will have also updated the use in N, thus
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
@@ -19300,10 +19302,9 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     auto TrueOpnd  = dyn_cast<ConstantFPSDNode>(Select.getOperand(1));
     auto FalseOpnd = dyn_cast<ConstantFPSDNode>(Select.getOperand(2));
 
-    if (TrueOpnd && FalseOpnd &&
-        Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == X &&
-        isa<ConstantFPSDNode>(Cond.getOperand(1)) &&
-        cast<ConstantFPSDNode>(Cond.getOperand(1))->isExactlyValue(0.0)) {
+    if (TrueOpnd && FalseOpnd && Cond.getOpcode() == ISD::SETCC &&
+        Cond.getOperand(0) == X && isa<ConstantFPSDNode>(Cond.getOperand(1)) &&
+        cast<ConstantFPSDNode>(Cond.getOperand(1))->isPosZero()) {
       ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
       switch (CC) {
       default: break;
@@ -19382,8 +19383,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   }
 
   if (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs()) {
-    if (N->getFlags().hasNoSignedZeros() ||
-        (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
+    if (N->getFlags().hasNoSignedZeros() || (N2CFP && !N2CFP->isNegZero())) {
       if (N0CFP && N0CFP->isZero())
         return N2;
       if (N1CFP && N1CFP->isZero())
@@ -27575,7 +27575,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
 
   // ty1 extract_vector(ty2 splat(V))) -> ty1 splat(V)
   if (V.getOpcode() == ISD::SPLAT_VECTOR)
-    if (DAG.isConstantValueOfAnyType(V.getOperand(0)) || V.hasOneUse())
+    if ((DAG.isConstantValueOfAnyType(V.getOperand(0)) &&
+         !(NVT.isScalableVector() &&
+           TLI.isExtractSubvectorCheap(NVT, V.getValueType(), ExtIdx))) ||
+        V.hasOneUse())
       if (!LegalOperations || TLI.isOperationLegal(ISD::SPLAT_VECTOR, NVT))
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 

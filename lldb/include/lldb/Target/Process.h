@@ -1619,9 +1619,6 @@ public:
                             Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
-  /// This calls ReadMemoryFromInferior multiple times, once per range,
-  /// bypassing the read cache. Process implementations that can perform this
-  /// operation more efficiently should override this.
   ///
   /// \param[in] ranges
   ///     A collection of ranges (base address + size) to read from.
@@ -1636,7 +1633,7 @@ public:
   ///     of the slice indicates how many bytes were read successfully. Partial
   ///     reads are always performed from the start of the requested range,
   ///     never from the middle or end.
-  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buffer);
 
@@ -2307,8 +2304,12 @@ protected:
   UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
 
 public:
+  /// Performs `action` on `site`. If `forbid_delay` is true, the action is
+  /// performed immediately, otherwise the method will delay the breakpoint if
+  /// it is correct to do so.
   llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                          Process::BreakpointAction action);
+                                          Process::BreakpointAction action,
+                                          bool forbid_delay);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -3042,6 +3043,13 @@ protected:
   ///     Zero is returned in the case of an error.
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
+
+  /// Reads each range individually via ReadMemoryFromInferior, bypassing the
+  /// memory cache. Subclasses may override it to batch the reads more
+  /// efficiently.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer);
 
   virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                               const uint8_t *buf, size_t size,

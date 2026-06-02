@@ -174,15 +174,22 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
     Ctx.diagnose(DiagnosticInfoUnsupported(
         F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
   }
+  if (hasFeature(AMDGPU::FeatureXNACKAnyOnly) && TargetID.isXnackOnOrOff()) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "target only supports xnack 'Any'; '+/-xnack' is not allowed"));
+  }
 }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                           const GCNTargetMachine &TM)
+                           const GCNTargetMachine &TM, bool BufferOOBRelaxed,
+                           bool TBufferOOBRelaxed)
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
+    BufferOOBRelaxed(BufferOOBRelaxed),
+    TBufferOOBRelaxed(TBufferOOBRelaxed),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
     TLInfo(TM, *this),
     // Frame index expansion sometimes assumes the low bit of SP is 0

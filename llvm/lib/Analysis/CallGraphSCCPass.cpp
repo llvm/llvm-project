@@ -678,7 +678,7 @@ namespace {
       auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
-        OS << Banner;
+        OS << Banner << "\n";
         BannerPrinted = true;
       };
 

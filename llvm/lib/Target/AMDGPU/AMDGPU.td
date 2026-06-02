@@ -155,11 +155,6 @@ defm UnalignedDSAccess : AMDGPUSubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
-defm RelaxedBufferOOBMode : AMDGPUSubtargetFeature<"relaxed-buffer-oob-mode",
-  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially"
-  "cause an adjacent access to be treated as if it were also OOB"
->;
-
 defm DX10ClampAndIEEEMode : AMDGPUSubtargetFeature<"dx10-clamp-and-ieee-mode",
   "Target has DX10_CLAMP and IEEE_MODE kernel descriptor bits"
 >;
@@ -210,6 +205,10 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
   "Hardware supports XNACK"
+>;
+
+defm XNACKAnyOnly : AMDGPUSubtargetFeature<"xnack-any-only",
+  "Target only supports XnackSetting to be Any"
 >;
 
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
@@ -2214,9 +2213,10 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
-    [FeatureAddressableLocalMemorySize327680,
-     FeatureSetregVGPRMSBFixup,
-     FeatureRequiresCOV6])>;
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup,
+   FeatureRequiresCOV6,
+   FeatureXNACKAnyOnly])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2788,6 +2788,9 @@ def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts()">,
+  AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 

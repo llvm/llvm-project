@@ -186,9 +186,9 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 
   // Note that clang CodeGen emits struct{ptrdiff_t, ptrdiff_t} for member
   // function pointers. Let's follow this approach.
-  return cir::RecordType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
+  return cir::StructType::get(type.getContext(), {ptrdiffCIRTy, ptrdiffCIRTy},
                               /*packed=*/false, /*padded=*/false,
-                              cir::RecordType::Struct);
+                              /*is_class=*/false);
 }
 
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
@@ -217,10 +217,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
     const mlir::TypeConverter &typeConverter) const {
   cir::IntType ptrdiffCIRTy = getPtrDiffCIRTy(lm);
 
-  // lowerMethodType returns the CIR type used to represent the method pointer
-  // in an ABI-specific way. That's why lowerMethodType returns cir::RecordType
-  // here.
-  auto loweredMethodTy = mlir::cast<cir::RecordType>(
+  auto loweredMethodTy = mlir::cast<cir::StructType>(
       lowerMethodType(attr.getType(), typeConverter));
 
   auto zero = cir::IntAttr::get(ptrdiffCIRTy, 0);
@@ -684,10 +681,11 @@ mlir::Value LowerItaniumCXXABI::lowerMethodToBoolCast(
 
 static void buildBadCastCall(mlir::OpBuilder &builder, mlir::Location loc,
                              mlir::FlatSymbolRefAttr badCastFuncRef) {
-  cir::CallOp::create(builder, loc, badCastFuncRef, /*resType=*/cir::VoidType(),
-                      /*operands=*/mlir::ValueRange{});
-  // TODO(cir): Set the 'noreturn' attribute on the function.
-  assert(!cir::MissingFeatures::opFuncNoReturn());
+  auto callOp = cir::CallOp::create(builder, loc, badCastFuncRef,
+                                    /*resType=*/cir::VoidType(),
+                                    /*operands=*/mlir::ValueRange{});
+  callOp->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                  builder.getUnitAttr());
 
   cir::UnreachableOp::create(builder, loc);
   builder.clearInsertionPoint();
