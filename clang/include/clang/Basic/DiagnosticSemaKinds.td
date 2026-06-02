@@ -3701,6 +3701,9 @@ def err_swift_abi_parameter_wrong_type : Error<
 def err_attribute_argument_invalid : Error<
   "%0 attribute argument is invalid: %select{max must be 0 since min is 0|"
   "min must not be greater than max}1">;
+def err_attribute_amdgpu_flat_work_group_size_mismatch : Error<
+  "'amdgpu_flat_work_group_size' attribute must match "
+  "'reqd_work_group_size' product">;
 def err_attribute_argument_is_zero : Error<
   "%0 attribute must be greater than 0">;
 def warn_attribute_argument_n_negative : Warning<

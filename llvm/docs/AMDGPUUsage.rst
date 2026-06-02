@@ -2249,6 +2249,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-flat-work-group-size"="min,max"          Specify the minimum and maximum flat work group sizes that
                                                       will be specified when the kernel is dispatched. Generated
                                                       by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                      If the ``reqd_work_group_size`` metadata is present, the product
+                                                      of its three workgroup size dimensions must match both ``min``
+                                                      and ``max``.
                                                       The IR implied default value is 1,1024. Clang may emit this attribute
                                                       with more restrictive bounds depending on language defaults.
                                                       If the actual block or workgroup size exceeds the limit at any point during
