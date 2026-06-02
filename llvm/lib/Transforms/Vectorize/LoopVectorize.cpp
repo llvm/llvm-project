@@ -206,10 +206,6 @@ static cl::opt<bool> ForcePartialAliasingVectorization(
     "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Replace pointer diff checks with alias masks."));
 
-static cl::opt<bool> EnableMaskedInvariantLoad(
-    "enable-masked-invariant-load", cl::init(false), cl::ReallyHidden,
-    cl::desc("Vectorize conditional invariant load with mask-load"
-             " and broadcast"));
 /// Option tail-folding-policy controls the tail-folding strategy and lists all
 /// available options. The vectorizer will attempt to fold the tail-loop into
 /// the vector loop (main/epilogue loops) and predicate the instructions
@@ -886,8 +882,7 @@ public:
     /// A widening decision that has been invalidated after replacing the
     /// corresponding recipe during VPlan transforms.
     /// TODO: Remove once the legacy exit cost computation is retired.
-    CM_InvalidatedDecision,
-    CM_CondInvar,
+    CM_InvalidatedDecision
   };
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
@@ -1364,10 +1359,6 @@ private:
 
   /// The cost computation for Gather/Scatter instruction.
   InstructionCost getGatherScatterCost(Instruction *I, ElementCount VF);
-
-  /// Cost of lowering a predicated loop-invariant load as a single-lane
-  /// masked load + broadcast. Returns getInvalid() if not applicable.
-  InstructionCost getConditionalInvarCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for widening instruction \p I with consecutive
   /// memory access.
@@ -2786,11 +2777,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    // CM_CondInvar uses its scalar invariant pointer uniformly.
     return (WideningDecision == CM_Widen ||
             WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave ||
-            WideningDecision == CM_CondInvar);
+            WideningDecision == CM_Interleave);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -4391,49 +4380,6 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 }
 
 InstructionCost
-LoopVectorizationCostModel::getConditionalInvarCost(Instruction *I,
-                                                    ElementCount VF) {
-  // Applicability checks. Any failure returns Invalid; the cost ladder
-  // already gates on .isValid().
-  if (!EnableMaskedInvariantLoad)
-    return InstructionCost::getInvalid();
-  if (!Legal->blockNeedsPredication(I->getParent()))
-    return InstructionCost::getInvalid();
-  if (!isMaskRequired(I))
-    return InstructionCost::getInvalid();
-  if (!isa<LoadInst>(I))
-    return InstructionCost::getInvalid();
-  const Align Alignment = getLoadStoreAlignment(I);
-  unsigned AS = getLoadStoreAddressSpace(I);
-  if (!TTI.isLegalMaskedLoad(I->getType(), Alignment, AS))
-    return InstructionCost::getInvalid();
-  Value *Ptr = getLoadStorePointerOperand(I);
-  if (!Legal->isInvariant(Ptr))
-    return InstructionCost::getInvalid();
-
-  // Components: AnyOf or-reduce + lane-0 mask materialisation
-  // (zero-splat + insertelement) + masked load + lane-0 broadcast shuffle.
-  // InstructionCost arithmetic propagates Invalid across the chain.
-  Type *ValTy = getLoadStoreType(I);
-  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  auto *MaskTy = cast<VectorType>(
-      toVectorTy(Type::getInt1Ty(I->getContext()), VF));
-  InstructionCost Cost = TTI.getArithmeticReductionCost(
-      Instruction::Or, MaskTy, /*FMF*/ std::nullopt, Config.CostKind);
-  Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, MaskTy, MaskTy,
-                             {}, Config.CostKind, 0);
-  Cost += TTI.getVectorInstrCost(Instruction::InsertElement, MaskTy,
-                                 Config.CostKind, /*Index=*/0);
-  Cost += TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(Intrinsic::masked_load, VectorTy, Alignment,
-                                 AS),
-      Config.CostKind);
-  Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
-                             VectorTy, {}, Config.CostKind, 0);
-  return Cost;
-}
-
-InstructionCost
 LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
                                                    ElementCount VF) {
   const auto *Group = getInterleavedAccessGroup(I);
@@ -4836,7 +4782,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       InstructionCost ScalarizationCost =
           getMemInstScalarizationCost(&I, VF) * NumAccesses;
 
-      InstructionCost ConditionalInvarCost = getConditionalInvarCost(&I, VF);
       // Choose better solution for the current VF,
       // write down this decision and use it during vectorization.
       InstructionCost Cost;
@@ -4845,11 +4790,6 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
           InterleaveCost < ScalarizationCost) {
         Decision = CM_Interleave;
         Cost = InterleaveCost;
-      } else if (ConditionalInvarCost.isValid() &&
-                 ConditionalInvarCost <= GatherScatterCost &&
-                 ConditionalInvarCost < ScalarizationCost) {
-        Decision = CM_CondInvar;
-        Cost = ConditionalInvarCost;
       } else if (GatherScatterCost < ScalarizationCost) {
         Decision = CM_GatherScatter;
         Cost = GatherScatterCost;
@@ -5341,9 +5281,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                    : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
-      case LoopVectorizationCostModel::CM_CondInvar:
-        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
-                                   : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Unknown:
         llvm_unreachable("Instr did not go through cost modelling?");
       case LoopVectorizationCostModel::CM_InvalidatedDecision:
@@ -6240,41 +6177,6 @@ bool VPRecipeBuilder::prefersVectorizedAddressing() const {
   return CM.TTI.prefersVectorizedAddressing();
 }
 
-VPInstruction *
-VPRecipeBuilder::tryToWidenCondInvarLoad(LoadInst *Load, VPValue *Ptr,
-                                         VPValue *Mask, VPInstruction *VPI) {
-  assert(Mask && "CM_CondInvar requires a non-null block mask");
-  LLVMContext &Ctx = Load->getContext();
-  DebugLoc DL = Load->getDebugLoc();
-  Builder.setInsertPoint(VPI);
-
-  // any = AnyOf(BlockMask). Unroll appends per-part masks, so this becomes
-  // a single OR-reduction across all UF parts.
-  VPValue *AnyActive = Builder.createNaryOp(VPInstruction::AnyOf, {Mask}, DL);
-
-  // vmsk = insertelement <VF x i1> zeroinitializer, any, 0
-  Type *I1Ty = Type::getInt1Ty(Ctx);
-  VPValue *FalseI1 = Plan.getOrAddLiveIn(ConstantInt::getFalse(I1Ty));
-  VPValue *ZeroVMask =
-      Builder.createNaryOp(VPInstruction::Broadcast, {FalseI1}, DL);
-  VPValue *Lane0Idx =
-      Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
-  VPValue *VMask = Builder.createNaryOp(
-      Instruction::InsertElement, {ZeroVMask, AnyActive, Lane0Idx}, DL);
-
-  // Consecutive=true selects the masked-load (not masked-gather) lowering
-  // in VPWidenLoadRecipe::execute. The access is stride-0, not stride-1;
-  // promote to a real AddrKind enum if other passes start relying on
-  // isConsecutive() distinguishing the two.
-  auto *MaskedLoad =
-      new VPWidenLoadRecipe(*Load, Ptr, VMask, /*Consecutive*/ true, *VPI, DL);
-  Builder.insert(MaskedLoad);
-
-  return new VPInstruction(VPInstruction::BroadcastLane,
-                           {Lane0Idx, MaskedLoad->getVPSingleValue()},
-                           /*Flags*/ {}, /*MD*/ {}, DL);
-}
-
 VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                 VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
@@ -6323,8 +6225,6 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
 
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    if (Decision == LoopVectorizationCostModel::CM_CondInvar && Mask)
-      return tryToWidenCondInvarLoad(Load, Ptr, Mask, VPI);
     auto *LoadR = Builder.createWidenLoad(*Load, Ptr, Mask, Consecutive, *VPI,
                                           Load->getDebugLoc());
     if (Reverse)
@@ -6717,6 +6617,7 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     // Now optimize the initial VPlan.
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
+    RUN_VPLAN_PASS(VPlanTransforms::widenPredicatedInvariantLoads, *Plan, TTI);
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
