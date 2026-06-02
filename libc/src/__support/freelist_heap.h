@@ -166,12 +166,9 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
       reinterpret_cast<uintptr_t>(block) + min_outer_size, Block::MIN_ALIGN);
   size_t new_outer_size = next_block_start - reinterpret_cast<uintptr_t>(block);
   if (block->outer_size() >= new_outer_size) {
-    // A block's usable space overlaps with the next block's prev_ field. When
-    // the next block is created via splitting, its header constructor writes to
-    // its prev_ field (initializing it to 0). Since the original block is
-    // currently in use, this write will corrupt the last sizeof(size_t) bytes
-    // of active user data. We back up these bytes here and restore them after
-    // the split is completed.
+    // TODO: this is a temporary workaround due to Block's setting prev_
+    // in its constructor. This code should be deleted once we finishing
+    // refactoring.
     cpp::byte *overlap_ptr =
         reinterpret_cast<cpp::byte *>(block) + new_outer_size;
     size_t backup;
