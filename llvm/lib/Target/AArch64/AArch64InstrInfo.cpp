@@ -2471,10 +2471,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
 
-    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), DstReg)
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrr), DstReg)
         .addReg(AArch64::FP)
-        .addReg(SrcReg)
-        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
+        .addReg(SrcReg);
 
     MBB.erase(MI);
     return true;
@@ -2638,10 +2637,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // The mixing happens here in expandPostRAPseudo (after RA) to ensure we use
   // the final frame pointer value.
   if (Subtarget.getTargetTriple().isOSMSVCRT())
-    BuildMI(MBB, MI, DL, get(AArch64::SUBXrx64), Reg)
+    BuildMI(MBB, MI, DL, get(AArch64::SUBXrr), Reg)
         .addReg(AArch64::FP)
-        .addReg(Reg, RegState::Kill)
-        .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0));
+        .addReg(Reg, RegState::Kill);
 
   MBB.erase(MI);
 

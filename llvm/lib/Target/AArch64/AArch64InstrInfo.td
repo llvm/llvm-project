@@ -2754,25 +2754,13 @@ def : InstAlias<"mov $dst, $src",
 defm ADDS : AddSubS<0, "adds", AArch64add_flag, "cmn", "subs", "cmp">;
 defm SUBS : AddSubS<1, "subs", AArch64sub_flag, "cmp", "adds", "cmn">;
 
-// Matches when SP is used directly via CopyFromReg, not after being moved to a GPR.
-// This ensures we don't incorrectly optimize "mov x8, sp; sub x8, x8, x9" into
-// "sub x8, sp, x9" - once SP is in x8, it's no longer a CopyFromReg node.
 def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
   return N->getOpcode() == ISD::CopyFromReg &&
          cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
 }]>;
 
-// Helper to convert shift amount to UXTX extend with LSL (valid range 0-4)
-def UXTXLSLImm : SDNodeXForm<imm, [{
-  uint64_t ShiftAmt = N->getZExtValue();
-  assert(ShiftAmt <= 4 && "Invalid shift amount for UXTX");
-  return CurDAG->getTargetConstant(
-      AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, ShiftAmt),
-      SDLoc(N), MVT::i32);
-}]>;
-
 // Pseudo instruction for stack guard cookie unmixing (epilogue).
-// This will be expanded post-RA to use SP directly, avoiding an extra mov.
+// This will be expanded post-RA to use FP directly, avoiding an extra mov.
 // Pattern matching for this will be done via custom C++ code during instruction selection.
 def STACK_GUARD_UNMIX : Pseudo<(outs GPR64:$dst), (ins GPR64:$stored_val), []>,
                         Sched<[]>;
@@ -2797,9 +2785,6 @@ def : Pat<(sub GPR64sp:$R2, arith_extended_reg32to64_i64:$R3),
           (SUBSXrx GPR64sp:$R2, arith_extended_reg32to64_i64:$R3)>;
 def : Pat<(sub copyFromSP:$R2, (arith_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
           (SUBXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
-// Handle SUB(copyFromSP, SHL) for dynamic stack allocation
-def : Pat<(sub copyFromSP:$sp, (shl GPR64:$val, (i64 imm:$shift))),
-          (SUBXrx64 GPR64sp:$sp, GPR64:$val, (UXTXLSLImm (i64 imm:$shift)))>;
 }
 
 // Because of the immediate format for add/sub-imm instructions, the
@@ -2828,11 +2813,6 @@ def : Pat<(AArch64sub_flag GPR32:$Rn, neg_addsub_shifted_imm32:$imm),
           (ADDSWri GPR32:$Rn, neg_addsub_shifted_imm32:$imm)>;
 def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
-}
-
-let AddedComplexity = 1 in {
-def : Pat<(add copyFromSP:$R2, (add_uxtx GPR64:$R3, arith_extendlsl64:$imm)),
-          (ADDXrx64 GPR64sp:$R2, GPR64:$R3, arith_extendlsl64:$imm)>;
 }
 
 

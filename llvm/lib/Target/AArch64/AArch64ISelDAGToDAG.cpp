@@ -75,8 +75,6 @@ public:
   template <signed Low, signed High>
   bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
 
-  bool SelectAddUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
-
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -1083,19 +1081,6 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   }
 
   return false;
-}
-
-/// SelectAddUXTXRegister - Select a "UXTX register" operand. This
-/// operand is referred by the instructions have SP operand
-bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
-                                                SDValue &Shift) {
-  // TODO: Relax condition to apply to more scenarios
-  if (N.getOpcode() != ISD::LOAD)
-    return false;
-  Reg = N;
-  Shift = CurDAG->getTargetConstant(getArithExtendImm(AArch64_AM::UXTX, 0),
-                                    SDLoc(N), MVT::i32);
-  return true;
 }
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
@@ -5060,26 +5045,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     if (trySelectXAR(Node))
       return;
     break;
-
-  case ISD::SUB: {
-    // Check for stack guard unmixing pattern: SUB(CopyFromReg(SP), LOAD(...))
-    // Select STACK_GUARD_UNMIX pseudo which will be expanded post-RA
-    // Only match when N1 is a LOAD (the stored guard value from stack).
-    // Other patterns like shifts for dynamic allocation will use normal SUB.
-    SDValue N0 = Node->getOperand(0);
-    SDValue N1 = Node->getOperand(1);
-    if (N0.getOpcode() == ISD::CopyFromReg && N1.getOpcode() == ISD::LOAD) {
-      RegisterSDNode *R = dyn_cast<RegisterSDNode>(N0.getOperand(1));
-      if (R && R->getReg() == AArch64::SP && VT == MVT::i64) {
-        SDValue Ops[] = {N1};
-        SDNode *ResNode = CurDAG->getMachineNode(AArch64::STACK_GUARD_UNMIX,
-                                                 SDLoc(Node), MVT::i64, Ops);
-        ReplaceNode(Node, ResNode);
-        return;
-      }
-    }
-    break;
-  }
 
   case ISD::EXTRACT_SUBVECTOR: {
     if (trySelectCastScalableToFixedLengthVector(Node))

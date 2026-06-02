@@ -17,13 +17,13 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    adrp x8, __security_cookie
 ; CHECK-NEXT:    add x0, sp, #4
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:__security_cookie]
-; CHECK-NEXT:    sub x8, x29, x8, uxtx
+; CHECK-NEXT:    sub x8, x29, x8
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    ldr x8, [sp, #8]
 ; CHECK-NEXT:    adrp x9, __security_cookie
 ; CHECK-NEXT:    ldr x9, [x9, :lo12:__security_cookie]
-; CHECK-NEXT:    sub x8, x29, x8, uxtx
+; CHECK-NEXT:    sub x8, x29, x8
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -36,7 +36,7 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %entry
 ; CHECK-NEXT:    ldr x8, [sp, #8]
-; CHECK-NEXT:    sub x0, x29, x8, uxtx
+; CHECK-NEXT:    sub x0, x29, x8
 ; CHECK-NEXT:    bl __security_check_cookie
 ; CHECK-NEXT:    brk #0x1
 ; CHECK-NEXT:    .seh_endfunclet

@@ -3125,11 +3125,11 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
       MachineMemOperand::MOVolatile);
 
   // If cookie mixing is enabled, unmix the stored GuardVal to get back the
-  // original cookie for comparison. The prologue stored (SP - Cookie) or
-  // (SP XOR Cookie), so we apply the same operation again to unmix:
-  // SP - (SP - Cookie) = Cookie, or (SP XOR Cookie) XOR SP = Cookie.
-  if (TLI.useStackGuardMixCookie())
-    GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, false);
+  // original cookie for comparison. The prologue stored (FP - Cookie) or
+  // (FP XOR Cookie), so we apply the same operation again to unmix:
+  // FP - (FP - Cookie) = Cookie, or (FP XOR Cookie) XOR FP = Cookie.
+  if (TLI.useStackGuardMixFP())
+    GuardVal = TLI.emitStackGuardMixFP(DAG, GuardVal, dl);
 
   // If we're using function-based instrumentation, call the guard check
   // function
@@ -3167,7 +3167,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   // For targets that mix the cookie in LOAD_STACK_GUARD expansion, we need to
   // load directly without using LOAD_STACK_GUARD to avoid unwanted mixing.
   SDValue Chain = DAG.getEntryNode();
-  if (TLI.useStackGuardMixCookie()) {
+  if (TLI.useStackGuardMixFP()) {
     // Mixing targets: load cookie directly to avoid mixing in LOAD_STACK_GUARD
     if (const Value *IRGuard = TLI.getSDagStackGuard(M, DAG.getLibcalls())) {
       SDValue GuardPtr = getValue(IRGuard);
@@ -3256,8 +3256,8 @@ void SelectionDAGBuilder::visitSPDescriptorFailure(
         MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), Align,
         MachineMemOperand::MOVolatile);
 
-    if (TLI.useStackGuardMixCookie())
-      GuardVal = TLI.emitStackGuardMixCookie(DAG, GuardVal, dl, true);
+    if (TLI.useStackGuardMixFP())
+      GuardVal = TLI.emitStackGuardMixFP(DAG, GuardVal, dl);
 
     // The target provides a guard check function to validate the guard value.
     // Generate a call to that function with the content of the guard slot as
@@ -7562,11 +7562,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                         MachinePointerInfo(Global, 0), Align,
                         MachineMemOperand::MOVolatile);
     }
-    // Mix the cookie with SP/FP if enabled. Skip if using LOAD_STACK_GUARD
+    // Mix the cookie with FP if enabled. Skip if using LOAD_STACK_GUARD
     // with post-RA mixing (AArch64 MSVCRT), as the mixing will be done during
     // post-RA expansion of LOAD_STACK_GUARD.
-    if (TLI.useStackGuardMixCookie() && !TLI.useLoadStackGuardNode(M))
-      Res = TLI.emitStackGuardMixCookie(DAG, Res, sdl, false);
+    if (TLI.useStackGuardMixFP() && !TLI.useLoadStackGuardNode(M))
+      Res = TLI.emitStackGuardMixFP(DAG, Res, sdl);
     DAG.setRoot(Chain);
     setValue(&I, Res);
     return;

@@ -30718,28 +30718,20 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   return true;
 }
 
-bool AArch64TargetLowering::useStackGuardMixCookie() const {
-  // MSVC CRTs mix the stack pointer into the stack guard value.
-  // The prologue mixing is handled via post-RA expansion of LOAD_STACK_GUARD,
-  // but the epilogue unmixing is done at the DAG level via
-  // emitStackGuardMixCookie.
+bool AArch64TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
   return Subtarget->getTargetTriple().isOSMSVCRT();
 }
 
-SDValue AArch64TargetLowering::emitStackGuardMixCookie(SelectionDAG &DAG,
-                                                       SDValue Val,
-                                                       const SDLoc &DL,
-                                                       bool FailureBB) const {
-  // Mix the cookie value with SP to create a position-dependent guard.
-  // Both prologue (stores SP - Cookie) and epilogue (compares SP - Cookie)
-  // use the same mixing operation.
-  // For FailureBB=true: Val is the stored mixed value, compute SP - Val to
-  // unmix For FailureBB=false: Val is the fresh cookie, compute SP - Val to mix
-  return DAG.getNode(ISD::SUB, DL, Val.getValueType(),
-                     DAG.getCopyFromReg(DAG.getEntryNode(), DL,
-                                        getStackPointerRegisterToSaveRestore(),
-                                        MVT::i64),
-                     Val);
+SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
+                                                   SDValue Val,
+                                                   const SDLoc &DL) const {
+  // Mix the cookie value with FP to create a position-dependent guard.
+  // Both prologue (stores FP - Cookie) and epilogue (compares FP - Cookie)
+  // use the same mixing operation: FP - Val.
+  return DAG.getNode(
+      ISD::SUB, DL, Val.getValueType(),
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, AArch64::FP, MVT::i64), Val);
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
