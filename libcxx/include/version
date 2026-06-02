@@ -162,7 +162,7 @@ __cpp_lib_is_scoped_enum                                202011L <type_traits>
 __cpp_lib_is_sufficiently_aligned                       202411L <memory>
 __cpp_lib_is_swappable                                  201603L <type_traits>
 __cpp_lib_is_virtual_base_of                            202406L <type_traits>
-__cpp_lib_is_within_lifetime                            202306L <type_traits>
+__cpp_lib_is_within_lifetime                            202603L <type_traits>
 __cpp_lib_jthread                                       201911L <stop_token> <thread>
 __cpp_lib_latch                                         201907L <latch>
 __cpp_lib_launder                                       201606L <new>
@@ -599,7 +599,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_is_virtual_base_of                 202406L
 # endif
 # if __has_builtin(__builtin_is_within_lifetime)
-#   define __cpp_lib_is_within_lifetime                 202306L
+#   define __cpp_lib_is_within_lifetime                 202603L
 # endif
 // # define __cpp_lib_linalg                               202311L
 # undef  __cpp_lib_mdspan

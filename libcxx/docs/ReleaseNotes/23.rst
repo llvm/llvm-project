@@ -51,6 +51,7 @@ Implemented Papers
 - P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P3450R1: Extend ``std::is_within_lifetime`` (`Github <https://llvm.org/PR189610>`__)
 
 Improvements and New Features
 -----------------------------
