@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
+#include <clang/AST/Attrs.inc>
 #include <string>
 
 namespace clang::lifetimes {
@@ -48,7 +49,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
-      diag::warn_lifetime_safety_intra_tu_this_suggestion};
+      diag::warn_lifetime_safety_intra_tu_this_suggestion,
+      diag::warn_lifetime_safety_meaningless_lifetimebound};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -341,6 +343,15 @@ public:
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
+  }
+
+  void reportMeaninglessLifetimebound(const ParmVarDecl *PVD) override {
+    assert(PVD->hasAttr<LifetimeBoundAttr>() &&
+           "Expected parameter to have lifetimebound attribute");
+    const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_meaningless_lifetimebound)
+        << PVD->getType() << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,
