@@ -5495,40 +5495,40 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
    liveins: $vgpr0, $sgpr4_sgpr5
+    %0:vreg_1024 = IMPLICIT_DEF
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
     %4:vreg_1024 = IMPLICIT_DEF
     %5:vreg_1024 = IMPLICIT_DEF
     %6:vreg_1024 = IMPLICIT_DEF
-    %7:vreg_1024 = IMPLICIT_DEF
-    %8:vreg_512 = IMPLICIT_DEF
-    %10:vreg_64 = IMPLICIT_DEF
-    %11:vgpr_32 = IMPLICIT_DEF
-    %12:vreg_128 = IMPLICIT_DEF
-    %13:vreg_1024 = IMPLICIT_DEF
-    S_NOP 0, implicit-def %50:av_512
-    S_NOP 0, implicit-def %51:av_512
+    %7:vreg_512 = IMPLICIT_DEF
+    %8:vreg_64 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vreg_128 = IMPLICIT_DEF
+    %11:vreg_1024 = IMPLICIT_DEF
+    S_NOP 0, implicit-def %12:av_512
+    S_NOP 0, implicit-def %13:av_512
     SCHED_BARRIER 0
-    %60:av_128_align2 = IMPLICIT_DEF
-    %61:av_128_align2 = IMPLICIT_DEF
-    %62:vreg_128_align2 = IMPLICIT_DEF
-    %63:vreg_64_align2 = IMPLICIT_DEF
-    %64:vgpr_32 = IMPLICIT_DEF
-    %72:vreg_128_align2 = IMPLICIT_DEF
+    %14:av_128_align2 = IMPLICIT_DEF
+    %15:av_128_align2 = IMPLICIT_DEF
+    %16:vreg_128_align2 = IMPLICIT_DEF
+    %17:vreg_64_align2 = IMPLICIT_DEF
+    %18:vgpr_32 = IMPLICIT_DEF
+    %19:vreg_128_align2 = IMPLICIT_DEF
 
   bb.1:
-    %85:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %60, %61, %72, 4, 4, %63.sub0, %64, 0, 0, implicit $mode, implicit $exec
-    %86:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %60, %61, %85, 4, 4, %63.sub0, %64, 0, 0, implicit $mode, implicit $exec
-    %87:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %60, %61, %86, 4, 4, %63.sub0, %64, 0, 0, implicit $mode, implicit $exec
-    %88:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %60, %61, %87, 4, 4, %63.sub0, %64, 0, 0, implicit $mode, implicit $exec
+    %20:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %19, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %21:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %20, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %22:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %21, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
+    %23:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %14, %15, %22, 4, 4, %17.sub0, %18, 0, 0, implicit $mode, implicit $exec
 
   bb.2:
-    undef %94.sub0:vreg_128_align2 = V_ADD_U32_e32 %85.sub0, %64, implicit $exec
-    %95:vreg_128_align2 = COPY %88
+    undef %24.sub0:vreg_128_align2 = V_ADD_U32_e32 %20.sub0, %18, implicit $exec
+    %25:vreg_128_align2 = COPY %23
     SCHED_BARRIER 0
-    KILL %1, %2, %3, %4, %5, %6, %7, %8, %10, %11, %12, %13, %62, %72, %94, %95
-    S_NOP 0, implicit %50, implicit %51
+    KILL %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %16, %19, %24, %25
+    S_NOP 0, implicit %12, implicit %13
     S_ENDPGM 0
 ...
 
@@ -5565,8 +5565,8 @@ body:             |
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %acc:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_64_align2 = COPY %acc
+  ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]]:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[AV_MOV_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -5578,7 +5578,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_64_align2 = V_ADD_U32_e32 %acc.sub0, [[DEF10]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_64_align2 = V_ADD_U32_e32 [[AV_MOV_]].sub0, [[DEF10]], implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[V_MFMA_F64_4X4X4F64_e64_3]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[COPY1]]
   ; CHECK-NEXT:   SCHED_BARRIER 0
@@ -5588,34 +5588,34 @@ body:             |
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
    liveins: $vgpr0, $sgpr4_sgpr5
+    %0:vreg_1024 = IMPLICIT_DEF
     %1:vreg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = IMPLICIT_DEF
     %3:vreg_1024 = IMPLICIT_DEF
     %4:vreg_1024 = IMPLICIT_DEF
     %5:vreg_1024 = IMPLICIT_DEF
     %6:vreg_1024 = IMPLICIT_DEF
-    %7:vreg_1024 = IMPLICIT_DEF
-    %8:vreg_512 = IMPLICIT_DEF
-    %13:vreg_1024 = IMPLICIT_DEF
-    S_NOP 0, implicit-def %50:av_512
-    S_NOP 0, implicit-def %51:av_512
+    %7:vreg_512 = IMPLICIT_DEF
+    %8:vreg_1024 = IMPLICIT_DEF
+    S_NOP 0, implicit-def %9:av_512
+    S_NOP 0, implicit-def %10:av_512
     SCHED_BARRIER 0
-    %60:vreg_64_align2 = IMPLICIT_DEF
-    %61:vreg_64_align2 = IMPLICIT_DEF
-    %64:vgpr_32 = IMPLICIT_DEF
-    %acc:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    %11:vreg_64_align2 = IMPLICIT_DEF
+    %12:vreg_64_align2 = IMPLICIT_DEF
+    %13:vgpr_32 = IMPLICIT_DEF
+    %14:vreg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
 
   bb.1:
-    %85:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %60, %61, %acc, 0, 0, 0, implicit $mode, implicit $exec
-    %86:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %60, %61, %85, 0, 0, 0, implicit $mode, implicit $exec
-    %87:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %60, %61, %86, 0, 0, 0, implicit $mode, implicit $exec
-    %88:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %60, %61, %87, 0, 0, 0, implicit $mode, implicit $exec
+    %15:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %11, %12, %14, 0, 0, 0, implicit $mode, implicit $exec
+    %16:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %11, %12, %15, 0, 0, 0, implicit $mode, implicit $exec
+    %17:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %11, %12, %16, 0, 0, 0, implicit $mode, implicit $exec
+    %18:vreg_64_align2 = contract nofpexcept V_MFMA_F64_4X4X4F64_vgprcd_e64 %11, %12, %17, 0, 0, 0, implicit $mode, implicit $exec
 
   bb.2:
-    undef %94.sub0:vreg_64_align2 = V_ADD_U32_e32 %acc.sub0, %64, implicit $exec
-    %95:vreg_64_align2 = COPY %88
+    undef %19.sub0:vreg_64_align2 = V_ADD_U32_e32 %14.sub0, %13, implicit $exec
+    %20:vreg_64_align2 = COPY %18
     SCHED_BARRIER 0
-    KILL %1, %2, %3, %4, %5, %6, %7, %8, %13, %94, %95
-    S_NOP 0, implicit %50, implicit %51
+    KILL %0, %1, %2, %3, %4, %5, %6, %7, %8, %19, %20
+    S_NOP 0, implicit %9, implicit %10
     S_ENDPGM 0
 ...

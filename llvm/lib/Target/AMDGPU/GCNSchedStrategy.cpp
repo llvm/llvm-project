@@ -2248,8 +2248,10 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-/// Returns true when \p RD will already be in AGPR-form after the rewrite, so
-/// no bridge copy is needed at this reaching definition.
+/// Returns true if reaching def \p RD will be in AGPR form after the rewrite
+/// and so needs no bridge copy: a candidate MFMA in \p RewriteSet, an
+/// AV_MOV_*_IMM_PSEUDO, or a copy from a candidate src2 reg in \p CandSrc2Regs.
+/// A non-candidate MFMA stays in VGPR form and still needs a bridge.
 static bool isReachingDefAGPRForm(
     MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
     const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
@@ -2263,19 +2265,21 @@ static bool isReachingDefAGPRForm(
   return false;
 }
 
-/// Returns true when \p Reg has a use that requires it to stay in VGPR form
-/// after the rewrite, i.e. any use other than a group MFMA.
-static bool
-src2RegEscapesRewriteGroup(Register Reg, const MachineRegisterInfo &MRI,
-                           const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
-                           const SIInstrInfo &TII) {
-  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
-    const MachineInstr *UseMI = Use.getParent();
-    if (UseMI->isCopy())
-      continue;
-    if (TII.isMAI(*UseMI) && RewriteSet.contains(UseMI))
-      continue;
-    return true;
+bool RewriteMFMAFormStage::hasEscapingUse(
+    ArrayRef<SlotIndex> Src2ReachingDefs,
+    const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
+  for (SlotIndex RDIdx : Src2ReachingDefs) {
+    MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+    SmallVector<MachineOperand *, 8> ReachingUses;
+    findReachingUses(RD, DAG.LIS, ReachingUses);
+    for (MachineOperand *UseMO : ReachingUses) {
+      MachineInstr *UseMI = UseMO->getParent();
+      if (UseMI->isCopy())
+        continue;
+      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
+        continue;
+      return true;
+    }
   }
   return false;
 }
@@ -2334,8 +2338,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         // If src2 has a use that must remain VGPR, it cannot be reclassified to
         // AGPR.
-        bool Src2Escapes = src2RegEscapesRewriteGroup(Src2->getReg(), DAG.MRI,
-                                                      RewriteSet, *TII);
+        bool Src2Escapes = hasEscapingUse(Src2ReachingDefs, RewriteSet);
 
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
@@ -2617,8 +2620,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If src2 has a use that must remain VGPR, it cannot be reclassified to
       // AGPR.
-      bool Src2Escapes =
-          src2RegEscapesRewriteGroup(Src2Reg, DAG.MRI, RewriteCandsSet, *TII);
+      bool Src2Escapes = hasEscapingUse(Src2ReachingDefs, RewriteCandsSet);
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);

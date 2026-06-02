@@ -479,6 +479,12 @@ private:
   void findReachingUses(MachineInstr *DefMI, LiveIntervals *LIS,
                         SmallVectorImpl<MachineOperand *> &ReachingUses);
 
+  /// Returns true if the src2 register with reaching defs \p Src2ReachingDefs
+  /// has a use other than a group MFMA (in \p RewriteSet) or a copy, which
+  /// would keep it in VGPR form rather than let it be reclassified to AGPR.
+  bool hasEscapingUse(ArrayRef<SlotIndex> Src2ReachingDefs,
+                      const SmallPtrSetImpl<MachineInstr *> &RewriteSet);
+
 public:
   bool initGCNSchedStage() override;
 
