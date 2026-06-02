@@ -315,7 +315,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -389,7 +389,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
@@ -424,7 +424,7 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(
             env_variables["runtimes_check_targets"],
-            "check-compiler-rt check-flang-rt check-libc check-libclc",
+            "check-compiler-rt check-flang-rt check-libc check-libclc offload openmp",
         )
         self.assertEqual(
             env_variables["runtimes_check_targets_needs_reconfig"],
