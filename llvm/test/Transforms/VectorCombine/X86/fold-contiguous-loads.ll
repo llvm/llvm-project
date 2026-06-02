@@ -19,7 +19,7 @@ define <2 x float> @extract_subvector_with_offset(ptr %arg0) {
 define <2 x float> @extract_subvector_with_offset_gep_i32(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset_gep_i32(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[V2]]
 ;
@@ -33,7 +33,7 @@ define <2 x float> @extract_subvector_with_offset_gep_i32(ptr %arg0) {
 define <2 x float> @extract_subvector_with_offset_gep_i64(ptr %arg0) {
 ; CHECK-LABEL: define <2 x float> @extract_subvector_with_offset_gep_i64(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x float>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[V2]]
 ;
@@ -60,7 +60,7 @@ define <2 x double> @extract_subvector_middle(ptr %arg0) {
 define <2 x double> @extract_subvector_middle_gep_i32(ptr %arg0) {
 ; CHECK-LABEL: define <2 x double> @extract_subvector_middle_gep_i32(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x double> [[V2]]
 ;
@@ -73,7 +73,7 @@ define <2 x double> @extract_subvector_middle_gep_i32(ptr %arg0) {
 define <2 x double> @extract_subvector_middle_gep_i64(ptr %arg0) {
 ; CHECK-LABEL: define <2 x double> @extract_subvector_middle_gep_i64(
 ; CHECK-SAME: ptr [[ARG0:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[ARG0]], i64 48
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    ret <2 x double> [[V2]]
 ;
@@ -280,6 +280,20 @@ define <2 x float> @negative_non_contiguous(ptr %arg0) {
   ret <2 x float> %v2
 }
 
+define <2 x float> @negative_non_contiguous_gep_i32(ptr %arg0) {
+; CHECK-LABEL: define <2 x float> @negative_non_contiguous_gep_i32(
+; CHECK-SAME: ptr [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds i32, ptr [[ARG0]], i64 10
+; CHECK-NEXT:    [[V1:%.*]] = load <4 x float>, ptr [[V0]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> poison, <2 x i32> <i32 3, i32 2>
+; CHECK-NEXT:    ret <2 x float> [[V2]]
+;
+  %v0 = getelementptr inbounds i32, ptr %arg0, i64 10
+  %v1 = load <4 x float>, ptr %v0, align 8
+  %v2 = shufflevector <4 x float> %v1, <4 x float> poison, <2 x i32> <i32 3, i32 2>
+  ret <2 x float> %v2
+}
+
 ; 5. Negative test: Volatile load (!isSimple)
 ; Added the volatile attribute to the load from the success case.
 define <2 x float> @negative_volatile_load(ptr %arg0) {
@@ -316,6 +330,42 @@ define <2 x float> @negative_different_bases(ptr %arg0, ptr %arg1) {
   ret <2 x float> %v2
 }
 
+define <2 x float> @negative_different_bases_gep_i32(ptr %arg0, ptr %arg1) {
+; CHECK-LABEL: define <2 x float> @negative_different_bases_gep_i32(
+; CHECK-SAME: ptr [[ARG0:%.*]], ptr [[ARG1:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds i32, ptr [[ARG0]], i64 10
+; CHECK-NEXT:    [[V1:%.*]] = load <4 x float>, ptr [[V0]], align 8
+; CHECK-NEXT:    [[V0_OTHER:%.*]] = getelementptr inbounds i32, ptr [[ARG1]], i64 10
+; CHECK-NEXT:    [[V1_OTHER:%.*]] = load <4 x float>, ptr [[V0_OTHER]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> [[V1_OTHER]], <2 x i32> <i32 2, i32 7>
+; CHECK-NEXT:    ret <2 x float> [[V2]]
+;
+  %v0 = getelementptr inbounds i32, ptr %arg0, i64 10
+  %v1 = load <4 x float>, ptr %v0, align 8
+  %v0_other = getelementptr inbounds i32, ptr %arg1, i64 10
+  %v1_other = load <4 x float>, ptr %v0_other, align 8
+  %v2 = shufflevector <4 x float> %v1, <4 x float> %v1_other, <2 x i32> <i32 2, i32 7>
+  ret <2 x float> %v2
+}
+
+define <2 x float> @negative_different_bases_gep_i64(ptr %arg0, ptr %arg1) {
+; CHECK-LABEL: define <2 x float> @negative_different_bases_gep_i64(
+; CHECK-SAME: ptr [[ARG0:%.*]], ptr [[ARG1:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds i64, ptr [[ARG0]], i64 5
+; CHECK-NEXT:    [[V1:%.*]] = load <4 x float>, ptr [[V0]], align 8
+; CHECK-NEXT:    [[V0_OTHER:%.*]] = getelementptr inbounds i64, ptr [[ARG1]], i64 5
+; CHECK-NEXT:    [[V1_OTHER:%.*]] = load <4 x float>, ptr [[V0_OTHER]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> [[V1_OTHER]], <2 x i32> <i32 2, i32 7>
+; CHECK-NEXT:    ret <2 x float> [[V2]]
+;
+  %v0 = getelementptr inbounds i64, ptr %arg0, i64 5
+  %v1 = load <4 x float>, ptr %v0, align 8
+  %v0_other = getelementptr inbounds i64, ptr %arg1, i64 5
+  %v1_other = load <4 x float>, ptr %v0_other, align 8
+  %v2 = shufflevector <4 x float> %v1, <4 x float> %v1_other, <2 x i32> <i32 2, i32 7>
+  ret <2 x float> %v2
+}
+
 ; 7. Negative test: Offset continuity failure (Memory gap)
 ; Tweaked the mask to <1, 3> from the success case to create a gap.
 define <2 x float> @negative_memory_gap(ptr %arg0) {
@@ -327,6 +377,34 @@ define <2 x float> @negative_memory_gap(ptr %arg0) {
 ; CHECK-NEXT:    ret <2 x float> [[V2]]
 ;
   %v0 = getelementptr inbounds i8, ptr %arg0, i64 40
+  %v1 = load <4 x float>, ptr %v0, align 8
+  %v2 = shufflevector <4 x float> %v1, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  ret <2 x float> %v2
+}
+
+define <2 x float> @negative_memory_gap_gep_i32(ptr %arg0) {
+; CHECK-LABEL: define <2 x float> @negative_memory_gap_gep_i32(
+; CHECK-SAME: ptr [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds i32, ptr [[ARG0]], i64 10
+; CHECK-NEXT:    [[V1:%.*]] = load <4 x float>, ptr [[V0]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[V2]]
+;
+  %v0 = getelementptr inbounds i32, ptr %arg0, i64 10
+  %v1 = load <4 x float>, ptr %v0, align 8
+  %v2 = shufflevector <4 x float> %v1, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  ret <2 x float> %v2
+}
+
+define <2 x float> @negative_memory_gap_gep_i64(ptr %arg0) {
+; CHECK-LABEL: define <2 x float> @negative_memory_gap_gep_i64(
+; CHECK-SAME: ptr [[ARG0:%.*]]) {
+; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds i64, ptr [[ARG0]], i64 5
+; CHECK-NEXT:    [[V1:%.*]] = load <4 x float>, ptr [[V0]], align 8
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <4 x float> [[V1]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[V2]]
+;
+  %v0 = getelementptr inbounds i64, ptr %arg0, i64 5
   %v1 = load <4 x float>, ptr %v0, align 8
   %v2 = shufflevector <4 x float> %v1, <4 x float> poison, <2 x i32> <i32 1, i32 3>
   ret <2 x float> %v2
