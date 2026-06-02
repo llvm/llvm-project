@@ -65,26 +65,6 @@ bool Constant::isNegativeZeroValue() const {
   return isNullValue();
 }
 
-bool Constant::isNullValue() const {
-  // 0 is null.
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
-    return CI->isZero();
-
-  // 0 is null.
-  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
-    return CB->isZero();
-
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    // ppc_fp128 determine isZero using high order double only
-    // so check the bitwise value to make sure all bits are zero.
-    return CFP->getValue().bitcastToAPInt().isZero();
-
-  // constant zero is zero for aggregates, cpnull is null for pointers, none for
-  // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
-}
-
 bool Constant::isAllOnesValue() const {
   // Check for -1 integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
@@ -906,6 +886,8 @@ ConstantInt::ConstantInt(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -1031,6 +1013,8 @@ ConstantByte::ConstantByte(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<ByteType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 // Get a ConstantByte from an APInt.
@@ -1216,6 +1200,10 @@ ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
+  // ppc_fp128 determine isZero using high order double only
+  // so check the bitwise value to make sure all bits are zero.
+  if (V.bitcastToAPInt().isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 bool ConstantFP::isExactlyValue(const APFloat &V) const {
@@ -2068,7 +2056,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2101,7 +2089,7 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
   // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   getContext().pImpl->BlockAddresses[NewBB] = this;
-  setOperand(0, NewBB);
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.

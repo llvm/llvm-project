@@ -6775,6 +6775,7 @@ libc_support_library(
         ":__support_math_exp10_float16_constants",
         ":__support_math_expf16_utils",
         ":hdr_stdint_proxy",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
