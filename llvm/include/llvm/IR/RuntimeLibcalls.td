@@ -156,7 +156,7 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def EXP2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def EXP2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def EXP10_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
-  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall;
+  def EXP10_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def SIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def COS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def TAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
@@ -172,10 +172,33 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def FDIM_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 
   def CABS_#FPTy.Suffix : RuntimeLibcall<NoneType, []>;
+
+  def ACOS_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOSH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASIN_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATAN2_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def ATANH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINH_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SQRT_FINITE_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def COSPI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def SINPI_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ACOSH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ASINH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ATANH_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ERF_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def EXPM1_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def FABS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def HYPOT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
+  def LOG1P_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def ILOGB_#FPTy.Suffix : RuntimeLibcall<Int, [FPTy.Type]>;
+  def LOGB_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def NEXTAFTER_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
 }
 
 foreach FPTy = [ "F32", "F64" ] in {
   def SINCOS_STRET_#FPTy : RuntimeLibcall;
+  def SINCOSPI_STRET_#FPTy : RuntimeLibcall<NoneType, []>;
 }
 
 foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
@@ -646,6 +669,7 @@ def EXECLP : RuntimeLibcall<Int, [Ptr, Ptr, Ellip]>;
 def EXECV : RuntimeLibcall<Int, [Ptr, Ptr]>;
 def EXECVE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVP : RuntimeLibcall<Int, [Ptr, Ptr]>;
+def EXECV_P : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXECVPE : RuntimeLibcall<Int, [Ptr, Ptr, Ptr]>;
 def EXIT : RuntimeLibcall<Void, [Int]>;
 def FCLOSE : RuntimeLibcall<Int, [Ptr]>;
@@ -908,6 +932,8 @@ def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [Long, Long, Ptr]>;
 def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [Long, Long, Ptr, Bool]>;
 def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]>;
 def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
+
+def NVVM_REFLECT : RuntimeLibcall<Int, [Ptr]>;
 
 //--------------------------------------------------------------------
 // Global variable references
@@ -1622,7 +1648,7 @@ def execl : RuntimeLibcallImpl<EXECL>;
 def execle : RuntimeLibcallImpl<EXECLE>;
 def execlp : RuntimeLibcallImpl<EXECLP>;
 def execv : RuntimeLibcallImpl<EXECV>;
-def execvP : RuntimeLibcallImpl<EXECVP>;
+def execvP : RuntimeLibcallImpl<EXECV_P>;
 def execve : RuntimeLibcallImpl<EXECVE>;
 def execvp : RuntimeLibcallImpl<EXECVP>;
 def execvpe : RuntimeLibcallImpl<EXECVPE>;
@@ -1801,6 +1827,76 @@ def vsprintf : RuntimeLibcallImpl<VSPRINTF>;
 def vsscanf : RuntimeLibcallImpl<VSSCANF>;
 def wcslen : RuntimeLibcallImpl<WCSLEN>;
 def write : RuntimeLibcallImpl<WRITE>;
+
+def __acos_finite : RuntimeLibcallImpl<ACOS_FINITE_F64>;
+def __acosf_finite : RuntimeLibcallImpl<ACOS_FINITE_F32>;
+def __acosl_finite : RuntimeLibcallImpl<ACOS_FINITE_F128>;
+def __acosh_finite : RuntimeLibcallImpl<ACOSH_FINITE_F64>;
+def __acoshf_finite : RuntimeLibcallImpl<ACOSH_FINITE_F32>;
+def __acoshl_finite : RuntimeLibcallImpl<ACOSH_FINITE_F128>;
+def __asin_finite : RuntimeLibcallImpl<ASIN_FINITE_F64>;
+def __asinf_finite : RuntimeLibcallImpl<ASIN_FINITE_F32>;
+def __asinl_finite : RuntimeLibcallImpl<ASIN_FINITE_F128>;
+def __atan2_finite : RuntimeLibcallImpl<ATAN2_FINITE_F64>;
+def __atan2f_finite : RuntimeLibcallImpl<ATAN2_FINITE_F32>;
+def __atan2l_finite : RuntimeLibcallImpl<ATAN2_FINITE_F128>;
+def __atanh_finite : RuntimeLibcallImpl<ATANH_FINITE_F64>;
+def __atanhf_finite : RuntimeLibcallImpl<ATANH_FINITE_F32>;
+def __atanhl_finite : RuntimeLibcallImpl<ATANH_FINITE_F128>;
+def __cosh_finite : RuntimeLibcallImpl<COSH_FINITE_F64>;
+def __coshf_finite : RuntimeLibcallImpl<COSH_FINITE_F32>;
+def __coshl_finite : RuntimeLibcallImpl<COSH_FINITE_F128>;
+def __sinh_finite : RuntimeLibcallImpl<SINH_FINITE_F64>;
+def __sinhf_finite : RuntimeLibcallImpl<SINH_FINITE_F32>;
+def __sinhl_finite : RuntimeLibcallImpl<SINH_FINITE_F128>;
+def __exp10_finite : RuntimeLibcallImpl<EXP10_FINITE_F64>;
+def __exp10f_finite : RuntimeLibcallImpl<EXP10_FINITE_F32>;
+def __exp10l_finite : RuntimeLibcallImpl<EXP10_FINITE_F128>;
+def __sqrt_finite : RuntimeLibcallImpl<SQRT_FINITE_F64>;
+def __sqrtf_finite : RuntimeLibcallImpl<SQRT_FINITE_F32>;
+def __sqrtl_finite : RuntimeLibcallImpl<SQRT_FINITE_F128>;
+def __cospi : RuntimeLibcallImpl<COSPI_F64>;
+def __cospif : RuntimeLibcallImpl<COSPI_F32>;
+def __sinpi : RuntimeLibcallImpl<SINPI_F64>;
+def __sinpif : RuntimeLibcallImpl<SINPI_F32>;
+def acosh : RuntimeLibcallImpl<ACOSH_F64>;
+def acoshf : RuntimeLibcallImpl<ACOSH_F32>;
+def acoshl : RuntimeLibcallImpl<ACOSH_F128>;
+def asinh : RuntimeLibcallImpl<ASINH_F64>;
+def asinhf : RuntimeLibcallImpl<ASINH_F32>;
+def asinhl : RuntimeLibcallImpl<ASINH_F128>;
+def atanh : RuntimeLibcallImpl<ATANH_F64>;
+def atanhf : RuntimeLibcallImpl<ATANH_F32>;
+def atanhl : RuntimeLibcallImpl<ATANH_F128>;
+def erf : RuntimeLibcallImpl<ERF_F64>;
+def erff : RuntimeLibcallImpl<ERF_F32>;
+def erfl : RuntimeLibcallImpl<ERF_F128>;
+def expm1 : RuntimeLibcallImpl<EXPM1_F64>;
+def expm1f : RuntimeLibcallImpl<EXPM1_F32>;
+def expm1l : RuntimeLibcallImpl<EXPM1_F128>;
+def fabs : RuntimeLibcallImpl<FABS_F64>;
+def fabsf : RuntimeLibcallImpl<FABS_F32>;
+def fabsl : RuntimeLibcallImpl<FABS_F128>;
+def hypot : RuntimeLibcallImpl<HYPOT_F64>;
+def hypotf : RuntimeLibcallImpl<HYPOT_F32>;
+def hypotl : RuntimeLibcallImpl<HYPOT_F128>;
+def log1p : RuntimeLibcallImpl<LOG1P_F64>;
+def log1pf : RuntimeLibcallImpl<LOG1P_F32>;
+def log1pl : RuntimeLibcallImpl<LOG1P_F128>;
+def ilogb : RuntimeLibcallImpl<ILOGB_F64>;
+def ilogbf : RuntimeLibcallImpl<ILOGB_F32>;
+def ilogbl : RuntimeLibcallImpl<ILOGB_F128>;
+def logb : RuntimeLibcallImpl<LOGB_F64>;
+def logbf : RuntimeLibcallImpl<LOGB_F32>;
+def logbl : RuntimeLibcallImpl<LOGB_F128>;
+def nextafter : RuntimeLibcallImpl<NEXTAFTER_F64>;
+def nextafterf : RuntimeLibcallImpl<NEXTAFTER_F32>;
+def nextafterl : RuntimeLibcallImpl<NEXTAFTER_F128>;
+
+def __nvvm_reflect : RuntimeLibcallImpl<NVVM_REFLECT>;
+
+def __sincospif_stret : RuntimeLibcallImpl<SINCOSPI_STRET_F32>;
+def __sincospi_stret : RuntimeLibcallImpl<SINCOSPI_STRET_F64>;
 
 //--------------------------------------------------------------------
 // compiler-rt/libgcc but 64-bit only, not available by default
