@@ -3893,8 +3893,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     }
   }
   cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
-  if (initialValue)
-    gv.setInitialValueAttr(initialValue);
+  gv.setInitialValueAttr(initialValue);
   gv.setLinkage(linkage);
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
 
