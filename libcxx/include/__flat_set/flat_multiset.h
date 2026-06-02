@@ -82,7 +82,7 @@ public:
   using value_type             = _Key;
   using key_compare            = __type_identity_t<_Compare>;
   using value_compare          = _Compare;
-  using reference              = iter_reference_t<typename _KeyContainer::const_iterator>;
+  using reference              = iter_reference_t<typename _KeyContainer::iterator>;
   using const_reference        = iter_reference_t<typename _KeyContainer::const_iterator>;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;

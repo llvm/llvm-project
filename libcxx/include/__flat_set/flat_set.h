@@ -78,16 +78,14 @@ class flat_set {
 
   static_assert(is_same_v<_Key, typename _KeyContainer::value_type>);
 
-  using __key_iterator _LIBCPP_NODEBUG = typename _KeyContainer::const_iterator;
-
 public:
   // types
   using key_type               = _Key;
   using value_type             = _Key;
   using key_compare            = __type_identity_t<_Compare>;
   using value_compare          = _Compare;
-  using reference              = iter_reference_t<__key_iterator>;
-  using const_reference        = iter_reference_t<__key_iterator>;
+  using reference              = iter_reference_t<typename _KeyContainer::iterator>;
+  using const_reference        = iter_reference_t<typename _KeyContainer::const_iterator>;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;
   using iterator               = __ra_iterator<flat_set, typename _KeyContainer::const_iterator>;
