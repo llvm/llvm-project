@@ -23,6 +23,11 @@
 
 #include "test_macros.h"
 
+template <class T, std::size_t Extent = std::dynamic_extent>
+constexpr bool hasAsWritableBytes() {
+  return requires(std::span<T, Extent> s) { std::as_writable_bytes(s); };
+}
+
 template <typename Span>
 void testRuntimeSpan(Span sp) {
   ASSERT_NOEXCEPT(std::as_writable_bytes(sp));
@@ -44,6 +49,12 @@ struct A {};
 int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 int main(int, char**) {
+  static_assert(hasAsWritableBytes<int>());
+  static_assert(hasAsWritableBytes<long>());
+  static_assert(hasAsWritableBytes<double>());
+  static_assert(hasAsWritableBytes<A>());
+  static_assert(hasAsWritableBytes<std::string>());
+
   testRuntimeSpan(std::span<int>());
   testRuntimeSpan(std::span<long>());
   testRuntimeSpan(std::span<double>());

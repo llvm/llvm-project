@@ -23,6 +23,11 @@
 
 #include "test_macros.h"
 
+template <class T, std::size_t Extent = std::dynamic_extent>
+constexpr bool hasAsBytes() {
+  return requires(std::span<T, Extent> s) { std::as_bytes(s); };
+}
+
 template <typename Span>
 void testRuntimeSpan(Span sp) {
   ASSERT_NOEXCEPT(std::as_bytes(sp));
@@ -44,6 +49,30 @@ struct A {};
 int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 int main(int, char**) {
+  static_assert(hasAsBytes<int>());
+  static_assert(hasAsBytes<long>());
+  static_assert(hasAsBytes<double>());
+  static_assert(hasAsBytes<A>());
+  static_assert(hasAsBytes<std::string>());
+
+  static_assert(hasAsBytes<const int>());
+  static_assert(hasAsBytes<const long>());
+  static_assert(hasAsBytes<const double>());
+  static_assert(hasAsBytes<const A>());
+  static_assert(hasAsBytes<const std::string>());
+
+  static_assert(hasAsBytes<int, 0>());
+  static_assert(hasAsBytes<long, 0>());
+  static_assert(hasAsBytes<double, 0>());
+  static_assert(hasAsBytes<A, 0>());
+  static_assert(hasAsBytes<std::string, 0>());
+
+  static_assert(hasAsBytes<const int, 0>());
+  static_assert(hasAsBytes<const long, 0>());
+  static_assert(hasAsBytes<const double, 0>());
+  static_assert(hasAsBytes<const A, 0>());
+  static_assert(hasAsBytes<const std::string, 0>());
+
   testRuntimeSpan(std::span<int>());
   testRuntimeSpan(std::span<long>());
   testRuntimeSpan(std::span<double>());
