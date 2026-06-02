@@ -2112,28 +2112,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  bool IsSibcall = false;
+  // We cannot guarantee TCO for mismatched calling conventions.
   if (isTailCall && ShouldGuaranteeTCO) {
-    // If we need to guarantee TCO for a non-musttail call, we just need to make
-    // sure the conventions match. If a tail call uses one of the supported TCO
-    // conventions and the caller and callee match, we can tail call any
-    // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    // Treat musttail as a sibcall only when all arguments are in registers;
-    // otherwise full tail-call lowering must run to populate the outgoing
-    // stack slots.
-    if (isTailCall && IsMustTail)
-      IsSibcall = llvm::all_of(
-          ArgLocs, [](const CCValAssign &VA) { return VA.isRegLoc(); });
-  } else if (isTailCall) {
-    // Check if this tail call is a "sibling" call, which is loosely defined to
-    // be a tail call that doesn't require heroics like moving the return
-    // address or swapping byval arguments. We treat some musttail calls as
-    // sibling calls to avoid unnecessary argument copies.
+  }
+
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return
+  // address or swapping byval arguments. We treat some musttail calls as
+  // sibling calls to avoid unnecessary argument copies.
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool IsSibcall = false;
+  if (isTailCall) {
     IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
-    isTailCall = IsSibcall || IsMustTail;
+    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
   if (isTailCall)
