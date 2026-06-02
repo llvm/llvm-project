@@ -350,8 +350,7 @@ bool ValuePointsToCode(lldb::SBValue v) {
   if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::SBError error;
-  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
+  lldb::addr_t addr = v.GetValueAsAddress();
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
