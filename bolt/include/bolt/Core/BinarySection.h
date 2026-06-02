@@ -478,7 +478,7 @@ public:
 
   /// Flush all pending relocations to patch original contents of sections
   /// that were not emitted via MCStreamer.
-  void flushPendingRelocations(raw_pwrite_stream &OS,
+  void flushPendingRelocations(raw_fd_ostream &OS,
                                SymbolResolverFuncTy Resolver);
 
   /// Change contents of the section. Unless the section has a valid SectionID,

@@ -483,7 +483,7 @@ void MachORewriteInstance::emitAndLink() {
 }
 
 void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
-                                                       raw_pwrite_stream &OS) {
+                                                       raw_fd_ostream &OS) {
   if (!opts::Instrument)
     return;
   ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
@@ -497,8 +497,8 @@ void MachORewriteInstance::writeInstrumentationSection(StringRef SectionName,
          "Section input offset cannot be zero");
   assert(Section->getAllocAddress() && "Section alloc address cannot be zero");
   assert(Section->getOutputSize() && "Section output size cannot be zero");
-  OS.pwrite(reinterpret_cast<char *>(Section->getAllocAddress()),
-            Section->getOutputSize(), Section->getInputFileOffset());
+  safePWrite(OS, reinterpret_cast<char *>(Section->getAllocAddress()),
+             Section->getOutputSize(), Section->getInputFileOffset());
 }
 
 void MachORewriteInstance::rewriteFile() {
@@ -518,13 +518,13 @@ void MachORewriteInstance::rewriteFile() {
       continue;
     if (opts::Verbosity >= 2)
       outs() << "BOLT: rewriting function \"" << Function << "\"\n";
-    OS.pwrite(reinterpret_cast<char *>(Function.getImageAddress()),
-              Function.getImageSize(), Function.getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function.getImageAddress()),
+               Function.getImageSize(), Function.getFileOffset());
   }
 
   for (const BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
   }
 
   writeInstrumentationSection("__counters", OS);

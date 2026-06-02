@@ -5141,7 +5141,7 @@ void RewriteInstance::patchELFSectionHeaderTable(ELFObjectFile<ELFT> *File) {
   NewEhdr.e_shoff = SHTOffset;
   NewEhdr.e_shnum = OutputSections.size();
   NewEhdr.e_shstrndx = NewSectionIndex[NewEhdr.e_shstrndx];
-  OS.pwrite(reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
+  safePWrite(OS, reinterpret_cast<const char *>(&NewEhdr), sizeof(NewEhdr), 0);
 }
 
 template <typename ELFT, typename WriteFuncTy, typename StrTabFuncTy>
@@ -5619,25 +5619,14 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   assert((DynSymSection || BC->IsStaticExecutable) &&
          "dynamic symbol table expected");
   if (DynSymSection) {
-    uint64_t SavedPos = Out->os().tell();
-    uint64_t RequiredPos = DynSymSection->sh_offset + DynSymSection->sh_size;
-    if (SavedPos < RequiredPos)
-      Out->os().seek(RequiredPos);
-
     updateELFSymbolTable(
         File,
-        /*IsDynSym=*/true,
-        *DynSymSection,
-        NewSectionIndex,
+        /*IsDynSym=*/true, *DynSymSection, NewSectionIndex,
         [&](size_t Offset, const ELFSymTy &Sym) {
-          Out->os().pwrite(reinterpret_cast<const char *>(&Sym),
-                           sizeof(ELFSymTy),
-                           DynSymSection->sh_offset + Offset);
+          safePWrite(Out->os(), reinterpret_cast<const char *>(&Sym),
+                     sizeof(ELFSymTy), DynSymSection->sh_offset + Offset);
         },
         [](StringRef) -> size_t { return 0; });
-
-    if (SavedPos < RequiredPos)
-      Out->os().seek(SavedPos);
   }
 
   if (opts::RemoveSymtab)
@@ -5721,7 +5710,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
     if (!Addend)
       return;
 
-    OS.pwrite(reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Addend), PSize, FileOffset);
   };
 
   // Fill new relative relocation offsets set
@@ -5759,8 +5748,8 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       exit(1);
     }
 
-    OS.pwrite(reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
-              RelrDynOffset);
+    safePWrite(OS, reinterpret_cast<const char *>(&Value), DynamicRelrEntrySize,
+               RelrDynOffset);
     RelrDynOffset += DynamicRelrEntrySize;
   };
 
@@ -5822,7 +5811,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   DynamicRelativeRelocationsCount = 0;
 
   auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t &Offset) {
-    OS.pwrite(reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
+    safePWrite(OS, reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
     Offset += sizeof(*RelA);
   };
 
@@ -5935,9 +5924,9 @@ void RewriteInstance::patchELFGOT(ELFObjectFile<ELFT> *File) {
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: patching GOT entry 0x"
                         << Twine::utohexstr(*GOTEntry) << " with 0x"
                         << Twine::utohexstr(NewAddress) << '\n');
-      OS.pwrite(reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
-                reinterpret_cast<const char *>(GOTEntry) -
-                    File->getData().data());
+      safePWrite(
+          OS, reinterpret_cast<const char *>(&NewAddress), sizeof(NewAddress),
+          reinterpret_cast<const char *>(GOTEntry) - File->getData().data());
     }
   }
 }
@@ -6029,8 +6018,8 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
       break;
     }
     if (ShouldPatch)
-      OS.pwrite(reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
-                DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
+      safePWrite(OS, reinterpret_cast<const char *>(&NewDE), sizeof(NewDE),
+                 DynamicOffset + (&Dyn - DTB) * sizeof(Dyn));
   }
 
   if (BC->RequiresZNow && !ZNowSet) {
@@ -6232,8 +6221,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
     if (opts::Verbosity >= 2)
       BC->outs() << "BOLT: rewriting function \"" << *Function << "\"\n";
 
-    OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
-              Function->getImageSize(), Function->getFileOffset());
+    safePWrite(OS, reinterpret_cast<char *>(Function->getImageAddress()),
+               Function->getImageSize(), Function->getFileOffset());
 
     // Write nops at the end of the function.
     if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
@@ -6256,8 +6245,8 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
 
     for (const FunctionFragment &FF :
          Function->getLayout().getSplitFragments()) {
-      OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
-                FF.getImageSize(), FF.getFileOffset());
+      safePWrite(OS,reinterpret_cast<char *>(FF.getImageAddress()),
+                 FF.getImageSize(), FF.getFileOffset());
     }
   }
 
