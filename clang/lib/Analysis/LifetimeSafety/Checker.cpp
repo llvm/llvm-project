@@ -148,11 +148,12 @@ public:
       // field!
     };
     auto CheckImplicitThis = [&](const CXXMethodDecl *MD) {
-      if (implicitObjectParamIsLifetimeBound(MD)) {
-        if (isa<ReturnEscapeFact>(OEF))
+      if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF)) {
+        if (implicitObjectParamIsLifetimeBound(MD))
           VerifiedLiftimeboundEscapes.insert(MD);
-      } else if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
-        AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+        else
+          AnnotationWarningsMap.try_emplace(MD, ReturnEsc->getReturnExpr());
+      }
     };
     auto MovedAtEscape = MovedLoans.getMovedLoans(OEF);
     for (LoanID LID : EscapedLoans) {
