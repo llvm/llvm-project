@@ -582,7 +582,6 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
     case eSymbolTypeRuntime:
     case eSymbolTypeVariable:
     case eSymbolTypeLocal:
-    case eSymbolTypeParam:
     case eSymbolTypeInvalid:
     case eSymbolTypeAbsolute:
     case eSymbolTypeException:
@@ -590,10 +589,8 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
     case eSymbolTypeHeaderFile:
     case eSymbolTypeObjectFile:
     case eSymbolTypeCommonBlock:
-    case eSymbolTypeBlock:
     case eSymbolTypeVariableType:
     case eSymbolTypeLineEntry:
-    case eSymbolTypeLineHeader:
     case eSymbolTypeScopeBegin:
     case eSymbolTypeScopeEnd:
     case eSymbolTypeAdditional:

@@ -813,7 +813,6 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
           case eSymbolTypeCode: // We already lookup functions elsewhere
           case eSymbolTypeVariable:
           case eSymbolTypeLocal:
-          case eSymbolTypeParam:
           case eSymbolTypeTrampoline:
           case eSymbolTypeInvalid:
           case eSymbolTypeException:
@@ -821,10 +820,8 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
           case eSymbolTypeHeaderFile:
           case eSymbolTypeObjectFile:
           case eSymbolTypeCommonBlock:
-          case eSymbolTypeBlock:
           case eSymbolTypeVariableType:
           case eSymbolTypeLineEntry:
-          case eSymbolTypeLineHeader:
           case eSymbolTypeScopeBegin:
           case eSymbolTypeScopeEnd:
           case eSymbolTypeAdditional:

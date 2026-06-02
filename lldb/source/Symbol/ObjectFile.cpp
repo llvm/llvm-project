@@ -416,19 +416,13 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return AddressClass::eDebug;
       case eSymbolTypeCommonBlock:
         return AddressClass::eDebug;
-      case eSymbolTypeBlock:
-        return AddressClass::eDebug;
       case eSymbolTypeLocal:
-        return AddressClass::eData;
-      case eSymbolTypeParam:
         return AddressClass::eData;
       case eSymbolTypeVariable:
         return AddressClass::eData;
       case eSymbolTypeVariableType:
         return AddressClass::eDebug;
       case eSymbolTypeLineEntry:
-        return AddressClass::eDebug;
-      case eSymbolTypeLineHeader:
         return AddressClass::eDebug;
       case eSymbolTypeScopeBegin:
         return AddressClass::eDebug;

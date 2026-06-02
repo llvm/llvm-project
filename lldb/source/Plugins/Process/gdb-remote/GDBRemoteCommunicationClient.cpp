@@ -4164,13 +4164,10 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeHeaderFile:
                   case eSymbolTypeObjectFile:
                   case eSymbolTypeCommonBlock:
-                  case eSymbolTypeBlock:
                   case eSymbolTypeLocal:
-                  case eSymbolTypeParam:
                   case eSymbolTypeVariable:
                   case eSymbolTypeVariableType:
                   case eSymbolTypeLineEntry:
-                  case eSymbolTypeLineHeader:
                   case eSymbolTypeScopeBegin:
                   case eSymbolTypeScopeEnd:
                   case eSymbolTypeAdditional:

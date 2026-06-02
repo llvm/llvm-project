@@ -755,13 +755,10 @@ const char *Symbol::GetTypeAsString(lldb::SymbolType symbol_type) {
     ENUM_TO_CSTRING(HeaderFile);
     ENUM_TO_CSTRING(ObjectFile);
     ENUM_TO_CSTRING(CommonBlock);
-    ENUM_TO_CSTRING(Block);
     ENUM_TO_CSTRING(Local);
-    ENUM_TO_CSTRING(Param);
     ENUM_TO_CSTRING(Variable);
     ENUM_TO_CSTRING(VariableType);
     ENUM_TO_CSTRING(LineEntry);
-    ENUM_TO_CSTRING(LineHeader);
     ENUM_TO_CSTRING(ScopeBegin);
     ENUM_TO_CSTRING(ScopeEnd);
     ENUM_TO_CSTRING(Additional);
@@ -790,13 +787,10 @@ lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
       .Case("headerfile", eSymbolTypeHeaderFile)
       .Case("objectfile", eSymbolTypeObjectFile)
       .Case("commonblock", eSymbolTypeCommonBlock)
-      .Case("block", eSymbolTypeBlock)
       .Case("local", eSymbolTypeLocal)
-      .Case("param", eSymbolTypeParam)
       .Case("variable", eSymbolTypeVariable)
       .Case("variableType", eSymbolTypeVariableType)
       .Case("lineentry", eSymbolTypeLineEntry)
-      .Case("lineheader", eSymbolTypeLineHeader)
       .Case("scopebegin", eSymbolTypeScopeBegin)
       .Case("scopeend", eSymbolTypeScopeEnd)
       .Case("additional,", eSymbolTypeAdditional)
