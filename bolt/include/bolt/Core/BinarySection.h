@@ -288,6 +288,8 @@ public:
   bool isNote() const { return isELF() && ELFType == ELF::SHT_NOTE; }
   bool isReordered() const { return IsReordered; }
   bool isAnonymous() const { return IsAnonymous; }
+  bool isBackupSection() const {
+    return llvm::StringRef(Name).starts_with(".bolt.org"); }
   bool isRelro() const { return IsRelro; }
   void setRelro() { IsRelro = true; }
   unsigned getELFType() const { return ELFType; }
