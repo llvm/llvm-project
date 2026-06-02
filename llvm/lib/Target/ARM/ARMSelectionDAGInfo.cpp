@@ -257,6 +257,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     bool AlwaysInline, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
   const ARMSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -375,6 +376,7 @@ SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
   return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size,
                                 Alignment.value(), RTLIB::MEMMOVE);
 }

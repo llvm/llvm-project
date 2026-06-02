@@ -67,6 +67,7 @@ SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     bool AlwaysInline, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (AlwaysInline || Alignment < Align(4) || !ConstantSize)
     return SDValue();
