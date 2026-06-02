@@ -14,6 +14,16 @@ int g_array_const[3] = {1, 2, 3};
 int g_runtime = runtime();              // expected-error {{non-local variable 'g_runtime' requires constant initialization under profile 'std::init'}}
 int g_runtime_array[3] = {1, runtime(), 3}; // expected-error {{non-local variable 'g_runtime_array' requires constant initialization under profile 'std::init'}}
 
+struct Trivial { int x; };
+struct WithDtor { ~WithDtor(); };
+struct WithCtor { WithCtor(); };
+
+int g_scalar;
+Trivial g_trivial;
+Trivial g_trivial_braced = {};
+WithDtor g_with_dtor;
+WithCtor g_with_ctor;                   // expected-error {{non-local variable 'g_with_ctor' requires constant initialization under profile 'std::init'}}
+
 constinit int g_ci = 0;
 // The constinit hard error fires regardless of -fprofiles.
 constinit int g_ci_runtime = runtime();

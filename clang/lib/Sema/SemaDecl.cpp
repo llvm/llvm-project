@@ -15085,11 +15085,16 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     } else if (IsGlobal && [&] {
                  // std::init / static_runtime_init: paper says non-local
                  // statics must be initialized at compile or link time.
-                 // Runs before -Wglobal-constructors so the profile error
-                 // (when enforced) takes precedence over the standalone
-                 // warning.
+                 // checkConstInit() permits trivial default initialization
+                 // (not a constant initializer but needs no global
+                 // constructor), so a zero-initialized aggregate such as
+                 // `struct S { int x; }; S g;` is not a violation. Runs before
+                 // -Wglobal-constructors so the profile error (when enforced)
+                 // takes precedence over the standalone warning.
                  static constexpr StringRef Profile = "std::init";
                  static constexpr StringRef Rule = "static_runtime_init";
+                 if (checkConstInit())
+                   return false;
                  if (!shouldEmitProfileViolation(Profile, Rule,
                                                  var->getLocation()))
                    return false;
