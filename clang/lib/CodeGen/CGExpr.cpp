@@ -1013,6 +1013,14 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
   return Builder.CreateUDiv(SizeInBytes, SizeOfElement);
 }
 
+static bool ShouldIgnoreLastMember(CodeGenFunction &CGF, const Expr *Base) {
+  auto &Ctx = CGF.getContext();
+  auto &SM = Ctx.getSourceManager();
+  auto FN = SM.getFilename(SM.getFileLoc(Base->getExprLoc()));
+  return Ctx.getNoSanitizeList().containsIgnoreFamFile(
+      SanitizerKind::ArrayBounds, FN);
+}
+
 /// If Base is known to point to the start of an array, return the length of
 /// that array. Return 0 if the length cannot be determined.
 static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
@@ -1027,6 +1035,9 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   }
 
   Base = Base->IgnoreParens();
+
+  if (ShouldIgnoreLastMember(CGF, Base))
+    StrictFlexArraysLevel = LangOptions::StrictFlexArraysLevelKind::Default;
 
   if (const auto *CE = dyn_cast<CastExpr>(Base)) {
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&

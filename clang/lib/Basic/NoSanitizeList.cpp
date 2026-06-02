@@ -62,6 +62,12 @@ bool NoSanitizeList::containsFile(SanitizerMask Mask, StringRef FileName,
   return containsPrefix(Mask, "src", FileName, Category);
 }
 
+bool NoSanitizeList::containsIgnoreFamFile(SanitizerMask Mask,
+                                           StringRef FileName,
+                                           StringRef Category) const {
+  return containsPrefix(Mask, "ignorefamsrc", FileName, Category);
+}
+
 bool NoSanitizeList::containsMainFile(SanitizerMask Mask, StringRef FileName,
                                       StringRef Category) const {
   return containsPrefix(Mask, "mainfile", FileName, Category);
