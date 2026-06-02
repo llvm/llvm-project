@@ -312,12 +312,53 @@ This pattern needs two pieces, both colocated with the dispatcher.
 The diagnostic itself is defined with ``ProfileRuleError`` as in patterns 1
 and 2.
 
-Unlike the post-parse CFG pass, class-finalization callbacks run while the
-``CXXRecordDecl`` is being finalized (immediately before
-``CheckCompletedCXXClass`` returns).  Out-of-line member definitions --
-including constructor bodies -- have not yet been parsed when the callback
-runs.  Rules that need ctor-body flow analysis must therefore live in a
-post-parse CFG pass (pattern 2), not here.
+Class-finalization is for **structural** rules -- those answerable from the
+class's declared members, their types, and their attributes.  The callbacks
+run while the ``CXXRecordDecl`` is being finalized (immediately before
+``CheckCompletedCXXClass`` returns), which is *before any constructor body or
+member-initializer list has been parsed* -- inline member bodies are
+late-parsed afterward, and out-of-line and template member constructors later
+still.  A class-finalization callback therefore must not inspect a
+constructor's ``inits()`` (they are empty here).  Rules that depend on what a
+constructor initializes belong on the constructor-finalization dispatch
+(pattern 4); rules that need whole-function flow analysis belong on a
+post-parse CFG pass (pattern 2).
+
+
+Pattern 4: Constructor-Finalization Profile
+-------------------------------------------
+
+Used when the rule applies to a single constructor and needs that
+constructor's complete member-initializer list -- for example, "every member
+must be initialized by this constructor."  ``test::ctor_final`` is the in-tree
+example, and the ``std::init`` ``ctor_uninit_member`` rule is the real one.
+
+The dispatch point is ``Sema::checkProfileViolationsAtConstructorFinalization``,
+called right after ``DiagnoseUninitializedFields`` in
+``Sema::ActOnMemInitializers`` and ``Sema::ActOnDefaultCtorInitializers`` in
+``clang/lib/Sema/SemaDeclCXX.cpp``.  Those two functions are the funnel for
+every user-defined constructor -- written or implicit member-initializer
+list, inline or out-of-line -- and template instantiation reaches the first
+of them through ``Sema::InstantiateMemInitializers``, so the hook sees every
+constructor at the point its ``inits()`` (including synthesized entries) is
+complete.
+
+The dispatcher filters out constructors the rules are not meant to see:
+
+- Dependent constructors (``isDependentContext()``).  The hook re-fires on
+  each instantiation.
+- Invalid constructors (``isInvalidDecl()``).
+- Delegating constructors (``isDelegatingConstructor()``), which leave member
+  initialization to their target.
+
+The two pieces mirror pattern 3: a per-pass opt-in table
+``ConstructorFinalizationProfiles`` (profile name plus a
+``void (*)(Sema &, CXXConstructorDecl *)`` callback), and a callback that
+emits via ``Sema::shouldEmitProfileViolation``.  The dispatcher establishes a
+``ProfileSuppressScope(*this, Ctor, /*WalkLexicalParents=*/true)`` around each
+callback, so ``[[profiles::suppress]]`` on the constructor, the class, or an
+enclosing lexical ``Decl`` works.  A callback that should only apply to
+user-written constructors checks ``Ctor->isUserProvided()``.
 
 
 .. _profiles-token-dominion:
@@ -427,23 +468,25 @@ The following parts of P3589R2 are deliberately not implemented:
 Built-in Profiles
 =================
 
-The tree ships four built-in profiles, all gated on ``-fprofiles``:
+The tree ships five built-in profiles, all gated on ``-fprofiles``:
 
 - ``test::type_cast`` (test-only) -- pattern-1 example.
 - ``test::uninit_read`` (test-only) -- pattern-2 example riding the existing
   CFG uninitialized-variables analysis.
 - ``test::class_final`` (test-only) -- pattern-3 example riding the
   class-finalization dispatch.
+- ``test::ctor_final`` (test-only) -- pattern-4 example riding the
+  constructor-finalization dispatch.
 - ``std::init`` (initial slice of the proposed initialization profile from
-  Stroustrup's draft, on top of P3589R2 and P3402R3).  It rides the same
-  CFG dispatch as ``test::uninit_read`` for one of its rules and adds three
-  parse-time (pattern-1) rules.
+  Stroustrup's draft, on top of P3589R2 and P3402R3).  It uses all four
+  patterns: the CFG dispatch (with ``test::uninit_read``), the
+  constructor-finalization dispatch, and several parse-time check sites.
 
 By convention:
 
 - Real test profiles live under the ``test::`` namespace.  Today there are
-  three: ``test::type_cast``, ``test::uninit_read``, and
-  ``test::class_final``.
+  four: ``test::type_cast``, ``test::uninit_read``, ``test::class_final``,
+  and ``test::ctor_final``.
 - The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
   ``test::not_enforced`` are deliberately *not* implemented and appear only
   in negative tests as stand-in "some other profile" names.  Adding a real
@@ -522,16 +565,37 @@ enclosing lexical ``Decl`` silences the diagnostic via the
 dispatcher establishes around each callback.
 
 
+The ``test::ctor_final`` Profile
+--------------------------------
+
+A pattern-4 (constructor-finalization) profile.  Demonstrates the case where
+the rule applies once per user-defined constructor, after its
+member-initializer list is complete.
+
+- **Rules**: none (single implicit rule, empty rule string).
+- **Diagnostic**: ``err_profile_ctor_final_test`` ("test profile fired on
+  finalization of a constructor for class %1 under profile '%0'").
+- **Opt-in table**: ``ConstructorFinalizationProfiles`` in
+  ``clang/lib/Sema/SemaDeclCXX.cpp``.
+
+The diagnostic fires once per user-defined constructor -- written or implicit
+member-initializer list, inline or out-of-line -- and on constructor template
+*instantiations* rather than the dependent pattern.  Defaulted and implicit
+constructors (no body) and delegating constructors are skipped.
+
+
 The ``std::init`` Profile (initial slice)
 -----------------------------------------
 
-A first slice of the proposed initialization profile, intentionally minimal:
-no ``[[ref_to_uninit]]``, no field-level marker, no new dataflow analyses.
-The class-finalization dispatch (pattern 3) now exists in the framework but
-``std::init`` does not yet register any class-finalization callbacks; the
-paper §6 / §6.2 class rules are deferred to later stages.
+A slice of the proposed initialization profile.  It does not yet implement
+``[[ref_to_uninit]]`` (paper §5), classes that expose uninitialized memory to
+users (paper §6.2), or random-access initialization of uninitialized arrays
+(paper §6.4); and the constructor-body flow check that would let a
+``[[uninitialized]]`` member be initialized by assignment in the body (the
+dynamic half of paper §6.1) is deferred to a future CFG-based pass.  Until it
+lands, a ``[[uninitialized]]`` data member is trusted.
 
-The slice introduces one new attribute and four rules.
+The slice introduces one new attribute and the rules below.
 
 Marker attribute
 ~~~~~~~~~~~~~~~~
@@ -539,23 +603,27 @@ Marker attribute
 ``[[uninitialized]]`` (a standard C++11 attribute, distinct from the Clang
 vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` or
 ``FieldDecl`` as intentionally left uninitialized.  Recognised by Clang
-regardless of ``-fprofiles``; only carries semantic weight when
+regardless of ``-fprofiles``; its profile rules carry weight only when
 ``std::init`` is enforced.
 
-- TableGen def: ``CXX11Uninitialized`` in ``clang/include/clang/Basic/Attr.td``.
-- Subjects: ``Var`` and ``Field``.  Field-level placement is accepted but
-  currently inert; rules that consume the field marker (paper §6
-  aggregate-without-ctor, §6.1 ctor-body member-init, classes-exposing-
-  uninitialized-memory) are deferred to later stages.
+- TableGen def: ``CXX11Uninitialized`` in ``clang/include/clang/Basic/Attr.td``,
+  with a custom handler in ``clang/lib/Sema/SemaDeclAttr.cpp``.
+- Subjects: ``Var`` and ``Field``.  The handler rejects placement where the
+  marker is meaningless -- a reference, a function parameter, or a structured
+  binding -- regardless of ``-fprofiles``.
 - Behaviour:
 
-  - Suppresses R2 (``uninit_decl``) on the marked declaration.
-  - Does **not** suppress R1 (``uninit_read``).  Per the paper, the marker
-    excuses the declaration but a read before any subsequent assignment is
-    still ill-formed.
-  - Triggers R4 (``uninit_with_initializer``) when combined with an
-    initializer, including a language-synthesized one (e.g., a class-typed
-    variable whose default constructor would run).
+  - Suppresses ``uninit_decl`` on the marked declaration (scalar or aggregate).
+  - Excuses a non-static data member from ``ctor_uninit_member``.
+  - Does **not** suppress ``uninit_read``.  Per the paper, the marker excuses
+    the declaration but a read before any subsequent assignment is still
+    ill-formed.
+  - Triggers ``uninit_with_initializer`` when combined with an initializer,
+    including a language-synthesized one from a constructor that actually runs
+    (e.g. ``WithCtor x [[uninitialized]];``).  A trivial/aggregate type whose
+    default-initialization is a no-op is *not* such an initializer, so the
+    marker is accepted there (the object is genuinely left uninitialized).
+  - Is banned on a union object or union member by ``union_marker``.
 
 Rules
 ~~~~~
@@ -581,18 +649,25 @@ and surface the ``std::init`` diagnostic.
 R2. ``uninit_decl`` -- pattern 1
 .................................
 
-A definition that, after attempted default-initialization, has no
-initializer expression must either carry ``[[uninitialized]]`` or have
-static / thread storage duration (zero-initialized by language rule).
+An automatic-storage variable definition whose default-initialization
+leaves it (or a scalar subobject) indeterminate must either carry
+``[[uninitialized]]`` or be initialized.  This covers a scalar / pointer /
+enum with no initializer, and -- per paper §6 ("classes without
+constructors") -- an aggregate or trivially-default-constructible class type
+whose default-initialization leaves a scalar subobject indeterminate (e.g.
+``struct S { int x; }; S s;``).  A class type with a user-provided default
+constructor is trusted; static / thread storage duration is excluded
+(zero-initialized by language rule).
 
 - Diagnostic: ``err_init_uninit_decl``.
-- Check site: end of ``Sema::ActOnUninitializedDecl`` in
-  ``clang/lib/Sema/SemaDecl.cpp``.
-- Conservative classification: a class type whose default constructor
-  produces an initializer expression (``Var->getInit()`` non-null after
-  ``InitSeq.Perform``) is trusted.  Aggregates / POD class types whose
-  default-init leaves members indeterminate are *not* diagnosed in this
-  slice; that is paper §6 ("classes without constructors") work, deferred.
+- Check site: ``Sema::ActOnUninitializedDecl`` in
+  ``clang/lib/Sema/SemaDecl.cpp``, which is only reached for declarations
+  with no initializer (so braced or value initialization such as
+  ``S s = {1};`` and ``S s{};`` is unaffected -- omitted aggregate members
+  are value-initialized).
+- The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``,
+  which recurses through bases and members, trusts user-provided default
+  constructors, and excludes unions.
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................
@@ -615,16 +690,50 @@ R4. ``uninit_with_initializer`` -- pattern 1
 contradiction (the marker means "no initialization here").
 
 - Diagnostic: ``err_init_uninit_with_initializer``.
-- Check site: top of ``Sema::CheckCompleteVariableDeclaration``.
-- Note: also fires when the initializer is language-synthesized (e.g.,
-  ``WithCtor x [[uninitialized]];`` -- the implicit default-constructor
-  call counts as an initializer).  Combining the marker with class types
-  that have a default constructor is therefore ill-formed.
+- Check site: ``Sema::checkInitProfileUninitWithInitializer``, shared by
+  ``Sema::CheckCompleteVariableDeclaration`` (variables) and
+  ``Sema::ActOnFinishCXXInClassMemberInitializer`` (data members with a
+  default member initializer).
+- A ``RecoveryExpr`` placeholder (from a failed initialization) is not a
+  user-written initializer and does not trigger the rule.
+- The "initializer" includes a language-synthesized one from a constructor
+  that actually runs (e.g. ``WithCtor x [[uninitialized]];``), but *not* a
+  no-op trivial/aggregate default-initialization, where the marker is
+  consistent with the object being left uninitialized.
+
+R5. ``ctor_uninit_member`` -- pattern 4
+.......................................
+
+A user-provided constructor must initialize every non-static data member
+via its member-initializer list or an NSDMI, unless the member is marked
+``[[uninitialized]]`` (paper §6.1).  A plain assignment in the constructor
+body does not count.  A member whose own default-initialization leaves a
+scalar subobject indeterminate (a nested aggregate) is flagged as well.
+
+- Diagnostic: ``err_init_ctor_uninit_member`` (with a
+  ``note_init_uninit_member_here`` note at the member).
+- Opt-in table: ``ConstructorFinalizationProfiles`` (pattern 4).
+- Reference and const members keep their existing dedicated diagnostics;
+  anonymous-aggregate members and bit-fields are conservatively skipped.
+
+R6. ``union_marker`` -- attribute handler
+.........................................
+
+``[[uninitialized]]`` on a union object or a union member is banned (paper
+§6.5): delayed initialization by assigning a member would be an erroneous
+assignment when compiled without the profile.
+
+- Diagnostic: ``err_init_union_marker``.
+- Check site: the ``CXX11Uninitialized`` handler in
+  ``clang/lib/Sema/SemaDeclAttr.cpp``.  Unlike the reference / parameter /
+  structured-binding rejections, which are unconditional, this is gated on
+  enforcement -- a union may legitimately carry the marker without the
+  profile.
 
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~
 
-All four rules are suppressible per-site with
+Every rule is suppressible per-site with
 ``[[profiles::suppress(std::init)]]`` (covers all rules) or
 ``[[profiles::suppress(std::init, rule: "rule_name")]]`` (rule-targeted).
 The token-based-dominion limitation noted earlier applies: a suppress
@@ -634,7 +743,7 @@ attribute on a ``VarDecl`` covers only that declaration's tokens.
 In-Tree Tests
 =============
 
-These tests collectively exercise the framework and the two built-in
+These tests collectively exercise the framework and the built-in
 profiles.  When changing the framework, run them all with
 ``check-clang-sema``, ``check-clang-parser``, and ``check-clang-pch``.
 
@@ -673,20 +782,40 @@ profiles.  When changing the framework, run them all with
   profile's ``uninit_read`` rule.  Same ``-DCASE=N`` style as the
   ``test::uninit_read`` test; CASE=4 additionally enforces
   ``test::uninit_read`` to exercise the table-order priority.
+- ``clang/test/SemaCXX/safety-profile-ctor-final.cpp`` -- the
+  ``test::ctor_final`` profile: end-to-end exercise of the
+  constructor-finalization dispatch (pattern 4) including written /
+  no-list / out-of-line / instantiated constructors, the delegating and
+  defaulted skips, suppression, and the without-``-fprofiles`` path.
 - ``clang/test/SemaCXX/safety-profile-init-decl.cpp`` -- the ``std::init``
-  profile's ``uninit_decl`` rule (R2): scalars / pointers / enums require
-  an initializer or ``[[uninitialized]]``; statics / thread-locals are
+  profile's ``uninit_decl`` rule for scalars / pointers / enums: require an
+  initializer or ``[[uninitialized]]``; statics / thread-locals are
   excluded; class types with a user-provided default constructor are
-  trusted; trivial / aggregate types are conservatively *not* diagnosed
-  (deferred to §6 work).
+  trusted.
+- ``clang/test/SemaCXX/safety-profile-init-aggregate.cpp`` -- the
+  ``uninit_decl`` rule for aggregates / trivially-default-constructible
+  class types whose default-init leaves a scalar subobject indeterminate
+  (paper §6); braced and value initialization are accepted.
 - ``clang/test/SemaCXX/safety-profile-init-static.cpp`` -- the ``std::init``
-  profile's ``static_runtime_init`` rule (R3): non-local vars need a
+  profile's ``static_runtime_init`` rule: non-local vars need a
   constant initializer; locals / static-locals / thread-locals are
   excluded; ``constinit`` failures still produce the existing hard error
   regardless of ``-fprofiles``.
 - ``clang/test/SemaCXX/safety-profile-init-with-initializer.cpp`` -- the
-  ``std::init`` profile's ``uninit_with_initializer`` rule (R4): every
+  ``std::init`` profile's ``uninit_with_initializer`` rule: every
   combination of ``[[uninitialized]]`` placement (prefix / postfix) with
-  every initializer form (``= e``, ``{}``, ``(e)``).
+  every initializer form (``= e``, ``{}``, ``(e)``), plus the
+  synthesized-initializer and RecoveryExpr cases.
+- ``clang/test/SemaCXX/safety-profile-init-field-marker.cpp`` -- placement
+  of ``[[uninitialized]]`` on data members, the marker / NSDMI
+  contradiction, and rejection on references, parameters, and structured
+  bindings.
+- ``clang/test/SemaCXX/safety-profile-init-ctor.cpp`` -- the ``std::init``
+  profile's ``ctor_uninit_member`` rule: member-initializer-list / NSDMI /
+  marker coverage, the nested-aggregate and body-assignment cases,
+  out-of-line and instantiated constructors, and suppression.
+- ``clang/test/SemaCXX/safety-profile-init-union.cpp`` -- the ``std::init``
+  profile's ``union_marker`` rule banning the marker on a union object or
+  union member.
 - ``clang/test/PCH/cxx-profiles-enforce.cpp`` -- ``[[profiles::enforce]]``
   state survives PCH serialization round-trip.

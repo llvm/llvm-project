@@ -897,15 +897,20 @@ A declaration or non-static data member with both ``[[uninitialized]]``
 and an initializer is ill-formed under the initialization profile (the
 marker contradicts the explicit initialization).
 
-When placed on a non-static data member, the attribute is currently inert:
-the parser accepts the placement but no diagnostic is tied to it yet. Its
-semantic weight is added by the classes-without-constructors rule, the
-class-exposes-uninitialized-memory rule, and the constructor-body
-member-initialization rule, which are staged separately.
+On a non-static data member the marker also excuses the member from the
+profile's requirement that every constructor initialize it. (The profile
+does not yet verify that such a member is assigned in the constructor
+body; until it does, a marked member is trusted.)
 
-Outside the initialization profile the attribute is silently accepted and
-has no effect, so code that uses it remains valid when compiled without
-``-fprofiles``.
+The attribute cannot be applied where leaving the entity uninitialized is
+meaningless -- a reference, a function parameter, or a structured binding --
+and these placements are diagnosed regardless of ``-fprofiles``. The
+initialization profile additionally rejects the marker on a union object or
+union member.
+
+Outside the initialization profile the attribute is otherwise silently
+accepted and has no effect, so code that uses it remains valid when compiled
+without ``-fprofiles``.
 
 This attribute is distinct from the Clang vendor attribute
 ``[[clang::uninitialized]]``, which interacts with
