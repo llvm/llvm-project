@@ -45,10 +45,12 @@ public:
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.
   llvm::SmallVector<OriginID>
-  buildOriginFlowChain(const FactManager &FactMgr, ProgramPoint StartPoint,
-                       const OriginID StartOID, const LoanID TargetLoan) const;
+  buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
+                       const LoanID TargetLoan) const;
 
 private:
+  FactManager &getFactManager() const;
+
   class Impl;
   std::unique_ptr<Impl> PImpl;
 };

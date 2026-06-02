@@ -198,6 +198,8 @@ public:
     return getLoans(getState(P), OID);
   }
 
+  FactManager &getFactManager() const { return FactMgr; }
+
 private:
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
@@ -248,15 +250,21 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 
-llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
-    const FactManager &FactMgr, ProgramPoint StartPoint,
-    const OriginID StartOID, const LoanID TargetLoan) const {
+FactManager &LoanPropagationAnalysis::getFactManager() const {
+  return PImpl->getFactManager();
+}
+
+llvm::SmallVector<OriginID>
+LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
+                                              const OriginID StartOID,
+                                              const LoanID TargetLoan) const {
   assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
          "TargetLoan must be present in the StartOID at the StartPoint");
 
   OriginID CurrOID = StartOID;
   llvm::SmallVector<OriginID> OriginFlowChain;
-  llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
+  llvm::ArrayRef<const Fact *> Facts =
+      getFactManager().getBlockContaining(StartPoint);
   const auto *StartIt = llvm::find(Facts, StartPoint);
   assert(StartIt != Facts.end());
 
