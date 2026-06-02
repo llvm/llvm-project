@@ -4761,6 +4761,15 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc, "loop-associated METADIRECTIVE variant");
     }
 
+    if (llvm::any_of(queue, [](const auto &item) {
+          return llvm::omp::getDirectiveAssociation(item.id) ==
+                     llvm::omp::Association::Declaration ||
+                 llvm::omp::getDirectiveCategory(item.id) ==
+                     llvm::omp::Category::Declarative;
+        })) {
+      TODO(variantLoc, "declarative METADIRECTIVE variant");
+    }
+
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());
   };
