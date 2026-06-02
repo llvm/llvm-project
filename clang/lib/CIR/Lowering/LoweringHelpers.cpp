@@ -19,9 +19,9 @@
 static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
     return intTy.getWidth();
-  if (mlir::isa<cir::BoolType>(ty))
-    return 1;
-  llvm_unreachable("expected CIR integer or bool element type");
+  assert(mlir::isa<cir::BoolType>(ty) &&
+         "expected CIR integer or bool element type");
+  return 1;
 }
 
 mlir::DenseElementsAttr
@@ -40,14 +40,12 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
   values.reserve(totalSize);
 
   for (const char element : stringAttr)
-    values.emplace_back(bitWidth, (uint64_t)(unsigned char)element);
+    values.emplace_back(bitWidth, element);
 
-  for (unsigned i = 0; i < trailingZeros; ++i)
-    values.push_back(mlir::APInt::getZero(bitWidth));
+  values.insert(values.end(), trailingZeros, mlir::APInt::getZero(bitWidth));
 
   return mlir::DenseElementsAttr::get(
-      mlir::RankedTensorType::get({(int64_t)totalSize}, type),
-      llvm::ArrayRef(values));
+      mlir::RankedTensorType::get({totalSize}, type), llvm::ArrayRef(values));
 }
 
 template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
