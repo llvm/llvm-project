@@ -21,7 +21,8 @@ void test() {
   float s = 0;
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<1>>(
-      [ // expected-note2{{within captured variable of lambda declared here}}
+      [ // expected-note{{within capture 'p' of lambda expression here}}
+        // expected-note@-1{{within capture 's' of lambda expression here}}
           // expected-error@+1 {{'int &' cannot be used as the type of a kernel parameter}}
           &p, q,
           // expected-error@+1 {{'float &' cannot be used as the type of a kernel parameter}}
@@ -43,18 +44,19 @@ struct S { // expected-note 2{{within field of type 'S' declared here}}
 void test() {
   int p = 0;
   auto L = [&]() { (void)p;}; // expected-error {{'int &' cannot be used as the type of a kernel parameter}}
-                               // expected-note@-1 {{within captured variable of lambda declared here}}
+                               // expected-note@-1 {{within capture 'p' of lambda expression here}}
   S Str {p, p};
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<2>>(
-      [=] { // expected-note 2{{within captured variable of lambda declared here}}
+      [=] { // expected-note {{within capture 'L' of lambda expression here}}
+            // expected-note@-1 {{within capture 'Str' of lambda expression here}}
         (void)L;
         (void)Str;
       });
 
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<3>>(
-     [=] { // // expected-note {{within captured variable of lambda declared here}}
+     [=] { // // expected-note {{within capture 'Str' of lambda expression here}}
        (void)Str;
      });
 
@@ -77,19 +79,19 @@ void test(int AS) {
   S arr[2] = {Str, Str};
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<4>>(
-      [=] { // expected-note {{within captured variable of lambda declared here}}
+      [=] { // expected-note {{within capture 'arr' of lambda expression here}}
         (void)arr;
       });
   int arr1[AS];
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<5>>(
-      [&] { // expected-note {{within captured variable of lambda declared here}}
+      [&] { // expected-note {{within capture 'arr1' of lambda expression here}}
         (void)arr1; // expected-error {{'int (&)[AS]' cannot be used as the type of a kernel parameter}}
       });
   int arrayints[5] = {0};
   // expected-note-re@+1 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
   kernel_single_task<class KN<7>>(
-      [&] { // expected-note {{within captured variable of lambda declared here}}
+      [&] { // expected-note {{within capture 'arrayints' of lambda expression here}}
         fooarr(arrayints); // expected-error {{'int (&)[5]' cannot be used as the type of a kernel parameter}}
       });
 }
@@ -165,7 +167,18 @@ void test() {
   kernel_single_task<class KN<13>>([&] { (void)s; });
   // expected-error@-1 {{'S &' cannot be used as the type of a kernel parameter}}
   // expected-note-re@-2 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
-  // expected-note@-3 {{within captured variable of lambda declared here}}
+  // expected-note@-3 {{within capture 's' of lambda expression here}}
+}
+} // namespace badref6
+
+// Check that init capture is diagnosed correctly.
+namespace badref7 {
+void test() {
+  int p = 0;
+  kernel_single_task<class KN<14>>([&x=p] { (void)x; });
+  // expected-error@-1 {{'int &' cannot be used as the type of a kernel parameter}}
+  // expected-note-re@-2 {{in instantiation of function template specialization 'kernel_single_task<KN<{{[0-9]+}}>, {{.*}}>' requested here}}
+  // expected-note@-3 {{within capture 'x' of lambda expression here}}
 }
 
 } // namespace badref7
