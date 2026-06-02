@@ -325,6 +325,7 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+  EM_EZH = 259,           // NXP SMARTDMA EZH
 };
 
 // Object file classes.
@@ -705,6 +706,11 @@ enum {
 // ELF Relocation type for Lanai.
 enum {
 #include "ELFRelocs/Lanai.def"
+};
+
+// ELF Relocation type for EZH.
+enum {
+#include "ELFRelocs/EZH.def"
 };
 
 // RISCV Specific e_flags

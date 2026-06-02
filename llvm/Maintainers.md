@@ -257,6 +257,11 @@ zixuan.wu@linux.alibaba.com (email), [zixuan-wu](https://github.com/zixuan-wu) (
 Justin Bogner \
 mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
+#### EZH backend
+
+Richard Pasek \
+rpasek@google.com (email), [rpasek](https://github.com/rpasek) (GitHub)
+
 #### Hexagon backend
 
 Brian Cain \

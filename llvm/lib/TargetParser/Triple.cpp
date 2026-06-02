@@ -150,6 +150,8 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "xcore";
   case xtensa:
     return "xtensa";
+  case ezh:
+    return "ezh";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -879,6 +881,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
                   "dxilv1.9"},
                  Triple::dxil)
           .Case("xtensa", Triple::xtensa)
+          .Case("ezh", Triple::ezh)
           .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -1241,6 +1244,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::thumbeb:
   case Triple::ve:
   case Triple::xcore:
+  case Triple::ezh:
   case Triple::xtensa:
     return Triple::ELF;
 
@@ -2004,6 +2008,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::wasm32:
   case llvm::Triple::x86:
   case llvm::Triple::xcore:
+  case llvm::Triple::ezh:
   case llvm::Triple::xtensa:
     return 32;
 
@@ -2116,6 +2121,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::x86:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::ezh:
     // Already 32-bit.
     break;
 
@@ -2200,6 +2206,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tce:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::ezh:
     T.setArch(UnknownArch);
     break;
 
@@ -2486,6 +2493,7 @@ bool Triple::isLittleEndian() const {
   case Triple::x86_64:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::ezh:
     return true;
   default:
     return false;
@@ -2720,6 +2728,8 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::xcore:
   case Triple::xtensa:
     return ExceptionHandling::DwarfCFI;
+  case Triple::ezh:
+    return ExceptionHandling::SjLj;
   default:
     break;
   }
