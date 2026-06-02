@@ -1028,7 +1028,7 @@ static bool shouldIgnoreLastMember(ASTContext &Ctx, const Expr *E) {
   auto Loc = D->getSourceRange().getBegin();
   auto &SM = Ctx.getSourceManager();
   auto FN = SM.getFilename(SM.getFileLoc(Loc));
-  return Ctx.getNoSanitizeList().containsIgnoreFamFile(
+  return Ctx.getNoSanitizeList().containsIgnoreLastMemberFile(
       SanitizerKind::ArrayBounds, FN);
 }
 

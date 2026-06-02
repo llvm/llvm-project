@@ -43,8 +43,8 @@ public:
   bool containsFunction(SanitizerMask Mask, StringRef FunctionName) const;
   bool containsFile(SanitizerMask Mask, StringRef FileName,
                     StringRef Category = StringRef()) const;
-  bool containsIgnoreFamFile(SanitizerMask Mask, StringRef FileName,
-                             StringRef Category = StringRef()) const;
+  bool containsIgnoreLastMemberFile(SanitizerMask Mask, StringRef FileName,
+                                    StringRef Category = StringRef()) const;
   bool containsMainFile(SanitizerMask Mask, StringRef FileName,
                         StringRef Category = StringRef()) const;
   bool containsLocation(SanitizerMask Mask, SourceLocation Loc,

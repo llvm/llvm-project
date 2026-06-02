@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds -fsanitize-ignorelist=%t/ignore.list %t/test2.c -o - | FileCheck %s --check-prefix=CHECK-NOT-IGNORED
 
 //--- ignore.list
-ignorefamsrc:*test.h
+ignorelastmembersrc:*test.h
 
 //--- test.h
 struct Three {
