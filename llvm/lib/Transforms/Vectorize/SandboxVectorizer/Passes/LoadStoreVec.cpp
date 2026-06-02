@@ -72,7 +72,8 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   DL = &F.getParent()->getDataLayout();
   auto &Ctx = F.getContext();
   Scheduler Sched(A.getAA(), Ctx);
-  if (!VecUtils::areConsecutive<StoreInst>(Bndl, A.getScalarEvolution(), *DL))
+  if (!VecUtils::areConsecutive<StoreInst, Instruction>(
+          Bndl, A.getScalarEvolution(), *DL))
     return false;
   if (!canVectorize(Bndl, Sched))
     return false;
@@ -118,8 +119,8 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
 
-    bool Consecutive =
-        VecUtils::areConsecutive<LoadInst>(Loads, A.getScalarEvolution(), *DL);
+    bool Consecutive = VecUtils::areConsecutive<LoadInst, Instruction>(
+        Loads, A.getScalarEvolution(), *DL);
     if (!Consecutive) {
       Ctx.accept();
       return false;
