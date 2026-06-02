@@ -8059,10 +8059,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   static const EqualBBWrapper *getEmptyKey() {
     return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
   }
-  static const EqualBBWrapper *getTombstoneKey() {
-    return static_cast<EqualBBWrapper *>(
-        DenseMapInfo<void *>::getTombstoneKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8083,8 +8079,7 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
     auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
-    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+    if (LHS == EKey || RHS == EKey)
       return LHS == RHS;
 
     BasicBlock *A = LHS->BB;

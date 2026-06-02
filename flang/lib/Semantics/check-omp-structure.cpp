@@ -71,6 +71,7 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
 
 void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
+  declareVariantPairs_.clear();
 }
 
 void OmpStructureChecker::Enter(const parser::MainProgram &x) {
@@ -1711,59 +1712,6 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDeclareSimdDirective &) {
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
-
-  const parser::OmpArgumentList &args{x.v.Arguments()};
-  if (args.v.size() != 1) {
-    context_.Say(args.source,
-        "DECLARE_VARIANT directive should have a single argument"_err_en_US);
-    return;
-  }
-
-  auto InvalidArgument{[&](parser::CharBlock source) {
-    context_.Say(source,
-        "The argument to the DECLARE_VARIANT directive should be [base-name:]variant-name"_err_en_US);
-  }};
-
-  auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
-    if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
-        auto &msg{context_.Say(source,
-            "The name '%s' should refer to a procedure"_err_en_US,
-            sym->name())};
-        if (sym->test(Symbol::Flag::Implicit)) {
-          msg.Attach(source, "The name '%s' has been implicitly declared"_en_US,
-              sym->name());
-        }
-      }
-    } else {
-      InvalidArgument(source);
-    }
-  }};
-
-  const parser::OmpArgument &arg{args.v.front()};
-  common::visit( //
-      common::visitors{
-          [&](const parser::OmpBaseVariantNames &y) {
-            CheckSymbol(GetObjectSymbol(std::get<0>(y.t), /*ultimate=*/true),
-                arg.source);
-            CheckSymbol(GetObjectSymbol(std::get<1>(y.t), /*ultimate=*/true),
-                arg.source);
-          },
-          [&](const parser::OmpLocator &y) {
-            CheckSymbol(GetArgumentSymbol(arg, /*ultimate=*/true), arg.source);
-          },
-          [&](auto &&y) { InvalidArgument(arg.source); },
-      },
-      arg.u);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
   dirContext_.pop_back();
 }
 

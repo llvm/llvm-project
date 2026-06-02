@@ -358,8 +358,12 @@ createCallLLVMIntrinsicOp(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Type resultTy, mlir::ValueRange operands) {
   auto intrinsicNameAttr =
       mlir::StringAttr::get(rewriter.getContext(), intrinsicName);
-  return mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, resultTy,
-                                             intrinsicNameAttr, operands);
+  // CallIntrinsicOp has distinct void / single-result create overloads.
+  if (resultTy)
+    return mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, resultTy,
+                                               intrinsicNameAttr, operands);
+  return mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, intrinsicNameAttr,
+                                             operands);
 }
 
 static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
@@ -375,10 +379,14 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Type llvmResTy =
-      getTypeConverter()->convertType(op->getResultTypes()[0]);
-  if (!llvmResTy)
-    return op.emitError("expected LLVM result type");
+  // Result is Optional on the op, so void intrinsics have zero
+  // results; leave llvmResTy null in that case.
+  mlir::Type llvmResTy;
+  if (op->getNumResults() != 0) {
+    llvmResTy = getTypeConverter()->convertType(op->getResultTypes()[0]);
+    if (!llvmResTy)
+      return op.emitError("expected LLVM result type");
+  }
   StringRef name = op.getIntrinsicName();
 
   // Some LLVM intrinsics require ElementType attribute to be attached to
@@ -4178,6 +4186,21 @@ mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
     cir::StackRestoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMLifetimeStartOpLowering::matchAndRewrite(
+    cir::LifetimeStartOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeStartOp>(op,
+                                                           adaptor.getPtr());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMLifetimeEndOpLowering::matchAndRewrite(
+    cir::LifetimeEndOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeEndOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 
