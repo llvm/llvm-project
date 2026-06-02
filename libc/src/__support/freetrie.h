@@ -14,8 +14,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 #define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 
-#include "freelist.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/freelist.h"
+#include "src/__support/freestore.h"
+#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -125,7 +128,7 @@ private:
 
 /// A best-fit store of variously-sized free blocks. Blocks can be inserted and
 /// removed in logarithmic time.
-class TrieFreeStore {
+class TrieFreeStore : public FreeStore<TrieFreeStore> {
 public:
   TrieFreeStore() = default;
   TrieFreeStore(const TrieFreeStore &other) = delete;
@@ -139,27 +142,22 @@ public:
 
   /// Insert a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void insert(Block *block);
+  void insert_impl(Block *block);
 
   /// Remove a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void remove(Block *block);
+  void remove_impl(Block *block);
 
   /// Remove a best-fit free block that can contain the given size when
   /// allocated. Returns nullptr if there is no such block.
-  Block *find_and_remove_fit(size_t size);
+  Block *find_and_remove_fit_impl(size_t size);
 
 private:
-  static constexpr size_t MIN_OUTER_SIZE =
-      align_up(sizeof(Block) + sizeof(FreeList::Node), Block::MIN_ALIGN);
   static constexpr size_t MIN_LARGE_OUTER_SIZE =
       align_up(sizeof(Block) + sizeof(FreeTrie::Node), Block::MIN_ALIGN);
   static constexpr size_t NUM_SMALL_SIZES =
       (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / Block::MIN_ALIGN;
 
-  LIBC_INLINE static bool too_small(Block *block) {
-    return block->outer_size() < MIN_OUTER_SIZE;
-  }
   LIBC_INLINE static bool is_small(Block *block) {
     return block->outer_size() < MIN_LARGE_OUTER_SIZE;
   }
@@ -286,7 +284,7 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
   }
 }
 
-LIBC_INLINE void TrieFreeStore::insert(Block *block) {
+LIBC_INLINE void TrieFreeStore::insert_impl(Block *block) {
   if (too_small(block))
     return;
   if (is_small(block))
@@ -295,7 +293,7 @@ LIBC_INLINE void TrieFreeStore::insert(Block *block) {
     large_trie.push(block);
 }
 
-LIBC_INLINE void TrieFreeStore::remove(Block *block) {
+LIBC_INLINE void TrieFreeStore::remove_impl(Block *block) {
   if (too_small(block))
     return;
   if (is_small(block)) {
@@ -307,7 +305,7 @@ LIBC_INLINE void TrieFreeStore::remove(Block *block) {
   }
 }
 
-LIBC_INLINE Block *TrieFreeStore::find_and_remove_fit(size_t size) {
+LIBC_INLINE Block *TrieFreeStore::find_and_remove_fit_impl(size_t size) {
   if (FreeList *list = find_best_small_fit(size)) {
     Block *block = list->front();
     list->pop();

@@ -16,10 +16,11 @@
 
 #include <stddef.h>
 
-#include "block.h"
-#include "freetrie.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/block.h"
+#include "src/__support/freestore.h"
+#include "src/__support/freetrie.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
@@ -36,11 +37,19 @@ using cpp::span;
 
 LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
-class FreeListHeap {
-public:
-  constexpr FreeListHeap() : begin(&_end), end(&__llvm_libc_heap_limit) {}
+template <typename T> LIBC_INLINE void init_free_store(T &, size_t) {}
 
-  constexpr FreeListHeap(span<cpp::byte> region)
+template <>
+LIBC_INLINE void init_free_store<TrieFreeStore>(TrieFreeStore &store,
+                                                size_t size) {
+  store.set_range({0, cpp::bit_ceil(size)});
+}
+
+template <typename FreeStoreType = TrieFreeStore> class FreeListHeapImpl {
+public:
+  constexpr FreeListHeapImpl() : begin(&_end), end(&__llvm_libc_heap_limit) {}
+
+  constexpr FreeListHeapImpl(span<cpp::byte> region)
       : begin(region.begin()), end(region.end()) {}
 
   void *allocate(size_t size);
@@ -67,18 +76,38 @@ private:
   cpp::byte *begin;
   cpp::byte *end;
   bool is_initialized = false;
-  TrieFreeStore free_store;
+  FreeStoreType free_store;
 };
 
-template <size_t BUFF_SIZE> class FreeListHeapBuffer : public FreeListHeap {
+// Deduction guide for FreeListHeapImpl to allow bracket-less instantiation
+FreeListHeapImpl(span<cpp::byte>) -> FreeListHeapImpl<TrieFreeStore>;
+
+using FreeListHeap = FreeListHeapImpl<TrieFreeStore>;
+
+template <size_t BUFF_SIZE, typename FreeStoreType = TrieFreeStore>
+class FreeListHeapBuffer : public FreeListHeapImpl<FreeStoreType> {
 public:
-  constexpr FreeListHeapBuffer() : FreeListHeap{buffer}, buffer{} {}
+  constexpr FreeListHeapBuffer()
+      : FreeListHeapImpl<FreeStoreType>{buffer}, buffer{} {}
 
 private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
-LIBC_INLINE void FreeListHeap::init() {
+// Specialization for the default FreeStore to allow conversion to FreeListHeap*
+template <size_t BUFF_SIZE>
+class FreeListHeapBuffer<BUFF_SIZE, TrieFreeStore>
+    : public FreeListHeapImpl<TrieFreeStore> {
+public:
+  constexpr FreeListHeapBuffer()
+      : FreeListHeapImpl<TrieFreeStore>{buffer}, buffer{} {}
+
+private:
+  cpp::byte buffer[BUFF_SIZE];
+};
+
+template <typename FreeStoreType>
+LIBC_INLINE void FreeListHeapImpl<FreeStoreType>::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = Block::init(region());
   Block *block = *result;
@@ -87,7 +116,9 @@ LIBC_INLINE void FreeListHeap::init() {
   is_initialized = true;
 }
 
-LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
+template <typename FreeStoreType>
+LIBC_INLINE void *
+FreeListHeapImpl<FreeStoreType>::allocate_impl(size_t alignment, size_t size) {
   if (size == 0)
     return nullptr;
 
@@ -112,12 +143,15 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   return block_info.block->usable_space();
 }
 
-LIBC_INLINE void *FreeListHeap::allocate(size_t size) {
+template <typename FreeStoreType>
+LIBC_INLINE void *FreeListHeapImpl<FreeStoreType>::allocate(size_t size) {
   return allocate_impl(Block::MIN_ALIGN, size);
 }
 
-LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
-                                                 size_t size) {
+template <typename FreeStoreType>
+LIBC_INLINE void *
+FreeListHeapImpl<FreeStoreType>::aligned_allocate(size_t alignment,
+                                                  size_t size) {
   // The alignment must be an integral power of two.
   if (!IsPow2(alignment))
     return nullptr;
@@ -132,7 +166,8 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
   return allocate_impl(alignment, size);
 }
 
-LIBC_INLINE void FreeListHeap::free(void *ptr) {
+template <typename FreeStoreType>
+LIBC_INLINE void FreeListHeapImpl<FreeStoreType>::free(void *ptr) {
   if (ptr == nullptr)
     return;
 
@@ -165,7 +200,9 @@ LIBC_INLINE void FreeListHeap::free(void *ptr) {
 
 // Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
-LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
+template <typename FreeStoreType>
+LIBC_INLINE void *FreeListHeapImpl<FreeStoreType>::realloc(void *ptr,
+                                                           size_t size) {
   if (size == 0) {
     free(ptr);
     return nullptr;
@@ -200,7 +237,9 @@ LIBC_INLINE void *FreeListHeap::realloc(void *ptr, size_t size) {
   return new_ptr;
 }
 
-LIBC_INLINE void *FreeListHeap::calloc(size_t num, size_t size) {
+template <typename FreeStoreType>
+LIBC_INLINE void *FreeListHeapImpl<FreeStoreType>::calloc(size_t num,
+                                                          size_t size) {
   size_t bytes;
   if (__builtin_mul_overflow(num, size, &bytes))
     return nullptr;

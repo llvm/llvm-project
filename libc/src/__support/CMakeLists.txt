@@ -40,6 +40,17 @@ add_object_library(
     libc.src.__support.CPP.span
 )
 
+add_header_library(
+  freestore
+  HDRS
+    freestore.h
+  DEPENDS
+    .block
+    .freelist
+    libc.hdr.types.size_t
+    libc.src.__support.macros.config
+)
+
 add_object_library(
   freetrie
   HDRS
@@ -49,6 +60,7 @@ add_object_library(
   DEPENDS
     .block
     .freelist
+    .freestore
     libc.src.__support.CPP.array
 )
 
@@ -65,6 +77,7 @@ add_object_library(
     .block
     .freelist
     .freetrie
+    .freestore
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.array
     libc.src.__support.CPP.optional
