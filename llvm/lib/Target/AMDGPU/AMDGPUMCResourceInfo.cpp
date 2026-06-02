@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCResourceInfo.h"
+#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
@@ -20,7 +21,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/TargetMachine.h"
-#include "GCNSubtarget.h"
 
 #define DEBUG_TYPE "amdgpu-mc-resource-usage"
 
@@ -310,7 +310,8 @@ void MCResourceInfo::gatherResourceInfo(
   });
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  auto [MaxAllowedVGPRs, MaxAllowedAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
+  auto [MaxAllowedVGPRs, MaxAllowedAGPRs] =
+      ST.getMaxNumVectorRegs(MF.getFunction());
   auto SetMaxReg = [&](MCSymbol *MaxSym, int32_t numRegs,
                        ResourceInfoKind RIK) {
     if (!FRI.HasIndirectCall) {
@@ -321,17 +322,19 @@ void MCResourceInfo::gatherResourceInfo(
       MCSymbol *LocalNumSym = getSymbol(FnSym->getName(), RIK, OutContext);
       const MCExpr *RegExpr = AMDGPUMCExpr::createMax(
           {MCConstantExpr::create(numRegs, OutContext), SymRef}, OutContext);
-      if(RIK == RIK_NumVGPR) {
+      if (RIK == RIK_NumVGPR) {
         RegExpr = AMDGPUMCExpr::createMin(
-          {MCConstantExpr::create(MaxAllowedVGPRs, OutContext),RegExpr},OutContext);
-      }
-      else if (RIK == RIK_NumAGPR) {
+            {MCConstantExpr::create(MaxAllowedVGPRs, OutContext), RegExpr},
+            OutContext);
+      } else if (RIK == RIK_NumAGPR) {
         RegExpr = AMDGPUMCExpr::createMin(
-          {MCConstantExpr::create(MaxAllowedAGPRs, OutContext),RegExpr},OutContext);
+            {MCConstantExpr::create(MaxAllowedAGPRs, OutContext), RegExpr},
+            OutContext);
       }
       LocalNumSym->setVariableValue(RegExpr);
       LLVM_DEBUG(dbgs() << "MCResUse:   " << LocalNumSym->getName()
-                        << ": Indirect callee within, using minimum of module maximum and function maximum\n");
+                        << ": Indirect callee within, using minimum of module "
+                           "maximum and function maximum\n");
     }
   };
 
