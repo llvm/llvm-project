@@ -852,3 +852,104 @@ func.func @for_missing_induction_var(%arg0: index, %arg1: index) {
   }) : (index, index, index) -> ()
   return
 }
+
+// -----
+
+func.func @break_outside_loop(%v: i32) {
+  // expected-error@+1 {{'scf.break' op expects parent op 'scf.loop'}}
+  scf.break %v : i32
+}
+
+// -----
+
+func.func @continue_outside_loop() {
+  // expected-error@+1 {{'scf.continue' op expects parent op 'scf.loop'}}
+  scf.continue
+}
+
+// -----
+
+func.func @loop_bad_terminator() {
+  // expected-error@+1 {{'scf.loop' op body must be terminated by 'scf.break' or 'scf.continue'}}
+  "scf.loop"() ({
+  ^bb0:
+    "test.foo"() : () -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @loop_init_arg_count_mismatch(%init: i32) {
+  // expected-error@+1 {{'scf.loop' op mismatch in number of loop-carried values and defined values}}
+  "scf.loop"(%init) ({
+  ^bb0:
+    scf.continue
+  }) : (i32) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_init_arg_type_mismatch(%init: i32) {
+  // expected-error@+1 {{'scf.loop' op type mismatch between 0th iter operand ('i32') and region argument ('i64')}}
+  "scf.loop"(%init) ({
+  ^bb0(%i: i64):
+    scf.continue %i : i64
+  }) : (i32) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_break_count_mismatch(%v: i32) -> (i32, i32) {
+  // expected-error@+2 {{'scf.break' op has 1 operands, but enclosing scf.loop returns 2 result(s)}}
+  %r:2 = scf.loop -> (i32, i32) {
+    scf.break %v : i32
+  }
+  return %r#0, %r#1 : i32, i32
+}
+
+// -----
+
+func.func @loop_break_type_mismatch(%v: i32) -> i64 {
+  // expected-error@+2 {{'scf.break' op type mismatch between 0th operand ('i32') and 0th result of enclosing scf.loop ('i64')}}
+  %r = scf.loop -> i64 {
+    scf.break %v : i32
+  }
+  return %r : i64
+}
+
+// -----
+
+func.func @loop_continue_count_mismatch(%init: i32) {
+  // expected-error@+2 {{'scf.continue' op has 0 operands, but enclosing scf.loop has 1 iter_args}}
+  scf.loop iter_args(%i = %init) : i32 {
+    scf.continue
+  }
+  return
+}
+
+// -----
+
+func.func @loop_continue_type_mismatch(%init: i32, %v: i64) {
+  // expected-error@+2 {{'scf.continue' op type mismatch between 0th operand ('i64') and 0th iter_arg of enclosing scf.loop ('i32')}}
+  scf.loop iter_args(%i = %init) : i32 {
+    scf.continue %v : i64
+  }
+  return
+}
+
+// -----
+
+func.func @loop_more_than_one_block(%v: i32) -> i32 {
+  // expected-error@+1 {{'scf.loop' op expects region #0 to have 0 or 1 blocks}}
+  %r = "scf.loop"() ({
+  ^bb0:
+    "test.unreachable"() [^bb1] : () -> ()
+  ^bb1:
+    scf.break %v : i32
+  }) : () -> i32
+  return %r : i32
+}
