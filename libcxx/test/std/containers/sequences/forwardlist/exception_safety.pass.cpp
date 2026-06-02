@@ -18,14 +18,18 @@
 //     forward_list(InputIterator first, InputIterator last, const allocator_type& a);
 // forward_list(const forward_list& x);
 // forward_list(const forward_list& x, const allocator_type& a);
+// forward_list(initializer_list<value_type> il);
+// forward_list(initializer_list<value_type> il, const allocator_type& a);
 // template<container-compatible-range<T> R>
 //     forward_list(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
 //
 // forward_list& operator=(const forward_list& x);
+// forward_list& operator=(initializer_list<value_type> il);
 //
 // template <class InputIterator>
 //     void assign(InputIterator first, InputIterator last);
 // void assign(size_type n, const value_type& v);
+// void assign(initializer_list<value_type> il);
 // template<container-compatible-range<T> R>
 //     void assign_range(R&& rg); // C++23
 //
@@ -138,6 +142,8 @@ int main(int, char**) {
     using C               = std::forward_list<T>;
     using Alloc           = std::allocator<T>;
 
+    std::initializer_list<T> il{1, 2, 3, 4, 5};
+
     // forward_list(size_type n, const value_type& v);
     test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T*) {
       std::forward_list<T> c(Size, *from);
@@ -192,10 +198,28 @@ int main(int, char**) {
       (void)c;
     });
 
+    // forward_list(initializer_list<value_type> il);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::forward_list<T> c(il);
+      (void)c;
+    });
+
+    // forward_list(initializer_list<value_type> il, const allocator_type& a);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::forward_list<T> c(il, Alloc());
+      (void)c;
+    });
+
     // forward_list& operator=(const forward_list& x);
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::forward_list<T> c;
       c = in;
+    });
+
+    // forward_list& operator=(initializer_list<value_type> il);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::forward_list<T> c;
+      c = il;
     });
 
     // template <class InputIterator>
@@ -203,6 +227,12 @@ int main(int, char**) {
     test_exception_safety_throwing_copy<ThrowOn, Size>([](T* from, T* to) {
       std::forward_list<T> c;
       c.assign(from, to);
+    });
+
+    // void assign(initializer_list<value_type> il);
+    test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
+      std::forward_list<T> c;
+      c.assign(il);
     });
 
 #if TEST_STD_VER >= 23
@@ -241,8 +271,7 @@ int main(int, char**) {
     });
 
     // iterator insert_after(const_iterator p, initializer_list<value_type> il);
-    std::initializer_list<T> il{1, 2, 3, 4, 5};
-    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([&](std::forward_list<T>& c, T*, T*) {
+    test_strong_exception_safety_throwing_copy<ThrowOn, Size>([&il](std::forward_list<T>& c, T*, T*) {
       c.insert_after(c.before_begin(), il);
     });
 
