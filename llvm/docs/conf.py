@@ -292,7 +292,7 @@ def process_rst(name):
 
 for name in os.listdir(command_guide_path):
     # Process Markdown files
-    if name.endswith(".md"):
+    if name.endswith(".md") and name != "index.md":
         process_md(name)
     # Process ReST files apart from the index page.
     elif name.endswith(".rst") and name != "index.rst":
