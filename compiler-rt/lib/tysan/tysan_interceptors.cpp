@@ -48,7 +48,6 @@ static void TysanOnDeadlySignal(int signo, void *siginfo, void *context) {
   HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
 }
 
-static bool tysanSignalsInitialized = false;
 void InitializeDeadlySignals();
 } // namespace __tysan
 
@@ -58,6 +57,7 @@ void InitializeDeadlySignals();
 
 namespace __tysan {
 void InitializeDeadlySignals() {
+  static bool tysanSignalsInitialized = false;
   if (tysanSignalsInitialized)
     return;
   InitializeSignalInterceptors();
