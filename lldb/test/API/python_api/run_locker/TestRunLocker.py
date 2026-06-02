@@ -71,7 +71,7 @@ class TestRunLocker(TestBase):
 
         # A stop_at_entry launch may have already stopped, it may
         # not be eStateRunning.
-        if stop_at_entry and state_type != lldb.eStateStopped:
+        if not stop_at_entry or state_type != lldb.eStateStopped:
             self.assertState(
                 state_type, lldb.eStateRunning, "Didn't get a running event"
             )
@@ -89,10 +89,12 @@ class TestRunLocker(TestBase):
                 self.assertState(state_type, eStateStopped, "Stop at entry stopped")
             process.Continue()
             event_result = listener.WaitForEvent(10, event)
-            self.assertTrue(event_result, "timed out waiting for launch")
+            self.assertTrue(event_result, "timed out waiting for Continue")
             state_type = lldb.SBProcess.GetStateFromEvent(event)
             self.assertState(
-                state_type, lldb.eStateRunning, "Didn't get a running event"
+                state_type,
+                lldb.eStateRunning,
+                "Didn't get a running event after Continue",
             )
 
         # Okay, now the process is running, make sure we can't do things
