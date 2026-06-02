@@ -2194,15 +2194,15 @@ public:
   bool isReversibleBranch(const MCInst &Inst,
                           DataflowInfoManager *DIM = nullptr) const override {
     if (isCompAndBranch(Inst)) {
-      bool NZCVflagsAreLive =
+      bool MayClobberFlags =
           DIM ? DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
               : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
       if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
-          NZCVflagsAreLive)
+          MayClobberFlags)
         return false;
       if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
-          NZCVflagsAreLive)
+          MayClobberFlags)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
