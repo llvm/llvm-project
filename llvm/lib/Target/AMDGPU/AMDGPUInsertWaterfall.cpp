@@ -269,13 +269,6 @@ private:
     WaterfallWorkitem(const SIInstrInfo *_TII, MachineRegisterInfo *_MRI)
         : TII(_TII), MRI(_MRI), TokReg(AMDGPU::NoRegister), Final(nullptr) {}
 
-    void processCandidate(MachineInstr *Cand) {
-      unsigned Opcode = Cand->getOpcode();
-      if (getWFBeginSize(Opcode) || getWFRFLSize(Opcode) ||
-          getWFEndSize(Opcode))
-        return;
-    }
-
     MachineInstr *getDefInstr(const MachineOperand *MO) const {
       if (MO->isReg() && MRI->hasOneDef(MO->getReg())) {
         return (MRI->def_begin(MO->getReg()))->getParent();
@@ -803,9 +796,6 @@ bool AMDGPUInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
         if (!Worklist.back().addCandidate(&MI)) {
           llvm_unreachable("Overlapping SI_WATERFALL_* groups");
         }
-      } else {
-        if (Worklist.size())
-          Worklist.back().processCandidate(&MI);
       }
     }
     Changed |= processWaterfall(MBB);
