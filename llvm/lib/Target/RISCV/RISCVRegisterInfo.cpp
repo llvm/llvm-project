@@ -177,12 +177,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
     // Mark any GPRs requested to be reserved as such
-    if (Subtarget.isRegisterReservedByUser(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (Subtarget.isRegisterReservedByUser(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
 
     // Mark all the registers defined as constant in TableGen as reserved.
-    if (isConstantPhysReg(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (isConstantPhysReg(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
@@ -725,13 +729,7 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
-    if (isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset))
-      return false;
-
-    // If the FP-relative offset doesn't fit, fall through to check the
-    // SP-relative offset. getFrameIndexReference may select SP over FP when
-    // the SP offset fits in the compressed instruction immediate range, so a
-    // base register might not be needed.
+    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
   }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible

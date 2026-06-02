@@ -5029,8 +5029,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Ty, true);
-  // Type legalization can't handle structs
-  if (VT == MVT::Other)
+  // Type legalization can't handle structs, and load latency isn't handled here
+  if (VT == MVT::Other ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency))
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
@@ -5553,6 +5554,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -5575,6 +5579,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     }
     return Res;
   }
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5589,6 +5596,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5596,6 +5606,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     Info.WriteMem = false;
     Info.PtrVal = Inst->getArgOperand(0);
     break;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4:
@@ -5605,20 +5618,33 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
 
+  // Use the ID of neon load as the "matching id".
   switch (Inst->getIntrinsicID()) {
   default:
     return false;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_st1x2:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x2;
+    break;
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_st1x3:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x3;
+    break;
+  case Intrinsic::aarch64_neon_ld1x4:
+  case Intrinsic::aarch64_neon_st1x4:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x4;
+    break;
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_st2:
-    Info.MatchingId = VECTOR_LDST_TWO_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld2;
     break;
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_st3:
-    Info.MatchingId = VECTOR_LDST_THREE_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld3;
     break;
   case Intrinsic::aarch64_neon_ld4:
   case Intrinsic::aarch64_neon_st4:
-    Info.MatchingId = VECTOR_LDST_FOUR_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld4;
     break;
   }
   return true;
@@ -5667,6 +5693,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 
   switch (RdxDesc.getRecurrenceKind()) {
   case RecurKind::Sub:
+  case RecurKind::FSub:
   case RecurKind::AddChainWithSubs:
   case RecurKind::FAddChainWithSubs:
   case RecurKind::Add:
@@ -6057,7 +6084,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
             NEONPred);
   };
 
-  bool IsSub = (Opcode == Instruction::Sub) || (Opcode == Instruction::FSub);
+  bool IsSub = Opcode == Instruction::Sub || Opcode == Instruction::FSub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
   // Integer partial sub-reductions that don't map to a specific instruction,
   // carry an extra cost for implementing a double negation:
@@ -6116,17 +6143,28 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     MVT InVT = InputLT.second.getScalarType();
 
     // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
-    if (IsSupported(ST->hasSVE2(), true) &&
+    if (IsSupported(ST->hasSVE2() || ST->hasSME(), true) &&
         llvm::is_contained({MVT::i8, MVT::i16, MVT::i32}, InVT.SimpleTy))
       return Cost * 2;
 
-    // SVE2 fmlalb/t and NEON fmlal(2)
+    // SVE2 fml[as]lb/t and NEON fml[as]l(2)
     if (IsSupported(ST->hasSVE2(), ST->hasFP16FML()) && InVT == MVT::f16)
       return Cost * 2;
 
+    // SME2/SVE2p1 bfmlslb/t
+    if (IsSupported(ST->hasSVE2p1() || ST->hasSME2(), false) &&
+        InVT == MVT::bf16 && IsSub)
+      return Cost * 2;
+
+    // FP partial sub-reductions that don't map to a specific instruction,
+    // carry an extra cost for implementing an extra negation:
+    //      partial_reduce_fmls  acc, lhs, rhs
+    // <=>  partial_reduce_fmla  acc, lhs, -rhs
+    InstructionCost FNegCost = IsSub ? InputLT.first * TTI::TCC_Basic : 0;
+
     // SVE and NEON bfmlalb/t
     if (IsSupported(ST->hasBF16(), ST->hasBF16()) && InVT == MVT::bf16)
-      return Cost * 2;
+      return Cost * 2 + FNegCost;
   }
 
   return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,

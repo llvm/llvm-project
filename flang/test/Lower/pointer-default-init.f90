@@ -21,8 +21,12 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_local() {
 ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest_localEx"}
 ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[ALLOCA]]
-! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMtestTt.DerivedInit) : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
-! CHECK: fir.copy %[[ADDR]] to %[[x]]#0 no_overlap : !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
+! CHECK: %[[x_comp:.*]] = fir.coordinate_of %[[x]]#0, x : (!fir.ref<!fir.type<_QMtestTt{i:i32,x:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK: %[[zero:.*]] = fir.zero_bits !fir.ptr<!fir.array<?xf32>>
+! CHECK: %[[c0:.*]] = arith.constant 0 : index
+! CHECK: %[[shape:.*]] = fir.shape %[[c0]] : (index) -> !fir.shape<1>
+! CHECK: %[[embox:.*]] = fir.embox %[[zero]](%[[shape]]) : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK: fir.store %[[embox]] to %[[x_comp]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 
 subroutine test_saved()
   use test, only : t

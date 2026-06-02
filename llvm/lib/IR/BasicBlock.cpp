@@ -175,8 +175,7 @@ BasicBlock::~BasicBlock() {
   // is no indirect branch).  Handle these cases by zapping the BlockAddress
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
-    assert(!use_empty() && "There should be at least one blockaddress!");
-    BlockAddress *BA = cast<BlockAddress>(user_back());
+    BlockAddress *BA = BlockAddress::lookup(this);
 
     Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
     BA->replaceAllUsesWith(

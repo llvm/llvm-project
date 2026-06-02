@@ -3185,7 +3185,8 @@ public:
   CommandObjectTargetModulesList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "target modules list",
-            "List current executable and dependent shared library images.") {
+            "List current executable and dependent shared library images.",
+            nullptr, eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeModule, eArgRepeatStar);
   }
 
@@ -3196,8 +3197,14 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = GetTarget();
-    assert(target && "target guaranteed by eCommandRequiresTarget");
     const bool use_global_module_list = m_options.m_use_global_module_list;
+
+    // Every code path other than the global module list needs a real target.
+    if (!use_global_module_list && (!target || target->IsDummyTarget())) {
+      result.AppendError(GetInvalidTargetDescription());
+      return;
+    }
+
     // Define a local module list here to ensure it lives longer than any
     // "locker" object which might lock its contents below (through the
     // "module_list_ptr" variable).
@@ -3446,6 +3453,9 @@ protected:
       const char *object_name = module->GetObjectName().GetCString();
       if (object_name)
         strm.Printf("(%s)", object_name);
+      std::optional<addr_t> memory_addr = module->GetMemoryModuleAddress();
+      if (memory_addr.has_value())
+        strm.Printf("(0x%" PRIx64 ")", memory_addr.value());
     }
     strm.EOL();
   }
@@ -5066,9 +5076,10 @@ protected:
       // This is a scripted stop hook:
       Target::StopHookScripted *hook_ptr =
           static_cast<Target::StopHookScripted *>(new_hook_sp.get());
-      Status error = hook_ptr->SetScriptCallback(
+      ScriptedMetadata scripted_metadata(
           m_python_class_options.GetName(),
           m_python_class_options.GetStructuredData());
+      Status error = hook_ptr->SetScriptCallback(scripted_metadata);
       if (error.Success())
         result.AppendMessageWithFormatv("Stop hook #{0} added.",
                                         new_hook_sp->GetID());
@@ -5700,9 +5711,10 @@ protected:
                                       new_hook_sp->GetID());
     } else if (!m_python_class_options.GetName().empty()) {
       auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
-      Status callback_error =
-          hook->SetScriptCallback(m_python_class_options.GetName(),
-                                  m_python_class_options.GetStructuredData());
+      ScriptedMetadata scripted_metadata(
+          m_python_class_options.GetName(),
+          m_python_class_options.GetStructuredData());
+      Status callback_error = hook->SetScriptCallback(scripted_metadata);
       if (callback_error.Fail()) {
         result.AppendErrorWithFormat("couldn't add hook: %s",
                                      callback_error.AsCString());

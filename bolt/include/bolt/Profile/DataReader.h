@@ -491,10 +491,6 @@ template <> struct DenseMapInfo<bolt::Location> {
   static inline bolt::Location getEmptyKey() {
     return bolt::Location(true, StringRef(), static_cast<uint64_t>(-1LL));
   }
-  static inline bolt::Location getTombstoneKey() {
-    return bolt::Location(true, StringRef(), static_cast<uint64_t>(-2LL));
-    ;
-  }
   static unsigned getHashValue(const bolt::Location &L) {
     return (unsigned(DenseMapInfo<StringRef>::getHashValue(L.Name)) >> 4) ^
            (unsigned(L.Offset));

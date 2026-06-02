@@ -146,22 +146,44 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
+Type *VPValue::getScalarType() const {
+  switch (getVPValueID()) {
+  case VPVIRValueSC:
+    return cast<VPIRValue>(this)->getType();
+  case VPRegionValueSC:
+    return cast<VPRegionValue>(this)->getType();
+  case VPVSymbolicSC:
+    return cast<VPSymbolicValue>(this)->getType();
+  case VPVMultiDefValueSC:
+  case VPVSingleDefValueSC:
+    return cast<VPRecipeValue>(this)->getScalarType();
+  }
+  llvm_unreachable("Unhandled VPValue subclass");
+}
+
 VPRecipeValue::~VPRecipeValue() {
   assert(Users.empty() &&
          "trying to delete a VPRecipeValue with remaining users");
-  getDefiningRecipe()->removeDefinedValue(this);
 }
 
-VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV)
-    : VPRecipeValue(VPVSingleDefValueSC, UV) {
+VPSingleDefValue::VPSingleDefValue(VPSingleDefRecipe *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVSingleDefValueSC, UV, Ty) {
   assert(Def && "VPSingleDefValue requires a defining recipe");
   Def->addDefinedValue(this);
 }
 
-VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV)
-    : VPRecipeValue(VPVMultiDefValueSC, UV), Def(Def) {
+VPSingleDefValue::~VPSingleDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
+}
+
+VPMultiDefValue::VPMultiDefValue(VPRecipeBase *Def, Value *UV, Type *Ty)
+    : VPRecipeValue(VPVMultiDefValueSC, UV, Ty), Def(Def) {
   assert(Def && "VPMultiDefValue requires a defining recipe");
   Def->addDefinedValue(this);
+}
+
+VPMultiDefValue::~VPMultiDefValue() {
+  getDefiningRecipe()->removeDefinedValue(this);
 }
 
 // Get the top-most entry block of \p Start. This is the entry block of the
@@ -252,9 +274,9 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))
@@ -311,40 +333,18 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Shuf;
   };
 
-  if (!hasScalarValue(Def, {0})) {
-    Value *IRV = Def->getLiveInIRValue();
-    Value *B = GetBroadcastInstrs(IRV);
-    set(Def, B);
-    return B;
-  }
-
   Value *ScalarValue = get(Def, VPLane(0));
-  // If we aren't vectorizing, we can just copy the scalar map values over
-  // to the vector map.
-  if (VF.isScalar()) {
-    set(Def, ScalarValue);
-    return ScalarValue;
-  }
-
-  bool IsSingleScalar = vputils::isSingleScalar(Def);
-  VPLane LastLane(IsSingleScalar ? 0 : VF.getFixedValue() - 1);
-
-  // We need to construct the vector value for a single-scalar value by
-  // broadcasting the scalar to all lanes.
-  // TODO: Replace by introducing Broadcast VPInstructions.
-  assert(IsSingleScalar && "must be a single-scalar at this point");
-  // Set the insert point after the last scalarized instruction or after the
-  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
-  // will directly follow the scalar definitions.
-  auto OldIP = Builder.saveIP();
-  auto *LastInst = cast<Instruction>(get(Def, LastLane));
-  auto NewIP = isa<PHINode>(LastInst)
-                   ? LastInst->getParent()->getFirstNonPHIIt()
-                   : std::next(BasicBlock::iterator(LastInst));
-  Builder.SetInsertPoint(&*NewIP);
+  VPLane LastLane = VPLane::getLastLaneForVF(VF);
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  if (auto *LastInst = dyn_cast<Instruction>(get(Def, LastLane)))
+    // Set the insert point after the last scalarized instruction or after the
+    // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+    // will directly follow the scalar definitions.
+    Builder.SetInsertPoint(isa<PHINode>(LastInst)
+                               ? LastInst->getParent()->getFirstNonPHIIt()
+                               : std::next(BasicBlock::iterator(LastInst)));
   Value *VectorValue = GetBroadcastInstrs(ScalarValue);
   set(Def, VectorValue);
-  Builder.restoreIP(OldIP);
   return VectorValue;
 }
 
@@ -885,23 +885,15 @@ VPlan::VPlan(Loop *L, Type *IdxTy)
 VPlan::~VPlan() {
   VPSymbolicValue DummyValue(nullptr);
 
-  for (auto *VPB : CreatedBlocks) {
-    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
-      // Replace all operands of recipes and all VPValues defined in VPBB with
-      // DummyValue so the block can be deleted.
-      for (VPRecipeBase &R : *VPBB) {
-        for (auto *Def : R.definedValues())
-          Def->replaceAllUsesWith(&DummyValue);
+  // Redirect all recipe operands to DummyValue before deleting blocks.
+  for (VPBasicBlock *VPBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(CreatedBlocks))
+    for (VPRecipeBase &R : *VPBB)
+      for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+        R.setOperand(I, &DummyValue);
 
-        for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
-          R.setOperand(I, &DummyValue);
-      }
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
-      CanIV->replaceAllUsesWith(&DummyValue);
-    }
-
+  for (auto *VPB : CreatedBlocks)
     delete VPB;
-  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
@@ -1661,9 +1653,7 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
 VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
                                                VPValue *TrueVal,
                                                VPValue *FalseVal, DebugLoc DL) {
-  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
-             .inferScalarType(ChainOp)
-             ->isIntegerTy(1) &&
+  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
          "ChainOp must be i1 for AnyOf reduction");
   VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
                   FastMathFlags());
@@ -1907,7 +1897,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
-    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+    Tys.push_back(toVectorizedTy(Op->getScalarType(), VF));
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
@@ -1940,7 +1930,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
           if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          Type *Ty = RepR->getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
               getLoadStoreAlignment(RepR->getUnderlyingInstr());

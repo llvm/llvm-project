@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
+#include "mlir/Dialect/AMDGPU/Utils/MemorySpaceUtils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
@@ -150,43 +151,14 @@ LogicalResult FatRawBufferCastOp::verify() {
   return success();
 }
 
-static bool hasGlobalMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return true;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 0 || intMemorySpace.getInt() == 1;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
-  return false;
-}
-
-static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 3;
-  if (auto gpuMemorySpace = dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == gpu::AddressSpace::Workgroup;
-  return false;
-}
-
-static bool hasFatRawBufferMemorySpace(Attribute memorySpace) {
-  if (!memorySpace)
-    return false;
-  if (auto intMemorySpace = dyn_cast<IntegerAttr>(memorySpace))
-    return intMemorySpace.getInt() == 7;
-  if (auto gpuMemorySpace = dyn_cast<amdgpu::AddressSpaceAttr>(memorySpace))
-    return gpuMemorySpace.getValue() == amdgpu::AddressSpace::FatRawBuffer;
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
 static LogicalResult verifyRawBufferOp(T &op) {
   MemRefType bufferType = llvm::cast<MemRefType>(op.getMemref().getType());
-  bool isGlobal = hasGlobalMemorySpace(bufferType.getMemorySpace());
+  bool isGlobal =
+      isGlobalMemorySpace(bufferType.getMemorySpace(), /*allowFlat=*/true);
 
   if (!isGlobal)
     return op.emitOpError(
@@ -307,22 +279,22 @@ void RawBufferStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 void RawBufferAtomicFaddOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFaddOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFaddOp>>(context);
 }
 
 void RawBufferAtomicFmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFmaxOp>>(context);
 }
 
 void RawBufferAtomicSmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicSmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicSmaxOp>>(context);
 }
 
 void RawBufferAtomicUminOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicUminOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicUminOp>>(context);
 }
 
 void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
@@ -985,12 +957,12 @@ LogicalResult GatherToLDSOp::verify() {
     return emitOpError(
         "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
-      !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/true) &&
+      !isFatRawBufferMemorySpace(srcType.getMemorySpace()))
     return emitOpError(
         "source memory address space must be global or fat raw buffer");
 
-  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");
 
   return success();
@@ -1056,10 +1028,10 @@ LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
     return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
     return emitOpError("source memory address space must be global");
 
-  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(dstType.getMemorySpace()))
     return emitOpError("destination memory address space must be Workgroup");
 
   return success();
@@ -1101,7 +1073,7 @@ LogicalResult TransposeLoadOp::verify() {
           verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
     return failure();
 
-  if (!hasWorkgroupMemorySpace(srcType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(srcType.getMemorySpace()))
     return emitOpError("source memory address space must be Workgroup");
 
   auto transferType = cast<VectorType>(getType());
@@ -1109,23 +1081,30 @@ LogicalResult TransposeLoadOp::verify() {
   size_t elementTypeSize =
       transferType.getElementType().getIntOrFloatBitWidth();
 
-  // ElementSize -> NumElements
-  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
-      {4, 16},
-      {6, 16},
-      {8, 8},
-      {16, 4},
-  };
-
-  auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
-  if (validNumElems == kValidLoadSizeMap.end())
-    return emitOpError("Unsupported element type size for transpose load: ")
-           << elementTypeSize << " bits";
-
-  if (numElements != validNumElems->second)
+  auto emitNumElementsError = [&](StringRef expected) {
     return emitOpError(
                "Transferring type size mismatch: expected num of elements: ")
-           << validNumElems->second;
+           << expected;
+  };
+
+  switch (elementTypeSize) {
+  case 4:
+  case 6:
+    if (numElements != 16)
+      return emitNumElementsError("16");
+    break;
+  case 8:
+    if (numElements != 8)
+      return emitNumElementsError("8");
+    break;
+  case 16:
+    if (numElements != 4 && numElements != 8)
+      return emitNumElementsError("4 or 8");
+    break;
+  default:
+    return emitOpError("Unsupported element type size for transpose load: ")
+           << elementTypeSize << " bits";
+  }
 
   return success();
 }
@@ -1141,7 +1120,7 @@ LogicalResult GlobalTransposeLoadOp::verify() {
           verifyIndexCount(*this, "source", srcType, getSrcIndices().size())))
     return failure();
 
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+  if (!isGlobalMemorySpace(srcType.getMemorySpace(), /*allowFlat=*/false))
     return emitOpError("source memory address space must be Global");
 
   auto resultType = cast<VectorType>(getType());
@@ -1184,10 +1163,10 @@ static LogicalResult verifyBase(BaseOp op) {
       failed(verifyIndexCount(op, "lds", ldsType, op.getLdsIndices().size())))
     return failure();
 
-  if (!hasWorkgroupMemorySpace(ldsType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(ldsType.getMemorySpace()))
     return op.emitOpError(
         "lds memref must have workgroup address space attribute.");
-  if (!hasGlobalMemorySpace(globalType.getMemorySpace()))
+  if (!isGlobalMemorySpace(globalType.getMemorySpace(), /*allowFlat=*/false))
     return op.emitOpError(
         "global memref must have global address space attribute.");
 
@@ -1268,7 +1247,7 @@ static LogicalResult verifyDescriptorOp(DescriptorOp op) {
       return failure();
 
     bool barrierInLDS =
-        hasWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
+        isWorkgroupMemorySpace(atomicBarrierAddressType.getMemorySpace());
     if (!barrierInLDS)
       return op.emitOpError("atomic barrier address must be in LDS.");
   }
@@ -1489,7 +1468,7 @@ static LogicalResult verifyDsBarrierOpCommon(T &op) {
           verifyIndexCount(op, "barrier", memrefType, op.getIndices().size())))
     return failure();
 
-  if (!hasWorkgroupMemorySpace(memrefType.getMemorySpace()))
+  if (!isWorkgroupMemorySpace(memrefType.getMemorySpace()))
     return op.emitOpError("barrier must be in workgroup (LDS) memory");
 
   return success();
@@ -1524,7 +1503,7 @@ LogicalResult GlobalPrefetchOp::verify() {
   Attribute memSpace = src.getMemorySpace();
   if (!memSpace)
     return this->emitOpError("the source must have address space attribute");
-  if (!hasGlobalMemorySpace(memSpace))
+  if (!isGlobalMemorySpace(memSpace, /*allowFlat=*/false))
     return this->emitOpError("the source must reside in global address space");
 
   const LoadTemporalHint temporalHint = getTemporalHint();

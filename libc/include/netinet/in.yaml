@@ -18,6 +18,9 @@ types:
   - type_name: in_port_t
   - type_name: in_addr_t
   - type_name: sa_family_t
+  - type_name: struct_sockaddr_in
+  - type_name: struct_in_addr
+  - type_name: struct_in6_addr
 enums: []
 objects: []
 functions: []

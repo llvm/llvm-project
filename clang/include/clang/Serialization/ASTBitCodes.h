@@ -138,10 +138,6 @@ struct UnsafeQualTypeDenseMapInfo {
     return QualType::getFromOpaquePtr((void *)1);
   }
 
-  static QualType getTombstoneKey() {
-    return QualType::getFromOpaquePtr((void *)2);
-  }
-
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
            "hash invalid for types with fast quals");
@@ -1225,13 +1221,7 @@ enum SpecialTypeIDs {
   SPECIAL_TYPE_OBJC_SEL_REDEFINITION = 6,
 
   /// C ucontext_t typedef type
-  SPECIAL_TYPE_UCONTEXT_T = 7,
-
-  /// C fexcept_t typedef type
-  SPECIAL_TYPE_FEXCEPT_T = 8,
-
-  /// C fenv_t typedef type
-  SPECIAL_TYPE_FENV_T = 9
+  SPECIAL_TYPE_UCONTEXT_T = 7
 };
 
 /// The number of special type IDs.
@@ -2222,10 +2212,6 @@ namespace llvm {
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
   static clang::serialization::DeclarationNameKey getEmptyKey() {
     return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
-  static clang::serialization::DeclarationNameKey getTombstoneKey() {
-    return clang::serialization::DeclarationNameKey(-1, 2);
   }
 
   static unsigned
