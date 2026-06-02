@@ -180,8 +180,8 @@ private:
 
   /// Perf process spawning bookkeeping
   struct PerfProcessInfo {
-    static constexpr StringLiteral PerfProcessTypeNames[] = {"BUILDIDS", "MAIN", "MEM",
-                                                      "MMAP", "TASK"};
+    static constexpr StringLiteral PerfProcessTypeNames[] = {
+        "BUILDIDS", "MAIN", "MEM", "MMAP", "TASK"};
 
     enum PerfProcessType Type;
     bool IsFinished{false};
@@ -519,7 +519,8 @@ private:
   /// based on how it was collected by Linux Perf.
   ///
   /// Example how you can generate pre-parsed profile for 'basic' aggregation:
-  /// perf2bolt -p perf.data BINARY -o perf.text --ba --profile-format=perfscript
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba
+  /// --profile-format=perfscript
   ///
   /// This is how a pre-parsed profile data looks like for Basic Aggregation:
   /// PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;

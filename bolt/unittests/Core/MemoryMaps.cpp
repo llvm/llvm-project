@@ -69,7 +69,7 @@ protected:
   }
 
   void createTempFileWithContent(std::string &Buffer,
-                                  SmallVector<char, 256> &Path) {
+                                 SmallVector<char, 256> &Path) {
     int FD;
     sys::fs::createTemporaryFile("perf-script-mmap", "text", FD, Path);
     ASSERT_GE(FD, 0);

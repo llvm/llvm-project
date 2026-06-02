@@ -135,7 +135,8 @@ cl::opt<bool> ReadPreAggOrPerfScript(
 
 static cl::alias ReadPerfScript("ps",
                                 cl::desc("read pre-parsed perf script output"),
-                                cl::NotHidden, cl::aliasopt(ReadPreAggOrPerfScript));
+                                cl::NotHidden,
+                                cl::aliasopt(ReadPreAggOrPerfScript));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -404,7 +405,8 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
   return DataAggregator::checkInputFileMagic(FileName, PerfDataMagicStr);
 }
 
-bool DataAggregator::checkInputFileMagic(StringRef FileName, StringLiteral MagicStr) {
+bool DataAggregator::checkInputFileMagic(StringRef FileName,
+                                         StringLiteral MagicStr) {
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
   if (!FD) {
     consumeError(FD.takeError());
@@ -415,8 +417,8 @@ bool DataAggregator::checkInputFileMagic(StringRef FileName, StringLiteral Magic
   assert(MagicStr.size() <= 8 && "Size must be maximum 8");
 
   llvm::scope_exit Close([&] { sys::fs::closeFile(*FD); });
-  Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
-      *FD, MutableArrayRef(Buf, MagicStrSize), 0);
+  Expected<size_t> BytesRead =
+      sys::fs::readNativeFileSlice(*FD, MutableArrayRef(Buf, MagicStrSize), 0);
   if (!BytesRead) {
     consumeError(BytesRead.takeError());
     return false;
@@ -499,19 +501,23 @@ std::error_code DataAggregator::parsePerfScriptFileHeader() {
       return make_error_code(llvm::errc::io_error);
     }
 
-    PerfProcessInfo *PPI =
-        StringSwitch<PerfProcessInfo *>(KV.first)
-            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::BUILDIDS],
-                  &BuildIDProcessInfo)
-            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MAIN_EVENTS],
-                  &MainEventsPPI)
-            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MEM_EVENTS],
-                  &MemEventsPPI)
-            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::MMAP_EVENTS],
-                  &MMapEventsPPI)
-            .Case(PerfProcessInfo::PerfProcessTypeNames[PerfProcessType::TASK_EVENTS],
-                  &TaskEventsPPI)
-            .Default(nullptr);
+    PerfProcessInfo *PPI = StringSwitch<PerfProcessInfo *>(KV.first)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::BUILDIDS],
+                                     &BuildIDProcessInfo)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MAIN_EVENTS],
+                                     &MainEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MEM_EVENTS],
+                                     &MemEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MMAP_EVENTS],
+                                     &MMapEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::TASK_EVENTS],
+                                     &TaskEventsPPI)
+                               .Default(nullptr);
 
     if (!PPI) {
       reportError("supported types: BUILDID, MAIN, MMAP, TASK, MEM");
@@ -853,7 +859,8 @@ void DataAggregator::imputeFallThroughs() {
 
 void DataAggregator::parseInput() {
   start();
-  if (opts::ReadPreAggOrPerfScript && checkInputFileMagic(Filename, PerfTextMagicStr)) {
+  if (opts::ReadPreAggOrPerfScript &&
+      checkInputFileMagic(Filename, PerfTextMagicStr)) {
     parsePerfScriptData();
   } else if (opts::ReadPreAggOrPerfScript) {
     parsePreAggregated();
