@@ -945,9 +945,9 @@ define <32 x i8> @splatvar_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX512DQVL-LABEL: splatvar_shift_v32i8:
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
 ; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
+; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; AVX512DQVL-NEXT:    vpsrlw %xmm1, %xmm3, %xmm1
 ; AVX512DQVL-NEXT:    vpsrlw $8, %xmm1, %xmm1
@@ -1314,9 +1314,9 @@ define <32 x i8> @splatvar_modulo_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwi
 ; AVX512DQVL-LABEL: splatvar_modulo_shift_v32i8:
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896,32896]
 ; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm2, %ymm2
+; AVX512DQVL-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
 ; AVX512DQVL-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
 ; AVX512DQVL-NEXT:    vpsrlw %xmm1, %xmm3, %xmm1
 ; AVX512DQVL-NEXT:    vpsrlw $8, %xmm1, %xmm1

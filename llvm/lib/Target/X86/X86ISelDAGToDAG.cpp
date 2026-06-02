@@ -31,6 +31,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <functional>
 
 using namespace llvm;
 
@@ -4696,8 +4697,17 @@ bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
                                      SDNode *ParentB, SDNode *ParentC,
                                      SDValue A, SDValue B, SDValue C,
                                      uint8_t Imm) {
-  assert(A.isOperandOf(ParentA) && B.isOperandOf(ParentB) &&
-         C.isOperandOf(ParentC) && "Incorrect parent node");
+  // Unused operand slots may be padded with an IMPLICIT_DEF (e.g. when a tree
+  // folds to a VPTERNLOG with fewer than three distinct inputs); padding has no
+  // parent node.
+  auto IsPad = [](SDValue V) {
+    return V.isMachineOpcode() &&
+           V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  };
+  assert((IsPad(A) || A.isOperandOf(ParentA)) &&
+         (IsPad(B) || B.isOperandOf(ParentB)) &&
+         (IsPad(C) || C.isOperandOf(ParentC)) && "Incorrect parent node");
+  (void)IsPad;
 
   auto tryFoldLoadOrBCast =
       [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
@@ -4815,8 +4825,17 @@ bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
   return true;
 }
 
-// Try to match two logic ops to a VPTERNLOG.
-// FIXME: Handle more complex patterns that use an operand more than once?
+// Try to match a tree of bitwise logic ops to one or more VPTERNLOG ops.
+//
+// VPTERNLOG implements an arbitrary 3-input bitwise function via an 8-bit
+// truth-table immediate.  We evaluate the logic sub-DAG rooted at N
+// symbolically: each of the (up to three) distinct leaf inputs is seeded with a
+// canonical truth-table column (0xF0/0xCC/0xAA) and AND/OR/XOR/ANDNP/NOT are
+// folded bitwise over those seeds, yielding the control immediate.  Operand
+// reuse, inverted inputs and arbitrary nesting depth all fall out of the
+// recursion.  Trees with more than three distinct leaves are split by leaving
+// one subtree "opaque" (it selects into its own VPTERNLOG when isel reaches it)
+// and folding the rest around it.
 bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   MVT NVT = N->getSimpleValueType(0);
 
@@ -4829,118 +4848,170 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
     return false;
 
-  auto getFoldableLogicOp = [](SDValue Op) {
-    // Peek through single use bitcast.
-    if (Op.getOpcode() == ISD::BITCAST && Op.hasOneUse())
-      Op = Op.getOperand(0);
-
-    if (!Op.hasOneUse())
-      return SDValue();
-
-    unsigned Opc = Op.getOpcode();
-    if (Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
-        Opc == X86ISD::ANDNP)
-      return Op;
-
-    return SDValue();
+  auto IsLogic = [](unsigned Opc) {
+    return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
+           Opc == X86ISD::ANDNP;
+  };
+  auto IsNot = [](SDValue V) {
+    return V.getOpcode() == ISD::XOR &&
+           ISD::isBuildVectorAllOnes(V.getOperand(1).getNode());
+  };
+  auto PeelBitcast = [](SDValue V) {
+    if (V.getOpcode() == ISD::BITCAST && V.hasOneUse())
+      return V.getOperand(0);
+    return V;
+  };
+  auto IsLoadLike = [](SDValue V) {
+    return isa<LoadSDNode>(V.getNode()) ||
+           V.getOpcode() == X86ISD::VBROADCAST_LOAD;
   };
 
-  SDValue N0, N1, A, FoldableOp;
-
-  // Identify and (optionally) peel an outer NOT that wraps a pure logic tree
-  auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
-    if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
-      SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
-
-      if (!InnerOp)
-        return SDValue();
-
-      N0 = InnerOp.getOperand(0);
-      N1 = InnerOp.getOperand(1);
-      if ((FoldableOp = getFoldableLogicOp(N1))) {
-        A = N0;
-        return InnerOp;
-      }
-      if ((FoldableOp = getFoldableLogicOp(N0))) {
-        A = N1;
-        return InnerOp;
-      }
-    }
-    return SDValue();
+  struct Leaf {
+    SDValue V;
+    SDNode *Parent;
   };
 
-  bool PeeledOuterNot = false;
-  SDNode *OriN = N;
-  if (SDValue InnerOp = tryPeelOuterNotWrappingLogic(N)) {
-    PeeledOuterNot = true;
-    N = InnerOp.getNode();
-  } else {
-    N0 = N->getOperand(0);
-    N1 = N->getOperand(1);
-
-    if ((FoldableOp = getFoldableLogicOp(N1)))
-      A = N0;
-    else if ((FoldableOp = getFoldableLogicOp(N0)))
-      A = N1;
-    else
+  // Symbolically evaluate the tree rooted at Root.  Opaque, if non-null, is
+  // treated as a leaf even when it is a logic op (used for cascading).  On
+  // success fills Leaves (the distinct inputs in seed order, at most three),
+  // Imm and NumOps (the number of logic/NOT nodes folded - a profitability
+  // signal), and returns true.  Returns false when more than three distinct
+  // leaves are required.  Single-use is required to fold a node; bitcasts are
+  // peeled.
+  auto Evaluate = [&](SDValue Root, SDNode *Opaque,
+                      SmallVectorImpl<Leaf> &Leaves, uint8_t &Imm,
+                      unsigned &NumOps) -> bool {
+    static constexpr uint8_t Seeds[] = {0xF0, 0xCC, 0xAA};
+    NumOps = 0;
+    std::function<int(SDValue, SDNode *, bool)> Eval =
+        [&](SDValue Op, SDNode *Parent, bool IsRoot) -> int {
+      if (Op.getNode() != Opaque) {
+        if (Op.getOpcode() == ISD::BITCAST && (IsRoot || Op.hasOneUse())) {
+          Parent = Op.getNode();
+          Op = Op.getOperand(0);
+        }
+        if ((IsRoot || Op.hasOneUse()) && IsNot(Op)) {
+          ++NumOps;
+          int Inner = Eval(Op.getOperand(0), Op.getNode(), false);
+          return Inner < 0 ? -1 : (~Inner & 0xFF);
+        }
+        if ((IsRoot || Op.hasOneUse()) && IsLogic(Op.getOpcode())) {
+          ++NumOps;
+          int L = Eval(Op.getOperand(0), Op.getNode(), false);
+          int R = Eval(Op.getOperand(1), Op.getNode(), false);
+          if (L < 0 || R < 0)
+            return -1;
+          switch (Op.getOpcode()) {
+          case ISD::AND:
+            return L & R;
+          case ISD::OR:
+            return L | R;
+          case ISD::XOR:
+            return (L ^ R) & 0xFF;
+          case X86ISD::ANDNP:
+            return ~L & R;
+          default:
+            llvm_unreachable("Checked by IsLogic");
+          }
+        }
+      }
+      // Leaf: reuse the seed of an identical input, else allocate a new one.
+      for (unsigned I = 0, E = Leaves.size(); I != E; ++I)
+        if (Leaves[I].V == Op)
+          return Seeds[I];
+      if (Leaves.size() >= 3)
+        return -1;
+      uint8_t Seed = Seeds[Leaves.size()];
+      Leaves.push_back({Op, Parent});
+      return Seed;
+    };
+    int Result = Eval(Root, Root.getNode(), /*IsRoot=*/true);
+    if (Result < 0)
       return false;
-  }
-
-  SDValue B = FoldableOp.getOperand(0);
-  SDValue C = FoldableOp.getOperand(1);
-  SDNode *ParentA = N;
-  SDNode *ParentB = FoldableOp.getNode();
-  SDNode *ParentC = FoldableOp.getNode();
-
-  // We can build the appropriate control immediate by performing the logic
-  // operation we're matching using these constants for A, B, and C.
-  uint8_t TernlogMagicA = 0xf0;
-  uint8_t TernlogMagicB = 0xcc;
-  uint8_t TernlogMagicC = 0xaa;
-
-  // Some of the inputs may be inverted, peek through them and invert the
-  // magic values accordingly.
-  // TODO: There may be a bitcast before the xor that we should peek through.
-  auto PeekThroughNot = [](SDValue &Op, SDNode *&Parent, uint8_t &Magic) {
-    if (Op.getOpcode() == ISD::XOR && Op.hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op.getOperand(1).getNode())) {
-      Magic = ~Magic;
-      Parent = Op.getNode();
-      Op = Op.getOperand(0);
-    }
+    Imm = Result & 0xFF;
+    return true;
   };
 
-  PeekThroughNot(A, ParentA, TernlogMagicA);
-  PeekThroughNot(B, ParentB, TernlogMagicB);
-  PeekThroughNot(C, ParentC, TernlogMagicC);
+  // Emit one VPTERNLOG from up to three leaves.  Unused operand slots are
+  // padded with undef so that, e.g., a NOT of a single memory operand folds the
+  // load with no false dependency on the other inputs.
+  auto Emit = [&](ArrayRef<Leaf> Leaves, uint8_t Imm) {
+    SDValue Undef(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SDLoc(N), NVT), 0);
+    SDValue Ops[3] = {Undef, Undef, Undef};
+    SDNode *Parents[3] = {N, N, N};
+    for (unsigned I = 0, E = Leaves.size(); I != E; ++I) {
+      Ops[I] = Leaves[I].V;
+      Parents[I] = Leaves[I].Parent;
+    }
+    return matchVPTERNLOG(N, Parents[0], Parents[1], Parents[2], Ops[0], Ops[1],
+                          Ops[2], Imm);
+  };
 
-  uint8_t Imm;
-  switch (FoldableOp.getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case ISD::AND:      Imm = TernlogMagicB & TernlogMagicC; break;
-  case ISD::OR:       Imm = TernlogMagicB | TernlogMagicC; break;
-  case ISD::XOR:      Imm = TernlogMagicB ^ TernlogMagicC; break;
-  case X86ISD::ANDNP: Imm = ~(TernlogMagicB) & TernlogMagicC; break;
+  // A cover is profitable when it folds at least two logic ops into one
+  // VPTERNLOG, or when it is a NOT of a single memory operand (which saves
+  // materializing an all-ones vector).  A lone binary op (and/or/xor/andn) is
+  // left to its dedicated, cheaper instruction.
+  auto Profitable = [&](ArrayRef<Leaf> Leaves, unsigned NumOps) {
+    if (NumOps >= 2)
+      return true;
+    return Leaves.size() == 1 && IsLoadLike(PeelBitcast(Leaves[0].V));
+  };
+
+  // Whole tree fits in a single VPTERNLOG (<= 3 distinct leaves).
+  SmallVector<Leaf, 3> Leaves;
+  uint8_t Imm = 0;
+  unsigned NumOps = 0;
+  if (Evaluate(SDValue(N, 0), /*Opaque=*/nullptr, Leaves, Imm, NumOps)) {
+    if (!Profitable(Leaves, NumOps))
+      return false;
+    return Emit(Leaves, Imm);
   }
 
-  switch (N->getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case X86ISD::ANDNP:
-    if (A == N0)
-      Imm &= ~TernlogMagicA;
-    else
-      Imm = ~(Imm) & TernlogMagicA;
-    break;
-  case ISD::AND: Imm &= TernlogMagicA; break;
-  case ISD::OR:  Imm |= TernlogMagicA; break;
-  case ISD::XOR: Imm ^= TernlogMagicA; break;
+  // More than three leaves: cascade.  Collect the single-use logic subtrees
+  // that could be made opaque (NOTs are transparent - cutting at one would just
+  // spill it to a separate instruction).
+  SmallVector<SDNode *, 8> Candidates;
+  std::function<void(SDValue)> Collect = [&](SDValue V) {
+    V = PeelBitcast(V);
+    if (!V.hasOneUse())
+      return;
+    if (IsNot(V)) {
+      Collect(V.getOperand(0));
+      return;
+    }
+    if (IsLogic(V.getOpcode())) {
+      Candidates.push_back(V.getNode());
+      Collect(V.getOperand(0));
+      Collect(V.getOperand(1));
+    }
+  };
+  Collect(N->getOperand(0));
+  Collect(N->getOperand(1));
+
+  // Pick the cut that lets the root fold the most leaves (a tighter cascade),
+  // breaking ties towards folding more ops.
+  SmallVector<Leaf, 3> BestLeaves;
+  uint8_t BestImm = 0;
+  unsigned BestNumOps = 0;
+  for (SDNode *S : Candidates) {
+    SmallVector<Leaf, 3> CutLeaves;
+    uint8_t CutImm = 0;
+    unsigned CutNumOps = 0;
+    if (!Evaluate(SDValue(N, 0), S, CutLeaves, CutImm, CutNumOps))
+      continue;
+    if (CutLeaves.size() > BestLeaves.size() ||
+        (CutLeaves.size() == BestLeaves.size() && CutNumOps > BestNumOps)) {
+      BestLeaves = std::move(CutLeaves);
+      BestImm = CutImm;
+      BestNumOps = CutNumOps;
+    }
   }
 
-  if (PeeledOuterNot)
-    Imm = ~Imm;
+  if (!BestLeaves.empty() && Profitable(BestLeaves, BestNumOps))
+    return Emit(BestLeaves, BestImm);
 
-  return matchVPTERNLOG(OriN, ParentA, ParentB, ParentC, A, B, C, Imm);
+  return false;
 }
 
 /// If the high bits of an 'and' operand are known zero, try setting the
