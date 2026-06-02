@@ -1,0 +1,29 @@
+# This test checks that llvm-objdump can show line info from PDB files.
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: yaml2obj %p/Inputs/test-pdb.exe.yaml -o %t.dir/test-pdb.exe
+# RUN: llvm-pdbutil yaml2pdb %p/Inputs/test-pdb.pdb.yaml --pdb %t.dir/test-pdb.pdb
+# RUN: llvm-objdump -l -C %t.dir/test-pdb.exe | FileCheck %s
+
+# FIXME: pdb2yaml doesn't include the section contributions, so no lines are shown.
+
+# CHECK:      0000000140001000 <.text>:
+# CHECK-NEXT: ; square():
+# CHECK-NEXT: ; F:\Dev\llvm-project\llvm\test\tools\llvm-objdump\COFF\Inputs\test-pdb.c:8
+# CHECK-NEXT: 140001000: 50                           pushq   %rax
+# CHECK-NEXT: 140001001: 89 4c 24 04                  movl    %ecx, 0x4(%rsp)
+# CHECK-NEXT: ; F:\Dev\llvm-project\llvm\test\tools\llvm-objdump\COFF\Inputs\test-pdb.c:9
+# CHECK-NEXT: 140001005: 8b 44 24 04                  movl    0x4(%rsp), %eax
+# CHECK-NEXT: 140001009: 0f af 44 24 04               imull   0x4(%rsp), %eax
+# CHECK-NEXT: 14000100e: 59                           popq    %rcx
+# CHECK-NEXT: 14000100f: c3                           retq
+# CHECK-NEXT: ; main():
+# CHECK-NEXT: ; F:\Dev\llvm-project\llvm\test\tools\llvm-objdump\COFF\Inputs\test-pdb.c:12
+# CHECK-NEXT: 140001010: 48 83 ec 28                  subq    $0x28, %rsp
+# CHECK-NEXT: 140001014: c7 44 24 24 00 00 00 00      movl    $0x0, 0x24(%rsp)
+# CHECK-NEXT: ; F:\Dev\llvm-project\llvm\test\tools\llvm-objdump\COFF\Inputs\test-pdb.c:13
+# CHECK-NEXT: 14000101c: b9 04 00 00 00               movl    $0x4, %ecx
+# CHECK-NEXT: 140001021: e8 da ff ff ff               callq   0x140001000 <.text>
+# CHECK-NEXT: 140001026: 90                           nop
+# CHECK-NEXT: 140001027: 48 83 c4 28                  addq    $0x28, %rsp
+# CHECK-NEXT: 14000102b: c3                           retq
