@@ -15024,6 +15024,7 @@ namespace {
                                          ArrayRef<Expr *> Args,
                                          const Expr *ArrayFiller,
                                          QualType AllocType = QualType());
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 } // end anonymous namespace
 
@@ -15409,6 +15410,13 @@ bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
                                          E->getArrayFiller());
+}
+
+bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 //===----------------------------------------------------------------------===//
