@@ -4548,6 +4548,45 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return replaceInstUsesWith(SI, FalseVal);
   }
 
+  // Fold a NaN-guard select of fptosi/fptoui into the saturating variant,
+  // which returns 0 for NaN. Matches both fcmp uno/ord forms (with
+  // appropriately swapped arms), fptosi and fptoui, and optionally looks
+  // through an AND mask on the conversion result.
+  {
+    CmpPredicate Pred;
+    Value *CmpLHS;
+    if (match(CondVal, m_FCmp(Pred, m_Value(CmpLHS), m_AnyZeroFP())) &&
+        (Pred == FCmpInst::FCMP_UNO || Pred == FCmpInst::FCMP_ORD)) {
+      Value *GuardedVal = (Pred == FCmpInst::FCMP_UNO) ? FalseVal : TrueVal;
+      Value *ZeroArm = (Pred == FCmpInst::FCMP_UNO) ? TrueVal : FalseVal;
+
+      if (match(ZeroArm, m_Zero())) {
+        Value *ConvSrc = nullptr;
+        Value *Mask = nullptr;
+        Intrinsic::ID IID = Intrinsic::not_intrinsic;
+
+        if (match(GuardedVal, m_FPToSI(m_Value(ConvSrc))))
+          IID = Intrinsic::fptosi_sat;
+        else if (match(GuardedVal, m_FPToUI(m_Value(ConvSrc))))
+          IID = Intrinsic::fptoui_sat;
+        else if (match(GuardedVal,
+                       m_c_And(m_FPToSI(m_Value(ConvSrc)), m_Value(Mask))))
+          IID = Intrinsic::fptosi_sat;
+        else if (match(GuardedVal,
+                       m_c_And(m_FPToUI(m_Value(ConvSrc)), m_Value(Mask))))
+          IID = Intrinsic::fptoui_sat;
+
+        if (IID != Intrinsic::not_intrinsic && ConvSrc == CmpLHS) {
+          Value *Sat = Builder.CreateIntrinsic(
+              IID, {SelType, CmpLHS->getType()}, CmpLHS);
+          if (Mask)
+            Sat = Builder.CreateAnd(Sat, Mask);
+          return replaceInstUsesWith(SI, Sat);
+        }
+      }
+    }
+  }
+
   // If the type of select is not an integer type or if the condition and
   // the selection type are not both scalar nor both vector types, there is no
   // point in attempting to match these patterns.
