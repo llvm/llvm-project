@@ -137,7 +137,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
       AvoidLDAPUR = true;
     break;
   case Carmel:
-    CacheLineSize = 64;
     break;
   case CortexA35:
   case CortexA53:
@@ -221,7 +220,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA17:
   case AppleM4:
   case AppleM5:
-    CacheLineSize = 64;
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
@@ -258,7 +256,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   case NeoverseV2:
   case NeoverseV3:
-    CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
     ScatterOverhead = 13;
     [[fallthrough]];
@@ -285,7 +282,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinVectorRegisterBitWidth = 128;
     break;
   case ThunderX2T99:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
     PrefetchDistance = 128;
@@ -305,12 +301,10 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
     break;
   case ThunderX3T110:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
     PrefetchDistance = 128;
@@ -323,18 +317,15 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Ampere1A:
   case Ampere1B:
   case Ampere1C:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
     break;
   case Oryon:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
   case Olympus:
-    CacheLineSize = 64;
     EpilogueVectorizationMinVF = 8;
     ScatterOverhead = 13;
     PrefFunctionAlignment = Align(16);
