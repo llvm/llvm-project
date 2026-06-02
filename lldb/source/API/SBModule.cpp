@@ -641,6 +641,7 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
 }
 
 lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
   ModuleSP module_sp(GetSP());
   if (module_sp)
     return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
