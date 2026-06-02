@@ -196,5 +196,8 @@ add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
     ${LLDB_LIBEDIT_LIBS}
+  ALLOWED_INTERNAL_DEPENDENCIES
+    lldbUtility
+    lldbHostMacOSXObjCXX
   )
 

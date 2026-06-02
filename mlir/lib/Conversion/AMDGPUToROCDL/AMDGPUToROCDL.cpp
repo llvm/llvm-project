@@ -491,6 +491,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bit 0: GLC = 0 (atomics drop value, less coherency)
     // bits 1-2: SLC, DLC = 0 (similarly)
     // bit 3: swizzled (0 for raw)
+    // Note: atomic ret/no-ret bit set by backend based on actual usage.
     args.push_back(createI32Constant(rewriter, loc, 0));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
@@ -3291,6 +3292,51 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
   }
 };
 
+struct AMDGPUPermlaneVarLowering
+    : public ConvertOpToLLVMPattern<PermlaneVarOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneVarLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<PermlaneVarOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(PermlaneVarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1200)
+      return op->emitOpError("permlane_var is only supported on GFX12+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    Value selector = adaptor.getSelector();
+    bool cross = op.getCross();
+    bool fi = op.getFetchInactive();
+    bool boundCtrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      if (cross)
+        res = ROCDL::PermlaneX16VarOp::create(rewriter, loc, i32, v, v,
+                                              selector, fi, boundCtrl);
+      else
+        res = ROCDL::Permlane16VarOp::create(rewriter, loc, i32, v, v, selector,
+                                             fi, boundCtrl);
+      permuted.emplace_back(res);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // In-LDS Barrier Operations
 //===----------------------------------------------------------------------===//
@@ -4559,7 +4605,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
            GlobalTransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           AMDGPUPermlaneVarLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

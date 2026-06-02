@@ -22,7 +22,7 @@ class NativeProcessWindows;
 class NativeThreadWindows;
 class NativeDebugDelegate;
 
-typedef std::shared_ptr<NativeDebugDelegate> NativeDebugDelegateSP;
+using NativeDebugDelegateSP = std::shared_ptr<NativeDebugDelegate>;
 
 //------------------------------------------------------------------
 // NativeProcessWindows
@@ -140,12 +140,21 @@ private:
   NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                        NativeDelegate &delegate, llvm::Error &E);
 
+  ExceptionResult HandleSingleStepException(const ExceptionRecord &record);
+  ExceptionResult HandleBreakpointException(const ExceptionRecord &record);
+  ExceptionResult HandleGenericException(bool first_chance,
+                                         const ExceptionRecord &record);
+
   Status CacheLoadedModules();
   std::map<lldb_private::FileSpec, lldb::addr_t> m_loaded_modules;
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.
   bool m_pending_library_events = true;
+
+  /// Whether we've seen the loader breakpoint that fires once per process at
+  /// launch / attach.
+  bool m_initial_stop_seen = false;
 };
 
 //------------------------------------------------------------------

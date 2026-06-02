@@ -3918,6 +3918,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",
@@ -4611,6 +4612,7 @@ cc_library(
     deps = [
         ":IR",
         ":MemorySlotInterfacesIncGen",
+        "//llvm:Support",
     ],
 )
 
@@ -5732,6 +5734,7 @@ cc_library(
         ":AMDGPUToROCDL",
         ":AffineToStandard",
         ":ArithToLLVM",
+        ":ArithTransforms",
         ":ConversionPasses",
         ":FuncDialect",
         ":FuncToLLVM",
@@ -5746,6 +5749,7 @@ cc_library(
         ":LinalgTransforms",
         ":MathToLLVM",
         ":MathToXeVM",
+        ":MathTransforms",
         ":MemRefToLLVM",
         ":MemRefTransforms",
         ":NVGPUToNVVM",
@@ -7431,7 +7435,10 @@ cc_library(
 cc_library(
     name = "SPIRVBinaryUtils",
     srcs = ["lib/Target/SPIRV/SPIRVBinaryUtils.cpp"],
-    hdrs = ["include/mlir/Target/SPIRV/SPIRVBinaryUtils.h"],
+    hdrs = [
+        "include/mlir/Target/SPIRV/SPIRVBinaryUtils.h",
+        "include/mlir/Target/SPIRV/SPIRVExtInstSets.h",
+    ],
     includes = ["include"],
     deps = [
         ":SPIRVDialect",
@@ -14755,6 +14762,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SCFTransforms",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
         ":VectorDialect",

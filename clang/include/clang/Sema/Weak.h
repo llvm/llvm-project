@@ -39,9 +39,6 @@ public:
     static inline WeakInfo getEmptyKey() {
       return WeakInfo(DenseMapInfo::getEmptyKey(), SourceLocation());
     }
-    static inline WeakInfo getTombstoneKey() {
-      return WeakInfo(DenseMapInfo::getTombstoneKey(), SourceLocation());
-    }
     static unsigned getHashValue(const WeakInfo &W) {
       return DenseMapInfo::getHashValue(W.getAlias());
     }
