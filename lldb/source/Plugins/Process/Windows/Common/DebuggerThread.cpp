@@ -497,7 +497,7 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
              ::GetLastError());
     return std::nullopt;
   }
-  auto close_iter = llvm::make_scope_exit([&] { ::FindVolumeClose(vol_iter); });
+  llvm::scope_exit close_iter([&] { ::FindVolumeClose(vol_iter); });
 
   do {
     // FindFirstVolumeW yields "\\?\Volume{GUID}\".
@@ -584,11 +584,11 @@ static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   return ConvertNtDevicePathToDosPath(mapped_filename);
 }
 
-static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
+static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
                                                            LPVOID base_addr) {
   std::array<wchar_t, MAX_PATH + 1> module_filename;
   DWORD len =
-      ::GetModuleFileNameExW(hProcess, reinterpret_cast<HMODULE>(base_addr),
+      ::GetModuleFileNameExW(process, reinterpret_cast<HMODULE>(base_addr),
                              module_filename.data(), module_filename.size());
   if (len > 0 && len < module_filename.size()) {
     std::string path_utf8;
@@ -602,7 +602,7 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   DWORD mapped_len = 0;
   while (mapped_filename.size() <= PATHCCH_MAX_CCH) {
     mapped_len = ::GetMappedFileNameW(
-        hProcess, base_addr, mapped_filename.data(), mapped_filename.size());
+        process, base_addr, mapped_filename.data(), mapped_filename.size());
     if (mapped_len < mapped_filename.size())
       break;
     if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
@@ -614,44 +614,84 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE hProcess,
   return dos_path;
 }
 
+// Determine how many bytes can be read at `addr` in `process` before crossing
+// out of the committed memory region containing it. Returns 0 if the address is
+// not within a committed region.
+static SIZE_T BytesReadableAt(HANDLE process, LPCVOID addr) {
+  MEMORY_BASIC_INFORMATION mbi{};
+  if (!::VirtualQueryEx(process, addr, &mbi, sizeof(mbi)))
+    return 0;
+  if (mbi.State != MEM_COMMIT)
+    return 0;
+  uintptr_t region_end =
+      reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+  uintptr_t a = reinterpret_cast<uintptr_t>(addr);
+  assert(a < region_end);
+  return region_end - a;
+}
+
+static std::optional<std::string> ReadRemotePathStringW(HANDLE process,
+                                                        LPCVOID addr) {
+  SIZE_T to_read = std::min<SIZE_T>((MAX_PATH + 1) * sizeof(wchar_t),
+                                    BytesReadableAt(process, addr));
+  to_read &= ~SIZE_T(1); // round down to a wchar_t boundary
+  if (to_read < sizeof(wchar_t))
+    return std::nullopt;
+
+  std::array<wchar_t, MAX_PATH + 1> buf{};
+  SIZE_T bytes_read = 0;
+  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+    return std::nullopt;
+
+  size_t max_chars = bytes_read / sizeof(wchar_t);
+  size_t len = ::wcsnlen(buf.data(), max_chars);
+  if (len == max_chars) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
+    return std::nullopt;
+
+  std::string result;
+  llvm::convertWideToUTF8(std::wstring(buf.data(), len), result);
+  return result;
+}
+
+static std::optional<std::string> ReadRemotePathStringA(HANDLE process,
+                                                        LPCVOID addr) {
+  SIZE_T to_read =
+      std::min<SIZE_T>(MAX_PATH + 1, BytesReadableAt(process, addr));
+  if (to_read == 0)
+    return std::nullopt;
+
+  std::array<char, MAX_PATH + 1> buf{};
+  SIZE_T bytes_read = 0;
+  if (!::ReadProcessMemory(process, addr, buf.data(), to_read, &bytes_read))
+    return std::nullopt;
+
+  size_t len = ::strnlen(buf.data(), bytes_read);
+  if (len == bytes_read) // no null terminator found
+    return std::nullopt;
+  if (len == 0) // empty string
+    return std::nullopt;
+
+  return std::string(buf.data(), len);
+}
+
 // Resolve the LOAD_DLL_DEBUG_INFO::lpImageName field.
 static std::optional<std::string>
-GetFileNameFromImageNameField(HANDLE hProcess,
-                              const LOAD_DLL_DEBUG_INFO &info) {
+GetFileNameFromImageNameField(HANDLE process, const LOAD_DLL_DEBUG_INFO &info) {
   if (info.lpImageName == nullptr)
     return std::nullopt;
 
-  LPVOID name_addr = nullptr;
+  LPVOID string_addr = nullptr;
   SIZE_T bytes_read = 0;
-  if (!::ReadProcessMemory(hProcess, info.lpImageName, &name_addr,
-                           sizeof(name_addr), &bytes_read) ||
-      bytes_read != sizeof(name_addr) || name_addr == nullptr)
+  if (!::ReadProcessMemory(process, info.lpImageName, &string_addr,
+                           sizeof(string_addr), &bytes_read) ||
+      bytes_read != sizeof(string_addr))
     return std::nullopt;
 
-  if (info.fUnicode) {
-    std::array<wchar_t, MAX_PATH + 1> wbuf{};
-    if (!::ReadProcessMemory(hProcess, name_addr, wbuf.data(),
-                             wbuf.size() * sizeof(wchar_t), &bytes_read))
-      return std::nullopt;
-    if (wbuf[MAX_PATH] != L'\0')
-      return std::nullopt;
-    std::string path_utf8;
-    llvm::convertWideToUTF8(wbuf.data(), path_utf8);
-    if (path_utf8.empty())
-      return std::nullopt;
-    return path_utf8;
-  }
-
-  std::array<char, MAX_PATH + 1> abuf{};
-  if (!::ReadProcessMemory(hProcess, name_addr, abuf.data(), abuf.size(),
-                           &bytes_read))
-    return std::nullopt;
-  if (abuf[MAX_PATH] != '\0')
-    return std::nullopt;
-  std::string path(abuf.data());
-  if (path.empty())
-    return std::nullopt;
-  return path;
+  if (info.fUnicode)
+    return ReadRemotePathStringW(process, string_addr);
+  return ReadRemotePathStringA(process, string_addr);
 }
 
 DWORD
@@ -689,11 +729,11 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     }
   }
 
-  HANDLE hProcess = m_process.GetNativeProcess().GetSystemHandle();
+  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
   if (!resolved_path)
-    resolved_path = GetFileNameFromImageNameField(hProcess, info);
+    resolved_path = GetFileNameFromImageNameField(process, info);
   if (!resolved_path)
-    resolved_path = GetFileNameByLoadAddress(hProcess, info.lpBaseOfDll);
+    resolved_path = GetFileNameByLoadAddress(process, info.lpBaseOfDll);
 
   if (resolved_path)
     on_load_dll(*resolved_path);

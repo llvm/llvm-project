@@ -1795,7 +1795,8 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
-    O << Instruction::getOpcodeName(getOpcode()) << " ";
+    O << Instruction::getOpcodeName(getOpcode());
+    printFlags(O);
     printOperands(O, SlotTracker);
     O << " to " << *ResultTy;
   }
@@ -2251,9 +2252,10 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   else
     assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
-  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
-                                {VTy, IncAmt->getType()},
-                                {Address, IncAmt, Mask});
+  auto *HistogramInst = State.Builder.CreateIntrinsic(
+      Intrinsic::experimental_vector_histogram_add, {VTy, IncAmt->getType()},
+      {Address, IncAmt, Mask});
+  applyMetadata(*HistogramInst);
 }
 
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
@@ -3197,7 +3199,10 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {},
+                        cast<VPReductionRecipe>(ExpressionRecipes.back())
+                            ->getChainOp()
+                            ->getScalarType()),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(

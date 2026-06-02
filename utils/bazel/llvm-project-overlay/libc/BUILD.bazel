@@ -2000,6 +2000,8 @@ libc_support_library(
         "src/__support/FPUtil/x86_64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/FEnvImpl.h",
         "src/__support/FPUtil/aarch64/fenv_darwin_impl.h",
+        "src/__support/FPUtil/arm/FEnvImpl.h",
+        "src/__support/FPUtil/riscv/FEnvImpl.h",
     ],
     deps = [
         ":__support_cpp_bit",
@@ -6773,6 +6775,7 @@ libc_support_library(
         ":__support_math_exp10_float16_constants",
         ":__support_math_expf16_utils",
         ":hdr_stdint_proxy",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 

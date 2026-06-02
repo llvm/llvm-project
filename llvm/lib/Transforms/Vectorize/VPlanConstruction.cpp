@@ -33,9 +33,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
+
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 
 namespace {
@@ -975,6 +978,72 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   return true;
 }
 
+bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
+                                             PredicatedScalarEvolution &PSE,
+                                             bool OptForSize,
+                                             unsigned SCEVCheckThreshold,
+                                             OptimizationRemarkEmitter *ORE,
+                                             Loop *TheLoop) {
+  // Collect which wide IVs have predicates and add them to PSE.
+  auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
+  for (auto &R : HeaderVPBB->phis()) {
+    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
+    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+      continue;
+    PredicatedIVs.insert(WideIV);
+    for (const auto *P : WideIV->getNoWrapPredicates())
+      PSE.addPredicate(*P);
+  }
+
+  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
+  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
+  // predicates directly, regardless of whether PSE was already non-trivial
+  // from other sources (e.g., LAI predicates).
+  // TODO: Overly conservative; the pre-computed exit values are not correct
+  // outside the loop, but the exit values could be extracted from the vector
+  // loop.
+  if (!PredicatedIVs.empty())
+    for (auto *EB : Plan.getExitBlocks())
+      for (VPRecipeBase &R : EB->phis())
+        for (VPValue *Op : R.operands()) {
+          VPValue *Inner;
+          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
+            continue;
+          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
+          if (!WideIV || !PredicatedIVs.contains(WideIV))
+            continue;
+          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
+                               "outside-loop use via ExitingIVValue\n");
+          return false;
+        }
+
+  unsigned TotalComplexity = PSE.getPredicate().getComplexity();
+  if (TotalComplexity && OptForSize) {
+    LLVM_DEBUG(
+        dbgs() << "LV: Not vectorizing: SCEV predicates needed for induction "
+                  "but optimizing for size\n");
+    reportVectorizationFailure(
+        "Runtime SCEV check is required with -Os/-Oz",
+        "runtime SCEV checks needed but optimizing for size",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
+    return false;
+  }
+
+  if (TotalComplexity > SCEVCheckThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Too many SCEV checks needed ("
+                      << TotalComplexity << " > " << SCEVCheckThreshold
+                      << ")\n");
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
+        "Too many SCEV assumptions need to be made and checked at runtime",
+        "TooManySCEVRunTimeChecks", ORE, TheLoop);
+    return false;
+  }
+
+  return true;
+}
+
 void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
                                                    ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
@@ -1478,7 +1547,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // check is known to be true, or known to be false.
       // Try to expand Step into VPInstructions in CheckBlock; otherwise fall
       // back to a VPExpandSCEV recipe in the plan's entry block.
-      VPValue *MinTripCountVPV = Builder.expandSCEV(Step, DL);
+      VPValue *MinTripCountVPV =
+          VPSCEVExpander(Builder, *PSE.getSE(), DL).tryToExpand(Step);
       if (!MinTripCountVPV)
         MinTripCountVPV = VPBuilder(Plan.getEntry()).createExpandSCEV(Step);
       TripCountCheck = Builder.createICmp(
@@ -1798,8 +1868,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     auto *RdxResult =
-        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
-            BackedgeSelect);
+        findUserOf<VPInstruction::ComputeReductionResult>(BackedgeSelect);
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
@@ -2036,7 +2105,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(vputils::findUserOf(
+    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
@@ -2052,7 +2121,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
 
     VPInstruction *MinOrMaxResult =
-        vputils::findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
+        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
     assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
            "one user must be MinOrMaxOp");
     assert(MinOrMaxResult && "MinOrMaxResult must be a user of MinOrMaxOp");
@@ -2081,7 +2150,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
     VPInstruction *FindIVResult =
-        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+        findUserOf<VPInstruction::ComputeReductionResult>(
             FindIVPhiR->getBackedgeValue());
     assert(FindIVResult &&
            "must be able to retrieve the FindIVResult VPInstruction");
