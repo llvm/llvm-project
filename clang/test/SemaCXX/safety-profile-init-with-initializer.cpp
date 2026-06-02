@@ -34,6 +34,16 @@ void test_init_alone() {
   (void)x;
 }
 
+struct WithCtor { WithCtor(); };
+
+void test_class_synthesized_init() {
+  // The implicit default-constructor call is the initializer, so the marker
+  // contradicts it even though there is no explicit initializer.
+  WithCtor x [[uninitialized]]; // expected-error {{variable 'x' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
+  [[uninitialized]] WithCtor y; // expected-error {{variable 'y' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
+  (void)x; (void)y;
+}
+
 int g_marker_with_init [[uninitialized]] = 42; // expected-error {{variable 'g_marker_with_init' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
 
 void test_suppress() {
