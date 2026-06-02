@@ -170,3 +170,102 @@ func.func @_QPtest_nested_inline_region_branch(
       : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   return
 }
+
+// -----
+
+// Chained declares in the SAME scope: an ASSOCIATE construct renames a
+// dummy argument (`associate(y => x)`). Lowering emits a plain
+// hlfir.declare for `y` (NO dummy_scope -- associate names are not
+// registered dummies) whose memref is the selector declare's result
+// %x#0. getDeclarationScope() assigns `y`'s snapshot the same dominating
+// fir.dummy_scope as `x`, so the refinement sees them as a same-scope,
+// distinct-declValue pair. They must NOT be disambiguated to NoAlias:
+// `y` is just another name for `x`. buildSourceAtDeclare walks THROUGH
+// the (dummy_scope-less) `y` declare down to the `x` declare, yielding
+// the same origin, and the base alias() already reports MustAlias via
+// the zero-offset view root, so the result stays MustAlias.
+//
+// CHECK-LABEL: Testing : "_QPtest_associate_rename_dummy"
+// CHECK-DAG: x#0 <-> y#0: MustAlias
+func.func @_QPtest_associate_rename_dummy(
+    %arg0: !fir.ref<f32> {fir.bindc_name = "x"}) {
+  %scope = fir.dummy_scope : !fir.dscope
+  %x:2 = hlfir.declare %arg0 dummy_scope %scope
+      {test.ptr = "x", uniq_name = "_QFtest_associate_rename_dummyEx"}
+      : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  // associate(y => x): chained declare, no dummy_scope.
+  %y:2 = hlfir.declare %x#0
+      {test.ptr = "y", uniq_name = "_QFtest_associate_rename_dummyEy"}
+      : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Two associate-names each renaming a DISTINCT dummy argument
+// (`associate(a => x, b => y)`). The chained `a`/`b` declares carry no
+// dummy_scope; their memrefs trace through to the distinct dummy declares
+// %x / %y. Disambiguation must still succeed: a and b are distinct
+// entities and do not alias. (Here the base alias() already resolves the
+// chains to distinct Argument origins and returns NoAlias.)
+//
+// CHECK-LABEL: Testing : "_QPtest_associate_two_dummies"
+// CHECK-DAG: a#0 <-> b#0: NoAlias
+func.func @_QPtest_associate_two_dummies(
+    %arg0: !fir.ref<f32> {fir.bindc_name = "x"},
+    %arg1: !fir.ref<f32> {fir.bindc_name = "y"}) {
+  %scope = fir.dummy_scope : !fir.dscope
+  %x:2 = hlfir.declare %arg0 dummy_scope %scope
+      {uniq_name = "_QFtest_associate_two_dummiesEx"}
+      : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %y:2 = hlfir.declare %arg1 dummy_scope %scope
+      {uniq_name = "_QFtest_associate_two_dummiesEy"}
+      : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  // associate(a => x, b => y): chained declares, no dummy_scope.
+  %a:2 = hlfir.declare %x#0
+      {test.ptr = "a", uniq_name = "_QFtest_associate_two_dummiesEa"}
+      : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %b:2 = hlfir.declare %y#0
+      {test.ptr = "b", uniq_name = "_QFtest_associate_two_dummiesEb"}
+      : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// Two associate-names renaming the SAME array dummy
+// (`associate(a => v, b => v)`), with element accesses a(i) / b(j).
+// Both chained declares (no dummy_scope) trace through to the same dummy
+// declare %v, so the array-element accesses are approximate (statically
+// unknown indices) over the SAME origin. This exercises the scope-aware
+// refinement path (base result is MayAlias, not short-circuited): the
+// pair of chained `a`/`b` declares must rebuild to the same %v origin and
+// stay MayAlias, never falsely NoAlias.
+//
+// CHECK-LABEL: Testing : "_QPtest_associate_same_array"
+// CHECK-DAG: a_elem#0 <-> b_elem#0: MayAlias
+func.func @_QPtest_associate_same_array(
+    %arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "v"},
+    %n: index, %i: index, %j: index) {
+  %scope = fir.dummy_scope : !fir.dscope
+  %shape = fir.shape %n : (index) -> !fir.shape<1>
+  %v = fir.declare %arg0(%shape) dummy_scope %scope
+      {fortran_attrs = #fir.var_attrs<intent_inout>,
+       uniq_name = "_QFtest_associate_same_arrayEv"}
+      : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope)
+        -> !fir.ref<!fir.array<?xf32>>
+  // associate(a => v, b => v): chained declares, no dummy_scope.
+  %a = fir.declare %v(%shape)
+      {uniq_name = "_QFtest_associate_same_arrayEa"}
+      : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>)
+        -> !fir.ref<!fir.array<?xf32>>
+  %b = fir.declare %v(%shape)
+      {uniq_name = "_QFtest_associate_same_arrayEb"}
+      : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>)
+        -> !fir.ref<!fir.array<?xf32>>
+  %a_elem = fir.array_coor %a(%shape) %i {test.ptr = "a_elem"}
+      : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %b_elem = fir.array_coor %b(%shape) %j {test.ptr = "b_elem"}
+      : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  return
+}
