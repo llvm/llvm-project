@@ -146,28 +146,6 @@ static bool matchImmOperands(const MachineOperand &Op0,
          Op1.getImm() == Imm1;
 }
 
-static bool isKillFromLiveRange(const SIRegisterInfo &TRI, LiveIntervals &LIS,
-                                Register Reg, const MachineInstr &MI) {
-  SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
-
-  if (Reg.isVirtual())
-    return LIS.getInterval(Reg).Query(Idx).isKill();
-
-  return llvm::all_of(TRI.regunits(Reg.asMCReg()), [&](MCRegUnit Unit) {
-    return LIS.getRegUnit(Unit).Query(Idx).isKill();
-  });
-}
-
-static void updateKillFlagFromLiveRange(const SIRegisterInfo &TRI,
-                                        LiveIntervals &LIS, Register Reg,
-                                        MachineInstr &MI) {
-  int OpIdx = MI.findRegisterUseOperandIdx(Reg, &TRI);
-  if (OpIdx == -1)
-    return;
-
-  MI.getOperand(OpIdx).setIsKill(isKillFromLiveRange(TRI, LIS, Reg, MI));
-}
-
 bool SIOptimizeExecMaskingPreRA::matchAndWithExec(
     MachineInstr &And, MachineOperand *&AndCC, MachineOperand *&AndExec) const {
   if (And.getOpcode() != LMC.AndOpc || !And.getOperand(1).isReg() ||
@@ -440,9 +418,6 @@ bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
   BoolSel->eraseFromParent();
   if (MRI->reg_nodbg_empty(BoolReg))
     LIS->removeInterval(BoolReg);
-
-  LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
-  updateKillFlagFromLiveRange(*TRI, *LIS, AMDGPU::SCC, *I);
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
   return true;
