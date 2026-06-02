@@ -2803,6 +2803,10 @@ private:
     }
 
     for (auto *Field : R->fields()) {
+      // Treat unnamed bitfields as padding.
+      if (Field->isUnnamedBitField())
+        continue;
+
       auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
       if (Field->isBitField()) {
         OccuppiedIntervals.push_back(BitInterval{
