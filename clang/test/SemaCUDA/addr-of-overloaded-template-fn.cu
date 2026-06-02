@@ -5,22 +5,24 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fsyntax-only -fcuda-is-device -verify %s
 
+// Tests that no ambiguities are diagnosed when resolving addresses of
+// specialized template functions with the same overloads on host and device.
+
 #include "Inputs/cuda.h"
 
-__host__ void overload() {}
-__device__ void overload() {}
+template <typename T> __host__ void overload(T) {}
+template <typename T> __device__ void overload(T) {}
 
 __host__ __device__ void test_hd() {
-  // This should not be ambiguous -- we choose the host or the device overload
-  // depending on whether or not we're compiling for host or device.
-  void (*x)() = overload;
+  void (*x)(int) = overload<int>;
+  void (*y)(float) = overload<float>;
 }
 
-// These also shouldn't be ambiguous, but they're an easier test than the HD
-// function above.
 __host__ void test_host() {
-  void (*x)() = overload;
+  void (*x)(int) = overload<int>;
+  void (*y)(float) = overload<float>;
 }
 __device__ void test_device() {
-  void (*x)() = overload;
+  void (*x)(int) = overload<int>;
+  void (*y)(float) = overload<float>;
 }
