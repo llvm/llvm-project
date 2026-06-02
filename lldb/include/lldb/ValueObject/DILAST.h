@@ -47,6 +47,8 @@ enum class BinaryOpKind {
   Mul, // "*"
   Div, // "/"
   Rem, // "%"
+  Shl, // "<<"
+  Shr, // ">>"
 };
 
 /// Translates DIL tokens to BinaryOpKind.
