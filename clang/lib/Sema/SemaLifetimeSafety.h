@@ -20,7 +20,6 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Sema.h"
-#include <clang/AST/Attrs.inc>
 #include <string>
 
 namespace clang::lifetimes {

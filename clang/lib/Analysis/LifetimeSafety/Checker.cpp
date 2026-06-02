@@ -469,7 +469,7 @@ public:
   }
 
   static bool canBeLifetimebound(QualType QT) {
-    if (QT->isReferenceType() || QT->isPointerType())
+    if (QT->isReferenceType() || QT->isAnyPointerType())
       return true;
     if (isGslOwnerType(QT) || QT->isScalarType())
       return false;
