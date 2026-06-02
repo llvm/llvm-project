@@ -2457,9 +2457,9 @@ def PseudoMSUBU : MAddSubPseudo<MSUBU, MipsMSubu>,
 
 let AdditionalPredicates = [NotInMicroMips] in {
   def PseudoSDIV : MultDivPseudo<SDIV, ACC64, GPR32Opnd, MipsDivRem,
-                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+                                 0, 0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def PseudoUDIV : MultDivPseudo<UDIV, ACC64, GPR32Opnd, MipsDivRemU,
-                                 0, 1, 1>, ISA_MIPS1_NOT_32R6_64R6;
+                                 0, 0, 1>, ISA_MIPS1_NOT_32R6_64R6;
   def RDHWR : MMRel, ReadHardware<GPR32Opnd, HWRegsOpnd>, RDHWR_FM, ISA_MIPS1;
   // TODO: Add '0 < pos+size <= 32' constraint check to ext instruction
   def EXT : MMRel, StdMMR6Rel, ExtBase<"ext", GPR32Opnd, uimm5, uimm5_plus1,

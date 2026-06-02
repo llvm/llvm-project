@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -93,6 +94,12 @@ static cl::opt<bool> UseMipsTailCalls("mips-tail-calls", cl::Hidden,
 static const MCPhysReg Mips64DPRegs[8] = {
   Mips::D12_64, Mips::D13_64, Mips::D14_64, Mips::D15_64,
   Mips::D16_64, Mips::D17_64, Mips::D18_64, Mips::D19_64
+};
+
+enum class DivByZeroTrapKind {
+  Break, // MIPS1
+  Teq,   // MIPS2+
+  TeqMM, // MicroMips
 };
 
 // The MIPS MSA ABI passes vector arguments in the integer register set.
@@ -1279,19 +1286,68 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
   return VReg;
 }
 
-static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
-                                              MachineBasicBlock &MBB,
-                                              const TargetInstrInfo &TII,
-                                              bool Is64Bit, bool IsMicroMips) {
+static MachineBasicBlock *
+insertDivByZeroTrap(MachineInstr &MI, MachineBasicBlock &MBB,
+                    const TargetInstrInfo &TII, bool Is64Bit,
+                    const DivByZeroTrapKind TrapKind) {
   if (NoZeroDivCheck)
     return &MBB;
 
-  // Insert instruction "teq $divisor_reg, $zero, 7".
   MachineBasicBlock::iterator I(MI);
-  MachineInstrBuilder MIB;
   MachineOperand &Divisor = MI.getOperand(2);
+
+  if (TrapKind == DivByZeroTrapKind::Break) {
+    // Build instructions:
+    // MBB:
+    //   bnez     $divisor, $zero, SinkMBB
+    //   MI       $dst, $dividend, $divisor (delay slot)
+    //
+    // BreakMBB:
+    //   break    7
+    //
+    // SinkMBB:
+    //   fallthrough
+    const DebugLoc DL = MI.getDebugLoc();
+    const BasicBlock *BB = MBB.getBasicBlock();
+    const auto It = std::next(MachineFunction::iterator(&MBB));
+
+    MachineFunction *MF = MBB.getParent();
+    MachineBasicBlock *BreakMBB = MF->CreateMachineBasicBlock(BB);
+    MachineBasicBlock *SinkMBB = MF->CreateMachineBasicBlock(BB);
+    MF->insert(It, BreakMBB);
+    MF->insert(It, SinkMBB);
+
+    // Place all instructions after MI into SinkMBB.
+    SinkMBB->splice(SinkMBB->begin(), &MBB, std::next(I), MBB.end());
+    SinkMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+    // Place the branch at the end of the block. Since MI is defined as having
+    // no side effects in TableGen, the filler will place it in the branch delay
+    // slot.
+    BuildMI(&MBB, DL, TII.get(Mips::BNE))
+        .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+        .addReg(Mips::ZERO)
+        .addMBB(SinkMBB);
+    MBB.addSuccessor(BreakMBB);
+    MBB.addSuccessor(SinkMBB);
+
+    // BreakMBB: break 7
+    BuildMI(BreakMBB, DL, TII.get(Mips::BREAK)).addImm(7).addImm(0);
+    BreakMBB->addSuccessor(SinkMBB);
+
+    LivePhysRegs LiveRegs;
+    computeAndAddLiveIns(LiveRegs, *SinkMBB);
+
+    Divisor.setIsKill(false);
+
+    return SinkMBB;
+  }
+
+  // Insert instruction "teq $divisor_reg, $zero, 7".
+  MachineInstrBuilder MIB;
   MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
-                TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
+                TII.get(TrapKind == DivByZeroTrapKind::TeqMM ? Mips::TEQ_MM
+                                                             : Mips::TEQ))
             .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
             .addReg(Mips::ZERO)
             .addImm(7);
@@ -1428,9 +1484,13 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIV:
   case Mips::DIVU:
   case Mips::MOD:
-  case Mips::MODU:
+  case Mips::MODU: {
+    const auto TrapKind = Subtarget.hasMips1() && !Subtarget.hasMips2()
+                              ? DivByZeroTrapKind::Break
+                              : DivByZeroTrapKind::Teq;
     return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
-                               false);
+                               TrapKind);
+  }
   case Mips::SDIV_MM_Pseudo:
   case Mips::UDIV_MM_Pseudo:
   case Mips::SDIV_MM:
@@ -1439,14 +1499,16 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case Mips::DIVU_MMR6:
   case Mips::MOD_MMR6:
   case Mips::MODU_MMR6:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false, true);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), false,
+                               DivByZeroTrapKind::TeqMM);
   case Mips::PseudoDSDIV:
   case Mips::PseudoDUDIV:
   case Mips::DDIV:
   case Mips::DDIVU:
   case Mips::DMOD:
   case Mips::DMODU:
-    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true, false);
+    return insertDivByZeroTrap(MI, *BB, *Subtarget.getInstrInfo(), true,
+                               DivByZeroTrapKind::Teq);
 
   case Mips::PseudoSELECT_I:
   case Mips::PseudoSELECT_I64:
@@ -3873,7 +3935,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
 
       assert(!VA.needsCustom() && "unexpected custom memory argument");
 
-      // Only arguments pased on the stack should make it here. 
+      // Only arguments pased on the stack should make it here.
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
