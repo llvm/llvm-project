@@ -2013,20 +2013,22 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
-  if (!Sign) {
-    APInt MustBeZero = APInt::getHighBitsSet(32, 8);
-    if (!DAG.MaskedValueIsZero(LHS, MustBeZero) ||
-        !DAG.MaskedValueIsZero(RHS, MustBeZero)) {
-      return SDValue();
-    }
-  }
-
-  unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
-  unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
-
+  unsigned LHSSignBits;
+  unsigned RHSSignBits;
   if (Sign) {
+    LHSSignBits = DAG.ComputeNumSignBits(LHS);
+    RHSSignBits = DAG.ComputeNumSignBits(RHS);
     if (LHSSignBits < 9 || RHSSignBits < 9)
       return SDValue();
+  } else {
+    KnownBits LHSKnown = DAG.computeKnownBits(LHS);
+    KnownBits RHSKnown = DAG.computeKnownBits(RHS);
+    APInt U24Max = APInt::getLowBitsSet(32, 24);
+    if (LHSKnown.getMaxValue().ugt(U24Max) ||
+        RHSKnown.getMaxValue().ugt(U24Max))
+      return SDValue();
+    LHSSignBits = LHSKnown.countMinLeadingZeros();
+    RHSSignBits = RHSKnown.countMinLeadingZeros();
   }
 
   unsigned BitSize = VT.getSizeInBits();
