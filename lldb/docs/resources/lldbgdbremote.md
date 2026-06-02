@@ -1181,6 +1181,30 @@ These packets must be sent  _prior_ to sending a "A" packet.
 a target after making a connection to a GDB server that isn't already connected to
 an inferior process.
 
+## QSetSTDIOWindowSize:cols=\<N\>;rows=\<N\>
+
+Set the terminal window size for the inferior's stdio pseudo-terminal prior to
+sending an "A" packet.
+
+When launching a program that uses a pseudo-terminal (PTY) for stdio, this
+packet specifies the initial terminal dimensions:
+```
+QSetSTDIOWindowSize:cols=<N>;rows=<N>
+```
+Both `cols` and `rows` must be non-zero unsigned 16-bit integers. The packet
+must be sent _prior_ to sending an "A" packet. On the server side, the
+dimensions are applied to the PTY via `TIOCSWINSZ` (POSIX) or the equivalent
+platform mechanism (e.g. `ConPTY` resize on Windows).
+
+The response is either:
+* `OK`: dimensions accepted.
+* `ENN`: malformed packet or zero value for `cols`/`rows`.
+* Empty/`+`: packet not supported; the client silently ignores this.
+
+**Priority To Implement:** Low. Only needed when the remote target launches a
+process with a PTY and the client wants the inferior's terminal to reflect the
+correct window size (e.g. for proper line-wrapping or full-screen TUI apps).
+
 ## QSetWorkingDir:\<ascii-hex-path\>
 
 Set the working directory prior to sending an "A" packet.
