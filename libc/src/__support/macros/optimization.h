@@ -56,6 +56,7 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
   (LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES |                     \
    LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
 #define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
+#define LIBC_MATH_ALWAYS_ROUND_NEAREST 0x20
 
 #ifndef LIBC_MATH
 #define LIBC_MATH 0
@@ -79,6 +80,10 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if ((LIBC_MATH) & LIBC_MATH_NO_EXCEPT)
 #define LIBC_MATH_HAS_NO_EXCEPT
+#endif
+
+#if ((LIBC_MATH) & LIBC_MATH_ALWAYS_ROUND_NEAREST)
+#define LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

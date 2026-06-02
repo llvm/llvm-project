@@ -67,6 +67,7 @@ LIBC_INLINE bool fenv_is_round_to_zero() {
 
 // Quick free standing get rounding mode based on the above observations.
 LIBC_INLINE int quick_get_round() {
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
   static volatile float x = 0x1.0p-24f;
   float y = x;
   float z = (0x1.000002p0f + y) + (-1.0f - y);
@@ -76,6 +77,11 @@ LIBC_INLINE int quick_get_round() {
   if (z == 0x1.0p-23f)
     return FE_TOWARDZERO;
   return (2.0f + y == 2.0f) ? FE_TONEAREST : FE_UPWARD;
+#else
+  // the optimization should've happened in each user of this function,
+  // but just in case
+  return FE_TONEAREST;
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 }
 
 } // namespace generic
