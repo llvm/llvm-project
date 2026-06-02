@@ -2759,14 +2759,13 @@ define amdgpu_kernel void @udot4_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-DL-FAKE16-NEXT:    v_or_b32_e32 v6, v6, v5
 ; GFX11-DL-FAKE16-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-DL-FAKE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; GFX11-DL-FAKE16-NEXT:    v_or_b32_e32 v6, v8, v6
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-DL-FAKE16-NEXT:    v_lshl_or_b32 v6, v6, 16, v8
 ; GFX11-DL-FAKE16-NEXT:    v_lshrrev_b32_e32 v6, 8, v6
-; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v6
 ; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v6
 ; GFX11-DL-FAKE16-NEXT:    v_mad_u16 v0, v4, v7, v0
+; GFX11-DL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DL-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v1
 ; GFX11-DL-FAKE16-NEXT:    global_store_b8 v2, v0, s[4:5]
 ; GFX11-DL-FAKE16-NEXT:    s_endpgm

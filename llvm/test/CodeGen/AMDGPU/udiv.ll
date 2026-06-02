@@ -1727,15 +1727,11 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    buffer_load_ushort v3, off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
-; VI-NEXT:    s_waitcnt vmcnt(3)
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; VI-NEXT:    v_cvt_f32_u32_e32 v0, v0
-; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_or_b32_e32 v1, v3, v1
+; VI-NEXT:    v_lshl_or_b32 v1, v2, 16, v3
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, v1
 ; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -1773,15 +1769,11 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GCN-NEXT:    flat_load_ushort v1, v[2:3]
-; GCN-NEXT:    s_waitcnt vmcnt(3)
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v6
 ; GCN-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NEXT:    v_or_b32_e32 v2, v4, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v6, 16, v4
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v2
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_or_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v3, v0
 ; GCN-NEXT:    v_rcp_f32_e32 v4, v2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
@@ -1806,17 +1798,13 @@ define amdgpu_kernel void @v_udiv_i23(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    global_load_ushort v2, v0, s[2:3] offset:4
 ; GFX1030-NEXT:    global_load_ubyte v3, v0, s[2:3] offset:2
 ; GFX1030-NEXT:    global_load_ushort v4, v0, s[2:3]
-; GFX1030-NEXT:    s_waitcnt vmcnt(3)
-; GFX1030-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX1030-NEXT:    s_waitcnt vmcnt(2)
-; GFX1030-NEXT:    v_or_b32_e32 v1, v2, v1
-; GFX1030-NEXT:    s_waitcnt vmcnt(1)
-; GFX1030-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
-; GFX1030-NEXT:    v_cvt_f32_u32_e32 v1, v1
+; GFX1030-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0)
-; GFX1030-NEXT:    v_or_b32_e32 v2, v4, v2
-; GFX1030-NEXT:    v_rcp_f32_e32 v3, v1
+; GFX1030-NEXT:    v_lshl_or_b32 v2, v3, 16, v4
+; GFX1030-NEXT:    v_cvt_f32_u32_e32 v1, v1
 ; GFX1030-NEXT:    v_cvt_f32_u32_e32 v2, v2
+; GFX1030-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX1030-NEXT:    v_mul_f32_e32 v3, v2, v3
 ; GFX1030-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX1030-NEXT:    v_fma_f32 v2, -v3, v1, v2
@@ -1937,17 +1925,13 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    buffer_load_ushort v3, off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s0, s4
 ; VI-NEXT:    s_mov_b32 s1, s5
-; VI-NEXT:    s_waitcnt vmcnt(3)
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_or_b32_e32 v0, v1, v0
+; VI-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, v0
 ; VI-NEXT:    v_sub_u32_e32 v4, vcc, 0, v0
-; VI-NEXT:    s_waitcnt vmcnt(1)
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; VI-NEXT:    v_rcp_f32_e32 v1, v1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_or_b32_e32 v2, v3, v2
+; VI-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
 ; VI-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; VI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; VI-NEXT:    v_mul_lo_u32 v4, v4, v1
@@ -1993,17 +1977,13 @@ define amdgpu_kernel void @v_udiv_i24(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    flat_load_ubyte v2, v[2:3]
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1]
-; GCN-NEXT:    s_waitcnt vmcnt(3)
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; GCN-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NEXT:    v_or_b32_e32 v3, v5, v1
+; GCN-NEXT:    v_lshl_or_b32 v3, v4, 16, v5
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v1, v3
 ; GCN-NEXT:    v_sub_u32_e32 v4, vcc, 0, v3
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GCN-NEXT:    v_rcp_f32_e32 v1, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_or_b32_e32 v2, v0, v2
+; GCN-NEXT:    v_lshl_or_b32 v2, v2, 16, v0
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GCN-NEXT:    v_mul_lo_u32 v4, v4, v1

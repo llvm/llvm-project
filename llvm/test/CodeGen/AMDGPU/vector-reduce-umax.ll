@@ -331,14 +331,12 @@ define i8 @test_vector_reduce_umax_v4i8(<4 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 8
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v2, 0, v2
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v2
-; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 24, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umax_v4i8:
@@ -617,17 +615,15 @@ define i8 @test_vector_reduce_umax_v8i8(<8 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v1, 0, v1
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 8
+; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v2, 0, v2
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v2
-; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 24, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umax_v8i8:
@@ -1023,17 +1019,15 @@ define i8 @test_vector_reduce_umax_v16i8(<16 x i8> %v) {
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v0, v0, v1
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v1, 0, v1
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v4, 8
+; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v2, 0, v2
 ; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
 ; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v2
-; GFX8-GISEL-NEXT:    v_max_u16_e32 v3, 0, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v3
-; GFX8-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 24, v0
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: test_vector_reduce_umax_v16i8:

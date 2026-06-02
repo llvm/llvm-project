@@ -2135,8 +2135,7 @@ define void @shl_or_k(ptr addrspace(1) %out, i32 %in) {
 ; VI-LABEL: shl_or_k:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
-; VI-NEXT:    v_or_b32_e32 v2, 4, v2
+; VI-NEXT:    v_lshl_or_b32 v2, v2, 2, 4
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]

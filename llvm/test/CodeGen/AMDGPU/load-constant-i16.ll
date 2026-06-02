@@ -703,36 +703,21 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GCN-NOHSA-VI-NEXT:    flat_load_ushort v21, v[4:5]
 ; GCN-NOHSA-VI-NEXT:    flat_load_ushort v22, v[6:7]
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(14)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v16
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v3, v17, v1
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(13)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v18
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v3, v16, 16, v17
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(12)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v2, v19, v1
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(11)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v8
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v2, v18, 16, v19
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(10)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v1, v9, v1
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(9)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v10
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v1, v8, 16, v9
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(8)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v7, v11, v4
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(7)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v12
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v7, v10, 16, v11
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(6)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v6, v13, v4
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(5)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v14
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v6, v12, 16, v13
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(4)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v5, v15, v4
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(3)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v5, v14, 16, v15
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v4, v20, v0
-; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NOHSA-VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v21
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v4, v0, 16, v20
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    v_or_b32_e32 v0, v22, v0
+; GCN-NOHSA-VI-NEXT:    v_lshl_or_b32 v0, v21, 16, v22
 ; GCN-NOHSA-VI-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GCN-NOHSA-VI-NEXT:    flat_store_dwordx4 v[0:1], v[0:3]
 ; GCN-NOHSA-VI-NEXT:    s_endpgm

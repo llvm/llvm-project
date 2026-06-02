@@ -840,10 +840,8 @@ define amdgpu_kernel void @v_ctlz_zero_poison_i32_with_select(ptr addrspace(1) n
 ; VI-NEXT:    flat_load_ubyte v5, v[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_waitcnt vmcnt(3)
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1002,20 +1000,16 @@ define amdgpu_kernel void @v_ctlz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; VI-NEXT:    flat_load_ubyte v3, v[4:5]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_waitcnt vmcnt(7)
-; VI-NEXT:    v_lshlrev_b32_e32 v4, 8, v10
 ; VI-NEXT:    s_waitcnt vmcnt(6)
-; VI-NEXT:    v_or_b32_e32 v4, v4, v11
+; VI-NEXT:    v_lshl_or_b32 v4, v10, 8, v11
 ; VI-NEXT:    s_waitcnt vmcnt(5)
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v12
 ; VI-NEXT:    s_waitcnt vmcnt(4)
 ; VI-NEXT:    v_or_b32_sdwa v5, v5, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v4, v5, v4
-; VI-NEXT:    s_waitcnt vmcnt(3)
-; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v7
 ; VI-NEXT:    v_ffbh_u32_e32 v4, v4
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_or_b32_e32 v5, v5, v8
+; VI-NEXT:    v_lshl_or_b32 v5, v7, 8, v8
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)

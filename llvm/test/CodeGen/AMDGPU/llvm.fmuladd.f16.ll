@@ -840,9 +840,8 @@ define amdgpu_kernel void @fmuladd_v2f16(
 ; VI-FLUSH-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-FLUSH-NEXT:    s_waitcnt vmcnt(0)
 ; VI-FLUSH-NEXT:    v_mac_f16_sdwa v3, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-FLUSH-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-FLUSH-NEXT:    v_mac_f16_e32 v1, v0, v2
-; VI-FLUSH-NEXT:    v_or_b32_e32 v0, v1, v3
+; VI-FLUSH-NEXT:    v_lshl_or_b32 v0, v3, 16, v1
 ; VI-FLUSH-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-FLUSH-NEXT:    s_endpgm
 ;
@@ -876,9 +875,8 @@ define amdgpu_kernel void @fmuladd_v2f16(
 ; VI-DENORM-NEXT:    s_waitcnt vmcnt(0)
 ; VI-DENORM-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; VI-DENORM-NEXT:    v_fma_f16 v3, v5, v4, v3
-; VI-DENORM-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-DENORM-NEXT:    v_fma_f16 v0, v2, v1, v0
-; VI-DENORM-NEXT:    v_or_b32_e32 v0, v0, v3
+; VI-DENORM-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; VI-DENORM-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-DENORM-NEXT:    s_endpgm
 ;

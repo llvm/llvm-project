@@ -297,18 +297,17 @@ define amdgpu_kernel void @test_copy_v4i8_extra_use(ptr addrspace(1) %out0, ptr 
 ; VI-NEXT:    s_mov_b32 s9, s3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NEXT:    v_add_u16_e32 v3, 9, v0
 ; VI-NEXT:    v_and_b32_e32 v4, 0xffffff00, v1
 ; VI-NEXT:    v_add_u16_e32 v1, 9, v1
-; VI-NEXT:    v_add_u16_e32 v3, 9, v0
-; VI-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffffff00, v0
 ; VI-NEXT:    v_and_b32_e32 v3, 0xff, v3
-; VI-NEXT:    v_or_b32_e32 v1, v4, v1
+; VI-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
-; VI-NEXT:    v_add_u16_e32 v1, 0x900, v1
+; VI-NEXT:    v_or_b32_e32 v1, v4, v1
 ; VI-NEXT:    v_add_u16_e32 v2, 0x900, v2
-; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VI-NEXT:    v_or_b32_e32 v1, v2, v1
+; VI-NEXT:    v_add_u16_e32 v1, 0x900, v1
+; VI-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    buffer_store_dword v1, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
@@ -383,18 +382,17 @@ define amdgpu_kernel void @test_copy_v4i8_x2_extra_use(ptr addrspace(1) %out0, p
 ; VI-NEXT:    s_mov_b32 s7, s11
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NEXT:    v_add_u16_e32 v3, 9, v0
 ; VI-NEXT:    v_and_b32_e32 v4, 0xffffff00, v1
 ; VI-NEXT:    v_add_u16_e32 v1, 9, v1
-; VI-NEXT:    v_add_u16_e32 v3, 9, v0
-; VI-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffffff00, v0
 ; VI-NEXT:    v_and_b32_e32 v3, 0xff, v3
-; VI-NEXT:    v_or_b32_e32 v1, v4, v1
+; VI-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v3
-; VI-NEXT:    v_add_u16_e32 v1, 0x900, v1
+; VI-NEXT:    v_or_b32_e32 v1, v4, v1
 ; VI-NEXT:    v_add_u16_e32 v2, 0x900, v2
-; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VI-NEXT:    v_or_b32_e32 v1, v2, v1
+; VI-NEXT:    v_add_u16_e32 v1, 0x900, v1
+; VI-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    buffer_store_dword v1, off, s[12:15], 0
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0

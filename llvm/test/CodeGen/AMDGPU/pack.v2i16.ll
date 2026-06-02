@@ -411,8 +411,7 @@ define amdgpu_kernel void @v_pack_v2i16_inline_imm_lo(ptr addrspace(1) %in1) #0 
 ; GFX803-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX803-NEXT:    flat_load_dword v0, v[0:1] glc
 ; GFX803-NEXT:    s_waitcnt vmcnt(0)
-; GFX803-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX803-NEXT:    v_or_b32_e32 v0, 64, v0
+; GFX803-NEXT:    v_lshl_or_b32 v0, v0, 16, 64
 ; GFX803-NEXT:    ;;#ASMSTART
 ; GFX803-NEXT:    ; use v0
 ; GFX803-NEXT:    ;;#ASMEND

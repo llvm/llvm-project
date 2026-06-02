@@ -199,8 +199,7 @@ define void @v_constained_fma_v2f16_fpexcept_strict_div(<2 x half> %x, <2 x half
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v5, v6, v7
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX8-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -425,19 +424,17 @@ define void @v_constained_fma_v4f16_fpexcept_strict_div(<4 x half> %x, <4 x half
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; GFX8-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
-; GFX8-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX8-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
+; GFX8-NEXT:    v_lshrrev_b32_e32 v12, 16, v4
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v2, v4
 ; GFX8-NEXT:    v_fma_f16 v2, v8, v10, v12
 ; GFX8-NEXT:    v_fma_f16 v1, v1, v3, v5
 ; GFX8-NEXT:    v_fma_f16 v3, v9, v11, v13
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
-; GFX8-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX8-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX8-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; GFX8-NEXT:    flat_store_dwordx2 v[6:7], v[0:1]
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -916,8 +913,7 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_div(<2 x half> %x,
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; GFX8-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX8-NEXT:    v_fma_f16 v1, v5, v6, v7
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX8-NEXT:    flat_store_dword v[3:4], v0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]

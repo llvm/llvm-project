@@ -502,9 +502,8 @@ define amdgpu_kernel void @v_ctpop_v2i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_bcnt_u32_b32 v1, v1, 0
-; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_bcnt_u32_b32 v0, v0, 0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -572,10 +571,9 @@ define amdgpu_kernel void @v_ctpop_v2i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v1, v1, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v0, v0, 0
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; VI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -630,17 +628,15 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_bcnt_u32_b32 v2, v2, 0
-; VI-NEXT:    v_bcnt_u32_b32 v3, v3, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-NEXT:    v_bcnt_u32_b32 v3, v3, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v0, v0, 0
-; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VI-NEXT:    v_or_b32_e32 v1, v1, v2
-; VI-NEXT:    v_or_b32_e32 v0, v0, v3
+; VI-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -744,14 +740,12 @@ define amdgpu_kernel void @v_ctpop_v4i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v2, v2, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v3, v3, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v0, v0, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v2, v2, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v1, v1, 0
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v2
-; VI-GISEL-NEXT:    v_or_b32_e32 v1, v1, v3
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v3, v3, 0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
 ; VI-GISEL-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -818,29 +812,25 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
-; VI-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_bcnt_u32_b32 v4, v4, 0
-; VI-NEXT:    v_bcnt_u32_b32 v5, v5, 0
-; VI-NEXT:    v_bcnt_u32_b32 v6, v6, 0
-; VI-NEXT:    v_bcnt_u32_b32 v7, v7, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v3, v3, 0
+; VI-NEXT:    v_bcnt_u32_b32 v5, v5, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v2, v2, 0
+; VI-NEXT:    v_bcnt_u32_b32 v6, v6, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-NEXT:    v_bcnt_u32_b32 v7, v7, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v0, v0, 0
-; VI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; VI-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; VI-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; VI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; VI-NEXT:    v_or_b32_e32 v3, v3, v4
-; VI-NEXT:    v_or_b32_e32 v2, v2, v5
-; VI-NEXT:    v_or_b32_e32 v1, v1, v6
-; VI-NEXT:    v_or_b32_e32 v0, v0, v7
+; VI-NEXT:    v_lshl_or_b32 v3, v4, 16, v3
+; VI-NEXT:    v_lshl_or_b32 v2, v5, 16, v2
+; VI-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v7, 16, v0
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -996,22 +986,18 @@ define amdgpu_kernel void @v_ctpop_v8i16(ptr addrspace(1) noalias %out, ptr addr
 ; VI-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; VI-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; VI-GISEL-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v4, v4, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v5, v5, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v6, v6, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v7, v7, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v0, v0, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v4, v4, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v5, v5, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v2, v2, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v6, v6, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v3, v3, 0
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v4
-; VI-GISEL-NEXT:    v_or_b32_e32 v1, v1, v5
-; VI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v6
-; VI-GISEL-NEXT:    v_or_b32_e32 v3, v3, v7
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v7, v7, 0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v1, v5, 16, v1
+; VI-GISEL-NEXT:    v_lshl_or_b32 v2, v6, 16, v2
+; VI-GISEL-NEXT:    v_lshl_or_b32 v3, v7, 16, v3
 ; VI-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1108,54 +1094,46 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshrrev_b32_e32 v8, 16, v3
-; VI-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; VI-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
-; VI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; VI-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; VI-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; VI-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
-; VI-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
-; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
-; VI-NEXT:    v_bcnt_u32_b32 v8, v8, 0
-; VI-NEXT:    v_bcnt_u32_b32 v9, v9, 0
-; VI-NEXT:    v_bcnt_u32_b32 v10, v10, 0
-; VI-NEXT:    v_bcnt_u32_b32 v11, v11, 0
 ; VI-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; VI-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
 ; VI-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; VI-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
 ; VI-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; VI-NEXT:    v_lshrrev_b32_e32 v15, 16, v4
 ; VI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; VI-NEXT:    v_bcnt_u32_b32 v8, v8, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v3, v3, 0
+; VI-NEXT:    v_bcnt_u32_b32 v9, v9, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v2, v2, 0
+; VI-NEXT:    v_bcnt_u32_b32 v10, v10, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-NEXT:    v_bcnt_u32_b32 v11, v11, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v0, v0, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v12, v12, 0
-; VI-NEXT:    v_bcnt_u32_b32 v13, v13, 0
-; VI-NEXT:    v_bcnt_u32_b32 v14, v14, 0
-; VI-NEXT:    v_bcnt_u32_b32 v15, v15, 0
-; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; VI-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; VI-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; VI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; VI-NEXT:    v_bcnt_u32_b32 v7, v7, 0
+; VI-NEXT:    v_bcnt_u32_b32 v13, v13, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v6, v6, 0
+; VI-NEXT:    v_bcnt_u32_b32 v14, v14, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v5, v5, 0
+; VI-NEXT:    v_bcnt_u32_b32 v15, v15, 0
 ; VI-NEXT:    v_bcnt_u32_b32 v4, v4, 0
-; VI-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
-; VI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; VI-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; VI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; VI-NEXT:    v_or_b32_e32 v3, v3, v8
-; VI-NEXT:    v_or_b32_e32 v2, v2, v9
-; VI-NEXT:    v_or_b32_e32 v1, v1, v10
-; VI-NEXT:    v_or_b32_e32 v0, v0, v11
-; VI-NEXT:    v_or_b32_e32 v7, v7, v12
-; VI-NEXT:    v_or_b32_e32 v6, v6, v13
-; VI-NEXT:    v_or_b32_e32 v5, v5, v14
-; VI-NEXT:    v_or_b32_e32 v4, v4, v15
+; VI-NEXT:    v_lshl_or_b32 v3, v8, 16, v3
+; VI-NEXT:    v_lshl_or_b32 v2, v9, 16, v2
+; VI-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v11, 16, v0
+; VI-NEXT:    v_lshl_or_b32 v7, v12, 16, v7
+; VI-NEXT:    v_lshl_or_b32 v6, v13, 16, v6
+; VI-NEXT:    v_lshl_or_b32 v5, v14, 16, v5
+; VI-NEXT:    v_lshl_or_b32 v4, v15, 16, v4
 ; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
 ; VI-NEXT:    s_endpgm
@@ -1426,42 +1404,34 @@ define amdgpu_kernel void @v_ctpop_v16i16(ptr addrspace(1) noalias %out, ptr add
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v14, 16, v6
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v8, v8, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v9, v9, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v10, v10, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v11, v11, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v0, v0, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v8, v8, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v1, v1, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v9, v9, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v2, v2, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v10, v10, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v3, v3, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v11, v11, 0
 ; VI-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; VI-GISEL-NEXT:    v_and_b32_e32 v5, 0xffff, v5
 ; VI-GISEL-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; VI-GISEL-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v12, v12, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v13, v13, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v14, v14, 0
-; VI-GISEL-NEXT:    v_bcnt_u32_b32 v15, v15, 0
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 16, v9
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v4, v4, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v12, v12, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v5, v5, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v13, v13, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v6, v6, 0
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v14, v14, 0
 ; VI-GISEL-NEXT:    v_bcnt_u32_b32 v7, v7, 0
-; VI-GISEL-NEXT:    v_or_b32_e32 v0, v0, v8
-; VI-GISEL-NEXT:    v_or_b32_e32 v1, v1, v9
-; VI-GISEL-NEXT:    v_or_b32_e32 v2, v2, v10
-; VI-GISEL-NEXT:    v_or_b32_e32 v3, v3, v11
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v12
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v9, 16, v13
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v14
-; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v11, 16, v15
-; VI-GISEL-NEXT:    v_or_b32_e32 v4, v4, v8
-; VI-GISEL-NEXT:    v_or_b32_e32 v5, v5, v9
-; VI-GISEL-NEXT:    v_or_b32_e32 v6, v6, v10
-; VI-GISEL-NEXT:    v_or_b32_e32 v7, v7, v11
+; VI-GISEL-NEXT:    v_bcnt_u32_b32 v15, v15, 0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v0, v8, 16, v0
+; VI-GISEL-NEXT:    v_lshl_or_b32 v1, v9, 16, v1
+; VI-GISEL-NEXT:    v_lshl_or_b32 v2, v10, 16, v2
+; VI-GISEL-NEXT:    v_lshl_or_b32 v3, v11, 16, v3
+; VI-GISEL-NEXT:    v_lshl_or_b32 v4, v12, 16, v4
+; VI-GISEL-NEXT:    v_lshl_or_b32 v5, v13, 16, v5
+; VI-GISEL-NEXT:    v_lshl_or_b32 v6, v14, 16, v6
+; VI-GISEL-NEXT:    v_lshl_or_b32 v7, v15, 16, v7
 ; VI-GISEL-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; VI-GISEL-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
 ; VI-GISEL-NEXT:    s_endpgm

@@ -322,24 +322,22 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s2, -1
+; GFX11-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-NEXT:    buffer_load_d16_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 8, v0
+; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 8, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX11-NEXT:    ; kill: def $vgpr1_hi16 killed $sgpr0 killed $exec
 ; GFX11-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11-NEXT:    s_and_b32 s1, s0, 0xff00
 ; GFX11-NEXT:    s_bfe_u32 s4, s0, 0x80008
 ; GFX11-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-NEXT:    s_or_b32 s1, s4, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshl_b32 s4, s1, 16
 ; GFX11-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX11-NEXT:    s_or_b32 s0, s0, s4
 ; GFX11-NEXT:    s_or_b32 s1, s1, s4
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_endpgm

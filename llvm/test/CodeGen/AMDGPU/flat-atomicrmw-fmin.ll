@@ -6359,10 +6359,9 @@ define half @flat_agent_atomic_fmin_ret_f16__amdgpu_no_fine_grained_memory(ptr %
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX8-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
 ; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
-; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
-; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
+; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
+; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -6763,10 +6762,9 @@ define half @flat_agent_atomic_fmin_ret_f16__offset12b_pos__amdgpu_no_fine_grain
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX8-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
 ; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
-; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
-; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
+; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
+; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7170,10 +7168,9 @@ define half @flat_agent_atomic_fmin_ret_f16__offset12b_neg__amdgpu_no_fine_grain
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX8-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
 ; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
-; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
-; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
+; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
+; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7550,10 +7547,9 @@ define void @flat_agent_atomic_fmin_noret_f16__amdgpu_no_fine_grained_memory(ptr
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-NEXT:    v_min_f16_e32 v3, v3, v2
 ; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
-; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v5, v3
-; GFX8-NEXT:    v_or_b32_e32 v3, v7, v3
+; GFX8-NEXT:    v_min_f16_e32 v3, v3, v2
+; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v5, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7942,10 +7938,9 @@ define void @flat_agent_atomic_fmin_noret_f16__offset12b_pos__amdgpu_no_fine_gra
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX8-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
 ; GFX8-NEXT:    v_and_b32_e32 v7, v3, v5
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
-; GFX8-NEXT:    v_or_b32_e32 v2, v7, v2
+; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
+; GFX8-NEXT:    v_lshl_or_b32 v2, v2, v4, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -8337,10 +8332,9 @@ define void @flat_agent_atomic_fmin_noret_f16__offset12b_neg__amdgpu_no_fine_gra
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX8-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
 ; GFX8-NEXT:    v_and_b32_e32 v7, v3, v5
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
-; GFX8-NEXT:    v_or_b32_e32 v2, v7, v2
+; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
+; GFX8-NEXT:    v_lshl_or_b32 v2, v2, v4, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -9340,10 +9334,9 @@ define half @flat_system_atomic_fmin_ret_f16__offset12b_pos__amdgpu_no_fine_grai
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX8-NEXT:    v_max_f16_e32 v5, v5, v5
-; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
 ; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
-; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
-; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
+; GFX8-NEXT:    v_min_f16_e32 v5, v5, v2
+; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -9740,10 +9733,9 @@ define void @flat_system_atomic_fmin_noret_f16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX8-NEXT:    v_max_f16_e32 v2, v2, v2
-; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
 ; GFX8-NEXT:    v_and_b32_e32 v7, v3, v5
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
-; GFX8-NEXT:    v_or_b32_e32 v2, v7, v2
+; GFX8-NEXT:    v_min_f16_e32 v2, v2, v6
+; GFX8-NEXT:    v_lshl_or_b32 v2, v2, v4, v7
 ; GFX8-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
