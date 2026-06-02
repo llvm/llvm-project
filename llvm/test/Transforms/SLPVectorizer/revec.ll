@@ -469,3 +469,32 @@ entry:
   store <4 x float> %11, ptr %1, align 16
   ret i32 0
 }
+
+define <4 x i32> @hor_reduction_four_points(ptr %a) {
+; CHECK-LABEL: @hor_reduction_four_points(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RDX_OP1:%.*]] = add <4 x i32> [[RDX_OP]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[RDX_OP2:%.*]] = add <4 x i32> [[RDX_OP1]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add <4 x i32> [[RDX_OP2]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i32> [[OP_RDX]]
+;
+entry:
+  %gep1 = getelementptr <4 x i32>, ptr %a, i64 1
+  %gep2 = getelementptr <4 x i32>, ptr %a, i64 2
+  %gep3 = getelementptr <4 x i32>, ptr %a, i64 3
+  %a0 = load <4 x i32>, ptr %a
+  %a1 = load <4 x i32>, ptr %gep1
+  %a2 = load <4 x i32>, ptr %gep2
+  %a3 = load <4 x i32>, ptr %gep3
+  %add0 = add <4 x i32> zeroinitializer, %a0
+  %add1 = add <4 x i32> %add0, %a1
+  %add2 = add <4 x i32> %add1, %a2
+  %add3 = add <4 x i32> %add2, %a3
+  ret <4 x i32> %add3
+}
