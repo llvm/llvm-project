@@ -179,3 +179,33 @@ func.func @test_lower_bounds(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32
 // Lower bound 10 should appear in the embox/store of the new allocation.
 // CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !fir.box<!fir.array<3xi32>>, !fir.box<!fir.heap<!fir.array<?xi32>>>
+
+// Test: allocatable = hlfir.eval_in_mem (e.g. b = matmul(...)). The pass must
+// reuse the eval_in_mem shape operand and must NOT emit an hlfir.shape_of of
+// the eval_in_mem result: an extra use would prevent
+// EvaluateIntoMemoryAssignBufferization from rewriting the evaluation in place.
+func.func private @sink(!fir.ref<!fir.array<?xf32>>)
+func.func @test_eval_in_mem_rhs(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, %n: index) {
+  %shape = fir.shape %n : (index) -> !fir.shape<1>
+
+  %a:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
+
+  %expr = hlfir.eval_in_mem shape %shape : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%mem: !fir.ref<!fir.array<?xf32>>):
+    fir.call @sink(%mem) : (!fir.ref<!fir.array<?xf32>>) -> ()
+  }
+
+  hlfir.assign %expr to %a#0 realloc : !hlfir.expr<?xf32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  hlfir.destroy %expr : !hlfir.expr<?xf32>
+  return
+}
+
+// CHECK-LABEL: func.func @test_eval_in_mem_rhs
+// The eval_in_mem and its shape operand are reused; no shape_of is emitted.
+// CHECK: hlfir.eval_in_mem
+// CHECK-NOT: hlfir.shape_of
+// CHECK-NOT: hlfir.assign{{.*}}realloc
+// CHECK: fir.if
+// CHECK: fir.allocmem
+// CHECK: %[[BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK: hlfir.assign %{{.*}} to %[[BOX]] : !hlfir.expr<?xf32>, !fir.box<!fir.heap<!fir.array<?xf32>>>
