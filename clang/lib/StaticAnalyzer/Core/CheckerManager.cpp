@@ -344,6 +344,7 @@ void CheckerManager::runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
                                                const ExplodedNodeSet &Src,
                                                const VarDecl *Decl,
                                                ExprEngine &Eng) {
+  llvm::TimeTraceScope TimeScope("CheckerManager::runCheckersForLifetimeEnd");
   CheckLifetimeEndContext C(LifetimeEndCheckers, Decl, Eng);
   expandGraphWithCheckers(C, Dst, Src);
 }
