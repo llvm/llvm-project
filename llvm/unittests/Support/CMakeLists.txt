@@ -69,6 +69,7 @@ add_llvm_unittest(SupportTests
   MustacheTest.cpp
   ModRefTest.cpp
   NativeFormatTests.cpp
+  OnDiskHashTableTest.cpp
   OptimizedStructLayoutTest.cpp
   ParallelTest.cpp
   Path.cpp

@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ONDISKHASHTABLE_H
 #define LLVM_SUPPORT_ONDISKHASHTABLE_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
@@ -56,6 +57,40 @@ namespace llvm {
 /// };
 /// \endcode
 template <typename Info> class OnDiskChainedHashTableGenerator {
+  template <typename T>
+  using emit_key_value_pair_t = decltype(std::declval<T>().EmitKeyValuePair(
+      std::declval<raw_ostream &>(), std::declval<typename T::key_type_ref>(),
+      std::declval<typename T::data_type_ref>()));
+
+  template <typename T>
+  using emit_key_data_length_t = decltype(std::declval<T>().EmitKeyDataLength(
+      std::declval<raw_ostream &>(), std::declval<typename T::key_type_ref>(),
+      std::declval<typename T::data_type_ref>()));
+
+  template <typename T>
+  using emit_key_t = decltype(std::declval<T>().EmitKey(
+      std::declval<raw_ostream &>(), std::declval<typename T::key_type_ref>(),
+      std::declval<typename T::offset_type>()));
+
+  template <typename T>
+  using emit_data_t = decltype(std::declval<T>().EmitData(
+      std::declval<raw_ostream &>(), std::declval<typename T::key_type_ref>(),
+      std::declval<typename T::data_type_ref>(),
+      std::declval<typename T::offset_type>()));
+
+  static_assert(
+      (llvm::is_detected<emit_key_value_pair_t, Info>::value &&
+       !llvm::is_detected<emit_key_data_length_t, Info>::value &&
+       !llvm::is_detected<emit_key_t, Info>::value &&
+       !llvm::is_detected<emit_data_t, Info>::value) ||
+          (!llvm::is_detected<emit_key_value_pair_t, Info>::value &&
+           llvm::is_detected<emit_key_data_length_t, Info>::value &&
+           llvm::is_detected<emit_key_t, Info>::value &&
+           llvm::is_detected<emit_data_t, Info>::value),
+      "Info trait class must implement either EmitKeyValuePair (and not mix it "
+      "with split emission methods) OR all of (EmitKeyDataLength, EmitKey, "
+      "EmitData).");
+
   /// A single item in the hash table.
   class Item {
   public:
@@ -108,6 +143,31 @@ private:
     free(Buckets);
     NumBuckets = NewSize;
     Buckets = NewBuckets;
+  }
+
+  void EmitKeyValuePair(raw_ostream &Out, Info &InfoObj,
+                        typename Info::key_type_ref Key,
+                        typename Info::data_type_ref Data) {
+    if constexpr (llvm::is_detected<emit_key_value_pair_t, Info>::value) {
+      InfoObj.EmitKeyValuePair(Out, Key, Data);
+    } else {
+      const std::pair<offset_type, offset_type> &Len =
+          InfoObj.EmitKeyDataLength(Out, Key, Data);
+#ifdef NDEBUG
+      InfoObj.EmitKey(Out, Key, Len.first);
+      InfoObj.EmitData(Out, Key, Data, Len.second);
+#else
+      uint64_t KeyStart = Out.tell();
+      InfoObj.EmitKey(Out, Key, Len.first);
+      uint64_t DataStart = Out.tell();
+      InfoObj.EmitData(Out, Key, Data, Len.second);
+      uint64_t End = Out.tell();
+      assert(offset_type(DataStart - KeyStart) == Len.first &&
+             "key length does not match bytes written");
+      assert(offset_type(End - DataStart) == Len.second &&
+             "data length does not match bytes written");
+#endif
+    }
   }
 
 public:
@@ -184,24 +244,7 @@ public:
       // Write out the entries in the bucket.
       for (Item *I = B.Head; I; I = I->Next) {
         LE.write<typename Info::hash_value_type>(I->Hash);
-        const std::pair<offset_type, offset_type> &Len =
-            InfoObj.EmitKeyDataLength(Out, I->Key, I->Data);
-#ifdef NDEBUG
-        InfoObj.EmitKey(Out, I->Key, Len.first);
-        InfoObj.EmitData(Out, I->Key, I->Data, Len.second);
-#else
-        // In asserts mode, check that the users length matches the data they
-        // wrote.
-        uint64_t KeyStart = Out.tell();
-        InfoObj.EmitKey(Out, I->Key, Len.first);
-        uint64_t DataStart = Out.tell();
-        InfoObj.EmitData(Out, I->Key, I->Data, Len.second);
-        uint64_t End = Out.tell();
-        assert(offset_type(DataStart - KeyStart) == Len.first &&
-               "key length does not match bytes written");
-        assert(offset_type(End - DataStart) == Len.second &&
-               "data length does not match bytes written");
-#endif
+        EmitKeyValuePair(Out, InfoObj, I->Key, I->Data);
       }
     }
 
