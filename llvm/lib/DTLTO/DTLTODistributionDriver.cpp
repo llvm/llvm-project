@@ -89,7 +89,7 @@ Error lto::DistributionDriver::emitJson() {
           // Add the bitcode files from which imports will be made. These do
           // not explicitly appear on the backend compilation command lines
           // but are recorded in the summary index shards.
-          append_range(Inputs, J.ImportsFiles);
+          append_range(Inputs, J.ImportsFilesList);
           JOS.attribute("inputs", Array(Inputs));
 
           JOS.attribute("outputs", Array(Outputs));

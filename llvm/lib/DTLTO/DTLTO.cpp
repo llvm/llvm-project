@@ -53,11 +53,9 @@ void lto::DTLTO::cleanup() {
 // Runs the DTLTO thin link phase, producing per-module summary indices,
 // import lists, and cache keys for distribution.
 Error lto::DTLTO::performThinLink() {
-  setLTOMode(lto::LTO::LTOKind::LTOK_UnifiedThin);
-
   size_t NumTasks = getMaxTasks();
   SummaryIndexFiles.resize(NumTasks);
-  ImportsFiles.resize(NumTasks);
+  ImportsFilesList.resize(NumTasks);
   CacheKeysList.resize(NumTasks);
 
   lto::Config &Cfg = getConfig();
@@ -71,7 +69,7 @@ Error lto::DTLTO::performThinLink() {
   if (ShouldEmitImportFiles) {
     Cfg.GetImportsListOutputArray =
         [&](size_t task) -> std::vector<std::string> & {
-      return ImportsFiles[task];
+      return ImportsFilesList[task];
     };
   }
   return Base::run(AddStreamFunc, {});
@@ -94,7 +92,7 @@ LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
 
   if (Error Err = prepareDtltoJobs())
     return Err;
-  if (Error Err = serializeBitcodeArchiveMembers())
+  if (Error Err = serializeLTOInputs())
     return Err;
   if (Error Err = performCodegen())
     return Err;
@@ -148,7 +146,7 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
        Saver.save(ObjFilePath.str()),
        Saver.save(SummaryIndexPathStr.str()),
        Saver.save(ImportsPathStr.str()),
-       ImportsFiles[Task],
+       ImportsFilesList[Task],
        CacheKeysList[Task],
        nullptr,
        false};
@@ -165,7 +163,7 @@ Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
     OnIndexWriteCb(J.SummaryIndexPath.str());
 
   if (ShouldEmitImportFiles)
-    if (Error Err = save(join(ImportsFiles[Task], "\n"), J.ImportsPath))
+    if (Error Err = save(join(J.ImportsFilesList, "\n"), J.ImportsPath))
       return Err;
 
   if (!SaveTemps) {

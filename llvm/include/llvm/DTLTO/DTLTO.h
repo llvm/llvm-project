@@ -42,7 +42,7 @@ namespace lto {
 /// normalize module ID for standalone bitcode; (3) for thin archive members,
 /// set module ID to the on-disk member path; (4) for other archives and FatLTO,
 /// set module ID to a unique path and serialize content in
-/// serializeBitcodeArchiveMembers().
+/// serializeLTOInputs().
 class DTLTO : public LTO {
   using Base = LTO;
 
@@ -64,6 +64,7 @@ public:
                           RemoteCompiler,     RemoteCompilerPrependArgs,
                           RemoteCompilerArgs, LinkerOutputFile} {
     assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
+    LTOMode = lto::LTO::LTOKind::LTOK_UnifiedThin;
   }
 
   // Create an instance of WriteIndexesBackend class.
@@ -108,7 +109,7 @@ private:
   /// Must be called after all input files are added but before optimization
   /// begins. If a file with that name already exists, it is likely a leftover
   /// from a previously terminated linker process and can be safely overwritten.
-  LLVM_ABI Error serializeBitcodeArchiveMembers();
+  LLVM_ABI Error serializeLTOInputs();
 
   // Remove temporary files created to enable distribution.
   LLVM_ABI void cleanup() override;
@@ -117,12 +118,6 @@ public:
   // Mutable and const accessors to the LTO configuration object.
   Config &getConfig() { return Conf; }
   const Config &getConfig() const { return Conf; }
-
-  // Set the LTO kind.
-  void setLTOMode(LTOKind Knd) { LTOMode = Knd; }
-  // Replace the ThinLTO backend (e.g. WriteIndexesThinBackend for the thin
-  // link).
-  void setThinBackend(ThinBackend Backend) { ThinLTO.Backend = Backend; }
 
 private:
   // Bump allocator for saving updated module IDs.
@@ -158,7 +153,7 @@ public:
     // Per-module imports list path.
     StringRef ImportsPath;
     // Bitcode files from which this module imports.
-    ArrayRef<std::string> ImportsFiles;
+    ArrayRef<std::string> ImportsFilesList;
     // Cache key from thin link.
     std::string CacheKey;
     // On cache miss, stream used to store the compiled object in the cache.
@@ -209,8 +204,8 @@ private:
   ///    derived from ModulePath.
   ///
   /// 2. Initializes the Job struct with Task, ModuleID (ModulePath), paths,
-  ///    ImportsFiles and CacheKey from thin link results, and default values
-  ///    for CacheAddStream and Cached.
+  ///    ImportsFilesList and CacheKey from thin link results, and default
+  ///    values for CacheAddStream and Cached.
   ///
   /// 3. Calls checkCacheHit() to probe the cache. On a cache hit, J.Cached is
   ///    set and the cached object has already been passed to the linker; the
@@ -279,7 +274,7 @@ private:
   // Per-task summary index shards from the thin link (in-memory buffers).
   std::vector<SmallString<0>> SummaryIndexFiles;
   // Per-task imported bitcode paths from the thin link.
-  std::vector<std::vector<std::string>> ImportsFiles;
+  std::vector<std::vector<std::string>> ImportsFilesList;
   // Per-task cache keys for incremental builds from the thin link.
   std::vector<std::string> CacheKeysList;
 
@@ -291,7 +286,7 @@ private:
   /// references and produces:
   ///
   /// - SummaryIndexFiles: per-module summary index shards (in-memory buffers)
-  /// - ImportsFiles: per-module lists of imported bitcode files
+  /// - ImportsFilesList: per-module lists of imported bitcode files
   /// - CacheKeysList: per-module cache keys for incremental builds
   /// - ModuleNames: per-module identifiers
   ///

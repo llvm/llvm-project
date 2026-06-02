@@ -292,7 +292,7 @@ public:
                            const std::string &NewModulePath) const;
 
   // Write sharded indices to SummaryPath, (optionally) imports to disk, and
-  // (optionally) record imports in ImportsFiles.
+  // (optionally) record imports in ImportsFilesList.
   LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
                            unsigned Task, StringRef ModulePath,
                            const std::string &NewModulePath,

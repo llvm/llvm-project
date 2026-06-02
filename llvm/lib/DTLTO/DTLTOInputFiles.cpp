@@ -203,7 +203,7 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
 
 // Save the contents of ThinLTO-enabled input files that must be serialized for
 // distribution.
-Error lto::DTLTO::serializeBitcodeArchiveMembers() {
+Error lto::DTLTO::serializeLTOInputs() {
   for (auto &Input : InputFiles) {
     if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
       continue;
