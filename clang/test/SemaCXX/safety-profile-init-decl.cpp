@@ -43,10 +43,11 @@ void test_class_with_user_ctor() {
 }
 
 void test_class_trivial() {
-  // Conservative: trivial / aggregate class types are not diagnosed by R2 in
-  // this minimal slice. Field-level initialization tracking is the §6
-  // "classes without constructors" work and is explicitly deferred.
-  Trivial t;
+  // A trivial / aggregate class whose default-initialization leaves a scalar
+  // member indeterminate is diagnosed by R5 (uninit_decl), the §6
+  // "classes without constructors" rule. (Detailed coverage lives in
+  // safety-profile-init-aggregate.cpp.)
+  Trivial t; // expected-error {{variable 't' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
   (void)t;
 }
 

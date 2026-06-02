@@ -1089,7 +1089,16 @@ public:
   /// initialization does not count as a user-written initializer.
   void checkInitProfileUninitWithInitializer(SourceLocation Loc,
                                              DeclarationName Name,
+                                             QualType DeclType,
                                              const Expr *Init, bool HasMarker);
+
+  /// True if default-initialization of \p T would leave at least one scalar
+  /// subobject with an indeterminate value. Shared by the std::init rules
+  /// uninit_decl (R5, at the variable declaration) and ctor_uninit_member
+  /// (R6, for a class-typed member). A class with a user-provided default
+  /// constructor is trusted (that constructor is checked by R6 at its own
+  /// definition). Dependent and incomplete types are treated as determinate.
+  bool defaultInitLeavesScalarIndeterminate(QualType T);
 
   class ProfileSuppressScope {
     Sema &S;

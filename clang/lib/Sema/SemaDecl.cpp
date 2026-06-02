@@ -14719,14 +14719,24 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // attempted default-initialization) must either carry [[uninitialized]] or
     // be initialized by a language rule. Static / thread storage duration is
     // excluded -- those are zero-initialized; runtime-init concerns are R3's.
-    if (!Var->isInvalidDecl() && !Var->getInit() &&
+    static constexpr StringRef Profile = "std::init";
+    static constexpr StringRef Rule = "uninit_decl";
+    // The enforcement check gates the (possibly recursive) type walk below so
+    // it runs only under the profile, not on every default-initialized
+    // variable.
+    if (!Var->isInvalidDecl() &&
         Var->getStorageDuration() == SD_Automatic &&
-        !Var->hasAttr<CXX11UninitializedAttr>()) {
-      static constexpr StringRef Profile = "std::init";
-      static constexpr StringRef Rule = "uninit_decl";
-      if (shouldEmitProfileViolation(Profile, Rule, Var->getLocation()))
-        Diag(Var->getLocation(), diag::err_init_uninit_decl)
-            << Profile << Var->getDeclName();
+        !Var->hasAttr<CXX11UninitializedAttr>() &&
+        shouldEmitProfileViolation(Profile, Rule, Var->getLocation()) &&
+        // A definition with no initializer (scalar / pointer / enum, or an
+        // array of them), or a class/aggregate type whose default-init leaves
+        // a scalar subobject indeterminate (its synthesized constructor call
+        // provides an initializer, so the !getInit() test alone misses it).
+        (!Var->getInit() ||
+         (Var->getType()->isRecordType() &&
+          defaultInitLeavesScalarIndeterminate(Var->getType())))) {
+      Diag(Var->getLocation(), diag::err_init_uninit_decl)
+          << Profile << Var->getDeclName();
     }
 
     CheckCompleteVariableDeclaration(Var);
@@ -14832,8 +14842,50 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
+static bool defaultInitLeavesScalarIndeterminateImpl(
+    ASTContext &Ctx, QualType T,
+    llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited) {
+  if (T->isDependentType() || T->isIncompleteType())
+    return false;
+  if (const ArrayType *AT = Ctx.getAsArrayType(T))
+    return defaultInitLeavesScalarIndeterminateImpl(Ctx, AT->getElementType(),
+                                                    Visited);
+  if (T->isReferenceType())
+    return false;
+  const auto *RD = T->getAsCXXRecordDecl();
+  if (!RD)
+    // Scalars, pointers, and enums are left indeterminate by default-init.
+    return T->isScalarType();
+  // A union is handled by the union_marker rule, not here; its members are
+  // mutually exclusive so the member walk below does not apply.
+  if (RD->isUnion() || RD->isInvalidDecl())
+    return false;
+  // Break cycles from ill-formed self-containing types (e.g. struct S { S x; }).
+  if (!Visited.insert(RD->getCanonicalDecl()).second)
+    return false;
+  // Trust a user-provided default constructor: R6 checks at its definition.
+  if (RD->hasUserProvidedDefaultConstructor())
+    return false;
+  for (const CXXBaseSpecifier &Base : RD->bases())
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, Base.getType(), Visited))
+      return true;
+  for (const FieldDecl *F : RD->fields()) {
+    if (F->isUnnamedBitField() || F->hasInClassInitializer())
+      continue;
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, F->getType(), Visited))
+      return true;
+  }
+  return false;
+}
+
+bool Sema::defaultInitLeavesScalarIndeterminate(QualType T) {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+  return defaultInitLeavesScalarIndeterminateImpl(Context, T, Visited);
+}
+
 void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
                                                  DeclarationName Name,
+                                                 QualType DeclType,
                                                  const Expr *Init,
                                                  bool HasMarker) {
   // [[uninitialized]] documents that the entity is intentionally left
@@ -14845,15 +14897,27 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
     return;
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "uninit_with_initializer";
-  if (shouldEmitProfileViolation(Profile, Rule, Loc))
-    Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
+  // Gate the (possibly recursive) type walk below on enforcement.
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc))
+    return;
+  // A synthesized default-initialization that leaves the object indeterminate
+  // (a trivial or aggregate type, no user-written initializer) is consistent
+  // with the marker: the object really is left uninitialized, to be
+  // initialized later (e.g. via construct_at), mirroring the scalar case. Only
+  // a real initializer -- an explicit one, or a constructor that actually runs
+  // -- contradicts the marker.
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit()))
+    if (CCE->getConstructor()->isDefaultConstructor() &&
+        defaultInitLeavesScalarIndeterminate(DeclType))
+      return;
+  Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
   checkInitProfileUninitWithInitializer(
-      var->getLocation(), var->getDeclName(), var->getInit(),
+      var->getLocation(), var->getDeclName(), var->getType(), var->getInit(),
       var->hasAttr<CXX11UninitializedAttr>());
 
   CUDA().MaybeAddConstantAttr(var);

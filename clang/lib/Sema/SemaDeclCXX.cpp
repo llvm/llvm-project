@@ -4227,6 +4227,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   FD->setInClassInitializer(InitExpr.get());
 
   checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
+                                        FD->getType(),
                                         FD->getInClassInitializer(),
                                         FD->hasAttr<CXX11UninitializedAttr>());
 }
