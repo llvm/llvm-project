@@ -609,8 +609,8 @@ let SchedRW = [WriteSystem] in {
 //===----------------------------------------------------------------------===//
 // Indirect Branch History Fence
 let SchedRW = [WriteFence] in {
-  def IBHFENCE : RI<0x1E, MRM_F8, (outs), (ins), "ibhf", []>, TB, XS,
-                   Requires<[In64BitMode]>; 
+  def IBHF : RI<0x1E, MRM_F8, (outs), (ins), "ibhf", []>, TB, XS,
+                Requires<[In64BitMode]>;
 }
 
 //===----------------------------------------------------------------------===//
