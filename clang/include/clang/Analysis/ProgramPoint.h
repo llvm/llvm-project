@@ -728,7 +728,7 @@ private:
     }
 };
 
-/// Represents a point when the lifetime ends of any automatic object.
+/// Represents a point when the lifetime of an automatic object ends.
 class LifetimeEnd : public ProgramPoint {
 public:
   LifetimeEnd(const Stmt *S, const VarDecl *D, const StackFrame *SF)
