@@ -68,3 +68,5 @@ class TestCase(PExpectTest):
         self.child.send("   ")
         self.child.send("\t")
         self.expect_repl("3 + 3", substrs=["(int) $0 = 6"])
+
+        self.quit()
