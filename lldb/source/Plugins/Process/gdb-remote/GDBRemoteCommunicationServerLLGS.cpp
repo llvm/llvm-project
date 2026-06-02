@@ -4545,7 +4545,8 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
     StringExtractorGDBRemote &) {
   std::vector<AcceleratorActions> accelerator_actions;
-  for (auto &plugin_up : m_accelerator_plugins) {
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
     if (auto actions = plugin_up->GetInitializeActions())
       accelerator_actions.push_back(std::move(*actions));
   }
@@ -4564,7 +4565,8 @@ GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginBreakpointHit(
   if (!args)
     return SendErrorResponse(args.takeError());
 
-  for (auto &plugin_up : m_accelerator_plugins) {
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
     if (plugin_up->GetPluginName() == args->plugin_name) {
       llvm::Expected<AcceleratorBreakpointHitResponse> bp_response =
           plugin_up->BreakpointWasHit(*args);
