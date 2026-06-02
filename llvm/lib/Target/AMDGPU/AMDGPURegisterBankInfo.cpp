@@ -1174,6 +1174,11 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register AllocSize = MI.getOperand(1).getReg();
   Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
+  // When using flat-scratch, the stack offset is already scaled by the
+  // wave-size by the hardware instructions.
+  const bool HasFlatScratch = ST.hasFlatScratchEnabled();
+  const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
+
   const RegisterBank *SizeBank = getRegBank(AllocSize, MRI, *TRI);
 
   if (SizeBank != &AMDGPU::SGPRRegBank) {
@@ -1191,16 +1196,23 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register SPReg = Info->getStackPtrOffsetReg();
   ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::SGPRRegBank);
 
-  auto WaveSize = B.buildConstant(LLT::scalar(32), ST.getWavefrontSizeLog2());
-  auto ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize);
+  Register ScaledSize = AllocSize;
+  if (!HasFlatScratch) {
+    auto WaveSize = B.buildConstant(LLT::scalar(32), WavefrontSizeLog2);
+    ScaledSize = B.buildShl(IntPtrTy, AllocSize, WaveSize).getReg(0);
+  }
 
   auto OldSP = B.buildCopy(PtrTy, SPReg);
   if (Alignment > TFI.getStackAlign()) {
-    auto StackAlignMask = (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
+    const uint64_t ScaledAlignment =
+        Alignment.value() << (HasFlatScratch ? 0u : WavefrontSizeLog2);
+    auto StackAlignMask = ScaledAlignment - 1;
     auto Tmp1 = B.buildPtrAdd(PtrTy, OldSP,
                               B.buildConstant(LLT::scalar(32), StackAlignMask));
     B.buildMaskLowPtrBits(Dst, Tmp1,
-                          Log2(Alignment) + ST.getWavefrontSizeLog2());
+                          (HasFlatScratch
+                               ? Log2(Alignment)
+                               : Log2(Alignment) + WavefrontSizeLog2));
   } else {
     B.buildCopy(Dst, OldSP);
   }
