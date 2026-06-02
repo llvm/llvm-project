@@ -239,9 +239,9 @@ private:
     Register TokReg; // This is always the token from the last begin intrinsic
     MachineInstr *Final;
 
-    std::vector<MachineInstr *> BeginList;
-    std::vector<MachineInstr *> RFLList;
-    std::vector<MachineInstr *> EndList;
+    SmallVector<MachineInstr *, 4> BeginList;
+    SmallVector<MachineInstr *, 4> RFLList;
+    SmallVector<MachineInstr *, 4> EndList;
 
     // List of corresponding init, newdst and phi registers used in loop for
     // end pseudos
@@ -483,9 +483,7 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
                          "updating remaining rfl list\n");
     // TODO: there's an opportunity to pull the DAG involving the (removed) rfls
     // out of the waterfall loop
-    Item.RFLList.clear();
-    std::copy(NewRFLList.begin(), NewRFLList.end(),
-              std::back_inserter(Item.RFLList));
+    Item.RFLList = std::move(NewRFLList);
     for (auto RFLMI : ToRemoveRFLList)
       RFLMI->eraseFromParent();
   }
@@ -499,14 +497,15 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
   MachineBasicBlock *CurrMBB = &MBB;
 
   // Firstly we check that there are at least 3 related waterfall instructions
-  // for this begin
-  // SI_WATERFALL_BEGIN [ SI_WATERFALL_BEGIN ]*
-  // [ SI_WATERFALL_READFIRSTLANE ]+ [ SI_WATERFALL_END ]+ If there are multiple
-  // waterfall loops they must also be disjoint
+  // for this begin:
+  // [ SI_WATERFALL_BEGIN ]+
+  // [ SI_WATERFALL_READFIRSTLANE ]+
+  // [ SI_WATERFALL_END ]+
+  // If there are multiple waterfall loops they must also be disjoint.
 
   for (WaterfallWorkitem &Item : Worklist) {
     LLVM_DEBUG(
-        if (Item.BeginList.size()) {
+        if (!Item.BeginList.empty()) {
           dbgs() << "Processing " << *Item.BeginList[0] << "\n";
 
           for (auto RUse = MRI->use_begin(Item.TokReg), RSE = MRI->use_end();
@@ -522,7 +521,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       continue;
     }
 
-    assert(Item.RFLList.size() && Item.EndList.size() &&
+    assert(!Item.RFLList.empty() && !Item.EndList.empty() &&
            "SI_WATERFALL* pseudo instruction group must have at least 1 of "
            "each type");
 
@@ -541,7 +540,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       Register CurrentIdxReg;
     } IdxInfo;
 
-    std::vector<IdxInfo> IndexList;
+    SmallVector<IdxInfo, 4> IndexList;
 #ifndef NDEBUG
     bool IsUniform = true;
 #endif
@@ -701,7 +700,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
         CondReg = compareIdx(LoopBB, MRI, RI, TII, J, DL, CurrIdx.CurrentIdxReg,
                              *CurrIdx.Index, CondReg, ST->isWave32());
 
-      // Update EXEC, save the original EXEC value to VCC
+      // Update EXEC, save the original EXEC value to NewExec
       BuildMI(LoopBB, J, DL, TII->get(SaveExecOpc), NewExec)
           .addReg(CondReg, RegState::Kill);
 
@@ -780,7 +779,7 @@ bool AMDGPUInsertWaterfall::runOnMachineFunction(MachineFunction &MF) {
         // Tag StartNew as true if we encounter another begin
         StartNew = true;
 
-        if (!Worklist.size() || getToken(&MI) != Worklist.back().TokReg) {
+        if (Worklist.empty() || getToken(&MI) != Worklist.back().TokReg) {
           // There's no associated begin for these body intrinsics
           // That means it's either an error - or all the begin intrinsics
           // were removed due to being uniform
