@@ -136,12 +136,11 @@ struct Benchmark {
   static Expected<Benchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);
 
-  // Deserializes benchmarks from the given Buffer. If SkipInvalidEntries is
-  // true, entries that fail to parse (e.g. referencing an unknown opcode) are
-  // warned about and skipped instead of aborting the read of the whole file.
+  // Deserializes benchmarks from the given Buffer. Entries that fail to parse
+  // (e.g. referencing an unknown opcode from a bitrotted sample) are warned
+  // about and skipped instead of aborting the read of the whole file.
   static Expected<std::vector<Benchmark>>
-  readYamls(const LLVMState &State, MemoryBufferRef Buffer,
-            bool SkipInvalidEntries = false);
+  readYamls(const LLVMState &State, MemoryBufferRef Buffer);
 
   // Given a set of serialized instruction benchmarks, returns the set of
   // triples and CPUs that appear in the list of benchmarks.

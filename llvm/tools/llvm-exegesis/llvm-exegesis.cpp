@@ -671,8 +671,7 @@ static void analysisMain() {
   // Skip entries that fail to parse (e.g. unknown opcodes from bitrotted
   // samples) with a warning rather than aborting the whole analysis.
   std::vector<Benchmark> Points = ExitOnFileError(
-      BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer,
-                                          /*SkipInvalidEntries=*/true));
+      BenchmarkFile, Benchmark::readYamls(State, *MemoryBuffer));
 
   outs() << "Parsed " << Points.size() << " benchmark points\n";
   if (Points.empty()) {

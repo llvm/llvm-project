@@ -391,14 +391,13 @@ Expected<Benchmark> Benchmark::readYaml(const LLVMState &State,
 }
 
 Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
-                                                      MemoryBufferRef Buffer,
-                                                      bool SkipInvalidEntries) {
+                                                      MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
-  // In skip mode, recoverable per-entry errors (e.g. unknown opcodes) are
-  // recorded rather than reported to the parser, so a single bad entry can be
-  // dropped without aborting the read of the whole file.
-  Context.ContinueOnError = SkipInvalidEntries;
+  // Recoverable per-entry errors (e.g. unknown opcodes) are recorded rather
+  // than reported to the parser, so a single bad entry can be dropped without
+  // aborting the read of the whole file.
+  Context.ContinueOnError = true;
   std::vector<Benchmark> Benchmarks;
   unsigned NumSkippedEntries = 0;
   while (Yin.setCurrentDocument()) {
@@ -407,11 +406,9 @@ Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
     if (Yin.error())
       return errorCodeToError(Yin.error());
     if (!Context.getLastError().empty()) {
-      if (!SkipInvalidEntries)
-        return make_error<Failure>(Context.getLastError());
-      // In skip mode, warn about the unparsable entry (e.g. an unknown opcode
-      // from a bitrotted sample), discard it, and continue so that a single bad
-      // entry doesn't abort the read of the whole file.
+      // Warn about the unparsable entry (e.g. an unknown opcode from a
+      // bitrotted sample), discard it, and continue so that a single bad entry
+      // doesn't abort the read of the whole file.
       WithColor::warning() << "skipping benchmark entry: "
                            << Context.getLastError();
       Context.getLastError().clear();

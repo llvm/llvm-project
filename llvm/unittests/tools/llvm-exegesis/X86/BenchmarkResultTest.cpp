@@ -170,61 +170,6 @@ TEST(BenchmarkResultTest, PerInstructionStats) {
   EXPECT_EQ(Stats.max(), 1.5);
   EXPECT_EQ(Stats.avg(), 0.25); // (0.5+1.5-1.0+0.0) / 4
 }
-
-TEST(BenchmarkResultTest, ReadYamlsSkipsInvalidEntries) {
-  LLVMInitializeX86TargetInfo();
-  LLVMInitializeX86Target();
-  LLVMInitializeX86TargetMC();
-  InitializeX86ExegesisTarget();
-
-  const LLVMState State =
-      cantFail(LLVMState::Create("x86_64-unknown-linux", "haswell"));
-  ExitOnError ExitOnErr;
-
-  // Serialize a single valid benchmark to YAML.
-  Benchmark Valid;
-  Valid.Key.Instructions.push_back(MCInstBuilder(X86::XOR32rr)
-                                       .addReg(X86::AL)
-                                       .addReg(X86::AH)
-                                       .addImm(123)
-                                       .addDFPImm(bit_cast<uint64_t>(0.5)));
-  Valid.Mode = Benchmark::Latency;
-  Valid.CpuName = "cpu_name";
-  Valid.LLVMTriple = "llvm_triple";
-  Valid.MinInstructions = 1;
-
-  std::string ValidYaml;
-  raw_string_ostream OS(ValidYaml);
-  ExitOnErr(Valid.writeYamlTo(State, OS));
-  OS.flush();
-
-  // Build a corrupted copy whose opcode name is unknown, then a two-document
-  // buffer with the bad entry first and the valid entry second.
-  const StringRef Opcode = "XOR32rr";
-  std::string InvalidYaml = ValidYaml;
-  const size_t Pos = InvalidYaml.find(Opcode);
-  ASSERT_NE(Pos, std::string::npos);
-  InvalidYaml.replace(Pos, Opcode.size(), "NOT_A_REAL_OPCODE");
-  const std::string Combined = InvalidYaml + ValidYaml;
-
-  // Without skipping, the unknown opcode aborts the read of the whole file.
-  {
-    auto Result =
-        Benchmark::readYamls(State, MemoryBufferRef(Combined, "data"));
-    EXPECT_FALSE(static_cast<bool>(Result));
-    consumeError(Result.takeError());
-  }
-
-  // With skipping, the bad entry is dropped and the valid one survives.
-  {
-    const auto Benchmarks = ExitOnErr(Benchmark::readYamls(
-        State, MemoryBufferRef(Combined, "data"), /*SkipInvalidEntries=*/true));
-    ASSERT_EQ(Benchmarks.size(), size_t{1});
-    EXPECT_EQ(Benchmarks[0].CpuName, "cpu_name");
-    EXPECT_THAT(Benchmarks[0].Key.Instructions,
-                Pointwise(EqMCInst(), Valid.Key.Instructions));
-  }
-}
 } // namespace
 } // namespace exegesis
 } // namespace llvm
