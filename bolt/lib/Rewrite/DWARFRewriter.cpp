@@ -638,18 +638,16 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
         }
     if (RefAddrAbbrevs.empty())
       continue;
-    // Track CUs involved in cross-CU references via DW_FORM_ref_addr. Use the
-    // low-level extractor instead of DWARFUnit::dies() to avoid materializing
-    // every DIE in the unit.
+    // Track CUs involved in cross-CU references via DW_FORM_ref_addr.
     uint64_t DIEOffset = CU->getOffset() + CU->getHeaderSize();
     const uint64_t NextCUOffset = CU->getNextUnitOffset();
     DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
     DWARFDebugInfoEntry DIEEntry;
-    SmallVector<uint32_t, 8> Parents;
-    Parents.push_back(UINT32_MAX);
+    SmallVector<uint32_t, 8> ParentIndex;
+    ParentIndex.push_back(UINT32_MAX);
     do {
       if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
-                                Parents.back()))
+                                ParentIndex.back()))
         break;
       const DWARFAbbreviationDeclaration *Abbrev =
           DIEEntry.getAbbreviationDeclarationPtr();
@@ -673,11 +671,11 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
           }
         }
         if (Abbrev->hasChildren())
-          Parents.push_back(0);
+          ParentIndex.push_back(0);
       } else {
-        Parents.pop_back();
+        ParentIndex.pop_back();
       }
-    } while (!Parents.empty());
+    } while (!ParentIndex.empty());
   }
 
   DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;
