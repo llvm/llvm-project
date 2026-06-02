@@ -418,7 +418,7 @@ def note_file_sloc_usage : Note<
 def note_file_misc_sloc_usage : Note<
   "%0 additional files entered using a total of %1B (%human1B) of space">;
 def warn_charset_conversion_failed : Warning<
-  "conversion from source encoding failed for '%0': %1; interpreting as %2">,
+  "conversion from source encoding failed for '%0': %1; interpreting as IBM-1047">,
    InGroup<DiagGroup<"charset-conversion-failed">>;
 
 // Modules
