@@ -1,0 +1,24 @@
+set(TARGET_PUBLIC_HEADERS
+    libc.include.assert
+    libc.include.ctype
+    libc.include.elf
+    libc.include.errno
+    libc.include.features
+    libc.include.float
+    libc.include.inttypes
+    libc.include.limits
+    libc.include.locale
+    libc.include.stdbit
+    libc.include.stdckdint
+    libc.include.stdint
+    libc.include.stdio
+    libc.include.stdlib
+    libc.include.setjmp
+    libc.include.string
+    libc.include.strings
+    libc.include.sys_queue
+    libc.include.time
+    libc.include.uchar
+    libc.include.wchar
+    libc.include.wctype
+)

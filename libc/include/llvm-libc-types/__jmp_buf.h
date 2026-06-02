@@ -55,6 +55,9 @@ typedef struct {
 #elif defined(__arm__)
   // r4, r5, r6, r7, r8, r9, r10, r11, r12, lr
   long opaque[10];
+#elif defined(__ezh__)
+  // r4, r5, r6, r7, sp, ra
+  long opaque[6];
 #elif defined(__aarch64__)
   long opaque[14]; // x19-x29, lr, sp, optional x18
 #if __ARM_FP

@@ -42,6 +42,10 @@
 #define LIBC_TARGET_ARCH_IS_X86
 #endif
 
+#if defined(__ezh__) || defined(__EZH__)
+#define LIBC_TARGET_ARCH_IS_EZH
+#endif
+
 #if (defined(__arm__) || defined(_M_ARM))
 #define LIBC_TARGET_ARCH_IS_ARM
 #endif

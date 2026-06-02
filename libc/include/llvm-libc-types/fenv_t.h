@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
   unsigned int __fpscr;
 } fenv_t;
-#elif defined(__riscv)
+#elif defined(__riscv) || defined(__ezh__)
 typedef unsigned int fenv_t;
 #elif defined(__AMDGPU__) || defined(__NVPTX__) || defined(__SPIRV__)
 typedef struct {
