@@ -3908,6 +3908,76 @@ directives:
     //   since-cxx17-note@#cwg92-p {{use 'noexcept(false)' instead}}
     // cxx98-14-error@#cwg92-p {{target exception specification is not superset of source}}
 
+
+Testing Modules (Serialization/Deserialization) When implementing a new C++ syntax
+----------------------------------------------------------------------------------
+
+When we implement a new C++ syntax, we need to make sure that it works correctly with modules.
+This means that we need to test that the syntax can be serialized and deserialized (if needed)
+correctly when used in a module. Otherwise, we can't claim the new C++ syntax is supported.
+
+To test a syntax that can be serialized, we can use the syntax in a module interface unit.
+(For ease of description, we use contracts as the example here)
+
+.. code-block:: c++
+
+  export module m;
+  void func(int x) pre(x > 0) {}
+  void func(int x, int y) pre(x > 0) pre(x > 0) {}
+  int func(int x, int y, int z) pre(x > 0) pre(y > 0) pre(z > 0) post(r: r > 0) { return 1; }
+
+And to test a syntax can be deserialized, we can import the module and use the entity (if any)
+defined with the syntax in the module interface.
+
+.. code-block:: c++
+
+  import m;
+  int test() {
+    func(1);
+    func(1, 2);
+    int x = func(1, 2, 3);
+    return x;
+  }
+
+These tests should be put into ``clang/test/Modules`` directory. We can use ``split-file`` tool
+to put multiple files into a single test file. To serialize a module interface unit to a BMI (built
+module interface), we can use the ``-emit-reduced-module-interface`` option. To deserialize the
+corresponding module interface unit, we can use ``-fmodule-file=<module-name>=<bmi-file-path>`` option.
+
+Put the above things together, we have
+
+.. code-block:: c++
+
+  // RUN: rm -rf %t
+  // RUN: mkdir -p %t
+  // RUN: split-file %s %t
+  //
+  // RUN: %clang_cc1 -std=c++26 %t/m.cppm -emit-reduced-module-interface -o %t/m.pcm
+  // RUN: %clang_cc1 -std=c++26 %t/use.cc -fmodule-file=m=%t/m.pcm -verify -syntax-only
+
+  //--- m.cppm
+  export module m;
+  void func(int x) pre(x > 0) {}
+  void func(int x, int y) pre(x > 0) pre(x > 0) {} // test we can serialize multiple pre conditions.
+  int func(int x, int y, int z) pre(x > 0) pre(y > 0) pre(z > 0) post(r: r > 0) { return 1; }
+
+  //--- use.cc
+  // expected-no-diagnostics
+  import m;
+  int test() {
+    func(1);
+    func(1, 2);
+    int x = func(1, 2, 3);
+    return x;
+  }
+
+We don't have to test all possible syntax combinations, which would be impractical.
+It is fine to test that the syntax construct can be serialized and deserialized.
+
+For example, for contracts, if we choose to implement it as a member of ``FunctionDecl``,
+and if the data structure of contracts is not affected by whether the FunctionDecl is a
+CXXMethodDecl or not we don't have to test the contracts in the case of member functions.
+
 Feature Test Macros
 ===================
 Clang implements several ways to test whether a feature is supported or not.
