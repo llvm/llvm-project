@@ -5305,7 +5305,6 @@ def HLSLColumnMajor : TypeAttr {
   let LangOpts = [HLSL];
   let Documentation = [HLSLMatrixLayoutDocs];
 }
-def : MutualExclusions<[HLSLRowMajor, HLSLColumnMajor]>;
 
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];

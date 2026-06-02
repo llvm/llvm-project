@@ -2745,12 +2745,14 @@ Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
     if (ExistingKind == AttrK) {
       Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact)
           << AL.getAttrName();
+      Diag(AL.getLoc(), diag::note_previous_attribute);
       return nullptr;
     }
     IdentifierInfo *ExistingII = &Ctx.Idents.get(
         ExistingKind == attr::HLSLRowMajor ? "row_major" : "column_major");
     Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
         << AL.getAttrName() << ExistingII;
+    Diag(AL.getLoc(), diag::note_conflicting_attribute);
     AL.setInvalid();
     return nullptr;
   }
