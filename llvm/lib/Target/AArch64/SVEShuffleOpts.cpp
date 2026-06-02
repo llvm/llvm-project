@@ -11,20 +11,55 @@
 //
 // An example would be a loop with 4 multiply-accumulate reductions, where the
 // new data in each vector iterations comes from a 4-way deinterleaving of
-// smaller datatypes loaded from memory,  which are then extended and multiplied
-// by a common term loaded in reverse order from memory before being added to
-// the accumulator.
+// smaller datatypes loaded from memory which are then zero extended.
+// 
+// Something like the following:
+//   %bgra = call ... @llvm.masked.load
+//   %deinterleave = call ... @llvm.vector.deinterleave4(%bgra)
+// If the load was of a <vscale x 8 x i16>, we now have 4 deinterleaved
+// <vscale x 2 x i16> values.
+//   %b.i16 = extractvalue %deinterleave, 0
+//   %b.i64 = zext <vscale x 2 x i16> %b.i16 to <vscale x 2 x i64>
+//   %acc.b.next = add <vscale x 2 x i64> %acc.b, %b.i64
+//   <repeat for the other 3 subvectors>
 //
 // If the initial load is a legal vector rather than 4x the size (generating a
 // structured ld4 instead), we would see multiple uunpkhi/lo instructions for
-// the extensions, followed by uzp1/2 instructions for the deinterleave, and rev
-// instructions for the common terms. Instead, we can replace all of those with
-// 4 tbl instructions. The tradeoff, of course, is that we now have 4 mask
-// values to maintain which increases register pressure.
+// the extensions, followed by uzp1/2 instructions for the deinterleave.
+// Instead, we can replace all of those with 4 tbl instructions. The tradeoff,
+// of course, is that we now have 4 mask values to maintain which increases
+// register pressure.
+//
+// This basic transform could be performed in CodeGenPrepare (as the equivalent
+// for NEON is), or in a DAG Combine. However, we hope to extend it to detect
+// other shuffles that we can fold into the tbl. Extending the above example,
+// if instead of directly adding to the accumulator we multiplied it by a
+// common term for all 4 components that had been reversed:
+//   %common.load = call @llvm.masked.load
+//   %common.reverse = call @llvm.vector.reverse
+// These would be loaded at the extended size, <vscale x 2 x i64> in our
+// example.
+//   %b.mul = mul <vscale x 2 x i64> %b.i64, %common.reverse
+//   %acc.b.next = add <vscale x 2 x i64> %acc.b, %b.mul
+//   <repeat for the other 3 subvectors, using %common.reverse for each)
+//
+// In this case, the reverse isn't applied to the deinterleaved data in the
+// original IR, but to the common term multiplied by the individual bgra
+// elements. If the order of the elements in the accumulator is important, we
+// cannot change that. If, however, we know that the accumulator is reduced to
+// a single scalar after the loop and the data is either integers or floating
+// point with reassociation allowed, we could instead choose a different mask
+// for the tbls to reverse the individual bgra elements instead, removing an
+// additional instruction from the loop. This does require looking beyond the
+// blocks in the loop, so DAGCombine won't help.
 //
 // We should also be able to introduce new shuffles in order to balance out
 // SVE's bottom/top instruction pairs, which act on even/odd lanes instead of
 // the high or low half of a register.
+//
+// This pass may end up being a temporary solution that is removed if we can
+// create a generic vector shuffle intrinsic and move this feature to
+// LoopVectorize itself, as that would allow for better cost modelling.
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,6 +82,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
+#include <array>
 #include <optional>
 
 using namespace llvm;
@@ -92,13 +128,14 @@ private:
 
 /// A mapping between a vector_deinterleaveN intrinsic and extending cast
 /// instructions used on the resulting subvectors.
-using DeinterleaveMap =
-    SmallDenseMap<CallInst *, SmallVector<std::pair<CastInst *, unsigned>, 4>>;
+using DeinterleaveMap = SmallDenseMap<CallInst *, std::array<CastInst *, 4>>;
 
+/// Evaluate a deinterleave and see what the uses are. If we find other
+/// operations that we can combine into a tbl shuffle, add the deinterleave and
+/// the operations (currently only zext or uitofp) to the candidates map.
 static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
                                  Loop &L) {
-  // TODO: 'Legalize' if the input is wider than nx128b but not wide enough
-  //       to match a structured load?
+  // This pass currently only handles legal SVE vector types.
   if (I->getOperand(0)
           ->getType()
           ->getPrimitiveSizeInBits()
@@ -108,15 +145,15 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   unsigned IntId = I->getIntrinsicID();
   assert(IntId == Intrinsic::vector_deinterleave4 &&
          "Only deinterleave4 supported currently");
-  SmallVector<std::pair<CastInst *, unsigned>, 4> Extends;
+  std::array<CastInst *, 4> Extends = {};
   unsigned Opcode = 0;
   Type *DestTy = nullptr;
   for (User *U : I->users()) {
     auto *Extract = dyn_cast<ExtractValueInst>(U);
-    // We expect only a single cast instruction as a user.
-    if (!Extract || Extract->getNumIndices() != 1)
+    if (!Extract)
       return;
 
+    // We expect only a single cast instruction as a user for the extract.
     auto *Extend =
         dyn_cast_if_present<CastInst>(Extract->getUniqueUndroppableUser());
     if (!Extend || (!isa<ZExtInst>(Extend) && !isa<UIToFPInst>(Extend)))
@@ -142,48 +179,56 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
     if (DestBits / SrcBits != 4)
       return;
 
-    // We can't abuse the invalid index trick for tbls of bytes, since the
-    // largest possible SVE vector (2048b) would have 256 bytes, leaving no
-    // way of zeroing.
+    // TBL zeroes elements with an out-of-bounds index, but for the largest
+    // possible SVE vector (2048b) a maximum value for i8 elements (256) is not
+    // large enough to encode an 'out of bounds' value.
     // TODO: If we know vscale is 8 or less, then we could use tbls for bytes.
     if (SrcBits <= 8)
       return;
 
-    Extends.push_back({Extend, Extract->getIndices()[0]});
+    Extends[Extract->getIndices().front()] = Extend;
   }
 
   // Check that all extracted values are being extended the same way, and that
   // we have the expected number of extensions.
-  if (Extends.size() != 4 ||
-      !all_of(Extends, [&](std::pair<CastInst *, unsigned> Ext) {
-        CastInst *CI = Ext.first;
-        return CI->getDestTy() == DestTy && CI->getOpcode() == Opcode;
+  if (!all_of(Extends, [DestTy, Opcode](CastInst *CI) {
+        return CI && CI->getDestTy() == DestTy && CI->getOpcode() == Opcode;
       }))
     return;
 
-  Candidates.insert({I, Extends});
+  Candidates.try_emplace(I, Extends);
 }
 
-// Optimize zext and uitofp from a 4-way deinterleaved load.
+/// Given a map of deinterleaves to zext or uitofp casts, remove the operations
+/// and replace them with tbl shuffles.
 static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
   // TODO: Cache tbl patterns and reuse, and abandon transforms for a particular
   //       deinterleave if it would introduce too many. We probably want a
   //       hardcoded number of tbls to start with, but if we can estimate
   //       register pressure then we could make better decisions.
   for (auto &[Deinterleave, Extends] : Deinterleaves) {
-    VectorType *DestTy = cast<VectorType>(Extends[0].first->getDestTy());
-    VectorType *SrcTy = cast<VectorType>(Extends[0].first->getSrcTy());
+    VectorType *DestTy = cast<VectorType>(Extends[0]->getDestTy());
+    VectorType *SrcTy = cast<VectorType>(Extends[0]->getSrcTy());
     unsigned DstBits = DestTy->getScalarSizeInBits();
     unsigned SrcBits = SrcTy->getScalarSizeInBits();
-    bool IsUIToFP = isa<UIToFPInst>(Extends[0].first);
+    bool IsUIToFP = isa<UIToFPInst>(Extends[0]);
     VectorType *StepVecTy = VectorType::getInteger(DestTy);
     Type *StepTy = StepVecTy->getScalarType();
     Value *Input = Deinterleave->getOperand(0);
     Type *InputTy = Input->getType();
 
     APInt Invalid = APInt::getAllOnes(DstBits);
-    for (auto &[Extend, Idx] : Extends) {
-      // Build mask
+    for (auto [Idx, Extend] : enumerate(Extends)) {
+      // Build the mask using stepvectors and casting.
+      // We want to select the Idx'th element, and every 4 elements after that.
+      // Each element needs to be zero extended; we can do that by providing
+      // tbl index values that are out of range. We can't do that nicely with
+      // a stepvector of the same element type as the input type, but we can
+      // do it with elements the size of the output type.
+      // E.g. for element 0 of a 16b -> 64b zext, we would start with a mask of
+      // 0xFFFF_FFFF_FFFF_0000 + Idx for the start of the stepvector, and use a
+      // step of 4. We then cast that back to an element size of 16b, yielding
+      // <0x0000 + Idx, 0xFFFF, 0xFFFF, 0xFFFF, 0x0004 + Idx, 0xFFFF...>.
       APInt StartIdx = Invalid << SrcBits;
       StartIdx += Idx;
       IRBuilder<> Builder(Extend);
@@ -245,18 +290,11 @@ INITIALIZE_PASS_END(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
 
 FunctionPass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 
-namespace llvm {
-class SVEShuffleOptsPass : public PassInfoMixin<SVEShuffleOptsPass> {
-  const AArch64TargetMachine *TM;
-
-public:
-  explicit SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
-    SVEShuffleImpl Impl(TM);
-    return Impl.run(F, FAM);
-  }
-};
-} // end namespace llvm
+PreservedAnalyses SVEShuffleOptsPass::run(Function &F,
+                                          FunctionAnalysisManager &FAM) {
+  SVEShuffleImpl Impl(&TM);
+  return Impl.run(F, FAM);
+}
 
 bool SVEShuffleImpl::runOnFunction(Function &F, Pass &P) {
   // Make sure we can use SVE
@@ -290,10 +328,9 @@ PreservedAnalyses SVEShuffleImpl::run(Function &F,
   bool Changed = false;
   // Only looking to tranform innermost loops, given the increase in
   // register usage.
-  for (Loop *L : LI->getLoopsInPreorder()) {
+  for (Loop *L : LI->getLoopsInPreorder())
     if (L->isInnermost())
       Changed |= processLoop(*L);
-  }
 
   // Can we do better than 'none'?
   // We're not actually using the new pass manager though.

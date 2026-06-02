@@ -229,10 +229,10 @@ static cl::opt<bool> EnableSRLTSubregToRegMitigation(
              "super-regs when using Subreg Liveness Tracking"),
     cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnableSVETblOpt(
-    "aarch64-sve-tbl-opt",
-    cl::desc("Enable the use of SVE tbls instructions to replace other kinds"
-             "shuffles, particularly combining them into one operation."),
+static cl::opt<bool> EnableSVEShuffleOpt(
+    "aarch64-enable-sve-shuffle-opts",
+    cl::desc("Enable pattern matching of shuffles that could make use of SVE "
+             "instructions like tbl or the bottom/top variants"),
     cl::init(true), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
@@ -287,6 +287,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+  initializeSVEShuffleOptsPass(PR);
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
@@ -684,7 +685,7 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
-  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSVETblOpt)
+  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSVEShuffleOpt)
     addPass(createSVEShuffleOptsPass());
 
   // Match complex arithmetic patterns

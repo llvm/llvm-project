@@ -204,6 +204,14 @@ void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 
+class SVEShuffleOptsPass : public PassInfoMixin<SVEShuffleOptsPass> {
+  const AArch64TargetMachine &TM;
+
+public:
+  explicit SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
 class AArch64StackTaggingPreRAPass
     : public OptionalPassInfoMixin<AArch64StackTaggingPreRAPass> {
 public:

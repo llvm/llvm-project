@@ -22,6 +22,7 @@ MODULE_PASS("aarch64-lower-homogeneous-prolog-epilog", AArch64LowerHomogeneousPr
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("aarch64-sve-shuffle-opts", SVEShuffleOptsPass(*static_cast<const AArch64TargetMachine *>(this)))
 #undef FUNCTION_PASS
 
 #ifndef MACHINE_FUNCTION_PASS
