@@ -575,6 +575,11 @@ cc_library(
                 "source/Host/posix/**/*.cpp",
             ],
         ),
+        "@platforms//os:windows": glob([
+            "source/Host/windows/**/*.cpp",
+        ]) + [
+            "source/Host/posix/ConnectionFileDescriptorPosix.cpp",
+        ],
     }) + select({
         ":libedit_enabled": ["source/Host/common/Editline.cpp"],
         "//conditions:default": [],
@@ -596,6 +601,11 @@ cc_library(
             "include/lldb/Host/linux/*.h",
             "include/lldb/Host/posix/*.h",
         ]),
+        "@platforms//os:windows": glob([
+            "include/lldb/Host/posix/*.h",
+            "include/lldb/Host/windows/*.h",
+            "include/lldb/Host/windows/**/*.h",
+        ]),
     }) + select({
         ":libedit_enabled": ["include/lldb/Host/Editline.h"],
         "//conditions:default": [],
@@ -609,6 +619,12 @@ cc_library(
             "-lxml2",
             "-Wl,-framework,CoreServices",
             "-Wl,-framework,Security",
+        ],
+        "@platforms//os:windows": [
+            "rpcrt4.lib",
+            "version.lib",
+            "dbghelp.lib",
+            "pathcch.lib",
         ],
         "//conditions:default": [],
     }) + select({
