@@ -4,8 +4,8 @@
 
 define void @trunc_store(ptr %dst) {
 ; CHECK-LABEL: 'trunc_store'
-; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP4:%[0-9]+]]> to i8
-; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<[[VP5]]> = trunc vp<[[VP4]]> to i8
+; CHECK:  Cost of 1 for VF 2: EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = trunc vp<[[VP4:%[0-9]+]]> to i8
+; CHECK:  Cost of 1 for VF 4: EMIT-SCALAR vp<[[VP5]]> = trunc vp<[[VP4]]> to i8
 ;
 entry:
   br label %loop
@@ -27,10 +27,10 @@ define i32 @sext_reduc(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'sext_reduc'
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST vp<[[VP6:%[0-9]+]]> = trunc ir<%red.next> to i1
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST vp<[[VP7:%[0-9]+]]> = sext vp<[[VP6]]> to i32
-; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = sext vp<[[VP9:%[0-9]+]]> to i32
+; CHECK:  Cost of 1 for VF 2: EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = sext vp<[[VP9:%[0-9]+]]> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST vp<[[VP6]]> = trunc ir<%red.next> to i1
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST vp<[[VP7]]> = sext vp<[[VP6]]> to i32
-; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<[[VP10]]> = sext vp<[[VP9]]> to i32
+; CHECK:  Cost of 1 for VF 4: EMIT-SCALAR vp<[[VP10]]> = sext vp<[[VP9]]> to i32
 ;
 entry:
   br label %for.body
@@ -53,11 +53,11 @@ define i8 @reduc_add_trunc(ptr %A) {
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%zext> = zext ir<%load> to i32
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST vp<[[VP7:%[0-9]+]]> = trunc ir<%red.next> to i8
 ; CHECK:  Cost of 1 for VF 2: WIDEN-CAST vp<[[VP8:%[0-9]+]]> = zext vp<[[VP7]]> to i32
-; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = zext vp<[[VP10:%[0-9]+]]> to i32
+; CHECK:  Cost of 1 for VF 2: EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = zext vp<[[VP10:%[0-9]+]]> to i32
 ; CHECK:  Cost of 0 for VF 4: WIDEN-CAST ir<%zext> = zext ir<%load> to i32
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST vp<[[VP7]]> = trunc ir<%red.next> to i8
 ; CHECK:  Cost of 1 for VF 4: WIDEN-CAST vp<[[VP8]]> = zext vp<[[VP7]]> to i32
-; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<[[VP11]]> = zext vp<[[VP10]]> to i32
+; CHECK:  Cost of 1 for VF 4: EMIT-SCALAR vp<[[VP11]]> = zext vp<[[VP10]]> to i32
 ;
 entry:
   br label %loop

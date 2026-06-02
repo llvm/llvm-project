@@ -1790,6 +1790,31 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // NOTE: At the moment it seems only possible to expose this path for
+  // the trunc, zext and sext opcodes. However, isScalarCast also covers
+  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
+  if (Instruction::isCast(getOpcode()))
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx);
+
+  switch (getOpcode()) {
+  case VPInstruction::VScale: {
+    Type *Ty = this->getScalarType();
+    ArrayRef<Type *> Tys;
+    IntrinsicCostAttributes Attrs(Intrinsic::vscale, Ty, Tys);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  default:
+    // Although VPInstructionWithType is also used for
+    // VPInstruction::StepVector and VPInstruction::WideIVStep it isn't
+    // currently possible to expose cases where the cost is queried.
+    llvm_unreachable("Unhandled opcode");
+  }
+  return 0;
+}
+
 void VPInstructionWithType::execute(VPTransformState &State) {
   Type *ResultTy = getResultType();
   if (Instruction::isCast(getOpcode())) {
