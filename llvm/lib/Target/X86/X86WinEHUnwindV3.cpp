@@ -29,8 +29,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -45,6 +46,38 @@ STATISTIC(SubFragmentSplits,
 static constexpr unsigned MaxV3PrologOps = 31;
 static constexpr unsigned MaxV3Epilogs = 7;
 static constexpr unsigned MaxV3EpilogOps = 31;
+
+/// After reporting a recoverable error for `MF`, erase all SEH pseudo-
+/// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
+/// emit (potentially malformed) unwind information. The LLVMContext
+/// diagnostic recorded by the caller will prevent the object file from
+/// actually being written.
+static void suppressWinCFI(MachineFunction &MF) {
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      switch (MI.getOpcode()) {
+      case X86::SEH_PushReg:
+      case X86::SEH_Push2Regs:
+      case X86::SEH_SaveReg:
+      case X86::SEH_SaveXMM:
+      case X86::SEH_StackAlloc:
+      case X86::SEH_StackAlign:
+      case X86::SEH_SetFrame:
+      case X86::SEH_PushFrame:
+      case X86::SEH_EndPrologue:
+      case X86::SEH_BeginEpilogue:
+      case X86::SEH_EndEpilogue:
+      case X86::SEH_SplitChained:
+      case X86::SEH_SplitChainedAtEndOfBlock:
+        MI.eraseFromParent();
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  MF.setHasWinCFI(false);
+}
 
 namespace {
 
@@ -145,18 +178,23 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   WinX64EHUnwindMode Mode =
       MF.getFunction().getParent()->getWinX64EHUnwindMode();
 
+  Function &F = MF.getFunction();
+  LLVMContext &Ctx = F.getContext();
+
   // EGPR (R16-R31) requires V3 unwind info because V1/V2 cannot encode
   // registers beyond R15. Only enforce this for functions that actually
   // emit SEH unwind info — `nounwind` functions and targets that don't
   // require unwind tables (e.g. cross-compilation host defaults) can use
   // EGPR with any unwind mode since no SEH metadata is generated.
   if (Mode != WinX64EHUnwindMode::V3) {
-    if (!MF.getFunction().needsUnwindTableEntry())
+    if (!F.needsUnwindTableEntry())
       return false;
     const auto &STI = MF.getSubtarget<X86Subtarget>();
-    if (STI.hasEGPR())
-      reportFatalUsageError(
-          "EGPR (R16-R31) requires V3 unwind info on Windows x64.");
+    if (STI.hasEGPR()) {
+      Ctx.diagnose(DiagnosticInfoUnsupported(
+          F, "EGPR (R16-R31) requires V3 unwind info on Windows x64"));
+      suppressWinCFI(MF);
+    }
     return false;
   }
 
@@ -169,17 +207,25 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     FuncletInfo Info = analyzeFunclet(MF, Iter);
 
     if (Info.PrologOpCount > MaxV3PrologOps) {
-      reportFatalUsageError("function '" + MF.getName() +
-                            "' requires more than 31 V3 prolog operations; "
-                            "sub-fragment splitting for prolog overflow is "
-                            "not yet implemented");
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          F, "number of unwind v3 prolog operations required",
+          Info.PrologOpCount, MaxV3PrologOps, DS_Error, DK_ResourceLimit));
+      Ctx.diagnose(DiagnosticInfoGenericWithLoc(
+          "sub-fragment splitting for prolog overflow is not yet implemented",
+          F, F.getSubprogram(), DS_Note));
+      suppressWinCFI(MF);
+      return Changed;
     }
 
     if (Info.MaxEpilogOpCount > MaxV3EpilogOps) {
-      reportFatalUsageError("function '" + MF.getName() +
-                            "' has an epilog with more than 31 V3 operations; "
-                            "sub-fragment splitting for epilog op overflow is "
-                            "not yet implemented");
+      Ctx.diagnose(DiagnosticInfoResourceLimit(
+          F, "number of unwind v3 epilog operations required",
+          Info.MaxEpilogOpCount, MaxV3EpilogOps, DS_Error, DK_ResourceLimit));
+      Ctx.diagnose(DiagnosticInfoGenericWithLoc(
+          "sub-fragment splitting for epilog overflow is not yet implemented",
+          F, F.getSubprogram(), DS_Note));
+      suppressWinCFI(MF);
+      return Changed;
     }
 
     if (Info.EpilogCount > MaxV3Epilogs) {
