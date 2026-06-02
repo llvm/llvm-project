@@ -14,10 +14,11 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
-#include "RegisterContextWindows_x64.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
-#include "TargetThreadWindows.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "ProcessWindowsLog.h"
+#include "RegisterContextWindows_x64.h"
+#include "TargetThreadWindows.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -494,8 +495,10 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
+  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+
   Log *log = GetLog(WindowsLog::Registers);
-  switch (reg_info->kinds[eRegisterKindLLDB]) {
+  switch (reg) {
   case lldb_rax_x86_64:
     m_context.Rax = reg_value.GetAsUInt64();
     break;
