@@ -2937,7 +2937,7 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
 
   // If this function was called to set the TLS mode for a temporary whose
   // lifetime is extended by the variable declared by `d`, don't emit the
-  // wrapperm init and guard info.
+  // wrapper, init, and guard info.
   if (isExtendingDecl)
     return;
 
