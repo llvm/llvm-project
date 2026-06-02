@@ -40,6 +40,7 @@ private:
   MCRegister ExecReg;
 
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
+  bool optimizeSccSelectBranch(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
@@ -273,6 +274,123 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 }
 
 // Optimize sequence
+//    %cc = S_CSELECT -1, 0, %uniformcc
+//    dead %and = S_AND %cc, $exec
+//    %bool = S_CSELECT_B32 1, 0
+//    S_CMP_LG_U32 %bool, 1
+//    S_CBRANCH_SCC1
+// =>
+//    dead %and = S_ANDN2 $exec, %cc
+//    S_CBRANCH_SCC1
+//
+// This is the scalar form of the negated uniform branch pattern handled by
+// optimizeVcndVcmpPair().
+bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
+    MachineBasicBlock &MBB) {
+  auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
+    return MI.getOpcode() == AMDGPU::S_CBRANCH_SCC1;
+  });
+  if (I == MBB.terminators().end())
+    return false;
+
+  MachineInstr *Cmp =
+      TRI->findReachingDef(AMDGPU::SCC, AMDGPU::NoSubRegister, *I, *MRI, LIS);
+  if (!Cmp || Cmp->getOpcode() != AMDGPU::S_CMP_LG_U32 ||
+      Cmp->getParent() != I->getParent())
+    return false;
+
+  MachineOperand *CmpBool = &Cmp->getOperand(0);
+  MachineOperand *CmpOne = &Cmp->getOperand(1);
+  if (CmpBool->isImm() && CmpOne->isReg())
+    std::swap(CmpBool, CmpOne);
+  if (!CmpBool->isReg() || !CmpOne->isImm() || CmpOne->getImm() != 1)
+    return false;
+
+  Register BoolReg = CmpBool->getReg();
+  if (BoolReg.isPhysical() || CmpBool->getSubReg() != AMDGPU::NoSubRegister ||
+      !MRI->hasOneNonDBGUse(BoolReg) ||
+      &*MRI->use_instr_nodbg_begin(BoolReg) != Cmp)
+    return false;
+
+  MachineInstr *BoolSel =
+      TRI->findReachingDef(BoolReg, AMDGPU::NoSubRegister, *Cmp, *MRI, LIS);
+  if (!BoolSel || BoolSel->getOpcode() != AMDGPU::S_CSELECT_B32 ||
+      BoolSel->getParent() != Cmp->getParent() ||
+      !BoolSel->getOperand(1).isImm() || !BoolSel->getOperand(2).isImm() ||
+      BoolSel->getOperand(1).getImm() != 1 ||
+      BoolSel->getOperand(2).getImm() != 0)
+    return false;
+
+  MachineInstr *And = TRI->findReachingDef(AMDGPU::SCC, AMDGPU::NoSubRegister,
+                                           *BoolSel, *MRI, LIS);
+  if (!And || And->getOpcode() != LMC.AndOpc ||
+      And->getParent() != BoolSel->getParent() || !And->getOperand(1).isReg() ||
+      !And->getOperand(2).isReg())
+    return false;
+
+  Register AndDst = And->getOperand(0).getReg();
+  if (AndDst.isPhysical() || !MRI->use_nodbg_empty(AndDst))
+    return false;
+
+  MachineOperand *AndCC = &And->getOperand(1);
+  MachineOperand *AndExec = &And->getOperand(2);
+  if (AndCC->getReg() == Register(ExecReg)) {
+    std::swap(AndCC, AndExec);
+  } else if (AndExec->getReg() != Register(ExecReg)) {
+    return false;
+  }
+
+  Register CCReg = AndCC->getReg();
+  if (CCReg.isPhysical())
+    return false;
+
+  MachineInstr *CCSel =
+      TRI->findReachingDef(CCReg, AndCC->getSubReg(), *And, *MRI, LIS);
+  if (!CCSel || CCSel->getOpcode() != LMC.CSelectOpc ||
+      CCSel->getParent() != And->getParent() || !CCSel->getOperand(1).isImm() ||
+      !CCSel->getOperand(2).isImm() || CCSel->getOperand(1).getImm() != -1 ||
+      CCSel->getOperand(2).getImm() != 0)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Folding scalar SCC branch sequence:\n\t" << *And << '\t'
+                    << *BoolSel << '\t' << *Cmp);
+
+  MachineOperand AndDstOp = And->getOperand(0);
+  AndDstOp.setIsDead(true);
+  MachineInstr *Andn2 =
+      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(LMC.AndN2Opc))
+          .add(AndDstOp)
+          .addReg(ExecReg)
+          .addReg(CCReg,
+                  getUndefRegState(AndCC->isUndef()) |
+                      getKillRegState(AndCC->isKill()),
+                  AndCC->getSubReg());
+
+  MachineOperand &Andn2SCC = Andn2->getOperand(3);
+  assert(Andn2SCC.getReg() == AMDGPU::SCC);
+  Andn2SCC.setIsDead(false);
+
+  LIS->ReplaceMachineInstrInMaps(*And, *Andn2);
+  And->eraseFromParent();
+
+  SlotIndex BoolSelIdx = LIS->getInstructionIndex(*BoolSel);
+  LiveInterval &BoolLI = LIS->getInterval(BoolReg);
+  LIS->RemoveMachineInstrFromMaps(*Cmp);
+  Cmp->eraseFromParent();
+
+  LIS->removeVRegDefAt(BoolLI, BoolSelIdx.getRegSlot());
+  LIS->RemoveMachineInstrFromMaps(*BoolSel);
+  BoolSel->eraseFromParent();
+  if (MRI->reg_nodbg_empty(BoolReg))
+    LIS->removeInterval(BoolReg);
+
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
+
+  LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
+  return true;
+}
+
+// Optimize sequence
 //    %dst = S_OR_SAVEEXEC %src
 //    ... instructions not modifying exec ...
 //    %tmp = S_AND $exec, %dst
@@ -381,6 +499,11 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     if (optimizeVcndVcmpPair(MBB)) {
       RecalcRegs.insert(AMDGPU::VCC_LO);
       RecalcRegs.insert(AMDGPU::VCC_HI);
+      RecalcRegs.insert(AMDGPU::SCC);
+      Changed = true;
+    }
+
+    if (optimizeSccSelectBranch(MBB)) {
       RecalcRegs.insert(AMDGPU::SCC);
       Changed = true;
     }
