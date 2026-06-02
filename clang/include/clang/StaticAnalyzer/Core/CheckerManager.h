@@ -333,8 +333,7 @@ public:
   /// Run checkers for end of variable lifetime
   void runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
                                  const ExplodedNodeSet &Src,
-                                 const VarDecl *Decl, const Stmt *TriggerStmt,
-                                 ExprEngine &Eng);
+                                 const VarDecl *Decl, ExprEngine &Eng);
 
   /// Run checkers for load/store of a location.
   void runCheckersForLocation(ExplodedNodeSet &Dst,

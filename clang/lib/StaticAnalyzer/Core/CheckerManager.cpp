@@ -319,12 +319,11 @@ struct CheckLifetimeEndContext {
 
   const CheckersTy &Checkers;
   const VarDecl *Decl;
-  const Stmt *TriggerStmt;
   ExprEngine &Eng;
 
   CheckLifetimeEndContext(const CheckersTy &checkers, const VarDecl *decl,
-                          const Stmt *stmt, ExprEngine &eng)
-      : Checkers(checkers), Decl(decl), TriggerStmt(stmt), Eng(eng) {}
+                          ExprEngine &eng)
+      : Checkers(checkers), Decl(decl), Eng(eng) {}
 
   CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
   CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
@@ -344,9 +343,8 @@ struct CheckLifetimeEndContext {
 void CheckerManager::runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
                                                const ExplodedNodeSet &Src,
                                                const VarDecl *Decl,
-                                               const Stmt *TriggerStmt,
                                                ExprEngine &Eng) {
-  CheckLifetimeEndContext C(LifetimeEndCheckers, Decl, TriggerStmt, Eng);
+  CheckLifetimeEndContext C(LifetimeEndCheckers, Decl, Eng);
   expandGraphWithCheckers(C, Dst, Src);
 }
 

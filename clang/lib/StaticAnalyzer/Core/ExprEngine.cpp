@@ -1151,7 +1151,7 @@ void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
   Bldr.generateNode(PP, Pred->getState(), Pred);
 
   ExplodedNodeSet Dst;
-  getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, S, *this);
+  getCheckerManager().runCheckersForLifetimeEnd(Dst, Src, D, *this);
   Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
   return;
 }
