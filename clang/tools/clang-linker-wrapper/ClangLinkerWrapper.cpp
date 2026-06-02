@@ -535,8 +535,14 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
-  // AMDGPU is always in LTO mode currently.
-  if (Triple.isAMDGPU())
+  // AMDGPU defaults to the LTO pipeline. Non-RDC HIP uses the conventional
+  // non-LTO pipeline so device codegen still runs here, in parallel, instead
+  // of being deferred to the LTO link.
+  // FIXME: This is a stop-gap for non-RDC. Longer term, RDC and non-RDC should
+  // share a unified interface so runtime libraries can be provided to non-RDC
+  // compilations without relying on -mlink-builtin-bitcode.
+  bool NonLTOAMDGPU = Triple.isAMDGPU() && Args.hasArg(OPT_no_lto);
+  if (Triple.isAMDGPU() && !NonLTOAMDGPU)
     CmdArgs.push_back("-flto");
 
   // Forward all of the `--offload-opt` and `-mllvm` options to the device.
@@ -548,6 +554,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
+  // The device inputs are bitcode stored in files with an object extension.
+  // Force the IR input language so Clang runs the compile and backend phases
+  // instead of treating them as linker inputs, which would defer codegen to
+  // the LTO link and defeat the non-LTO pipeline.
+  if (NonLTOAMDGPU)
+    CmdArgs.append({"-x", "ir"});
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 

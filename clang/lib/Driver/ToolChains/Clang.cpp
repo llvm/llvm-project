@@ -9830,6 +9830,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
          JA.getType() == types::TY_Image);
   if (JA.getType() == types::TY_HIP_FATBIN) {
     CmdArgs.push_back("--emit-fatbin-only");
+    // Non-RDC HIP uses the conventional non-LTO pipeline unless the user opts
+    // into offload LTO. The device backend then runs in the linker wrapper's
+    // parallel device-link step rather than being deferred to the LTO link.
+    // Profile generation still needs LTO so the device profile runtime is
+    // linked and optimized together with the device code.
+    bool UsesProfileGenerate = Args.hasArg(
+        options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
+        options::OPT_fprofile_instr_generate,
+        options::OPT_fprofile_instr_generate_EQ);
+    if (C.getDriver().getOffloadLTOMode() == LTOK_None && !UsesProfileGenerate)
+      CmdArgs.push_back("--no-lto");
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
