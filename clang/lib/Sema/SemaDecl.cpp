@@ -14832,22 +14832,29 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
+void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
+                                                 DeclarationName Name,
+                                                 const Expr *Init,
+                                                 bool HasMarker) {
+  // [[uninitialized]] documents that the entity is intentionally left
+  // uninitialized, so it contradicts an explicit initializer. A RecoveryExpr
+  // is a placeholder for an initialization that already failed (e.g.
+  // default-init of a const scalar), not an initializer the user wrote, so it
+  // must not trigger this rule.
+  if (!HasMarker || !Init || isa<RecoveryExpr>(Init->IgnoreParens()))
+    return;
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "uninit_with_initializer";
+  if (shouldEmitProfileViolation(Profile, Rule, Loc))
+    Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
+}
+
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
-  // std::init / uninit_with_initializer: [[uninitialized]] documents that
-  // the variable is intentionally left uninitialized, so it contradicts an
-  // explicit initializer. A RecoveryExpr is a placeholder for an
-  // initialization that already failed (e.g. default-init of a const scalar),
-  // not an initializer the user wrote, so it must not trigger this rule.
-  if (var->hasInit() && !isa<RecoveryExpr>(var->getInit()->IgnoreParens()) &&
-      var->hasAttr<CXX11UninitializedAttr>()) {
-    static constexpr StringRef Profile = "std::init";
-    static constexpr StringRef Rule = "uninit_with_initializer";
-    if (shouldEmitProfileViolation(Profile, Rule, var->getLocation()))
-      Diag(var->getLocation(), diag::err_init_uninit_with_initializer)
-          << Profile << var->getDeclName();
-  }
+  checkInitProfileUninitWithInitializer(
+      var->getLocation(), var->getDeclName(), var->getInit(),
+      var->hasAttr<CXX11UninitializedAttr>());
 
   CUDA().MaybeAddConstantAttr(var);
 

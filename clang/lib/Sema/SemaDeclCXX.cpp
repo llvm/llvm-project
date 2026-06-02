@@ -4225,6 +4225,10 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   }
 
   FD->setInClassInitializer(InitExpr.get());
+
+  checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
+                                        FD->getInClassInitializer(),
+                                        FD->hasAttr<CXX11UninitializedAttr>());
 }
 
 /// Find the direct and/or virtual base specifiers that

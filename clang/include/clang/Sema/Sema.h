@@ -1081,6 +1081,16 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
+  /// std::init / uninit_with_initializer (R4): diagnose an entity that is both
+  /// marked [[uninitialized]] and has an initializer. Shared by the variable
+  /// (\c CheckCompleteVariableDeclaration) and non-static data member
+  /// (\c ActOnFinishCXXInClassMemberInitializer) paths. \p Init is the
+  /// (possibly null) initializer; a RecoveryExpr placeholder for a failed
+  /// initialization does not count as a user-written initializer.
+  void checkInitProfileUninitWithInitializer(SourceLocation Loc,
+                                             DeclarationName Name,
+                                             const Expr *Init, bool HasMarker);
+
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;

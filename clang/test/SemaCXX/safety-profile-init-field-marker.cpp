@@ -13,11 +13,11 @@ struct PlainFieldPrefix {
 };
 
 struct FieldWithNSDMI {
-  int m [[uninitialized]] = 0;
+  int m [[uninitialized]] = 0; // expected-error {{variable 'm' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
 };
 
 struct FieldWithNSDMIPrefix {
-  [[uninitialized]] int m = 0;
+  [[uninitialized]] int m = 0; // expected-error {{variable 'm' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
 };
 
 struct WithStaticDataMember {
@@ -30,7 +30,7 @@ int WithStaticDataMember::t;
 struct MultipleFields {
   int a [[uninitialized]];
   int b = 0;
-  int c [[uninitialized]] = 0;
+  int c [[uninitialized]] = 0; // expected-error {{variable 'c' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
 };
 
 template <typename T>
