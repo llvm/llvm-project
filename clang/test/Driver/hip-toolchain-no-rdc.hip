@@ -46,6 +46,13 @@
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-NEW %s
 
+// Profile generation needs LTO, so the linker wrapper must not get --no-lto.
+// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -fprofile-generate \
+// RUN:   -x hip --cuda-gpu-arch=gfx900 -nogpuinc -nogpulib --offload-new-driver \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=PGO -implicit-check-not="--no-lto" %s
+// PGO: {{".*clang-linker-wrapper}}
+// PGO-SAME: "--emit-fatbin-only"
+
 //
 // Compile device code in a.cu to code object for gfx803.
 //
@@ -109,6 +116,7 @@
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
 // NEW-SAME: "--host-triple=x86_64-unknown-linux-gnu"
 // NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "--no-lto"
 // NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -181,6 +189,7 @@
 
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
 // NEW-SAME: "--emit-fatbin-only"
+// NEW-SAME: "--no-lto"
 // NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
