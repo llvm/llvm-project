@@ -100,7 +100,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 }
 
 EXCLUDE_LINUX = {
-    "cross-project-tests",  # TODO(issues/132796): Tests are failing.
 }
 
 # Runtimes configured for cross-compilation using LLVM_RUNTIME_TARGETS.
@@ -163,10 +162,10 @@ PROJECT_CHECK_TARGETS = {
     "libc": "check-libc",
     "libclc": "check-libclc",
     "mlir": "check-mlir",
-    "openmp": "openmp",
+    "openmp": "openmp", # Run only build in pre-merge
     "polly": "check-polly",
     "lit": "check-lit",
-    "offload": "offload",
+    "offload": "offload", #Run only build in pre-merge
 }
 
 RUNTIMES = {
