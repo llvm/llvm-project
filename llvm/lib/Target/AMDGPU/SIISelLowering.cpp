@@ -892,7 +892,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       for (MVT VT : {MVT::v4bf16, MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
         // Split vector operations.
         setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FCANONICALIZE,
-                            ISD::FNEG, ISD::FABS},
+                            ISD::FNEG, ISD::FABS, ISD::FMAXNUM, ISD::FMINNUM},
                            VT, Custom);
     }
 
@@ -2352,6 +2352,19 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                          Type *Ty) const {
   // FIXME: Could be smarter if called for vector constants.
   return true;
+}
+
+bool SITargetLowering::shouldNarrowExtractedVectorBinOp(EVT SrcVT, EVT SubVT,
+                                                        unsigned Index) const {
+  unsigned ScalarBits = SubVT.getScalarSizeInBits();
+  unsigned OffsetBits = Index * ScalarBits;
+  unsigned SubvectorBits = SubVT.getSizeInBits();
+
+  // If the extracted subvector starts on a dword boundary and has a dword
+  // sized payload, keeping the original wide result is preferable because the
+  // subvector can be referenced directly through subregisters. Otherwise,
+  // narrowing may avoid element extraction or reconstruction.
+  return OffsetBits % 32 != 0 || SubvectorBits % 32 != 0;
 }
 
 bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,

@@ -218,8 +218,8 @@ define <3 x i16> @v_uaddsat_v3i16(<3 x i16> %lhs, <3 x i16> %rhs) {
 ; GFX9-LABEL: v_uaddsat_v3i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_add_u16 v1, v1, v3 clamp
 ; GFX9-NEXT:    v_pk_add_u16 v0, v0, v2 clamp
+; GFX9-NEXT:    v_pk_add_u16 v1, v1, v3 clamp
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_uaddsat_v3i16:

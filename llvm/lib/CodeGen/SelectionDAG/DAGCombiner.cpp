@@ -27192,6 +27192,8 @@ static SDValue narrowInsertExtractVectorBinOp(EVT SubVT, SDValue BinOp,
     return SDValue();
 
   EVT VecVT = BinOp.getValueType();
+  if (!TLI.shouldNarrowExtractedVectorBinOp(VecVT, SubVT, Index))
+    return SDValue();
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
   if (VecVT != Bop0.getValueType() || VecVT != Bop1.getValueType())
     return SDValue();

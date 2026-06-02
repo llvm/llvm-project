@@ -399,7 +399,8 @@ public:
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
-
+  bool shouldNarrowExtractedVectorBinOp(EVT SrcVT, EVT SubVT,
+                                        unsigned Index) const override;
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;
