@@ -286,7 +286,7 @@ class BinaryContext {
   void deregisterSectionName(const BinarySection &Section);
 
   /// Mutex used for parallel processing of DWP type units.
-  mutable std::mutex DWPUnitsMutex;
+  std::mutex DWPUnitsMutex;
 
 public:
   static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(

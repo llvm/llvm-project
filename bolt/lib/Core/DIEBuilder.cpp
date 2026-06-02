@@ -283,6 +283,11 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
   }
 }
 
+/// Recursively collects type unit signatures from the given DIE and all of its
+/// children.
+///
+/// Note: De-duplication of the collected signatures is handled at the outer
+/// level by registerUnit.
 static void collectReferencedTypeSignatures(DWARFDie Die,
                                             DenseSet<uint64_t> &ProcessedTU,
                                             SmallVectorImpl<uint64_t> &TUlist) {
@@ -309,6 +314,7 @@ static void collectReferencedTypeSignatures(DWARFDie Die,
 }
 
 void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
+  std::unique_lock<std::mutex> LockGuard(BC.getUnitsMutex());
   // Avoid processing the same type unit multiple times.
   DenseSet<uint64_t> ProcessedTU;
   SmallVector<uint64_t, 8> TUlist;
@@ -334,19 +340,18 @@ void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
     collectReferencedTypeSignatures(TU->getUnitDIE(), ProcessedTU, TUlist);
   }
 
-  // Ensure deterministic order of processing type units
+  // Ensure original order of processing type units
   auto SortByOffset = [](const DWARFUnit *A, const DWARFUnit *B) {
     return A->getOffset() < B->getOffset();
   };
-  llvm::sort(getState().DWARF4TUVector, SortByOffset);
-  llvm::sort(getState().DWARF5TUVector, SortByOffset);
 
-  getState().Type = ProcessingType::DWARF4TUs;
-  for (DWARFUnit *TU : getState().DWARF4TUVector)
-    constructFromUnit(*TU);
+  // For Split DWARF, we have either DWARF4 or DWARF5, they cannot be mixed.
+  std::vector<DWARFUnit *> &TUVec = !getState().DWARF4TUVector.empty()
+                                        ? getState().DWARF4TUVector
+                                        : getState().DWARF5TUVector;
+  llvm::sort(TUVec, SortByOffset);
 
-  getState().Type = ProcessingType::DWARF5TUs;
-  for (DWARFUnit *TU : getState().DWARF5TUVector)
+  for (DWARFUnit *TU : TUVec)
     constructFromUnit(*TU);
 }
 
@@ -396,7 +401,6 @@ void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
   if (DwarfContext->isDWP()) {
-    std::unique_lock<std::mutex> LockGuard(BC.getUnitsMutex());
     buildDWPTypeUnitsForUnit(U);
   } else {
     buildTypeUnits(nullptr, false);
