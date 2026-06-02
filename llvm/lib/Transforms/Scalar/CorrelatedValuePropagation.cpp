@@ -94,6 +94,8 @@ STATISTIC(NumSMinMax,
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumNNeg, "Number of zext/uitofp non-negative deductions");
+STATISTIC(NumStoreVals,
+          "Number of stores with a constant value operand folded");
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At))
@@ -1261,6 +1263,24 @@ static bool processTrunc(TruncInst *TI, LazyValueInfo *LVI) {
   return Changed;
 }
 
+/// Try to replace the stored value with a constant if LVI can determine it is
+/// constant at this point (e.g. because the value is derived from a branch
+/// condition known to be true/false on this path).
+static bool processStore(StoreInst *SI, LazyValueInfo *LVI) {
+  Value *StoredVal = SI->getValueOperand();
+  if (isa<Constant>(StoredVal))
+    return false;
+  // LVI does not handle vector types.
+  if (StoredVal->getType()->isVectorTy())
+    return false;
+  Constant *C = LVI->getConstant(StoredVal, SI);
+  if (!C)
+    return false;
+  ++NumStoreVals;
+  SI->setOperand(0, C);
+  return true;
+}
+
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
@@ -1326,6 +1346,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::Trunc:
         BBChanged |= processTrunc(cast<TruncInst>(&II), LVI);
+        break;
+      case Instruction::Store:
+        BBChanged |= processStore(cast<StoreInst>(&II), LVI);
         break;
       }
     }
