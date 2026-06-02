@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -xc -analyzer-checker=core,debug.ExprInspection -verify=expected,c %s
-// RUN: %clang_analyze_cc1 -xc++ -DCPP -std=c++14 -analyzer-checker=core,debug.ExprInspection -verify=expected,cpp %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux-gnu -analyzer-checker=core,debug.ExprInspection -verify=expected,c -xc %s
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux-gnu -analyzer-checker=core,debug.ExprInspection -verify=expected,cpp -xc++ -DCPP -std=c++14 %s
 
 void clang_analyzer_value(int);
 
@@ -87,6 +87,19 @@ void test_nested_struct_array_field(void) {
   clang_analyzer_value(nested.z);        // expected-warning {{50}}
 }
 
+// Elided braces: see [dcl.init.aggr] p15.
+
+const struct Outer nested_elided = {10, 20, 30, 40, 50};
+
+void test_nested_elided_braces(void) {
+  clang_analyzer_value(nested_elided.arr[0].x); // expected-warning {{10}}
+  clang_analyzer_value(nested_elided.arr[0].y); // expected-warning {{20}}
+  clang_analyzer_value(nested_elided.arr[1].x); // expected-warning {{30}}
+  clang_analyzer_value(nested_elided.arr[1].y); // expected-warning {{40}}
+  clang_analyzer_value(nested_elided.z);        // expected-warning {{50}}
+}
+
+
 const struct CStruct matrix[2][2] = {{{1}, {2}}, {{3}, {4}}};
 
 void test_2d_array_of_structs(void) {
@@ -95,6 +108,16 @@ void test_2d_array_of_structs(void) {
   clang_analyzer_value(matrix[1][0].a); // expected-warning {{3}}
   clang_analyzer_value(matrix[1][1].a); // expected-warning {{4}}
 }
+
+const struct CStruct matrix_elided[2][2] = {1, 2, 3, 4};
+
+void test_matrix_elided_braces(void) {
+  clang_analyzer_value(matrix_elided[0][0].a); // expected-warning {{1}}
+  clang_analyzer_value(matrix_elided[0][1].a); // expected-warning {{2}}
+  clang_analyzer_value(matrix_elided[1][0].a); // expected-warning {{3}}
+  clang_analyzer_value(matrix_elided[1][1].a); // expected-warning {{4}}
+}
+
 
 const struct Inner partial_arr[3] = {{100, 200}};
 

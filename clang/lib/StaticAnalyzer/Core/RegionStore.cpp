@@ -586,7 +586,7 @@ public:
   getConstantValFromConstArrayInitializer(RegionBindingsConstRef B,
                                           const ElementRegion *R);
   std::optional<SVal> getConstantValFromInitializer(const FieldRegion *R,
-                                                    bool isMainAnalysis);
+                                                    bool IsMainAnalysis);
   std::optional<SVal>
   getSValFromInitListExpr(const InitListExpr *ILE,
                           const SmallVector<uint64_t, 2> &ConcreteOffsets,
@@ -2129,7 +2129,7 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
     }
   }
 
-  const auto *VR = dyn_cast_or_null<VarRegion>(Cur);
+  const auto *VR = dyn_cast<VarRegion>(Cur);
   if (!VR)
     return std::nullopt;
 
@@ -2149,21 +2149,23 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
   const Expr *E = Init;
   for (const SubRegion *SR : llvm::reverse(Path)) {
     const auto *ILE = dyn_cast<InitListExpr>(E);
-    if (!ILE)
+    // If E is not an InitListExpr, it may be an ImplicitValueInitExpr
+    // representing zero-initialization of this aggregate element.
+    if (!ILE) {
       return isa<ImplicitValueInitExpr>(E)
                  ? std::optional<SVal>(svalBuilder.makeZeroVal(LeafTy))
                  : std::nullopt;
+    }
 
     if (const auto *FR = dyn_cast<FieldRegion>(SR)) {
       if (ILE->getType()->isUnionType()) {
         // A union InitListExpr has one init for one member. We can only
         // resolve if the accessed field matches the initialized member.
         const FieldDecl *InitField = ILE->getInitializedFieldInUnion();
-        if (InitField && InitField == FR->getDecl()) {
-          if (ILE->getNumInits() > 0)
-            E = ILE->getInit(0);
-          else
+        if (InitField == FR->getDecl()) {
+          if (ILE->getNumInits() == 0)
             return svalBuilder.makeZeroVal(LeafTy);
+          E = ILE->getInit(0);
         } else {
           return std::nullopt;
         }
