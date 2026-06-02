@@ -132,9 +132,9 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (HasHWShadowStack) {
     if (STI.hasStdExtZcmop()) {
       static_assert(RAReg == RISCV::X1, "C.SSPUSH only accepts X1");
-      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_C_SSPUSH));
+      BuildMI(MBB, MI, DL, TII->get(RISCV::C_SSPUSH)).addReg(RAReg);
     } else {
-      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPUSH)).addReg(RAReg);
+      BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     }
     return;
   }
@@ -197,7 +197,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPOPCHK)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
   }
 
@@ -1704,10 +1704,15 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Append GPRPair registers for pairs where both sub-registers are in CSR
     // list. Iterate through all GPRPairs and check if both sub-regs are CSRs.
     for (MCPhysReg Pair : RISCV::GPRPairRegClass) {
+      // Do not append a pair that's already in the CSR list.
+      if (CSRSet.contains(Pair))
+        continue;
       MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
       MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
-      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg))
+      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg)) {
         NewCSRs.push_back(Pair);
+        CSRSet.insert(Pair);
+      }
     }
 
     MRI.setCalleeSavedRegs(NewCSRs);

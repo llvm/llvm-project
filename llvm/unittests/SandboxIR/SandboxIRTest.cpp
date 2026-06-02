@@ -2010,7 +2010,7 @@ bb1:
   ret void, !tbaa !2
 }
 
-!1 = !{}
+!1 = !DILocation(line: 12, column: 1, scope: !{})
 !2 = !{}
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");

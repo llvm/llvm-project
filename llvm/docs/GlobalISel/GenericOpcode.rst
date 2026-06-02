@@ -341,6 +341,15 @@ These each perform their respective integer arithmetic on a scalar.
 
 The above example adds %src1 to %src0 and stores the result in %dst.
 
+G_CLMUL
+^^^^^^^
+
+Perform integer carry-less multiplication.
+
+.. code-block:: none
+
+  %dst:_(s32) = G_CLMUL %src_0:_(s32), %src1:_(32)
+
 G_SDIVREM, G_UDIVREM
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -759,6 +768,9 @@ the runtime scaling factor. The indices inserted in the source vector must be
 valid indices of that vector. If this condition cannot be determined statically
 but is false at runtime, then the result vector is undefined.
 
+This operation supports inserting a fixed vector into a scalable vector, but not
+the other way around.
+
 .. code-block:: none
 
   %2:_(<vscale x 4 x i64>) = G_INSERT_SUBVECTOR %0:_(<vscale x 4 x i64>), %1:_(<vscale x 2 x i64>), 0
@@ -770,18 +782,19 @@ Extract a vector of destination type from the source vector. The index operand
 represents the starting index from which a subvector is extracted from
 the source vector.
 
-The index must be a constant multiple of the source vector's minimum vector
+The index must be a constant multiple of the destination vector's minimum vector
 length. If the source vector is a scalable vector, then the index is first
 scaled by the runtime scaling factor. The indices extracted from the source
 vector must be valid indices of that vector. If this condition cannot be
 determined statically but is false at runtime, then the result vector is
 undefined.
 
-Mixing scalable vectors and fixed vectors are not allowed.
+This operation supports extracting a fixed vector from a scalable vector, but
+not the other way around.
 
 .. code-block:: none
 
-  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 2
+  %3:_(<vscale x 4 x i64>) = G_EXTRACT_SUBVECTOR %2:_(<vscale x 8 x i64>), 4
 
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^

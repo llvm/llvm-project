@@ -312,7 +312,7 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
     if (!recTy)
       return op.emitOpError(
           "when 'num_elements' is present, 'addr' must be a pointer to a "
-          "!cir.record type");
+          "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy != ptrTy)
       return op.emitOpError("when 'num_elements' is present, 'addr' type must "
@@ -330,8 +330,8 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
 
     auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
     if (!recTy)
-      return op.emitOpError(
-          "the block argument type must be a pointer to a !cir.record type");
+      return op.emitOpError("the block argument type must be a pointer to a "
+                            "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy.getPointee() != innerEltTy)
       return op.emitOpError(
@@ -369,6 +369,91 @@ LogicalResult cir::DeleteArrayOp::verify() {
   if (getDtorMayThrow() && !getElementDtorAttr())
     return emitOpError(
         "'dtor_may_throw' requires an 'element_dtor' to be present");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+static void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
+                              cir::AssumeBundleKindAttr kindAttr,
+                              OperandRange bundleArgs,
+                              TypeRange bundleArgTypes) {
+  cir::AssumeBundleKind kind = kindAttr.getValue();
+  if (kind == cir::AssumeBundleKind::None)
+    return;
+
+  p << " " << cir::stringifyAssumeBundleKind(kind);
+  if (bundleArgs.empty())
+    return;
+
+  p << "(";
+  p.printOperands(bundleArgs);
+  p << " : ";
+  llvm::interleaveComma(bundleArgTypes, p);
+  p << ")";
+}
+
+static ParseResult parseAssumeBundle(
+    OpAsmParser &p, cir::AssumeBundleKindAttr &bundleKindAttr,
+    llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> &bundleArgs,
+    llvm::SmallVector<mlir::Type, 1> &bundleArgTypes) {
+  StringRef keyword;
+  auto loc = p.getCurrentLocation();
+  if (failed(p.parseOptionalKeyword(&keyword))) {
+    bundleKindAttr = cir::AssumeBundleKindAttr::get(
+        p.getContext(), cir::AssumeBundleKind::None);
+    return success();
+  }
+
+  std::optional<cir::AssumeBundleKind> parsedKind =
+      cir::symbolizeAssumeBundleKind(keyword);
+  if (!parsedKind)
+    return p.emitError(loc, "unknown assume bundle kind '") << keyword << "'";
+
+  bundleKindAttr = cir::AssumeBundleKindAttr::get(p.getContext(), *parsedKind);
+
+  if (p.parseOptionalLParen())
+    return success();
+
+  if (p.parseOperandList(bundleArgs) || p.parseColon() ||
+      p.parseTypeList(bundleArgTypes) || p.parseRParen())
+    return failure();
+
+  return success();
+}
+
+LogicalResult cir::AssumeOp::verify() {
+  cir::AssumeBundleKind kind = getBundleKind();
+  size_t numArgs = getBundleArgs().size();
+
+  if (kind == cir::AssumeBundleKind::None) {
+    if (numArgs != 0)
+      return emitOpError("unexpected bundle operands for kind 'none'");
+    return success();
+  }
+
+  if (numArgs == 0)
+    return emitOpError("expected bundle operands for kind '")
+           << cir::stringifyAssumeBundleKind(kind) << "'";
+
+  switch (kind) {
+  case cir::AssumeBundleKind::Align:
+    if (numArgs != 2 && numArgs != 3)
+      return emitOpError("align bundle expects 2 or 3 operands");
+    break;
+  case cir::AssumeBundleKind::SeparateStorage:
+    if (numArgs != 2)
+      return emitOpError("separate_storage bundle expects 2 operands");
+    break;
+  case cir::AssumeBundleKind::Dereferenceable:
+    if (numArgs != 2)
+      return emitOpError("dereferenceable bundle expects 2 operands");
+    break;
+  default:
+    break;
+  }
   return success();
 }
 
@@ -3133,10 +3218,9 @@ LogicalResult cir::CopyOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::GetRuntimeMemberOp::verify() {
-  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
   cir::DataMemberType memberPtrTy = getMember().getType();
 
-  if (recordTy != memberPtrTy.getClassTy())
+  if (getAddr().getType().getPointee() != memberPtrTy.getClassTy())
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
@@ -3183,7 +3267,11 @@ LogicalResult cir::GetMethodOp::verify() {
            << "the first parameter of callee must be a void pointer";
   }
 
-  if (calleeArgsTy.slice(1) != methodFuncArgsTy)
+  if (calleeArgsTy.size() != methodFuncArgsTy.size())
+    return emitError() << "callee and method parameter counts do not match";
+
+  if (calleeArgsTy.size() > 1 &&
+      calleeArgsTy.slice(1) != methodFuncArgsTy.slice(1))
     return emitError()
            << "callee parameters and method parameters do not match";
 
@@ -3213,13 +3301,13 @@ LogicalResult cir::GetMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ExtractMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError()
            << "cir.extract_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getType())
+  if (structTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3229,12 +3317,12 @@ LogicalResult cir::ExtractMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::InsertMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError() << "cir.insert_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+  if (structTy.getMembers()[getIndex()] != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();
@@ -4031,21 +4119,27 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// ThrowOp
+// ThrowOp / TryThrowOp
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult cir::ThrowOp::verify() {
-  // For the no-rethrow version, it must have at least the exception pointer.
-  if (rethrows())
-    return success();
+template <typename ThrowOpTy>
+static mlir::LogicalResult verifyThrowOpImpl(ThrowOpTy op) {
+  if (op.rethrows())
+    return mlir::success();
 
-  if (getNumOperands() != 0) {
-    if (getTypeInfo())
-      return success();
-    return emitOpError() << "'type_info' symbol attribute missing";
+  if (op.getNumOperands() != 0) {
+    if (op.getTypeInfo())
+      return mlir::success();
+    return op.emitOpError() << "'type_info' symbol attribute missing";
   }
 
-  return failure();
+  return mlir::failure();
+}
+
+mlir::LogicalResult cir::ThrowOp::verify() { return verifyThrowOpImpl(*this); }
+
+mlir::LogicalResult cir::TryThrowOp::verify() {
+  return verifyThrowOpImpl(*this);
 }
 
 //===----------------------------------------------------------------------===//

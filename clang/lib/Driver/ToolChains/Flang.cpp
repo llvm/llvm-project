@@ -690,6 +690,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
 
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (IsHostOffloadingAction)
+    CmdArgs.push_back("-offload-device");
+
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
   // adds other secondary input (e.g. device bitcode files for embedding to the
@@ -1174,6 +1179,38 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());
 
+  // Default intrinsic module dirs must be added after any user-provided dirs in
+  // -fintrinsic-modules-path since the default dirs have lower precedence than
+  // user-provided dirs
+  if (std::optional<std::string> IntrModPath =
+          TC.getDefaultIntrinsicModuleDir()) {
+    CmdArgs.push_back("-fintrinsic-modules-path");
+    CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+  }
+
+  // Ideally, every target triple has its own set of builtin modules since they
+  // are compiled with platform-dependent conditionals such as `#if __x86_64__`.
+  // However, getting the builtin modules for offload targets requires building
+  // the flang-rt and openmp for those targets as well:
+  // -DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda.
+  // To reduce friction when build systems have not yet been updated, we also
+  // add the host's builtin module to the search path (with lower priority), in
+  // case a module file has not been found for the offload targets itself.
+  // FIXME: This workaround may mix module files targeting different triples and
+  //        should eventually be removed.
+  auto &&HostTCs =
+      C.getOffloadToolChains<clang::driver::OffloadAction ::OFK_Host>();
+  for (auto [OKind, HostTC] : llvm::make_range(HostTCs.first, HostTCs.second)) {
+    if (HostTC == &TC)
+      continue;
+
+    if (std::optional<std::string> IntrModPath =
+            HostTC->getDefaultIntrinsicModuleDir()) {
+      CmdArgs.push_back("-fintrinsic-modules-path");
+      CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+    }
+  }
+
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 
@@ -1237,7 +1274,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   renderGlobalISelOptions(D, Args, CmdArgs, Triple);
-  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+  renderCommonIntegerOverflowOptions(Args, CmdArgs, false);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

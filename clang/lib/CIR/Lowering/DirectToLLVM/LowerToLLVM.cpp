@@ -27,6 +27,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -820,42 +821,15 @@ mlir::LogicalResult CIRToLLVMSignBitOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
     cir::AssumeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = adaptor.getPredicate();
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
-  return mlir::success();
-}
+  mlir::Value cond = adaptor.getPredicate();
+  if (op.getBundleKind() == cir::AssumeBundleKind::None) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond);
+    return mlir::success();
+  }
 
-mlir::LogicalResult CIRToLLVMAssumeAlignedOpLowering::matchAndRewrite(
-    cir::AssumeAlignedOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  SmallVector<mlir::Value, 3> opBundleArgs{adaptor.getPointer()};
-
-  auto alignment = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                                  adaptor.getAlignmentAttr());
-  opBundleArgs.push_back(alignment);
-
-  if (mlir::Value offset = adaptor.getOffset())
-    opBundleArgs.push_back(offset);
-
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  mlir::LLVM::AssumeOp::create(rewriter, op.getLoc(), cond, "align",
-                               opBundleArgs);
-
-  // The llvm.assume operation does not have a result, so we need to replace
-  // all uses of this cir.assume_aligned operation with the input ptr itself.
-  rewriter.replaceOp(op, adaptor.getPointer());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
-    cir::AssumeSepStorageOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
-                                             rewriter.getI1Type(), 1);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(
-      op, cond, mlir::LLVM::AssumeSeparateStorageTag{}, adaptor.getPtr1(),
-      adaptor.getPtr2());
+  llvm::StringRef tag = cir::stringifyAssumeBundleKind(op.getBundleKind());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::AssumeOp>(op, cond, tag,
+                                                    adaptor.getBundleArgs());
   return mlir::success();
 }
 
@@ -1979,6 +1953,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
+  if (mlir::isa<cir::UndefAttr>(attr)) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
+        op, getTypeConverter()->convertType(op.getType()));
+    return mlir::success();
+  }
+
   if (mlir::isa<mlir::IntegerType>(op.getType())) {
     // Verified cir.const operations cannot actually be of these types, but the
     // lowering pass may generate temporary cir.const operations with these
@@ -2053,7 +2033,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     rewriter.replaceOp(op, lowerCirAttrAsValue(op, op.getValue(), rewriter,
                                                getTypeConverter()));
     return mlir::success();
-  } else if (auto recTy = mlir::dyn_cast<cir::RecordType>(op.getType())) {
+  } else if (mlir::isa<cir::RecordType>(op.getType())) {
     if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
       mlir::Value initVal =
           lowerCirAttrAsValue(op, attr, rewriter, typeConverter);
@@ -2071,6 +2051,12 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
       mlir::ArrayAttr array = rewriter.getArrayAttr({zeroAttr, zeroAttr});
       rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
           op, getTypeConverter()->convertType(op.getType()), array);
+      return mlir::success();
+    }
+
+    if (mlir::isa<cir::UndefAttr>(op.getValue())) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
+          op, getTypeConverter()->convertType(op.getType()));
       return mlir::success();
     }
 
@@ -3302,42 +3288,43 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     auto varArg = type.isVarArg();
     return mlir::LLVM::LLVMFunctionType::get(result, arguments, varArg);
   });
-  converter.addConversion([&](cir::RecordType type) -> mlir::Type {
-    // Convert struct members.
+  converter.addConversion([&](cir::StructType type) -> mlir::Type {
     llvm::SmallVector<mlir::Type> llvmMembers;
-    switch (type.getKind()) {
-    case cir::RecordType::Class:
-    case cir::RecordType::Struct:
-      for (mlir::Type ty : type.getMembers())
-        llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
-      break;
-    // Unions are lowered as only the largest member.
-    case cir::RecordType::Union:
-      if (type.getMembers().empty())
-        break;
-      if (auto largestMember = type.getLargestMember(dataLayout))
-        llvmMembers.push_back(
-            convertTypeForMemory(converter, dataLayout, largestMember));
-      if (type.getPadded()) {
-        auto last = *type.getMembers().rbegin();
-        llvmMembers.push_back(
-            convertTypeForMemory(converter, dataLayout, last));
-      }
-      break;
-    }
+    for (mlir::Type ty : type.getMembers())
+      llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, ty));
 
-    // Record has a name: lower as an identified record.
     mlir::LLVM::LLVMStructType llvmStruct;
     if (type.getName()) {
       llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
           type.getContext(), type.getPrefixedName());
       if (llvmStruct.setBody(llvmMembers, type.getPacked()).failed())
         llvm_unreachable("Failed to set body of record");
-    } else { // Record has no name: lower as literal record.
+    } else {
       llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
           type.getContext(), llvmMembers, type.getPacked());
     }
+    return llvmStruct;
+  });
+  // Unions are lowered as only the largest member.
+  converter.addConversion([&](cir::UnionType type) -> mlir::Type {
+    llvm::SmallVector<mlir::Type> llvmMembers;
+    if (!type.getMembers().empty())
+      if (auto storage = type.getUnionStorageType(dataLayout))
+        llvmMembers.push_back(
+            convertTypeForMemory(converter, dataLayout, storage));
+    if (mlir::Type pad = type.getPadding())
+      llvmMembers.push_back(convertTypeForMemory(converter, dataLayout, pad));
 
+    mlir::LLVM::LLVMStructType llvmStruct;
+    if (type.getName()) {
+      llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+          type.getContext(), type.getPrefixedName());
+      if (llvmStruct.setBody(llvmMembers, type.getPacked()).failed())
+        llvm_unreachable("Failed to set body of record");
+    } else {
+      llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
+          type.getContext(), llvmMembers, type.getPacked());
+    }
     return llvmStruct;
   });
   converter.addConversion([&](cir::VoidType type) -> mlir::Type {
@@ -3786,34 +3773,30 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
     cir::GetMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type llResTy = getTypeConverter()->convertType(op.getType());
-  const auto recordTy =
-      mlir::cast<cir::RecordType>(op.getAddrTy().getPointee());
-  assert(recordTy && "expected record type");
+  mlir::Type pointee = op.getAddrTy().getPointee();
 
-  switch (recordTy.getKind()) {
-  case cir::RecordType::Class:
-  case cir::RecordType::Struct: {
-    // Since the base address is a pointer to an aggregate, the first offset
-    // is always zero. The second offset tell us which member it will access.
-    llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
-    const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
-    // Struct member accesses are always inbounds and nuw: the base pointer
-    // is valid and the member offset is a positive, constant offset within
-    // the struct layout, so it cannot wrap. This matches LLVM's
-    // IRBuilder::CreateStructGEP.
-    mlir::LLVM::GEPNoWrapFlags flags =
-        mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-        op, llResTy, elementTy, adaptor.getAddr(), offset, flags);
-    return mlir::success();
-  }
-  case cir::RecordType::Union:
+  if (mlir::isa<cir::UnionType>(pointee)) {
     // Union members share the address space, so we just need a bitcast to
     // conform to type-checking.
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(op, llResTy,
                                                        adaptor.getAddr());
     return mlir::success();
   }
+
+  auto structTy = mlir::cast<cir::StructType>(pointee);
+  // Since the base address is a pointer to an aggregate, the first offset
+  // is always zero. The second offset tells us which member it will access.
+  llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+  const mlir::Type elementTy = getTypeConverter()->convertType(structTy);
+  // Struct member accesses are always inbounds and nuw: the base pointer
+  // is valid and the member offset is a positive, constant offset within
+  // the struct layout, so it cannot wrap. This matches LLVM's
+  // IRBuilder::CreateStructGEP.
+  mlir::LLVM::GEPNoWrapFlags flags =
+      mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+      op, llResTy, elementTy, adaptor.getAddr(), offset, flags);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
@@ -3821,33 +3804,24 @@ mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   std::int64_t indices[1] = {static_cast<std::int64_t>(op.getIndex())};
 
-  mlir::Type recordTy = op.getRecord().getType();
-  auto cirRecordTy = mlir::cast<cir::RecordType>(recordTy);
-  switch (cirRecordTy.getKind()) {
-  case cir::RecordType::Struct:
-  case cir::RecordType::Class:
-    rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
-        op, adaptor.getRecord(), indices);
-    return mlir::success();
-
-  case cir::RecordType::Union:
+  if (mlir::isa<cir::UnionType>(op.getRecord().getType())) {
     op.emitError("cir.extract_member cannot extract member from a union");
     return mlir::failure();
   }
-  llvm_unreachable("Unexpected record kind");
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
+      op, adaptor.getRecord(), indices);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
     cir::InsertMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   std::int64_t indecies[1] = {static_cast<std::int64_t>(op.getIndex())};
-  mlir::Type recordTy = op.getRecord().getType();
 
-  if (auto cirRecordTy = mlir::dyn_cast<cir::RecordType>(recordTy)) {
-    if (cirRecordTy.getKind() == cir::RecordType::Union) {
-      op.emitError("cir.update_member cannot update member of a union");
-      return mlir::failure();
-    }
+  if (mlir::isa<cir::UnionType>(op.getRecord().getType())) {
+    op.emitError("cir.update_member cannot update member of a union");
+    return mlir::failure();
   }
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(

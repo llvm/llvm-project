@@ -42,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <cassert>
 #include <optional>
@@ -657,6 +658,41 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+static Value *canoncalizeSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                          Value *FVal,
+                                          InstCombiner::BuilderTy &Builder,
+                                          const SimplifyQuery &SQ) {
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (match(FVal, m_Zero())) {
+    std::swap(TVal, FVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+  if (!match(TVal, m_Zero()))
+    return nullptr;
+
+  if (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Handles:
+  // (X <= Y) ? 0 : (X - Y)
+  // (X <= Y) ? (Y - X) : 0
+  // (X >= Y) ? 0 : (Y - X)
+  // (X >= Y) ? (X - Y) : 0
+  if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
+      match(FVal, m_NSWSub(m_Specific(CmpLHS), m_Specific(CmpRHS))) &&
+      isGuaranteedNotToBeUndef(CmpLHS, SQ.AC, SQ.CxtI, SQ.DT)) {
+    Value *SMin =
+        Builder.CreateBinaryIntrinsic(Intrinsic::smin, CmpRHS, CmpLHS);
+    return Builder.CreateNSWSub(CmpLHS, SMin);
+  }
+
+  return nullptr;
+}
+
 /// Try to fold a select to a min/max intrinsic. Many cases are already handled
 /// by matchDecomposedSelectPattern but here we handle the cases where more
 /// extensive modification of the IR is required.
@@ -664,9 +700,12 @@ static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
                                    Value *FVal,
                                    InstCombiner::BuilderTy &Builder,
                                    const SimplifyQuery &SQ) {
-  const Value *CmpLHS = Cmp->getOperand(0);
-  const Value *CmpRHS = Cmp->getOperand(1);
+  Value *CmpLHS = Cmp->getOperand(0);
+  Value *CmpRHS = Cmp->getOperand(1);
   ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  if (Value *V = canoncalizeSelectICmpMinMax(Cmp, TVal, FVal, Builder, SQ))
+    return V;
 
   // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
   // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
@@ -1468,7 +1507,8 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
                                          Value *FalseVal,
                                          InstCombiner::BuilderTy &Builder) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
-  if (!ICI->isEquality() || !match(ICI->getOperand(1), m_Zero()))
+  if (!isPowerOf2_32(BitWidth) || !ICI->isEquality() ||
+      !match(ICI->getOperand(1), m_Zero()))
     return nullptr;
 
   if (ICI->getPredicate() == ICmpInst::ICMP_NE)
@@ -1749,6 +1789,17 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     }
 
     return replaceInstUsesWith(Sel, FalseVal);
+  }
+
+  Constant *CmpC;
+  if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
+      match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
+      match(CmpRHS, m_ImmConstant(CmpC)) &&
+      ConstantFoldCompareInstOperands(
+          ICmpInst::Predicate::ICMP_NE, CmpC,
+          ConstantInt::getNullValue(CmpLHS->getType()), DL) == TrueVal) {
+    return new ICmpInst(CmpInst::Predicate::ICMP_NE, CmpLHS,
+                        ConstantInt::getNullValue(CmpLHS->getType()));
   }
 
   return nullptr;
@@ -4425,6 +4476,48 @@ static Value *foldSelectBitTest(SelectInst &Sel, Value *CondVal, Value *TrueVal,
   return nullptr;
 }
 
+/// This function makes the following folds:
+/// select C, (sub 0, X), (xor X, -1)
+///   -> sub (sext !C), X
+/// select C, (xor X, -1), (sub 0, X)
+///   -> sub (sext C), X
+static Instruction *foldSelectNegNot(SelectInst &SI,
+                                     InstCombiner::BuilderTy &Builder) {
+  auto *CondVal = SI.getCondition();
+  auto *TrueVal = SI.getTrueValue();
+  auto *FalseVal = SI.getFalseValue();
+  auto *SelTy = SI.getType();
+
+  if (!SelTy->isIntOrIntVectorTy() || SelTy->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  if (CondVal->getType()->isVectorTy() != SelTy->isVectorTy())
+    return nullptr;
+
+  auto matchNegNot = [&](Value *Neg, Value *Not, Value *&X) -> bool {
+    return match(Neg, m_OneUse(m_Neg(m_Value(X)))) &&
+           match(Not, m_OneUse(m_Not(m_Specific(X))));
+  };
+
+  Value *X;
+  Value *Mask;
+
+  // select C, (sub 0, X), (xor X, -1) -> sub (sext !C), X
+  if (matchNegNot(TrueVal, FalseVal, X)) {
+    Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
+    Mask = Builder.CreateSExt(NotCond, SelTy);
+    return BinaryOperator::CreateSub(Mask, X);
+  }
+
+  // select C, (xor X, -1), (sub 0, X) -> sub (sext C), X
+  if (matchNegNot(FalseVal, TrueVal, X)) {
+    Mask = Builder.CreateSExt(CondVal, SelTy);
+    return BinaryOperator::CreateSub(Mask, X);
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -4512,6 +4605,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return new SExtInst(NotCond, SelType);
     }
   }
+
+  if (Instruction *I = foldSelectNegNot(SI, Builder))
+    return I;
 
   auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
 

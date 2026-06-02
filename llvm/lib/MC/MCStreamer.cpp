@@ -1171,7 +1171,7 @@ void MCStreamer::emitWindowsUnwindTables() {}
 void MCStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {}
 
 void MCStreamer::finish(SMLoc EndLoc) {
-  if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
+  if (hasUnfinishedDwarfFrameInfo() ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(EndLoc, "Unfinished frame!");
     return;

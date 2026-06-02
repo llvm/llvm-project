@@ -177,6 +177,12 @@ public:
     const uint32_t idx = ePropertyUseGPacketForReading;
     return GetPropertyAtIndexAs<bool>(idx, true);
   }
+
+  uint64_t GetPacketTestDelay() const {
+    const uint32_t idx = ePropertyPacketTestDelay;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_processgdbremote_properties[idx].default_uint_value);
+  }
 };
 
 std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
@@ -223,6 +229,11 @@ void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
   return std::chrono::seconds(GetGlobalPluginProperties().GetPacketTimeout());
+}
+
+std::chrono::milliseconds ProcessGDBRemote::GetPacketTestDelay() {
+  return std::chrono::milliseconds(
+      GetGlobalPluginProperties().GetPacketTestDelay());
 }
 
 ArchSpec ProcessGDBRemote::GetSystemArchitecture() {
@@ -1752,13 +1763,19 @@ void ProcessGDBRemote::ParseExpeditedRegisters(
   RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
 
   for (const auto &pair : expedited_register_map) {
-    StringExtractor reg_value_extractor(pair.second);
-    WritableDataBufferSP buffer_sp(
-        new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
-    reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
     uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
         eRegisterKindProcessPlugin, pair.first);
-    gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+    if (lldb_regnum != LLDB_INVALID_REGNUM) {
+      StringExtractor reg_value_extractor(pair.second);
+      if (reg_value_extractor.GetStringRef().empty()) {
+        gdb_thread->PrivateSetRegisterUnavailable(lldb_regnum);
+        continue;
+      }
+      WritableDataBufferSP buffer_sp(
+          new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
+      reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
+      gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
+    }
   }
 }
 
@@ -2873,11 +2890,11 @@ static uint64_t ComputeNumRangesMultiMemRead(
 }
 
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
-ProcessGDBRemote::ReadMemoryRanges(
+ProcessGDBRemote::DoReadMemoryRanges(
     llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
     llvm::MutableArrayRef<uint8_t> buffer) {
   if (!m_gdb_comm.GetMultiMemReadSupported())
-    return Process::ReadMemoryRanges(ranges, buffer);
+    return Process::DoReadMemoryRanges(ranges, buffer);
 
   const llvm::ArrayRef<Range<lldb::addr_t, size_t>> original_ranges = ranges;
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory_regions;
@@ -2886,7 +2903,7 @@ ProcessGDBRemote::ReadMemoryRanges(
     uint64_t num_ranges =
         ComputeNumRangesMultiMemRead(m_max_memory_size, ranges);
     if (num_ranges == 0)
-      return Process::ReadMemoryRanges(original_ranges, buffer);
+      return Process::DoReadMemoryRanges(original_ranges, buffer);
 
     auto ranges_for_request = ranges.take_front(num_ranges);
     ranges = ranges.drop_front(num_ranges);
@@ -2896,7 +2913,7 @@ ProcessGDBRemote::ReadMemoryRanges(
     if (!response) {
       LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
                      "MultiMemRead error response: {0}");
-      return Process::ReadMemoryRanges(original_ranges, buffer);
+      return Process::DoReadMemoryRanges(original_ranges, buffer);
     }
 
     llvm::StringRef response_str = response->GetStringRef();
@@ -2905,7 +2922,7 @@ ProcessGDBRemote::ReadMemoryRanges(
             response_str, buffer, expected_num_ranges, memory_regions)) {
       LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
                      "MultiMemRead error parsing response: {0}");
-      return Process::ReadMemoryRanges(original_ranges, buffer);
+      return Process::DoReadMemoryRanges(original_ranges, buffer);
     }
   }
   return memory_regions;
@@ -5536,6 +5553,9 @@ llvm::Error ProcessGDBRemote::LoadModules() {
 
       if (obj->GetType() != ObjectFile::Type::eTypeExecutable)
         return IterationAction::Continue;
+
+      if (target.GetExecutableModulePointer() == module_sp.get())
+        return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
       target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);

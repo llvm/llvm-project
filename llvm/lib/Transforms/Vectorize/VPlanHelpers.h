@@ -323,9 +323,6 @@ struct VPTransformState {
 
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
-  /// Choice for how to widen a call at a given VF.
-  enum class CallWideningKind { Scalarize, Intrinsic, VectorVariant };
-
   const TargetTransformInfo &TTI;
   const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
@@ -354,6 +351,10 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// Mark the widening decision for \p I at \p VF as invalidated since a VPlan
+  /// transform replaced the original recipe.
+  void invalidateWideningDecision(Instruction *I, ElementCount VF);
+
   /// \returns how much the cost of a predicated block should be divided by.
   /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
   uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
@@ -363,11 +364,6 @@ struct VPCostContext {
 
   /// Forwards to LoopVectorizationCostModel::isMaskRequired.
   bool isMaskRequired(Instruction *I) const;
-
-  /// Returns the legacy call widening decision for \p CI at \p VF, or
-  /// std::nullopt if none was recorded. Used only in asserts.
-  std::optional<CallWideningKind> getLegacyCallKind(CallInst *CI,
-                                                    ElementCount VF) const;
 
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;

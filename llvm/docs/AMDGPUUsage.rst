@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -828,6 +830,55 @@ For example:
 
      =============== ============================ ==================================================
 
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
+
 .. _amdgpu-target-id:
 
 Target ID
@@ -1131,7 +1182,7 @@ supported for the ``amdgcn`` target.
 
   These pointers can be created by ``addrspacecast`` from a buffer resource
   (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
-  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
+  ``ptr addrspace(9)`` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
@@ -1152,6 +1203,15 @@ supported for the ``amdgcn`` target.
 
 Memory Scopes
 -------------
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
@@ -1323,6 +1383,45 @@ It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
 intrinsics. Reading from or writing to such pointers is undefined behavior.
+
+Strided Buffer Marker (``stridemark``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The strided buffer marker type ``target("amdgpu.stridemark")`` is a type used to
+allow representing the mixed index/offset access provided by buffer instructions,
+which is used with ``ptr addrspace(9)`` - a pointer that carries both indices.
+
+This type is a compile-time marker that has no real value and appears only in
+element type metadata. No value of this type can be created.
+
+The marker type has one optional parameter - an integer indicating the constant
+value of the stride of the buffer(s) being addressed if known. That integer, if
+given, must be non-negative (but can be 0, indicating the degenarate case where
+no stride is set but the index field should be used anyway).
+
+When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
+represent indexing into the *index* component of the structured/strided buffer,
+while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
+part.
+
+Example usage:
+
+.. code-block:: llvm
+
+      ;; A 2-D array of unknown length and stride.
+      %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
+        i32 %index)
+      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
+
+      ;; Known bounds on index and offset.
+      %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
+        i32 %index)
+      %y = getelementptr ptr addrspace(9) %y1, i32 %offset
+
+Note that the lowering for these examples is not yet implemented and will
+be added in future changes.
 
 LLVM IR Intrinsics
 ------------------
@@ -1825,6 +1924,98 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 .. TODO::
 
    List AMDGPU intrinsics.
+
+'``llvm.amdgcn.av``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
+
+The pointer argument can be a global pointer (``addrspace(1)``) or a flat
+pointer (``addrspace(0)``). Global pointers select ``global_load``/
+``global_store`` instructions; flat pointers select ``flat_load``/
+``flat_store`` instructions. The cache policy bits are the same in both cases.
+
+.. code-block:: llvm
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p1(
+       ptr addrspace(1), ; source (global)
+       metadata)         ; scope    - e.g. '!0' where '!0 = !{!"workgroup"}'
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p0(
+       ptr,              ; source (flat)
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p1(
+       ptr addrspace(1), ; destination (global)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p0(
+       ptr,              ; destination (flat)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+Implementation Details
+++++++++++++++++++++++
+
+This section is informational and for **internal reference only**. Users should
+not rely on the expansions described below. The only reliable user-level
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
+
+The tables below show the cache policy bits for global pointer variants.
+Flat pointer variants use the corresponding ``flat_load``/``flat_store``
+instructions with the same cache policy bits.
+
+**TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
+``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
+enabled this should map to ``scope:SCOPE_SE``.
+
+.. table:: AMDGPU Load-Visible Implementation
+   :class: longtable
+
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target       | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
+   +==============+=========================+===============+===============+===============+===============+===============+
+   | gfx90*       | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10*       | ``global_load_dwordx4`` |               |               | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* (WGP) | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11*       | ``global_load_b128``    |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* (WGP) | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+       | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+
+.. table:: AMDGPU Store-Available Implementation
+   :class: longtable
+
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target | instruction              | wavefront     | workgroup     | cluster       | agent         | system        |
+   +========+==========================+===============+===============+===============+===============+===============+
+   | gfx90* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* | ``global_store_b128``    |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+ | ``global_store_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+
+**Note:** Cache control bits for Store are not affected by WGP mode.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -6931,6 +7122,15 @@ code (see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
