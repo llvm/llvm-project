@@ -930,7 +930,12 @@ public:
     if (auto *ExprWithClean = dyn_cast<ExprWithCleanups>(Arg))
       Arg = ExprWithClean->getSubExpr()->IgnoreParenCasts();
     if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg)) {
-      if (OriginalQT == BTE->getType())
+      // Only elide when the temporary *is* the returned object, i.e. it has the
+      // same smart-pointer type as the return value. Compare canonical,
+      // unqualified types rather than relying on exact QualType identity, which
+      // is sensitive to sugar (typedefs/aliases) and cv-qualifiers.
+      if (OriginalQT.getCanonicalType().getUnqualifiedType() ==
+          BTE->getType().getCanonicalType().getUnqualifiedType())
         return Visit(BTE->getSubExpr());
     }
     return Visit(Arg);

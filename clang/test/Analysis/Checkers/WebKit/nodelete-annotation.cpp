@@ -685,3 +685,19 @@ void [[clang::annotate_type("webkit.nodelete")]] discardedTemporaryIsFlagged() {
 }
 
 } // namespace argument_temporaries_are_not_elided
+
+namespace returned_prvalue_typedef {
+
+// A returned prvalue spelled through a typedef/alias is still the return-slot
+// object and must be elided. The elision relies on a canonical, unqualified
+// type comparison rather than exact QualType identity.
+
+using RefRC = Ref<RefCountable>;
+RefRC [[clang::annotate_type("webkit.nodelete")]] makeAlias();
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnTypedefPrvalue() {
+  return makeAlias(); // no warning: the elided temporary is the return slot.
+}
+
+} // namespace returned_prvalue_typedef
+
