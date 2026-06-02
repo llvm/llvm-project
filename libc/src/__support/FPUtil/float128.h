@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 
-#include "src/__support/CPP/bit.h" // cpp::bit_cast
+#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
@@ -24,8 +24,8 @@ struct Float128 {
   LIBC_INLINE Float128() = default;
 
   LIBC_INLINE constexpr explicit Float128(double x) : bits(0) {
-    uint64_t d = cpp::bit_cast<uint64_t>(x);
-    bits = static_cast<UInt128>(d) << 64U;
+    uint64_t x_bits = cpp::bit_cast<uint64_t>(x);
+    bits = static_cast<UInt128>(x_bits) << 64U;
   }
 
   LIBC_INLINE constexpr explicit operator double() const {
