@@ -72,7 +72,7 @@ __attribute__((section("non_trivial_ctor"))) const t1 v2{3}; // expected-error {
 
 // Check that a section conflict with a decl whose name is not a simple
 // identifier (here, a lambda's call operator) is diagnosed without crashing.
-namespace lambda_call_operator {
+namespace GH192264 {
 auto lambda = [](int val) __attribute__((section("lambda_op"))) { return val; }; // expected-note {{declared here}}
 __attribute__((section("lambda_op"))) int i{}; // expected-error {{'i' causes a section type conflict with 'operator()'}}
 } // namespace lambda_call_operator
