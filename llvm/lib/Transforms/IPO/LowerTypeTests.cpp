@@ -1790,9 +1790,11 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     if (IsExported) {
       GlobalValue::GUID GUID = F->getGUIDOrFallbackDropEscape();
       if (IsJumpTableCanonical)
-        ExportSummary->cfiFunctionDefs().emplace(GUID, F->getName());
+        ExportSummary->cfiFunctionDefs().addSymbolWithThinLTOGUID(F->getName(),
+                                                                  GUID);
       else
-        ExportSummary->cfiFunctionDecls().emplace(GUID, F->getName());
+        ExportSummary->cfiFunctionDecls().addSymbolWithThinLTOGUID(F->getName(),
+                                                                   GUID);
     }
 
     if (!IsJumpTableCanonical) {
@@ -2124,10 +2126,9 @@ bool LowerTypeTestsModule::lower() {
       // have the same name, but it's not the one we are looking for.
       if (F.hasLocalLinkage())
         continue;
-      auto GUID = F.getGUIDOrFallback();
-      if (ImportSummary->cfiFunctionDefs().count(GUID))
+      if (ImportSummary->cfiFunctionDefs().contains(F.getName()))
         Defs.push_back(&F);
-      else if (ImportSummary->cfiFunctionDecls().count(GUID))
+      else if (ImportSummary->cfiFunctionDecls().contains(F.getName()))
         Decls.push_back(&F);
     }
 

@@ -5371,7 +5371,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     if (CfiIndex.empty())
       return;
     for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-      for (StringRef Name : CfiIndex.forGuid(GUID)) {
+      for (StringRef Name : CfiIndex.getMatchingNamesForThinLTOGUID(GUID)) {
         Functions.push_back({GUID, Name});
       }
     }

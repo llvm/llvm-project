@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1333,12 +1334,24 @@ struct TypeIdSummary {
 };
 
 class CfiFunctionIndex {
-  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
+  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>>
+      ThinLTOToNameIndex;
+  StringSet<> Names;
+
   using IndexIterator =
       DenseMap<GlobalValue::GUID,
                std::set<std::string, std::less<>>>::const_iterator;
   using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
 
+  template <typename It> CfiFunctionIndex(It B, It E) {
+    for (; B != E; ++B) {
+      StringRef S(*B);
+      GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::dropLLVMManglingEscape(S));
+      ThinLTOToNameIndex[GUID].emplace(S);
+      Names.insert(S);
+    }
+  }
 public:
   // Iterates keys of the DenseMap.
   class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
@@ -1354,42 +1367,45 @@ public:
   };
 
   CfiFunctionIndex() = default;
-  template <typename It> CfiFunctionIndex(It B, It E) {
-    for (; B != E; ++B) {
-      StringRef S(*B);
-      GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-          GlobalValue::dropLLVMManglingEscape(S));
-      Index[GUID].emplace(S);
-    }
+  
+  template <typename It>
+  static CfiFunctionIndex createForTest(It B, It E) {
+    return CfiFunctionIndex(B, E);
   }
 
   std::vector<StringRef> symbols() const {
     std::vector<StringRef> Symbols;
-    for (auto &[GUID, Syms] : Index) {
-      (void)GUID;
-      llvm::append_range(Symbols, Syms);
+    for (auto &[_, Syms] : Names) {
+      Symbols.emplace_back(Names);
     }
     return Symbols;
   }
 
-  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
-  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
-  iterator_range<GUIDIterator> guids() const {
-    return make_range(guid_begin(), guid_end());
+  auto getExportedGuids() const {
+    return map_range(ThinLTOToNameIndex, [](auto I) { return I.first; });
   }
 
-  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
-    auto I = Index.find(GUID);
-    if (I == Index.end())
+  iterator_range<NestedIterator>
+  getMatchingNamesForThinLTOGUID(GlobalValue::GUID GUID) const {
+    auto I = ThinLTOToNameIndex.find(GUID);
+    if (I == ThinLTOToNameIndex.end())
       return make_range(NestedIterator{}, NestedIterator{});
     return make_range(I->second.begin(), I->second.end());
   }
 
-  void emplace(GlobalValue::GUID GUID, StringRef S) { Index[GUID].emplace(S); }
+  void addSymbolWithThinLTOGUID(StringRef S, GlobalValue::GUID GUID) {
+    ThinLTOToNameIndex[GUID].emplace(S);
+    Names.insert(S);
+  }
 
-  size_t count(GlobalValue::GUID GUID) const { return Index.count(GUID); }
+  bool contains(StringRef Name) const {
+    return Names.find(Name) != Names.end();
+  }
 
-  bool empty() const { return Index.empty(); }
+  bool empty() const {
+    assert(Names.empty() == ThinLTOToNameIndex.empty());
+    return ThinLTOToNameIndex.empty();
+  }
 };
 
 /// 160 bits SHA1

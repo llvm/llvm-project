@@ -361,11 +361,12 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
     } else {
       std::vector<std::string> CfiFunctionDefs;
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      index.CfiFunctionDefs = {CfiFunctionDefs.begin(), CfiFunctionDefs.end()};
+      index.CfiFunctionDefs = CfiFunctionIndex::createForTest(
+          CfiFunctionDefs.begin(), CfiFunctionDefs.end());
       std::vector<std::string> CfiFunctionDecls;
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
-      index.CfiFunctionDecls = {CfiFunctionDecls.begin(),
-                                CfiFunctionDecls.end()};
+      index.CfiFunctionDecls = CfiFunctionIndex::createForTest(
+          CfiFunctionDecls.begin(), CfiFunctionDecls.end());
     }
   }
 };
