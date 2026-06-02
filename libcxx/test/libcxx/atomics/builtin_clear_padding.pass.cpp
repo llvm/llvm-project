@@ -660,7 +660,7 @@ void structTests() {
   {
     struct S {
       unsigned int b1 : 1;
-      unsigned int : 30;
+      unsigned int    : 30;
       unsigned int b2 : 1;
     };
 
