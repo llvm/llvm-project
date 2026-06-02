@@ -14,6 +14,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER_P(VarDecl, hasOwnInitializer, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *Initializer = Node.getInit();
+  return Initializer != nullptr &&
+         InnerMatcher.matches(*Initializer, Finder, Builder);
+}
+} // namespace
+
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
   Finder->addMatcher(parmVarDecl().bind("Parm"), this);
@@ -32,7 +41,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
                  cxxUnresolvedConstructExpr()))
           .bind("Mark"),
       this);
-  Finder->addMatcher(varDecl(hasInitializer(anything())).bind("Mark"), this);
+  Finder->addMatcher(varDecl(hasOwnInitializer(anything())).bind("Mark"), this);
 }
 
 void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
@@ -104,12 +113,7 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
     if (T->isDependentType()) {
-      // Initializer matched by hasInitializer() may be attached to a different
-      // redeclaration.
-      const Expr *Init = VD->getInit();
-      if (!Init)
-        return;
-      Init = Init->IgnoreParenCasts();
+      const Expr *Init = VD->getInit()->IgnoreParenCasts();
       if (const auto *U = dyn_cast<UnaryOperator>(Init);
           U && U->getOpcode() == UO_Deref) {
         markCanNotBeConst(U->getSubExpr(), true);

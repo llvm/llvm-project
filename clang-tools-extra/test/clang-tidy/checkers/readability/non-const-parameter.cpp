@@ -435,9 +435,17 @@ void dependentInitInGenericLambdaMultiArg() {
 }
 
 template <class T>
-struct StaticMemberWithDependentType {
+struct StaticDepInClassInit {
   static const T X = 0;
 };
 
 template <class T>
-const T StaticMemberWithDependentType<T>::X;
+const T StaticDepInClassInit<T>::X;
+
+template <class T>
+struct StaticDepOutOfClassInit {
+  static const T X;
+};
+
+template <class T>
+const T StaticDepOutOfClassInit<T>::X = 0;
