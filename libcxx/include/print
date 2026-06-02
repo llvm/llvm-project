@@ -338,9 +338,9 @@ println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, 
 #    endif // _LIBCPP_HAS_UNICODE
 }
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+template <class _Void = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
-  std::print(__stream, "\n");
+  std::print(__stream, (_Void(), "\n"));
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
