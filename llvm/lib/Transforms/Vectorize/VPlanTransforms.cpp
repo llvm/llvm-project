@@ -7025,9 +7025,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // Create the base pointer of strided access.
       VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
-      Type *IndexTy =
-          Plan.getDataLayout().getIndexType(TypeInfo.inferScalarType(Ptr));
-      assert(IndexTy == TypeInfo.inferScalarType(StrideInBytes) &&
+      Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+      assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIVTyStride = Builder.createScalarSExtOrTrunc(
           StrideInBytes, VectorLoop->getCanonicalIVType(), IndexTy,
