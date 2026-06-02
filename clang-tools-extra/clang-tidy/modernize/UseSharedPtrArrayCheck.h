@@ -25,7 +25,6 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus17;
   }
-
 };
 
 } // namespace clang::tidy::modernize

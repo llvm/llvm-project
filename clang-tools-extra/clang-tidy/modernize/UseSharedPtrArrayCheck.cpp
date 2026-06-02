@@ -32,8 +32,8 @@ AST_MATCHER(FunctionDecl, funcHasSingleArrayDeleteBody) {
   const auto *DE = dyn_cast<CXXDeleteExpr>(E->IgnoreParenImpCasts());
   if (!DE || !DE->isArrayForm())
     return false;
-  const auto *DRE = dyn_cast<DeclRefExpr>(
-      DE->getArgument()->IgnoreParenImpCasts());
+  const auto *DRE =
+      dyn_cast<DeclRefExpr>(DE->getArgument()->IgnoreParenImpCasts());
   return DRE && DRE->getDecl() == Param;
 }
 
@@ -53,8 +53,8 @@ AST_MATCHER(LambdaExpr, lambdaHasSingleArrayDeleteBody) {
   const auto *DE = dyn_cast<CXXDeleteExpr>(E->IgnoreParenImpCasts());
   if (!DE || !DE->isArrayForm())
     return false;
-  const auto *DRE = dyn_cast<DeclRefExpr>(
-      DE->getArgument()->IgnoreParenImpCasts());
+  const auto *DRE =
+      dyn_cast<DeclRefExpr>(DE->getArgument()->IgnoreParenImpCasts());
   return DRE && DRE->getDecl() == Param;
 }
 
@@ -70,19 +70,19 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
               0, ignoringParenImpCasts(cxxNewExpr(isArray()).bind("newExpr"))),
 
           hasArgument(
-              1,
-              ignoringImplicit(anyOf(
+              1, ignoringImplicit(anyOf(
 
-                  cxxConstructExpr(
-                      hasType(qualType(hasCanonicalType(
-                          hasDeclaration(classTemplateSpecializationDecl(
-                              hasName("::std::default_delete")))))))
-                      .bind("defaultDelete"),
+                     cxxConstructExpr(
+                         hasType(qualType(hasCanonicalType(
+                             hasDeclaration(classTemplateSpecializationDecl(
+                                 hasName("::std::default_delete")))))))
+                         .bind("defaultDelete"),
 
-                  lambdaExpr(lambdaHasSingleArrayDeleteBody()).bind("lambdaDeleter"),
+                     lambdaExpr(lambdaHasSingleArrayDeleteBody())
+                         .bind("lambdaDeleter"),
 
-                  declRefExpr(to(functionDecl(funcHasSingleArrayDeleteBody())
-                                     .bind("deleterFunction")))))))
+                     declRefExpr(to(functionDecl(funcHasSingleArrayDeleteBody())
+                                        .bind("deleterFunction")))))))
 
           .bind("sharedPtrCtor"),
       this);
@@ -140,7 +140,6 @@ static StringRef extractWrittenElementType(const TypeSourceInfo *TSI,
       CharSourceRange::getTokenRange(ArgTL.getBeginLoc(), ArgTL.getEndLoc());
   return Lexer::getSourceText(R, SM, LO);
 }
-
 
 // Returns the QualType of the deleter's pointee, or null if the
 // deleter shape is not recognised.
