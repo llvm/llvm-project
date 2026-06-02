@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86LegalizerInfo.h"
+#include "X86ShuffleUtils.h"
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -24,6 +25,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
+#define DEBUG_TYPE "x86-legalizer-info"
 using namespace llvm;
 using namespace TargetOpcode;
 using namespace LegalizeActions;
@@ -581,6 +583,26 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                          {v8s64, v2s64},
                          {v8s64, v4s64}});
 
+  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+      .customFor(HasSSE2, {{v16s8, v16s8},
+                           {v8s16, v8s16},
+                           {v4s32, v4s32},
+                           {v2s64, v2s64},
+                           {v4s32, v4s32},
+                           {v2s64, v2s64}})
+      .customFor(HasAVX, {{v32s8, v32s8},
+                          {v16s16, v16s16},
+                          {v8s32, v8s32},
+                          {v4s64, v4s64},
+                          {v8s32, v8s32},
+                          {v4s64, v4s64}})
+      .customFor(HasAVX512, {{v64s8, v64s8},
+                             {v32s16, v32s16},
+                             {v16s32, v16s32},
+                             {v8s64, v8s64},
+                             {v16s32, v16s32},
+                             {v8s64, v8s64}});
+
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
       .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
@@ -621,6 +643,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return legalizeShuffleVector(MI, MRI, Helper);
   case TargetOpcode::G_FPTOUI:
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
@@ -1008,4 +1032,206 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                          MachineInstr &MI) const {
   return true;
+}
+
+/// Compute whether each element of a shuffle is zeroable.
+///
+/// A "zeroable" vector shuffle element is one which can be lowered to zero.
+/// Either it is an undef element in the shuffle mask, the element of the input
+/// referenced is undef, or the element of the input referenced is known to be
+/// zero. Many x86 shuffles can zero lanes cheaply and we often want to handle
+/// as many lanes with this technique as possible to simplify the remaining
+/// shuffle.
+static void computeZeroableShuffleElements(ArrayRef<int> Mask, Register V1,
+                                           Register V2,
+                                           MachineRegisterInfo &MRI,
+                                           APInt &KnownUndef,
+                                           APInt &KnownZero) {
+  int Size = Mask.size();
+  KnownUndef = KnownZero = APInt::getZero(Size);
+
+  // TODO: Add pick Throught bitcast
+
+  bool V1IsZero = false;
+  bool V2IsZero = false;
+
+  auto *V1Def = MRI.getVRegDef(V1);
+  auto *V2Def = MRI.getVRegDef(V2);
+
+  // Check if V1 is a build vector of all zeros
+  if (auto *BV1 = dyn_cast<GBuildVector>(V1Def)) {
+    V1IsZero = isBuildVectorAllOnes(*BV1, MRI);
+  }
+  // Check if V2 is a build vector of all zeros
+  if (auto *BV2 = dyn_cast<GBuildVector>(V2Def)) {
+    V2IsZero = isBuildVectorAllZeros(*BV2, MRI);
+  }
+
+  for (int i = 0; i < Size; ++i) {
+    int M = Mask[i];
+
+    // Handle the easy cases.
+    if (M < 0) {
+      KnownUndef.setBit(i);
+      continue;
+    }
+
+    // Check if element comes from an all-zero vector
+    if ((M >= 0 && M < Size && V1IsZero) || (M >= Size && V2IsZero)) {
+      KnownZero.setBit(i);
+      continue;
+    }
+
+    // Determine shuffle input and normalize the mask
+    Register V = M < Size ? V1 : V2;
+    M %= Size;
+
+    // Check if source is undef
+    MachineInstr *VDef = MRI.getVRegDef(V);
+    if (VDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      KnownUndef.setBit(i);
+      continue;
+    }
+
+    // Check BUILD_VECTOR for individual UNDEF/ZERO elements
+    if (auto *BV = dyn_cast<GBuildVector>(VDef)) {
+      if (M < (int)BV->getNumSources()) {
+        Register SrcReg = BV->getSourceReg(M);
+        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
+
+        // Check if this specific element is undef
+        if (SrcDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+          KnownUndef.setBit(i);
+          continue;
+        }
+
+        // Check if this specific element is zero
+        auto ValAndVReg = getIConstantVRegValWithLookThrough(SrcReg, MRI);
+        if (ValAndVReg && ValAndVReg->Value == 0) {
+          KnownZero.setBit(i);
+          continue;
+        }
+
+        // Check for floating point zero
+        auto FPValAndVReg = getFConstantVRegValWithLookThrough(SrcReg, MRI);
+        if (FPValAndVReg && FPValAndVReg->Value.isZero()) {
+          KnownZero.setBit(i);
+          continue;
+        }
+      }
+    }
+  }
+}
+
+/// Handle lowering of 2-lane 64-bit floating point shuffles.
+///
+/// This is the basis function for the 2-lane 64-bit shuffles as we have full
+/// support for floating point shuffles but not integer shuffles. These
+/// instructions will incur a domain crossing penalty on some chips though so
+/// it is better to avoid lowering through this for integer vectors where
+/// possible.
+static bool lowerV2F64Shuffle(const X86Subtarget &Subtarget, MachineInstr &MI,
+                              MachineRegisterInfo &MRI, LegalizerHelper &Helper,
+                              ArrayRef<int> Mask, Register Dst, Register Src1,
+                              Register Src2) {
+  LLVM_DEBUG(dbgs() << "Lowering v2f64 shuffle: " << MI);
+  assert(Mask.size() == 2 && "Unexpected mask size for v2 shuffle!");
+  // TODO Src2 is Undef
+  assert(Mask[0] >= 0 && "No undef lanes in multi-input v2 shuffles!");
+  assert(Mask[1] >= 0 && "No undef lanes in multi-input v2 shuffles!");
+  assert(Mask[0] < 2 && "We sort V1 to be the first input.");
+  assert(Mask[1] >= 2 && "We sort V2 to be the second input.");
+
+  // Calculate SHUFPD immediate: bit 0 from Mask[0], bit 1 from (Mask[1] - 2)
+  unsigned SHUFPDMask = (Mask[0] == 1) | (((Mask[1] - 2) == 1) << 1);
+
+  auto SHUFPDInst = Helper.MIRBuilder.buildInstr(X86::G_X86_SHUFP)
+                        .addDef(Dst)
+                        .addUse(Src1)
+                        .addUse(Src2)
+                        .addImm(SHUFPDMask);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool lower128BitShuffle(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               LegalizerHelper &Helper, ArrayRef<int> Mask,
+                               Register Dst, Register Src1, Register Src2) {
+  // TODO: we need Extended LLT for BF16 shuffle.
+  return lowerV2F64Shuffle(
+      Helper.MIRBuilder.getMF().getSubtarget<X86Subtarget>(), MI, MRI, Helper,
+      Mask, Dst, Src1, Src2);
+}
+
+bool X86LegalizerInfo::legalizeShuffleVector(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto &ShuffleVec = cast<GShuffleVector>(MI);
+
+  Register Dst = ShuffleVec.getReg(0);
+  Register Src1 = ShuffleVec.getSrc1Reg();
+  ArrayRef<int> Mask = ShuffleVec.getMask();
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src1);
+
+  unsigned NumElts = DstTy.getNumElements();
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+  unsigned VecSize = DstTy.getSizeInBits();
+  unsigned NumSrcElts = SrcTy.getNumElements();
+
+  Register Src2 = ShuffleVec.getSrc2Reg();
+  bool Src2IsUndef = getOpcodeDef<GImplicitDef>(Src2, MRI) != nullptr;
+  bool Src1IsUndef = getOpcodeDef<GImplicitDef>(Src1, MRI) != nullptr;
+
+  if (Src2IsUndef && Src1IsUndef) {
+    // Both sources are undef, just return an undef vector.
+    auto UndefVec = MIRBuilder.buildUndef(DstTy);
+    MIRBuilder.buildCopy(Dst, UndefVec);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // Case 1: Check for non-undef masks pointing at an undef vector and make the
+  // masks undef as well. This makes it easier to match the shuffle based solely
+  // on the mask.
+  if (Src2IsUndef && x86shufutils::hasMaskIndexOutOfBounds(Mask, NumElts)) {
+    SmallVector<int, 8> NewMask;
+    x86shufutils::getCanonicalizeMask(Mask, NumElts, NewMask);
+    auto NewShuf = MIRBuilder.buildShuffleVector(DstTy, Src1, Src2, NewMask);
+    MRI.replaceRegWith(Dst, NewShuf.getReg(0));
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // For Source2 != undef, make sure shuffle mask is legal.
+  int MaskUpperLimit = Mask.size() * (Src2IsUndef ? 1 : 2);
+  assert(x86shufutils::isLegalMask(Mask, NumElts, MaskUpperLimit) &&
+         "Out of bounds shuffle index");
+
+  // Case 2: We actually see shuffles that are entirely re-arrangements of a set
+  // of zero inputs. This mostly happens while decomposing complex shuffles into
+  // simple ones. Directly lower these as a buildvector of zeros.
+  APInt KnownUndef, KnownZero;
+  computeZeroableShuffleElements(Mask, Src1, Src2, MRI, KnownUndef, KnownZero);
+
+  APInt Zeroable = KnownUndef | KnownZero;
+  if (Zeroable.isAllOnes()) {
+    // All elements are zeroable - return zero vector
+    auto Zero = MIRBuilder.buildConstant(LLT::scalar(EltSize), 0);
+    SmallVector<Register, 16> Zeros(NumElts, Zero.getReg(0));
+    auto ZeroVec = MIRBuilder.buildBuildVector(DstTy, Zeros);
+    MRI.replaceRegWith(Dst, ZeroVec.getReg(0));
+    MI.eraseFromParent();
+    return true;
+  }
+  bool Src2IsZero =
+      !Src2IsUndef && isBuildVectorAllZeros(*MRI.getVRegDef(Src2), MRI);
+  // TODO:
+  if (DstTy.getSizeInBits() == 128)
+    return lower128BitShuffle(MI, MRI, Helper, Mask, Dst, Src1, Src2);
+  llvm_unreachable("Unexpected shuffle type");
 }

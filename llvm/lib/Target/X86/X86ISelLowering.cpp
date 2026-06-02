@@ -18,6 +18,7 @@
 #include "X86InstrBuilder.h"
 #include "X86IntrinsicsInfo.h"
 #include "X86MachineFunctionInfo.h"
+#include "X86ShuffleUtils.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -18895,11 +18896,9 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   // undef as well. This makes it easier to match the shuffle based solely on
   // the mask.
   if (V2IsUndef &&
-      any_of(OrigMask, [NumElements](int M) { return M >= NumElements; })) {
-    SmallVector<int, 8> NewMask(OrigMask);
-    for (int &M : NewMask)
-      if (M >= NumElements)
-        M = -1;
+      x86shufutils::hasMaskIndexOutOfBounds(OrigMask, NumElements)) {
+    SmallVector<int, 8> NewMask;
+    x86shufutils::getCanonicalizeMask(OrigMask, NumElements, NewMask);
     return DAG.getVectorShuffle(VT, DL, V1, V2, NewMask);
   }
 
