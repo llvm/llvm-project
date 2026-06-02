@@ -28,10 +28,9 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
     bool AlwaysInline, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
-  Align Alignment = std::min(DstAlign, SrcAlign);
   unsigned SizeBitWidth = Size.getValueSizeInBits();
   // Call __memcpy_4 if the src, dst and size are all 4 byte aligned.
-  if (!AlwaysInline && Alignment >= Align(4) &&
+  if (!AlwaysInline && SrcAlign >= Align(4) && DstAlign >= Align(4) &&
       DAG.MaskedValueIsZero(Size, APInt(SizeBitWidth, 3))) {
     const TargetLowering &TLI = *DAG.getSubtarget().getTargetLowering();
     TargetLowering::ArgListTy Args;
