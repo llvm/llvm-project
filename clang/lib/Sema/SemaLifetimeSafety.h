@@ -474,12 +474,7 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
-    // FIXME: Ideally, this should use IgnoreParenImpCasts().
-    // However, according to the comment on IgnoreParenImpCasts(),
-    // it is not fully equivalent to IgnoreImpCasts() + IgnoreParens().
-    // Once the FIXME in IgnoreParenImpCasts() is resolved,
-    // this can be switched to use IgnoreParenImpCasts().
-    E = E->IgnoreImpCasts()->IgnoreParens();
+    E = E->IgnoreImpCasts();
     if (isa<MaterializeTemporaryExpr>(E))
       return "local temporary object";
 
@@ -490,13 +485,15 @@ private:
   }
 
   bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
-    CurrExpr = CurrExpr->IgnoreImpCasts()->IgnoreParens();
-    LastExpr = LastExpr->IgnoreImpCasts()->IgnoreParens();
+    CurrExpr = CurrExpr->IgnoreImpCasts();
+    LastExpr = LastExpr->IgnoreImpCasts();
 
-    if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
+    if (isa<MaterializeTemporaryExpr, ParenExpr>(CurrExpr))
       return false;
-    if (isa<MaterializeTemporaryExpr>(CurrExpr) &&
-        isa<MaterializeTemporaryExpr>(LastExpr))
+    // Source ranges can be used to filter out many implicit expressions,
+    // because operations between class objects often involve numerous implicit
+    // conversions, yet they share the same source range.
+    if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
       return false;
 
     return true;
@@ -509,7 +506,7 @@ private:
     const Expr *LastExpr = OriginExprChain.back();
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
 
-    for (const Expr *CurrExpr : reverse(OriginExprChain)) {
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
       if (!shouldShowInAliasChain(CurrExpr, LastExpr))
         continue;
       S.Diag(CurrExpr->getBeginLoc(),

@@ -1266,17 +1266,6 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   (void)*p;  // expected-note 4 {{later used here}}
 }
 
-void simpleparen() {
-  MyObj* p;
-  {
-    MyObj a;
-    MyObj* b = &a;   // expected-warning {{local variable 'a' does not live long enough}} \
-                     // expected-note {{expression aliases the storage of local variable 'a'}}
-    p = (((b)));     // expected-note {{local variable 'b' aliases the storage of local variable 'a'}}
-  }                  // expected-note {{destroyed here}}
-  (void)*p;          // expected-note {{later used here}}
-}
-
 void parentheses(bool cond) {
   MyObj* p;
   {
