@@ -47,8 +47,7 @@ exit:
   ret void
 }
 
-; All members share !tbaa !2.
-; FIXME: the narrowed wide load/store should preserve it.
+; All members share !tbaa !2. The narrowed wide load/store preserve it.
 define void @load_store_interleave_group_with_shared_metadata(ptr noalias %data) {
 ; VF2-LABEL: define void @load_store_interleave_group_with_shared_metadata(
 ; VF2-SAME: ptr noalias [[DATA:%.*]]) {
