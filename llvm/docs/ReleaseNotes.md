@@ -140,6 +140,10 @@ Makes programs 10x faster by doing Special New Thing.
   Use the new ``remove_if`` member to erase matching elements in a single pass
   instead of erasing while iterating.
 
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -360,6 +364,9 @@ Makes programs 10x faster by doing Special New Thing.
 #### Windows
 
 * Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+
 
 ### Changes to BOLT
 

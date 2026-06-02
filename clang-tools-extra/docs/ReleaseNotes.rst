@@ -758,6 +758,9 @@ Changes in existing checks
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
 
+  - Fixed a crash when analyzing a redeclaration whose initializer is attached
+    to another declaration.
+
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by adding the
   `IgnoreImplicitCasts` option (default `false`) to flag casts as redundant
