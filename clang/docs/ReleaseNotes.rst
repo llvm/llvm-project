@@ -600,7 +600,7 @@ Improvements to Clang's diagnostics
 
 - Fixed false positive for host-device ambiguities when retrieving the address
   of specializations of templated functions that have overloads for both host
-  and device.
+  and device. (#GH199299)
 
 Improvements to Clang's time-trace
 ----------------------------------
