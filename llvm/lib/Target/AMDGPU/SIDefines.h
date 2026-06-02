@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -198,10 +199,6 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
-
-// Identifies which FLAT address-space segment an instruction operates on.
-// Passed to helpers like isLegalFLATOffset / splitFlatOffset.
-enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
 
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
