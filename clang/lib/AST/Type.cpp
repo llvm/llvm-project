@@ -14,6 +14,7 @@
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -5341,12 +5342,11 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
 void AttributedType::Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
                              QualType modified, QualType equivalent,
                              const Attr *attr) {
-
   ID.AddInteger(attrKind);
   ID.AddPointer(modified.getAsOpaquePtr());
   ID.AddPointer(equivalent.getAsOpaquePtr());
-  if (attr)
-    attr->Profile(ID);
+  if (const auto *A = dyn_cast_or_null<SwiftAttrAttr>(attr))
+    A->Profile(ID);
 }
 
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {

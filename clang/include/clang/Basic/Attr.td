@@ -3197,7 +3197,7 @@ def SwiftAttr : DeclOrTypeAttr {
   let Documentation = [SwiftAttrDocs];
   let PragmaAttributeSupport = 1;
   let AdditionalMembers = [{
-    void Profile(llvm::FoldingSetNodeID &ID) const override {
+    void Profile(llvm::FoldingSetNodeID &ID) const {
       ID.AddString(getAttribute());
     }
   }];
