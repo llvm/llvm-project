@@ -1,4 +1,4 @@
-//===- TriggerCrashPass.h - Trigger Crash Passes ----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,12 +24,14 @@ class TriggerCrashModulePass
     : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static StringRef name() { return "TriggerCrashModulePass"; }
 };
 
 class TriggerCrashFunctionPass
     : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 FunctionPass *createTriggerCrashFunctionPass();
