@@ -975,7 +975,7 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
 
   uint16_t cols = 0;
   uint16_t rows = 0;
-  llvm::SmallVector<llvm::StringRef, 4> fields;
+  llvm::SmallVector<llvm::StringRef, 2> fields;
   body.split(fields, ';');
   for (llvm::StringRef field : fields) {
     auto [key, value] = field.split('=');
