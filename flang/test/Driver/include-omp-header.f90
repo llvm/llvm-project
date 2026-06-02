@@ -10,8 +10,11 @@
 ! RUN: %flang_fc1 -fsyntax-only -cpp %s
 ! RUN: %flang_fc1 -fsyntax-only -cpp -DHASHINCLUDE %s
 
+! Check non-#include
+! RUN: %flang_fc1 -cpp %s -E -fno-reformat 2>&1 | FileCheck %s --check-prefix=INCLUDE
+! INCLUDE: include "omp_lib.h"
+
 ! Check omp_lib.h contents
-! RUN: %flang_fc1 -cpp %s -E -fno-reformat 2>&1 | FileCheck %s --check-prefix=PREPROCESSED
 ! RUN: %flang_fc1 -cpp %s -E -fno-reformat -DHASHINCLUDE 2>&1 | FileCheck %s --check-prefix=PREPROCESSED
 ! PREPROCESSED: integer(kind=omp_integer_kind)openmp_version
 ! PREPROCESSED: parameter(openmp_version={{[0-9]+}})
