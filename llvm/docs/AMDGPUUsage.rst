@@ -2086,9 +2086,11 @@ For example::
 
 Each waterfall group must be contained within a single basic block.
 A single basic block can contain more than one waterfall group.
+Waterfall regions must not overlap.
 
-Later compiler passes can remove operands determined as uniform.
-If all operands are uniform, the compiler will not insert the waterfall loop.
+Later compiler passes can remove parts of the index that are statically determined to be uniform
+(i.e., remove the corresponding ``waterfall.begin`` intrinsics).
+If all parts of the index are uniform, the compiler will not insert the waterfall loop.
 
 .. table:: AMDGPU Waterfall Intrinsics
   :name: amdgpu-waterfall-intrinsics-table
@@ -2129,7 +2131,8 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
 
   ``llvm.amdgcn.waterfall.end``                    Marks the end of a waterfall region.
                                                    Takes the token from the final ``waterfall.begin`` in the group and
-                                                   a value. Effectively a no-op tagging a value as the end of the section.
+                                                   a value that needs to be available after the waterfall loop.
+                                                   Effectively a no-op tagging a value as the end of the section.
 
   ==============================================   =========================================================================
 
