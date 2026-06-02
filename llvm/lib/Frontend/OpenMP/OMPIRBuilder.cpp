@@ -6539,7 +6539,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Compute the trip counts of the floor loops.
   Builder.SetCurrentDebugLocation(DL);
   Builder.restoreIP(OutermostLoop->getPreheaderIP());
-  SmallVector<Value *, 4> FloorCount;
+  SmallVector<Value *, 4> FloorCompleteCount, FloorCount, FloorRems;
   for (int i = 0; i < NumLoops; ++i) {
     Value *TileSize = TileSizes[i];
     Value *OrigTripCount = OrigTripCounts[i];
@@ -6563,7 +6563,10 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
         Builder.CreateAdd(FloorCompleteTripCount, FloorTripOverflow,
                           "omp_floor" + Twine(i) + ".tripcount", true);
 
+    // Remember some values for later use.
+    FloorCompleteCount.push_back(FloorCompleteTripCount);
     FloorCount.push_back(FloorTripCount);
+    FloorRems.push_back(FloorTripRem);
   }
 
   // Generate the new loop nest, from the outermost to the innermost.
@@ -6607,10 +6610,23 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
 
   EmbeddNewLoops(FloorCount, "floor");
 
-  // Create the tile loops with rectangular (constant) trip counts equal to
-  // the tile sizes. A validity predicate in the body guards against
-  // out-of-bounds iterations in the remainder tile.
-  SmallVector<Value *, 4> TileCounts(TileSizes.begin(), TileSizes.end());
+  // Within the innermost floor loop, emit the code that computes the tile
+  // sizes.
+  Builder.SetInsertPoint(Enter->getTerminator());
+  SmallVector<Value *, 4> TileCounts;
+  for (int i = 0; i < NumLoops; ++i) {
+    CanonicalLoopInfo *FloorLoop = Result[i];
+    Value *TileSize = TileSizes[i];
+
+    Value *FloorIsEpilogue =
+        Builder.CreateICmpEQ(FloorLoop->getIndVar(), FloorCompleteCount[i]);
+    Value *TileTripCount =
+        Builder.CreateSelect(FloorIsEpilogue, FloorRems[i], TileSize);
+
+    TileCounts.push_back(TileTripCount);
+  }
+
+  // Create the tile loops.
   EmbeddNewLoops(TileCounts, "tile");
 
   // Insert the inbetween code into the body.
@@ -6639,7 +6655,6 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // Replace the original induction variable with an induction variable computed
   // from the tile and floor induction variables.
   Builder.restoreIP(Result.back()->getBodyIP());
-  SmallVector<Value *, 4> ShiftValues;
   for (int i = 0; i < NumLoops; ++i) {
     CanonicalLoopInfo *FloorLoop = Result[i];
     CanonicalLoopInfo *TileLoop = Result[NumLoops + i];
@@ -6651,40 +6666,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     Value *Shift =
         Builder.CreateAdd(Scale, TileLoop->getIndVar(), {}, /*HasNUW=*/true);
     OrigIndVar->replaceAllUsesWith(Shift);
-    ShiftValues.push_back(Shift);
   }
-
-  // Build a validity predicate: for each tiled dimension, check that the
-  // computed original index is within the original trip count. This guards
-  // against executing out-of-bounds iterations in the remainder tile.
-  Value *Pred = nullptr;
-  for (int i = 0; i < NumLoops; ++i) {
-    Value *DimPred = Builder.CreateICmpULT(ShiftValues[i], OrigTripCounts[i],
-                                           "omp_tile" + Twine(i) + ".inbounds");
-    Pred = Pred ? Builder.CreateAnd(Pred, DimPred) : DimPred;
-  }
-
-  // Insert the conditional guard: split the body flow so that out-of-bounds
-  // iterations skip directly to a merge block before the tile latch.
-  BasicBlock *TileBodyBB = Builder.GetInsertBlock();
-  Instruction *BodyTerm = TileBodyBB->getTerminator();
-  BasicBlock *BodySucc = cast<UncondBrInst>(BodyTerm)->getSuccessor(0);
-  BasicBlock *TileLatch = Result.back()->getLatch();
-
-  BasicBlock *MergeBB =
-      BasicBlock::Create(F->getContext(), "omp_tile.body.merge", F, TileLatch);
-  Builder.SetInsertPoint(MergeBB);
-  Builder.CreateBr(TileLatch);
-
-  // Redirect the body chain's exit from the tile latch to the merge block.
-  for (BasicBlock *PredBB : llvm::make_early_inc_range(predecessors(TileLatch)))
-    if (PredBB != MergeBB)
-      PredBB->getTerminator()->replaceUsesOfWith(TileLatch, MergeBB);
-
-  // Replace the tile body's unconditional branch with a conditional one.
-  BodyTerm->eraseFromParent();
-  Builder.SetInsertPoint(TileBodyBB);
-  Builder.CreateCondBr(Pred, BodySucc, MergeBB);
 
   // Remove unused parts of the original loops.
   removeUnusedBlocksFromParent(OldControlBBs);
@@ -6692,6 +6674,10 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   for (CanonicalLoopInfo *L : Loops)
     L->invalidate();
 
+#ifndef NDEBUG
+  for (CanonicalLoopInfo *GenL : Result)
+    GenL->assertOK();
+#endif
   return Result;
 }
 

@@ -1618,27 +1618,12 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoop) {
   CanonicalLoopInfo *Floor = GenLoops[0];
   CanonicalLoopInfo *Tile = GenLoops[1];
 
-  // The merge block sits between the body code and the tile latch.
-  BasicBlock *MergeBB = Tile->getLatch()->getSinglePredecessor();
-  ASSERT_NE(MergeBB, nullptr);
-
   BasicBlock *RefOrder[] = {
-      Floor->getPreheader(),
-      Floor->getHeader(),
-      Floor->getCond(),
-      Floor->getBody(),
-      Tile->getPreheader(),
-      Tile->getHeader(),
-      Tile->getCond(),
-      Tile->getBody(),
-      BodyCode,
-      MergeBB,
-      Tile->getLatch(),
-      Tile->getExit(),
-      Tile->getAfter(),
-      Floor->getLatch(),
-      Floor->getExit(),
-      Floor->getAfter(),
+      Floor->getPreheader(), Floor->getHeader(),   Floor->getCond(),
+      Floor->getBody(),      Tile->getPreheader(), Tile->getHeader(),
+      Tile->getCond(),       Tile->getBody(),      BodyCode,
+      Tile->getLatch(),      Tile->getExit(),      Tile->getAfter(),
+      Floor->getLatch(),     Floor->getExit(),     Floor->getAfter(),
   };
   EXPECT_TRUE(verifyDFSOrder(F, RefOrder));
   EXPECT_TRUE(verifyListOrder(F, RefOrder));
@@ -1708,10 +1693,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
   CanonicalLoopInfo *Tile1 = GenLoops[2];
   CanonicalLoopInfo *Tile2 = GenLoops[3];
 
-  // The merge block sits between the body code and the innermost tile latch.
-  BasicBlock *MergeBB = Tile2->getLatch()->getSinglePredecessor();
-  ASSERT_NE(MergeBB, nullptr);
-
   BasicBlock *RefOrder[] = {
       Floor1->getPreheader(),
       Floor1->getHeader(),
@@ -1730,7 +1711,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
       Tile2->getCond(),
       Tile2->getBody(),
       BodyCode,
-      MergeBB,
       Tile2->getLatch(),
       Tile2->getExit(),
       Tile2->getAfter(),
@@ -1821,10 +1801,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
   CanonicalLoopInfo *Tile0 = GenLoops[2];
   CanonicalLoopInfo *Tile1 = GenLoops[3];
 
-  // The merge block sits between the body code and the innermost tile latch.
-  BasicBlock *MergeBB = Tile1->getLatch()->getSinglePredecessor();
-  ASSERT_NE(MergeBB, nullptr);
-
   BasicBlock *RefOrder[] = {
       Floor0->getPreheader(),
       Floor0->getHeader(),
@@ -1843,7 +1819,6 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
       Tile1->getCond(),
       Tile1->getBody(),
       BodyCode,
-      MergeBB,
       Tile1->getLatch(),
       Tile1->getExit(),
       Tile1->getAfter(),
