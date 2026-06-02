@@ -12,6 +12,7 @@
 #include <cstdlib>
 #if LLDB_ENABLE_POSIX
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -19,6 +20,9 @@
 #include <sys/stat.h>
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
+#endif
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
 #endif
 #include <ctime>
 #include <sys/types.h>
@@ -186,6 +190,25 @@ public:
 };
 
 std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
+
+static std::pair<uint16_t, uint16_t> GetClientTerminalSize() {
+#ifdef _WIN32
+  CONSOLE_SCREEN_BUFFER_INFO csbi{};
+  HANDLE h = ::GetStdHandle(STD_OUTPUT_HANDLE);
+  if (h != INVALID_HANDLE_VALUE && ::GetConsoleScreenBufferInfo(h, &csbi)) {
+    int cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (cols > 0 && rows > 0)
+      return {static_cast<uint16_t>(cols), static_cast<uint16_t>(rows)};
+  }
+#elif LLDB_ENABLE_POSIX
+  struct winsize ws{};
+  if (::ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0 &&
+      ws.ws_row > 0)
+    return {ws.ws_col, ws.ws_row};
+#endif
+  return {0, 0};
+}
 
 } // namespace
 
@@ -812,6 +835,9 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       m_gdb_comm.SetSTDOUT(stdout_file_spec);
     if (stderr_file_spec)
       m_gdb_comm.SetSTDERR(stderr_file_spec);
+
+    auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
+    m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
 
     m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
     m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);

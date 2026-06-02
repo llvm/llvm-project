@@ -144,6 +144,9 @@ public:
   int SetSTDOUT(const FileSpec &file_spec);
   int SetSTDERR(const FileSpec &file_spec);
 
+  /// Send the dimensions of the user's stdio terminal window to the server.
+  int SetSTDIOWindowSize(uint16_t cols, uint16_t rows);
+
   /// Sets the disable ASLR flag to \a enable for a process that will
   /// be launched with the 'A' packet.
   ///
