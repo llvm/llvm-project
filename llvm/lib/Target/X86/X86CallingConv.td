@@ -1138,8 +1138,7 @@ def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R1
 
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
-def CSR_Win64_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE,
-                                         R30, R31,
+def CSR_Win64_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE, R30, R31,
                                          (sequence "XMM%u", 6, 15))>;
 
 def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
