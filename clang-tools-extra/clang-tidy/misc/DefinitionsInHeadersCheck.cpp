@@ -106,7 +106,7 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     diag(FD->getLocation(), "mark the definition as 'inline'",
          DiagnosticIDs::Note)
-        << FixItHint::CreateInsertion(FD->getInnerLocStart(), "inline ");
+        << FixItHint::CreateInsertion(FD->getFunctionLocStart(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // C++14 variable templates are allowed.
     if (VD->getDescribedVarTemplate())

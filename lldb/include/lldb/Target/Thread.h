@@ -24,6 +24,7 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
@@ -1009,8 +1010,8 @@ public:
       bool stop_others, uint32_t frame_idx, Status &status);
 
   virtual lldb::ThreadPlanSP
-  QueueThreadPlanForStepScripted(bool abort_other_plans, const char *class_name,
-                                 StructuredData::ObjectSP extra_args_sp,
+  QueueThreadPlanForStepScripted(bool abort_other_plans,
+                                 const ScriptedMetadata &scripted_metadata,
                                  bool stop_other_threads, Status &status);
 
   // Thread Plan accessors:

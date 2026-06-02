@@ -115,18 +115,6 @@ def static_libflangrt : Flag<["-"], "static-libflangrt">,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
 //===----------------------------------------------------------------------===//
-// FlangOption + NoXarchOption
-//===----------------------------------------------------------------------===//
-
-def flang_experimental_hlfir : Flag<["-"], "flang-experimental-hlfir">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Use HLFIR lowering (experimental)">;
-
-def flang_deprecated_no_hlfir : Flag<["-"], "flang-deprecated-no-hlfir">,
-  Flags<[HelpHidden]>, Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Do not use HLFIR lowering (deprecated)">;
-
-//===----------------------------------------------------------------------===//
 // FlangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
 
@@ -202,6 +190,8 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm acc_allow_default_none_scalars : OptInFC1FFlag<"acc-allow-default-none-scalars",
+  "Allow scalar variables in OpenACC default(none) regions without explicit data clauses (pre-OpenACC-3.2 behavior)">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
@@ -291,16 +281,14 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
   PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
-def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
+def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc-checks">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
-  HelpText<"Unsafe relaxation of C_LOC() argument restrictions for compatibility">,
+  HelpText<"Allow a data object or function pointer as the C_LOC() argument">,
   DocBrief<[{
-    Unsafe relaxation of C_LOC() argument restrictions for compatibility.
-    All C_LOC values should be passed directly to C calls.
-
-    This is unsafe, because it can be used to create aliases the compiler
-    is unaware of, please fix your applications instead of using this flag.
-    This may be removed in the future.}]>;
+    Allow a data object or function pointer as the C_LOC() argument
+    (not just pointers/targets). The compiler will not reason about aliases
+    created through non-target non-pointer arguments and code generated
+    using such aliases may exhibit unexpected behavior.}]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -404,6 +392,7 @@ def fno_reformat : Flag<["-"], "fno-reformat">, Group<Preprocessor_Group>,
 def fpreprocess_include_lines : Flag<["-"], "fpreprocess-include-lines">, Group<Preprocessor_Group>,
   HelpText<"Treat INCLUDE lines like #include directives in -E mode">;
 defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse", "", "Do not use the analyzed objects when unparsing">;
+def foffload_device : Flag<["-"], "foffload-device">, Group<f_Group>, Flags<[HelpHidden]>;
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to FIR">;

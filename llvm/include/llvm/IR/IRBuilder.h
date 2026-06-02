@@ -896,11 +896,11 @@ public:
 
   /// Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
-  ///
-  /// The optional argument \p OpBundles specifies operand bundles that are
-  /// added to the call instruction.
-  LLVM_ABI CallInst *
-  CreateAssumption(Value *Cond, ArrayRef<OperandBundleDef> OpBundles = {});
+  LLVM_ABI CallInst *CreateAssumption(Value *Cond);
+
+  /// Create an assume intrinsic call that allows the optimizer to
+  /// assume that the provided operand bundles hold.
+  LLVM_ABI CallInst *CreateAssumption(ArrayRef<OperandBundleDef> OpBundles);
 
   /// Create a llvm.experimental.noalias.scope.decl intrinsic call.
   LLVM_ABI Instruction *CreateNoAliasScopeDeclaration(Value *Scope);
@@ -1008,9 +1008,9 @@ public:
 
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
-  LLVM_ABI CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                          FMFSource FMFSource = {},
-                                          const Twine &Name = "");
+  LLVM_ABI Value *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                       FMFSource FMFSource = {},
+                                       const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
   /// first type.
@@ -1025,7 +1025,8 @@ public:
                                      ArrayRef<Type *> OverloadTypes,
                                      ArrayRef<Value *> Args,
                                      FMFSource FMFSource = {},
-                                     const Twine &Name = "");
+                                     const Twine &Name = "",
+                                     ArrayRef<OperandBundleDef> OpBundles = {});
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
@@ -1044,8 +1045,8 @@ public:
   }
 
   /// Create call to the fabs intrinsic.
-  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
-                       const Twine &Name = "") {
+  Value *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                    const Twine &Name = "") {
     return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 
@@ -1634,6 +1635,10 @@ public:
     for (unsigned i = 1; i < Ops.size(); i++)
       Accum = CreateOr(Accum, Ops[i]);
     return Accum;
+  }
+
+  Value *CreateDisjointOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    return CreateOr(LHS, RHS, Name, true);
   }
 
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {
@@ -2807,7 +2812,7 @@ public:
   /// specified alignment.
   LLVM_ABI CallInst *CreateAlignmentAssumption(const DataLayout &DL,
                                                Value *PtrValue,
-                                               unsigned Alignment,
+                                               uint64_t Alignment,
                                                Value *OffsetValue = nullptr);
 
   /// Create an assume intrinsic call that represents an alignment
@@ -2824,10 +2829,14 @@ public:
                                                Value *Alignment,
                                                Value *OffsetValue = nullptr);
 
-  /// Create an assume intrinsic call that represents an dereferencable
+  /// Create an assume intrinsic call that represents a dereferencable
   /// assumption on the provided pointer.
   LLVM_ABI CallInst *CreateDereferenceableAssumption(Value *PtrValue,
                                                      Value *SizeValue);
+
+  /// Create an assume intrinsic call that represents a nonnull assumption on
+  /// the provided pointer.
+  LLVM_ABI CallInst *CreateNonnullAssumption(Value *PtrValue);
 };
 
 /// This provides a uniform API for creating instructions and inserting

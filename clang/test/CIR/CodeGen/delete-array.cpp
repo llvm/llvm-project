@@ -24,7 +24,12 @@ void test_delete_array(int *ptr) {
 // CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!s32i>
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
-// CIR:     cir.call @_ZdaPv(%[[VOID_PTR]])
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZdaPv(%[[VOID_PTR]]) nothrow
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 
 // LLVM: define {{.*}} void @_Z17test_delete_arrayPi
@@ -69,7 +74,12 @@ void test_simple_delete_array(SimpleArrDelete *ptr) {
 // CIR:   %[[NOT_NULL:.*]] = cir.cmp ne %[[PTR]], %[[NULL]] : !cir.ptr<!rec_SimpleArrDelete>
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!rec_SimpleArrDelete> -> !cir.ptr<!void>
-// CIR:     cir.call @_ZN15SimpleArrDeletedaEPv(%[[VOID_PTR]])
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN15SimpleArrDeletedaEPv(%[[VOID_PTR]]) nothrow
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 
 // LLVM: define {{.*}} void @_Z24test_simple_delete_arrayP15SimpleArrDelete
@@ -120,11 +130,16 @@ void test_sized_array_delete(SizedArrayDelete *ptr) {
 // CIR:     %[[VOID_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
 // CIR:     %[[COOKIE_PTR:.*]] = cir.cast bitcast %[[ALLOC_BYTE_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!u64i>
 // CIR:     %[[NUM_ELEM:.*]] = cir.load align(4) %[[COOKIE_PTR]] : !cir.ptr<!u64i>, !u64i
-// CIR:     %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:     %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
-// CIR:     %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:     %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
-// CIR:     cir.call @_ZN16SizedArrayDeletedaEPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]])
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:       %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
+// CIR:       %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CIR:       %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
+// CIR:       cir.call @_ZN16SizedArrayDeletedaEPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]]) nothrow
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 
 // LLVM: define {{.*}} void @_Z23test_sized_array_deleteP16SizedArrayDelete
@@ -188,31 +203,34 @@ void test_delete_array_destructed(Destructed *ptr) {
 // CIR:     %[[NUM_ELEM:.*]] = cir.load{{.*}} %[[COOKIE_PTR]] : !cir.ptr<!u64i>, !u64i
 //
 // Destruct elements in reverse order.
-// CIR:     %[[END:.*]] = cir.ptr_stride %[[PTR]], %[[NUM_ELEM]] : (!cir.ptr<!rec_Destructed>, !u64i) -> !cir.ptr<!rec_Destructed>
-// CIR:     %[[NOT_EMPTY:.*]] = cir.cmp ne %[[END]], %[[PTR]] : !cir.ptr<!rec_Destructed>
-// CIR:     cir.if %[[NOT_EMPTY]] {
-// CIR:       %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>, ["__array_idx"] {alignment = 1 : i64}
-// CIR:       cir.store %[[END]], %[[ARR_IDX]] : !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>
-// CIR:       cir.do {
-// CIR:         %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_Destructed>>, !cir.ptr<!rec_Destructed>
-// CIR:         %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
-// CIR:         %[[ARR_PREV:.*]] = cir.ptr_stride %[[ARR_CUR]], %[[NEG_ONE]] : (!cir.ptr<!rec_Destructed>, !s64i) -> !cir.ptr<!rec_Destructed>
-// CIR:         cir.store %[[ARR_PREV]], %[[ARR_IDX]] : !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>
-// CIR:         cir.call @_ZN10DestructedD1Ev(%[[ARR_PREV]]) : (!cir.ptr<!rec_Destructed>) -> ()
-// CIR:         cir.yield
-// CIR:       } while {
-// CIR:         %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_Destructed>>, !cir.ptr<!rec_Destructed>
-// CIR:         %[[CMP:.*]] = cir.cmp ne %[[ARR_CUR]], %[[PTR]] : !cir.ptr<!rec_Destructed>
-// CIR:         cir.condition(%[[CMP]])
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[END:.*]] = cir.ptr_stride %[[PTR]], %[[NUM_ELEM]] : (!cir.ptr<!rec_Destructed>, !u64i) -> !cir.ptr<!rec_Destructed>
+// CIR:       %[[NOT_EMPTY:.*]] = cir.cmp ne %[[END]], %[[PTR]] : !cir.ptr<!rec_Destructed>
+// CIR:       cir.if %[[NOT_EMPTY]] {
+// CIR:         %[[ARR_IDX:.*]] = cir.alloca !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>, ["__array_idx"] {alignment = 1 : i64}
+// CIR:         cir.store %[[END]], %[[ARR_IDX]] : !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>
+// CIR:         cir.do {
+// CIR:           %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_Destructed>>, !cir.ptr<!rec_Destructed>
+// CIR:           %[[NEG_ONE:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR:           %[[ARR_PREV:.*]] = cir.ptr_stride %[[ARR_CUR]], %[[NEG_ONE]] : (!cir.ptr<!rec_Destructed>, !s64i) -> !cir.ptr<!rec_Destructed>
+// CIR:           cir.store %[[ARR_PREV]], %[[ARR_IDX]] : !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>
+// CIR:           cir.call @_ZN10DestructedD1Ev(%[[ARR_PREV]]) nothrow : (!cir.ptr<!rec_Destructed>) -> ()
+// CIR:           cir.yield
+// CIR:         } while {
+// CIR:           %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_Destructed>>, !cir.ptr<!rec_Destructed>
+// CIR:           %[[CMP:.*]] = cir.cmp ne %[[ARR_CUR]], %[[PTR]] : !cir.ptr<!rec_Destructed>
+// CIR:           cir.condition(%[[CMP]])
+// CIR:         }
 // CIR:       }
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:       %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
+// CIR:       %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CIR:       %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
+// CIR:       cir.call @_ZdaPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]]) nothrow
+// CIR:       cir.yield
 // CIR:     }
-//
-// Compute total size and call delete function.
-// CIR:     %[[ELEM_SIZE:.*]] = cir.const #cir.int<4> : !u64i
-// CIR:     %[[ARRAY_SIZE:.*]] = cir.mul %[[ELEM_SIZE]], %[[NUM_ELEM]] : !u64i
-// CIR:     %[[COOKIE_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:     %[[TOTAL_SIZE:.*]] = cir.add %[[ARRAY_SIZE]], %[[COOKIE_SIZE]] : !u64i
-// CIR:     cir.call @_ZdaPvm(%[[VOID_PTR]], %[[TOTAL_SIZE]])
 // CIR:   }
 
 // LLVM: define {{.*}} void @_Z28test_delete_array_destructedP10Destructed
@@ -244,8 +262,7 @@ void test_delete_array_destructed(Destructed *ptr) {
 // LLVM:   %[[ARRAY_SIZE:.*]] = mul i64 4, %[[NUM_ELEM]]
 // LLVM:   %[[TOTAL_SIZE:.*]] = add i64 %[[ARRAY_SIZE]], 8
 // LLVM:   call void @_ZdaPvm(ptr %[[ALLOC_PTR]], i64 %[[TOTAL_SIZE]])
-// LLVM:   br label %[[DONE]]
-// LLVM: [[DONE]]:
+// LLVM:   br label %{{.*}}
 // LLVM:   ret void
 
 // OGCG: define {{.*}} void @_Z28test_delete_array_destructedP10Destructed

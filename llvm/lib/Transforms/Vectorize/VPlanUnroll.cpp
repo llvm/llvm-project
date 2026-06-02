@@ -161,8 +161,8 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
     auto PartI = vp_depth_first_shallow(Copy->getEntry());
     auto Part0 = vp_depth_first_shallow(VPR->getEntry());
     for (const auto &[PartIVPBB, Part0VPBB] :
-         zip(VPBlockUtils::blocksOnly<VPBasicBlock>(PartI),
-             VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
+         zip(VPBlockUtils::blocksAs<VPBasicBlock>(PartI),
+             VPBlockUtils::blocksAs<VPBasicBlock>(Part0))) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))
@@ -341,18 +341,20 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
-    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
-      VPBuilder Builder(VPR);
+    if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
+      VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
-      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
-      Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
+      Type *IndexTy =
+          isa<VPWidenCanonicalIVRecipe>(R)
+              ? Plan.getVectorLoopRegion()->getCanonicalIVType()
+              : DL.getIndexType(TypeInfo.inferScalarType(R.getVPSingleValue()));
+      Type *VFTy = Plan.getVF().getType();
       VPValue *VF = Builder.createScalarZExtOrTrunc(
           &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
-      Copy->setOperand(0, VPR->getOperand(0));
       Copy->addOperand(VFxPart);
       continue;
     }
@@ -381,11 +383,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
       addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan, TypeInfo);
 
-    // Add operand indicating the part to generate code for, to recipes still
-    // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe>(Copy))
-      Copy->addOperand(getConstantInt(Part));
-
     if (match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
       VPBuilder Builder(Copy);
@@ -397,6 +394,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
     // Materialize Part0 offset for VectorEndPointer.
     VEPR->materializeOffset();
+  }
+  if (auto *WideCanIV = dyn_cast<VPWidenCanonicalIVRecipe>(&R)) {
+    // Set Part0 step for WidenCanonicalIV.
+    WideCanIV->addOperand(getConstantInt(0));
   }
 }
 

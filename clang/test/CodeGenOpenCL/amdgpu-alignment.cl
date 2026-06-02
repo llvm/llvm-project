@@ -116,9 +116,9 @@ typedef double __attribute__((ext_vector_type(16))) double16;
 // CHECK: store volatile <4 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4i64, align 32
 // CHECK: store volatile <8 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8i64, align 64
 // CHECK: store volatile <16 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16i64, align 128
-// CHECK: store volatile half 0xH0000, ptr addrspace(3) @local_memory_alignment_global.lds_f16, align 2
+// CHECK: store volatile half 0.000000e+00, ptr addrspace(3) @local_memory_alignment_global.lds_f16, align 2
 // CHECK: store volatile <2 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2f16, align 4
-// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3f16, align 8
+// CHECK: store volatile <4 x half> <half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3f16, align 8
 // CHECK: store volatile <4 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4f16, align 8
 // CHECK: store volatile <8 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8f16, align 16
 // CHECK: store volatile <16 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16f16, align 32
@@ -403,9 +403,9 @@ kernel void local_memory_alignment_arg(
 // CHECK: store volatile <4 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
 // CHECK: store volatile <8 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 64
 // CHECK: store volatile <16 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 128
-// CHECK: store volatile half 0xH0000, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 2
+// CHECK: store volatile half 0.000000e+00, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 2
 // CHECK: store volatile <2 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
-// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <4 x half> <half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
 // CHECK: store volatile <4 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
 // CHECK: store volatile <8 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
 // CHECK: store volatile <16 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32

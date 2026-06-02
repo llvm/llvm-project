@@ -166,7 +166,7 @@ LLVM_ABI Value *simplifyFCmpInst(CmpPredicate Predicate, Value *LHS, Value *RHS,
 
 /// Given operands for a SelectInst, fold the result or return null.
 LLVM_ABI Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
-                                   const SimplifyQuery &Q);
+                                   FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given operands for a GetElementPtrInst, fold the result or return null.
 LLVM_ABI Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
@@ -194,12 +194,16 @@ LLVM_ABI Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
 LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                                  const SimplifyQuery &Q);
 
-/// Given operands for a BinaryIntrinsic, fold the result or return null.
-/// The \p `Call` argument is optional and may be null.
+/// Given operands for a binary intrinsic, fold the result or return null.
 LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                         Value *Op0, Value *Op1,
-                                        const SimplifyQuery &Q,
-                                        const CallBase *Call);
+                                        FastMathFlags FMF,
+                                        const SimplifyQuery &Q);
+
+/// Given operands for a unary intrinsic, fold the result or return null.
+LLVM_ABI Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                       FastMathFlags FMF,
+                                       const SimplifyQuery &Q);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.

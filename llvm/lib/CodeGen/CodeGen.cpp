@@ -26,7 +26,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockSectionsProfileReaderWrapperPassPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationLegacyPass(Registry);
-  initializeBreakFalseDepsPass(Registry);
+  initializeBreakFalseDepsLegacyPass(Registry);
   initializeCFGuardLongjmpPass(Registry);
   initializeCFIFixupPass(Registry);
   initializeCFIInstrInserterPass(Registry);
@@ -86,7 +86,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineBlockPlacementLegacyPass(Registry);
   initializeMachineBlockPlacementStatsLegacyPass(Registry);
   initializeMachineBranchProbabilityInfoWrapperPassPass(Registry);
-  initializeMachineCFGPrinterPass(Registry);
+  initializeMachineCFGPrinterLegacyPass(Registry);
   initializeMachineCSELegacyPass(Registry);
   initializeMachineCombinerPass(Registry);
   initializeMachineDominanceFrontierWrapperPassPass(Registry);

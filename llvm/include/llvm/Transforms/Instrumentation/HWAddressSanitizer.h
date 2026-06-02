@@ -37,12 +37,13 @@ struct HWAddressSanitizerOptions {
 /// This is a public interface to the hardware address sanitizer pass for
 /// instrumenting code to check for various memory errors at runtime, similar to
 /// AddressSanitizer but based on partial hardware assistance.
-class HWAddressSanitizerPass : public PassInfoMixin<HWAddressSanitizerPass> {
+class HWAddressSanitizerPass
+    : public RequiredPassInfoMixin<HWAddressSanitizerPass> {
 public:
   explicit HWAddressSanitizerPass(HWAddressSanitizerOptions Options)
       : Options(Options){};
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
+
   LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);

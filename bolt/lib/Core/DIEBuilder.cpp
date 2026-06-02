@@ -42,29 +42,6 @@ extern cl::opt<unsigned> Verbosity;
 namespace llvm {
 namespace bolt {
 
-/// Returns DWO Name to be used to update DW_AT_dwo_name/DW_AT_GNU_dwo_name
-/// either in CU or TU unit die. Handles case where user specifies output DWO
-/// directory, and there are duplicate names. Assumes DWO ID is unique.
-static std::string
-getDWOName(llvm::DWARFUnit &CU,
-           std::unordered_map<std::string, uint32_t> &NameToIndexMap,
-           std::optional<StringRef> &DwarfOutputPath) {
-  assert(CU.getDWOId() && "DWO ID not found.");
-  std::string DWOName = dwarf::toString(
-      CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-      "");
-  assert(!DWOName.empty() &&
-         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exist.");
-  if (DwarfOutputPath) {
-    DWOName = std::string(sys::path::filename(DWOName));
-    uint32_t &Index = NameToIndexMap[DWOName];
-    DWOName.append(std::to_string(Index));
-    ++Index;
-  }
-  DWOName.append(".dwo");
-  return DWOName;
-}
-
 /// Adds a \p Str to .debug_str section.
 /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
 /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
@@ -85,38 +62,31 @@ static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
 
 std::string DIEBuilder::updateDWONameCompDir(
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
-    DWARFUnit &SkeletonCU, std::optional<StringRef> DwarfOutputPath,
-    std::optional<StringRef> DWONameToUse) {
+    DWARFUnit &SkeletonCU, StringRef DwarfOutputPath,
+    const StringRef DWONameToUse) {
   DIE &UnitDIE = *getUnitDIEbyUnit(SkeletonCU);
   DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
   if (!DWONameAttrInfo)
     DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
   if (!DWONameAttrInfo)
     return "";
-  std::string ObjectName;
-  if (DWONameToUse)
-    ObjectName = *DWONameToUse;
-  else
-    ObjectName = getDWOName(SkeletonCU, NameToIndexMap, DwarfOutputPath);
+  std::string ObjectName(DWONameToUse);
   addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
                   DWONameAttrInfo, ObjectName);
 
   DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
   assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
 
-  if (DwarfOutputPath) {
-    if (!sys::fs::exists(*DwarfOutputPath))
-      sys::fs::create_directory(*DwarfOutputPath);
+  if (!DwarfOutputPath.empty()) {
     addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
-                    CompDirAttrInfo, *DwarfOutputPath);
+                    CompDirAttrInfo, DwarfOutputPath);
   }
   return ObjectName;
 }
 
 void DIEBuilder::updateDWONameCompDirForTypes(
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
-    DWARFUnit &Unit, std::optional<StringRef> DwarfOutputPath,
-    const StringRef DWOName) {
+    DWARFUnit &Unit, StringRef DwarfOutputPath, const StringRef DWOName) {
   for (DWARFUnit *DU : getState().DWARF5TUVector)
     updateDWONameCompDir(StrOffstsWriter, StrWriter, *DU, DwarfOutputPath,
                          DWOName);
@@ -705,7 +675,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] != Encoding::Size1))
+         Description.Op[0] != Encoding::Size1 &&
+         Description.Op[0] != Encoding::SizeLEB))
       BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
                    "encoding.\n";
 
@@ -713,9 +684,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] == Encoding::Size1)) {
-      // This code assumes that the other non-typeref operand fits into 1
-      // byte.
+         (Description.Op[0] == Encoding::Size1 ||
+          Description.Op[0] == Encoding::SizeLEB))) {
       assert(OpOffset < Op.getEndOffset());
       const uint32_t ULEBsize = Op.getEndOffset() - OpOffset - 1;
       (void)ULEBsize;
@@ -727,7 +697,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
       if (Description.Op.size() == 1) {
         RefOffset = Op.getRawOperand(0);
       } else {
-        OutputBuffer.push_back(Op.getRawOperand(0));
+        const StringRef FirstOpBytes =
+            Data.getData().slice(OpOffset + 1, Op.getOperandEndOffset(0));
+        OutputBuffer.append(FirstOpBytes.begin(), FirstOpBytes.end());
         RefOffset = Op.getRawOperand(1);
       }
       uint32_t Offset = 0;
@@ -903,6 +875,7 @@ void DIEBuilder::cloneAttribute(
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_udata:
     cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
                                      Val.getUnit()->getOffset() +
                                          *Val.getAsRelativeReference());

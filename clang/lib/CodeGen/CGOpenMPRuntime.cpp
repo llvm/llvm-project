@@ -1529,11 +1529,13 @@ convertCaptureClause(const VarDecl *VD) {
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
     break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Enter:
-  case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Local:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
-    break;
   case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Link:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
+    break;
+  case OMPDeclareTargetDeclAttr::MapTypeTy::MT_Local:
+    // MT_Local variables don't need offload entry (device-local).
+    llvm_unreachable("MT_Local should not reach convertCaptureClause");
     break;
   default:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryNone;
@@ -7983,8 +7985,7 @@ private:
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
           if ((*Res == OMPDeclareTargetDeclAttr::MT_Link) ||
               ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-                *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
+                *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
                CGF.CGM.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())) {
             RequiresReference = true;
             BP = CGF.CGM.getOpenMPRuntime().getAddrOfDeclareTargetVar(VD);
@@ -10981,7 +10982,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
+        DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(
@@ -11290,7 +11292,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
       return true;
   }
 
-  // Do not to emit function if it is not marked as declare target.
+  // Do not emit function if it is not marked as declare target.
   return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
          AlreadyEmittedTargetDecls.count(VD) == 0;
 }
@@ -11320,14 +11322,13 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
     }
   }
 
-  // Do not to emit variable if it is not marked as declare target.
+  // Do not emit variable if it is not marked as declare target.
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
           cast<VarDecl>(GD.getDecl()));
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link ||
       ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-        *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-        *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
+        *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
        HasRequiresUnifiedSharedMemory)) {
     DeferredGlobalVariables.insert(cast<VarDecl>(GD.getDecl()));
     return true;
@@ -11348,6 +11349,11 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
   // do not emit an offloading entry.
   if (Res && *Res != OMPDeclareTargetDeclAttr::MT_Link &&
       VD->hasExternalStorage())
+    return;
+
+  // MT_Local variables use direct access with no host-device mapping.
+  // No offload entry needed — the device global keeps its own initializer.
+  if (Res && *Res == OMPDeclareTargetDeclAttr::MT_Local)
     return;
 
   if (!Res) {
@@ -11396,10 +11402,11 @@ void CGOpenMPRuntime::emitDeferredTargetDecls() const {
         OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
     if (!Res)
       continue;
-    if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
-         *Res == OMPDeclareTargetDeclAttr::MT_Enter ||
-         *Res == OMPDeclareTargetDeclAttr::MT_Local) &&
-        !HasRequiresUnifiedSharedMemory) {
+    // MT_Local and MT_To/MT_Enter without USM are always emitted.
+    if (*Res == OMPDeclareTargetDeclAttr::MT_Local ||
+        ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
+          *Res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+         !HasRequiresUnifiedSharedMemory)) {
       CGM.EmitGlobal(VD);
     } else {
       assert((*Res == OMPDeclareTargetDeclAttr::MT_Link ||
@@ -11495,7 +11502,7 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
     return true;
 
   const auto *D = cast<FunctionDecl>(GD.getDecl());
-  // Do not to emit function if it is marked as declare target as it was already
+  // Do not emit function if it is marked as declare target as it was already
   // emitted.
   if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
     if (D->hasBody() && AlreadyEmittedTargetDecls.count(D) == 0) {

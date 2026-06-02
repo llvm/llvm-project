@@ -385,7 +385,7 @@ LANGOPT(ConstexprCallDepth, 32, 512, Benign,
         "maximum constexpr call depth")
 LANGOPT(ConstexprStepLimit, 32, 1048576, Benign,
         "maximum constexpr evaluation steps")
-LANGOPT(EnableNewConstInterp, 1, 0, Benign,
+LANGOPT(EnableNewConstInterp, 1, CLANG_USE_EXPERIMENTAL_CONST_INTERP, Benign,
         "enable the experimental new constant interpreter")
 LANGOPT(BracketDepth, 32, 256, Benign,
         "maximum bracket nesting depth")
@@ -518,7 +518,7 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
+LANGOPT(DebugRunLifetimeSafety, 1, 0, NotCompatible, "Run lifetime safety analysis for C++. Does not enable warnings.")
 
 LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, NotCompatible, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
 

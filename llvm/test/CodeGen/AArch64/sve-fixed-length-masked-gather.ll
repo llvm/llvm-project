@@ -215,7 +215,7 @@ define void @masked_gather_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    cmeq v0.8h, v0.8h, #0
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d0, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z1.d, #0
@@ -622,7 +622,7 @@ define void @masked_gather_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    fcmeq v0.8h, v0.8h, #0.0
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
-; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; VBITS_GE_256-NEXT:    mov d0, v0.d[1]
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z1.s
 ; VBITS_GE_256-NEXT:    sunpklo z0.s, z0.h
 ; VBITS_GE_256-NEXT:    cmpne p1.d, p0/z, z1.d, #0
