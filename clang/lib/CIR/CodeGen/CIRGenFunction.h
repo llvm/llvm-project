@@ -1205,6 +1205,29 @@ public:
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
 
+    /// Force the emission of EH cleanups now, but defer promoting any
+    /// lifetime-extended cleanup entries onto the EH scope stack. The caller
+    /// must subsequently call forceLifetimeExtendedCleanups() to finalize the
+    /// scope.
+    void forceCleanupExceptLifetimeExtended() {
+      assert(performCleanup && "Already forced cleanup");
+      cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
+      cgf.popCleanupBlocks(cleanupStackDepth);
+    }
+
+    /// Promote any pending lifetime-extended cleanup entries onto the EH scope
+    /// stack at the current insertion point and finalize this scope. This must
+    /// be paired with a prior call to forceCleanupExceptLifetimeExtended().
+    void forceLifetimeExtendedCleanups() {
+      assert(performCleanup && "Already forced cleanup");
+      assert(deactivateCleanups.deactivated &&
+             "forceCleanupExceptLifetimeExtended() must be called first");
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
     /// Whether there are any pending cleanups that have been pushed since
     /// this scope was entered.
     bool hasPendingCleanups() const {
@@ -1624,6 +1647,25 @@ public:
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
+
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
+  /// return type matches the type of the first argument. The intrinsic name is
+  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
+  /// into \p intrinName by the caller.
+  template <unsigned N>
+  [[maybe_unused]] RValue
+  emitBuiltinWithOneOverloadedType(const CallExpr *e,
+                                   llvm::StringRef intrinName) {
+    static_assert(N, "expect non-empty argument");
+    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    SmallVector<mlir::Value, N> args;
+    for (unsigned i = 0; i < N; ++i)
+      args.push_back(emitScalarExpr(e->getArg(i)));
+    const auto call = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(intrinName),
+        cirTy, args);
+    return RValue::get(call->getResult(0));
+  }
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,

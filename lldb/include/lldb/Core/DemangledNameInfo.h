@@ -30,7 +30,7 @@ struct DemangledNameInfo {
   ///                        ^       ^
   ///                      start    end
   /// \endcode
-  std::pair<size_t, size_t> BasenameRange;
+  std::pair<uint32_t, uint32_t> BasenameRange;
 
   /// A [start, end) pair for the function template arguments.
   ///
@@ -40,7 +40,7 @@ struct DemangledNameInfo {
   ///                                ^      ^
   ///                              start   end
   /// \endcode
-  std::pair<size_t, size_t> TemplateArgumentsRange;
+  std::pair<uint32_t, uint32_t> TemplateArgumentsRange;
 
   /// A [start, end) pair for the function scope qualifiers.
   ///
@@ -50,7 +50,7 @@ struct DemangledNameInfo {
   ///         ^              ^
   ///       start           end
   /// \endcode
-  std::pair<size_t, size_t> ScopeRange;
+  std::pair<uint32_t, uint32_t> ScopeRange;
 
   /// Indicates the [start, end) of the function argument list.
   ///
@@ -60,7 +60,7 @@ struct DemangledNameInfo {
   ///                        ^              ^
   ///                      start           end
   /// \endcode
-  std::pair<size_t, size_t> ArgumentsRange;
+  std::pair<uint32_t, uint32_t> ArgumentsRange;
 
   /// Indicates the [start, end) of the function qualifiers
   /// (e.g., CV-qualifiers, reference qualifiers, requires clauses).
@@ -71,7 +71,7 @@ struct DemangledNameInfo {
   ///                                       ^        ^
   ///                                     start     end
   /// \endcode
-  std::pair<size_t, size_t> QualifiersRange;
+  std::pair<uint32_t, uint32_t> QualifiersRange;
 
   /// Indicates the [start, end) of the function's name qualifiers. This is a
   /// catch-all range for anything in between the basename and the function's
@@ -84,17 +84,17 @@ struct DemangledNameInfo {
   ///              ^        ^
   ///            start     end
   /// \endcode
-  std::pair<size_t, size_t> NameQualifiersRange;
+  std::pair<uint32_t, uint32_t> NameQualifiersRange;
 
   /// Indicates the [start, end) of the function's prefix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> PrefixRange;
+  std::pair<uint32_t, uint32_t> PrefixRange;
 
   /// Indicates the [start, end) of the function's suffix. This is a
   /// catch-all range for anything that is not tracked by the rest of
   /// the pairs.
-  std::pair<size_t, size_t> SuffixRange;
+  std::pair<uint32_t, uint32_t> SuffixRange;
 
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {

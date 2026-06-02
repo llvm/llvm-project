@@ -1287,6 +1287,21 @@ void use_trivial_temporary_after_destruction() {
   use(a); // expected-note {{later used here}}
 }
 
+namespace FullExprCleanupLoc {
+void var_initializer() {
+  View v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+               .getView(); // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
+}
+
+void expr_statement() {
+  View v;
+  v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+          .getView(); // expected-note {{destroyed here}}
+  v.use(); // expected-note {{later used here}}
+}
+} // namespace FullExprCleanupLoc
+
 namespace GH162834 {
 // https://github.com/llvm/llvm-project/issues/162834
 template <class T>
@@ -2299,8 +2314,8 @@ struct S {
 void indexing_with_static_operator() {
   S()(1, 2);
   S& x = S()("1",
-             2,  // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
-             3); // expected-warning {{local temporary object does not live long enough}} expected-note {{destroyed here}}
+             2,  // expected-warning {{local temporary object does not live long enough}}
+             3); // expected-warning {{local temporary object does not live long enough}} expected-note 2 {{destroyed here}}
 
   (void)x; // expected-note 2 {{later used here}}
 
@@ -2449,7 +2464,7 @@ void from_template_instantiation() {
 
 struct FieldInitFromLifetimebound {
   S value; // expected-note {{this field dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{address of stack memory escapes to a field}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with local temporary object escapes to the field 'value' which will dangle}}
 };
 
 S S::return_self_after_registration() const {
@@ -2639,12 +2654,12 @@ void nested_local_pointer() {
 
 struct PFieldFromParam {
   Pointer<Bar> value;                      // expected-note {{this field dangles}}
-  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{address of stack memory escapes to a field}}
+  PFieldFromParam(Bar bar) : value(bar) {} // expected-warning {{stack memory associated with parameter 'bar' escapes to the field 'value' which will dangle}}
 };
 
 struct PFieldFromTemp {
   Pointer<Bar> value;                // expected-note {{this field dangles}}
-  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{address of stack memory escapes to a field}}
+  PFieldFromTemp() : value(Bar{}) {} // expected-warning {{stack memory associated with local temporary object escapes to the field 'value' which will dangle}}
 };
 
 } // namespace gslpointer_construction_from_lifetimebound
@@ -3210,7 +3225,7 @@ struct S2 : S {
 
 namespace CXXDefaultInitExprTests {
 struct Holder {
-  std::string_view view = std::string("temporary"); // expected-warning {{address of stack memory escapes to a field}} expected-note {{this field dangles}}
+  std::string_view view = std::string("temporary"); // expected-warning {{stack memory associated with local temporary object escapes to the field 'view' which will dangle}} expected-note {{this field dangles}}
   Holder() {}
 };
 } // namespace CXXDefaultInitExprTests
@@ -3222,7 +3237,7 @@ struct Y : X {
   void bar() {
     {
       int a;
-      x = &a; // expected-warning {{address of stack memory escapes to a field}}
+      x = &a; // expected-warning {{stack memory associated with local variable 'a' escapes to the field 'x' which will dangle}}
     }
     (void)x;
   }
@@ -3420,3 +3435,163 @@ namespace GH191954 {
     return std::move(f);
   }
 } // namespace GH191954
+
+//===----------------------------------------------------------------------===//
+// lifetime-capture-by
+//===----------------------------------------------------------------------===//
+
+void setCaptureBy(View& res, View in [[clang::lifetime_capture_by(res)]]);
+
+void use_after_free_capture_by() {
+  View res;
+  {
+    MyObj a;      
+    setCaptureBy(res, a); // expected-warning {{local variable 'a' does not live long enough}}
+  }               // expected-note {{destroyed here}}
+  (void)res;      // expected-note {{later used here}}      
+}
+
+View use_after_return_capture_by() {
+  MyObj a;
+  View res;
+  setCaptureBy(res, a);   // expected-warning {{stack memory associated with local variable 'a' is returned}}
+  return res;     // expected-note {{returned here}}  
+                   
+}
+
+void transitive_capture() {
+  View v1, v2;
+  {
+    MyObj local;
+    setCaptureBy(v1, local); // expected-warning {{local variable 'local' does not live long enough}}
+    setCaptureBy(v2, v1);   
+  }                 // expected-note {{destroyed here}}
+  (void)v2;         // expected-note {{later used here}}   
+}
+
+void set1(View& res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_reference_to_view() {
+  View v;
+  {
+    MyObj local;
+    set1(v, local);   // expected-warning {{local variable 'local' does not live long enough}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}} 
+}
+
+// FIXME: Add special handling for multi-level pointers and lvalue expressions which are not DeclRefExpr.
+void set2(MyObj** res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_pointer_to_pointer() {
+  MyObj *ptr = nullptr;
+  {
+    MyObj local;
+    set2(&ptr, local);
+  }
+  (void)ptr;
+}
+
+void test_pointer_to_pointer_2(MyObj **ptr) {
+  {
+    MyObj local;
+    set2(ptr, local);
+  }
+  (void)ptr;
+}
+
+void set3(MyObj*& res, const MyObj& in [[clang::lifetime_capture_by(res)]]);
+
+void test_reference_to_pointer() {
+  MyObj *ptr = nullptr;
+  {
+    MyObj local;
+    set3(ptr, local);   // expected-warning {{local variable 'local' does not live long enough}}
+  }                     // expected-note {{destroyed here}}
+  (void)ptr;            // expected-note {{later used here}} 
+}
+
+struct [[gsl::Pointer]] MyContainer {
+  View stored;
+  void set(View s [[clang::lifetime_capture_by(this)]]);
+};
+
+void member_capture() {
+  MyContainer c;
+  {
+    MyObj local;
+    c.set(local);   // expected-warning {{local variable 'local' does not live long enough}}
+  }                 // expected-note {{destroyed here}}
+  (void)c.stored;   // expected-note {{later used here}}
+}
+
+// FIXME: Add support for simple containers without annotations.
+struct SimpleContainer {
+  View stored;
+  void set(View s [[clang::lifetime_capture_by(this)]]);
+};
+
+void member_capture_simple_container() {
+  SimpleContainer c;
+  {
+    MyObj local;
+    c.set(local);   
+  }                 
+  (void)c.stored;   
+}
+
+void captureTwo(View& into, 
+                View a [[clang::lifetime_capture_by(into)]], 
+                View b [[clang::lifetime_capture_by(into)]]);
+
+void multiple_captures() {
+  View res;
+  MyObj val1;
+  {
+    MyObj val2;
+    captureTwo(res, val1, val2); // expected-warning {{local variable 'val2' does not live long enough}}
+  }                              // expected-note {{destroyed here}}
+  (void)res;                     // expected-note {{later used here}}              
+}
+
+void multiple_local_captures() {
+  View res;
+  {
+    MyObj val1;
+    MyObj val2;
+    captureTwo(res, val1, val2); // expected-warning {{local variable 'val1' does not live long enough}} // expected-warning {{local variable 'val2' does not live long enough}}
+  }                              // expected-note 2 {{destroyed here}}
+  (void)res;                     // expected-note 2 {{later used here}}              
+}
+
+void captureIntoTwo(View& v1, View& v2, 
+                    View s [[clang::lifetime_capture_by(v1, v2)]]);
+
+void captured_by_multiple_params() {
+   View v1, v2;
+  {
+    MyObj local;
+    captureIntoTwo(v1, v2, local);  // expected-warning {{local variable 'local' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}                                  
+  (void)v1;                         // expected-note {{later used here}}                     
+}
+
+void captured_by_multiple_params_2() {
+   View v1, v2;
+  {
+    MyObj local;
+    captureIntoTwo(v1, v2, local);  // expected-warning {{local variable 'local' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}                                  
+  (void)v2;                         // expected-note {{later used here}}                     
+}
+
+void capturing_multiple_locals() {
+    View v;
+    {
+        MyObj local1;
+        setCaptureBy(v, local1);    // expected-warning{{local variable 'local1' does not live long enough}}
+        MyObj local2;   
+        setCaptureBy(v, local2);    // expected-warning{{local variable 'local2' does not live long enough}}
+    }                               // expected-note 2 {{destroyed here}} 
+    (void)v;                        // expected-note 2 {{later used here}}
+}

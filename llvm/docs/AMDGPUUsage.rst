@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -828,6 +830,55 @@ For example:
 
      =============== ============================ ==================================================
 
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
+
 .. _amdgpu-target-id:
 
 Target ID
@@ -1152,6 +1203,15 @@ supported for the ``amdgcn`` target.
 
 Memory Scopes
 -------------
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
@@ -1872,11 +1932,10 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The '``llvm.amdgcn.av``' intrinsics perform load and store operations on flat or
-global memory, with explicit control on how their side-effects propagate through
-the system. They take a *scope* argument as a string metadata, which indicates
-the scope within which these side-effects are guaranteed to be observable.
-[TODO: The exact semantics as a memory consistency model is a work in progress.]
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
 
 The pointer argument can be a global pointer (``addrspace(1)``) or a flat
 pointer (``addrspace(0)``). Global pointers select ``global_load``/
@@ -1908,8 +1967,7 @@ Implementation Details
 
 This section is informational and for **internal reference only**. Users should
 not rely on the expansions described below. The only reliable user-level
-guarantees are those provided by the memory consistency model, which is
-currently a work in progress.
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
 
 The tables below show the cache policy bits for global pointer variants.
 Flat pointer variants use the corresponding ``flat_load``/``flat_store``
@@ -7068,6 +7126,15 @@ code (see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
