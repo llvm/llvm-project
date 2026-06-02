@@ -396,15 +396,6 @@ bool ExpandVariadics::runOnModule(Module &M) {
     }
   }
 
-  // Expand any remaining va_arg IR instructions. Frontends like Clang lower
-  // va_arg to explicit IR themselves, but anything that emits the IR form
-  // directly is lowered here so backends do not need their own implementation.
-  for (Function &F : M)
-    for (BasicBlock &BB : F)
-      for (Instruction &I : make_early_inc_range(BB))
-        if (auto *VA = dyn_cast<VAArgInst>(&I))
-          Changed |= expandVAArgInst(Builder, DL, VA);
-
   if (Mode != ExpandVariadicsMode::Lowering)
     return Changed;
 
@@ -412,12 +403,15 @@ bool ExpandVariadics::runOnModule(Module &M) {
     if (F.isDeclaration())
       continue;
 
-    // Now need to track down indirect calls. Can't find those
-    // by walking uses of variadic functions, need to crawl the instruction
-    // stream. Fortunately this is only necessary for the ABI rewrite case.
+    // Now need to track down indirect calls and va_arg instructions. Can't find
+    // those by walking uses of variadic functions, need to crawl the
+    // instruction stream. Fortunately this is only necessary for the ABI
+    // rewrite case.
     for (BasicBlock &BB : F) {
       for (Instruction &I : make_early_inc_range(BB)) {
-        if (CallBase *CB = dyn_cast<CallBase>(&I)) {
+        if (auto *VA = dyn_cast<VAArgInst>(&I)) {
+          Changed |= expandVAArgInst(Builder, DL, VA);
+        } else if (CallBase *CB = dyn_cast<CallBase>(&I)) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
