@@ -738,7 +738,7 @@ public:
     return static_cast<const Stmt *>(getData1());
   }
 
-  /// Returns a variable declaration that uniquely identifies the scope
+  /// Returns a variable declaration that uniquely identifies the scope.
   LLVM_ATTRIBUTE_RETURNS_NONNULL const VarDecl *getDecl() const {
     return static_cast<const VarDecl *>(getData2());
   }
