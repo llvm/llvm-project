@@ -20,9 +20,9 @@
 #include "llvm/Config/llvm-config.h"
 #include "gtest/gtest.h"
 
-namespace clang {
-namespace ento {
 namespace {
+using namespace clang;
+using namespace ento;
 
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
   using Self = LifetimeEndReporter;
@@ -89,5 +89,3 @@ void foo() {
 }
 
 } // namespace
-} // namespace ento
-} // namespace clang
