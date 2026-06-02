@@ -121,3 +121,10 @@ class TestSwiftFixIts(TestBase):
             ret.GetError(), r"\(unsafeBitCast\(.+, to: SomeClass.self\)\).value"
         )
         self.assertIn(" = 42", ret.GetOutput())
+
+        # Test a legitimate cast.
+        ret = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand(f"expression 0x1234 as Float", ret)
+        self.assertTrue(ret.Succeeded())
+        self.assertNotIn("unsafeBitCast", ret.GetError())
+        self.assertIn(" = 4660", ret.GetOutput())

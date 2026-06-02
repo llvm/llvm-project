@@ -743,10 +743,10 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
 /// This supports casting expressions users may try when wanting the object
 /// represented by a raw address.
 static std::optional<std::string> ApplyLLDBCastFixIts(StringRef expr_text) {
-  llvm::Regex cast_regex("(0[xX][0-9a-fA-F]{4,})"
-                         "[[:space:]]+"
-                         "as[?!]?[[:space:]]+"
-                         "([[:alpha:]_][[:alnum:]_.]*)");
+  static llvm::Regex cast_regex("(0[xX][0-9a-fA-F]{4,})"
+                                "[[:space:]]+"
+                                "as[?!]?[[:space:]]+"
+                                "([[:alpha:]_][[:alnum:]_.]*)");
 
   llvm::SmallVector<StringRef, 3> matches;
   if (!cast_regex.match(expr_text, &matches))
