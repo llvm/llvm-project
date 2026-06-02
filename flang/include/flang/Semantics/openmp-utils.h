@@ -86,8 +86,10 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
@@ -138,6 +140,8 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -152,7 +156,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  parser::Name iv;
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:

@@ -291,8 +291,8 @@ namespace {
 //  - VariadicOMPInteropInfoArgument
 #define USE_DEFAULT_EQUALITY                                                   \
   (std::is_same_v<T, StringRef> || std::is_same_v<T, VersionTuple> ||          \
-   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, ParamIdx> ||       \
-   std::is_same_v<T, char *> || std::is_enum_v<T> || std::is_integral_v<T>)
+   std::is_same_v<T, IdentifierInfo *> || std::is_same_v<T, char *> ||         \
+   std::is_enum_v<T> || std::is_integral_v<T>)
 
 template <class T>
 typename std::enable_if_t<!USE_DEFAULT_EQUALITY, bool>
@@ -304,6 +304,20 @@ template <class T>
 typename std::enable_if_t<USE_DEFAULT_EQUALITY, bool>
 equalAttrArgs(T A1, T A2, StructuralEquivalenceContext &Context) {
   return A1 == A2;
+}
+
+template <>
+bool equalAttrArgs<ParamIdx>(ParamIdx P1, ParamIdx P2,
+                             StructuralEquivalenceContext &) {
+  // ParamIdx can be invalid when representing an optional parameter that was
+  // not specified (e.g. the second argument of alloc_size(N)).
+  // ParamIdx::operator== asserts both sides are valid, so guard against the
+  // invalid case before delegating to it.
+  if (P1.isValid() != P2.isValid())
+    return false;
+  if (!P1.isValid())
+    return true;
+  return P1 == P2;
 }
 
 template <class T>

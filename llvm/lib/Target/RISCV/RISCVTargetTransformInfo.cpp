@@ -873,6 +873,14 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                         LT.second, CostKind));
   }
   case TTI::SK_Broadcast: {
+    // Check for broadcast loads, which are synthesized by optimized zero-stride
+    // loads (this is checked in RISCVTTIImpl::isLegalBroadcastLoad).
+    bool IsLoad = !Args.empty() && isa<LoadInst>(Args[0]);
+    if (IsLoad && LT.second.isVector() &&
+        isLegalBroadcastLoad(SrcTy->getElementType(),
+                             LT.second.getVectorElementCount()))
+      return 0;
+
     bool HasScalar = (Args.size() > 0) && (Operator::getOpcode(Args[0]) ==
                                            Instruction::InsertElement);
     if (LT.second.getScalarSizeInBits() == 1) {
@@ -2288,7 +2296,7 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   if (IsUnsigned && Opcode == Instruction::Add &&
-      LT.second.isFixedLengthVector() && LT.second.getScalarType() == MVT::i1) {
+      LT.second.isFixedLengthVectorOf(MVT::i1)) {
     // Represent vector_reduce_add(ZExt(<n x i1>)) as
     // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
     return LT.first *
@@ -2329,8 +2337,9 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Src, true);
-  // Type legalization can't handle structs
-  if (VT == MVT::Other)
+  // Type legalization can't handle structs, and load latency isn't handled here
+  if (VT == MVT::Other ||
+      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency))
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind, OpInfo, I);
 
@@ -3406,6 +3415,15 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
   if (!isLegalMaskedLoadStore(DataTy, Alignment))
     return false;
   return true;
+}
+
+bool RISCVTTIImpl::isLegalBroadcastLoad(Type *ElementTy,
+                                        ElementCount NumElements) const {
+  // Optimized zero-stride loads can be treated as broadcasts.
+  if (!ST->hasVInstructions() || !ST->hasOptimizedZeroStrideLoad())
+    return false;
+
+  return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, ElementTy));
 }
 
 /// See if \p I should be considered for address type promotion. We check if \p

@@ -59,6 +59,7 @@ add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(in_addr_t HDR in_addr_t.h)
 add_header(in_port_t HDR in_port_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(struct_in_addr HDR struct_in_addr.h DEPENDS .in_addr_t)
+add_header(struct_in6_addr HDR struct_in6_addr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(ino_t HDR ino_t.h)
 add_header(key_t HDR key_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
@@ -205,6 +206,8 @@ add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_cmsghdr HDR struct_cmsghdr.h DEPENDS .size_t)
 add_header(struct_msghdr HDR struct_msghdr.h DEPENDS .size_t .socklen_t .struct_iovec)
+add_header(struct_mmsghdr HDR struct_mmsghdr.h DEPENDS .struct_msghdr)
+add_header(struct_udphdr HDR struct_udphdr.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(ACTION HDR ACTION.h)
 add_header(ENTRY HDR ENTRY.h)
 add_header(VISIT HDR VISIT.h)
@@ -575,6 +578,7 @@ add_header(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
   HDR
     EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.h
   DEPENDS
+    libc.include.llvm-libc-macros.EFIAPI_macros
     libc.include.llvm-libc-macros.stdint_macros
     .EFI_STATUS
     .size_t

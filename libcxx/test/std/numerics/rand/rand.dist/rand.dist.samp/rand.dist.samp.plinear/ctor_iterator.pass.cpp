@@ -16,8 +16,6 @@
 //                                     InputIteratorB lastB,
 //                                     InputIteratorW firstW);
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <random>
 
 #include <cassert>

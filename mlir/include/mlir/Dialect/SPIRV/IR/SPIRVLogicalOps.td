@@ -535,6 +535,28 @@ def SPIRV_IsNanOp : SPIRV_LogicalUnaryOp<"IsNan", SPIRV_Float, []> {
 
 // -----
 
+def SPIRV_IsNormalOp : SPIRV_LogicalUnaryOp<"IsNormal", SPIRV_Float, []> {
+  let summary = "Result is true if x is an IEEE normal number, otherwise result is false";
+
+  let description = [{
+    Result Type must be a scalar or vector of Boolean type.
+
+    x must be a scalar or vector of floating-point type.  It must have the
+    same number of components as Result Type.
+
+    Results are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.IsNormal %0: f32
+    %3 = spirv.IsNormal %1: vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_LogicalAndOp : SPIRV_LogicalBinaryOp<"LogicalAnd",
                                            SPIRV_Bool,
                                            [Commutative,
