@@ -12,11 +12,11 @@
 
 // Helper class to convert vector element types to integers.
 class ChangeElementTypeToInteger<ValueType InVT> {
-  ValueType VT = !cond(
-    !eq(InVT, v2f32): v2i32,
-    !eq(InVT, v4f32): v4i32,
+  ValueType VT = !switch(InVT,
+    v2f32: v2i32,
+    v4f32: v4i32,
     // TODO: Other types.
-    true : untyped);
+    untyped);
 }
 
 class VTPair<ValueType A, ValueType B> {
