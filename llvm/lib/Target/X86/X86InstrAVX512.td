@@ -3869,8 +3869,8 @@ def VMOVPDI2DIZrr  : AVX512BI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128X:$s
 def VMOVPDI2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                        (ins i32mem:$dst, VR128X:$src),
                        "vmovd\t{$src, $dst|$dst, $src}",
-                       [(store (i32 (extractelt (v4i32 VR128X:$src),
-                                     (iPTR 0))), addr:$dst)]>,
+                       [(any_store_32 (i32 (extractelt (v4i32 VR128X:$src),
+                                        (iPTR 0))), addr:$dst)]>,
                        EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
 
@@ -3893,8 +3893,8 @@ def VMOVPQIto64Zmr : I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128X:$src),
 def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
                       (ins i64mem:$dst, VR128X:$src),
                       "vmovq\t{$src, $dst|$dst, $src}",
-                      [(store (extractelt (v2i64 VR128X:$src), (iPTR 0)),
-                              addr:$dst)]>,
+                      [(any_store_64 (extractelt (v2i64 VR128X:$src), (iPTR 0)),
+                                 addr:$dst)]>,
                       EVEX, TB, PD, REX_W, EVEX_CD8<64, CD8VT1>,
                       Sched<[WriteVecStore]>, Requires<[HasAVX512]>;
 
@@ -11505,8 +11505,8 @@ multiclass avx512_extract_elt_bw_m<bits<8> opc, string OpcodeStr, SDNode OpNode,
   def mri : AVX512Ii8<opc, MRMDestMem, (outs),
               (ins _.ScalarMemOp:$dst, _.RC:$src1, u8imm:$src2),
               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-              [(store (_.EltVT (trunc (OpNode (_.VT _.RC:$src1), timm:$src2))),
-                       addr:$dst)]>,
+              [(any_store (_.EltVT (trunc (OpNode (_.VT _.RC:$src1), timm:$src2))),
+                          addr:$dst)]>,
               EVEX, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteVecExtractSt]>;
 }
 

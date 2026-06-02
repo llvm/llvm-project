@@ -706,7 +706,6 @@ namespace llvm {
 
     // Use-list order directives.
     bool parseUseListOrder(PerFunctionState *PFS = nullptr);
-    bool parseUseListOrderBB();
     bool parseUseListOrderIndexes(SmallVectorImpl<unsigned> &Indexes);
     bool sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes, SMLoc Loc);
   };

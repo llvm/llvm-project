@@ -32,11 +32,12 @@ namespace TestFunctionRedecl {
 // CHECK-LABEL: Dumping TestFunctionRedecl:
 // CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T1:[^ ]+]] <line:[[@LINE-4]]:{{.+}} f external-linkage
 // CHECK: | |-FunctionDecl 0x[[TestFunctionRedecl_D1:[^ ]+]] {{.+}} f 'void ()'
-// CHECK: | `-FunctionDecl 0x[[TestFunctionRedecl_S1:[^ ]+]] {{.+}} f 'void ()' explicit_instantiation_definition instantiated_from 0x[[TestFunctionRedecl_D2:[^ ]+]] external-linkage
-// CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T2:[^ ]+]] prev 0x[[TestFunctionRedecl_T1]] <line:[[@LINE-6]]:{{.+}} f external-linkage
+// CHECK: | |-FunctionDecl {{.+}} prev 0x[[TestFunctionRedecl_S1:[^ ]+]] <col:22, col:32> col:27 f 'void ()' implicit_instantiation instantiated_from 0x[[TestFunctionRedecl_D1]] external-linkage
+// CHECK: | `-FunctionDecl 0x[[TestFunctionRedecl_S1]] {{.+}} f 'void ()' explicit_instantiation_definition instantiated_from 0x[[TestFunctionRedecl_D2:[^ ]+]] external-linkage
+// CHECK: |-FunctionTemplateDecl 0x[[TestFunctionRedecl_T2:[^ ]+]] prev 0x[[TestFunctionRedecl_T1]] <line:[[@LINE-7]]:{{.+}} f external-linkage
 // CHECK: | |-FunctionDecl 0x[[TestFunctionRedecl_D2]] prev 0x[[TestFunctionRedecl_D1]] {{.+}} f 'void ()'
 // CHECK: | `-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-8]]:{{.+}} 'f'
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-9]]:{{.+}} 'f'
 // CHECK:   |-Function 0x[[TestFunctionRedecl_S1]] 'f' 'void ()'
 // CHECK:   |-FunctionProtoTypeLoc {{.+}} 'void ()' cdecl
 // CHECK:   | `-BuiltinTypeLoc {{.+}} 'void'
@@ -76,15 +77,15 @@ namespace TestNestedClassRedecl {
 // CHECK: | | `-ClassTemplateDecl 0x[[TestNestedClassRedecl_B_T1:[^ ]+]] <line:[[@LINE-8]]:{{.+}} B external-linkage
 // CHECK: | |   `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D1:[^ ]+]] {{.+}} struct B
 // CHECK: | `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_A_S1:[^ ]+]] <line:[[@LINE-8]]:{{.+}} line:[[@LINE-11]]:{{.+}} struct A definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_A_D2:[^ ]+]] implicit_instantiation
-// CHECK: |   `-ClassTemplateDecl 0x{{.+}} <line:[[@LINE-11]]:{{.+}} B external-linkage
-// CHECK: |     |-CXXRecordDecl 0x{{.+}} struct B
-// CHECK: |     `-ClassTemplateSpecialization  0x[[TestNestedClassRedecl_B_S1:[^ ]+]] 'B'
-// CHECK: |-ClassTemplateDecl 0x{{.+}} prev 0x[[TestNestedClassRedecl_A_T1]] <line:[[@LINE-12]]:{{.+}} A external-linkage
+// CHECK: |   |-ClassTemplateDecl 0x{{.+}} <line:[[@LINE-11]]:{{.+}} B external-linkage
+// CHECK: |   | |-CXXRecordDecl 0x{{.+}} struct B
+// CHECK: |   | `-ClassTemplateSpecialization  0x[[TestNestedClassRedecl_B_S1:[^ ]+]] 'B'
+// CHECK: |   `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_B_S1]] <line:[[@LINE-10]]:{{.+}} struct B definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_B_D1]] explicit_instantiation_definition
+// CHECK: |-ClassTemplateDecl 0x{{.+}} prev 0x[[TestNestedClassRedecl_A_T1]] <line:[[@LINE-13]]:{{.+}} A external-linkage
 // CHECK: | |-CXXRecordDecl 0x[[TestNestedClassRedecl_A_D2]] prev 0x[[TestNestedClassRedecl_A_D1]] {{.+}} struct A
 // CHECK: | `-ClassTemplateSpecialization 0x[[TestNestedClassRedecl_A_S1]] 'A'
-// CHECK: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-14]]:{{.+}} B external-linkage
+// CHECK: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-15]]:{{.+}} B external-linkage
 // CHECK: | `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D2:[^ ]+]] parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_D1]] {{.+}} struct B definition
-// CHECK: |-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_B_S1]] parent 0x[[TestNestedClassRedecl_A_S1]] <line:[[@LINE-15]]:{{.+}} struct B definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_B_D1]] explicit_instantiation_definition
 // CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-16]]:{{.+}} 'B'
 // CHECK:   |-NestedNameSpecifier TypeSpec {{.+}}
 // CHECK:   |-ClassTemplateSpecialization 0x[[TestNestedClassRedecl_B_S1]] 'B'

@@ -690,6 +690,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
 
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (IsHostOffloadingAction)
+    CmdArgs.push_back("-offload-device");
+
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
   // adds other secondary input (e.g. device bitcode files for embedding to the
