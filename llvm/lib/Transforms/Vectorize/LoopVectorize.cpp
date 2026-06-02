@@ -315,6 +315,17 @@ cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
+// TODO: Move size-based thresholds out of legality checking, make cost based
+// decisions instead of hard thresholds.
+static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
+    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed."));
+
+static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
+    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed with a "
+             "vectorize(enable) pragma"));
+
 static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
@@ -2035,10 +2046,6 @@ struct CSEDenseMapInfo {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
-  static inline Instruction *getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(),
@@ -2046,8 +2053,7 @@ struct CSEDenseMapInfo {
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
-    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
-        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+    if (LHS == getEmptyKey() || RHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(RHS);
   }
@@ -3251,7 +3257,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
-  VPTypeAnalysis TypeInfo(Plan);
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
@@ -3331,7 +3336,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // operand.
       VPValue *ToCheck =
           R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
-      Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
+      Type *ScalarTy = ToCheck->getScalarType();
       if (!Visited.insert({ScalarTy}).second)
         continue;
       Type *WideTy = toVectorizedTy(ScalarTy, VF);
@@ -6018,8 +6023,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
-                         OrigLoop->getParentLoop(),
-                         Legal->getWidestInductionType());
+                         OrigLoop->getParentLoop());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -6381,9 +6385,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       // if tail folded.
       if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      assert(VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val)
-                     ->getBackedgeValue() == Val &&
-             "Store isn't backedge value?");
+      [[maybe_unused]] auto *Rdx =
+          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+             "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
           VPI->getDebugLoc());
@@ -6550,6 +6555,20 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                    LAI->getSymbolicStrides());
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+
+  // Add surviving induction predicates to PSE and check constraints.
+  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  bool OptForSize =
+      !ForceVectorization &&
+      (CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
+       CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  unsigned SCEVCheckThreshold = ForceVectorization
+                                    ? PragmaVectorizeSCEVCheckThreshold
+                                    : VectorizeSCEVCheckThreshold;
+  if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
+                      OptForSize, SCEVCheckThreshold, ORE, OrigLoop))
+    return nullptr;
+
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -6817,8 +6836,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
                    Range);
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
@@ -6832,15 +6849,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  InterleaveGroups, CM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
-  // legal and profitable. Use a new VPCostContext to ensure type inference
-  // reflects the current plan state.
-  // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
-  {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
-                   *OrigLoop, CostCtx, Range);
-  }
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                 *OrigLoop, CostCtx, Range);
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
@@ -6869,7 +6880,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
-  VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
@@ -6885,7 +6895,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
-    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+    Type *PhiTy = PhiR->getScalarType();
 
     // Convert a VPBlendRecipe backedge to a select.
     if (auto *Blend = dyn_cast<VPBlendRecipe>(PhiR->getBackedgeValue())) {
@@ -7462,7 +7472,9 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
-    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
+    assert(MainPlan.getVectorLoopRegion()->getCanonicalIV() &&
+           "canonical IV must exist");
+    Type *Ty = VectorTC->getScalarType();
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
         {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
