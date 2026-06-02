@@ -84,7 +84,7 @@ struct Runtime {
 
   // The benchmark options that were used to perform the measurement.
   // This is decided by the framework.
-  struct BenchmarkOptions BenchmarkOptions;
+  llvm::libc_benchmarks::BenchmarkOptions BenchmarkOptions;
 };
 
 //--------
@@ -94,7 +94,7 @@ struct Runtime {
 // The root object containing all the data (configuration and measurements).
 struct Study {
   std::string StudyName;
-  struct Runtime Runtime;
+  llvm::libc_benchmarks::Runtime Runtime;
   StudyConfiguration Configuration;
   std::vector<Duration> Measurements;
 };
