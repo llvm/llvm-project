@@ -256,7 +256,7 @@ llvm::omp::target::ompt::setTraceEventTy(int DeviceId, unsigned int Enable,
     return ompt_set_never;
   }
 
-  ODBG(ODT_Tool) << "Executing setTraceEventTy: DeviceId=" << DeviceId
+  ODBG(debug::ODT_Tool) << "Executing setTraceEventTy: DeviceId=" << DeviceId
                  << " Enable=" << Enable << " EventTy=" << EventTy;
 
   std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
@@ -407,7 +407,7 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Generated trace record: " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record: " << DataPtr
                  << " (ompt_target_data_alloc)";
   return DataPtr;
 }
@@ -438,7 +438,7 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Generated trace record: " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record: " << DataPtr
                  << " (ompt_target_data_delete)";
   return DataPtr;
 }
@@ -467,7 +467,7 @@ Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
                              ompt_target_data_transfer_to_device, SrcPtrBegin,
                              SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
-  ODBG(ODT_Tool) << "OMPT-Async: Returning data trace record buf ptr " << DataPtr;
+  ODBG(debug::ODT_Tool) << "OMPT-Async: Returning data trace record buf ptr " << DataPtr;
   return DataPtr;
 }
 
@@ -494,7 +494,7 @@ Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
                              ompt_target_data_transfer_from_device, SrcPtrBegin,
                              SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
 
-  ODBG(ODT_Tool) << "OMPT-Async: Returning data trace record buf ptr " << DataPtr;
+  ODBG(debug::ODT_Tool) << "OMPT-Async: Returning data trace record buf ptr " << DataPtr;
   return DataPtr;
 }
 
@@ -510,7 +510,7 @@ ompt_record_ompt_t *Interface::stopTargetDataMovementTraceAsync(
   OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "OMPT-Async: Completed target_data trace record " << DataPtr;
+  ODBG(debug::ODT_Tool) << "OMPT-Async: Completed target_data trace record " << DataPtr;
   return DataPtr;
 }
 
@@ -532,7 +532,7 @@ ompt_record_ompt_t *Interface::startTargetSubmitTrace(int64_t DeviceId,
   DataPtr->record.target_kernel.host_op_id = getHostOpId();
 
   // May be null if event is not traced
-  ODBG(ODT_Tool) << "OMPT-Async: Returning kernel trace record buf ptr " << DataPtr;
+  ODBG(debug::ODT_Tool) << "OMPT-Async: Returning kernel trace record buf ptr " << DataPtr;
   return DataPtr;
 }
 
@@ -550,7 +550,7 @@ Interface::stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
   OmptTracingBufferMgr *TRM = PM->getTraceRecordManager();
   // Ready Record
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "OMPT-Async: Completed trace record buf ptr " << DataPtr;
+  ODBG(debug::ODT_Tool) << "OMPT-Async: Completed trace record buf ptr " << DataPtr;
   return DataPtr;
 }
 
@@ -574,7 +574,7 @@ ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Returning trace record buf ptr " << DataPtr
+  ODBG(debug::ODT_Tool) << "Returning trace record buf ptr " << DataPtr
                  << " (ompt_target_enter_data)";
   return DataPtr;
 }
@@ -599,7 +599,7 @@ ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Generated trace record " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record " << DataPtr
                  << " (ompt_target_enter_data)";
   return DataPtr;
 }
@@ -624,7 +624,7 @@ ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Returning trace record buf ptr " << DataPtr
+  ODBG(debug::ODT_Tool) << "Returning trace record buf ptr " << DataPtr
                  << " (ompt_target_exit_data)";
   return DataPtr;
 }
@@ -649,7 +649,7 @@ ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Generated trace record " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record " << DataPtr
                  << " (ompt_target_exit_data)";
   return DataPtr;
 }
@@ -674,7 +674,7 @@ ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Returning trace record buf ptr " << DataPtr
+  ODBG(debug::ODT_Tool) << "Returning trace record buf ptr " << DataPtr
                  << " (ompt_target_update)";
   return DataPtr;
 }
@@ -699,7 +699,7 @@ ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Generated trace record " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record " << DataPtr
                  << " (ompt_target_update)";
   return DataPtr;
 }
@@ -724,7 +724,7 @@ ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  ODBG(ODT_Tool) << "Returning trace record buf ptr " << DataPtr
+  ODBG(debug::ODT_Tool) << "Returning trace record buf ptr " << DataPtr
                  << " (ompt_target)";
   return DataPtr;
 }
@@ -750,7 +750,7 @@ ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
   // The trace record has been created, mark it ready for delivery to the tool
   TRM->setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
 
-  ODBG(ODT_Tool) << "Generated trace record " << DataPtr
+  ODBG(debug::ODT_Tool) << "Generated trace record " << DataPtr
                  << " (ompt_target)";
   return DataPtr;
 }
@@ -839,7 +839,7 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *Device,
                                             ompt_buffer_cursor_t CurrentPos,
                                             ompt_buffer_cursor_t *NextPos) {
   if (!PM) {
-    REPORT() << "Failed to advance buffer cursor for Device=" 
+    REPORT() << "Failed to advance buffer cursor for Device="
              << Device << " (invalid plugin manager)";
     // Indicate failure
     return false;
@@ -856,7 +856,7 @@ int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *Device,
 
   size_t TRSize = TRM->getTRSize();
   *NextPos = (ompt_buffer_cursor_t)(TraceRecord + TRSize);
-  ODBG(ODT_Tool) << "Advanced buffer pointer by "
+  ODBG(llvm::omp::target::debug::ODT_Tool) << "Advanced buffer pointer by "
                  << TRSize << " bytes to "
                  << TraceRecord + TRSize;
   return true;
