@@ -88,6 +88,11 @@ public:
   NewSubprocess(NativeProcessProtocol *parent_process,
                 std::unique_ptr<NativeProcessProtocol> child_process) override;
 
+  /// Forward a chunk of inferior stdout/stderr produced by the platform's
+  /// own reader. This is used on Windows.
+  void NewProcessOutput(NativeProcessProtocol *process,
+                        llvm::StringRef data) override;
+
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
   GDBRemoteCommunication::PacketResult

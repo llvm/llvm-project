@@ -291,13 +291,8 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
-    // Temporarily relax the following for Windows until we can take advantage
-    // of the recently added pty support. This doesn't really affect the use of
-    // lldb-server on Windows.
-#if !defined(_WIN32)
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
-#endif
   }
 
   {
@@ -1222,6 +1217,18 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
   m_debugged_processes.emplace(
       child_pid,
       DebuggedProcess{std::move(child_process), DebuggedProcess::Flag{}});
+}
+
+void GDBRemoteCommunicationServerLLGS::NewProcessOutput(NativeProcessProtocol *,
+                                                        llvm::StringRef data) {
+  if (data.empty())
+    return;
+
+  std::string owned(data);
+  m_mainloop.AddPendingCallback(
+      [this, owned = std::move(owned)](MainLoopBase &) {
+        SendONotification(owned.data(), owned.size());
+      });
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
