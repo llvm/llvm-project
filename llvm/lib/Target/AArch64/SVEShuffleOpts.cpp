@@ -12,7 +12,7 @@
 // An example would be a loop with 4 multiply-accumulate reductions, where the
 // new data in each vector iterations comes from a 4-way deinterleaving of
 // smaller datatypes loaded from memory which are then zero extended.
-// 
+//
 // Something like the following:
 //   %bgra = call ... @llvm.masked.load
 //   %deinterleave = call ... @llvm.vector.deinterleave4(%bgra)
@@ -68,7 +68,9 @@
 #include "AArch64TargetMachine.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -332,7 +334,11 @@ PreservedAnalyses SVEShuffleImpl::run(Function &F,
     if (L->isInnermost())
       Changed |= processLoop(*L);
 
-  // Can we do better than 'none'?
-  // We're not actually using the new pass manager though.
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<TargetIRAnalysis>();
+  PA.preserve<AssumptionAnalysis>();
+  PA.preserve<MemorySSAAnalysis>();
+
+  return Changed ? PA : PreservedAnalyses::all();
 }
