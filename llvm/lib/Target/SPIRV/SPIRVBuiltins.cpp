@@ -2968,7 +2968,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   const unsigned LocalSizeElemPtrIdx =
       HasVarArgs ? (BaseArgIdx + 6 + (HasEvents ? 3 : 0)) : IncorrectIdx;
 
-  const unsigned LastArgIdx =
+  [[maybe_unused]] const unsigned LastArgIdx =
       (BaseArgIdx + 4 + (HasEvents ? 3 : 0) + (HasVarArgs ? 2 : 0));
   assert(LastArgIdx < NumArgs && "Incorrect number arguments");
 
@@ -3215,8 +3215,8 @@ static bool generateConvertInst(const StringRef DemangledCall,
         Opcode = Builtin->IsDestinationSigned ? SPIRV::OpSatConvertUToS
                                               : SPIRV::OpSatConvertSToU;
       else
-        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpUConvert
-                                              : SPIRV::OpSConvert;
+        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpSConvert
+                                              : SPIRV::OpUConvert;
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
       // Int -> Float

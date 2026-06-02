@@ -37,7 +37,7 @@ define void @test() {
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %v0 = load double, ptr %in0, align 8
-; AVX512:  Cost of 19.5 for VF 2: INTERLEAVE-GROUP with factor 7 at %v0, ir<%in0>
+; AVX512:  Cost of 19.5 for VF 2: INTERLEAVE-GROUP with factor 7, ir<%in0>
 ; AVX512:    ir<%v0> = load from index 0
 ; AVX512:    ir<%v1> = load from index 1
 ; AVX512:    ir<%v2> = load from index 2
