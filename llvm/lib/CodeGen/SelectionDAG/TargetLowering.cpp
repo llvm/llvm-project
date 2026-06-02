@@ -8995,11 +8995,11 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
         DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
     SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, M);
     SDValue ShiftI = DAG.getShiftAmountConstant(I, VT, DL);
-    M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv),
-                    DAG.getNode(ISD::SRL, DL, VT, Mv, ShiftI));
+    SDValue MvS = DAG.getNode(ISD::SRL, DL, VT, Mv, ShiftI);
+    M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv), MvS);
     SDValue T = DAG.getNode(ISD::AND, DL, VT, X, Mv);
-    X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T),
-                    DAG.getNode(ISD::SRL, DL, VT, T, ShiftI));
+    SDValue TS = DAG.getNode(ISD::SRL, DL, VT, T, ShiftI);
+    X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T), TS);
     Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
   }
 
@@ -9026,11 +9026,12 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
     // This expands the "parallel prefix" operation to clmul(Mk, ~0).
     SDValue Mp =
         DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
-    MvArray[S] = DAG.getNode(ISD::AND, DL, VT, Mp, Mc);
-    SDValue ShiftSv = DAG.getShiftAmountConstant(ShiftS, VT, DL);
-    Mc = DAG.getNode(ISD::OR, DL, VT,
-                     DAG.getNode(ISD::XOR, DL, VT, Mc, MvArray[S]),
-                     DAG.getNode(ISD::SRL, DL, VT, MvArray[S], ShiftSv));
+    SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, Mc);
+    MvArray[S] = Mv;
+    SDValue McXorMv = DAG.getNode(ISD::XOR, DL, VT, Mc, Mv);
+    SDValue MvShifted = DAG.getNode(ISD::SRL, DL, VT, Mv,
+                                    DAG.getShiftAmountConstant(ShiftS, VT, DL));
+    Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted);
     Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
   }
 
@@ -9040,10 +9041,10 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   for (int S = (int)LogBW - 1; S >= 0; --S) {
     SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
-    X = DAG.getNode(
-        ISD::OR, DL, VT,
-        DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT)),
-        DAG.getNode(ISD::AND, DL, VT, T, MvArray[S]));
+    SDValue UnshiftedBits =
+        DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
+    SDValue ShiftedBits = DAG.getNode(ISD::AND, DL, VT, T, MvArray[S]);
+    X = DAG.getNode(ISD::OR, DL, VT, UnshiftedBits, ShiftedBits);
   }
 
   return DAG.getNode(ISD::AND, DL, VT, X, Msk);

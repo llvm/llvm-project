@@ -8668,19 +8668,17 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
       assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected scalar type");
       EVT NeonVT = VT == MVT::i64 ? MVT::v2i64 : MVT::v4i32;
       EVT SveVT = VT == MVT::i64 ? MVT::nxv2i64 : MVT::nxv4i32;
-      SDValue Zero = DAG.getVectorIdxConstant(0, DL);
       auto ToScalable = [&](SDValue X) {
         SDValue V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, NeonVT, X);
-        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, SveVT,
-                           DAG.getUNDEF(SveVT), V, Zero);
+        return DAG.getInsertSubvector(DL, DAG.getUNDEF(SveVT), V, 0);
       };
       SDValue Z0 = ToScalable(Op.getOperand(0));
       SDValue Z1 = ToScalable(Op.getOperand(1));
       SDValue R =
           DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SveVT,
                       DAG.getTargetConstant(IntrID, DL, MVT::i32), Z0, Z1);
-      SDValue Fixed = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NeonVT, R, Zero);
-      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Fixed, Zero);
+      SDValue Fixed = DAG.getExtractSubvector(DL, NeonVT, R, 0);
+      return DAG.getExtractVectorElt(DL, VT, Fixed, 0);
     }
 
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,

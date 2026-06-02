@@ -5572,12 +5572,12 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand bit extract (compress).
+  /// Expand parallel bit extract (compress).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand bit deposit (expand).
+  /// Expand parallel bit deposit (expand).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
