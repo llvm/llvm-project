@@ -3921,6 +3921,22 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
         I, "There must be at least two constituent operands in a vector");
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
+
+  bool IsNullVector = IsConst && !STI.isShader();
+  for (unsigned i = I.getNumExplicitDefs();
+       i < I.getNumExplicitOperands() && IsNullVector; ++i) {
+    MachineInstr *Def = getDef(I.getOperand(i), MRI);
+    IsNullVector = Def && isNullOrNullSplat(*Def, *MRI);
+  }
+
+  if (IsNullVector) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(IsConst ? SPIRV::OpConstantComposite
                                      : SPIRV::OpCompositeConstruct))

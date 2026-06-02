@@ -8,7 +8,7 @@
 ; CHECK-DAG: %[[#NullInt:]] = OpConstantNull %[[#Int]]
 ; CHECK-DAG: %[[#V2Int:]] = OpTypeVector %[[#Int]] 2
 ; CHECK-DAG: %[[#V2Bool:]] = OpTypeVector %[[#Bool]] 2
-; CHECK-DAG: %[[#NullV2Int:]] = OpConstantComposite %[[#V2Int]]
+; CHECK-DAG: %[[#NullV2Int:]] = OpConstantNull %[[#V2Int]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#Int]]
