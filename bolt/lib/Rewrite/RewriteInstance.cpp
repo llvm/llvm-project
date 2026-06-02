@@ -6245,7 +6245,7 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
 
     for (const FunctionFragment &FF :
          Function->getLayout().getSplitFragments()) {
-      safePWrite(OS,reinterpret_cast<char *>(FF.getImageAddress()),
+      safePWrite(OS, reinterpret_cast<char *>(FF.getImageAddress()),
                  FF.getImageSize(), FF.getFileOffset());
     }
   }
