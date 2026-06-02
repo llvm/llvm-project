@@ -847,6 +847,71 @@ CallInst *OpenMPIRBuilder::createRuntimeFunctionCall(FunctionCallee Callee,
   return Call;
 }
 
+void OpenMPIRBuilder::addDeclareTargetUsmRefPair(GlobalVariable *orig,
+                                                 GlobalVariable *refPtr) {
+  declareTargetUsmRefPtrPairs.emplace_back(orig, refPtr);
+}
+
+Error OpenMPIRBuilder::rewriteDeclareTargetGlobalUsesWithRefPtr(
+    GlobalVariable *origGV, GlobalVariable *refPtrGV) {
+  auto replaceUsesWithRefLoad = [refPtrGV](Instruction *inst, Value *replaced) {
+    IRBuilder<> b(inst);
+    Value *rep =
+        b.CreateLoad(refPtrGV->getValueType(), refPtrGV, "decltgt.ref");
+    if (rep->getType() != replaced->getType())
+      rep = b.CreatePointerBitCastOrAddrSpaceCast(rep, replaced->getType(),
+                                                  "decltgt.as");
+    inst->replaceUsesOfWith(replaced, rep);
+  };
+
+  SmallSetVector<User *, 8> users;
+  for (User *u : origGV->users())
+    users.insert(u);
+
+  for (User *u : users) {
+    if (auto *ce = dyn_cast<ConstantExpr>(u)) {
+      const bool isPointerCast =
+          ce->getOpcode() == Instruction::AddrSpaceCast ||
+          (ce->getOpcode() == Instruction::BitCast &&
+           ce->getType()->isPointerTy());
+
+      if (ce->getOperand(0) != origGV || !isPointerCast)
+        continue;
+
+      SmallVector<User *, 8> instUsers;
+      for (User *ceUser : ce->users())
+        if (isa<Instruction>(ceUser))
+          instUsers.push_back(ceUser);
+
+      for (User *ceUser : instUsers) {
+        auto *inst = cast<Instruction>(ceUser);
+        replaceUsesWithRefLoad(inst, ce);
+      }
+
+      if (ce->use_empty())
+        ce->destroyConstant();
+    } else if (auto *insn = dyn_cast<Instruction>(u)) {
+      replaceUsesWithRefLoad(insn, origGV);
+    }
+  }
+
+  if (!origGV->use_empty())
+    return createStringError(inconvertibleErrorCode(),
+                             "expected all uses of '%s' to be replaced",
+                             origGV->getName().str().c_str());
+
+  return Error::success();
+}
+
+Error OpenMPIRBuilder::finalizeDeclareTargetUsmIndirectLoads() {
+  if (!Config.isTargetDevice() || declareTargetUsmRefPtrPairs.empty())
+    return Error::success();
+  for (auto [orig, ref] : declareTargetUsmRefPtrPairs)
+    if (Error Err = rewriteDeclareTargetGlobalUsesWithRefPtr(orig, ref))
+      return Err;
+  return Error::success();
+}
+
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
 static void raiseUserConstantDataAllocasToEntryBlock(IRBuilderBase &Builder,
@@ -1045,6 +1110,9 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
+
+  if (Error Err = finalizeDeclareTargetUsmIndirectLoads())
+    report_fatal_error(std::move(Err));
 
   IsFinalized = true;
 }

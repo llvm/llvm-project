@@ -31,6 +31,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
@@ -8206,12 +8208,18 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
           (attribute.getCaptureClause().getValue() !=
                mlir::omp::DeclareTargetCaptureClause::to ||
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
-        ompBuilder->getAddrOfDeclareTargetVar(
+        llvm::Type *ptrTy = gVal->getType();
+        if (ompBuilder->Config.hasRequiresUnifiedSharedMemory())
+          ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
+        llvm::Constant *refPtrConst = ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-            gVal->getType(), /*GlobalInitializer*/ nullptr,
-            /*VariableLinkage*/ nullptr);
+            ptrTy, /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr);
+        if (auto *origGV = llvm::dyn_cast<llvm::GlobalVariable>(gVal))
+          if (auto *refPtrGV =
+                  llvm::dyn_cast_or_null<llvm::GlobalVariable>(refPtrConst))
+            ompBuilder->addDeclareTargetUsmRefPair(origGV, refPtrGV);
       }
     }
   }
