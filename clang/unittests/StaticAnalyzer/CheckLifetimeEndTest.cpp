@@ -88,4 +88,19 @@ void foo() {
   EXPECT_TRUE(Diags.empty());
 }
 
+TEST(CheckLifetimeEnd, NonTrivialDtor) {
+  constexpr auto Code = R"(
+ struct A {
+   ~A() {}
+ };
+ void foo() {
+   A a;
+ }
+   )";
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCodeWithArgs<addLifetimeEndReporter>(
+      Code, EnableLifetimeArgs, Diags, /*OnlyEmitWarnings=*/true));
+  EXPECT_EQ(Diags, "test.LifetimeEndReporter: a LIFETIME END\n");
+}
+
 } // namespace
