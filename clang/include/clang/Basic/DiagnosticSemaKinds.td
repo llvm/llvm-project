@@ -11806,6 +11806,8 @@ def note_within_capture : Note<
   "within capture %0 of lambda expression here">;
 def note_within_base_of_type : Note<
   "within base of type %0 declared here">;
+def note_within_param_of_type : Note<
+  "within parameter %0 of type %1 declared here">;
 def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
 def err_opencl_type_struct_or_union_field : Error<

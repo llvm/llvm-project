@@ -692,9 +692,9 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
         SemaSYCLRef.Diag(BS->getBeginLoc(), diag::note_within_base_of_type)
             << RD;
       } else {
-        // Nothing to emit for ParmVarDecl since its location just points to
-        // skep-attributed function template.
-        assert(isa<const ParmVarDecl *>(Parent));
+        auto *Param = cast<const ParmVarDecl *>(Parent);
+        SemaSYCLRef.Diag(Param->getBeginLoc(), diag::note_within_param_of_type)
+            << Param << Param->getType();
       }
     }
   }
