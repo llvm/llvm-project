@@ -33,9 +33,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
+
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 
 namespace {
@@ -972,6 +975,72 @@ bool VPlanTransforms::createHeaderPhiRecipes(
                             ? "bc.resume.val"
                             : "bc.merge.rdx");
   }
+  return true;
+}
+
+bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
+                                             PredicatedScalarEvolution &PSE,
+                                             bool OptForSize,
+                                             unsigned SCEVCheckThreshold,
+                                             OptimizationRemarkEmitter *ORE,
+                                             Loop *TheLoop) {
+  // Collect which wide IVs have predicates and add them to PSE.
+  auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
+  for (auto &R : HeaderVPBB->phis()) {
+    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
+    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+      continue;
+    PredicatedIVs.insert(WideIV);
+    for (const auto *P : WideIV->getNoWrapPredicates())
+      PSE.addPredicate(*P);
+  }
+
+  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
+  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
+  // predicates directly, regardless of whether PSE was already non-trivial
+  // from other sources (e.g., LAI predicates).
+  // TODO: Overly conservative; the pre-computed exit values are not correct
+  // outside the loop, but the exit values could be extracted from the vector
+  // loop.
+  if (!PredicatedIVs.empty())
+    for (auto *EB : Plan.getExitBlocks())
+      for (VPRecipeBase &R : EB->phis())
+        for (VPValue *Op : R.operands()) {
+          VPValue *Inner;
+          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
+            continue;
+          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
+          if (!WideIV || !PredicatedIVs.contains(WideIV))
+            continue;
+          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
+                               "outside-loop use via ExitingIVValue\n");
+          return false;
+        }
+
+  unsigned TotalComplexity = PSE.getPredicate().getComplexity();
+  if (TotalComplexity && OptForSize) {
+    LLVM_DEBUG(
+        dbgs() << "LV: Not vectorizing: SCEV predicates needed for induction "
+                  "but optimizing for size\n");
+    reportVectorizationFailure(
+        "Runtime SCEV check is required with -Os/-Oz",
+        "runtime SCEV checks needed but optimizing for size",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
+    return false;
+  }
+
+  if (TotalComplexity > SCEVCheckThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Too many SCEV checks needed ("
+                      << TotalComplexity << " > " << SCEVCheckThreshold
+                      << ")\n");
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
+        "Too many SCEV assumptions need to be made and checked at runtime",
+        "TooManySCEVRunTimeChecks", ORE, TheLoop);
+    return false;
+  }
+
   return true;
 }
 

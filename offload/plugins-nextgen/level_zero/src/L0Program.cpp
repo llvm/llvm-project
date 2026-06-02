@@ -571,7 +571,7 @@ Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Cannot read from device global variable %s", Name);
   }
-  return getL0Device().enqueueMemCopy(HostPtr, DevicePtr, Size);
+  return getL0Device().enqueueMemCopyAndSync(HostPtr, DevicePtr, Size);
 }
 
 Error L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
@@ -585,7 +585,7 @@ Error L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Cannot write to device global variable %s", Name);
   }
-  return getL0Device().enqueueMemCopy(DevicePtr, HostPtr, Size);
+  return getL0Device().enqueueMemCopyAndSync(DevicePtr, HostPtr, Size);
 }
 
 Error L0ProgramTy::loadModuleKernels() {

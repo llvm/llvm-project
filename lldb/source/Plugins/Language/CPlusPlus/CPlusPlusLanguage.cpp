@@ -269,7 +269,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "function '{0}' does not have a demangled name",
         mangled.GetMangledName());
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  const DemangledNameInfo *info = mangled.GetDemangledInfo();
   if (!info)
     return llvm::createStringErrorV(
         "function '{0}' does not have demangled info", demangled_name);
@@ -1154,9 +1154,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::chrono::sys_seconds summary provider",
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
-                "std::__[[:alnum:]]+::chrono::duration<.*, "
-                "std::__[[:alnum:]]+::ratio<1, 1> "
-                "> >$",
+                "std::__[[:alnum:]]+::chrono::duration<[^,]*> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,
                 true);
@@ -1166,7 +1164,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::system_clock, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400, 1> "
+                "std::__[[:alnum:]]+::ratio<86400> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,
@@ -1178,9 +1176,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "libc++ std::chrono::local_seconds summary provider",
       "^std::__[[:alnum:]]+::chrono::time_point<"
       "std::__[[:alnum:]]+::chrono::local_t, "
-      "std::__[[:alnum:]]+::chrono::duration<.*, "
-      "std::__[[:alnum:]]+::ratio<1, 1> "
-      "> >$",
+      "std::__[[:alnum:]]+::chrono::duration<[^,]*> >$",
       eTypeOptionHideChildren | eTypeOptionHideValue | eTypeOptionCascade,
       true);
   AddCXXSummary(cpp_category_sp,
@@ -1189,7 +1185,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::chrono::time_point<"
                 "std::__[[:alnum:]]+::chrono::local_t, "
                 "std::__[[:alnum:]]+::chrono::duration<int, "
-                "std::__[[:alnum:]]+::ratio<86400, 1> "
+                "std::__[[:alnum:]]+::ratio<86400> "
                 "> >$",
                 eTypeOptionHideChildren | eTypeOptionHideValue |
                     eTypeOptionCascade,

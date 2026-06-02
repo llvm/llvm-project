@@ -161,7 +161,9 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   void setResult(Instruction &I, AnyValue V) {
     if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
       setFailed();
-    CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
+    assert(V.isCompatibleWith(I.getType()) && "Unexpected value storage kind.");
+    if (!V.isNone())
+      CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
   APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
@@ -1254,7 +1256,7 @@ public:
     }
     case Intrinsic::vector_insert: {
       if (Args[2].isPoison())
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -1263,14 +1265,14 @@ public:
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
       if (RawOffset % MinSize != 0)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Offset = Chunk * EVL;
       if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       std::vector<AnyValue> Res;
       Res.reserve(Vec.size());
       for (size_t I = 0; I != Vec.size(); ++I) {
@@ -1283,21 +1285,21 @@ public:
     }
     case Intrinsic::vector_extract: {
       if (Args[1].isPoison())
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
       if (RawOffset % MinSize != 0)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Offset = Chunk * EVL;
       if (Offset > Vec.size() || EVL > Vec.size() - Offset)
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       return std::vector<AnyValue>(Vec.begin() + Offset,
                                    Vec.begin() + Offset + EVL);
     }
@@ -1350,13 +1352,13 @@ public:
     }
     case Intrinsic::vector_splice_left: {
       if (Args[2].isPoison())
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const auto &LHS = Args[0].asAggregate();
       const auto &RHS = Args[1].asAggregate();
       const auto &Off = Args[2].asInteger();
       const size_t Len = LHS.size();
       if (Off.ugt(Len))
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       uint64_t Offset = Off.getZExtValue();
       std::vector<AnyValue> Res;
       Res.reserve(Len);
@@ -1368,13 +1370,13 @@ public:
     }
     case Intrinsic::vector_splice_right: {
       if (Args[2].isPoison())
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       const auto &LHS = Args[0].asAggregate();
       const auto &RHS = Args[1].asAggregate();
       const auto &Off = Args[2].asInteger();
       const size_t Len = LHS.size();
       if (Off.ugt(Len))
-        return AnyValue::poison();
+        return AnyValue::getPoisonValue(Ctx, RetTy);
       uint64_t Offset = Len - Off.getZExtValue();
       std::vector<AnyValue> Res;
       Res.reserve(Len);
