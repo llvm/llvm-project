@@ -2162,21 +2162,21 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
         // A union InitListExpr has one init for one member. We can only
         // resolve if the accessed field matches the initialized member.
         const FieldDecl *InitField = ILE->getInitializedFieldInUnion();
-        if (InitField == FR->getDecl()) {
-          if (ILE->getNumInits() == 0)
-            return svalBuilder.makeZeroVal(LeafTy);
-          E = ILE->getInit(0);
-        } else {
+        if (InitField != FR->getDecl())
           return std::nullopt;
-        }
+        if (ILE->getNumInits() == 0)
+          return svalBuilder.makeZeroVal(LeafTy);
+        E = ILE->getInit(0);
       } else {
         unsigned Idx = FR->getDecl()->getFieldIndex();
-        if (Idx < ILE->getNumInits())
-          E = ILE->getInit(Idx);
-        else
+        if (Idx >= ILE->getNumInits())
           return std::nullopt;
+        E = ILE->getInit(Idx);
       }
-    } else if (const auto *ER = dyn_cast<ElementRegion>(SR)) {
+      continue;
+    }
+
+    if (const auto *ER = dyn_cast<ElementRegion>(SR)) {
       auto CI = ER->getIndex().getAs<nonloc::ConcreteInt>();
       if (!CI)
         return std::nullopt;
@@ -2187,9 +2187,10 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
         E = Filler;
       else
         return std::nullopt;
-    } else {
-      return std::nullopt;
+      continue;
     }
+
+    return std::nullopt;
   }
 
   return svalBuilder.getConstantVal(E);
