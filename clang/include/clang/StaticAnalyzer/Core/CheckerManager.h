@@ -330,7 +330,7 @@ public:
                                const CallEvent &Call, ExprEngine &Eng,
                                bool wasInlined = false);
 
-  /// Run checkers for end of variable lifetime
+  /// Run checkers for the end of a variable's lifetime.
   void runCheckersForLifetimeEnd(ExplodedNodeSet &Dst,
                                  const ExplodedNodeSet &Src,
                                  const VarDecl *Decl, ExprEngine &Eng);
