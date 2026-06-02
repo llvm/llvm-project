@@ -17,13 +17,13 @@ _LIB_EXPORT MockLiboffload &getMockLiboffload() {
 
 } // namespace mock
 
-bool inline operator==(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
+static bool operator==(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
   return (lhs.Size == rhs.Size) && (lhs.NumPlatforms == rhs.NumPlatforms) &&
          std::memcmp(lhs.Platforms, rhs.Platforms,
                      lhs.NumPlatforms * sizeof(ol_platform_backend_t)) == 0;
 }
 
-bool inline operator!=(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
+static bool operator!=(const ol_init_args_t &lhs, const ol_init_args_t &rhs) {
   return !(lhs == rhs);
 }
 
@@ -44,7 +44,7 @@ void mock::MockLiboffload::initDefault() {
         assert(!DefaultDevice);
         DefaultPlatform = mock::createDummyHandle<ol_platform_handle_t>();
         DefaultDevice = mock::createDummyHandleWithData<ol_device_handle_t>(
-            reinterpret_cast<unsigned char *>(DefaultPlatform),
+            reinterpret_cast<unsigned char *>(&DefaultPlatform),
             sizeof(DefaultPlatform));
 
         return OL_SUCCESS;
@@ -220,7 +220,7 @@ void mock::MockLiboffload::initDefault() {
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
         // Attach device as data to check what device queue belongs to if needed
         *Queue = mock::createDummyHandleWithData<ol_queue_handle_t>(
-            reinterpret_cast<unsigned char *>(Device), sizeof(Device));
+            reinterpret_cast<unsigned char *>(&Device), sizeof(Device));
         return OL_SUCCESS;
       });
 

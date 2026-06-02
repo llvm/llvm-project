@@ -29,10 +29,7 @@ inline llvm::object::OffloadBinary::OffloadingImage createSYCLImage(
   llvm::object::OffloadBinary::OffloadingImage Image;
   Image.TheImageKind = ImageKind;
   Image.TheOffloadKind = OffloadKind;
-  Image.Flags = 0;
   Image.StringData["triple"] = sycl::detail::DeviceBinaryTripleSPIRV64;
-  Image.StringData["compile-opts"] = "";
-  Image.StringData["link-opts"] = "";
   Image.StringData["symbols"] = SymbolsBlob;
   static constexpr char DummyImageData[] = "dummy image data";
   Image.Image = llvm::MemoryBuffer::getMemBufferCopy(

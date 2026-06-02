@@ -60,7 +60,7 @@ TEST(ProgramAndKernelManager, CheckUnsupportedVersionOfImage) {
   std::array<llvm::StringRef, 1> KernelNames = {"kernel"};
   llvm::SmallString<0> IncompatibleImageBinary =
       sycl::unittest::createSYCLDeviceBinary(KernelNames,
-                                             llvm::object::IMG_Object);
+                                             llvm::object::IMG_Bitcode);
 
   MockProgramAndKernelManager Manager;
 

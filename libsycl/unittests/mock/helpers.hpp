@@ -29,19 +29,16 @@
 namespace mock {
 
 struct ol_dummy_handle_t {
-  ol_dummy_handle_t(size_t DataSize = 0)
-      : MStorage(DataSize), MSize(DataSize) {}
-  ol_dummy_handle_t(unsigned char *Data, size_t Size)
-      : MStorage(Size), MSize(Size) {
+  ol_dummy_handle_t(size_t DataSize = 0) : MStorage(DataSize) {}
+  ol_dummy_handle_t(unsigned char *Data, size_t Size) : MStorage(Size) {
     std::memcpy(MStorage.data(), Data, Size);
   }
-  std::atomic<size_t> MRefCounter = 1;
-  std::vector<unsigned char> MStorage;
-  size_t MSize;
 
-  template <typename T> T getDataAs() {
+  std::vector<unsigned char> MStorage;
+
+  template <typename T> const T getDataAs() const {
     assert(MStorage.size() >= sizeof(T));
-    return *reinterpret_cast<T *>(MStorage.data());
+    return *reinterpret_cast<const T *>(MStorage.data());
   }
 
   template <typename T> T setDataAs(T Val) {
@@ -52,18 +49,18 @@ struct ol_dummy_handle_t {
 
 using dummy_handle_t = ol_dummy_handle_t *;
 
-template <class T> inline T createDummyHandle(size_t Size = 0) {
+template <class T> T createDummyHandle(size_t Size = 0) {
   dummy_handle_t DummyHandlePtr = new ol_dummy_handle_t(Size);
   return reinterpret_cast<T>(DummyHandlePtr);
 }
 
 template <class T>
-inline T createDummyHandleWithData(unsigned char *Data, size_t Size) {
+T createDummyHandleWithData(unsigned char *Data, size_t Size) {
   auto DummyHandlePtr = new ol_dummy_handle_t(Data, Size);
   return reinterpret_cast<T>(DummyHandlePtr);
 }
 
-template <class T> inline void releaseDummyHandle(T Handle) {
+template <class T> void releaseDummyHandle(T Handle) {
   auto DummyHandlePtr = reinterpret_cast<dummy_handle_t>(Handle);
   delete DummyHandlePtr;
 }
@@ -109,8 +106,6 @@ public:
   MOCK_METHOD(ol_result_t, olCreateEvent,
               (ol_queue_handle_t Queue, ol_event_handle_t *Event));
 
-  void initDefault();
-
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =
         Errors.emplace(std::make_pair(Code, ol_error_struct_t{Code, ""}));
@@ -118,8 +113,10 @@ public:
   }
 
 private:
+  void initDefault();
+
   std::unordered_map<ol_errc_t, ol_error_struct_t> Errors;
-  ol_platform_handle_t DefaultPlatform;
+  ol_platform_handle_t DefaultPlatform{};
   ol_device_handle_t DefaultDevice{};
 };
 
@@ -136,9 +133,7 @@ _LIB_EXPORT MockLiboffload &getMockLiboffload();
 class MockWrapper {
 public:
   MockWrapper() : Mock(getMockLiboffload()) {}
-  ~MockWrapper() {
-    ::testing::Mock::VerifyAndClearExpectations(&Mock); // move to common
-  }
+  ~MockWrapper() { ::testing::Mock::VerifyAndClearExpectations(&Mock); }
   MockLiboffload &get() { return Mock; };
 
 private:
