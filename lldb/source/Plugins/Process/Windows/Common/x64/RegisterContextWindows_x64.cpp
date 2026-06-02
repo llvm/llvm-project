@@ -494,6 +494,7 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   if (!CacheAllRegisterValues())
     return false;
 
+  Log *log = GetLog(WindowsLog::Registers);
   switch (reg_info->kinds[eRegisterKindLLDB]) {
   case lldb_rax_x86_64:
     m_context.Rax = reg_value.GetAsUInt64();
@@ -597,6 +598,10 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
   case lldb_xmm15_x86_64:
     memcpy(&m_context.Xmm15, reg_value.GetBytes(), 16);
     break;
+  default:
+    LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
+             reg_value.GetAsUInt32(), reg);
+    return false;
   }
 
   // Physically update the registers in the target process.

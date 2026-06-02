@@ -274,6 +274,7 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
 
   const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
 
+  Log *log = GetLog(WindowsLog::Registers);
   switch (reg) {
   case gpr_r0:
     m_context.R0 = reg_value.GetAsUInt32();
@@ -421,6 +422,8 @@ bool RegisterContextWindows_arm::WriteRegister(const RegisterInfo *reg_info,
     break;
 
   default:
+    LLDB_LOG(log, "Write value {0:x} to unknown register {1}",
+             reg_value.GetAsUInt32(), reg);
     return false;
   }
 
