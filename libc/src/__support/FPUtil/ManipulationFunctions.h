@@ -170,6 +170,8 @@ ldexp(T x, U exp) {
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
   // Make sure that we can safely cast exp to int when not returning early.
   static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
+
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
@@ -197,6 +199,7 @@ ldexp(T x, U exp) {
     raise_except_if_required(FE_UNDERFLOW);
     return FPBits<T>::zero(sign).get_val();
   }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());

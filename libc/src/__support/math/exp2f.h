@@ -76,9 +76,11 @@ LIBC_INLINE float exp2f(float x) {
     if (xbits.is_pos()) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_TO_NEAREST
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return FPBits::max_normal().get_val();
+#endif
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);

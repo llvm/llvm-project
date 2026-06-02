@@ -176,6 +176,10 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
       uint32_t s = EXCEPT_OUTPUTS_SIN[i][0]; // FE_TOWARDZERO
       uint32_t c = EXCEPT_OUTPUTS_COS[i][0]; // FE_TOWARDZERO
       bool x_sign = x < 0;
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+      s += EXCEPT_OUTPUTS_SIN[i][3];
+      c += EXCEPT_OUTPUTS_COS[i][3];
+#else
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
         s += x_sign ? EXCEPT_OUTPUTS_SIN[i][2] : EXCEPT_OUTPUTS_SIN[i][1];
@@ -190,6 +194,7 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
         c += EXCEPT_OUTPUTS_COS[i][3];
         break;
       }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
       *sinp = x_sign ? -FPBits(s).get_val() : FPBits(s).get_val();
       *cosp = FPBits(c).get_val();
 

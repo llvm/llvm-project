@@ -58,6 +58,9 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         StorageType out_bits = values[i].rnd_towardzero_result;
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+        out_bits += values[i].rnd_tonearest_offset;
+#else
         switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           out_bits += values[i].rnd_upward_offset;
@@ -69,6 +72,7 @@ template <typename T, size_t N> struct ExceptValues {
           out_bits += values[i].rnd_tonearest_offset;
           break;
         }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
         return FPBits<T>(out_bits).get_val();
       }
     }
@@ -80,6 +84,9 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         StorageType out_bits = values[i].rnd_towardzero_result;
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+        out_bits += values[i].rnd_tonearest_offset;
+#else
         switch (fputil::quick_get_round()) {
         case FE_UPWARD:
           if (sign)
@@ -100,6 +107,7 @@ template <typename T, size_t N> struct ExceptValues {
           out_bits += values[i].rnd_tonearest_offset;
           break;
         }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
         T result = FPBits<T>(out_bits).get_val();
         if (sign)
           result = -result;

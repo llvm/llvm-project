@@ -87,11 +87,13 @@ LIBC_INLINE constexpr float16 asinhf16(float16 x) {
     // when |x| < 0x1.718p-5, asinhf16(x) = x. Adjust by 1 ULP for certain
     // rounding types.
     if (LIBC_UNLIKELY(x_abs < 0x29c6)) {
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
       int rounding = fputil::quick_get_round();
       if ((rounding == FE_UPWARD || rounding == FE_TOWARDZERO) && xf < 0)
         return fputil::cast<float16>(xf + 0x1p-24f);
       if ((rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO) && xf > 0)
         return fputil::cast<float16>(xf - 0x1p-24f);
+#endif
       return fputil::cast<float16>(xf);
     }
 

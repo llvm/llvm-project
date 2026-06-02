@@ -93,6 +93,11 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW);
+      return FPBits::inf().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_UPWARD:
@@ -102,6 +107,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     }
 
     // When x < -11 * log10(2).
@@ -117,6 +123,9 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       }
 
       // When x < -0x1.ce4p+1, round(10^x - 1, HP, RN) = -1.
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      return FPBits::one(Sign::NEG).get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_DOWNWARD:
@@ -124,6 +133,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       default:
         return fputil::cast<float16>(-0x1.ffcp-1);
       }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     }
 
     // When |x| <= 2^(-3).
@@ -150,8 +160,8 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
   }
 
   // When x is 1, 2, or 3. These are hard-to-round cases with exact results.
-  // 10^4 - 1 = 9'999 is not exactly representable as a float16, but luckily the
-  // polynomial approximation gives the correct result for x = 4 in all
+  // 10^4 - 1 = 9'999 is not exactly representable as a float16, but luckily
+  // the polynomial approximation gives the correct result for x = 4 in all
   // rounding modes.
   if (LIBC_UNLIKELY((x_u & ~(0x3c00U | 0x4000U | 0x4200U | 0x4400U)) == 0)) {
     switch (x_u) {

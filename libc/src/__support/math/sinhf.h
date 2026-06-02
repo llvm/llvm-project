@@ -61,6 +61,7 @@ LIBC_INLINE float sinhf(float x) {
     if (xbits.is_inf())
       return x;
 
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
     int rounding = fputil::quick_get_round();
     if (xbits.is_neg()) {
       if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
@@ -69,6 +70,7 @@ LIBC_INLINE float sinhf(float x) {
       if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
         return FPBits::max_normal().get_val();
     }
+#endif // !LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);

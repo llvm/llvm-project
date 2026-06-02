@@ -46,6 +46,18 @@ rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
       (rshift >= Bits && value == 0))
     return 0; // exact
 
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+  if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
+    // We round up, unless the value is an exact halfway case and
+    // the bit that will end up in the units place is 0, in which
+    // case tie-break-to-even says round down.
+    bool round_bit = rshift < Bits ? value.get_bit(rshift) : 0;
+    return round_bit != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
+  } else {
+    return -1;
+  }
+#endif
+
   switch (quick_get_round()) {
   case FE_TONEAREST:
     if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
@@ -190,6 +202,10 @@ template <size_t Bits> struct DyadicFloat {
         raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       }
 
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      return FPBits::inf(sign).get_val();
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+
       switch (quick_get_round()) {
       case FE_TONEAREST:
         return FPBits::inf(sign).get_val();
@@ -248,6 +264,10 @@ template <size_t Bits> struct DyadicFloat {
     StorageType result =
         FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
 
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+    if (round && (lsb || sticky))
+      ++result;
+#else
     switch (quick_get_round()) {
     case FE_TONEAREST:
       if (round && (lsb || sticky))
@@ -264,6 +284,7 @@ template <size_t Bits> struct DyadicFloat {
     default:
       break;
     }
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 
     if (ShouldSignalExceptions && (round || sticky)) {
       int excepts = FE_INEXACT;
