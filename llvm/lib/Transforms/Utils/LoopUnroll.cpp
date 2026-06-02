@@ -48,6 +48,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
@@ -1534,9 +1535,18 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          RdxResult = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, RdxResult, "bin.rdx");
+          if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK)) {
+            RdxResult = createMinMaxOp(Builder, RK, RdxResult, RdxPart);
+            // createMinMaxOp emits a new select for FP fcmp+select
+            // min/max without MD_prof. Mark its branch weights as
+            // explicitly unknown.
+            if (auto *NewSI = dyn_cast<SelectInst>(RdxResult))
+              setExplicitlyUnknownBranchWeightsIfProfiled(*NewSI, DEBUG_TYPE);
+          } else {
+            RdxResult = Builder.CreateBinOp(
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+                RdxPart, RdxResult, "bin.rdx");
+          }
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
@@ -1713,11 +1723,9 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.
-  // TODO: Handle additional reductions, including FP and min-max
-  // reductions.
+  // TODO: Handle any-of and find-last reductions.
   if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isFindRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
+      RecurrenceDescriptor::isFindRecurrenceKind(RK))
     return std::nullopt;
 
   if (RdxDesc.hasExactFPMath())
