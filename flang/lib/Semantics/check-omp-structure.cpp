@@ -395,7 +395,7 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
     // on those.
     return;
   }
-  if (auto *symbol{GetObjectSymbol(object)}) {
+  if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
     // Eliminate certain kinds of symbols before running the analyzer to
     // avoid confusing error messages. The analyzer assumes that the context
     // of the object use is an expression, and some diagnostics are tailored
@@ -1569,7 +1569,7 @@ void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
-    const Symbol *sym{GetArgumentSymbol(arg)};
+    const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
     if (!locator || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
@@ -1695,7 +1695,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
   }};
 
   const parser::OmpArgument &arg{args.v.front()};
-  if (auto *sym{GetArgumentSymbol(arg)}) {
+  if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
     if (!isValidSymbol(sym)) {
       auto &msg{context_.Say(arg.source,
           "The name '%s' should refer to a procedure"_err_en_US, sym->name())};
@@ -1750,11 +1750,13 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
   common::visit( //
       common::visitors{
           [&](const parser::OmpBaseVariantNames &y) {
-            CheckSymbol(GetObjectSymbol(std::get<0>(y.t)), arg.source);
-            CheckSymbol(GetObjectSymbol(std::get<1>(y.t)), arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<0>(y.t), /*ultimate=*/true),
+                arg.source);
+            CheckSymbol(GetObjectSymbol(std::get<1>(y.t), /*ultimate=*/true),
+                arg.source);
           },
           [&](const parser::OmpLocator &y) {
-            CheckSymbol(GetArgumentSymbol(arg), arg.source);
+            CheckSymbol(GetArgumentSymbol(arg, /*ultimate=*/true), arg.source);
           },
           [&](auto &&y) { InvalidArgument(arg.source); },
       },
@@ -2053,7 +2055,7 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       continue;
     }
 
-    if (const Symbol *symbol{GetObjectSymbol(*object)}) {
+    if (const Symbol *symbol{GetObjectSymbol(*object, /*ultimate=*/true)}) {
       if (!IsTypeParamInquiry(*symbol)) {
         checkSymbol(*symbol, arg.source);
       }
@@ -2086,7 +2088,7 @@ void OmpStructureChecker::CheckExecutableAllocateDirective(
       hasEmptyList = true;
     }
     for (const parser::OmpArgument &arg : spec.Arguments().v) {
-      if (auto *sym{GetArgumentSymbol(arg)}) {
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
         // Ignore these checks for structure members. They are not allowed
         // in the first place, so don't tell the users that they need to
         // be specified somewhere,
@@ -2217,7 +2219,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
       if (auto *found{parser::omp::FindClause(spec, dsaClause)}) {
         for (auto &object : GetOmpObjectList(*found)->v) {
           if (auto *symbol{GetObjectSymbol(object)}) {
-            privatized.insert(symbol);
+            privatized.insert(&symbol->GetUltimate());
           }
         }
       }
@@ -2225,7 +2227,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
 
     for (auto &object : GetOmpObjectList(x)->v) {
       if (auto *symbol{GetObjectSymbol(object)}) {
-        if (!privatized.count(symbol)) {
+        if (!privatized.count(&symbol->GetUltimate())) {
           context_.Say(
               GetObjectSource(object).value_or(GetContext().clauseSource),
               "The ALLOCATE clause requires that '%s' must be listed in a private data-sharing attribute clause on the same directive"_err_en_US,
@@ -2323,7 +2325,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
 
   // Check if arguments are extended-list-items.
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    const Symbol *symbol{GetArgumentSymbol(arg)};
+    const Symbol *symbol{GetArgumentSymbol(arg, /*ultimate=*/true)};
     if (!symbol) {
       context_.Say(arg.source,
           "An argument to the DECLARE TARGET directive should be an extended-list-item"_err_en_US);
@@ -2581,7 +2583,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
     }
     for (auto &object : DEREF(GetOmpObjectList(clause)).v) {
       CheckVarIsNotPartOfAnotherVar(dirName.source, object);
-      if (auto *symbol{GetObjectSymbol(object)}) {
+      if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (IsStructureComponent(*symbol)) {
           continue;
         }
@@ -3042,7 +3044,7 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
   if (flushList) {
     for (const parser::OmpArgument &arg : flushList->v) {
-      if (auto *sym{GetArgumentSymbol(arg)};
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
           sym && !isVariableListItemOrCommonBlock(*sym)) {
         context_.Say(arg.source,
             "FLUSH argument must be a variable list item"_err_en_US);
@@ -3845,7 +3847,7 @@ bool OmpStructureChecker::CheckReductionOperator(
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
       const Scope &scope{definedOp->v.symbol->owner()};
       if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
-        if (symbol->detailsIf<UserReductionDetails>()) {
+        if (symbol->GetUltimate().detailsIf<UserReductionDetails>()) {
           return true;
         }
       }
@@ -3863,7 +3865,7 @@ bool OmpStructureChecker::CheckReductionOperator(
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
       if (!valid) {
-        valid = name->symbol->detailsIf<UserReductionDetails>();
+        valid = name->symbol->GetUltimate().detailsIf<UserReductionDetails>();
       }
     }
     if (!valid) {
@@ -3901,7 +3903,7 @@ void OmpStructureChecker::CheckReductionObjects(
   // Iterate on objects because `GetSymbolsInObjectList` expands common block
   // names into the lists of their members.
   for (const parser::OmpObject &object : objects.v) {
-    auto *symbol{GetObjectSymbol(object)};
+    auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)};
     if (symbol && IsCommonBlock(*symbol)) {
       auto source{GetObjectSource(object)};
       context_.Say(source ? *source : GetContext().clauseSource,
@@ -3931,8 +3933,8 @@ void OmpStructureChecker::CheckReductionObjects(
     }
     // Type parameter inquiries are not allowed.
     for (const parser::OmpObject &object : objects.v) {
-      if (auto *dataRef{GetDataRefFromObj(object)}) {
-        if (IsDataRefTypeParamInquiry(dataRef)) {
+      if (auto *symbol{GetObjectSymbol(object)}) {
+        if (IsTypeParamInquiry(*symbol)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
               "Type parameter inquiry is not permitted in %s clause"_err_en_US,
@@ -3946,18 +3948,23 @@ void OmpStructureChecker::CheckReductionObjects(
 static bool CheckSymbolSupportsType(const Scope &scope,
     const parser::CharBlock &name, const DeclTypeSpec &type) {
   if (const auto *symbol{scope.FindSymbol(name)}) {
+    const auto &ultimate{symbol->GetUltimate()};
     if (const auto *reductionDetails{
-            symbol->detailsIf<UserReductionDetails>()}) {
+            ultimate.detailsIf<UserReductionDetails>()}) {
       return reductionDetails->SupportsType(type);
     }
   }
   // Look through module scopes in the global scope.
-  // This covers reductions declared in a module and used via USE association
+  // This covers reductions declared in a module and used via USE association.
   const SemanticsContext &semCtx{scope.context()};
   Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
   for (const Scope &child : global.children()) {
     if (child.kind() == Scope::Kind::Module) {
       if (const auto *symbol{child.FindSymbol(name)}) {
+        // Skip PRIVATE reductions that aren't visible in the current scope.
+        if (symbol->attrs().test(Attr::PRIVATE)) {
+          continue;
+        }
         if (const auto *reductionDetails{
                 symbol->detailsIf<UserReductionDetails>()}) {
           return reductionDetails->SupportsType(type);
@@ -4057,7 +4064,7 @@ static bool IsReductionAllowedForType(
       // if the symbol has UserReductionDetails, and if so, the type is
       // supported.
       if (const auto *reductionDetails{
-              name->symbol->detailsIf<UserReductionDetails>()}) {
+              name->symbol->GetUltimate().detailsIf<UserReductionDetails>()}) {
         return reductionDetails->SupportsType(type);
       }
 
@@ -4233,26 +4240,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
 }
 
-bool OmpStructureChecker::IsDataRefTypeParamInquiry(
-    const parser::DataRef *dataRef) {
-  bool dataRefIsTypeParamInquiry{false};
-  if (const auto *structComp{
-          parser::Unwrap<parser::StructureComponent>(dataRef)}) {
-    if (const auto *compSymbol{structComp->Component().symbol}) {
-      if (const auto *compSymbolMiscDetails{
-              std::get_if<MiscDetails>(&compSymbol->details())}) {
-        const auto detailsKind = compSymbolMiscDetails->kind();
-        dataRefIsTypeParamInquiry =
-            (detailsKind == MiscDetails::Kind::KindParamInquiry ||
-                detailsKind == MiscDetails::Kind::LenParamInquiry);
-      } else if (compSymbol->has<TypeParamDetails>()) {
-        dataRefIsTypeParamInquiry = true;
-      }
-    }
-  }
-  return dataRefIsTypeParamInquiry;
-}
-
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList,
     llvm::StringRef clause) {
@@ -4267,14 +4254,13 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            if (const auto *dataRef{
-                    std::get_if<parser::DataRef>(&designator.u)}) {
-              if (IsDataRefTypeParamInquiry(dataRef)) {
-                context_.Say(source,
-                    "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
-                    ContextDirectiveAsFortran());
-              } else if (parser::Unwrap<parser::StructureComponent>(
-                             ompObject) ||
+            if (auto *symbol{GetLastName(designator).symbol};
+                symbol && IsTypeParamInquiry(*symbol)) {
+              context_.Say(source,
+                  "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
+                  ContextDirectiveAsFortran());
+            } else if (std::holds_alternative<parser::DataRef>(designator.u)) {
+              if (parser::Unwrap<parser::StructureComponent>(ompObject) ||
                   parser::Unwrap<parser::ArrayElement>(ompObject)) {
                 if (llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
                   context_.Say(source,
@@ -5025,32 +5011,29 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 }
 
 void OmpStructureChecker::CheckStructureComponent(
-    const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
+    const parser::OmpObject &object, llvm::omp::Clause clauseId) {
   unsigned version{context_.langOptions().OpenMPVersion};
-
-  auto CheckComponent{[&](const parser::Designator &designator) {
-    if (const parser::DataRef *dataRef{
-            std::get_if<parser::DataRef>(&designator.u)}) {
-      if (!IsDataRefTypeParamInquiry(dataRef)) {
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    if (auto *symbol{GetLastName(*desg).symbol}) {
+      if (!IsTypeParamInquiry(*symbol) &&
+          std::holds_alternative<parser::DataRef>(desg->u)) {
         evaluate::ExpressionAnalyzer ea{context_};
         auto restore{ea.AllowWholeAssumedSizeArray(true)};
-        const auto expr{ea.Analyze(designator)};
-        if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
-          context_.Say(designator.source,
+        MaybeExpr expr{ea.Analyze(*desg)};
+        if (expr && evaluate::HasStructureComponent(*expr)) {
+          context_.Say(desg->source,
               "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
               parser::omp::GetUpperName(clauseId, version));
         }
       }
     }
-  }};
+  }
+}
 
-  for (const auto &object : objects.v) {
-    common::visit(common::visitors{
-                      CheckComponent,
-                      [&](const parser::Name &name) {},
-                      [&](const parser::OmpObject::Invalid &invalid) {},
-                  },
-        object.u);
+void OmpStructureChecker::CheckStructureComponent(
+    const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
+  for (const parser::OmpObject &object : objects.v) {
+    CheckStructureComponent(object, clauseId);
   }
 }
 

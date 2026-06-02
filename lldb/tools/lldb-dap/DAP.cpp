@@ -227,15 +227,21 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
-  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
-    return Error;
+  if (auto error = out.RedirectTo(
+          m_loop, overrideOut,
+          [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          },
+          log))
+    return error;
 
-  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
-    return Error;
+  if (auto error = err.RedirectTo(
+          m_loop, overrideErr,
+          [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          },
+          log))
+    return error;
 
   return llvm::Error::success();
 }
@@ -953,8 +959,10 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect")
+  if (request.command == "disconnect") {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_disconnecting = true;
+  }
 
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
@@ -1044,9 +1052,6 @@ llvm::Error DAP::Loop() {
   auto thread = std::thread([this] { TransportHandler(); });
 
   llvm::scope_exit cleanup([this]() {
-    // FIXME: Merge these into the MainLoop handler.
-    out.Stop();
-    err.Stop();
     StopEventHandlers();
 
     // Destroy the debugger when the session ends. This will trigger the

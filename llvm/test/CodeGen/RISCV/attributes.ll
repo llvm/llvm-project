@@ -152,6 +152,11 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+ssctr  %s -o - | FileCheck --check-prefix=RV32SSCTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV32P %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV32ZIBI %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvqwbdota8i %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVQWBDOTA8I %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvqwbdota16i %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVQWBDOTA16I %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfwbdota16bf %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFWBDOTA16BF %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfqwbdota8f %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFQWBDOTA8F %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfbdota32f %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFBDOTA32F %s
 
 ; RUN: llc -mtriple=riscv64 %s -o - | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefixes=CHECK,RV64M %s
@@ -311,6 +316,11 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV64P %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-y %s -o - | FileCheck --check-prefix=RV64Y %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zibi %s -o - | FileCheck --check-prefix=RV64ZIBI %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvqwbdota8i %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVQWBDOTA8I %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvqwbdota16i %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVQWBDOTA16I %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfwbdota16bf %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFWBDOTA16BF %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfqwbdota8f %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFQWBDOTA8F %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfbdota32f %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFBDOTA32F %s
 
 
 ; Tests for profile features.
@@ -479,6 +489,11 @@
 ; RV32SSCTR: .attribute 5, "rv32i2p1_sscsrind1p0_ssctr1p0"
 ; RV32P: .attribute 5, "rv32i2p1_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
 ; RV32ZIBI: .attribute 5, "rv32i2p1_zibi0p1"
+; RV32ZVQWBDOTA8I: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvqwbdota8i0p2"
+; RV32ZVQWBDOTA16I: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_zvqwbdota16i0p2"
+; RV32ZVFWBDOTA16BF: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfwbdota16bf0p2_zvl32b1p0"
+; RV32ZVFQWBDOTA8F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfqwbdota8f0p2_zvl32b1p0"
+; RV32ZVFBDOTA32F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbdota32f0p2_zvl32b1p0"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p1_zmmul1p0"
@@ -634,8 +649,13 @@
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
 ; RV64P: .attribute 5, "rv64i2p1_p0p21_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
-; RV64Y: .attribute 5, "rv64i2p1_y0p96"
+; RV64Y: .attribute 5, "rv64i2p1_y0p98"
 ; RV64ZIBI: .attribute 5, "rv64i2p1_zibi0p1"
+; RV64ZVQWBDOTA8I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvqwbdota8i0p2"
+; RV64ZVQWBDOTA16I: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_zvqwbdota16i0p2"
+; RV64ZVFWBDOTA16BF: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfwbdota16bf0p2_zvl32b1p0"
+; RV64ZVFQWBDOTA8F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfqwbdota8f0p2_zvl32b1p0"
+; RV64ZVFBDOTA32F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbdota32f0p2_zvl32b1p0"
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
 ; RVI20U64: .attribute 5, "rv64i2p1"
