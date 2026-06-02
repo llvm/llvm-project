@@ -1224,11 +1224,26 @@ void GDBRemoteCommunicationServerLLGS::NewProcessOutput(NativeProcessProtocol *,
   if (data.empty())
     return;
 
-  std::string owned(data);
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    m_pending_output_buffer.append(data.begin(), data.end());
+  }
   m_mainloop.AddPendingCallback(
-      [this, owned = std::move(owned)](MainLoopBase &) {
-        SendONotification(owned.data(), owned.size());
-      });
+      [this](MainLoopBase &) { FlushPendingProcessOutput(); });
+}
+
+void GDBRemoteCommunicationServerLLGS::FlushPendingProcessOutput() {
+  if (!m_current_process || !StateIsRunningState(m_current_process->GetState()))
+    return;
+
+  std::string out;
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    if (m_pending_output_buffer.empty())
+      return;
+    out.swap(m_pending_output_buffer);
+  }
+  SendONotification(out.data(), out.size());
 }
 
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
@@ -2037,6 +2052,16 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     NativeProcessProtocol &process, lldb::StateType process_state,
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
+
+  {
+    std::string out;
+    {
+      std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+      out.swap(m_pending_output_buffer);
+    }
+    if (!out.empty())
+      SendONotification(out.data(), out.size());
+  }
 
   if (m_disabling_non_stop) {
     // Check if we are waiting for any more processes to stop.  If we are,
