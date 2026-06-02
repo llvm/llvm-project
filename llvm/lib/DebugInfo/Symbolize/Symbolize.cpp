@@ -740,6 +740,39 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   return InsertResult.first->second.get();
 }
 
+Expected<DIContext *> LLVMSymbolizer::createPDBContext(const ObjectFile &Obj) {
+  auto *CoffObject = dyn_cast<COFFObjectFile>(&Obj);
+  if (!CoffObject)
+    return nullptr;
+
+  StringRef PDBFileName = Opts.PDBName;
+  if (PDBFileName.empty()) {
+    const codeview::DebugInfo *DebugInfo;
+    auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
+    // Use DWARF if there're DWARF sections and we weren't asked for PDB.
+    bool HasDwarf =
+        llvm::any_of(Obj.sections(), [](SectionRef Section) -> bool {
+          if (Expected<StringRef> SectionName = Section.getName())
+            return SectionName.get() == ".debug_info";
+          return false;
+        });
+
+    if (EC || HasDwarf || !DebugInfo || PDBFileName.empty())
+      return nullptr;
+  }
+
+  using namespace pdb;
+  std::unique_ptr<IPDBSession> Session;
+
+  PDB_ReaderType ReaderType =
+      Opts.UseDIA ? PDB_ReaderType::DIA : PDB_ReaderType::Native;
+  if (auto Err = loadDataForEXE(ReaderType, Obj.getFileName(), Session)) {
+    // Return along the PDB filename to provide more context
+    return createFileError(PDBFileName, std::move(Err));
+  }
+  return new PDBContext(*CoffObject, std::move(Session));
+}
+
 Expected<SymbolizableModule *>
 LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   StringRef BinaryName = ModuleName;
@@ -770,29 +803,16 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   ObjectPair Objects = ObjectsOrErr.get();
 
   std::unique_ptr<DIContext> Context;
-  pdb::PDB_ReaderType ReaderType =
-      Opts.UseDIA ? pdb::PDB_ReaderType::DIA : pdb::PDB_ReaderType::Native;
-  const auto *CoffObject = dyn_cast<COFFObjectFile>(Objects.first);
+  // We try the following in order
+  // - GSYM (if no PDB was given on the command line)
+  // - PDB
+  // - DWARF
 
-  // First, if the user specified a pdb file on the command line, use that.
-  if (CoffObject && !Opts.PDBName.empty()) {
-    using namespace pdb;
-    std::unique_ptr<IPDBSession> Session;
-    if (auto Err = loadDataForPDB(ReaderType, Opts.PDBName, Session)) {
-      Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
-      return createFileError(Opts.PDBName, std::move(Err));
-    }
-    Context.reset(new PDBContext(*CoffObject, std::move(Session)));
-  }
+  // PDB was explicitly requested, use it.
+  bool PreferCoffPDB =
+      isa<COFFObjectFile>(Objects.first) && !Opts.PDBName.empty();
 
-  if (!Context) {
-    // If this is a COFF object containing PDB info and not containing DWARF
-    // section, use a PDBContext to symbolize. Otherwise, use DWARF.
-    // Create a DIContext to symbolize as follows:
-    // - If there is a GSYM file, create a GsymContext.
-    // - Otherwise, if this is a COFF object containing PDB info, create a
-    // PDBContext.
-    // - Otherwise, create a DWARFContext.
+  if (!PreferCoffPDB) {
     const auto GsymFile = lookUpGsymFile(BinaryName.str());
     if (!GsymFile.empty()) {
       auto ReaderOrErr = gsym::GsymReader::openFile(GsymFile);
@@ -802,34 +822,20 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
     }
   }
 
-  if (!Context && CoffObject) {
-    const codeview::DebugInfo *DebugInfo;
-    StringRef PDBFileName;
-    auto EC = CoffObject->getDebugPDBInfo(DebugInfo, PDBFileName);
-    // Use DWARF if there're DWARF sections.
-    bool HasDwarf =
-        llvm::any_of(Objects.first->sections(), [](SectionRef Section) -> bool {
-          if (Expected<StringRef> SectionName = Section.getName())
-            return SectionName.get() == ".debug_info";
-          return false;
-        });
-    if (!EC && !HasDwarf && DebugInfo != nullptr && !PDBFileName.empty()) {
-      using namespace pdb;
-      std::unique_ptr<IPDBSession> Session;
-
-      if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
-                                    Session)) {
-        Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
-        // Return along the PDB filename to provide more context
-        return createFileError(PDBFileName, std::move(Err));
-      }
-      Context.reset(new PDBContext(*CoffObject, std::move(Session)));
+  if (!Context) {
+    Expected<DIContext *> PDBContextOrErr = createPDBContext(*Objects.first);
+    if (!PDBContextOrErr) {
+      Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
+      return PDBContextOrErr.takeError();
     }
+
+    Context.reset(*PDBContextOrErr);
   }
   if (!Context)
     Context = DWARFContext::create(
         *Objects.second, DWARFContext::ProcessDebugRelocations::Process,
         nullptr, Opts.DWPName);
+
   auto ModuleOrErr =
       createModuleInfo(Objects.first, std::move(Context), ModuleName);
   if (ModuleOrErr) {
@@ -858,9 +864,18 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
   std::unique_ptr<DIContext> Context;
   if (useBTFContext(Obj))
     Context = BTFContext::create(Obj);
-  else
-    Context = DWARFContext::create(Obj);
-  // FIXME: handle COFF object with PDB info to use PDBContext
+  else {
+    Expected<DIContext *> PDBContextOrErr = createPDBContext(Obj);
+    if (!PDBContextOrErr) {
+      Modules.emplace(ObjName, std::unique_ptr<SymbolizableModule>());
+      return PDBContextOrErr.takeError();
+    }
+
+    if (*PDBContextOrErr)
+      Context.reset(*PDBContextOrErr);
+    else
+      Context = DWARFContext::create(Obj);
+  }
   return createModuleInfo(&Obj, std::move(Context), ObjName);
 }
 
