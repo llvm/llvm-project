@@ -635,18 +635,24 @@ cc_library(
         "include/llvm/DebugInfo/LogicalView/**/*.h",
     ]),
     copts = llvm_copts,
+    features = ["-parse_headers"],
     deps = [
         ":BinaryFormat",
+        ":CodeGen",
+        ":Core",
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
+        ":IRReader",
         ":MC",
         ":MCDisassembler",
         ":Object",
         ":Support",
+        ":TargetParser",
+        ":TransformUtils",
     ],
 )
 
@@ -1726,6 +1732,7 @@ cc_library(
         ":Analysis",
         ":Core",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )
@@ -2027,6 +2034,7 @@ cc_library(
         ":Core",
         ":FrontendDirective",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )
@@ -5547,6 +5555,7 @@ cc_binary(
         ":Linker",
         ":Object",
         ":Support",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )
