@@ -3759,7 +3759,7 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
-bool isLegalCmpImmed(APInt C) {
+bool isLegalCmpImmed(const APInt &C) {
   // Works for negative immediates too, as it can be written as an ADDS
   // instruction with a negated immediate.
   return isLegalArithImmed(C.abs().getZExtValue());
@@ -4228,20 +4228,25 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
 }
 
 // emitComparison() converts comparison with one or negative one to comparison
-// with 0. Note that this only works for signed comparisons because of how ANDS
-// works.
-static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
-  // Only works for ANDS and AND.
-  if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
+// with 0. Note that this is profitable for multiple uses with ANDS.
+static bool shouldBeAdjustedToZero(SDValue LHS, APInt &C, ISD::CondCode &CC) {
+  if (!LHS.hasOneUse() && LHS.getOpcode() != ISD::AND &&
+      LHS.getOpcode() != AArch64ISD::ANDS)
     return false;
-
-  if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
-    CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
-    return true;
-  }
 
   if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
     CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    C.clearAllBits();
+    return true;
+  }
+
+  if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
+    // Plain register: keep compare at #1 so we can match sub X, #1 / subs.
+    if (getCmpOperandFoldingProfit(LHS, false) == 0 &&
+        LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
+      return false;
+    CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+    C.clearAllBits();
     return true;
   }
 
@@ -4258,7 +4263,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // emitComparison().
     if (shouldBeAdjustedToZero(LHS, C, CC)) {
       // Adjust the constant to zero.
-      // CC has already been adjusted.
+      // CC and C have already been adjusted.
       RHS = DAG.getConstant(0, DL, VT);
     } else if (!isLegalCmpImmed(C)) {
       unsigned NumImmForC = numberOfInstrToLoadImm(C);
@@ -4312,7 +4317,9 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
         }
         break;
       }
-    } else if (C.isZero() && getCmpOperandFoldingProfit(LHS, false) != 0) {
+    }
+
+    if (C.isZero() && getCmpOperandFoldingProfit(LHS, false) != 0) {
       // Fold into CMP WZR, reg, shift #amount
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
