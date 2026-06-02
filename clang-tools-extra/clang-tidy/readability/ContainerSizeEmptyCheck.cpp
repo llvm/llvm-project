@@ -208,6 +208,19 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
           .bind("SizeCallExpr"),
       this);
 
+  // Match non-member std::size(container) used in boolean context or compared
+  // with 0/1.
+  Finder->addMatcher(
+      callExpr(argumentCountIs(1),
+               callee(functionDecl(hasName("::std::size")).bind("SizeMethod")),
+               hasArgument(0, expr(anyOf(hasType(ValidContainer),
+                                         hasType(pointsTo(ValidContainer)),
+                                         hasType(references(ValidContainer))))
+                                  .bind("MemberCallObject")),
+               WrongUse, NotInEmptyMethodOfContainer)
+          .bind("SizeCallExpr"),
+      this);
+
   // Comparison to empty string or empty constructor.
   const auto WrongComparend =
       anyOf(stringLiteral(hasSize(0)),

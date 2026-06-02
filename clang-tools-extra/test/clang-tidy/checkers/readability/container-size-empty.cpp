@@ -27,6 +27,12 @@ namespace string_literals{
 string operator""s(const char *, size_t);
 }
 
+template <class C>
+auto size(const C& c) -> decltype(c.size());
+
+template <class C>
+auto empty(const C& c) -> decltype(c.empty());
+
 }
 
 template <typename T>
@@ -923,6 +929,50 @@ public:
     }
   }
 };
+
+namespace GH198494 {
+
+void testStdSize(const std::string &str, std::vector<int> vect) {
+  if (std::size(vect))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (!std::size(vect))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (vect.empty())
+
+  if (std::size(vect) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (vect.empty())
+
+  if (std::size(vect) != 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (std::size(vect) > 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!vect.empty())
+
+  if (std::size(str))
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (!str.empty())
+
+  if (std::size(str) == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-FIXES: if (str.empty())
+
+  // No warning when std::empty is already used.
+  if (std::empty(vect)) {}
+}
+
+} // namespace GH198494
 
 
 
