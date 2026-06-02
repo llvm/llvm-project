@@ -6392,8 +6392,14 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       // if tail folded.
       if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      assert(VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val)
-                     ->getBackedgeValue() == Val &&
+      // The reduction may have been folded to a constant, so the
+      // VPReductionPHIRecipe may no longer exist.
+      auto *RedPhi = VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+      if (!RedPhi) {
+        VPI->eraseFromParent();
+        return true;
+      }
+      assert(RedPhi->getBackedgeValue() == Val &&
              "Store isn't backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
