@@ -185,10 +185,11 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     NewOffsetInBits = alignTo(NewOffsetInBits, 8);
   bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
   uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
-  uint32_t NumWords = divideCeil(NumBitsToExtract, 8);
-  SmallVector<uint64_t> RawBits(NumWords);
+  uint32_t NumWords = APInt::getNumWords(NumBitsToExtract);
+  constexpr uint32_t WordBits = APInt::APINT_BITS_PER_WORD;
+  SmallVector<APInt::WordType> RawBits(NumWords);
   bool IsTagValid = Ty->isPointerTy();
-  SmallVector<uint64_t> RawTagBits;
+  SmallVector<APInt::WordType> RawTagBits;
   if (Ty->isPointerTy())
     RawTagBits.resize(NumWords);
   for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
@@ -230,12 +231,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
                          Mask;
-    RawBits[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
+    RawBits[I / WordBits] |= static_cast<APInt::WordType>(ActualBits)
+                             << (I % WordBits);
     if (IsTagValid) {
       if ((LogicalByte.TagMask & LogicalByte.ConcreteMask & Mask) == Mask) {
         uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
-        RawTagBits[I / 64] |= static_cast<APInt::WordType>(ActualTagBits)
-                              << (I % 64);
+        RawTagBits[I / WordBits] |= static_cast<APInt::WordType>(ActualTagBits)
+                                    << (I % WordBits);
       } else {
         IsTagValid = false;
       }

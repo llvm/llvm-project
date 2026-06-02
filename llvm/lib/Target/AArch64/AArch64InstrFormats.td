@@ -2858,7 +2858,7 @@ multiclass MulAccum<bit isSub, string asm> {
 }
 
 class WideMulAccum<bit isSub, bits<3> opc, string asm,
-                   SDNode AccNode, SDNode ExtNode>
+                   SDPatternOperator AccNode, SDNode ExtNode>
   : BaseMulAccum<isSub, opc, GPR32, GPR64, asm,
     [(set GPR64:$Rd, (AccNode GPR64:$Ra,
                             (mul (ExtNode GPR32:$Rn), (ExtNode GPR32:$Rm))))]>,

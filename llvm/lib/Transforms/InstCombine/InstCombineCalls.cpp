@@ -3138,7 +3138,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *X;
     // fabs (-X) --> fabs (X)
     if (match(Arg, m_FNeg(m_Value(X)))) {
-      CallInst *Fabs = Builder.CreateFAbs(X, II);
+      Value *Fabs = Builder.CreateFAbs(X, II);
       return replaceInstUsesWith(CI, Fabs);
     }
 
@@ -3168,7 +3168,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_CopySign(m_Value(Magnitude), m_Value(Sign)))) {
       // fabs (copysign x, y) -> (fabs x)
-      CallInst *AbsSign = Builder.CreateFAbs(Magnitude, II);
+      Value *AbsSign = Builder.CreateFAbs(Magnitude, II);
       return replaceInstUsesWith(*II, AbsSign);
     }
 
@@ -3953,47 +3953,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       Value *Shuffle = Builder.CreateShuffleVector(Vec, Mask);
       return replaceInstUsesWith(CI, Shuffle);
-    }
-    break;
-  }
-  case Intrinsic::vp_load: {
-    auto *VPI = cast<VPIntrinsic>(II);
-    // Fold away bit casts of the loaded value by loading the desired type,
-    // if the mask is all-ones.
-    Value *Mask = VPI->getMaskParam();
-    Value *EVL = VPI->getVectorLengthParam();
-    if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
-        !II->hasOneUse())
-      break;
-
-    const DataLayout &DL = II->getDataLayout();
-    auto *Cast = dyn_cast<CastInst>(II->user_back());
-    if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
-      break;
-    VectorType *OrigVecTy = cast<VectorType>(II->getType());
-    Align OrigAlign =
-        DL.getValueOrABITypeAlignment(VPI->getPointerAlignment(), OrigVecTy);
-    ElementCount OrigVecCnt = OrigVecTy->getElementCount();
-    VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
-    ElementCount NewVecCnt = NewVecTy->getElementCount();
-
-    // Right now we only support cases where the NewVec is longer, because for
-    // cases where it's shorter, we have to be sure that EVL can be exactly
-    // divided, otherwise it might yield incorrect results or even page faults
-    // (if we round-up during the division).
-    if (OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
-        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)) {
-      unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
-      Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
-      Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
-      CallInst *NewVP = Builder.CreateIntrinsic(
-          NewVecTy, Intrinsic::vp_load,
-          {VPI->getMemoryPointerParam(), NewMask, NewEVL});
-      // Preserve the original alignment.
-      NewVP->addParamAttrs(
-          0, AttrBuilder(VPI->getContext()).addAlignmentAttr(OrigAlign));
-      replaceInstUsesWith(*Cast, NewVP);
-      return eraseInstFromFunction(*Cast);
     }
     break;
   }
