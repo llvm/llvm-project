@@ -5528,7 +5528,7 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     auto *LI = cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos());
     auto *L = new VPWidenLoadRecipe(*LI, LoadGroup->getAddr(),
                                     LoadGroup->getMask(), /*Consecutive=*/true,
-                                    {}, LoadGroup->getDebugLoc());
+                                    *LoadGroup, LoadGroup->getDebugLoc());
     L->insertBefore(LoadGroup);
     NarrowedOps.insert(L);
     return L;
@@ -5690,7 +5690,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     auto *S = new VPWidenStoreRecipe(*SI, StoreGroup->getAddr(), Res, nullptr,
-                                     /*Consecutive=*/true, {},
+                                     /*Consecutive=*/true, *StoreGroup,
                                      StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
