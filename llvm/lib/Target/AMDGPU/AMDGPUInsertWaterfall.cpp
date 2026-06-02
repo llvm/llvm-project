@@ -112,8 +112,7 @@ static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
 // Check if operand is uniform by checking:
 // 1. Trivially detectable as operand in SGPR
 // 2. Direct def is from an SGPR->VGPR copy (which may happen if assumed
-// non-uniform value
-//    turns out to be uniform)
+// non-uniform value turns out to be uniform)
 static Register getUniformOperandReplacementReg(MachineRegisterInfo *MRI,
                                                 const SIRegisterInfo *RI,
                                                 Register Reg) {
@@ -254,12 +253,14 @@ private:
                       MachineRegisterInfo *_MRI)
         : TII(_TII), MRI(_MRI), Final(nullptr) {
 
-      auto TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
+      const MachineOperand *TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
 
       assert(tokIsStart(TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok)) &&
              "first begin does not have an undefined input token as expected");
+
       assert(TokMO &&
              "Unable to extract tok operand from SI_WATERFALL_BEGIN pseudo op");
+
 
       BeginList.push_back(_Begin);
       TokReg = TokMO->getReg();
@@ -277,7 +278,7 @@ private:
 
     MachineInstr *getDefInstr(const MachineOperand *MO) const {
       if (MO->isReg() && MRI->hasOneDef(MO->getReg())) {
-        return (*MRI->def_begin(MO->getReg())).getParent();
+        return (MRI->def_begin(MO->getReg()))->getParent();
       }
       return nullptr;
     }
