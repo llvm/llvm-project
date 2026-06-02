@@ -157,6 +157,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
+  # On Windows, DLLs must reside alongside the .pyd extension so the loader finds them.
+  # Without this, importing _lldb fails at runtime when vcpkg-provided DLLs are not on PATH.
   if(WIN32 AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
     file(GLOB _lldb_vcpkg_runtime_dlls
       "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
