@@ -37,7 +37,10 @@ public:
                               float128
 #endif
                               ,
-                              bfloat16, fputil::Float128>();
+                              bfloat16
+
+                              ,
+                              fputil::Float128>();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_floating_point_v =
