@@ -18,7 +18,7 @@ LLVM documentation is written in `reStructuredText`_, a markup syntax similar to
 How to use this template
 ========================
 
-This article is located in ``docs/SphinxQuickstartTemplate.rst``. To use it as a template, make a copy and open it in a text editor. You can then write your docs, and then send the new article to llvm-commits for review.
+This article is located in ``docs/SphinxQuickstartTemplate.md``. To use it as a template, make a copy and open it in a text editor. You can then write your docs, and then send the new article to llvm-commits for review.
 
 To view the restructuredText source file for this article, click **Show Source** on the right sidebar.
 
