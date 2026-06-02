@@ -1687,9 +1687,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_reduce_min:
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
-  case Builtin::BI__builtin_reduce_xor:
-  case Builtin::BI__builtin_reduce_or:
-  case Builtin::BI__builtin_reduce_and:
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd:
   case Builtin::BI__builtin_reduce_maximum:
@@ -1704,6 +1701,30 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_masked_compress_store:
   case Builtin::BI__builtin_masked_scatter:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_and: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
+    llvm::StringRef intrinsicName;
+    switch (builtinID) {
+    default:
+      llvm_unreachable("unexpected vector reduce bitwise builtin");
+    case Builtin::BI__builtin_reduce_xor:
+      intrinsicName = "vector.reduce.xor";
+      break;
+    case Builtin::BI__builtin_reduce_or:
+      intrinsicName = "vector.reduce.or";
+      break;
+    case Builtin::BI__builtin_reduce_and:
+      intrinsicName = "vector.reduce.and";
+      break;
+    }
+    mlir::Value result = builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), intrinsicName, vecTy.getElementType(),
+        mlir::ValueRange{arg});
+    return RValue::get(result);
+  }
   case Builtin::BI__builtin_isinf_sign: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Location loc = getLoc(e->getBeginLoc());
