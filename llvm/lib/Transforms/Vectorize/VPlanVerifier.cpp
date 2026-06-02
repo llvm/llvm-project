@@ -333,7 +333,7 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     for (const VPValue *V : R.definedValues()) {
       // Verify that each defined value has a scalar type.
       if (!V->getScalarType()) {
-        errs() << "Failed to infer scalar type!\n";
+        errs() << "VPValue without scalar type!\n";
         return false;
       }
 
