@@ -50,6 +50,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TextEncoding.h"
 #include <cassert>
 #include <cstddef>
 #include <map>
@@ -155,6 +156,11 @@ public:
   ///
   /// FIXME: Remove this once OrigEntry is a FileEntryRef with a stable name.
   StringRef Filename;
+
+  /// Information on whether this is associated with a FileID for a file (as
+  /// opposed to a buffer) and, if so, what conversion (if any) was requested.
+  llvm::PointerIntPair<llvm::TextEncodingConverter *, 1u, bool>
+      FileIDConverterInfo;
 
   /// A bump pointer allocated array of offsets for each source line.
   ///
@@ -919,7 +925,16 @@ public:
   FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
                       SrcMgr::CharacteristicKind FileCharacter,
                       int LoadedID = 0,
+                      llvm::TextEncodingConverter *Converter, int LoadedID = 0,
                       SourceLocation::UIntTy LoadedOffset = 0);
+
+  FileID createFileID(FileEntryRef SourceFile, SourceLocation IncludePos,
+                      SrcMgr::CharacteristicKind FileCharacter,
+                      int LoadedID = 0,
+                      SourceLocation::UIntTy LoadedOffset = 0) {
+    return createFileID(SourceFile, IncludePos, FileCharacter,
+                        /*Converter=*/nullptr, LoadedID, LoadedOffset);
+  }
 
   /// Create a new FileID that represents the specified memory buffer.
   ///
@@ -942,7 +957,8 @@ public:
   /// Get the FileID for \p SourceFile if it exists. Otherwise, create a
   /// new FileID for the \p SourceFile.
   FileID getOrCreateFileID(FileEntryRef SourceFile,
-                           SrcMgr::CharacteristicKind FileCharacter);
+                           SrcMgr::CharacteristicKind FileCharacter,
+                           llvm::TextEncodingConverter *Converter = nullptr);
 
   /// Creates an expansion SLocEntry for the substitution of an argument into a
   /// function-like macro's body. Returns the start of the expansion.

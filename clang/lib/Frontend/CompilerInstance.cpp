@@ -51,6 +51,9 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/AdvisoryLock.h"
+#ifdef __MVS__
+#include "llvm/Support/AutoConvert.h"
+#endif
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
@@ -907,15 +910,37 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
 // Initialization Utilities
 
 bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input){
-  return InitializeSourceManager(Input, getDiagnostics(), getFileManager(),
-                                 getSourceManager());
+  llvm::TextEncodingConverter *Converter = nullptr;
+  if (hasPreprocessor() && !Input.isBuffer()) {
+    Preprocessor &PP = getPreprocessor();
+    StringRef InputFile = Input.getFile();
+
+#ifdef __MVS__
+    // Check for system filetag if we are on z/OS.
+    llvm::ErrorOr<__ccsid_t> Ccsid = llvm::getzOSFileTag(InputFile);
+    if (!Ccsid.getError() && *Ccsid > 0) {
+      // Create converter from filetag if it exists
+      std::unique_ptr<llvm::TextEncodingConverter> InputConverter =
+          TextEncodingConfig::createInputConverterFromFiletag(*Ccsid, getDiagnostics());
+
+      if (InputConverter)
+        TextEncodingConfig::setFromInputConverter(
+            PP.getTextEncodingConfig(), std::move(InputConverter));
+    }
+#endif
+
+    // Retrieve the converter to the internal charset if it exists.
+    Converter = PP.getTextEncodingConfig().getConverter(CA_FromInputEncoding);
+  }
+
+  return InitializeSourceManager(Input, Converter, getDiagnostics(),
+                                 getFileManager(), getSourceManager());  
 }
 
 // static
-bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
-                                               DiagnosticsEngine &Diags,
-                                               FileManager &FileMgr,
-                                               SourceManager &SourceMgr) {
+bool CompilerInstance::InitializeSourceManager(
+    const FrontendInputFile &Input, llvm::TextEncodingConverter *Converter,
+    DiagnosticsEngine &Diags, FileManager &FileMgr, SourceManager &SourceMgr) {
   SrcMgr::CharacteristicKind Kind =
       Input.getKind().getFormat() == InputKind::ModuleMap
           ? Input.isSystem() ? SrcMgr::C_System_ModuleMap
@@ -931,10 +956,14 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
 
   StringRef InputFile = Input.getFile();
 
+  // If we have a converter, open the file in binary mode to avoid autoconversion.
+  bool IsText = (Converter == nullptr);
+
   // Figure out where to get and map in the main file.
   auto FileOrErr = InputFile == "-"
                        ? FileMgr.getSTDIN()
-                       : FileMgr.getFileRef(InputFile, /*OpenFile=*/true);
+                       : FileMgr.getFileRef(InputFile, /*OpenFile=*/true,
+				     	    /*CacheFailure=*/true, IsText);
   if (!FileOrErr) {
     auto EC = llvm::errorToErrorCode(FileOrErr.takeError());
     if (InputFile != "-")
@@ -945,7 +974,7 @@ bool CompilerInstance::InitializeSourceManager(const FrontendInputFile &Input,
   }
 
   SourceMgr.setMainFileID(
-      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind));
+      SourceMgr.createFileID(*FileOrErr, SourceLocation(), Kind, Converter));    
 
   assert(SourceMgr.getMainFileID().isValid() &&
          "Couldn't establish MainFileID!");
