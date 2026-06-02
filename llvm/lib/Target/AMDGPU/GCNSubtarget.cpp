@@ -774,16 +774,17 @@ void GCNSubtarget::adjustSchedDependency(
   MachineInstr *UseI = Use->getInstr();
 
   // Check for false latency on $tesnsorcnt / $asynccnt dependencies
-  /*
   if (Dep.getReg() == AMDGPU::TENSORcnt || Dep.getReg() == AMDGPU::ASYNCcnt) {
     unsigned UseOp = UseI->getOpcode();
     // Do not adjust latency for load->s_wait
-    bool IsBarrierCase = InstrInfo.isLDSDMA(*DefI) && (UseOp ==
-  AMDGPU::S_WAIT_TENSORCNT || UseOp == AMDGPU::S_WAIT_ASYNCCNT); if
-  (!IsBarrierCase) { Dep.setLatency(1); return;
+    bool IsBarrierCase =
+        InstrInfo.isLDSDMA(*DefI) &&
+        (UseOp == AMDGPU::S_WAIT_TENSORCNT || UseOp == AMDGPU::S_WAIT_ASYNCCNT);
+    if (!IsBarrierCase) {
+      Dep.setLatency(1);
+      return;
     }
   }
-  */
 
   if (Register Reg = getRealSchedDependency(*DefI, DefOpIdx, *UseI, UseOpIdx)) {
     Dep.setReg(Reg);
