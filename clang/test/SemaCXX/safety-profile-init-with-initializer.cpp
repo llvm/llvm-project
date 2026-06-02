@@ -44,6 +44,19 @@ void test_class_synthesized_init() {
   (void)x; (void)y;
 }
 
+struct NoDefaultCtor { NoDefaultCtor() = delete; }; // expected-note {{'NoDefaultCtor' has been explicitly marked deleted here}} \
+                                                    // no-profiles-note {{'NoDefaultCtor' has been explicitly marked deleted here}}
+
+void test_failed_init_no_double_diag() {
+  // Default-init fails and installs a RecoveryExpr placeholder. That is not a
+  // user-written initializer, so R4 must not pile a spurious diagnostic on top
+  // of the real error (the absence of an extra '...have an initializer...'
+  // diagnostic here is the assertion).
+  NoDefaultCtor z [[uninitialized]]; // expected-error {{call to deleted constructor of 'NoDefaultCtor'}} \
+                                     // no-profiles-error {{call to deleted constructor of 'NoDefaultCtor'}}
+  (void)z;
+}
+
 int g_marker_with_init [[uninitialized]] = 42; // expected-error {{variable 'g_marker_with_init' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}
 
 void test_suppress() {

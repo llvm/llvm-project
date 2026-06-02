@@ -14837,8 +14837,11 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // std::init / uninit_with_initializer: [[uninitialized]] documents that
   // the variable is intentionally left uninitialized, so it contradicts an
-  // explicit initializer.
-  if (var->hasInit() && var->hasAttr<CXX11UninitializedAttr>()) {
+  // explicit initializer. A RecoveryExpr is a placeholder for an
+  // initialization that already failed (e.g. default-init of a const scalar),
+  // not an initializer the user wrote, so it must not trigger this rule.
+  if (var->hasInit() && !isa<RecoveryExpr>(var->getInit()->IgnoreParens()) &&
+      var->hasAttr<CXX11UninitializedAttr>()) {
     static constexpr StringRef Profile = "std::init";
     static constexpr StringRef Rule = "uninit_with_initializer";
     if (shouldEmitProfileViolation(Profile, Rule, var->getLocation()))
