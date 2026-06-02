@@ -4270,8 +4270,8 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 
   // Need to combine the integer fields of the string into a single value
   // based on the bit encoding of MRS/MSR instruction.
-  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) |
-         (Ops[3] << 3) | (Ops[4]);
+  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) | (Ops[3] << 3) |
+         (Ops[4]);
 }
 
 // Lower the read_register intrinsic to an MRS instruction node if the special
