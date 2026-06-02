@@ -239,6 +239,7 @@ public:
     eCore_avr,
 
     eCore_wasm32,
+    eCore_ezh,
 
     kNumCores,
 
