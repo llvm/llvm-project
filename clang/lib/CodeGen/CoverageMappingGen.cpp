@@ -1745,11 +1745,13 @@ struct CounterCoverageMappingBuilder
     // Go back to handle the condition.
     Counter CondCount =
         addCounters(ParentCount, BackedgeCount, BC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount);
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
-    propagateCounts(CondCount, S->getCond());
+    Counter CondExitCount = propagateCounts(CondCount, S->getCond());
     adjustForOutOfOrderTraversal(getEnd(S));
+    Counter BranchParentCount =
+        CallContinuationCounterMap ? CondExitCount : CondCount;
+    auto BranchCount = getBranchCounterPair(S, BranchParentCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     // The body count applies to the area immediately after the increment.
     auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
@@ -1786,10 +1788,12 @@ struct CounterCoverageMappingBuilder
     HasGapRegion = false;
 
     Counter CondCount = addCounters(BackedgeCount, BC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount);
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
-    propagateCounts(CondCount, S->getCond());
+    Counter CondExitCount = propagateCounts(CondCount, S->getCond());
+    Counter BranchParentCount =
+        CallContinuationCounterMap ? CondExitCount : CondCount;
+    auto BranchCount = getBranchCounterPair(S, BranchParentCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     Counter OutCount = addCounters(BC.BreakCount, BranchCount.Skipped);
     if (!IsCounterEqual(OutCount, ParentCount)) {
@@ -1836,13 +1840,16 @@ struct CounterCoverageMappingBuilder
     Counter CondCount = addCounters(
         addCounters(ParentCount, BackedgeCount, BodyBC.ContinueCount),
         IncrementBC.ContinueCount);
-    auto BranchCount = getBranchCounterPair(S, CondCount);
-    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
+    Counter CondExitCount = CondCount;
     if (const Expr *Cond = S->getCond()) {
-      propagateCounts(CondCount, Cond);
+      CondExitCount = propagateCounts(CondCount, Cond);
       adjustForOutOfOrderTraversal(getEnd(S));
     }
+    Counter BranchParentCount =
+        CallContinuationCounterMap ? CondExitCount : CondCount;
+    auto BranchCount = getBranchCounterPair(S, BranchParentCount);
+    assert(BranchCount.Executed.isZero() || BranchCount.Executed == BodyCount);
 
     // The body count applies to the area immediately after the increment.
     auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getBody()));
@@ -2184,14 +2191,31 @@ struct CounterCoverageMappingBuilder
     extendRegion(E);
 
     Counter ParentCount = getRegion().getCounter();
-    auto [TrueCount, FalseCount] = getBranchCounterPair(E, ParentCount);
     Counter OutCount;
 
     if (const auto *BCO = dyn_cast<BinaryConditionalOperator>(E)) {
-      propagateCounts(ParentCount, BCO->getCommon());
+      Counter CondExitCount = propagateCounts(ParentCount, BCO->getCommon());
+      Counter BranchParentCount =
+          CallContinuationCounterMap ? CondExitCount : ParentCount;
+      auto [TrueCount, FalseCount] = getBranchCounterPair(E, BranchParentCount);
       OutCount = TrueCount;
+
+      extendRegion(E->getFalseExpr());
+      OutCount =
+          addCounters(OutCount, propagateCounts(FalseCount, E->getFalseExpr()));
+
+      if (!IsCounterEqual(OutCount, BranchParentCount)) {
+        pushRegion(OutCount);
+        GapRegionCounter = OutCount;
+      }
+
+      createBranchRegion(E->getCond(), TrueCount, FalseCount);
+      return;
     } else {
-      propagateCounts(ParentCount, E->getCond());
+      Counter CondExitCount = propagateCounts(ParentCount, E->getCond());
+      Counter BranchParentCount =
+          CallContinuationCounterMap ? CondExitCount : ParentCount;
+      auto [TrueCount, FalseCount] = getBranchCounterPair(E, BranchParentCount);
       // The 'then' count applies to the area immediately after the condition.
       auto Gap =
           findGapAreaBetween(E->getQuestionLoc(), getStart(E->getTrueExpr()));
@@ -2200,19 +2224,19 @@ struct CounterCoverageMappingBuilder
 
       extendRegion(E->getTrueExpr());
       OutCount = propagateCounts(TrueCount, E->getTrueExpr());
+
+      extendRegion(E->getFalseExpr());
+      OutCount =
+          addCounters(OutCount, propagateCounts(FalseCount, E->getFalseExpr()));
+
+      if (!IsCounterEqual(OutCount, BranchParentCount)) {
+        pushRegion(OutCount);
+        GapRegionCounter = OutCount;
+      }
+
+      // Create Branch Region around condition.
+      createBranchRegion(E->getCond(), TrueCount, FalseCount);
     }
-
-    extendRegion(E->getFalseExpr());
-    OutCount =
-        addCounters(OutCount, propagateCounts(FalseCount, E->getFalseExpr()));
-
-    if (!IsCounterEqual(OutCount, ParentCount)) {
-      pushRegion(OutCount);
-      GapRegionCounter = OutCount;
-    }
-
-    // Create Branch Region around condition.
-    createBranchRegion(E->getCond(), TrueCount, FalseCount);
   }
 
   inline unsigned findMCDCBranchesInSourceRegion(
@@ -2332,8 +2356,10 @@ struct CounterCoverageMappingBuilder
     CurCondIDs[true] = RHSid;
     auto DecisionLHS = CurCondIDs;
 
+    Counter ParentCnt = getRegion().getCounter();
+
     extendRegion(E->getLHS());
-    propagateCounts(getRegion().getCounter(), E->getLHS());
+    Counter LHSExitCnt = propagateCounts(ParentCnt, E->getLHS());
     handleFileExit(getEnd(E->getLHS()));
 
     // Restore CurCondIDs.
@@ -2349,25 +2375,35 @@ struct CounterCoverageMappingBuilder
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), getRegionCounter(E));
     }
 
+    // Extract the RHS's Execution Counter.
+    Counter LHSBranchParentCnt =
+        CallContinuationCounterMap ? LHSExitCnt : getRegion().getCounter();
+    auto [RHSExecCnt, LHSFalseCnt] =
+        getBranchCounterPair(E, LHSBranchParentCnt);
+
     // Counter tracks the right hand side of a logical and operator.
     extendRegion(E->getRHS());
-    propagateCounts(getRegionCounter(E), E->getRHS());
-
-    // Extract the Parent Region Counter.
-    Counter ParentCnt = getRegion().getCounter();
-
-    // Extract the RHS's Execution Counter.
-    auto [RHSExecCnt, LHSExitCnt] = getBranchCounterPair(E, ParentCnt);
+    Counter RHSExitCnt = propagateCounts(RHSExecCnt, E->getRHS());
 
     // Extract the RHS's "True" Instance Counter.
-    auto [RHSTrueCnt, RHSExitCnt] =
-        getBranchCounterPair(E->getRHS(), RHSExecCnt);
+    Counter RHSBranchParentCnt =
+        CallContinuationCounterMap ? RHSExitCnt : RHSExecCnt;
+    auto [RHSTrueCnt, RHSFalseCnt] =
+        getBranchCounterPair(E->getRHS(), RHSBranchParentCnt);
+
+    if (CallContinuationCounterMap) {
+      Counter OutCount = addCounters(LHSFalseCnt, RHSExitCnt);
+      if (!IsCounterEqual(OutCount, ParentCnt)) {
+        getRegion().setCounter(OutCount);
+        GapRegionCounter = OutCount;
+      }
+    }
 
     // Create Branch Region around LHS condition.
-    createBranchRegion(E->getLHS(), RHSExecCnt, LHSExitCnt, DecisionLHS);
+    createBranchRegion(E->getLHS(), RHSExecCnt, LHSFalseCnt, DecisionLHS);
 
     // Create Branch Region around RHS condition.
-    createBranchRegion(E->getRHS(), RHSTrueCnt, RHSExitCnt, DecisionRHS);
+    createBranchRegion(E->getRHS(), RHSTrueCnt, RHSFalseCnt, DecisionRHS);
 
     // Create MCDC Decision Region when E is at the top level.
     createOrCancelDecision(E, SourceRegionsSince);
@@ -2400,8 +2436,10 @@ struct CounterCoverageMappingBuilder
     CurCondIDs[false] = RHSid;
     auto DecisionLHS = CurCondIDs;
 
+    Counter ParentCnt = getRegion().getCounter();
+
     extendRegion(E->getLHS());
-    Counter OutCount = propagateCounts(getRegion().getCounter(), E->getLHS());
+    Counter LHSExitCnt = propagateCounts(ParentCnt, E->getLHS());
     handleFileExit(getEnd(E->getLHS()));
 
     // Track LHS True/False Decision.
@@ -2417,29 +2455,38 @@ struct CounterCoverageMappingBuilder
       fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), getRegionCounter(E));
     }
 
+    // Extract the RHS's Execution Counter.
+    Counter LHSBranchParentCnt =
+        CallContinuationCounterMap ? LHSExitCnt : getRegion().getCounter();
+    auto [RHSExecCnt, LHSTrueCnt] = getBranchCounterPair(E, LHSBranchParentCnt);
+
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
-    propagateCounts(getRegionCounter(E), E->getRHS());
-
-    // Extract the Parent Region Counter.
-    Counter ParentCnt = getRegion().getCounter();
-
-    // Extract the RHS's Execution Counter.
-    auto [RHSExecCnt, LHSExitCnt] = getBranchCounterPair(E, ParentCnt);
+    Counter RHSExitCnt = propagateCounts(RHSExecCnt, E->getRHS());
 
     // Extract the RHS's "False" Instance Counter.
-    auto [RHSFalseCnt, RHSExitCnt] =
-        getBranchCounterPair(E->getRHS(), RHSExecCnt);
+    Counter RHSBranchParentCnt =
+        CallContinuationCounterMap ? RHSExitCnt : RHSExecCnt;
+    auto [RHSFalseCnt, RHSTrueCnt] =
+        getBranchCounterPair(E->getRHS(), RHSBranchParentCnt);
 
     if (!shouldVisitRHS(E->getLHS())) {
-      GapRegionCounter = OutCount;
+      GapRegionCounter = LHSExitCnt;
+    }
+
+    if (CallContinuationCounterMap) {
+      Counter OutCount = addCounters(LHSTrueCnt, RHSExitCnt);
+      if (!IsCounterEqual(OutCount, ParentCnt)) {
+        getRegion().setCounter(OutCount);
+        GapRegionCounter = OutCount;
+      }
     }
 
     // Create Branch Region around LHS condition.
-    createBranchRegion(E->getLHS(), LHSExitCnt, RHSExecCnt, DecisionLHS);
+    createBranchRegion(E->getLHS(), LHSTrueCnt, RHSExecCnt, DecisionLHS);
 
     // Create Branch Region around RHS condition.
-    createBranchRegion(E->getRHS(), RHSExitCnt, RHSFalseCnt, DecisionRHS);
+    createBranchRegion(E->getRHS(), RHSTrueCnt, RHSFalseCnt, DecisionRHS);
 
     // Create MCDC Decision Region when E is at the top level.
     createOrCancelDecision(E, SourceRegionsSince);

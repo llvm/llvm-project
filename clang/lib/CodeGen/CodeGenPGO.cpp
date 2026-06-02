@@ -14,6 +14,7 @@
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -23,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 namespace llvm {
@@ -180,6 +182,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   unsigned MCDCMaxCond;
   /// Whether call-continuation coverage counters are enabled.
   bool CoverageCallContinuations;
+  /// The call currently marked as musttail, if any.
+  const CallExpr *MustTailCall = nullptr;
   /// The profile version.
   uint64_t ProfileVersion;
   /// Diagnostics Engine used to report warnings.
@@ -207,6 +211,29 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
   bool TraverseCapturedStmt(CapturedStmt *CS) { return true; }
+
+  static const CallExpr *getMustTailCall(const AttributedStmt *S) {
+    for (const Attr *A : S->getAttrs()) {
+      if (A->getKind() != attr::MustTail)
+        continue;
+
+      const auto *R = dyn_cast<ReturnStmt>(S->getSubStmt());
+      if (!R || !R->getRetValue())
+        return nullptr;
+      return dyn_cast<CallExpr>(R->getRetValue()->IgnoreParens());
+    }
+    return nullptr;
+  }
+
+  bool TraverseAttributedStmt(AttributedStmt *S) {
+    const CallExpr *NewMustTailCall = getMustTailCall(S);
+    if (!NewMustTailCall)
+      return Base::TraverseAttributedStmt(S);
+
+    llvm::SaveAndRestore<const CallExpr *> SaveMustTail(MustTailCall,
+                                                        NewMustTailCall);
+    return Base::TraverseAttributedStmt(S);
+  }
 
   bool VisitDecl(const Decl *D) {
     switch (D->getKind()) {
@@ -364,7 +391,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   /// reached from later source being reached.
   bool VisitCallExpr(CallExpr *S) {
     if (CoverageCallContinuations && CallContinuationCounterMap &&
-        !isNoReturnCall(S))
+        !isNoReturnCall(S) && S != MustTailCall)
       CallContinuations.push_back(S);
     return Base::VisitCallExpr(S);
   }
