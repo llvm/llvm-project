@@ -79,6 +79,10 @@ llvm.func @tile_2d_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %ts1: i32, %t
 // CHECK-NEXT:    br i1 %[[OMP_FLOOR1_CMP:.+]], label %[[OMP_FLOOR1_BODY:.+]], label %[[OMP_FLOOR1_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_FLOOR1_BODY]]:
+// CHECK-NEXT:    %[[TMP14:.+]] = icmp eq i32 %[[OMP_FLOOR0_IV:.+]], %[[TMP6:.+]]
+// CHECK-NEXT:    %[[TMP15:.+]] = select i1 %[[TMP14:.+]], i32 %[[TMP7:.+]], i32 %[[TMP3:.+]]
+// CHECK-NEXT:    %[[TMP16:.+]] = icmp eq i32 %[[OMP_FLOOR1_IV:.+]], %[[TMP10:.+]]
+// CHECK-NEXT:    %[[TMP17:.+]] = select i1 %[[TMP16:.+]], i32 %[[TMP11:.+]], i32 %[[TMP4:.+]]
 // CHECK-NEXT:    br label %[[OMP_TILE0_PREHEADER:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_PREHEADER]]:
@@ -89,7 +93,7 @@ llvm.func @tile_2d_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %ts1: i32, %t
 // CHECK-NEXT:    br label %[[OMP_TILE0_COND:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_COND]]:
-// CHECK-NEXT:    %[[OMP_TILE0_CMP:.+]] = icmp ult i32 %[[OMP_TILE0_IV:.+]], %[[TMP3:.+]]
+// CHECK-NEXT:    %[[OMP_TILE0_CMP:.+]] = icmp ult i32 %[[OMP_TILE0_IV:.+]], %[[TMP15:.+]]
 // CHECK-NEXT:    br i1 %[[OMP_TILE0_CMP:.+]], label %[[OMP_TILE0_BODY:.+]], label %[[OMP_TILE0_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_BODY]]:
@@ -103,32 +107,26 @@ llvm.func @tile_2d_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %ts1: i32, %t
 // CHECK-NEXT:    br label %[[OMP_TILE1_COND:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE1_COND]]:
-// CHECK-NEXT:    %[[OMP_TILE1_CMP:.+]] = icmp ult i32 %[[OMP_TILE1_IV:.+]], %[[TMP4:.+]]
+// CHECK-NEXT:    %[[OMP_TILE1_CMP:.+]] = icmp ult i32 %[[OMP_TILE1_IV:.+]], %[[TMP17:.+]]
 // CHECK-NEXT:    br i1 %[[OMP_TILE1_CMP:.+]], label %[[OMP_TILE1_BODY:.+]], label %[[OMP_TILE1_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE1_BODY]]:
-// CHECK-NEXT:    %[[TMP14:.+]] = mul nuw i32 %[[TMP3:.+]], %[[OMP_FLOOR0_IV:.+]]
-// CHECK-NEXT:    %[[TMP15:.+]] = add nuw i32 %[[TMP14:.+]], %[[OMP_TILE0_IV:.+]]
-// CHECK-NEXT:    %[[TMP16:.+]] = mul nuw i32 %[[TMP4:.+]], %[[OMP_FLOOR1_IV:.+]]
-// CHECK-NEXT:    %[[TMP17:.+]] = add nuw i32 %[[TMP16:.+]], %[[OMP_TILE1_IV:.+]]
-// CHECK-NEXT:    %[[OMP_TILE0_INBOUNDS:.+]] = icmp ult i32 %[[TMP15:.+]], %[[TMP1:.+]]
-// CHECK-NEXT:    %[[OMP_TILE1_INBOUNDS:.+]] = icmp ult i32 %[[TMP17:.+]], %[[TMP2:.+]]
-// CHECK-NEXT:    %[[OMP_TILE_PRED:.+]] = and i1 %[[OMP_TILE0_INBOUNDS:.+]], %[[OMP_TILE1_INBOUNDS:.+]]
-// CHECK-NEXT:    br i1 %[[OMP_TILE_PRED:.+]], label %[[OMP_OMP_LOOP_BODY:.+]], label %[[OMP_TILE_BODY_MERGE:.+]]
+// CHECK-NEXT:    %[[TMP18:.+]] = mul nuw i32 %[[TMP3:.+]], %[[OMP_FLOOR0_IV:.+]]
+// CHECK-NEXT:    %[[TMP19:.+]] = add nuw i32 %[[TMP18:.+]], %[[OMP_TILE0_IV:.+]]
+// CHECK-NEXT:    %[[TMP20:.+]] = mul nuw i32 %[[TMP4:.+]], %[[OMP_FLOOR1_IV:.+]]
+// CHECK-NEXT:    %[[TMP21:.+]] = add nuw i32 %[[TMP20:.+]], %[[OMP_TILE1_IV:.+]]
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_BODY:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_OMP_LOOP_BODY4]]:
 // CHECK-NEXT:    br label %[[OMP_LOOP_REGION12:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_LOOP_REGION12]]:
-// CHECK-NEXT:    %[[TMP18:.+]] = add i32 %[[TMP15:.+]], %[[TMP17:.+]]
-// CHECK-NEXT:    %[[TMP19:.+]] = getelementptr inbounds float, ptr %[[TMP0:.+]], i32 %[[TMP18:.+]]
-// CHECK-NEXT:    store float 4.200000e+01, ptr %[[TMP19:.+]], align 4
+// CHECK-NEXT:    %[[TMP22:.+]] = add i32 %[[TMP19:.+]], %[[TMP21:.+]]
+// CHECK-NEXT:    %[[TMP23:.+]] = getelementptr inbounds float, ptr %[[TMP0:.+]], i32 %[[TMP22:.+]]
+// CHECK-NEXT:    store float 4.200000e+01, ptr %[[TMP23:.+]], align 4
 // CHECK-NEXT:    br label %[[OMP_REGION_CONT11:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_REGION_CONT11]]:
-// CHECK-NEXT:    br label %[[OMP_TILE_BODY_MERGE:.+]]
-// CHECK-EMPTY:
-// CHECK-NEXT:  [[OMP_TILE_BODY_MERGE]]:
 // CHECK-NEXT:    br label %[[OMP_TILE1_INC:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE1_INC]]:

@@ -38,6 +38,8 @@ llvm.func @tile_trivial_loop(%baseptr: !llvm.ptr, %tc: i32, %ts: i32) -> () {
 // CHECK-NEXT:    br i1 %[[OMP_FLOOR0_CMP:.+]], label %[[OMP_FLOOR0_BODY:.+]], label %[[OMP_FLOOR0_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_FLOOR0_BODY]]:
+// CHECK-NEXT:    %[[TMP8:.+]] = icmp eq i32 %[[OMP_FLOOR0_IV:.+]], %[[TMP4:.+]]
+// CHECK-NEXT:    %[[TMP9:.+]] = select i1 %[[TMP8:.+]], i32 %[[TMP5:.+]], i32 %[[TMP2:.+]]
 // CHECK-NEXT:    br label %[[OMP_TILE0_PREHEADER:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_PREHEADER]]:
@@ -48,27 +50,23 @@ llvm.func @tile_trivial_loop(%baseptr: !llvm.ptr, %tc: i32, %ts: i32) -> () {
 // CHECK-NEXT:    br label %[[OMP_TILE0_COND:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_COND]]:
-// CHECK-NEXT:    %[[OMP_TILE0_CMP:.+]] = icmp ult i32 %[[OMP_TILE0_IV:.+]], %[[TMP2:.+]]
+// CHECK-NEXT:    %[[OMP_TILE0_CMP:.+]] = icmp ult i32 %[[OMP_TILE0_IV:.+]], %[[TMP9:.+]]
 // CHECK-NEXT:    br i1 %[[OMP_TILE0_CMP:.+]], label %[[OMP_TILE0_BODY:.+]], label %[[OMP_TILE0_EXIT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_BODY]]:
-// CHECK-NEXT:    %[[TMP8:.+]] = mul nuw i32 %[[TMP2:.+]], %[[OMP_FLOOR0_IV:.+]]
-// CHECK-NEXT:    %[[TMP9:.+]] = add nuw i32 %[[TMP8:.+]], %[[OMP_TILE0_IV:.+]]
-// CHECK-NEXT:    %[[OMP_TILE0_INBOUNDS:.+]] = icmp ult i32 %[[TMP9:.+]], %[[TMP1:.+]]
-// CHECK-NEXT:    br i1 %[[OMP_TILE0_INBOUNDS:.+]], label %[[OMP_OMP_LOOP_BODY:.+]], label %[[OMP_TILE_BODY_MERGE:.+]]
+// CHECK-NEXT:    %[[TMP10:.+]] = mul nuw i32 %[[TMP2:.+]], %[[OMP_FLOOR0_IV:.+]]
+// CHECK-NEXT:    %[[TMP11:.+]] = add nuw i32 %[[TMP10:.+]], %[[OMP_TILE0_IV:.+]]
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_BODY:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_OMP_LOOP_BODY]]:
 // CHECK-NEXT:    br label %[[OMP_LOOP_REGION:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_LOOP_REGION]]:
-// CHECK-NEXT:    %[[TMP10:.+]] = getelementptr inbounds float, ptr %[[TMP0:.+]], i32 %[[TMP9:.+]]
-// CHECK-NEXT:    store float 4.200000e+01, ptr %[[TMP10:.+]], align 4
+// CHECK-NEXT:    %[[TMP12:.+]] = getelementptr inbounds float, ptr %[[TMP0:.+]], i32 %[[TMP11:.+]]
+// CHECK-NEXT:    store float 4.200000e+01, ptr %[[TMP12:.+]], align 4
 // CHECK-NEXT:    br label %[[OMP_REGION_CONT:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_REGION_CONT]]:
-// CHECK-NEXT:    br label %[[OMP_TILE_BODY_MERGE:.+]]
-// CHECK-EMPTY:
-// CHECK-NEXT:  [[OMP_TILE_BODY_MERGE]]:
 // CHECK-NEXT:    br label %[[OMP_TILE0_INC:.+]]
 // CHECK-EMPTY:
 // CHECK-NEXT:  [[OMP_TILE0_INC]]:
