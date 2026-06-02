@@ -97,6 +97,11 @@ static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
         "Commands are in the Lua language.",
     },
     {
+        lldb::eScriptLanguageJavaScript,
+        "javascript",
+        "Commands are in the JavaScript language.",
+    },
+    {
         lldb::eScriptLanguageNone,
         "default",
         "Commands are in the default scripting language.",
