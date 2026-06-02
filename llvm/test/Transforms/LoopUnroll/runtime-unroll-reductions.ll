@@ -484,10 +484,6 @@ exit:
   ret float %res
 }
 
-; FIXME: The combines of the partial reduction results below are incorrect:
-; partial results of sub/fsub reductions each apply their subtractions
-; starting from the identity value, so they must be combined with add/fadd.
-; The chained sub/fsub combines flip the sign of every other partial result.
 define i32 @test_sub_reduction(ptr %a, i64 %n) {
 ;
 ; CHECK-LABEL: define i32 @test_sub_reduction(
@@ -520,7 +516,7 @@ define i32 @test_sub_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = sub i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_EPIL_PREHEADER]]:
@@ -588,7 +584,7 @@ define float @test_fsub_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[RES_PH:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fsub reassoc float [[RDX_NEXT_1]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc float [[RDX_NEXT_1]], [[RDX_NEXT]]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP_EPIL_PREHEADER]]:

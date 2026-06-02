@@ -820,6 +820,14 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   // in that scenario, but that seems worse.
 }
 
+static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
+  if (Kind == RecurKind::Sub)
+    return Instruction::Add;
+  if (Kind == RecurKind::FSub)
+    return Instruction::FAdd;
+  llvm_unreachable("RecurKind should be Sub/FSub.");
+}
+
 /// Unroll the given loop by Count. The loop must be in LCSSA form.  Unrolling
 /// can only fail when the loop's latch block is not terminated by a conditional
 /// branch instruction. However, if the trip count (and multiple) are not known,
@@ -1533,10 +1541,15 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         IRBuilder Builder(ExitBlock, ExitBlock->getFirstNonPHIIt());
         Builder.setFastMathFlags(Reductions.begin()->second.getFastMathFlags());
         RecurKind RK = Reductions.begin()->second.getRecurrenceKind();
+        // For sub-recurrences, each partial reduction result is already
+        // negative, we need to do: (-acc0) + (-acc1) + ...
+        Instruction::BinaryOps Opcode =
+            RecurrenceDescriptor::isSubRecurrenceKind(RK)
+                ? getSubRecurOpcode(RK)
+                : (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
         for (Instruction *RdxPart : drop_begin(PartialReductions)) {
-          RdxResult = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, RdxResult, "bin.rdx");
+          RdxResult =
+              Builder.CreateBinOp(Opcode, RdxPart, RdxResult, "bin.rdx");
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
