@@ -136,6 +136,9 @@
 ; CHECK-O23-NEXT: Running pass: BDCEPass on foo
 ; CHECK-O23-NEXT: Running pass: SLPVectorizerPass on foo
 ; CHECK-O23-NEXT: Running pass: VectorCombinePass on foo
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23-NEXT: Running pass: LoopReduceMotionPass on loop
 ; CHECK-O23-NEXT: Running pass: InferAlignmentPass on foo
 ; CHECK-O23-NEXT: Running pass: InstCombinePass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
