@@ -447,6 +447,18 @@ public:
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
+  llvm::DenseMap<const CompoundLiteralExpr *, cir::GlobalOp>
+      emittedCompoundLiterals;
+
+  cir::GlobalOp
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *e) {
+    return emittedCompoundLiterals.lookup(e);
+  }
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
+                                        cir::GlobalOp gv) {
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
+    assert(ok && "compound literal global already emitted");
+  }
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
