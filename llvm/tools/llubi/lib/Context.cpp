@@ -71,7 +71,7 @@ bool Context::initGlobalValues() {
     if (!GV.hasInitializer())
       continue;
 
-    MemoryObject *Obj = GlobalAddrMap.at(&GV).getMemoryObject();
+    MemoryObject *Obj = GlobalAddrMap.at(&GV).provenance().getMemoryObject();
     assert(Obj && "global pointer should have memory object provenance");
 
     Constant *Init = GV.getInitializer();

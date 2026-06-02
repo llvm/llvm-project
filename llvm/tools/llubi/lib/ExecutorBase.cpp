@@ -147,8 +147,14 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/true, AS);
-      MO)
+      MO) {
+    if (MO->isConstant()) {
+      reportImmediateUB() << "Try to write to a constant memory object: "
+                          << PtrVal << ".";
+      return;
+    }
     Ctx.store(*MO, Offset, Val, ValTy);
+  }
 }
 
 void ExecutorBase::requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
