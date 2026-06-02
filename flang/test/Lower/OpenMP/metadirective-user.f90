@@ -219,6 +219,31 @@ subroutine test_mixed_static_dynamic(n)
 #endif
 end subroutine
 
+! The dynamic user condition remains part of ranking even without a score, so it
+! wins over its static subset despite appearing later in declaration order.
+! CHECK-LABEL: func.func @_QPtest_mixed_static_dynamic_reordered(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
+! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           omp.taskwait
+! CHECK:         }
+! CHECK:         return
+subroutine test_mixed_static_dynamic_reordered(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(llvm)}: taskwait) &
+  !$omp & when(implementation={vendor(llvm)}, user={condition(flag)}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskyield)
+#else
+  !$omp & default(taskyield)
+#endif
+end subroutine
+
 ! Dynamic candidate whose static traits don't match is skipped entirely.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_static_mismatch(
 ! CHECK-NOT:     fir.if
@@ -304,6 +329,30 @@ subroutine test_dynamic_user_score_order(low, high)
   !$omp & when(device={kind(host)}, user={condition(low)}: taskyield) &
   !$omp & when(user={condition(score(1000): high)}: barrier) &
   !$omp & when(device={kind(host)}: taskwait)
+end subroutine
+
+! A scored dynamic condition can be ranked without making the runtime user
+! condition part of static applicability under extension(match_none).
+! CHECK-LABEL: func.func @_QPtest_dynamic_user_score_match_none(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
+! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           omp.taskwait
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_user_score_match_none(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={extension(match_none)}, user={condition(score(5): flag)}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskwait)
+#else
+  !$omp & default(taskwait)
+#endif
 end subroutine
 
 ! The explicit directive variant wins this tie over the earlier implicit

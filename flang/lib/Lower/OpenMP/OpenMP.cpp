@@ -4779,39 +4779,56 @@ static void genMetadirective(lower::AbstractConverter &converter,
       const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
-      llvm::omp::VariantMatchInfo vmi;
+      llvm::omp::VariantMatchInfo rawVMI;
       std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
-          vmi, ctxSel, semaCtx, converter.genLocation(clause.source));
+          rawVMI, ctxSel, semaCtx, converter.genLocation(clause.source));
 
-      // Ignore a runtime condition while testing static eligibility. If this
-      // variant is selected, the condition becomes a fir.if guard below.
       if (dynamicCond) {
-        llvm::omp::VariantMatchInfo dynamicVMI = vmi;
+        constexpr llvm::omp::TraitProperty dynamicConditionTrait =
+            llvm::omp::TraitProperty::user_condition_unknown;
+        constexpr llvm::omp::TraitProperty matchNoneTrait =
+            llvm::omp::TraitProperty::implementation_extension_match_none;
+
+        // Static applicability must only use traits known at lowering time.
+        // For example, in
+        //   when(implementation={vendor(llvm)},
+        //        user={condition(score(5): flag)}: barrier)
+        // vendor(llvm) can be checked now, but flag cannot. Drop the
+        // runtime-only user_condition_unknown for applicability, while keeping
+        // score(5) so ranking can still honor the user-condition selector.
+        llvm::omp::VariantMatchInfo staticVMI = rawVMI;
         std::optional<llvm::APInt> conditionScore;
-        auto scoreIt = dynamicVMI.ScoreMap.find(
-            llvm::omp::TraitProperty::user_condition_unknown);
-        if (scoreIt != dynamicVMI.ScoreMap.end()) {
+        auto scoreIt = staticVMI.ScoreMap.find(dynamicConditionTrait);
+        if (scoreIt != staticVMI.ScoreMap.end()) {
           conditionScore = scoreIt->second;
-          dynamicVMI.ScoreMap.erase(scoreIt);
+          staticVMI.ScoreMap.erase(scoreIt);
         }
-        dynamicVMI.RequiredTraits.reset(
-            unsigned(llvm::omp::TraitProperty::user_condition_unknown));
-        // Keep a score attached to user={condition(...)} for ranking without
-        // requiring the runtime condition to be statically true.
-        if (conditionScore && !conditionScore->isZero()) {
-          dynamicVMI.addTrait(llvm::omp::TraitProperty::user_condition_true,
-                              "<condition>", &*conditionScore);
-        }
-        if (!llvm::omp::isVariantApplicableInContext(dynamicVMI, ompCtx))
+        staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+
+        if (!llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx))
           continue;
-        candidates.emplace_back(spec, dynamicVMI, isExplicit, dynamicCond);
+
+        // Add a user-condition trait to rankingVMI so dynamic selectors stay
+        // more specific than their static subset and retain any explicit score.
+        // Normally use the active user_condition_true trait. For
+        // extension(match_none), keep user_condition_unknown so the selector is
+        // still scored without matching an active user condition.
+        llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
+        if (isExplicit) {
+          bool matchNone = rawVMI.RequiredTraits.test(unsigned(matchNoneTrait));
+          rankingVMI.addTrait(
+              matchNone ? dynamicConditionTrait
+                        : llvm::omp::TraitProperty::user_condition_true,
+              "<condition>", conditionScore ? &*conditionScore : nullptr);
+        }
+        candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond);
         continue;
       }
 
-      if (!llvm::omp::isVariantApplicableInContext(vmi, ompCtx))
+      if (!llvm::omp::isVariantApplicableInContext(rawVMI, ompCtx))
         continue;
 
-      candidates.emplace_back(spec, vmi, isExplicit);
+      candidates.emplace_back(spec, rawVMI, isExplicit);
     } else if (const auto *otherwiseClause =
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
