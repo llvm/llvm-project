@@ -5351,6 +5351,10 @@ def mlong_double_128 : Flag<["-"], "mlong-double-128">, Group<LongDouble_Group>,
 let Flags = [TargetSpecific] in {
 def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
+def mezh_bitslice_interrupts : Flag<["-"], "mezh-bitslice-interrupts">, Group<m_Group>,
+  HelpText<"Enable EZH bitslice interrupt workaround (injection of e_gotol_bs before branches/calls)">;
+def mno_ezh_bitslice_interrupts : Flag<["-"], "mno-ezh-bitslice-interrupts">, Group<m_Group>,
+  HelpText<"Disable EZH bitslice interrupt workaround (injection of e_gotol_bs before branches/calls)">;
 } // let Flags = [TargetSpecific]
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of data access to code sections (AArch64/ARM only)">;

@@ -919,6 +919,10 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::csky:
     csky::getCSKYTargetFeatures(D, Triple, Args, CmdArgs, Features);
     break;
+  case llvm::Triple::ezh:
+    AddTargetFeature(Args, Features, options::OPT_mezh_bitslice_interrupts,
+                     options::OPT_mno_ezh_bitslice_interrupts, "bitslice-interrupts");
+    break;
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
     loongarch::getLoongArchTargetFeatures(D, Triple, Args, Features);
