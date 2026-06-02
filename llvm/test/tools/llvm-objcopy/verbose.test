@@ -1,5 +1,4 @@
 ## Test --verbose / -v for llvm-objcopy and llvm-strip.
-## Output format: copy from '<input>' [<format>] to '<output>' [<format>]
 
 # RUN: rm -rf %t && mkdir %t
 # RUN: yaml2obj %s --docnum=1 -o %t/input.o

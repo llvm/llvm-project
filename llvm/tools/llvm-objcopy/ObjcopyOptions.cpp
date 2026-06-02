@@ -764,8 +764,8 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   MatchStyle SectionMatchStyle = InputArgs.hasArg(OBJCOPY_regex)
                                      ? MatchStyle::Regex
                                      : MatchStyle::Wildcard;
-  MatchStyle SymbolMatchStyle =
-      InputArgs.hasArg(OBJCOPY_regex)      ? MatchStyle::Regex
+  MatchStyle SymbolMatchStyle
+      = InputArgs.hasArg(OBJCOPY_regex)    ? MatchStyle::Regex
       : InputArgs.hasArg(OBJCOPY_wildcard) ? MatchStyle::Wildcard
                                            : MatchStyle::Literal;
   StringRef InputFormat, OutputFormat;
@@ -1580,8 +1580,8 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                              "--regex and --wildcard are incompatible");
   MatchStyle SectionMatchStyle =
       InputArgs.hasArg(STRIP_regex) ? MatchStyle::Regex : MatchStyle::Wildcard;
-  MatchStyle SymbolMatchStyle =
-      InputArgs.hasArg(STRIP_regex)      ? MatchStyle::Regex
+  MatchStyle SymbolMatchStyle
+      = InputArgs.hasArg(STRIP_regex)    ? MatchStyle::Regex
       : InputArgs.hasArg(STRIP_wildcard) ? MatchStyle::Wildcard
                                          : MatchStyle::Literal;
   ELFConfig.AllowBrokenLinks = InputArgs.hasArg(STRIP_allow_broken_links);

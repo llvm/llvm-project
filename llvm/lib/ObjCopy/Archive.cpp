@@ -28,19 +28,20 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
     if (!ChildNameOrErr)
       return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
 
+    auto MemberName = [&](StringRef Prefix) -> std::string {
+      return (Twine(Prefix) + "(" + *ChildNameOrErr + ")").str();
+    };
+
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
-      return createFileError(Ar.getFileName() + "(" + *ChildNameOrErr + ")",
+      return createFileError(MemberName(Ar.getFileName()),
                              ChildOrErr.takeError());
 
     const CommonConfig &CC = Config.getCommonConfig();
     if (CC.Verbose) {
       StringRef FormatName = getObjectFormatName(*ChildOrErr->get());
-      printCopyMessage(
-          (Twine(Ar.getFileName()) + "(" + *ChildNameOrErr + ")").str(),
-          FormatName,
-          (Twine(CC.OutputFilename) + "(" + *ChildNameOrErr + ")").str(),
-          FormatName);
+      printCopyMessage(MemberName(Ar.getFileName()), FormatName,
+                       MemberName(CC.OutputFilename), FormatName);
     }
 
     SmallVector<char, 0> Buffer;
