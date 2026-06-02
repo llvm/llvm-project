@@ -713,8 +713,12 @@ public:
   }
 
   bool VisitReturnStmt(const ReturnStmt *RS) {
+    // A return statement is allowed as long as the return value is trivial. A
+    // returned smart-pointer prvalue is special: under guaranteed copy elision
+    // the temporary *is* the function's return slot, so it is destructed by the
+    // caller, not here. Hence we may ignore that temporary's destructor.
     if (auto *RV = RS->getRetValue())
-      return VisitIgnoringTempWithoutDestruction(RV);
+      return visitReturnValueElidingTemp(RV);
     return true;
   }
 
@@ -894,13 +898,25 @@ public:
 
   bool checkArguments(const CallExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !VisitIgnoringTempWithoutDestruction(Arg))
+      if (Arg && !Visit(Arg))
         return false;
     }
     return true;
   }
 
-  bool VisitIgnoringTempWithoutDestruction(const Expr *Arg) {
+  // Triviality check for a return value that may elide a smart-pointer
+  // temporary's destructor.
+  //
+  // This is only valid for *return values*: a returned class prvalue is
+  // constructed directly into the function's return slot (C++17 guaranteed copy
+  // elision), so the temporary is destructed by the caller rather than here.
+  //
+  // It is deliberately NOT applied to call/constructor arguments. An argument
+  // temporary's lifetime ends at the full-expression *in this function* (the
+  // caller destroys arguments, e.g. per the Itanium C++ ABI), so its destructor
+  // runs here and may invoke delete. Proving otherwise would require
+  // interprocedural ownership analysis, so arguments are checked normally.
+  bool visitReturnValueElidingTemp(const Expr *Arg) {
     QualType OriginalQT = Arg->getType();
     auto *Type = OriginalQT.getTypePtrOrNull();
     if (!Type)
@@ -922,7 +938,7 @@ public:
 
   bool VisitCXXConstructExpr(const CXXConstructExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
-      if (Arg && !VisitIgnoringTempWithoutDestruction(Arg))
+      if (Arg && !Visit(Arg))
         return false;
     }
 

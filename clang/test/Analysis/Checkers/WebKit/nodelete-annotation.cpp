@@ -642,3 +642,46 @@ Box [[clang::annotate_type("webkit.nodelete")]] makeBox() {
 }
 
 } // namespace temp_object_typecheck
+
+namespace argument_temporaries_are_not_elided {
+
+// Only a *returned* prvalue is elided into the caller's return slot. A
+// smart-pointer temporary passed as a call argument is destructed in this
+// function at the end of the full-expression (the caller destroys arguments),
+// so its destructor -- which may run delete -- is correctly flagged, no matter
+// how the callee binds it (by value, by rvalue reference, or by const
+// reference). The factory and sinks are annotated no-delete so the only
+// possible offender is the argument temporary's destruction.
+
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] makeRef();
+void [[clang::annotate_type("webkit.nodelete")]] sinkByValue(Ref<RefCountable>);
+void [[clang::annotate_type("webkit.nodelete")]] sinkByRvalueRef(Ref<RefCountable>&&);
+void [[clang::annotate_type("webkit.nodelete")]] observeByConstRef(const Ref<RefCountable>&);
+
+// Returned prvalue: constructed into the caller's return slot -> no local
+// destruction here.
+Ref<RefCountable> [[clang::annotate_type("webkit.nodelete")]] returnedPrvalueIsElided() {
+  return makeRef();
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByValueIsFlagged() {
+  sinkByValue(makeRef());
+  // expected-warning@-1{{A function 'passedByValueIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByRvalueRefIsFlagged() {
+  sinkByRvalueRef(makeRef());
+  // expected-warning@-1{{A function 'passedByRvalueRefIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] passedByConstRefIsFlagged() {
+  observeByConstRef(makeRef());
+  // expected-warning@-1{{A function 'passedByConstRefIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] discardedTemporaryIsFlagged() {
+  makeRef();
+  // expected-warning@-1{{A function 'discardedTemporaryIsFlagged' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+}
+
+} // namespace argument_temporaries_are_not_elided

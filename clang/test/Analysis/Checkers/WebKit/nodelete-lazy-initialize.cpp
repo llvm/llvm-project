@@ -24,6 +24,11 @@ struct Container {
   void [[clang::annotate_type("webkit.nodelete")]] foo() {
     if (!m_bar)
       lazyInitialize(m_bar, RefObj::create());
+      // expected-warning@-1{{A function 'foo' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+      // The 'RefObj::create()' temporary is passed as an argument, so its
+      // lifetime ends at this full-expression in 'foo' (the caller destroys
+      // arguments) and its destructor may run delete. Only returned prvalues
+      // are elided, so this is correctly flagged.
   }
 
   void [[clang::annotate_type("webkit.nodelete")]] bar() {
