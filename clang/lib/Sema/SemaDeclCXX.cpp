@@ -7072,9 +7072,47 @@ void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
       << "test::ctor_final" << Ctor->getParent();
 }
 
+void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
+  // Paper §6.1: a user-provided constructor must initialize every member via
+  // its member-initializer list or an NSDMI, unless the member is marked
+  // [[uninitialized]] (whose body initialization is the deferred R7 check).
+  // A plain assignment in the constructor body does not count.
+  if (!Ctor->isUserProvided())
+    return;
+
+  // Members given a written member-initializer by this constructor.
+  llvm::SmallPtrSet<const FieldDecl *, 8> Written;
+  for (const CXXCtorInitializer *Init : Ctor->inits())
+    if (Init->isWritten() && Init->isAnyMemberInitializer())
+      if (const FieldDecl *F = Init->getAnyMember())
+        Written.insert(F);
+
+  for (const FieldDecl *F : Ctor->getParent()->fields()) {
+    // Anonymous aggregate members and bit-fields are conservatively skipped in
+    // this slice; reference and const members already have dedicated
+    // diagnostics when left uninitialized.
+    if (F->isUnnamedBitField() || !F->getDeclName() ||
+        F->getType()->isReferenceType() || F->getType().isConstQualified())
+      continue;
+    if (F->hasAttr<CXX11UninitializedAttr>() || F->hasInClassInitializer() ||
+        Written.count(F))
+      continue;
+    if (!S.defaultInitLeavesScalarIndeterminate(F->getType()))
+      continue;
+    if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
+                                      Ctor->getLocation()))
+      continue;
+    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
+        << "std::init" << F->getDeclName();
+    S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
+        << F->getDeclName();
+  }
+}
+
 constexpr ConstructorFinalizationProfileEntry
     ConstructorFinalizationProfiles[] = {
         {"test::ctor_final", &runTestCtorFinalCallback},
+        {"std::init", &runStdInitCtorUninitMemberCallback},
 };
 } // namespace
 

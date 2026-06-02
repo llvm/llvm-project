@@ -14160,4 +14160,8 @@ def err_uninitialized_attr_invalid_subject : Error<
 def err_init_union_marker : ProfileRuleError<
   "'[[uninitialized]]' cannot be applied to %select{a variable of union type|"
   "a union member}1 under profile '%0'">;
+def err_init_ctor_uninit_member : ProfileRuleError<
+  "constructor does not initialize member %1 under profile '%0'">;
+def note_init_uninit_member_here : Note<
+  "member %0 declared here">;
 } // end of sema component.
