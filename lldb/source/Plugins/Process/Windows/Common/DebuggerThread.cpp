@@ -211,7 +211,7 @@ Status DebuggerThread::StopDebugging(bool terminate) {
   // If we're stuck waiting for an exception to continue (e.g. the user is at a
   // breakpoint messing around in the debugger), continue it now.  But only
   // AFTER calling TerminateProcess to make sure that the very next call to
-  // WaitForDebugEvent is an exit process event.
+  // WaitForDebugEventEx is an exit process event.
   if (m_active_exception.get()) {
     LLDB_LOG(log, "masking active exception");
     ContinueAsyncException(ExceptionResult::MaskException);
@@ -271,7 +271,7 @@ void DebuggerThread::DebugLoop() {
   Log *log = GetLog(WindowsLog::Event);
   DEBUG_EVENT dbe = {};
   bool should_debug = true;
-  LLDB_LOG_VERBOSE(log, "Entering WaitForDebugEvent loop");
+  LLDB_LOG_VERBOSE(log, "Entering WaitForDebugEventEx loop");
   while (should_debug) {
     LLDB_LOG_VERBOSE(log, "Calling WaitForDebugEvent");
     BOOL wait_result = g_wait_for_debug_event(&dbe, INFINITE);
@@ -350,7 +350,7 @@ void DebuggerThread::DebugLoop() {
           // detaching with leaving breakpoint exception event on the queue may
           // cause target process to crash so process events as possible since
           // target threads are running at this time, there is possibility to
-          // have some breakpoint exception between last WaitForDebugEvent and
+          // have some breakpoint exception between last WaitForDebugEventEx and
           // DebugActiveProcessStop but ignore for now.
           while (g_wait_for_debug_event(&dbe, 0)) {
             continue_status = DBG_CONTINUE;
@@ -375,7 +375,7 @@ void DebuggerThread::DebugLoop() {
         should_debug = false;
       }
     } else {
-      LLDB_LOG(log, "returned FALSE from WaitForDebugEvent.  Error = {0}",
+      LLDB_LOG(log, "returned FALSE from WaitForDebugEventEx.  Error = {0}",
                ::GetLastError());
 
       should_debug = false;
@@ -383,7 +383,7 @@ void DebuggerThread::DebugLoop() {
   }
   FreeProcessHandles();
 
-  LLDB_LOG(log, "WaitForDebugEvent loop completed, exiting.");
+  LLDB_LOG(log, "WaitForDebugEventEx loop completed, exiting.");
   ::SetEvent(m_debugging_ended_event);
 }
 
@@ -765,6 +765,10 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
 DWORD
 DebuggerThread::HandleODSEvent(const OUTPUT_DEBUG_STRING_INFO &info,
                                DWORD thread_id) {
+  m_debug_delegate->OnDebugString(
+      static_cast<lldb::addr_t>(
+          reinterpret_cast<uintptr_t>(info.lpDebugStringData)),
+      info.fUnicode == TRUE, info.nDebugStringLength);
   return DBG_CONTINUE;
 }
 
