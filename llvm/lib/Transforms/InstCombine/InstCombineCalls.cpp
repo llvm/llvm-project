@@ -3116,14 +3116,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
-    // copysign(floor(fabs(X)), X) --> trunc(X)
-    // Requires nnan: for NaN X the source returns a NaN with X's sign bit
-    // preserved (via copysign), but trunc(X) may return any NaN, making the
-    // target more undefined.
-    if (II->hasNoNaNs() &&
-        match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Specific(Sign))))) {
+    // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
+    // copysign ignores the sign bit of its magnitude argument (implicit fabs),
+    // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
+    // including NaN without requiring nnan.
+    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Specific(Sign))))) {
       Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
-      return replaceInstUsesWith(*II, Trunc);
+      return replaceOperand(*II, 0, Trunc);
     }
 
     Type *SignEltTy = Sign->getType()->getScalarType();

@@ -295,64 +295,56 @@ define <2 x bfloat> @copysign_simplify_demanded_bits_sign_bitcast_not_int_vec(<2
   ret <2 x bfloat> %result
 }
 
-; copysign(floor(fabs(X)), X) --> trunc(X)  (requires nnan)
+; copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
+; copysign ignores the sign of its magnitude arg, so trunc(X) is equivalent
+; to floor(fabs(X)) for the magnitude. Valid for all inputs including NaN.
 
 define double @copysign_floor_fabs_to_trunc_f64(double %x) {
 ; CHECK-LABEL: @copysign_floor_fabs_to_trunc_f64(
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan double @llvm.trunc.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.trunc.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.copysign.f64(double [[RESULT]], double [[X]])
+; CHECK-NEXT:    ret double [[RESULT1]]
 ;
   %abs = call double @llvm.fabs.f64(double %x)
   %fl = call double @llvm.floor.f64(double %abs)
-  %result = call nnan double @llvm.copysign.f64(double %fl, double %x)
+  %result = call double @llvm.copysign.f64(double %fl, double %x)
   ret double %result
 }
 
 define float @copysign_floor_fabs_to_trunc_f32(float %x) {
 ; CHECK-LABEL: @copysign_floor_fabs_to_trunc_f32(
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.trunc.f32(float [[X:%.*]])
-; CHECK-NEXT:    ret float [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call float @llvm.copysign.f32(float [[RESULT]], float [[X]])
+; CHECK-NEXT:    ret float [[RESULT1]]
 ;
   %abs = call float @llvm.fabs.f32(float %x)
   %fl = call float @llvm.floor.f32(float %abs)
-  %result = call nnan float @llvm.copysign.f32(float %fl, float %x)
+  %result = call float @llvm.copysign.f32(float %fl, float %x)
   ret float %result
 }
 
 define <3 x double> @copysign_floor_fabs_to_trunc_vec(<3 x double> %x) {
 ; CHECK-LABEL: @copysign_floor_fabs_to_trunc_vec(
-; CHECK-NEXT:    [[RESULT:%.*]] = call nnan <3 x double> @llvm.trunc.v3f64(<3 x double> [[X:%.*]])
-; CHECK-NEXT:    ret <3 x double> [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call <3 x double> @llvm.trunc.v3f64(<3 x double> [[X:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call <3 x double> @llvm.copysign.v3f64(<3 x double> [[RESULT]], <3 x double> [[X]])
+; CHECK-NEXT:    ret <3 x double> [[RESULT1]]
 ;
   %abs = call <3 x double> @llvm.fabs.v3f64(<3 x double> %x)
   %fl = call <3 x double> @llvm.floor.v3f64(<3 x double> %abs)
-  %result = call nnan <3 x double> @llvm.copysign.v3f64(<3 x double> %fl, <3 x double> %x)
+  %result = call <3 x double> @llvm.copysign.v3f64(<3 x double> %fl, <3 x double> %x)
   ret <3 x double> %result
 }
 
-; FMF flags from copysign propagate to the resulting trunc.
+; FMF flags from copysign propagate to the resulting instructions.
 define double @copysign_floor_fabs_to_trunc_fmf(double %x) {
 ; CHECK-LABEL: @copysign_floor_fabs_to_trunc_fmf(
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf double @llvm.trunc.f64(double [[X:%.*]])
-; CHECK-NEXT:    ret double [[RESULT]]
+; CHECK-NEXT:    [[RESULT1:%.*]] = call nnan ninf double @llvm.copysign.f64(double [[RESULT]], double [[X]])
+; CHECK-NEXT:    ret double [[RESULT1]]
 ;
   %abs = call double @llvm.fabs.f64(double %x)
   %fl = call double @llvm.floor.f64(double %abs)
   %result = call nnan ninf double @llvm.copysign.f64(double %fl, double %x)
-  ret double %result
-}
-
-; Negative test: missing nnan -- NaN inputs would give different sign bits.
-define double @copysign_floor_fabs_no_fold_no_nnan(double %x) {
-; CHECK-LABEL: @copysign_floor_fabs_no_fold_no_nnan(
-; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[FL:%.*]] = call double @llvm.floor.f64(double [[ABS]])
-; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.copysign.f64(double [[FL]], double [[X:%.*]])
-; CHECK-NEXT:    ret double [[RESULT]]
-;
-  %abs = call double @llvm.fabs.f64(double %x)
-  %fl = call double @llvm.floor.f64(double %abs)
-  %result = call double @llvm.copysign.f64(double %fl, double %x)
   ret double %result
 }
 
