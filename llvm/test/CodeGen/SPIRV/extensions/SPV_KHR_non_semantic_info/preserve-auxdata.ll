@@ -4,11 +4,12 @@
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
 ; RUN:   %s -o - | FileCheck %s
 
-; Off by default: only the Linkage record fires (for the AE function).
+; Off by default: no AuxData records at all, even with the extension enabled.
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info %s -o - \
 ; RUN:   | FileCheck %s --check-prefix=OFF
 
+; OFF-NOT: OpExtInstImport "NonSemantic.AuxData"
 ; OFF-NOT: OpString "my-attr"
 ; OFF-NOT: OpString "nounwind"
 ; OFF-NOT: OpString "some.md"

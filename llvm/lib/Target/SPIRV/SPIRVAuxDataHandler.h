@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // Emits NonSemantic.AuxData ExtInst annotations (mirrors SPIRV-LLVM-Translator
-// --spirv-preserve-auxdata). Linkage records emit unconditionally for AE-tagged
-// functions; attribute/metadata records are gated by -spirv-preserve-auxdata.
+// --spirv-preserve-auxdata).
+// Otherwise, AE-tagged functions emit plain Export linkage via
+// LinkageAttributes.
 //
 //===----------------------------------------------------------------------===//
 

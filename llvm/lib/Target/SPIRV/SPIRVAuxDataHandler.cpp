@@ -54,9 +54,7 @@ SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
       LinkagePreservedFns.push_back(&F);
 }
 
-bool SPIRVAuxDataHandler::hasWork() const {
-  return !LinkagePreservedFns.empty() || SPVPreserveAuxData;
-}
+bool SPIRVAuxDataHandler::hasWork() const { return SPVPreserveAuxData; }
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,
                                               SPIRV::ModuleAnalysisInfo &MAI) {
