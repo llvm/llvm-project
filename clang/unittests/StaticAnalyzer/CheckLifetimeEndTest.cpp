@@ -25,7 +25,6 @@ using namespace clang;
 using namespace ento;
 
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
-  using Self = LifetimeEndReporter;
   const BugType LifetimeEndNode{this, "LifetimeEndReporter"};
 
   bool report(CheckerContext &C, StringRef Description) const {
