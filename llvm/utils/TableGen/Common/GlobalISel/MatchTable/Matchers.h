@@ -1533,7 +1533,7 @@ protected:
 
 public:
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
-                                     TreePredicateFn Predicatem);
+                                     TreePredicateFn Predicate);
 
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
                                      const std::string &EnumVal)
