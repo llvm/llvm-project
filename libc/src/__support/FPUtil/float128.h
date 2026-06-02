@@ -10,6 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/comparison_operations.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
@@ -33,10 +35,27 @@ struct Float128 {
   }
 
   LIBC_INLINE constexpr bool operator==(Float128 other) const {
-    return bits == other.bits;
+    return fputil::equals(*this, other);
   }
+
   LIBC_INLINE constexpr bool operator!=(Float128 other) const {
-    return bits != other.bits;
+    return !fputil::equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<(Float128 other) const {
+    return fputil::less_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator<=(Float128 other) const {
+    return fputil::less_than_or_equals(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>(Float128 other) const {
+    return fputil::greater_than(*this, other);
+  }
+
+  LIBC_INLINE constexpr bool operator>=(Float128 other) const {
+    return fputil::greater_than_or_equals(*this, other);
   }
 };
 
