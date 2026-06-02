@@ -45,7 +45,6 @@
 #include "ExceptionRecord.h"
 #include "ForwardDecl.h"
 #include "LocalDebugDelegate.h"
-#include "MSVCRTCFrameRecognizer.h"
 #include "ProcessWindowsLog.h"
 #include "TargetThreadWindows.h"
 
@@ -304,8 +303,6 @@ void ProcessWindows::DidLaunch() {
 
 void ProcessWindows::DidAttach(ArchSpec &arch_spec) {
   llvm::sys::ScopedLock lock(m_mutex);
-
-  RegisterMSVCRTCFrameRecognizer(*this);
 
   // The initial stop won't broadcast the state change event, so account for
   // that here.
