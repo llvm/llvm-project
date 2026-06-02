@@ -150,6 +150,7 @@ void ExecutableFileMemoryManager::updateSection(
 
     Section = &OrgSection.get();
     Section->updateContents(Contents, Size);
+    Section->setExternallyOwnedContents();  // buffer owned by JITLink
   } else {
     // If the input contains a section with the section name, rename it in the
     // output file to avoid the section name conflict and emit the new section
@@ -171,6 +172,7 @@ void ExecutableFileMemoryManager::updateSection(
     if (UsePrefix)
       NewSection.setOutputName(SectionName);
     Section = &NewSection;
+    NewSection.setExternallyOwnedContents();  // buffer owned by JITLink
   }
 
   LLVM_DEBUG({
