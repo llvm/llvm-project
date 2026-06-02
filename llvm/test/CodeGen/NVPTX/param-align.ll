@@ -55,17 +55,17 @@ declare ptr @getfp(i32 %n)
 define ptx_device void @t6() {
 ; CHECK: .func t6
   %fp = call ptr @getfp(i32 0)
-; CHECK: prototype_2 : .callprototype ()_ (.param .align 8 .b8 _[8]);
+; CHECK: $L__prototype_2 : .callprototype ()_ (.param .align 8 .b8 _[8]);
   call void %fp(ptr byval(double) null);
 
   %fp2 = call ptr @getfp(i32 1)
-; NOALIGN4: prototype_4 : .callprototype ()_ (.param .align 2 .b8 _[4]);
-; ALIGN4: prototype_4 : .callprototype ()_ (.param .align 4 .b8 _[4]);
+; NOALIGN4: $L__prototype_4 : .callprototype ()_ (.param .align 2 .b8 _[4]);
+; ALIGN4: $L__prototype_4 : .callprototype ()_ (.param .align 4 .b8 _[4]);
   call void %fp(ptr byval(%struct.half2) null);
 
   %fp3 = call ptr @getfp(i32 2)
-; NOALIGN4: prototype_6 : .callprototype ()_ (.param .align 1 .b8 _[1]);
-; ALIGN4: prototype_6 : .callprototype ()_ (.param .align 4 .b8 _[1]);
+; NOALIGN4: $L__prototype_6 : .callprototype ()_ (.param .align 1 .b8 _[1]);
+; ALIGN4: $L__prototype_6 : .callprototype ()_ (.param .align 4 .b8 _[1]);
   call void %fp(ptr byval(i8) null);
   ret void
 }

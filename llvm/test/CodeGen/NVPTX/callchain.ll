@@ -4,7 +4,7 @@
 target triple = "nvptx"
 
 define void @foo(ptr %ptr) {
-; CHECK: prototype_0 : .callprototype ()_ ()
+; CHECK: $L__prototype_0 : .callprototype ()_ ()
   tail call void %ptr()
   ret void
 }
