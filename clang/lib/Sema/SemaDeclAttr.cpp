@@ -6941,6 +6941,33 @@ static void handleUninitializedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) UninitializedAttr(S.Context, AL));
 }
 
+static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
+                                         const ParsedAttr &AL) {
+  // The SubjectList has already restricted D to a variable or non-static data
+  // member. Reject the subjects for which "leave uninitialized" is
+  // meaningless: a reference (must bind when declared), a function parameter
+  // (initialized by the caller), and a structured binding (requires an
+  // initializer). These are rejected regardless of -fprofiles, like any other
+  // ill-formed attribute placement.
+  enum InvalidSubject { Reference, Parameter, StructuredBinding };
+  std::optional<InvalidSubject> Invalid;
+  if (isa<ParmVarDecl>(D))
+    Invalid = Parameter;
+  else if (isa<DecompositionDecl>(D))
+    Invalid = StructuredBinding;
+  else if (cast<ValueDecl>(D)->getType()->isReferenceType())
+    Invalid = Reference;
+
+  if (Invalid) {
+    S.Diag(AL.getLoc(), diag::err_uninitialized_attr_invalid_subject)
+        << static_cast<unsigned>(*Invalid);
+    AL.setInvalid();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
+}
+
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -8205,6 +8232,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_Uninitialized:
     handleUninitializedAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_CXX11Uninitialized:
+    handleCXX11UninitializedAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_ObjCExternallyRetained:

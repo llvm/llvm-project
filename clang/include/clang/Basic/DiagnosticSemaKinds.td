@@ -14151,4 +14151,7 @@ def err_init_static_runtime_init : ProfileRuleError<
 def err_init_uninit_with_initializer : ProfileRuleError<
   "variable %1 cannot be both '[[uninitialized]]' and have an initializer "
   "under profile '%0'">;
+def err_uninitialized_attr_invalid_subject : Error<
+  "'uninitialized' attribute cannot be applied to %select{a reference|"
+  "a function parameter|a structured binding}0">;
 } // end of sema component.

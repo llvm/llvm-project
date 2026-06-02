@@ -42,3 +42,21 @@ template struct DependentField<int>;
 // expected-error@+2 {{'uninitialized' attribute only applies to variables and non-static data members}}
 // no-profiles-error@+1 {{'uninitialized' attribute only applies to variables and non-static data members}}
 [[uninitialized]] void f();
+
+// Subjects on which "leave uninitialized" is meaningless are rejected
+// regardless of -fprofiles.
+struct ReferenceField {
+  int &r [[uninitialized]]; // expected-error {{'uninitialized' attribute cannot be applied to a reference}} \
+                            // no-profiles-error {{'uninitialized' attribute cannot be applied to a reference}}
+};
+
+void test_invalid_subjects(int p [[uninitialized]]) { // expected-error {{'uninitialized' attribute cannot be applied to a function parameter}} \
+                                                      // no-profiles-error {{'uninitialized' attribute cannot be applied to a function parameter}}
+  int n = 0;
+  int &lr [[uninitialized]] = n; // expected-error {{'uninitialized' attribute cannot be applied to a reference}} \
+                                 // no-profiles-error {{'uninitialized' attribute cannot be applied to a reference}}
+  int arr[2] = {1, 2};
+  [[uninitialized]] auto [a, b] = arr; // expected-error {{'uninitialized' attribute cannot be applied to a structured binding}} \
+                                       // no-profiles-error {{'uninitialized' attribute cannot be applied to a structured binding}}
+  (void)p; (void)lr; (void)a; (void)b;
+}
