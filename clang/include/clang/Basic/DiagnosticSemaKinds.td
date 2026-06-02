@@ -14140,6 +14140,9 @@ def err_profile_uninit_read : ProfileRuleError<
   "variable %1 is read before initialization under profile '%0'">;
 def err_profile_class_final_test : ProfileRuleError<
   "test profile fired on completion of class %1 under profile '%0'">;
+def err_profile_ctor_final_test : ProfileRuleError<
+  "test profile fired on finalization of a constructor for class %1 under "
+  "profile '%0'">;
 def err_init_uninit_read : ProfileRuleError<
   "variable %1 is read before initialization under profile '%0'">;
 def err_init_uninit_decl : ProfileRuleError<

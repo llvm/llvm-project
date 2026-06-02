@@ -5924,6 +5924,8 @@ void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
   SetCtorInitializers(Constructor, AnyErrors, MemInits);
 
   DiagnoseUninitializedFields(*this, Constructor);
+
+  checkProfileViolationsAtConstructorFinalization(Constructor);
 }
 
 void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
@@ -5990,6 +5992,7 @@ void Sema::ActOnDefaultCtorInitializers(Decl *CDtorDecl) {
     }
     SetCtorInitializers(Constructor, /*AnyErrors=*/false);
     DiagnoseUninitializedFields(*this, Constructor);
+    checkProfileViolationsAtConstructorFinalization(Constructor);
   }
 }
 
@@ -7049,6 +7052,30 @@ void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
 constexpr ClassFinalizationProfileEntry ClassFinalizationProfiles[] = {
     {"test::class_final", &runTestClassFinalCallback},
 };
+
+// Profiles that opt into the constructor-finalization dispatch. Each entry
+// pairs the profile name with a callback invoked once per fully-processed,
+// non-dependent, non-invalid, non-delegating constructor (the point at which
+// its member-initializer list, including synthesized entries, is complete).
+// Adding a new profile is a single row here plus a ProfileRuleError diagnostic
+// and a callback that consults Sema::shouldEmitProfileViolation.
+struct ConstructorFinalizationProfileEntry {
+  StringRef Name;
+  void (*Callback)(Sema &, CXXConstructorDecl *);
+};
+
+void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
+  if (!S.shouldEmitProfileViolation("test::ctor_final", /*Rule=*/"",
+                                    Ctor->getLocation()))
+    return;
+  S.Diag(Ctor->getLocation(), diag::err_profile_ctor_final_test)
+      << "test::ctor_final" << Ctor->getParent();
+}
+
+constexpr ConstructorFinalizationProfileEntry
+    ConstructorFinalizationProfiles[] = {
+        {"test::ctor_final", &runTestCtorFinalCallback},
+};
 } // namespace
 
 void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
@@ -7487,6 +7514,23 @@ void Sema::checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD) {
     if (!isProfileEnforced(E.Name))
       continue;
     E.Callback(*this, RD);
+  }
+}
+
+void Sema::checkProfileViolationsAtConstructorFinalization(
+    CXXConstructorDecl *Ctor) {
+  if (!getLangOpts().Profiles || !Ctor)
+    return;
+  // A dependent constructor pattern re-fires on instantiation; a delegating
+  // constructor leaves member initialization to its target.
+  if (Ctor->isInvalidDecl() || Ctor->isDependentContext() ||
+      Ctor->isDelegatingConstructor())
+    return;
+  ProfileSuppressScope Scope(*this, Ctor, /*WalkLexicalParents=*/true);
+  for (const auto &E : ConstructorFinalizationProfiles) {
+    if (!isProfileEnforced(E.Name))
+      continue;
+    E.Callback(*this, Ctor);
   }
 }
 

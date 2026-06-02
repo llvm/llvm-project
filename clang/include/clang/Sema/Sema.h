@@ -6060,6 +6060,16 @@ public:
   /// invalid, and lambda classes are filtered out.
   void checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD);
 
+  /// Dispatch constructor-finalization profile callbacks once a constructor's
+  /// member-initializer list is complete. Called from \c ActOnMemInitializers
+  /// and \c ActOnDefaultCtorInitializers, which also serve template
+  /// instantiations (via \c InstantiateMemInitializers), so every
+  /// user-defined constructor is covered at the point its \c inits() is fully
+  /// populated -- unlike class finalization, which runs before any
+  /// constructor body is parsed. Dependent, invalid, and delegating
+  /// constructors are filtered out.
+  void checkProfileViolationsAtConstructorFinalization(CXXConstructorDecl *Ctor);
+
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.
   void checkIllFormedTrivialABIStruct(CXXRecordDecl &RD);
