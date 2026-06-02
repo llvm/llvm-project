@@ -511,7 +511,15 @@ public:
   /// hasOneUse - Return true if there is exactly one instruction using the
   /// specified register.
   bool hasOneUse(Register RegNo) const {
-    return hasSingleElement(use_operands(RegNo));
+    MachineOperand *Head = getRegUseDefListHead(RegNo);
+    if (!Head)
+      return false;
+    MachineOperand *Tail = Head->Contents.Reg.Prev;
+    if (!Tail->isUse())
+      return false;
+    if (Tail == Head)
+      return true;
+    return Tail->Contents.Reg.Prev->isDef();
   }
 
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
