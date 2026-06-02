@@ -670,25 +670,31 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     const CIRGenFunctionInfo &fnInfo =
         cgm.getTypes().arrangeGlobalDeclaration(curGD);
     const cir::ABIArgInfo &retInfo = fnInfo.getReturnInfo();
-    mlir::Type loadTy =
-        cast<cir::FuncOp>(curFn).getFunctionType().getReturnType();
-    Address loadAddr = returnValue;
     if (retInfo.getDirectOffset() != 0) {
+      mlir::Type loadTy =
+          cast<cir::FuncOp>(curFn).getFunctionType().getReturnType();
       mlir::Value offsetVal =
           builder.getUnsignedInt(loc, retInfo.getDirectOffset(), 64);
       Address byteAddr =
-          loadAddr.withElementType(builder, builder.getUInt8Ty());
-      loadAddr = byteAddr.withPointer(
+          returnValue.withElementType(builder, builder.getUInt8Ty());
+      Address loadAddr = byteAddr.withPointer(
           builder.createPtrStride(loc, byteAddr.getPointer(), offsetVal));
       if (retInfo.getCoerceToType()) {
         loadTy = retInfo.getCoerceToType();
         loadAddr = loadAddr.withElementType(builder, loadTy);
       }
-    }
-    auto value =
-        cir::LoadOp::create(builder, loc, loadTy, loadAddr.getPointer());
+      auto value =
+          cir::LoadOp::create(builder, loc, loadTy, loadAddr.getPointer());
+      cir::ReturnOp::create(builder, loc, {value});
+    } else {
+      // Load the value from `__retval` and return it via the `cir.return` op.
+      cir::AllocaOp retAlloca =
+          mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+      auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                       *fnRetAlloca);
 
-    cir::ReturnOp::create(builder, loc, {value});
+      cir::ReturnOp::create(builder, loc, {value});
+    }
   } else {
     cir::ReturnOp::create(builder, loc);
   }
@@ -1288,25 +1294,33 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
-  // Load the value from `__retval` and return it via the `cir.return` op.
   const CIRGenFunctionInfo &fnInfo =
       cgm.getTypes().arrangeGlobalDeclaration(curGD);
   const cir::ABIArgInfo &retInfo = fnInfo.getReturnInfo();
-  mlir::Type loadTy =
-      cast<cir::FuncOp>(curFn).getFunctionType().getReturnType();
-  Address loadAddr = returnValue;
   if (retInfo.getDirectOffset() != 0) {
+    mlir::Type loadTy =
+        cast<cir::FuncOp>(curFn).getFunctionType().getReturnType();
     mlir::Value offsetVal =
         builder.getUnsignedInt(loc, retInfo.getDirectOffset(), 64);
-    Address byteAddr = loadAddr.withElementType(builder, builder.getUInt8Ty());
-    loadAddr = byteAddr.withPointer(
+    Address byteAddr =
+        returnValue.withElementType(builder, builder.getUInt8Ty());
+    Address loadAddr = byteAddr.withPointer(
         builder.createPtrStride(loc, byteAddr.getPointer(), offsetVal));
     if (retInfo.getCoerceToType()) {
       loadTy = retInfo.getCoerceToType();
       loadAddr = loadAddr.withElementType(builder, loadTy);
     }
+    auto value =
+        cir::LoadOp::create(builder, loc, loadTy, loadAddr.getPointer());
+    cir::ReturnOp::create(builder, loc, {value});
+    return;
   }
-  auto value = cir::LoadOp::create(builder, loc, loadTy, loadAddr.getPointer());
+
+  // Load the value from `__retval` and return it via the `cir.return` op.
+  cir::AllocaOp retAlloca =
+      mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+  auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                   *fnRetAlloca);
 
   cir::ReturnOp::create(builder, loc, {value});
 }
