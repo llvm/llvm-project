@@ -287,9 +287,10 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 // optimizeVcndVcmpPair().
 bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
     MachineBasicBlock &MBB) {
-  auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
-    return MI.getOpcode() == AMDGPU::S_CBRANCH_SCC1;
-  });
+  MachineBasicBlock::iterator I =
+      llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
+        return MI.getOpcode() == AMDGPU::S_CBRANCH_SCC1;
+      });
   if (I == MBB.terminators().end())
     return false;
 
