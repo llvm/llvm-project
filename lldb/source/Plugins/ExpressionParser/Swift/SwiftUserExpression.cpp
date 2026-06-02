@@ -32,6 +32,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -42,9 +43,11 @@
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
 #include "swift/Demangling/Demangler.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
 #include <map>
+#include <optional>
 #include <string>
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -730,6 +733,37 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
   return parse_result;
 }
 
+/// Rewrite invalid cast expressions.
+///
+/// A substring matching:
+///     <hex-literal> as[?!]? <Type>
+/// will be substituted with:
+///     unsafeBitCast(<hex-literal>, to: <Type>.self)
+///
+/// This supports casting expressions users may try when wanting the object
+/// represented by a raw address.
+static std::optional<std::string> ApplyLLDBCastFixIts(StringRef expr_text) {
+  llvm::Regex cast_regex("(0[xX][0-9a-fA-F]{4,})"
+                         "[[:space:]]+"
+                         "as[?!]?[[:space:]]+"
+                         "([[:alpha:]_][[:alnum:]_.]*)");
+
+  llvm::SmallVector<StringRef, 3> matches;
+  if (!cast_regex.match(expr_text, &matches))
+    return std::nullopt;
+
+  constexpr static llvm::StringRef swift_numeric_type_names[] = {
+      "Int",     "Int8",    "Int16",   "Int32",  "Int64",  "UInt",
+      "UInt8",   "UInt16",  "UInt32",  "UInt64", "Float",  "Float16",
+      "Float32", "Float64", "Float80", "Double", "CGFloat"};
+  StringRef type_name = matches[2];
+  if (llvm::is_contained(swift_numeric_type_names, type_name))
+    // Don't rewrite valid casts such as `0xABCDEF as UInt32`
+    return std::nullopt;
+
+  return cast_regex.sub("unsafeBitCast(\\1, to: \\2.self)", expr_text);
+}
+
 /// If `sc` represents a "closure-like" function according to `lang`, and
 /// `var_name` can be found in a parent context, create a diagnostic
 /// explaining that this variable is available but not captured by the closure.
@@ -901,6 +935,12 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   //
   // Generate the expression.
   //
+
+  // Apply LLDB-specific expression rewrites before compilation.
+  if (auto rewritten = ApplyLLDBCastFixIts(m_expr_text)) {
+    m_fixed_text = *rewritten;
+    m_expr_text = std::move(*rewritten);
+  }
 
   std::string prefix = m_expr_prefix;
 

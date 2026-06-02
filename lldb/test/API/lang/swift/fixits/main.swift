@@ -14,6 +14,10 @@ class Wrapper {
   let wrapped = 7
 }
 
+class SomeClass {
+  let value = 42
+}
+
 class HasOptional
 {
     var could_be : Int?
@@ -39,10 +43,11 @@ class HasOptional
     }
 }
 
-func main() -> Int 
+func main() -> Int
 {
     let does_have = HasOptional(input: 100)
     let wrapper: Wrapper? = Wrapper()
+    let obj = SomeClass()
     print ("\(does_have.returnIt()): break here to test fixits.")
     return 0
 }

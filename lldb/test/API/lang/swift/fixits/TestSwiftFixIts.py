@@ -97,3 +97,27 @@ class TestSwiftFixIts(TestBase):
         tmp_value = frame.EvaluateExpression("$tmp2 == 7")
         self.assertSuccess(tmp_value.GetError())
         self.assertTrue(tmp_value.GetSummary() == 'true')
+
+        obj_value = frame.var("obj")
+        self.assertSuccess(obj_value.GetError())
+        obj_addr = obj_value.GetValueAsUnsigned()
+        self.assertNotEqual(obj_addr, 0)
+
+        # Test LLDB-specific casting rewrites.
+        for op in ("as", "as?", "as!"):
+            ret = lldb.SBCommandReturnObject()
+            self.ci.HandleCommand(f"expression 0x{obj_addr:x} {op} SomeClass", ret)
+            self.assertTrue(ret.Succeeded())
+            errors = ret.GetError()
+            self.assertIn("Evaluated this expression after applying Fix-It(s):", errors)
+            self.assertRegex(errors, r"unsafeBitCast\(.+, to: SomeClass.self\)")
+
+        # Test LLDB-specific casting rewrite where the cast is a substring of a
+        # larger expression, in this case a cast followed by property access.
+        ret = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand(f"expression (0x{obj_addr:x} as SomeClass).value", ret)
+        self.assertTrue(ret.Succeeded())
+        self.assertRegex(
+            ret.GetError(), r"\(unsafeBitCast\(.+, to: SomeClass.self\)\).value"
+        )
+        self.assertIn(" = 42", ret.GetOutput())
