@@ -510,7 +510,7 @@ middle.block:
 }
 
 ; Make sure we don't crash if 512-bit vectors aren't enabled.
-define dso_local i32 @sad_avx64i8_prefer_256() nounwind "min-legal-vector-width"="256" "prefer-vector-width"="256" {
+define i32 @sad_avx64i8_prefer_256() nounwind "min-legal-vector-width"="256" "prefer-vector-width"="256" {
 ; SSE2-LABEL: sad_avx64i8_prefer_256:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
