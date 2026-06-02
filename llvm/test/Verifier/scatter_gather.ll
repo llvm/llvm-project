@@ -17,7 +17,7 @@ define <8 x float> @gather3(<8 x ptr> %ptrs, <16 x i1> %mask, <8 x float> %passt
 declare <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr>, <16 x i1>, <8 x float>)
 
 ; Return type is not a vector
-; CHECK: intrinsic has incorrect return type!
+; CHECK: intrinsic return type (overload type 0) expected any vector type, but got ptr
 define ptr @gather4(<8 x ptr> %ptrs, <8 x i1> %mask, <8 x float> %passthru) {
   %res = call ptr @llvm.masked.gather.p0.v8p0(<8 x ptr> %ptrs, <8 x i1> %mask, <8 x float> %passthru)
   ret ptr %res
@@ -50,7 +50,7 @@ define <8 x float> @gather8(<16 x ptr> %ptrs, <8 x i1> %mask, <8 x float> %passt
 declare <8 x float> @llvm.masked.gather.v8f32.v16p0(<16 x ptr>, <8 x i1>, <8 x float>)
 
 ; Passthru type doesn't match return type
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 2 type (matching overload type 0) expected <16 x i32>, but got <8 x i32>
 ; CHECK-NEXT: ptr @llvm.masked.gather.v16i32.v16p0
 define <16 x i32> @gather9(<16 x ptr> %ptrs, <16 x i1> %mask, <8 x i32> %passthru) {
   %res = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> %ptrs, <16 x i1> %mask, <8 x i32> %passthru)
@@ -77,7 +77,7 @@ define void @scatter3(<8 x float> %value, <8 x ptr> %ptrs, <16 x i1> %mask) {
 declare void @llvm.masked.scatter.v8f32.v8p0(<8 x float>, <8 x ptr>, <16 x i1>)
 
 ; Value type is not a vector
-; CHECK: intrinsic has incorrect argument type!
+; CHECK: intrinsic argument 0 type (overload type 0) expected any vector type, but got ptr
 ; CHECK-NEXT: ptr @llvm.masked.scatter.p0.v8p0
 define void @scatter4(ptr %value, <8 x ptr> %ptrs, <8 x i1> %mask) {
   call void @llvm.masked.scatter.p0.v8p0(ptr %value, <8 x ptr> %ptrs, <8 x i1> %mask)

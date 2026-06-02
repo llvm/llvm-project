@@ -831,12 +831,24 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with ``unnamed_addr`` which indicates
-that the address is not significant, only the content. Constants marked
-like this can be merged with other constants if they have the same
-initializer. Note that a constant with significant address *can* be
-merged with a ``unnamed_addr`` constant, the result being a constant
-whose address is significant.
+Global variables can be marked with ``unnamed_addr`` which indicates that
+the address is not significant, only the content. Constants marked like
+this can be merged with other constants if they have the same initializer,
+and can also be duplicated. Note that a constant with significant address
+*can* be merged with a ``unnamed_addr`` constant, the result being a
+constant whose address is significant.
+
+.. warning::
+
+    Constant duplication currently makes it unsound to compare pointers
+    if either may be ``unnamed_addr``, because each reference to the
+    global in the IR may return a different pointer, and optimization
+    passes may create additional references. Optimization passes can also
+    create pointer comparisons with the expectation that the comparison
+    will return true if the object is the same, which theoretically can
+    make any usage of ``unnamed_addr`` unsound, but in practice it is
+    unlikely that input IR that does not explicitly compare pointers
+    will be affected by this issue.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
@@ -1543,8 +1555,20 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that the callee does not free the pointer argument. This is not
-    a valid attribute for return values.
+    This indicates that a pointer based on this argument cannot be freed during
+    the execution of the function.
+
+    More formally, a ``nofree`` argument provides the callee with a new pointer
+    with the same address and a derived provenance, where the derived
+    provenance has the same permissions as the original, except that the
+    underlying object cannot be freed until the function returns (or unwinds),
+    otherwise the behavior is undefined. This includes frees of the pointer on
+    other threads if the free *happens-before* the function return.
+
+    Notably, it is still possible to free the underlying object through a
+    pointer that is not based on the argument.
+
+    This is not a valid attribute for return values.
 
 .. _nest:
 
@@ -2326,22 +2350,21 @@ For example:
     internal linkage and only has one call site, so the original
     call is dead after inlining.
 ``nofree``
-    This function attribute indicates that the function does not, directly or
-    transitively, call a memory-deallocation function (``free``, for example)
-    on a memory allocation which existed before the call.
+    This function attribute indicates that the function does not free any memory
+    allocation which existed before the call, either through direct calls to
+    a memory-deallocation function like ``free``, or through synchronization.
+    Freeing through synchronization here means that a deallocation
+    *happens-before* the function exit but does not *happens-before* the
+    function entry.
 
-    As a result, uncaptured pointers that are known to be dereferenceable
-    prior to a call to a function with the ``nofree`` attribute are still
-    known to be dereferenceable after the call. The capturing condition is
-    necessary in environments where the function might communicate the
-    pointer to another thread which then deallocates the memory.  Alternatively,
-    ``nosync`` would ensure such communication cannot happen and even captured
-    pointers cannot be freed by the function.
+    As a result, pointers that are known to be dereferenceable prior to a call
+    to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call.
 
     A ``nofree`` function is explicitly allowed to free memory which it
-    allocated or (if not ``nosync``) arrange for another thread to free
-    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated
+    allocated or arrange for another thread to free such memory on its behalf.
+    As a result, perhaps surprisingly, a ``nofree`` function can return a
+    pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
@@ -4044,17 +4067,21 @@ For a simpler introduction to the ordering constraints, see the
 .. _syncscope:
 
 If an atomic operation is marked ``syncscope("singlethread")``, it only
-*synchronizes with* and only participates in the seq\_cst total orderings of
-other operations running in the same thread (for example, in signal handlers).
+*synchronizes with* other operations running in the same thread (for
+example, in signal handlers) and it is related in the seq\_cst order and
+the monotonic modification order with other operations in the same
+thread.
 
 If an atomic operation is marked ``syncscope("<target-scope>")``, where
-``<target-scope>`` is a target-specific synchronization scope, then it is target
-dependent if it *synchronizes with* and participates in the seq\_cst total
-orderings of other operations.
+``<target-scope>`` is a target-specific synchronization scope, then it
+is target-dependent if it *synchronizes with* other operations and
+if it is related with other operations in the seq\_cst order and the
+monotonic modification order.
 
-Otherwise, an atomic operation that is not marked ``syncscope("singlethread")``
-or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
-seq\_cst total orderings of other operations that are not marked
+Otherwise, an atomic operation that is not marked
+``syncscope("singlethread")`` or ``syncscope("<target-scope>")``
+*synchronizes with* and is related in the seq\_cst order and the
+monotonic modification order with other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
 .. _floatenv:
@@ -4298,16 +4325,11 @@ Use-list directives may appear at function scope or global scope. They are not
 instructions, and have no effect on the semantics of the IR. When they're at
 function scope, they must appear after the terminator of the final basic block.
 
-If basic blocks have their address taken via ``blockaddress()`` expressions,
-``uselistorder_bb`` can be used to reorder their use-lists from outside their
-function's scope.
-
 :Syntax:
 
 ::
 
     uselistorder <ty> <value>, { <order-indexes> }
-    uselistorder_bb @function, %block { <order-indexes> }
 
 :Examples:
 
@@ -4328,7 +4350,6 @@ function's scope.
     uselistorder ptr @global, { 1, 2, 0 }
     uselistorder i32 7, { 1, 0 }
     uselistorder i32 (i32) @bar, { 1, 0 }
-    uselistorder_bb @foo, %bb, { 5, 1, 3, 2, 0, 4 }
 
 .. _source_filename:
 
@@ -7841,6 +7862,81 @@ result in undefined behavior.
 The ``!captures`` attribute makes no statement about other uses of ``%x``, or
 uses of the stored-to memory location after it has been overwritten with a
 different value.
+
+'``mem.cache_hint``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
+or writes memory, except non-intrinsic calls. Cache hints are not permitted on
+function calls because their memory behavior depends on attributes, which may
+change independently.
+
+The ``!mem.cache_hint`` metadata provides target-specific cache control hints
+for the memory operation. This metadata is purely a performance hint: dropping
+or ignoring it must not change the observable behavior of the program
+(particularly, cache hints do not affect memory model semantics).
+
+The ``!mem.cache_hint`` node must contain an even number of entries,
+alternating between ``i32`` operand numbers and metadata hint nodes.
+
+Each operand number identifies the pointer operand to which the following hint
+node applies. For non-call instructions, the operand number is the IR operand
+index. For intrinsic calls, the operand number is the call argument index.
+Operand numbers must be unique and appear in increasing order within a
+``!mem.cache_hint`` node and must refer to a pointer-typed operand.
+
+For example, for a ``load``, the pointer is operand 0. For a ``store``, the
+value is operand 0 and the pointer is operand 1. For intrinsic calls such as
+``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
+destination is argument 0 and source is argument 1.
+
+Each hint node is a metadata node containing target-prefixed key/value pairs.
+Keys must be strings, and values must be either strings or integer constants.
+Keys within a single hint node must be unique.
+
+The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
+their interpretation is target-dependent. Each hint must describe a property of
+the individual memory access through the corresponding pointer operand. The IR
+verifier enforces only the structural rules above; validation of target-specific
+keys and values is performed by the corresponding backend. Unsupported
+properties may be silently ignored during code generation.
+
+The following examples use ``nvvm.`` prefixed keys for NVIDIA GPU targets.
+Other targets may define their own prefixed keys.
+
+Example: load with cache hints:
+
+.. code-block:: llvm
+
+    %v = load i32, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
+
+Example: store with cache hints:
+
+.. code-block:: llvm
+
+    store i32 %v, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 1, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"last",
+            !"nvvm.l2_eviction", !"last" }
+
+Example: memcpy with per-operand hints:
+
+.. code-block:: llvm
+
+    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %d,
+                                      ptr addrspace(1) %s, i64 16, i1 false),
+                                      !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1, i32 1, !2 }
+    !1 = !{ !"nvvm.l1_eviction", !"last" }
+    !2 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
 
 .. _llvm.loop:
 
@@ -15266,9 +15362,10 @@ called).
 .. _int_read_register:
 .. _int_read_volatile_register:
 .. _int_write_register:
+.. _int_write_volatile_register:
 
-'``llvm.read_register``', '``llvm.read_volatile_register``', and '``llvm.write_register``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.read_register``', '``llvm.read_volatile_register``', '``llvm.write_register``', and '``llvm.write_volatile_register``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15281,26 +15378,30 @@ Syntax:
       declare i64 @llvm.read_volatile_register.i64(metadata)
       declare void @llvm.write_register.i32(metadata, i32 @value)
       declare void @llvm.write_register.i64(metadata, i64 @value)
+      declare void @llvm.write_volatile_register.i32(metadata, i32 @value)
+      declare void @llvm.write_volatile_register.i64(metadata, i64 @value)
       !0 = !{!"sp\00"}
 
 Overview:
 """""""""
 
-The '``llvm.read_register``', '``llvm.read_volatile_register``', and
-'``llvm.write_register``' intrinsics provide access to the named register.
-The register must be valid on the architecture being compiled to. The type
-needs to be compatible with the register being read.
+The '``llvm.read_register``', '``llvm.read_volatile_register``',
+'``llvm.write_register``', and '``llvm.write_volatile_register``' intrinsics
+provide access to the named register. The register must be valid on the
+architecture being compiled to. The type needs to be compatible with the
+register being accessed.
 
 Semantics:
 """"""""""
 
 The '``llvm.read_register``' and '``llvm.read_volatile_register``' intrinsics
 return the current value of the register, where possible. The
-'``llvm.write_register``' intrinsic sets the current value of the register,
-where possible.
+'``llvm.write_register``' and '``llvm.write_volatile_register``' intrinsics
+set the current value of the register, where possible.
 
-A call to '``llvm.read_volatile_register``' is assumed to have side-effects
-and possibly return a different value each time (e.g., for a timer register).
+A call to '``llvm.read_volatile_register``' or
+'``llvm.write_volatile_register``' is assumed to have side-effects and will
+not be reordered or eliminated by the optimizer.
 
 This is useful to implement named register global variables that need
 to always be mapped to a specific register, as is common practice on
@@ -15308,12 +15409,22 @@ bare-metal programs including OS kernels.
 
 The compiler doesn't check for register availability or use of the used
 register in surrounding code, including inline assembly. Because of that,
-allocatable registers are not supported.
+allocatable registers are not supported by '``llvm.read_register``',
+'``llvm.read_volatile_register``', or '``llvm.write_register``'.
 
-Warning: So far it only works with the stack pointer on selected
-architectures (ARM, AArch64, PowerPC and x86_64). Significant amount of
-work is needed to support other registers and even more so, allocatable
-registers.
+'``llvm.write_volatile_register``' supports allocatable registers. Writing
+to an allocatable register means the value is copied into that physical
+register at the point of the call; the register may subsequently be
+reused by the register allocator for other purposes. The backend emits a
+``FAKE_USE`` of the physical register after the write to prevent the store
+from being dead-eliminated before register allocation.
+
+Warning: Register support is target-specific. The IR-level verifier does
+not validate register names; an unsupported name results in a fatal error
+during code generation. Supported registers vary by target and can be
+found in each target's ``getRegisterByName`` implementation.
+'``llvm.write_volatile_register``' support for allocatable registers is
+currently only implemented on AArch64.
 
 .. _int_stacksave:
 

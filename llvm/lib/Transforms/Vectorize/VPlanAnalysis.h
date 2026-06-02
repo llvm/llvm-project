@@ -21,9 +21,6 @@ namespace llvm {
 
 class LLVMContext;
 class VPValue;
-class VPBlendRecipe;
-class VPWidenRecipe;
-class VPReplicateRecipe;
 class VPRecipeBase;
 class VPlan;
 class Value;
@@ -45,10 +42,6 @@ class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;
   const DataLayout &DL;
-
-  Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
   VPTypeAnalysis(const VPlan &Plan)
