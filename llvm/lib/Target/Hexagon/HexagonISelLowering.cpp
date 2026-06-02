@@ -216,10 +216,10 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
   Align Alignment = Flags.getNonZeroByValAlign();
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
-      /*isVolatile=*/false, /*AlwaysInline=*/false,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/false,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 bool

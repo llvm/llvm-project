@@ -9455,13 +9455,11 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
 
-static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
-                                        SDValue Chain, SDValue Dst, SDValue Src,
-                                        uint64_t Size, Align DstAlign, Align SrcAlign,
-                                        bool isVol, bool AlwaysInline,
-                                        MachinePointerInfo DstPtrInfo,
-                                        MachinePointerInfo SrcPtrInfo,
-                                        const AAMDNodes &AAInfo) {
+static SDValue getMemmoveLoadsAndStores(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    uint64_t Size, Align DstAlign, Align SrcAlign, bool isVol,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo) {
   // Turn a memmove of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())

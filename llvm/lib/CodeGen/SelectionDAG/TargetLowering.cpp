@@ -227,8 +227,9 @@ bool TargetLowering::findOptimalMemOpLowering(
       bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
       while (VT != MVT::i8) {
         unsigned VTSize = VT.getSizeInBits() / 8;
-        bool DstOk = Op.getDstAlign() >= VTSize ||
-                     allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign());
+        bool DstOk =
+            Op.getDstAlign() >= VTSize ||
+            allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign());
         bool SrcOk =
             !LoadsFromSrc || Op.getSrcAlign() >= VTSize ||
             allowsMisalignedMemoryAccesses(VT, SrcAS, Op.getSrcAlign());

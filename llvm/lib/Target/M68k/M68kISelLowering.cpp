@@ -270,10 +270,10 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), DL, MVT::i32);
   Align Alignment = Flags.getNonZeroByValAlign();
 
-  return DAG.getMemcpy(
-      Chain, DL, Dst, Src, SizeNode, Alignment, Alignment,
-      /*isVolatile=*/false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  return DAG.getMemcpy(Chain, DL, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
