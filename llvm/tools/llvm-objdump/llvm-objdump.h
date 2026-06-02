@@ -18,6 +18,8 @@
 #include "llvm/Support/FormattedStream.h"
 #include <functional>
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 class StringRef;
@@ -66,6 +68,8 @@ extern std::vector<std::string> MAttrs;
 extern std::string MCPU;
 extern std::string Prefix;
 extern uint32_t PrefixStrip;
+extern std::vector<std::pair<std::string, std::string>> SubstitutePaths;
+extern std::vector<std::string> SourceDirs;
 extern bool PrintImmHex;
 extern bool PrintLines;
 extern bool PrintSource;

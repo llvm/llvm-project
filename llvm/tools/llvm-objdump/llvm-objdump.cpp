@@ -344,6 +344,8 @@ bool objdump::UnwindInfo;
 bool objdump::UnwindShowWODPool;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
+std::vector<std::pair<std::string, std::string>> objdump::SubstitutePaths;
+std::vector<std::string> objdump::SourceDirs;
 
 DebugFormat objdump::DbgVariables = DFDisabled;
 DebugFormat objdump::DbgInlinedFunctions = DFDisabled;
@@ -3903,6 +3905,17 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   UnwindShowWODPool = InputArgs.hasArg(OBJDUMP_unwind_show_wod_pool);
   Prefix = InputArgs.getLastArgValue(OBJDUMP_prefix).str();
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_substitute_path))
+    SubstitutePaths.emplace_back(A->getValue(0), A->getValue(1));
+  for (StringRef Dirs : InputArgs.getAllArgValues(OBJDUMP_source_dir)) {
+#if defined(_WIN32)
+    for (StringRef Dir : llvm::split(Dirs, ";"))
+#else
+    for (StringRef Dir : llvm::split(Dirs, ":"))
+#endif
+      if (!Dir.empty())
+        SourceDirs.insert(SourceDirs.end(), Dir.str());
+  }
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugFormat>(A->getValue())
                        .Case("ascii", DFASCII)

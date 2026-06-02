@@ -1,0 +1,73 @@
+;; Test --substitute-path and --source-dir with --source and --line-numbers.
+;;
+;; The object records source paths under /wrong/Inputs, but the source file
+;; lives in this test's Inputs directory. Without path remapping, --source
+;; cannot load the file from disk.
+;;
+;; --source-dir: each flag is prepended to the search list, so later flags on
+;; the command line are tried first.
+;;
+;; --substitute-path: rules are tried in command-line order; the first match
+;; wins (same as GDB set substitute-path).
+
+; RUN: sed -e "s,SRC_COMPDIR,/wrong/Inputs,g" %p/Inputs/source-path.ll > %t.ll
+; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
+; REQUIRES: x86-registered-target
+
+; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t.o | FileCheck %s --check-prefix=LINE
+; RUN: llvm-objdump --no-print-imm-hex -d --source %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+; RUN: llvm-objdump --no-print-imm-hex -d --source --source-dir %/p/Inputs %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wron %/p %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING -DFILE=%t.o
+
+; First --source-dir misses (no source-path.c under %/p alone); second finds
+; Inputs/source-path.c via basename lookup.
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --source-dir %/p/Inputs --source-dir %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; More specific rule listed first wins (GDB example: /wrong/Inputs before /wrong).
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wrong/Inputs %/p/Inputs \
+; RUN:   --substitute-path /wrong /nowhere %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+
+; Broader rule listed first matches; later rule is not applied (miss on remapped path).
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wrong /nowhere \
+; RUN:   --substitute-path /wrong/Inputs %/p/Inputs %t.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=SOURCE-MISSING-SUBST -DFILE=%t.o
+
+; First substitute rule is a no-match; second matching rule remaps the path.
+; RUN: llvm-objdump --no-print-imm-hex -d --source \
+; RUN:   --substitute-path /wron /nowhere \
+; RUN:   --substitute-path /wrong %/p %t.o | \
+; RUN:   FileCheck %s --check-prefix=SOURCE
+; LINE: <foo>:
+; LINE-NEXT: ; foo():
+; LINE-NEXT: ; {{.*}}source-path.c:2
+; LINE-NEXT: pushq
+; LINE: ; {{.*}}source-path.c:3
+; LINE-NEXT: movq
+; LINE-NEXT: movl
+; LINE-NEXT: popq
+; LINE-NEXT: retq
+
+; SOURCE-MISSING: warning: '[[FILE]]': failed to find source {{[/\\]}}wrong{{[/\\]}}Inputs{{[/\\]}}source-path.c
+
+; SOURCE-MISSING-SUBST: warning: '[[FILE]]': failed to find source {{[/\\]}}nowhere{{[/\\]}}Inputs{{[/\\]}}source-path.c
+
+; SOURCE: <foo>:
+; SOURCE-NEXT: ; int foo() {
+; SOURCE-NEXT: pushq
+; SOURCE: ; return a;
+; SOURCE-NEXT: movq
+; SOURCE-NEXT: movl
+; SOURCE-NEXT: popq
+; SOURCE-NEXT: retq
