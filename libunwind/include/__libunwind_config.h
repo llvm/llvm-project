@@ -187,6 +187,10 @@
 // Unused
 #define _LIBUNWIND_CONTEXT_SIZE 0
 #define _LIBUNWIND_CURSOR_SIZE 0
+#elif defined(__ezh__)
+#define _LIBUNWIND_CONTEXT_SIZE 16
+#define _LIBUNWIND_CURSOR_SIZE 24
+#define _LIBUNWIND_HIGHEST_DWARF_REGISTER 16
 # else
 #  error "Unsupported architecture."
 # endif
