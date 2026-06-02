@@ -404,7 +404,8 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
         os << "!$omp "
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
-                  llvm::omp::Directive::OMPD_declare_target, version)) << " ";
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
         decls->printClauseSet(os, dtgt, symbol.name());
         os << "\n";
       }
