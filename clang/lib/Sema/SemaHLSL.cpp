@@ -3301,8 +3301,8 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
-           << /* half or float */ 2 << PassedType;
+           << ArgOrdinal << /* scalar, vector, or matrix */ 6
+           << /* no int */ 0 << /* half or float */ 2 << PassedType;
   return false;
 }
 
@@ -3378,8 +3378,8 @@ static bool CheckUnsignedIntRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   if (!PassedType->hasUnsignedIntegerRepresentation())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* unsigned int */ 3
-           << /* no fp */ 0 << PassedType;
+           << ArgOrdinal << /* scalar, vector, or matrix */ 6
+           << /* unsigned int */ 3 << /* no fp */ 0 << PassedType;
   return false;
 }
 
@@ -4204,8 +4204,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
              ->hasFloatingRepresentation()) // half or float or double
       return SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
                           diag::err_builtin_invalid_arg_type)
-             << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-             << /* fp */ 1 << TheCall->getArg(0)->getType();
+             << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
+             << /* no int */ 0 << /* fp */ 1 << TheCall->getArg(0)->getType();
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     break;

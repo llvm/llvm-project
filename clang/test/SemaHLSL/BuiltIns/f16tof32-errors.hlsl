@@ -24,7 +24,7 @@ float builtin_f16tof32_bool4(bool4 p0) {
 
 float builtin_f16tof32_short(short p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'short')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'short')}}
 }
 
 float builtin_f16tof32_unsigned_short(unsigned short p0) {
@@ -34,37 +34,37 @@ float builtin_f16tof32_unsigned_short(unsigned short p0) {
 
 float builtin_f16tof32_int(int p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'int')}}
 }
 
 float builtin_f16tof32_int64_t(long p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'long')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'long')}}
 }
 
 float2 builtin_f16tof32_int2_to_float2_promotion(int2 p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int2' (aka 'vector<int, 2>'))}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'int2' (aka 'vector<int, 2>'))}}
 }
 
 float builtin_f16tof32_half(half p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'half')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'half')}}
 }
 
 float builtin_f16tof32_half4(half4 p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'half4' (aka 'vector<half, 4>'))}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'half4' (aka 'vector<half, 4>'))}}
 }
 
 float builtin_f16tof32_float(float p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'float')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'float')}}
 }
 
 float builtin_f16tof32_double(double p0) {
   return __builtin_hlsl_elementwise_f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'double')}}
+  // expected-error@-1 {{1st argument must be a scalar, vector, or matrix of unsigned integer types (was 'double')}}
 }
 
 float f16tof32_too_few_arg() {
