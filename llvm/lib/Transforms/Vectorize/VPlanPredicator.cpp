@@ -69,6 +69,8 @@ class VPPredicator {
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
 
+  DenseMap<const VPBasicBlock *, VPBasicBlock::iterator> InsertPoints;
+
 public:
   VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
 
@@ -135,6 +137,10 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
+
+  // Keep track of where in VPBB we are inserting the masks into.
+  scope_exit UpdateInsertPoint(
+      [this, &VPBB]() { InsertPoints[VPBB] = Builder.getInsertPoint(); });
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates the
   // immediate dominator.
@@ -225,6 +231,7 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
+  Builder.setInsertPoint(VPBB, InsertPoints[VPBB]);
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPPhi>(&R));
@@ -276,10 +283,8 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
-    if (VPBB != Header) {
+    if (VPBB != Header)
       Predicator.createBlockInMask(VPBB);
-      Predicator.convertPhisToBlends(VPBB);
-    }
 
     VPValue *BlockMask = Predicator.getBlockInMask(VPBB);
     if (!BlockMask)
@@ -291,6 +296,10 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
         VPI->addMask(BlockMask);
     }
   }
+
+  for (VPBlockBase *VPB : reverse(RPOT))
+    if (VPB != Header)
+      Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPB));
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
