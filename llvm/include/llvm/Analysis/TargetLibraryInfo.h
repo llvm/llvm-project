@@ -43,27 +43,42 @@ template <typename T> class ArrayRef;
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 class VecDesc {
-  StringRef ScalarFnName;
-  StringRef VectorFnName;
-  ElementCount VectorizationFactor;
-  bool Masked;
-  StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  friend struct VecDescBuilder;
+
+  // String offsets are relative to the this pointer.
+  uint16_t ScalarFnNameOff = 0;
+  uint16_t ScalarFnNameSize = 0;
+  uint16_t VectorFnNameOff = 0;
+  uint16_t VectorFnNameSize = 0;
+  ElementCount VectorizationFactor = {};
+  bool Masked = false;
+  uint16_t VABIPrefixOff = 0;
+  uint16_t VABIPrefixSize = 0;
+  std::optional<CallingConv::ID> CC = {};
+
+  constexpr VecDesc() {}
+
+  // Due to the relative string offsets, VecDesc is neither copyable nor
+  // movable. The move constructor has to exist to allow assignment to a
+  // variable.
+  VecDesc(const VecDesc &) = delete;
+  VecDesc(VecDesc &&) = default;
 
 public:
-  VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
-      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
-        VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
-
-  StringRef getScalarFnName() const { return ScalarFnName; }
-  StringRef getVectorFnName() const { return VectorFnName; }
+  StringRef getScalarFnName() const {
+    return StringRef(reinterpret_cast<const char *>(this) + ScalarFnNameOff,
+                     ScalarFnNameSize);
+  }
+  StringRef getVectorFnName() const {
+    return StringRef(reinterpret_cast<const char *>(this) + VectorFnNameOff,
+                     VectorFnNameSize);
+  }
   ElementCount getVectorizationFactor() const { return VectorizationFactor; }
   bool isMasked() const { return Masked; }
-  StringRef getVABIPrefix() const { return VABIPrefix; }
+  StringRef getVABIPrefix() const {
+    return StringRef(reinterpret_cast<const char *>(this) + VABIPrefixOff,
+                     VABIPrefixSize);
+  }
   std::optional<CallingConv::ID> getCallingConv() const { return CC; }
 
   /// Returns a vector function ABI variant string on the form:
@@ -104,10 +119,10 @@ class TargetLibraryInfoImpl {
   }
 
   /// Vectorization descriptors - sorted by ScalarFnName.
-  std::vector<VecDesc> VectorDescs;
+  std::vector<const VecDesc *> VectorDescs;
   /// Scalarization descriptors - same content as VectorDescs but sorted based
   /// on VectorFnName rather than ScalarFnName.
-  std::vector<VecDesc> ScalarDescs;
+  std::vector<const VecDesc *> ScalarDescs;
 
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
