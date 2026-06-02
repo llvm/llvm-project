@@ -131,10 +131,6 @@ template <> struct llvm::DenseMapInfo<ComplexValue> {
     return {DenseMapInfo<Value *>::getEmptyKey(),
             DenseMapInfo<Value *>::getEmptyKey()};
   }
-  static inline ComplexValue getTombstoneKey() {
-    return {DenseMapInfo<Value *>::getTombstoneKey(),
-            DenseMapInfo<Value *>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const ComplexValue &Val) {
     return hash_combine(DenseMapInfo<Value *>::getHashValue(Val.Real),
                         DenseMapInfo<Value *>::getHashValue(Val.Imag));
