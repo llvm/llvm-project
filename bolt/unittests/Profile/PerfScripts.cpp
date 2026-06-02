@@ -114,7 +114,7 @@ protected:
     DataAggregator::MMapInfo MMap;
     DA.BinaryMMapInfo.insert(std::make_pair(Pid, MMap));
 
-    DA.parsePerfScriptData();
+    DA.parsePerfScript();
     EXPECT_EQ(DA.Traces.size(), Expected);
 
     sys::fs::remove(Path);

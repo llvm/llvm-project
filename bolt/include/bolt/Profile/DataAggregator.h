@@ -487,7 +487,7 @@ private:
   /// Coordinate reading pre-parsed perf-script:
   /// - open file header to determine offset and length for each part,
   /// - read perf script slices.
-  void parsePerfScriptData();
+  void parsePerfScript();
 
   /// Parse the header of the perf text file.
   std::error_code parsePerfScriptFileHeader();

@@ -133,10 +133,8 @@ cl::opt<bool> ReadPreAggOrPerfScript(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-static cl::alias ReadPerfScript("ps",
-                                cl::desc("read pre-parsed perf script output"),
-                                cl::NotHidden,
-                                cl::aliasopt(ReadPreAggOrPerfScript));
+cl::alias ReadPerfScript("ps", cl::desc("read pre-parsed perf script output"),
+                         cl::NotHidden, cl::aliasopt(ReadPreAggOrPerfScript));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -546,7 +544,7 @@ std::error_code DataAggregator::parsePerfScriptFileHeader() {
   return std::error_code();
 }
 
-void DataAggregator::parsePerfScriptData() {
+void DataAggregator::parsePerfScript() {
   outs() << "PERF2BOLT: parsing a textual perf-script events...\n";
   NamedRegionTimer T("parsePerfScript", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
@@ -861,7 +859,7 @@ void DataAggregator::parseInput() {
   start();
   if (opts::ReadPreAggOrPerfScript &&
       checkInputFileMagic(Filename, PerfTextMagicStr)) {
-    parsePerfScriptData();
+    parsePerfScript();
   } else if (opts::ReadPreAggOrPerfScript) {
     parsePreAggregated();
   } else {
