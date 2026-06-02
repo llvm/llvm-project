@@ -10982,19 +10982,16 @@ static SDValue lowerShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
          (Subtarget.hasAVX2() && VT.is256BitVector()) ||
          (Subtarget.hasBWI() && VT.is512BitVector()));
 
-  SmallVector<SDValue, 64> PSHUFBMask(NumBytes);
-  // Sign bit set in i8 mask means zero element.
-  SDValue ZeroMask = DAG.getConstant(0x80, DL, MVT::i8);
-
+  SmallVector<int, 64> PSHUFBMask(NumBytes, -1);
   SDValue V;
   for (int i = 0; i < NumBytes; ++i) {
     int M = Mask[i / NumEltBytes];
-    if (M < 0) {
-      PSHUFBMask[i] = DAG.getUNDEF(MVT::i8);
+    if (M < 0)
       continue;
-    }
+
     if (Zeroable[i / NumEltBytes]) {
-      PSHUFBMask[i] = ZeroMask;
+      // Sign bit set in i8 mask means zero element.
+      PSHUFBMask[i] = 0x80;
       continue;
     }
 
@@ -11011,14 +11008,14 @@ static SDValue lowerShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
 
     M = M % LaneSize;
     M = M * NumEltBytes + (i % NumEltBytes);
-    PSHUFBMask[i] = DAG.getConstant(M, DL, MVT::i8);
+    PSHUFBMask[i] = M;
   }
   assert(V && "Failed to find a source input");
 
   MVT I8VT = MVT::getVectorVT(MVT::i8, NumBytes);
-  return DAG.getBitcast(
-      VT, DAG.getNode(X86ISD::PSHUFB, DL, I8VT, DAG.getBitcast(I8VT, V),
-                      DAG.getBuildVector(I8VT, DL, PSHUFBMask)));
+  SDValue R = getConstVector(PSHUFBMask, I8VT, DAG, DL, /*IsMask=*/true);
+  R = DAG.getNode(X86ISD::PSHUFB, DL, I8VT, DAG.getBitcast(I8VT, V), R);
+  return DAG.getBitcast(VT, R);
 }
 
 /// Return Mask with the necessary casting or extending
