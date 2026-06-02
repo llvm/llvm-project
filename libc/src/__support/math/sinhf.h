@@ -32,8 +32,12 @@ LIBC_INLINE float sinhf(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
       // |x| = 0.0005589424981735646724700927734375
       if (LIBC_UNLIKELY(x_abs == 0x3a12'85ffU)) {
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+        return x;
+#else
         if (fputil::fenv_is_round_to_nearest())
           return x;
+#endif // LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
       }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 

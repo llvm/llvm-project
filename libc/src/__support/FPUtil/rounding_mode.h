@@ -44,9 +44,6 @@ LIBC_INLINE bool fenv_is_round_down() {
 //   1.5f - 2^-24 = 1.5f           for FE_TONEAREST, FE_UPWARD
 //                = 0x1.0ffffep-1f for FE_DOWNWARD, FE_TOWARDZERO
 LIBC_INLINE bool fenv_is_round_to_nearest() {
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
-  return true;
-#endif
   static volatile float x = 0x1.0p-24f;
   float y = 1.5f + x;
   return (y == 1.5f - x);
