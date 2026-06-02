@@ -377,7 +377,6 @@ static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
       symbol.details());
 }
 
-
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
   using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
