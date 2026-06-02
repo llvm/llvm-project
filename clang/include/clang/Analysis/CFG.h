@@ -385,8 +385,8 @@ public:
 
 private:
   friend class CFGElement;
-  static bool isKind(const CFGElement &elem) {
-    return elem.getKind() == ScopeBegin;
+  static bool isKind(const CFGElement &Elem) {
+    return Elem.getKind() == ScopeBegin;
   }
 };
 
