@@ -578,8 +578,9 @@ def CIR_DataMemberAttr : CIR_ValueLikeAttr<"DataMember", "data_member"> {
 
   let genVerifyDecl = 1;
 
-  // Printing and parsing available in CIRAttrs.cpp
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    `<` custom<DataMemberPath>($member_path) `>`
+  }];
 
   let extraClassDeclaration = [{
     bool isNullPtr() const { return !getMemberPath(); }

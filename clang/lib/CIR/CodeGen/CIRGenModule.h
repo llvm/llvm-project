@@ -935,12 +935,11 @@ public:
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
 private:
-  /// Recursively find the chain of non-virtual base subobject field indices
-  /// from \p currentClass to \p targetClass.  Appends indices in leaf-to-root
-  /// order; the caller must reverse before use.
-  bool findBaseSubobjectPath(const CXXRecordDecl *currentClass,
-                             const CXXRecordDecl *targetClass,
-                             llvm::SmallVectorImpl<int32_t> &path);
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
 
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;

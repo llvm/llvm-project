@@ -70,6 +70,13 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
+static mlir::ParseResult
+parseDataMemberPath(mlir::AsmParser &parser,
+                    mlir::DenseI32ArrayAttr &memberPath);
+
+static void printDataMemberPath(mlir::AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath);
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 
@@ -260,6 +267,26 @@ static void printConstPtr(AsmPrinter &p, mlir::IntegerAttr value) {
     p << "null";
   else
     p << value;
+}
+
+static ParseResult parseDataMemberPath(AsmParser &parser,
+                                       mlir::DenseI32ArrayAttr &memberPath) {
+  if (parser.parseOptionalKeyword("null").succeeded())
+    return success();
+
+  auto parsed = mlir::FieldParser<mlir::DenseI32ArrayAttr>::parse(parser);
+  if (mlir::failed(parsed))
+    return failure();
+  memberPath = *parsed;
+  return success();
+}
+
+static void printDataMemberPath(AsmPrinter &p,
+                                mlir::DenseI32ArrayAttr memberPath) {
+  if (!memberPath)
+    p << "null";
+  else
+    p.printStrippedAttrOrType(memberPath);
 }
 
 //===----------------------------------------------------------------------===//
@@ -539,54 +566,6 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
               "the attribute type";
 
   return success();
-}
-
-mlir::Attribute DataMemberAttr::parse(mlir::AsmParser &parser,
-                                      mlir::Type type) {
-  auto mdt = mlir::cast<cir::DataMemberType>(type);
-  if (parser.parseLess())
-    return {};
-
-  auto emitError = [&]() {
-    return parser.emitError(parser.getCurrentLocation());
-  };
-
-  // null pointer-to-data-member.
-  if (succeeded(parser.parseOptionalKeyword("null"))) {
-    if (parser.parseGreater())
-      return {};
-    return getChecked(emitError, parser.getContext(), mdt,
-                      mlir::DenseI32ArrayAttr{});
-  }
-
-  // Non-null: parse a dense int32 array, e.g. [2] or [0, 1].
-  mlir::MLIRContext *ctx = parser.getContext();
-  llvm::SmallVector<int32_t> path;
-  if (parser.parseCommaSeparatedList(mlir::AsmParser::Delimiter::Square,
-                                     [&]() -> mlir::ParseResult {
-                                       int32_t idx;
-                                       if (parser.parseInteger(idx))
-                                         return mlir::failure();
-                                       path.push_back(idx);
-                                       return mlir::success();
-                                     }))
-    return {};
-  if (parser.parseGreater())
-    return {};
-  auto pathAttr = mlir::DenseI32ArrayAttr::get(ctx, path);
-  return getChecked(emitError, ctx, mdt, pathAttr);
-}
-
-void DataMemberAttr::print(mlir::AsmPrinter &p) const {
-  p << "<";
-  if (isNullPtr()) {
-    p << "null";
-  } else {
-    p << "[";
-    llvm::interleaveComma(getPath(), p);
-    p << "]";
-  }
-  p << ">";
 }
 
 //===----------------------------------------------------------------------===//
