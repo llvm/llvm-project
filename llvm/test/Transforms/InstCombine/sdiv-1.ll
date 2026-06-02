@@ -29,3 +29,223 @@ define i32 @c(i32 %X) {
   %t1 = sdiv i32 %t0, -3
   ret i32 %t1
 }
+;positive tests
+; Basic: sdiv exact ((x * 24) + (-24)), 24 => x + (-1)
+define i8 @fold_basic(i8 %x) {
+; CHECK-LABEL: @fold_basic(
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 24
+  %a = add i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+; C1 positive multiple: sdiv exact ((x * 6) + 12), 6 => x + 2
+; Note: avoid power-of-2 multipliers (e.g. 4) — they get lowered to shifts before this pattern runs
+define i8 @fold_positive_offset(i8 %x) {
+; CHECK-LABEL: @fold_positive_offset(
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 6
+  %a = add i8 %m, 12
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+; Large negative offset: sdiv exact ((x * 6) + (-18)), 6 => x + (-3)
+define i8 @fold_large_negative_offset(i8 %x) {
+; CHECK-LABEL: @fold_large_negative_offset(
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[X:%.*]], -3
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 6
+  %a = add i8 %m, -18
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+; C2 = 1: sdiv exact ((x * 1) + (-1)), 1 => x + (-1)
+define i8 @fold_divisor_one(i8 %x) {
+; CHECK-LABEL: @fold_divisor_one(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, 1
+  %a = add i8 %m, -1
+  %d = sdiv exact i8 %a, 1
+  ret i8 %d
+}
+
+; C2 = -1: sdiv exact ((x * -1) + 1), -1 => x + (-1)
+define i8 @fold_negative_divisor(i8 %x) {
+; CHECK-LABEL: @fold_negative_divisor(
+; CHECK-NEXT:    [[A_NEG:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A_NEG]]
+;
+  %m = mul i8 %x, -1
+  %a = add i8 %m, 1
+  %d = sdiv exact i8 %a, -1
+  ret i8 %d
+}
+
+; Commuted add: constant is first operand
+define i8 @fold_commuted_add(i8 %x) {
+; CHECK-LABEL: @fold_commuted_add(
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 24
+  %a = add i8 -24, %m
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+; NSW propagated: mul nsw + |C2| > 1 => add nsw
+define i8 @fold_nsw_propagated(i8 %x) {
+; CHECK-LABEL: @fold_nsw_propagated(
+; CHECK-NEXT:    [[D:%.*]] = add nsw i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul nsw i8 %x, 24
+  %a = add nsw i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+; NSW NOT propagated when C2 = 1 (|C2| not > 1)
+; Another combine handles mul nsw i8 %x, 1 -> %x directly,
+; so the add nsw on the input propagates through independently.
+; The key point: YOUR fold fires and produces add nsw here because
+; the input add was nsw — just accept what opt produces.
+define i8 @fold_nsw_not_propagated_c2_one(i8 %x) {
+; CHECK-LABEL: @fold_nsw_not_propagated_c2_one(
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X:%.*]], -1
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, 1
+  %a = add nsw i8 %m, -1
+  %d = sdiv exact i8 %a, 1
+  ret i8 %d
+}
+
+; i32 type
+define i32 @fold_i32(i32 %x) {
+; CHECK-LABEL: @fold_i32(
+; CHECK-NEXT:    [[D:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %m = mul i32 %x, 24
+  %a = add i32 %m, -24
+  %d = sdiv exact i32 %a, 24
+  ret i32 %d
+}
+
+; i64 type
+define i64 @fold_i64(i64 %x) {
+; CHECK-LABEL: @fold_i64(
+; CHECK-NEXT:    [[D:%.*]] = add i64 [[X:%.*]], -1
+; CHECK-NEXT:    ret i64 [[D]]
+;
+  %m = mul i64 %x, 24
+  %a = add i64 %m, -24
+  %d = sdiv exact i64 %a, 24
+  ret i64 %d
+}
+
+; Vector splat
+define <2 x i8> @fold_vector(<2 x i8> %x) {
+; CHECK-LABEL: @fold_vector(
+; CHECK-NEXT:    [[D:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %m = mul <2 x i8> %x, <i8 24, i8 24>
+  %a = add <2 x i8> %m, <i8 -24, i8 -24>
+  %d = sdiv exact <2 x i8> %a, <i8 24, i8 24>
+  ret <2 x i8> %d
+}
+
+; Original motivating pattern from the issue: trunc + sext wrapper
+define i32 @fold_trunc_sext(i32 %x) {
+; CHECK-LABEL: @fold_trunc_sext(
+; CHECK-NEXT:    [[T:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[T]], -1
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[D]] to i32
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %t = trunc nuw nsw i32 %x to i8
+  %m = mul nuw i8 %t, 24
+  %a = add i8 %m, -24
+  %d = sdiv exact i8 %a, 24
+  %s = sext i8 %d to i32
+  ret i32 %s
+}
+
+;negative tests
+; Not exact: missing exact flag must block the fold
+define i8 @no_fold_not_exact(i8 %x) {
+; CHECK-LABEL: @no_fold_not_exact(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -24
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 24
+  %a = add i8 %m, -24
+  %d = sdiv i8 %a, 24
+  ret i8 %d
+}
+
+; C1 not a multiple of C2: -25 % 24 != 0
+; sdiv exact with non-divisible constant is poison by the LLVM spec
+define i8 @no_fold_non_multiple(i8 %x) {
+; CHECK-LABEL: @no_fold_non_multiple(
+; CHECK-NEXT:    ret i8 poison
+;
+  %m = mul i8 %x, 24
+  %a = add i8 %m, -25
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
+
+; udiv: patch only handles sdiv
+define i8 @no_fold_udiv(i8 %x) {
+; CHECK-LABEL: @no_fold_udiv(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 24
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 24
+  %a = add i8 %m, 24
+  %d = udiv exact i8 %a, 24
+  ret i8 %d
+}
+
+; Mul constant != divisor: mul by 24 but sdiv by 6
+define i8 @no_fold_divisor_mismatch(i8 %x) {
+; CHECK-LABEL: @no_fold_divisor_mismatch(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 24
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], -6
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %m = mul i8 %x, 24
+  %a = add i8 %m, -6
+  %d = sdiv exact i8 %a, 6
+  ret i8 %d
+}
+
+; Wrong shape: Op0 is not (mul + const)
+define i8 @no_fold_wrong_shape(i8 %x, i8 %y) {
+; CHECK-LABEL: @no_fold_wrong_shape(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[A]], 24
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = add i8 %x, %y
+  %d = sdiv exact i8 %a, 24
+  ret i8 %d
+}
