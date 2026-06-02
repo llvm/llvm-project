@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_HOST_COMMON_PYTHONRUNTIMELOADERINTERNAL_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -23,8 +22,11 @@ namespace lldb_private {
 /// short-circuit on the first candidate that loads cleanly, so platforms
 /// that synthesize candidates lazily (e.g. Darwin invokes `xcrun` only when
 /// hardcoded paths miss) don't pay for the more expensive ones up front.
+///
+/// The callback receives a null-terminated C string so it can be handed
+/// straight to dlopen / getPermanentLibrary without an extra copy.
 void ForEachPythonRuntimeCandidate(
-    llvm::function_ref<bool(llvm::StringRef)> callback);
+    llvm::function_ref<bool(const char *)> callback);
 
 } // namespace lldb_private
 

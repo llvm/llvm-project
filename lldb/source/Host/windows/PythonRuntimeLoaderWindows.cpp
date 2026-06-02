@@ -71,7 +71,7 @@ std::string ExeRelativeCandidate() {
 } // namespace
 
 void ForEachPythonRuntimeCandidate(
-    llvm::function_ref<bool(llvm::StringRef)> callback) {
+    llvm::function_ref<bool(const char *)> callback) {
   // Tried in order: bare DLL name (lets the loader use PATH and the system
   // search list), then the build-relative location next to lldb.exe. Bare
   // names work when Python is on PATH or already mapped in the process; the
@@ -79,10 +79,10 @@ void ForEachPythonRuntimeCandidate(
   // liblldb.
   //
   // The common loader maps each candidate via getPermanentLibrary, so on
-  // first success python3xx.dll is in the process by base name. When the
+  // first success the Python DLL is in the process by base name. When the
   // ScriptInterpreterPython plugin is dlopen'd later, its delay-load thunks'
-  // implicit LoadLibrary("python3xx.dll") matches the already-mapped module
-  // and resolves without consulting any DLL search path.
+  // implicit LoadLibrary call matches the already-mapped module and resolves
+  // without consulting any DLL search path.
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
   if (callback(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME))
     return;
@@ -90,7 +90,7 @@ void ForEachPythonRuntimeCandidate(
 
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
   std::string exe_relative = ExeRelativeCandidate();
-  if (!exe_relative.empty() && callback(exe_relative))
+  if (!exe_relative.empty() && callback(exe_relative.c_str()))
     return;
 #endif
 }

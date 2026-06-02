@@ -21,14 +21,14 @@ using namespace lldb_private;
 // consistent with the first.
 TEST(PythonRuntimeLoaderTest, LoadIsIdempotent) {
   llvm::Error first = PythonRuntimeLoader::Load();
-  bool first_failed = static_cast<bool>(first);
+  const bool first_result = static_cast<bool>(first);
   llvm::consumeError(std::move(first));
 
   llvm::Error second = PythonRuntimeLoader::Load();
-  bool second_failed = static_cast<bool>(second);
+  const bool second_result = static_cast<bool>(second);
   llvm::consumeError(std::move(second));
 
-  EXPECT_EQ(first_failed, second_failed);
+  EXPECT_EQ(first_result, second_result);
 }
 
 #endif // LLDB_ENABLE_PYTHON

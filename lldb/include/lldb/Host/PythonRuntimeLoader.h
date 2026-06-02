@@ -23,7 +23,7 @@ public:
   /// llvm::sys::DynamicLibrary::getPermanentLibrary, leaving Python's
   /// stable-ABI symbols visible in the global namespace. On Windows this
   /// configures the DLL search path so the plugin's delay-load thunks can
-  /// find python3xx.dll.
+  /// find the Python DLL.
   ///
   /// No-op when Python is already loaded in the current process (i.e. when
   /// LLDB is imported into a Python interpreter).
@@ -45,6 +45,14 @@ public:
   /// without Python support. Triggers the load on first call, mirroring
   /// Load().
   static llvm::StringRef GetLoadedPath();
+
+  /// True if libpython is currently mapped into the process (whether we put
+  /// it there or it was already loaded). Lets callers distinguish the
+  /// lldb-in-python case (Load() success, GetLoadedPath() empty, IsLoaded()
+  /// true) from a build without Python support (Load() success,
+  /// GetLoadedPath() empty, IsLoaded() false). Always false on builds
+  /// without Python support.
+  static bool IsLoaded();
 };
 
 } // namespace lldb_private

@@ -43,32 +43,12 @@ struct PythonRuntimeState {
   std::string error_message;
 };
 
-/// True if libpython is already in the current process. This happens when
-/// LLDB is imported into a Python interpreter, in which case we must not
-/// dlopen another libpython on top of it.
-///
-/// Probe two stable-ABI symbols. Py_IsInitialized has existed forever
-/// (including incompatible Python 2), but Py_InitializeFromConfig is 3.8+.
-/// Requiring both rejects a stale Python 2 libpython, a stub, or another
-/// tool's vendored runtime that happens to export Py_IsInitialized.
-bool IsPythonAlreadyLoaded() {
-#if defined(_WIN32)
-  HMODULE main = ::GetModuleHandleW(nullptr);
-  return ::GetProcAddress(main, "Py_IsInitialized") != nullptr &&
-         ::GetProcAddress(main, "Py_InitializeFromConfig") != nullptr;
-#else
-  return ::dlsym(RTLD_DEFAULT, "Py_IsInitialized") != nullptr &&
-         ::dlsym(RTLD_DEFAULT, "Py_InitializeFromConfig") != nullptr;
-#endif
-}
-
 /// Returns success only if the load succeeded and the resulting library
 /// exposes Py_IsInitialized (a stable-ABI symbol).
-llvm::Error TryLoad(llvm::StringRef path) {
+llvm::Error TryLoad(const char *path) {
   std::string err_msg;
   llvm::sys::DynamicLibrary lib =
-      llvm::sys::DynamicLibrary::getPermanentLibrary(path.str().c_str(),
-                                                     &err_msg);
+      llvm::sys::DynamicLibrary::getPermanentLibrary(path, &err_msg);
   if (!lib.isValid())
     return llvm::createStringErrorV("could not load '{0}': {1}", path, err_msg);
 
@@ -80,18 +60,18 @@ llvm::Error TryLoad(llvm::StringRef path) {
 }
 
 llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
-  if (IsPythonAlreadyLoaded())
+  if (PythonRuntimeLoader::IsLoaded())
     return llvm::Error::success();
 
   llvm::Error failures =
       llvm::createStringError("could not locate the Python runtime library");
 
-  auto try_path = [&](llvm::StringRef path) -> bool {
+  auto try_path = [&](const char *path) -> bool {
     if (llvm::Error err = TryLoad(path)) {
       failures = llvm::joinErrors(std::move(failures), std::move(err));
       return false;
     }
-    out_path = std::string(path);
+    out_path = path;
     return true;
   };
 
@@ -120,7 +100,7 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
   // loads cleanly wins; the rest of the list is not enumerated.
   bool found = false;
   ForEachPythonRuntimeCandidate(
-      [&](llvm::StringRef candidate) { return found = try_path(candidate); });
+      [&](const char *candidate) { return found = try_path(candidate); });
 
   if (found) {
     consumeError(std::move(failures));
@@ -144,6 +124,25 @@ const PythonRuntimeState &GetState() {
 
 } // namespace
 
+/// True if libpython is mapped into the current process. This is the case
+/// when LLDB is imported into a Python interpreter (we must not dlopen
+/// another libpython on top of it), and after Load() has placed one there.
+///
+/// Probe two stable-ABI symbols. Py_IsInitialized has existed forever
+/// (including incompatible Python 2), but Py_InitializeFromConfig is 3.8+.
+/// Requiring both rejects a stale Python 2 libpython, a stub, or another
+/// tool's vendored runtime that happens to export Py_IsInitialized.
+bool PythonRuntimeLoader::IsLoaded() {
+#if defined(_WIN32)
+  HMODULE main = ::GetModuleHandleW(nullptr);
+  return ::GetProcAddress(main, "Py_IsInitialized") != nullptr &&
+         ::GetProcAddress(main, "Py_InitializeFromConfig") != nullptr;
+#else
+  return ::dlsym(RTLD_DEFAULT, "Py_IsInitialized") != nullptr &&
+         ::dlsym(RTLD_DEFAULT, "Py_InitializeFromConfig") != nullptr;
+#endif
+}
+
 llvm::Error PythonRuntimeLoader::Load() {
   const PythonRuntimeState &state = GetState();
   if (state.error_message.empty())
@@ -160,6 +159,7 @@ llvm::StringRef PythonRuntimeLoader::GetLoadedPath() { return GetState().path; }
 namespace lldb_private {
 llvm::Error PythonRuntimeLoader::Load() { return llvm::Error::success(); }
 llvm::StringRef PythonRuntimeLoader::GetLoadedPath() { return {}; }
+bool PythonRuntimeLoader::IsLoaded() { return false; }
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON

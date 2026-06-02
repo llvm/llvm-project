@@ -41,13 +41,13 @@ constexpr llvm::StringLiteral kPythonOrgFrameworkSuffix =
 /// Build an absolute path by joining \p base and \p relative; emit it via the
 /// callback only if the file exists. Returns the callback's result so the
 /// caller can short-circuit on first success.
-bool TryIfExists(llvm::function_ref<bool(llvm::StringRef)> callback,
+bool TryIfExists(llvm::function_ref<bool(const char *)> callback,
                  llvm::StringRef base, llvm::StringRef relative) {
   llvm::SmallString<256> path(base);
   llvm::sys::path::append(path, relative);
   if (!llvm::sys::fs::exists(path))
     return false;
-  return callback(path);
+  return callback(path.c_str());
 }
 
 /// Invoke `xcrun -f python3` and follow the resulting interpreter path back
@@ -107,7 +107,7 @@ std::string FindPythonViaXcrun() {
 } // namespace
 
 void ForEachPythonRuntimeCandidate(
-    llvm::function_ref<bool(llvm::StringRef)> callback) {
+    llvm::function_ref<bool(const char *)> callback) {
   if (const char *developer_dir = std::getenv("DEVELOPER_DIR");
       developer_dir && *developer_dir)
     if (TryIfExists(callback, developer_dir, kAppleFrameworkSuffix))
@@ -130,7 +130,7 @@ void ForEachPythonRuntimeCandidate(
   // none of the well-known paths matched. Spawned only on the cold path so
   // the common case never pays for it.
   if (std::string xcrun_path = FindPythonViaXcrun(); !xcrun_path.empty())
-    if (callback(xcrun_path))
+    if (callback(xcrun_path.c_str()))
       return;
 
   // Final fallback: let dyld search DYLD_LIBRARY_PATH and the system dyld
