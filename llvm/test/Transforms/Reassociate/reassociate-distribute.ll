@@ -21,9 +21,9 @@ define i32 @test_basic(i32 %a, i32 %b) {
 ; Sub instead of add inside: a*500 - (a-b)*300
 define i32 @test_with_sub(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_with_sub(
-; CHECK-NEXT:    [[MUL2_NEG_NEG:%.*]] = mul i32 [[B:%.*]], 300
+; CHECK-NEXT:    [[MUL2_NEG:%.*]] = mul i32 [[B:%.*]], 300
 ; CHECK-NEXT:    [[REASS_MUL:%.*]] = mul i32 [[A:%.*]], 200
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[REASS_MUL]], [[MUL2_NEG_NEG]]
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[REASS_MUL]], [[MUL2_NEG]]
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %mul  = mul nsw i32 %a, 500
@@ -80,7 +80,7 @@ define i32 @test_no_match(i32 %a, i32 %b) {
 
 ; AddSub has multiple uses (second use is an xor) — oneUse required for distribution
 define i32 @test_multi_use_add(i32 %a, i32 %b) {
-; CHECK-LABEL: @test_multi_use_add_(
+; CHECK-LABEL: @test_multi_use_add(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[A:%.*]], 777
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[B:%.*]], [[A]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = mul nsw i32 [[ADD]], 444
