@@ -14020,6 +14020,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+        ":__support_osutil_linux_syscall_wrappers_open",
         ":errno",
         ":hdr_fcntl_macros",
     ],
