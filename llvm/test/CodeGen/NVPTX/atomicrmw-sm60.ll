@@ -3135,3 +3135,748 @@ define i32 @nand_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
         ret i32 %retval
 }
 
+define i32 @add_acq_rel_i32_global_sys(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: add_acq_rel_i32_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i32_global_sys_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [add_acq_rel_i32_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.add.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i32 %val syncscope("") acq_rel
+        ret i32 %retval
+}
+
+define i64 @add_acq_rel_i64_global_sys(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: add_acq_rel_i64_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i64_global_sys_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [add_acq_rel_i64_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.add.u64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i64 %val syncscope("") acq_rel
+        ret i64 %retval
+}
+
+define i32 @min_acq_rel_i32_global_sys(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: min_acq_rel_i32_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [min_acq_rel_i32_global_sys_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [min_acq_rel_i32_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.min.s32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw min ptr  addrspace(1) %addr, i32 %val syncscope("") acq_rel
+        ret i32 %retval
+}
+
+define i32 @umax_acq_rel_i32_global_sys(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: umax_acq_rel_i32_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [umax_acq_rel_i32_global_sys_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [umax_acq_rel_i32_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.max.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw umax ptr  addrspace(1) %addr, i32 %val syncscope("") acq_rel
+        ret i32 %retval
+}
+
+define i32 @nand_acq_rel_i32_global_sys(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: nand_acq_rel_i32_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b32 %r<6>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_global_sys_param_1];
+; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_global_sys_param_0];
+; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
+; SM60-NEXT:  $L__BB104_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b32 %r3, %r5, %r2;
+; SM60-NEXT:    not.b32 %r4, %r3;
+; SM60-NEXT:    atom.sys.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p1 bra $L__BB104_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i32 %val syncscope("") acq_rel
+        ret i32 %retval
+}
+
+define i64 @nand_acq_rel_i64_global_sys(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: nand_acq_rel_i64_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_global_sys_param_1];
+; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_global_sys_param_0];
+; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
+; SM60-NEXT:  $L__BB105_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
+; SM60-NEXT:    not.b64 %rd5, %rd4;
+; SM60-NEXT:    atom.sys.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p1 bra $L__BB105_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i64 %val syncscope("") acq_rel
+        ret i64 %retval
+}
+
+define float @fadd_acq_rel_float_global_sys(ptr addrspace(1) %addr, float %val) {
+; SM60-LABEL: fadd_acq_rel_float_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_float_global_sys_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_float_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, float %val syncscope("") acq_rel
+        ret float %retval
+}
+
+define double @fadd_acq_rel_double_global_sys(ptr addrspace(1) %addr, double %val) {
+; SM60-LABEL: fadd_acq_rel_double_global_sys(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_double_global_sys_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_double_global_sys_param_1];
+; SM60-NEXT:    atom.sys.global.add.f64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, double %val syncscope("") acq_rel
+        ret double %retval
+}
+
+define i32 @add_acq_rel_i32_global_cluster(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: add_acq_rel_i32_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i32_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [add_acq_rel_i32_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.add.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i32 %val syncscope("cluster") acq_rel
+        ret i32 %retval
+}
+
+define i64 @add_acq_rel_i64_global_cluster(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: add_acq_rel_i64_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i64_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [add_acq_rel_i64_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.add.u64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i64 %val syncscope("cluster") acq_rel
+        ret i64 %retval
+}
+
+define i32 @min_acq_rel_i32_global_cluster(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: min_acq_rel_i32_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [min_acq_rel_i32_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [min_acq_rel_i32_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.min.s32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw min ptr  addrspace(1) %addr, i32 %val syncscope("cluster") acq_rel
+        ret i32 %retval
+}
+
+define i32 @umax_acq_rel_i32_global_cluster(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: umax_acq_rel_i32_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [umax_acq_rel_i32_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [umax_acq_rel_i32_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.max.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw umax ptr  addrspace(1) %addr, i32 %val syncscope("cluster") acq_rel
+        ret i32 %retval
+}
+
+define i32 @nand_acq_rel_i32_global_cluster(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: nand_acq_rel_i32_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b32 %r<6>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_global_cluster_param_1];
+; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_global_cluster_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
+; SM60-NEXT:  $L__BB112_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b32 %r3, %r5, %r2;
+; SM60-NEXT:    not.b32 %r4, %r3;
+; SM60-NEXT:    atom.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p1 bra $L__BB112_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i32 %val syncscope("cluster") acq_rel
+        ret i32 %retval
+}
+
+define i64 @nand_acq_rel_i64_global_cluster(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: nand_acq_rel_i64_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_global_cluster_param_1];
+; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_global_cluster_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
+; SM60-NEXT:  $L__BB113_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
+; SM60-NEXT:    not.b64 %rd5, %rd4;
+; SM60-NEXT:    atom.cta.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p1 bra $L__BB113_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i64 %val syncscope("cluster") acq_rel
+        ret i64 %retval
+}
+
+define float @fadd_acq_rel_float_global_cluster(ptr addrspace(1) %addr, float %val) {
+; SM60-LABEL: fadd_acq_rel_float_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_float_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_float_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, float %val syncscope("cluster") acq_rel
+        ret float %retval
+}
+
+define double @fadd_acq_rel_double_global_cluster(ptr addrspace(1) %addr, double %val) {
+; SM60-LABEL: fadd_acq_rel_double_global_cluster(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_double_global_cluster_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_double_global_cluster_param_1];
+; SM60-NEXT:    atom.cta.global.add.f64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, double %val syncscope("cluster") acq_rel
+        ret double %retval
+}
+
+define i32 @add_acq_rel_i32_global_gpu(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: add_acq_rel_i32_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i32_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [add_acq_rel_i32_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.add.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i32 %val syncscope("device") acq_rel
+        ret i32 %retval
+}
+
+define i64 @add_acq_rel_i64_global_gpu(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: add_acq_rel_i64_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i64_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [add_acq_rel_i64_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.add.u64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(1) %addr, i64 %val syncscope("device") acq_rel
+        ret i64 %retval
+}
+
+define i32 @min_acq_rel_i32_global_gpu(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: min_acq_rel_i32_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [min_acq_rel_i32_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [min_acq_rel_i32_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.min.s32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw min ptr  addrspace(1) %addr, i32 %val syncscope("device") acq_rel
+        ret i32 %retval
+}
+
+define i32 @umax_acq_rel_i32_global_gpu(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: umax_acq_rel_i32_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [umax_acq_rel_i32_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [umax_acq_rel_i32_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.max.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw umax ptr  addrspace(1) %addr, i32 %val syncscope("device") acq_rel
+        ret i32 %retval
+}
+
+define i32 @nand_acq_rel_i32_global_gpu(ptr addrspace(1) %addr, i32 %val) {
+; SM60-LABEL: nand_acq_rel_i32_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b32 %r<6>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_global_gpu_param_1];
+; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_global_gpu_param_0];
+; SM60-NEXT:    membar.gl;
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
+; SM60-NEXT:  $L__BB120_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b32 %r3, %r5, %r2;
+; SM60-NEXT:    not.b32 %r4, %r3;
+; SM60-NEXT:    atom.gpu.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p1 bra $L__BB120_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.gl;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i32 %val syncscope("device") acq_rel
+        ret i32 %retval
+}
+
+define i64 @nand_acq_rel_i64_global_gpu(ptr addrspace(1) %addr, i64 %val) {
+; SM60-LABEL: nand_acq_rel_i64_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_global_gpu_param_1];
+; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_global_gpu_param_0];
+; SM60-NEXT:    membar.gl;
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
+; SM60-NEXT:  $L__BB121_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
+; SM60-NEXT:    not.b64 %rd5, %rd4;
+; SM60-NEXT:    atom.gpu.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p1 bra $L__BB121_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.gl;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(1) %addr, i64 %val syncscope("device") acq_rel
+        ret i64 %retval
+}
+
+define float @fadd_acq_rel_float_global_gpu(ptr addrspace(1) %addr, float %val) {
+; SM60-LABEL: fadd_acq_rel_float_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_float_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_float_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, float %val syncscope("device") acq_rel
+        ret float %retval
+}
+
+define double @fadd_acq_rel_double_global_gpu(ptr addrspace(1) %addr, double %val) {
+; SM60-LABEL: fadd_acq_rel_double_global_gpu(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_double_global_gpu_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_double_global_gpu_param_1];
+; SM60-NEXT:    atom.gpu.global.add.f64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(1) %addr, double %val syncscope("device") acq_rel
+        ret double %retval
+}
+
+define i32 @add_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
+; SM60-LABEL: add_acq_rel_i32_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i32_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [add_acq_rel_i32_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.add.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i64 @add_acq_rel_i64_generic_cta(ptr %addr, i64 %val) {
+; SM60-LABEL: add_acq_rel_i64_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i64_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [add_acq_rel_i64_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.add.u64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  %addr, i64 %val syncscope("block") acq_rel
+        ret i64 %retval
+}
+
+define i32 @min_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
+; SM60-LABEL: min_acq_rel_i32_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [min_acq_rel_i32_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [min_acq_rel_i32_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.min.s32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw min ptr  %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i32 @umax_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
+; SM60-LABEL: umax_acq_rel_i32_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [umax_acq_rel_i32_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [umax_acq_rel_i32_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.max.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw umax ptr  %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i32 @nand_acq_rel_i32_generic_cta(ptr %addr, i32 %val) {
+; SM60-LABEL: nand_acq_rel_i32_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b32 %r<6>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_generic_cta_param_1];
+; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_generic_cta_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.b32 %r5, [%rd1];
+; SM60-NEXT:  $L__BB128_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b32 %r3, %r5, %r2;
+; SM60-NEXT:    not.b32 %r4, %r3;
+; SM60-NEXT:    atom.cta.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p1 bra $L__BB128_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i64 @nand_acq_rel_i64_generic_cta(ptr %addr, i64 %val) {
+; SM60-LABEL: nand_acq_rel_i64_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_generic_cta_param_1];
+; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_generic_cta_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.b64 %rd6, [%rd2];
+; SM60-NEXT:  $L__BB129_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
+; SM60-NEXT:    not.b64 %rd5, %rd4;
+; SM60-NEXT:    atom.cta.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p1 bra $L__BB129_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  %addr, i64 %val syncscope("block") acq_rel
+        ret i64 %retval
+}
+
+define float @fadd_acq_rel_float_generic_cta(ptr %addr, float %val) {
+; SM60-LABEL: fadd_acq_rel_float_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_float_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_float_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  %addr, float %val syncscope("block") acq_rel
+        ret float %retval
+}
+
+define double @fadd_acq_rel_double_generic_cta(ptr %addr, double %val) {
+; SM60-LABEL: fadd_acq_rel_double_generic_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_double_generic_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_double_generic_cta_param_1];
+; SM60-NEXT:    atom.cta.add.f64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  %addr, double %val syncscope("block") acq_rel
+        ret double %retval
+}
+
+define i32 @add_acq_rel_i32_shared_cta(ptr addrspace(3) %addr, i32 %val) {
+; SM60-LABEL: add_acq_rel_i32_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i32_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [add_acq_rel_i32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(3) %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i64 @add_acq_rel_i64_shared_cta(ptr addrspace(3) %addr, i64 %val) {
+; SM60-LABEL: add_acq_rel_i64_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [add_acq_rel_i64_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [add_acq_rel_i64_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.u64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw add ptr  addrspace(3) %addr, i64 %val syncscope("block") acq_rel
+        ret i64 %retval
+}
+
+define i32 @min_acq_rel_i32_shared_cta(ptr addrspace(3) %addr, i32 %val) {
+; SM60-LABEL: min_acq_rel_i32_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [min_acq_rel_i32_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [min_acq_rel_i32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.min.s32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw min ptr  addrspace(3) %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i32 @umax_acq_rel_i32_shared_cta(ptr addrspace(3) %addr, i32 %val) {
+; SM60-LABEL: umax_acq_rel_i32_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [umax_acq_rel_i32_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [umax_acq_rel_i32_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.max.u32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw umax ptr  addrspace(3) %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i32 @nand_acq_rel_i32_shared_cta(ptr addrspace(3) %addr, i32 %val) {
+; SM60-LABEL: nand_acq_rel_i32_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b32 %r<6>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_shared_cta_param_1];
+; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_shared_cta_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.shared.b32 %r5, [%rd1];
+; SM60-NEXT:  $L__BB136_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b32 %r3, %r5, %r2;
+; SM60-NEXT:    not.b32 %r4, %r3;
+; SM60-NEXT:    atom.cta.shared.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM60-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM60-NEXT:    mov.b32 %r5, %r1;
+; SM60-NEXT:    @%p1 bra $L__BB136_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(3) %addr, i32 %val syncscope("block") acq_rel
+        ret i32 %retval
+}
+
+define i64 @nand_acq_rel_i64_shared_cta(ptr addrspace(3) %addr, i64 %val) {
+; SM60-LABEL: nand_acq_rel_i64_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .pred %p<2>;
+; SM60-NEXT:    .reg .b64 %rd<7>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_shared_cta_param_1];
+; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_shared_cta_param_0];
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    ld.volatile.shared.b64 %rd6, [%rd2];
+; SM60-NEXT:  $L__BB137_1: // %atomicrmw.start
+; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
+; SM60-NEXT:    not.b64 %rd5, %rd4;
+; SM60-NEXT:    atom.cta.shared.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM60-NEXT:    setp.ne.b64 %p1, %rd1, %rd6;
+; SM60-NEXT:    mov.b64 %rd6, %rd1;
+; SM60-NEXT:    @%p1 bra $L__BB137_1;
+; SM60-NEXT:  // %bb.2: // %atomicrmw.end
+; SM60-NEXT:    membar.cta;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd1;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw nand ptr  addrspace(3) %addr, i64 %val syncscope("block") acq_rel
+        ret i64 %retval
+}
+
+define float @fadd_acq_rel_float_shared_cta(ptr addrspace(3) %addr, float %val) {
+; SM60-LABEL: fadd_acq_rel_float_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b32 %r<3>;
+; SM60-NEXT:    .reg .b64 %rd<2>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_float_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b32 %r1, [fadd_acq_rel_float_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f32 %r2, [%rd1], %r1;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r2;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(3) %addr, float %val syncscope("block") acq_rel
+        ret float %retval
+}
+
+define double @fadd_acq_rel_double_shared_cta(ptr addrspace(3) %addr, double %val) {
+; SM60-LABEL: fadd_acq_rel_double_shared_cta(
+; SM60:       {
+; SM60-NEXT:    .reg .b64 %rd<4>;
+; SM60-EMPTY:
+; SM60-NEXT:  // %bb.0:
+; SM60-NEXT:    ld.param.b64 %rd1, [fadd_acq_rel_double_shared_cta_param_0];
+; SM60-NEXT:    ld.param.b64 %rd2, [fadd_acq_rel_double_shared_cta_param_1];
+; SM60-NEXT:    atom.cta.shared.add.f64 %rd3, [%rd1], %rd2;
+; SM60-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM60-NEXT:    ret;
+        %retval = atomicrmw fadd ptr  addrspace(3) %addr, double %val syncscope("block") acq_rel
+        ret double %retval
+}
+

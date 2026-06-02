@@ -360,6 +360,16 @@ protected:
 
 } // namespace lldb_private
 
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 80,
+    "Symbol is a high volume data type, size must be increased with care");
+#elif __SIZEOF_POINTER__ == 4
+static_assert(
+    sizeof(lldb_private::Symbol) == 52,
+    "Symbol is a high volume data type, size must be increased with care");
+#endif
+
 namespace llvm {
 namespace json {
 

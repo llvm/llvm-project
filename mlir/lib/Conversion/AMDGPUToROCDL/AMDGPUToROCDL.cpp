@@ -491,6 +491,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bit 0: GLC = 0 (atomics drop value, less coherency)
     // bits 1-2: SLC, DLC = 0 (similarly)
     // bit 3: swizzled (0 for raw)
+    // Note: atomic ret/no-ret bit set by backend based on actual usage.
     args.push_back(createI32Constant(rewriter, loc, 0));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),

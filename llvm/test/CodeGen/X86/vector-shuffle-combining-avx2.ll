@@ -1343,7 +1343,7 @@ define <4 x i16> @PR176951(<32 x i64> %shuffle, <16 x i16> %0, <16 x i1> %cmp) n
 ; X86-AVX2-NEXT:    vmovaps %ymm0, 0
 ; X86-AVX2-NEXT:    vpsllw $15, %xmm3, %xmm0
 ; X86-AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,10,11,8,9,8,9,6,7,u,u,10,11,14,15]
+; X86-AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,u,u,8,9,8,9,6,7,u,u,10,11,14,15]
 ; X86-AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],mem[5],xmm0[6,7]
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,6,7]
