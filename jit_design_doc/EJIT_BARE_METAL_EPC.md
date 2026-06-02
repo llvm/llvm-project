@@ -1,7 +1,7 @@
 # EJIT 裸核 ExecutorProcessControl 设计
 
-**版本**: 1.1
-**日期**: 2026-06-01
+**版本**: 1.2
+**日期**: 2026-06-02
 **关联**: PASS7_EJitRuntime_OrcJITLink.md, EJIT_BARE_METAL_STUBS.md, EJIT_LIBRARY_TRIMMING.md
 
 ---
@@ -34,7 +34,7 @@ InProcessMemoryManager**。`linkProcessSymbolsByDefault` 只是符号发现
 
   // 3. ProcessSymbols JITDylib：空 JD 满足 LLJIT 平台初始化要求
   //    符号由 PASS1 生成的 ejit_register_symbol 调用注入
-  Builder.setSetupProcessSymbolsJITDylib([](LLJIT &J) -> Expected<JITDylibSP> {
+  Builder.setProcessSymbolsJITDylibSetup([](LLJIT &J) -> Expected<JITDylibSP> {
       auto &JD = J.getExecutionSession().createBareJITDylib("<Process Symbols>");
       return &JD;
   });
@@ -56,51 +56,81 @@ InProcessMemoryManager**。`linkProcessSymbolsByDefault` 只是符号发现
 
 #### 2.1 MemoryAccess
 
-**不能做纯 no-op**——JITLink 在 finalize 阶段通过 MemoryAccess 写入
-relocation fixup 后的最终代码。必须实现 direct read/write：
+**源码事实**：`MemoryAccess` 是独立类 `llvm::orc::MemoryAccess`（非 EPC 嵌套类），
+位于 `llvm/include/llvm/ExecutionEngine/Orc/MemoryAccess.h`。
+接口是**异步**的（`writeUInt8sAsync`、`readPointersAsync` 等），
+但提供同步便捷包装。参考实现：`InProcessMemoryAccess`。
+
+**不能做纯 no-op**——JITLink finalize 阶段通过 MemoryAccess 写入
+relocation fixup 后的最终代码。
 
 ```cpp
-class BareMetalMemoryAccess : public MemoryAccess {
-  void writeToMemory(ExecutorAddr Dst, const char *Src, size_t Size) override {
-    memcpy(Dst.toPtr<void *>(), Src, Size);
+class BareMetalMemoryAccess : public orc::MemoryAccess {
+  // 实现全部 write*Async / read*Async 纯虚方法
+  // 参考 InProcessMemoryAccess：直接对 ExecutorAddr 做 memcpy，
+  // 然后同步回调 OnComplete
+  void writeBuffersAsync(ArrayRef<tpctypes::BufferWrite> Ws,
+                         WriteResultFn OnComplete) override {
+    for (auto &W : Ws)
+      memcpy(W.Addr.template toPtr<char *>(), W.Buffer.data(), W.Buffer.size());
+    OnComplete(Error::success());
   }
-  void readFromMemory(char *Dst, ExecutorAddr Src, size_t Size) override {
-    memcpy(Dst, Src.toPtr<void *>(), Size);
-  }
-  // 裸核默认 RWX，不调 mprotect
-  Error makeExecutable(JITLinkMemoryManager::FinalizedAlloc &FA) override {
-    return Error::success();
-  }
+  // ... writeUInt8sAsync, readPointersAsync 等同理 ...
 };
-```
+
+// 裸核默认 RWX，MemoryAccess 不做权限切换。
+// mprotect 语义在 JITLinkMemoryManager::InFlightAlloc::finalize 中处理（见 3.3）。
 
 #### 2.2 DylibMgr
 
-裸核无动态库。实现为返回错误的 dylib manager：
+**源码事实**：EPC 的 `DylibMgr` 字段类型是 `DylibManager *`（独立抽象类），
+位于 `llvm/include/llvm/ExecutionEngine/Orc/DylibManager.h`。
+`SelfExecutorProcessControl` 通过**私有继承** `DylibManager` 并设
+`DylibMgr = this`。`EPCGenericDylibManager` 是远程 EPC 的辅助类，
+**不是** `DylibManager` 的子类。
+
+裸核参考 `SelfExecutorProcessControl` 模式，私有继承 `DylibManager`
+并返回错误：
 
 ```cpp
-class BareMetalDylibMgr : public EPCGenericDylibManager {
-  Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t) override {
+class BareMetalEPC : public ExecutorProcessControl,
+                     private DylibManager {  // 参考 SelfEPC 模式
+  // DylibManager 实现：裸核无动态库
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override {
     return make_error<StringError>("bare-metal: no dynamic libraries",
                                    inconvertibleErrorCode());
   }
-  // lookup / close 同理返回错误
+  void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                          SymbolLookupCompleteFn F) override {
+    // 返回空结果
+    ...
+  }
 };
 ```
 
 #### 2.3 callWrapperAsync
 
-参考 `SelfExecutorProcessControl::callWrapperAsync` 做**同步直调**：
+**源码事实**：`SelfExecutorProcessControl::callWrapperAsync` 实际把
+`ExecutorAddr` 强转为函数指针，**同步调用后立即回调** `OnComplete`——
+没有 IPC，wrapper 函数就是 in-process 直调。
 
 ```cpp
-void callWrapperAsync(ExecutorAddr WrapperFnAddr,
-                      SendResultFunction SendResult, ArrayRef<char> ArgBuffer) override {
+// 实际接口签名（来自 ExecutorProcessControl.h:224）：
+// virtual void callWrapperAsync(ExecutorAddr WrapperFnAddr,
+//                               IncomingWFRHandler OnComplete,
+//                               ArrayRef<char> ArgBuffer) = 0;
+
+void BareMetalEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
+                                    IncomingWFRHandler OnComplete,
+                                    ArrayRef<char> ArgBuffer) override {
   using WrapperFnTy = shared::CWrapperFunctionResult (*)(const char *, size_t);
   auto *WrapperFn = WrapperFnAddr.toPtr<WrapperFnTy>();
   shared::WrapperFunctionResult R = WrapperFn(ArgBuffer.data(), ArgBuffer.size());
-  SendResult(std::move(R));
+  OnComplete(std::move(R));
 }
 ```
+
+裸核和 SelfEPC 一样走同步直调——没有远程执行器需要 IPC。
 
 #### 2.4 runAsMain / runAsVoidFunction / runAsIntFunction
 
@@ -146,7 +176,6 @@ void allocate(const JITLinkDylib *JD, LinkGraph &G,
   auto FA = std::make_unique<SlabFinalizedAlloc>(std::move(BL), *this, AllocOffset);
   OnAllocated(std::move(FA));
 }
-```
 
 #### 3.3 finalize + instruction cache flush
 
@@ -187,7 +216,6 @@ typedef struct {
   void     *dataHeapStart;    // JIT 数据堆起始地址（rodata+data）
   size_t    dataHeapSize;     // JIT 数据堆大小
 } ejit_config_t;
-```
 
 x86 hosted 测试可用 `malloc` buffer 模拟 slab：
 
@@ -206,7 +234,6 @@ ejit_init(&cfg);
 PROVIDE(__ejit_code_heap_start = .);
 . = . + 512K;
 PROVIDE(__ejit_code_heap_end   = .);
-```
 
 ```c
 extern char __ejit_code_heap_start, __ejit_code_heap_end;
@@ -231,6 +258,34 @@ extern char __ejit_code_heap_start, __ejit_code_heap_end;
 
 ---
 
-*文档版本: 1.1*
+*文档版本: 1.2*
 *创建日期: 2026-06-01*
-*更新日期: 2026-06-01*
+*更新日期: 2026-06-02*
+
+---
+
+## 附录 A：源码检视记录 (v1.2)
+
+基于 2026-06-02 对 LLVM 源码的检视，修正了以下 API 假设：
+
+| 设计文档假设 | 实际 API |
+|---|---|
+| `MemoryAccess` 是 EPC 嵌套类 | 独立类 `llvm::orc::MemoryAccess`，async 接口 (`writeUInt8sAsync` 等) |
+| `BareMetalMemoryAccess` 重写 `writeToMemory`/`readFromMemory` | 实际需重写 `writeBuffersAsync`/`readPointersAsync` 等 13 个纯虚方法 |
+| `DylibMgr` 类型是 `EPCGenericDylibManager` | 实际是 `DylibManager *`（抽象基类），`SelfEPC` 用私有继承实现 |
+| `setSetupProcessSymbolsJITDylib` | 实际是 `setProcessSymbolsJITDylibSetup` |
+| `callWrapperAsync` 回调是 `SendResultFunction` | 实际是 `IncomingWFRHandler` |
+| `makeExecutable` 在 `MemoryAccess` 上 | 实际在 `JITLinkMemoryManager::InFlightAlloc::finalize` 中处理 |
+
+### 参考文件
+
+| 组件 | 文件 |
+|---|---|
+| `ExecutorProcessControl` | `llvm/include/llvm/ExecutionEngine/Orc/ExecutorProcessControl.h` |
+| `MemoryAccess` | `llvm/include/llvm/ExecutionEngine/Orc/MemoryAccess.h` |
+| `InProcessMemoryAccess` | `llvm/include/llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h` |
+| `DylibManager` | `llvm/include/llvm/ExecutionEngine/Orc/DylibManager.h` |
+| `SelfExecutorProcessControl` | `llvm/include/llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h` |
+| `JITLinkMemoryManager` | `llvm/include/llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h` |
+| `InProcessMemoryManager` | `llvm/include/llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h` (line 363) |
+| `LLJITBuilder` | `llvm/include/llvm/ExecutionEngine/Orc/LLJIT.h` |
