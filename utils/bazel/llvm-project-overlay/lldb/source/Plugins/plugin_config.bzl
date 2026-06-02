@@ -100,6 +100,13 @@ DEFAULT_SCRIPT_PLUGINS = [
     "ScriptInterpreterNone",
 ]
 
+# Plugins excluded on Windows: GNUstep has source compat issues with
+# the current LLVM version, ScriptedProcess requires Python.
+WINDOWS_EXCLUDED_PLUGINS = [
+    "GNUstepObjCRuntime",
+    "ScriptedProcess",
+]
+
 OBJCPP_COPTS = [
     "-std=c++{}".format(CMAKE_CXX_STANDARD),
     "-fno-objc-exceptions",

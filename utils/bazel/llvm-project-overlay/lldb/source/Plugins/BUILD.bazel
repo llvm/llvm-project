@@ -4,7 +4,7 @@
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_library", "objc_library")
 load("//mlir:tblgen.bzl", "gentbl_cc_library")
-load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load(":plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS", "WINDOWS_EXCLUDED_PLUGINS")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -2422,21 +2422,50 @@ cc_library(
 _DEFAULT_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS]) + \
                         "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in DEFAULT_SCRIPT_PLUGINS])
 
+_WINDOWS_LOAD_PLUGINS = "\n".join(["LLDB_PLUGIN({})".format(x) for x in DEFAULT_PLUGINS if x not in WINDOWS_EXCLUDED_PLUGINS]) + \
+                         "\n" + "\n".join(["LLDB_SCRIPT_PLUGIN({})".format(x) for x in DEFAULT_SCRIPT_PLUGINS if x not in WINDOWS_EXCLUDED_PLUGINS])
+
+cc_library(
+    name = "PluginProcessWindowsCommon",
+    srcs = glob(["Process/Windows/Common/*.cpp"]),
+    hdrs = glob([
+        "Process/Windows/Common/*.h",
+        "Process/Windows/Common/**/*.h",
+    ]),
+    includes = [".."],
+    target_compatible_with = ["@platforms//os:windows"],
+    deps = [
+        ":PluginDynamicLoaderWindowsDYLD",
+        "//lldb:Breakpoint",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 expand_template(
     name = "plugins_config_gen",
     out = "Plugins.def",
     substitutions = {
-        "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
         "@LLDB_PROCESS_GDB_PLUGIN@": "LLDB_PLUGIN(ProcessGDBRemote)",
     } | select({
         "@platforms//os:macos": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
             "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS + """
 LLDB_PLUGIN(ProcessMacOSXKernel)
 LLDB_PLUGIN(SymbolLocatorDebugSymbols)
 LLDB_PLUGIN(SymbolVendorMacOSX)
 """,
         },
+        "@platforms//os:windows": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "LLDB_PLUGIN(ProcessWindowsCommon)",
+            "@LLDB_ENUM_PLUGINS@": _WINDOWS_LOAD_PLUGINS,
+        },
         "//conditions:default": {
+            "@LLDB_PROCESS_WINDOWS_PLUGIN@": "",
             "@LLDB_ENUM_PLUGINS@": _DEFAULT_LOAD_PLUGINS,
         },
     }),
