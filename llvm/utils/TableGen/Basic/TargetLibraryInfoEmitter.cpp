@@ -80,8 +80,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoStringTable(
     raw_ostream &OS) const {
 
   auto getFuncName = [](const Record *R) -> StringRef {
-    if (R->isSubClassOf("TargetLibCall_R"))
-      R = R->getValueAsDef("RTLibcallImpl");
+    R = R->getValueAsDef("RTLibcallImpl");
     return R->getValueAsString("LibCallFuncName");
   };
 
@@ -140,8 +139,7 @@ void TargetLibraryInfoEmitter::emitTargetLibraryInfoSignatureTable(
   using Signature = std::vector<StringRef>;
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
   auto GetSignature = [](const Record *R) -> Signature {
-    if (R->isSubClassOf("TargetLibCall_R"))
-      R = R->getValueAsDef("RTLibcallImpl")->getValueAsDef("Provides");
+    R = R->getValueAsDef("RTLibcallImpl")->getValueAsDef("Provides");
     const auto *Tys = R->getValueAsListInit("ArgumentTypes");
     Signature Sig;
     Sig.reserve(Tys->size() + 1);
