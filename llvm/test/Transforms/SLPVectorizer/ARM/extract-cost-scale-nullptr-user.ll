@@ -7,9 +7,11 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N0:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[I3:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[N3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[NIV:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
 ; CHECK-NEXT:    [[A0:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP1]]
 ; CHECK-NEXT:    store i8 0, ptr [[A0]], align 1
 ; CHECK-NEXT:    [[A1:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP1]]
@@ -26,7 +28,10 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    store i8 6, ptr [[A6]], align 1
 ; CHECK-NEXT:    [[A7:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP1]]
 ; CHECK-NEXT:    store i8 7, ptr [[A7]], align 1
-; CHECK-NEXT:    [[TMP2]] = add nuw nsw <4 x i32> [[TMP0]], <i32 32, i32 32, i32 32, i32 16>
+; CHECK-NEXT:    [[N0]] = add nuw nsw i32 [[I0]], 32
+; CHECK-NEXT:    [[N1]] = add nuw nsw i32 [[TMP1]], 16
+; CHECK-NEXT:    [[N2]] = add nuw nsw i32 [[I2]], 32
+; CHECK-NEXT:    [[N3]] = add nuw nsw i32 [[I3]], 32
 ; CHECK-NEXT:    [[NIV]] = add nuw nsw i32 [[IV]], 16
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[NIV]], 512
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
