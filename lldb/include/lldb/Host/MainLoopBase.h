@@ -110,6 +110,7 @@ protected:
     CallbackEntry(TimePoint tp, Callback cb, uint64_t seq)
         : time_point(std::move(tp)), callback(std::move(cb)), sequence(seq) {}
 
+    /// Sort using the `>`(!) operator to create a min-priority queue.
     bool operator<(const CallbackEntry &other) const {
       return std::tie(time_point, sequence) > // > for Min-priority queue
              std::tie(other.time_point, other.sequence);
