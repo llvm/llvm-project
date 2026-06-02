@@ -3,7 +3,7 @@
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {!s32i}>
 
 module {
   cir.func no_inline dso_local @_Z7to_boolM3Fooi(%arg0: !cir.data_member<!s32i in !rec_Foo>) -> !s32i {
@@ -16,7 +16,7 @@ module {
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {!s32i}>
 
 module {
   cir.func no_inline dso_local @_Z7to_boolM3Fooi(%arg0: !s32i) -> !cir.bool {

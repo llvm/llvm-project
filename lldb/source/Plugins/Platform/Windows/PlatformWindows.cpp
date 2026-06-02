@@ -131,33 +131,23 @@ PlatformWindows::PlatformWindows(bool is_host) : RemoteAwarePlatform(is_host) {
 }
 
 Status PlatformWindows::ConnectRemote(Args &args) {
-  Status error;
-  if (IsHost()) {
-    error = Status::FromErrorStringWithFormatv(
+  if (IsHost())
+    return Status::FromErrorStringWithFormatv(
         "can't connect to the host platform '{0}', always connected",
         GetPluginName());
-  } else {
-    if (!m_remote_platform_sp)
-      m_remote_platform_sp =
-          platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
-              /*force=*/true, nullptr);
 
-    if (m_remote_platform_sp) {
-      if (error.Success()) {
-        if (m_remote_platform_sp) {
-          error = m_remote_platform_sp->ConnectRemote(args);
-        } else {
-          error = Status::FromErrorString(
-              "\"platform connect\" takes a single argument: <connect-url>");
-        }
-      }
-    } else
-      error = Status::FromErrorString(
-          "failed to create a 'remote-gdb-server' platform");
+  if (!m_remote_platform_sp)
+    m_remote_platform_sp =
+        platform_gdb_server::PlatformRemoteGDBServer::CreateInstance(
+            /*force=*/true, nullptr);
 
-    if (error.Fail())
-      m_remote_platform_sp.reset();
-  }
+  if (!m_remote_platform_sp)
+    return Status::FromErrorString(
+        "failed to create a 'remote-gdb-server' platform");
+
+  Status error = m_remote_platform_sp->ConnectRemote(args);
+  if (error.Fail())
+    m_remote_platform_sp.reset();
 
   return error;
 }
@@ -513,13 +503,13 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
   ProcessSP process_sp =
       target.CreateProcess(launch_info.GetListener(),
                            launch_info.GetProcessPluginName(), nullptr, false);
+  if (!process_sp)
+    return nullptr;
 
   process_sp->HijackProcessEvents(launch_info.GetHijackListener());
 
   // We need to launch and attach to the process.
   launch_info.GetFlags().Set(eLaunchFlagDebug);
-  if (!process_sp)
-    return nullptr;
   error = process_sp->Launch(launch_info);
 #ifdef _WIN32
   if (error.Success()) {
@@ -551,9 +541,6 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
 
   if (target == nullptr) {
     TargetSP new_target_sp;
-    FileSpec emptyFileSpec;
-    ArchSpec emptyArchSpec;
-
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
     target = new_target_sp.get();

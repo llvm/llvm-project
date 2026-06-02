@@ -89,9 +89,8 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
   llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
   TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
                            /*IsDefaulted=*/true);
-  SizeParam->setDefaultArgument(
-      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
-                                                  SourceLocation(), SizeParam));
+  SizeParam->setDefaultArgument(AST, SemaPtr->getTrivialTemplateArgumentLoc(
+                                         Default, AST.IntTy, SourceLocation()));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
@@ -146,7 +145,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   RowsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(RDefault, AST.IntTy,
-                                                  SourceLocation(), RowsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(RowsParam);
 
   auto *ColsParam = NonTypeTemplateParmDecl::Create(
@@ -158,7 +157,7 @@ void HLSLExternalSemaSource::defineHLSLMatrixAlias() {
                             /*IsDefaulted=*/true);
   ColsParam->setDefaultArgument(
       AST, SemaPtr->getTrivialTemplateArgumentLoc(CDefault, AST.IntTy,
-                                                  SourceLocation(), ColsParam));
+                                                  SourceLocation()));
   TemplateParams.emplace_back(ColsParam);
 
   const unsigned MaxMatDim = SemaPtr->getLangOpts().MaxMatrixDimension;
@@ -313,12 +312,6 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
           ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
           {TemplateArgument(VectorType)}, {}));
 
-  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
-      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
-      SourceLocation(), TemplateParams, TextureTemplate,
-      {TemplateArgument(VectorType)},
-      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
-
   // Set the template arguments as written.
   TemplateArgument Arg(VectorType);
   TemplateArgumentLoc ArgLoc =
@@ -326,8 +319,13 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
   TemplateArgumentListInfo ArgsInfo =
       TemplateArgumentListInfo(SourceLocation(), SourceLocation());
   ArgsInfo.addArgument(ArgLoc);
-  PartialSpec->setTemplateArgsAsWritten(
-      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
+
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams,
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo), TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
 
   PartialSpec->setImplicit(true);
   PartialSpec->setLexicalDeclContext(HLSLNamespace);
