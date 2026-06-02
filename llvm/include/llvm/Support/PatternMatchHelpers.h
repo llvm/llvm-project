@@ -19,7 +19,7 @@
 namespace llvm::PatternMatchHelpers {
 /// Matching or combinator leaf case.
 template <typename... Tys> struct match_combine_or { // NOLINT
-  template <typename ITy> bool match(ITy *) const { return false; }
+  template <typename ITy> bool match(ITy) const { return false; }
 };
 
 /// Matching or combinator.
@@ -29,14 +29,14 @@ struct match_combine_or<Ty, Tys...> : match_combine_or<Tys...> {
   match_combine_or(const Ty &P, const Tys &...Ps)
       : match_combine_or<Tys...>(Ps...), P(P) {}
 
-  template <typename ITy> bool match(ITy *V) const {
+  template <typename ITy> bool match(ITy V) const {
     return P.match(V) || match_combine_or<Tys...>::match(V);
   }
 };
 
 /// Matching and combinator leaf case.
 template <typename... Tys> struct match_combine_and { // NOLINT
-  template <typename ITy> bool match(ITy *) const { return true; }
+  template <typename ITy> bool match(ITy) const { return true; }
 };
 
 /// Matching and combinator.
@@ -46,7 +46,7 @@ struct match_combine_and<Ty, Tys...> : match_combine_and<Tys...> {
   match_combine_and(const Ty &P, const Tys &...Ps)
       : match_combine_and<Tys...>(Ps...), P(P) {}
 
-  template <typename ITy> bool match(ITy *V) const {
+  template <typename ITy> bool match(ITy V) const {
     return P.match(V) && match_combine_and<Tys...>::match(V);
   }
 };
