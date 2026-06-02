@@ -1,4 +1,4 @@
-/*===---- riscv_packed.h - RISC-V P intrinsics -----------------------------===
+/*===---- riscv_packed_simd.h - RISC-V P intrinsics ------------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __RISCV_PACKED_H
-#define __RISCV_PACKED_H
+#ifndef __RISCV_PACKED_SIMD_H
+#define __RISCV_PACKED_SIMD_H
 
 #include <stdint.h>
 
@@ -246,4 +246,4 @@ __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 }
 #endif
 
-#endif /* __RISCV_PACKED_H */
+#endif /* __RISCV_PACKED_SIMD_H */

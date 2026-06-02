@@ -8,7 +8,7 @@
 // RUN:   -menable-experimental-extensions -march=rv64i_p0p21 -Werror -Wextra -Xclang -verify \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
-#include <riscv_packed.h>
+#include <riscv_packed_simd.h>
 
 // CHECK-LABEL: test_pmv_s_u8x4:
 // CHECK:       pmv.bs
