@@ -277,3 +277,54 @@ loop:
 exit:
   ret void
 }
+
+; Negative test
+define void @narrow_iv_i8_sext_i64_wrapping(ptr noalias %arr, ptr noalias %out) {
+; RV64-LABEL: define void @narrow_iv_i8_sext_i64_wrapping(
+; RV64-SAME: ptr noalias [[ARR:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; RV64-NEXT:  [[ENTRY:.*]]:
+; RV64-NEXT:    br label %[[LOOP:.*]]
+; RV64:       [[LOOP]]:
+; RV64-NEXT:    [[I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RV64-NEXT:    [[IDX:%.*]] = sext i8 [[I]] to i64
+; RV64-NEXT:    [[PTR:%.*]] = getelementptr [1024 x i8], ptr [[ARR]], i64 [[IDX]]
+; RV64-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR]], align 1
+; RV64-NEXT:    store i8 [[VAL]], ptr [[OUT]], align 1
+; RV64-NEXT:    [[I_NEXT]] = add i8 [[I]], 4
+; RV64-NEXT:    [[CMP:%.*]] = icmp ne i8 [[I_NEXT]], 0
+; RV64-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; RV64:       [[EXIT]]:
+; RV64-NEXT:    ret void
+;
+; RV32-LABEL: define void @narrow_iv_i8_sext_i64_wrapping(
+; RV32-SAME: ptr noalias [[ARR:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; RV32-NEXT:  [[ENTRY:.*]]:
+; RV32-NEXT:    br label %[[LOOP:.*]]
+; RV32:       [[LOOP]]:
+; RV32-NEXT:    [[I:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; RV32-NEXT:    [[IDX:%.*]] = sext i8 [[I]] to i64
+; RV32-NEXT:    [[PTR:%.*]] = getelementptr [1024 x i8], ptr [[ARR]], i64 [[IDX]]
+; RV32-NEXT:    [[VAL:%.*]] = load i8, ptr [[PTR]], align 1
+; RV32-NEXT:    store i8 [[VAL]], ptr [[OUT]], align 1
+; RV32-NEXT:    [[I_NEXT]] = add i8 [[I]], 4
+; RV32-NEXT:    [[CMP:%.*]] = icmp ne i8 [[I_NEXT]], 0
+; RV32-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; RV32:       [[EXIT]]:
+; RV32-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i8 [ 0, %entry ], [ %i.next, %loop ]
+  %idx = sext i8 %i to i64
+  %ptr = getelementptr [1024 x i8], ptr %arr, i64 %idx
+  %val = load i8, ptr %ptr, align 1
+  store i8 %val, ptr %out, align 1
+  %i.next = add i8 %i, 4
+  %cmp = icmp ne i8 %i.next, 0
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
