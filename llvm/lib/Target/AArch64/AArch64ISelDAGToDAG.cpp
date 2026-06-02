@@ -4309,6 +4309,24 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
         Opcode64Bit = AArch64::ADR;
         Imm = 0;
       } else {
+        // Not a system register. It may name an allocatable 64-bit GPR/FPR read
+        // by the MSVC __getReg/__getRegFp intrinsics. Emit a pseudo that
+        // carries the source register as an immediate so the read does not
+        // reference an undefined physical register (which the machine verifier
+        // rejects); the AsmPrinter materializes the real mov/fmov.
+        Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+            RegString->getString());
+        unsigned PseudoOp = 0;
+        if (AArch64::GPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_GPR64;
+        else if (AArch64::FPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_FPR64;
+        if (!ReadIs128Bit && PseudoOp && N->getValueType(0) == MVT::i64) {
+          CurDAG->SelectNodeTo(N, PseudoOp, MVT::i64, MVT::Other,
+                               {CurDAG->getTargetConstant(PReg, DL, MVT::i32),
+                                N->getOperand(0)});
+          return true;
+        }
         return false;
       }
     }
@@ -4393,8 +4411,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     else
       Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
 
-    if (Imm == -1)
+    if (Imm == -1) {
+      // Used by the MSVC __setReg/__setRegFp intrinsics. Copy the value into
+      // the physical register and keep it live with a FAKE_USE so the write is
+      // not dead-eliminated. (getRegisterByName rejects allocatable registers,
+      // so the generic write path cannot handle these.)
+      Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+          RegString->getString());
+      bool IsGPR = AArch64::GPR64RegClass.contains(PReg);
+      bool IsFPR = AArch64::FPR64RegClass.contains(PReg);
+      if (!WriteIs128Bit && (IsGPR || IsFPR) &&
+          N->getOperand(2).getValueType() == MVT::i64) {
+        SDValue Copy =
+            CurDAG->getCopyToReg(N->getOperand(0), DL, PReg, N->getOperand(2));
+        SDValue RegOp = CurDAG->getRegister(PReg, MVT::i64);
+        SDNode *FakeUse = CurDAG->getMachineNode(TargetOpcode::FAKE_USE, DL,
+                                                 MVT::Other, {RegOp, Copy});
+        ReplaceUses(SDValue(N, 0), SDValue(FakeUse, 0));
+        CurDAG->RemoveDeadNode(N);
+        return true;
+      }
       return false;
+    }
   }
 
   SDValue InChain = N->getOperand(0);

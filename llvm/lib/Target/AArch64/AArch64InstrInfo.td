@@ -1402,6 +1402,15 @@ def PROBED_STACKALLOC_DYN : Pseudo<(outs),
 } // Defs = [SP, NZCV], Uses = [SP] in
 } // hasSideEffects = 1, isCodeGenOnly = 1
 
+// Read of an allocatable register by name (e.g. the MSVC __getReg/__getRegFp
+// intrinsics, lowered from llvm.read[_volatile]_register).
+let hasSideEffects = 1, mayLoad = 1, Size = 4, isCodeGenOnly = 1 in {
+def READ_REGISTER_GPR64 : Pseudo<(outs GPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+def READ_REGISTER_FPR64 : Pseudo<(outs FPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+}
+
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat
 // cannot handle multiple instructions.  When that changes, they can be
