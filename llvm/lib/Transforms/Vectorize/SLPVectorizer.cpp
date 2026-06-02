@@ -19960,14 +19960,26 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // scalar instruction executes at its definition site's frequency.
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       if (ExtraCost.isValid() && ExtraCost != 0) {
-        BasicBlock *ExtractBB = ScalarToExtractBlock.lookup(EU.Scalar);
-        if (const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr) {
-          uint64_t Scale = getLoopNestScale(
-              findInnermostNonInvariantLoop(L, ArrayRef<Value *>(EU.Scalar)));
-          LLVM_DEBUG(dbgs()
-                     << "SLP: Extract scale " << Scale << " (NCD block) for "
-                     << EU.Scalar->getNameOrAsOperand() << "\n");
-          ExtraCost *= Scale;
+        if (!EU.User) {
+          // No external user instruction is recorded (User == nullptr): the
+          // scalar stays live in vectorized instructions or is used as an
+          // extra arg, and is not present in ScalarToExtractBlock (the
+          // pre-pass only records sites of real users). vectorizeTree() then
+          // places the extractelement right after the vectorized instruction
+          // (in the entry's block) and replaces the scalar uses with it, so
+          // scale by the entry block's execution frequency to match that
+          // placement.
+          ExtraCost = ScaleCost(ExtraCost, *Entry, EU.Scalar, /*U=*/nullptr);
+        } else {
+          BasicBlock *ExtractBB = ScalarToExtractBlock.lookup(EU.Scalar);
+          if (const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr) {
+            uint64_t Scale = getLoopNestScale(
+                findInnermostNonInvariantLoop(L, ArrayRef<Value *>(EU.Scalar)));
+            LLVM_DEBUG(dbgs()
+                       << "SLP: Extract scale " << Scale << " (NCD block) for "
+                       << EU.Scalar->getNameOrAsOperand() << "\n");
+            ExtraCost *= Scale;
+          }
         }
       }
     } else {
