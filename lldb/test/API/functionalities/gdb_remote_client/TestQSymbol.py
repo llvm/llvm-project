@@ -12,8 +12,8 @@ from lldbsuite.support.seven import hexlify, unhexlify
 
 
 class MyResponder(MockGDBServerResponder):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, test_obj):
+        super().__init__()
         self.wanted_symbols = [
             "main",
             "local_address",
@@ -23,17 +23,18 @@ class MyResponder(MockGDBServerResponder):
         ]
         self.last_symbol_request = None
         self.symbol_results = {}
+        self.test_obj = test_obj
 
     def qSymbol(self, args):
         # args will be <name hex encoded>:<hex value>.
         # In the initial packet both fields are empty.
         if args == ":":
-            assert self.last_symbol_request is None
+            self.test_obj.assertIsNone(self.last_symbol_request)
         else:
             # Anything else should be a response to our previous request.
             value, name = args.split(":")
             name = unhexlify(name)
-            assert name == self.last_symbol_request
+            self.test_obj.assertEqual(name, self.last_symbol_request)
 
             if value:
                 self.symbol_results[name] = int(value, 16)
@@ -54,7 +55,7 @@ class TestQSymbol(GDBRemoteTestBase):
     @skipIfLLVMTargetMissing("AArch64")
     def test_qsymbol(self):
         target = self.createTarget("test_qsymbol.yaml")
-        self.server.responder = MyResponder()
+        self.server.responder = MyResponder(self)
 
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
