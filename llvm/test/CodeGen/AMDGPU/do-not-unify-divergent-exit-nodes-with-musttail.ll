@@ -4,6 +4,7 @@
 declare void @foo(ptr)
 declare i1 @bar(ptr)
 declare i32 @bar32(ptr)
+declare ptr @bar_ptr(ptr)
 
 define void @musttail_call_without_return_value(ptr %p) {
 ; CHECK-LABEL: define void @musttail_call_without_return_value(
@@ -101,4 +102,30 @@ bb.0:
 
 bb.1:
   ret i32 %load
+}
+
+define ptr @musttail_call_with_bitcast(ptr %p) {
+; CHECK-LABEL: define ptr @musttail_call_with_bitcast(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i1, ptr [[P]], align 1
+; CHECK-NEXT:    br i1 [[LOAD]], label %[[BB_0:.*]], label %[[BB_1:.*]]
+; CHECK:       [[BB_0]]:
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @bar_ptr(ptr [[P]])
+; CHECK-NEXT:    [[RETC:%.*]] = bitcast ptr [[RET]] to ptr
+; CHECK-NEXT:    ret ptr [[RETC]]
+; CHECK:       [[BB_1]]:
+; CHECK-NEXT:    ret ptr null
+;
+entry:
+  %load = load i1, ptr %p, align 1
+  br i1 %load, label %bb.0, label %bb.1
+
+bb.0:
+  %ret = musttail call ptr @bar_ptr(ptr %p)
+  %retc = bitcast ptr %ret to ptr
+  ret ptr %retc
+
+bb.1:
+  ret ptr null
 }

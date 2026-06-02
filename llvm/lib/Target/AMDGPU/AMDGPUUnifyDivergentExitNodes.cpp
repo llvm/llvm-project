@@ -253,9 +253,8 @@ bool AMDGPUUnifyDivergentExitNodesImpl::run(Function &F, DominatorTree *DT,
 
   for (BasicBlock *BB : PDT.roots()) {
     Instruction *Term = BB->getTerminator();
-    if (auto *RI = dyn_cast<ReturnInst>(Term)) {
-      auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode());
-      if (CI && CI->isMustTailCall())
+    if (isa<ReturnInst>(Term)) {
+      if (BB->getTerminatingMustTailCall())
         continue;
       if (HasDivergentExitBlock)
         ReturningBlocks.push_back(BB);
