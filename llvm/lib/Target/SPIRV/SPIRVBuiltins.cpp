@@ -2976,12 +2976,6 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // 2.1 Events - use Call arguments, or use dummy nulls in case of absence of
   // events
 
-  // Per SPIR-V spec, OpEnqueueKernel's Wait Events / Ret Event operands
-  // must be pointers to OpTypeDeviceEvent. Build the LLVM TargetExtType
-  // for spirv.DeviceEvent so getOrCreateSPIRVPointerType can register
-  // both the SPIR-V type and the LLVM-side mapping; deriving the pointer
-  // from an opaque LLVM PointerType would lose the pointee and deduce
-  // to <Generic i8*>.
   auto BuildDeviceEventNullPtr = [&]() {
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *DeviceEventTy = TargetExtType::get(Ctx, "spirv.DeviceEvent");
