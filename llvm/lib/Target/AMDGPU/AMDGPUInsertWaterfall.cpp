@@ -421,7 +421,6 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // uniform - unless there are no begin instructions, in which case we always
   // remove
   bool LoopRemoved = false;
-  unsigned Removed = 0;
   std::vector<MachineInstr *> NewRFLList;
   std::vector<MachineInstr *> ToRemoveRFLList;
 
@@ -434,10 +433,8 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
     Register ReplaceReg = getUniformOperandReplacementReg(MRI, RI, RFLSrcReg);
     if (ReplaceReg != AMDGPU::NoRegister) {
       MRI->replaceRegWith(RFLDstReg, ReplaceReg);
-      Removed++;
       ToRemoveRFLList.push_back(RFLMI);
     } else if (RFLDstOp->isDead()) {
-      Removed++;
       ToRemoveRFLList.push_back(RFLMI);
     } else {
       NewRFLList.push_back(RFLMI);
@@ -447,7 +444,7 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // Note: this test also returns true when there are NO RFL intrinsics, the
   // case where a prior pass has removed all of them and the loop is now
   // redundant
-  if (!Item.BeginList.size() || Removed == Item.RFLList.size()) {
+  if (!Item.BeginList.size() || ToRemoveRFLList.size() == Item.RFLList.size()) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
 
@@ -481,8 +478,8 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
 
     LoopRemoved = true;
 
-  } else if (Removed) {
-    LLVM_DEBUG(dbgs() << "Removed " << Removed
+  } else if (!ToRemoveRFLList.empty()) {
+    LLVM_DEBUG(dbgs() << "Removed " << ToRemoveRFLList.size()
                       << " waterfall rfl intrinsics due to being uniform - "
                          "updating remaining rfl list\n");
     // TODO: there's an opportunity to pull the DAG involving the (removed) rfls
