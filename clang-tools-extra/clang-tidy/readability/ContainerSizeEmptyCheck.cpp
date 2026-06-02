@@ -419,7 +419,7 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                               "for emptiness instead of %0");
     if (const auto *SizeMethod =
             Result.Nodes.getNodeAs<NamedDecl>("SizeMethod"))
-      Diag << SizeMethod;
+      Diag << SizeMethod->getDeclName();
     else if (const auto *DependentExpr =
                  Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
                      "MemberExpr"))
