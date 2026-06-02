@@ -1159,9 +1159,9 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
   if (!body.empty() && !isa<SwitchCase>(body.front())) {
     builder.setInsertionPointToEnd(switchBlock);
     {
-      // This is needed to handle compound statements with cleanups in the
-      // switch body.
-      RunCleanupsScope switchScope(*this);
+      // This is needed to handle cleanups in a compound statement before the
+      // first case statement.
+      RunCleanupsScope preCaseScope(*this);
       while (!body.empty() && !isa<SwitchCase>(body.front())) {
 
         auto *c = body.front();
