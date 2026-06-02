@@ -613,3 +613,28 @@ gpu.func @load_1D_vector_addrspace3_unsupported(%source: memref<32xf32, 3>,
 // LOAD-GATHER: vector.transfer_read
 
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_strip_leading_unit_dims(
+    %src: memref<1x24x1024x1024xf16>,
+    %i: index, %j: index) -> vector<1x1x1x1024xf16> {
+  %pad = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %src[%i, %j, %j, %i], %pad
+    {in_bounds = [true, true, true, true]}
+    : memref<1x24x1024x1024xf16>, vector<1x1x1x1024xf16>
+  gpu.return %0 : vector<1x1x1x1024xf16>
+}
+
+// LOAD-ND-LABEL:  @load_strip_leading_unit_dims(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<1x24x1024x1024xf16>,
+// LOAD-ND-SAME:   %[[I:.+]]: index, %[[J:.+]]: index
+// LOAD-ND:        xegpu.create_nd_tdesc
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd {{.*}} -> vector<1x1024xf16>
+// LOAD-ND:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x1024xf16> to vector<1x1x1x1024xf16>
+// LOAD-ND:        gpu.return %[[CAST]]
+
+// LOAD-GATHER-LABEL:  @load_strip_leading_unit_dims(
+// LOAD-GATHER:        xegpu.load {{.*}} -> vector<1x1x1x1024xf16>
+
+}

@@ -412,3 +412,27 @@ gpu.func @store_1D_vector_addrspace3_unsupported(%vec: vector<8xf32>,
 // STORE-SCATTER: vector.transfer_write
 
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_strip_leading_unit_dims(
+    %vec: vector<1x1x1x1024xf16>,
+    %dst: memref<1x24x1152x1024xf16>,
+    %i: index, %j: index) {
+  vector.transfer_write %vec, %dst[%i, %j, %j, %i]
+    {in_bounds = [true, true, true, true]}
+    : vector<1x1x1x1024xf16>, memref<1x24x1152x1024xf16>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_strip_leading_unit_dims(
+// STORE-ND-SAME:  %[[VEC:.+]]: vector<1x1x1x1024xf16>,
+// STORE-ND-SAME:  %[[DST:.+]]: memref<1x24x1152x1024xf16>,
+// STORE-ND:       %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x1x1x1024xf16> to vector<1x1024xf16>
+// STORE-ND:       xegpu.create_nd_tdesc
+// STORE-ND:       xegpu.store_nd %[[CAST]], {{.*}} : vector<1x1024xf16>
+
+// STORE-SCATTER-LABEL: @store_strip_leading_unit_dims(
+// STORE-SCATTER:       xegpu.store {{.*}} : vector<1x1x1x1024xf16>
+
+}
