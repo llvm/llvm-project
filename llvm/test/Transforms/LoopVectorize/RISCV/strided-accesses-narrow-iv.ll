@@ -15,8 +15,9 @@ define void @narrow_iv_i8_sext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
+; RV64-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
+; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
@@ -83,8 +84,9 @@ define void @narrow_iv_i8_sext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
+; RV64-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
+; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
@@ -151,8 +153,9 @@ define void @narrow_iv_i8_zext_i64(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
+; RV64-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
+; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
@@ -219,8 +222,9 @@ define void @narrow_iv_i8_zext_i16(ptr noalias %arr, ptr noalias %out) {
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[AVL:%.*]] = phi i32 [ 16, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 8, i1 true)
-; RV64-NEXT:    [[TMP1:%.*]] = shl i32 [[INDEX]], 12
-; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i32 [[TMP1]]
+; RV64-NEXT:    [[TMP1:%.*]] = sext i32 [[INDEX]] to i64
+; RV64-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP1]], 12
+; RV64-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[ARR]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i8> @llvm.experimental.vp.strided.load.nxv8i8.p0.i64(ptr align 1 [[TMP2]], i64 4096, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP3]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RV64-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP0]], [[INDEX]]
