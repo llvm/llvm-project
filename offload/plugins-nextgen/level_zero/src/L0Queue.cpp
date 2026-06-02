@@ -221,7 +221,9 @@ Error L0AsyncQueueTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr,
   return memoryCopy(TgtPtr, SrcPtr, Size);
 }
 
-Error L0AsyncQueueTy::dataFenceImpl() { return CmdList->appendBarrier(); }
+Error L0AsyncQueueTy::dataFenceImpl() {
+  return CmdList->appendBarrier(nullptr, 0, nullptr);
+}
 
 Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                        L0LaunchEnvTy &KEnv) {

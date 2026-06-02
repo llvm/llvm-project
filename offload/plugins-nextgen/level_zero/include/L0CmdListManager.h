@@ -127,9 +127,8 @@ public:
     return Plugin::success();
   }
 
-  Error appendBarrier(ze_event_handle_t SignalEvent = nullptr,
-                      uint32_t NumWaitEvents = 0,
-                      ze_event_handle_t *WaitEvents = nullptr) {
+  Error appendBarrier(ze_event_handle_t SignalEvent, uint32_t NumWaitEvents,
+                      ze_event_handle_t *WaitEvents) {
     std::lock_guard<std::mutex> Lock(Mtx);
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, SignalEvent,
                       NumWaitEvents, WaitEvents);
