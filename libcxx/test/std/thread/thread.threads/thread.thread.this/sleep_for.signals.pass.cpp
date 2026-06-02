@@ -21,6 +21,9 @@
 // This test ensures that we sleep for the right amount of time even when
 // we get interrupted by a signal, as fixed in 58a0a70fb2f1.
 
+// missing ITIMER_REAL
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <thread>
 #include <cassert>
 #include <chrono>
