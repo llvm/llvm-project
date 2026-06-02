@@ -4,12 +4,14 @@
 // RUN:         readability-function-size.BranchThreshold: 0, \
 // RUN:         readability-function-size.NestingThreshold: 1, \
 // RUN:         readability-function-size.VariableThreshold: 0, \
+// RUN:         readability-function-size.ParameterThreshold: 5, \
 // RUN:         readability-function-size.IgnoreMacros: true \
 // RUN:     }}'
 
 #define STATEMENT ;
 #define BRANCH if (true) {}
 #define VARIABLE int X;
+#define BODY ;
 #define INIT_X X(0)
 #define INIT_Y Y(0)
 #define  WRAP(x) x
@@ -48,6 +50,13 @@ void macro_variable() {
   VARIABLE
 }
 
+void macro_body_too_many_params(int a, int b, int c, int d, int e, int f) {
+  // CHECK-NOTES-IGNORE-MACROS: :[[@LINE-1]]:6: warning: function 'macro_body_too_many_params' exceeds recommended size/complexity thresholds [readability-function-size]
+  // CHECK-NOTES-IGNORE-MACROS: :[[@LINE-2]]:6: note: 6 parameters (threshold 5)
+  ;
+  BODY
+}
+
 struct MacroCtorInit {
   int X, Y;
   MacroCtorInit() : INIT_X, INIT_Y {
@@ -60,4 +69,3 @@ void macro_wrap() {
   ;
   WRAP(if (true){})
 }
-
