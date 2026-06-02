@@ -87,6 +87,11 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 // Coalesce gather/scatter analysis + apply.
 //===----------------------------------------------------------------------===//
 
+/// Discardable attribute name carrying the coalesce hint
+/// (`#xegpu.coalesce_hint<factor = N>`) stamped by
+/// `runCoalesceGatherScatterAnalysis`.
+inline StringRef getCoalesceHintAttrName() { return "xegpu.coalesce_hint"; }
+
 /// Options controlling `runCoalesceGatherScatterAnalysis`.
 struct CoalesceGatherScatterAnalysisOptions {
   /// Upper bound on the per-lane chunk size produced by coalescing. Mirrors

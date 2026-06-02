@@ -985,10 +985,6 @@ static unsigned lookupSubgroupSize(Operation *op) {
   return uArch ? static_cast<unsigned>(uArch->getSubgroupSize()) : 16u;
 }
 
-/// Discardable attribute name for the coalesce hint.
-static constexpr llvm::StringLiteral kCoalesceHintAttrName =
-    "xegpu.coalesce_hint";
-
 /// Common analysis preconditions: vector offsets/value, all-true mask,
 /// no existing non-trivial lane_data, no explicit chunk_size > 1.
 template <typename OpTy>
@@ -1027,7 +1023,7 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
   if (d.kind != CoalesceDecision::Kind::Chunked)
     return;
   auto hint = xegpu::CoalesceHintAttr::get(op.getContext(), d.factor);
-  op->setAttr(kCoalesceHintAttrName, hint);
+  op->setAttr(xegpu::getCoalesceHintAttrName(), hint);
 }
 
 /// Apply a stamped hint on `op`: build a lane_layout/lane_data/inst_data
@@ -1038,7 +1034,7 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
 template <typename OpTy>
 static LogicalResult applyHintOnOp(OpTy op) {
   auto hint = op->template getAttrOfType<xegpu::CoalesceHintAttr>(
-      kCoalesceHintAttrName);
+      xegpu::getCoalesceHintAttrName());
   if (!hint)
     return success(); // no hint: idempotent no-op.
 
@@ -1062,7 +1058,7 @@ static LogicalResult applyHintOnOp(OpTy op) {
   op.setLayoutAttr(layout);
   if (dropChunk)
     op.removeChunkSizeAttr();
-  op->removeAttr(kCoalesceHintAttrName);
+  op->removeAttr(xegpu::getCoalesceHintAttrName());
   return success();
 }
 
@@ -1096,20 +1092,20 @@ LogicalResult mlir::xegpu::applyCoalesceGatherScatterHint(Operation *op) {
   if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
     return applyHintOnOp(store);
   // Hint attached to an unsupported op: silently drop it.
-  if (op->hasAttr(kCoalesceHintAttrName))
-    op->removeAttr(kCoalesceHintAttrName);
+  if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
+    op->removeAttr(xegpu::getCoalesceHintAttrName());
   return success();
 }
 
 void mlir::xegpu::applyCoalesceGatherScatterHints(Operation *root) {
   root->walk([&](Operation *op) {
-    if (op->hasAttr(kCoalesceHintAttrName))
+    if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
       (void)applyCoalesceGatherScatterHint(op);
   });
 }
 
 void mlir::xegpu::clearCoalesceGatherScatterHints(Operation *root) {
-  StringRef name = kCoalesceHintAttrName;
+  StringRef name = xegpu::getCoalesceHintAttrName();
   root->walk([&](Operation *op) {
     if (op->hasAttr(name))
       op->removeAttr(name);

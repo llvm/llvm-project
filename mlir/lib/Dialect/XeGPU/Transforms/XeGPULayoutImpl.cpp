@@ -1273,7 +1273,7 @@ static xegpu::DistributeLayoutAttr
 setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
                               mlir::MLIRContext *context, bool isChunkedStore,
                               int maxChunkSize, ArrayRef<int64_t> srcShape,
-                              int subgroupSize) {
+                              int subgroupSize, int coalesceFactor = 1) {
 
   int srcShapeSize = srcShape.size();
   SmallVector<int> instData(srcShapeSize, 1);
@@ -1287,13 +1287,27 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
   }
 
   if (!isChunkedStore) {
+    int64_t inner = srcShape.back();
     if (layoutKind == xegpu::LayoutKind::InstData) {
       instData[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
+          std::min(subgroupSize, static_cast<int>(inner));
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
-      laneLayout[srcShapeSize - 1] =
-          std::min(subgroupSize, static_cast<int>(srcShape.back()));
+      // Coalescing sink: seed lane_data[FCD] = coalesceFactor (capped so
+      // lane_layout * lane_data divides the inner extent), then shrink
+      // lane_layout[FCD] accordingly. coalesceFactor == 1 reproduces the
+      // default (lane_layout = min(subgroupSize, inner), lane_data = 1).
+      int factor = std::max(1, coalesceFactor);
+      int laneLayoutInner = std::min<int64_t>(subgroupSize, inner / factor);
+      if (laneLayoutInner < 1)
+        laneLayoutInner = 1;
+      // Fall back to the trivial layout if the factor doesn't divide cleanly.
+      if (factor > 1 && inner % (laneLayoutInner * factor) != 0) {
+        factor = 1;
+        laneLayoutInner = std::min<int64_t>(subgroupSize, inner);
+      }
+      laneLayout[srcShapeSize - 1] = laneLayoutInner;
+      laneData[srcShapeSize - 1] = factor;
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
@@ -1315,7 +1329,8 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 xegpu::DistributeLayoutAttr
 xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
                                      VectorType srcVecTy, int chunkSize,
-                                     const uArch::uArch *uArch) {
+                                     const uArch::uArch *uArch,
+                                     int coalesceFactor) {
 
   const int subgroupSize = uArch->getSubgroupSize();
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
@@ -1326,8 +1341,11 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+  // A coalescing sink can carry at most `maxLaneStoreSize` per lane.
+  int factor = std::min(std::max(1, coalesceFactor), maxChunkSize);
   return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
-                                       maxChunkSize, srcShape, subgroupSize);
+                                       maxChunkSize, srcShape, subgroupSize,
+                                       factor);
 }
 
 /// Sets up the anchor layout for a store matrix operation.

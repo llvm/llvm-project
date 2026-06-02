@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
@@ -31,6 +32,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -1275,8 +1277,18 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
+    // A coalesce hint (stamped by the coalesce-gather-scatter analysis at the
+    // start of lane propagation) seeds a non-trivial lane_data on the FCD so
+    // each lane stores `factor` contiguous elements. This factor flows
+    // backward to producers via the operand `meet` below.
+    int coalesceFactor = 1;
+    if (layoutKind == xegpu::LayoutKind::Lane) {
+      if (auto hint = storeScatter->getAttrOfType<xegpu::CoalesceHintAttr>(
+              xegpu::getCoalesceHintAttrName()))
+        coalesceFactor = static_cast<int>(hint.getFactor().getInt());
+    }
     requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, uArch);
+        layoutKind, srcVecTy, chunkSize, uArch, coalesceFactor);
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
@@ -1787,6 +1799,23 @@ struct XeGPUPropagateLayoutPass final
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                       LayoutKind layoutKind,
                                       unsigned indexBitWidth, bool printOnly) {
+  // At the lane level, run the coalesce-gather-scatter analysis up front so
+  // every coalescible xegpu.load/store carries an `xegpu.coalesce_hint`. The
+  // hint is consumed by the gather/scatter anchor-layout setup below: a
+  // coalescing store seeds a non-trivial lane_data on its FCD, which flows
+  // backward to producers via the operand `meet`. A consumer that requires a
+  // different lane_data (e.g. a reduction over the FCD) naturally overrides
+  // it, so no unlowerable convert_layout is created. Hints that propagation
+  // did not turn into a layout are stripped after the run.
+  bool coalesce = (layoutKind == LayoutKind::Lane) && !printOnly;
+  if (coalesce)
+    runCoalesceGatherScatterAnalysis(target);
+  auto cleanupFn = [&] {
+    if (coalesce)
+      clearCoalesceGatherScatterHints(target);
+  };
+  llvm::scope_exit<decltype(cleanupFn)> hintCleanup(std::move(cleanupFn));
+
   RunLayoutInfoPropagation analysis(target, layoutKind, indexBitWidth);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
@@ -1876,6 +1905,7 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+
   // Resolve layout conflicts if any.
   if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
     signalPassFailure();
