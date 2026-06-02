@@ -1371,8 +1371,8 @@ Named barriers are fixed function hardware barrier objects that are available
 in gfx12.5+ in addition to the traditional default barriers.
 
 In LLVM IR, named barriers are represented by global variables of type
-``target("amdgcn.named.barrier", 0)`` in the Execution Synchronization Resources
-address space. Programs in LLVM IR refer to named barriers using pointers.
+``target("amdgcn.named.barrier", 0)`` in the barrier address space.
+Programs in LLVM IR refer to named barriers using pointers.
 
 The following named barrier types are supported in global variables, defined
 recursively:

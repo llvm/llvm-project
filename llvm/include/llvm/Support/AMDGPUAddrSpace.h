@@ -92,7 +92,7 @@ enum : unsigned {
   UNKNOWN_ADDRESS_SPACE = ~0u,
 };
 
-/// The BARRIER AS is does not have an aperture in HW, so when converting
+/// The BARRIER AS does not have an aperture in HW, so when converting
 /// BARRIER addresses from/to generic, we represent them as LDS addresses
 /// offset by a large amount so they can never alias with real LDS memory.
 static constexpr unsigned BarrierAddrLDSOffset = 0x802000u;
