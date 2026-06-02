@@ -412,6 +412,11 @@ public:
     return false;
   };
 
+  /// Add final touches to a `mayLoad` instruction \p MI.
+  virtual bool finalizeLoad(MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
+
   /// Handle cooperative load/store atomics.
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
     llvm_unreachable(
@@ -596,6 +601,8 @@ public:
                                       bool IsLastUse) const override;
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
+
+  bool finalizeLoad(MachineBasicBlock::iterator &MI) const override;
 
   bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
@@ -2213,21 +2220,16 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   return Changed;
 }
 
-static bool isLoadMonitorInstr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
-  case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
-  case AMDGPU::FLAT_LOAD_MONITOR_B32:
-  case AMDGPU::FLAT_LOAD_MONITOR_B64:
-  case AMDGPU::FLAT_LOAD_MONITOR_B128:
-    return true;
-  default:
+bool SIGfx12CacheControl::finalizeLoad(MachineBasicBlock::iterator &MI) const {
+  if (!SIInstrInfo::isLoadMonitor(MI->getOpcode()))
     return false;
-  }
+
+  // load_monitor instructions need at least SCOPE_SE to ensure L2 is hit.
+  MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
+  assert(CPol && "load_monitor must have a cpol operand");
+  if ((CPol->getImm() & AMDGPU::CPol::SCOPE) < AMDGPU::CPol::SCOPE_SE)
+    return setScope(MI, AMDGPU::CPol::SCOPE_SE);
+  return false;
 }
 
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
@@ -2280,14 +2282,6 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   // memory.
 
   // Other address spaces do not have a cache.
-
-  // load_monitor instructions need at least SCOPE_SE to ensure L2 is hit.
-  if (isLoadMonitorInstr(*MI)) {
-    MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
-    if (CPol &&
-        (CPol->getImm() & AMDGPU::CPol::SCOPE) < AMDGPU::CPol::SCOPE_SE)
-      Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
-  }
 
   return Changed;
 }
@@ -2347,6 +2341,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    Position::AFTER);
     }
 
+    Changed |= CC->finalizeLoad(MI);
     return Changed;
   }
 
@@ -2357,6 +2352,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
 
+  Changed |= CC->finalizeLoad(MI);
   return Changed;
 }
 
