@@ -729,9 +729,6 @@ public:
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
 
-  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return HasGFX1250Insts; }
-
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }
 
