@@ -233,6 +233,9 @@ public:
   bool expandVAIntrinsicCall(IRBuilder<> &Builder, const DataLayout &DL,
                              VACopyInst *Inst);
 
+  bool expandVAArgInst(IRBuilder<> &Builder, const DataLayout &DL,
+                       VAArgInst *Inst);
+
   FunctionType *inlinableVariadicFunctionType(Module &M, FunctionType *FTy,
                                               Type *ReturnType) {
     // The type of "FTy" with the ... removed and a va_list appended
@@ -392,6 +395,15 @@ bool ExpandVariadics::runOnModule(Module &M) {
       Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, TargetAS);
     }
   }
+
+  // Expand any remaining va_arg IR instructions. Frontends like Clang lower
+  // va_arg to explicit IR themselves, but anything that emits the IR form
+  // directly is lowered here so backends do not need their own implementation.
+  for (Function &F : M)
+    for (BasicBlock &BB : F)
+      for (Instruction &I : make_early_inc_range(BB))
+        if (auto *VA = dyn_cast<VAArgInst>(&I))
+          Changed |= expandVAArgInst(Builder, DL, VA);
 
   if (Mode != ExpandVariadicsMode::Lowering)
     return Changed;
@@ -915,6 +927,52 @@ bool ExpandVariadics::expandVAIntrinsicCall(IRBuilder<> &Builder,
   Builder.CreateMemCpy(Inst->getDest(), {}, Inst->getSrc(), {},
                        Builder.getInt32(Size));
 
+  Inst->eraseFromParent();
+  return true;
+}
+
+bool ExpandVariadics::expandVAArgInst(IRBuilder<> &Builder,
+                                      const DataLayout &DL, VAArgInst *Inst) {
+  Builder.SetInsertPoint(Inst);
+
+  auto &Ctx = Builder.getContext();
+  Type *ValTy = Inst->getType();
+  Value *VaListPtr = Inst->getPointerOperand();
+
+  const VariadicABIInfo::VAArgSlotInfo SlotInfo = ABI->slotInfo(DL, ValTy);
+  Type *FrameFieldType = SlotInfo.Indirect ? DL.getAllocaPtrType(Ctx) : ValTy;
+  const uint64_t SlotSize = DL.getTypeAllocSize(FrameFieldType).getFixedValue();
+  const Align SlotAlign = SlotInfo.DataAlign;
+
+  Type *PtrTy = VaListPtr->getType();
+  Type *IdxTy = DL.getIndexType(PtrTy);
+
+  Value *Cur = Builder.CreateLoad(PtrTy, VaListPtr);
+
+  // Round the cursor up to the slot alignment used by the caller.
+  Value *Aligned = Cur;
+  if (SlotAlign > Align(1)) {
+    Value *RoundUp = Builder.CreateInBoundsPtrAdd(
+        Cur, ConstantInt::get(IdxTy, SlotAlign.value() - 1));
+    Aligned = Builder.CreateIntrinsic(
+        Intrinsic::ptrmask, {PtrTy, IdxTy},
+        {RoundUp, ConstantInt::getSigned(IdxTy, -(int64_t)SlotAlign.value())});
+  }
+
+  // Advance past the slot and write the iterator back.
+  Value *Next =
+      Builder.CreateInBoundsPtrAdd(Aligned, ConstantInt::get(IdxTy, SlotSize));
+  Builder.CreateStore(Next, VaListPtr);
+
+  // Load the slot contents: the value itself for direct arguments, or a
+  // pointer to the value for indirect ones.
+  Value *Result = Builder.CreateAlignedLoad(FrameFieldType, Aligned, SlotAlign);
+
+  if (SlotInfo.Indirect)
+    Result = Builder.CreateLoad(ValTy, Result);
+
+  Result->takeName(Inst);
+  Inst->replaceAllUsesWith(Result);
   Inst->eraseFromParent();
   return true;
 }
