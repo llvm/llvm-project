@@ -2745,9 +2745,9 @@ def int_amdgcn_waterfall_begin :
 // The readfirstlane intrinsic is a no-op if the index is used directly
 // in the body of the waterfall loop.
 def int_amdgcn_waterfall_readfirstlane :
-    Intrinsic<[llvm_any_ty],     // Returns any value
+    Intrinsic<[llvm_any_ty],     // Uniform value read from the first active lane
               [llvm_token_ty,    // Token from final begin
-               llvm_any_ty],     // Non-uniform value to be used in readfirstlane
+               LLVMMatchType<0>], // Non-uniform value to read
               [IntrConvergent]>;
 
 // Effectively a no-op, but this intrinsic is used to indicate the end of the
