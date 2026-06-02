@@ -1321,17 +1321,6 @@ class ZPRVectorList<int ElementWidth, int NumRegs> : AsmOperandClass {
   let RenderMethod = "addVectorListOperands<AArch64Operand::VecListIdx_ZReg, " # NumRegs # ">";
 }
 
-class ZPRVectorListZ0Z7<int ElementWidth, int NumRegs>
-  : ZPRVectorList<ElementWidth, NumRegs> {
-  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # "Z0Z7";
-  let DiagnosticType = "Invalid" # Name;
-  let PredicateMethod =
-      "isTypedVectorListMultiple<RegKind::SVEDataVector, "
-                                 # NumRegs # ", 0, "
-                                 # ElementWidth #  ", "
-                                 # "AArch64::ZPR_3bRegClassID" # ">";
-}
-
 def Z_b  : RegisterOperand<ZPR,  "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 1>;
 }
@@ -1374,14 +1363,6 @@ def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
 
 def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 2>;
-}
-
-def ZZZ_Any  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
-  let ParserMatchClass = ZPRVectorList<0, 3>;
-}
-
-def ZZZ_Any_Z0Z7  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
-  let ParserMatchClass = ZPRVectorListZ0Z7<0, 3>;
 }
 
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
@@ -1442,6 +1423,16 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = ""
                                  # NumRegs # ", 0, "
                                  # ElementWidth #  ", "
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
+}
+
+class ZPRVectorList_3b<int ElementWidth, int NumRegs>
+  : ZPRVectorListMul<ElementWidth, NumRegs, "_3b"> {
+  let Name = "SVEVectorList" # NumRegs # "x" # ElementWidth # "Z0Z7";
+  let DiagnosticType = "Invalid" # Name;
+}
+
+def ZZZ_Any_Z0Z7  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+  let ParserMatchClass = ZPRVectorList_3b<0, 3>;
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
