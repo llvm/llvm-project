@@ -979,16 +979,21 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
   body.split(fields, ';');
   for (llvm::StringRef field : fields) {
     auto [key, value] = field.split('=');
+    uint16_t *dest;
+    if (key == "cols")
+      dest = &cols;
+    else if (key == "rows")
+      dest = &rows;
+    else
+      continue;
     unsigned parsed = 0;
     if (value.empty() || value.getAsInteger(10, parsed) || parsed > UINT16_MAX)
       continue;
-    if (key == "cols")
-      cols = static_cast<uint16_t>(parsed);
-    else if (key == "rows")
-      rows = static_cast<uint16_t>(parsed);
+    *dest = static_cast<uint16_t>(parsed);
   }
   if (cols == 0 || rows == 0)
-    return SendErrorResponse(17);
+    return SendErrorResponse(28);
+
   m_process_launch_info.SetSTDIOWindowSize(cols, rows);
   return SendOKResponse();
 }
