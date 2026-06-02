@@ -155,8 +155,7 @@ class CodeGenTBAA {
 
   /// CollectFields - Collect information about the fields of a type for
   /// !tbaa.struct metadata formation. Return false for an unsupported type.
-  bool CollectFields(uint64_t BaseOffset,
-                     QualType Ty,
+  bool CollectFields(uint64_t BaseOffset, llvm::MDNode *BaseType, QualType Ty,
                      SmallVectorImpl<llvm::MDBuilder::TBAAStructField> &Fields,
                      bool MayAlias);
 

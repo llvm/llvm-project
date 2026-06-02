@@ -55,13 +55,14 @@ void init(int, ...);
 
 struct non_packed_struct gs_non_packed_struct;
 
-// CHECK-LABEL: define dso_local void @named_arg_non_packed_struct
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_NON_PACKED_STRUCT_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_non_packed_struct(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_NON_PACKED_STRUCT_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_NON_PACKED_STRUCT_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6:![0-9]+]]
-// CHECK-NEXT:    store <8 x i16> [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_non_packed_struct, align 16, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5:![0-9]+]]
+// CHECK-NEXT:    store <8 x i16> [[S_NON_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_non_packed_struct, align 16, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct non_packed_struct s_non_packed_struct) {
@@ -69,14 +70,15 @@ __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1,
     gs_non_packed_struct = s_non_packed_struct;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_non_packed_struct
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_non_packed_struct(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -86,9 +88,9 @@ void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct non_packed_struct);
 }
 
-// CHECK-LABEL: define dso_local void @test_non_packed_struct
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_non_packed_struct(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_NON_PACKED_STRUCT:%.*]] = alloca [[STRUCT_NON_PACKED_STRUCT:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
@@ -100,6 +102,7 @@ void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_non_packed_struct(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_non_packed_struct() {
     struct non_packed_struct s_non_packed_struct;
     init(1, &s_non_packed_struct);
@@ -110,13 +113,14 @@ void test_non_packed_struct() {
 
 struct packed_struct gs_packed_struct;
 
-// CHECK-LABEL: define dso_local void @named_arg_packed_struct
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PACKED_STRUCT_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_packed_struct(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PACKED_STRUCT_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PACKED_STRUCT_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_struct, align 1, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_PACKED_STRUCT_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_struct, align 1, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct packed_struct s_packed_struct) {
@@ -124,14 +128,15 @@ __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, dou
     gs_packed_struct = s_packed_struct;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_packed_struct
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_packed_struct(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -141,9 +146,9 @@ void variadic_packed_struct(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct packed_struct);
 }
 
-// CHECK-LABEL: define dso_local void @test_packed_struct
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_packed_struct(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PACKED_STRUCT:%.*]] = alloca [[STRUCT_PACKED_STRUCT:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
@@ -155,6 +160,7 @@ void variadic_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_packed_struct(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_packed_struct() {
     struct packed_struct s_packed_struct;
     init(1, &s_packed_struct);
@@ -165,13 +171,14 @@ void test_packed_struct() {
 
 struct packed_member gs_packed_member;
 
-// CHECK-LABEL: define dso_local void @named_arg_packed_member
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PACKED_MEMBER_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_packed_member(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PACKED_MEMBER_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PACKED_MEMBER_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_member, align 1, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_PACKED_MEMBER_COERCE_FCA_0_EXTRACT]], ptr @gs_packed_member, align 1, !tbaa [[TBAA11:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct packed_member s_packed_member) {
@@ -179,14 +186,15 @@ __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, dou
     gs_packed_member = s_packed_member;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_packed_member
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_packed_member(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_packed_member(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -196,9 +204,9 @@ void variadic_packed_member(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct packed_member);
 }
 
-// CHECK-LABEL: define dso_local void @test_packed_member
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_packed_member(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PACKED_MEMBER:%.*]] = alloca [[STRUCT_PACKED_MEMBER:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
@@ -210,6 +218,7 @@ void variadic_packed_member(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_packed_member(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_packed_member() {
     struct packed_member s_packed_member;
     init(1, &s_packed_member);
@@ -220,13 +229,14 @@ void test_packed_member() {
 
 struct aligned_struct_8 gs_aligned_struct_8;
 
-// CHECK-LABEL: define dso_local void @named_arg_aligned_struct_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_ALIGNED_STRUCT_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_aligned_struct_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_ALIGNED_STRUCT_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_ALIGNED_STRUCT_8_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_struct_8, align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_struct_8, align 16, !tbaa [[TBAA13:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct aligned_struct_8 s_aligned_struct_8) {
@@ -234,14 +244,15 @@ __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, 
     gs_aligned_struct_8 = s_aligned_struct_8;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_aligned_struct_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_aligned_struct_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -251,9 +262,9 @@ void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct aligned_struct_8);
 }
 
-// CHECK-LABEL: define dso_local void @test_aligned_struct_8
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_aligned_struct_8(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_ALIGNED_STRUCT_8:%.*]] = alloca [[STRUCT_ALIGNED_STRUCT_8:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
@@ -265,6 +276,7 @@ void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_aligned_struct_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_aligned_struct_8() {
     struct aligned_struct_8 s_aligned_struct_8;
     init(1, &s_aligned_struct_8);
@@ -275,13 +287,14 @@ void test_aligned_struct_8() {
 
 struct aligned_member_8 gs_aligned_member_8;
 
-// CHECK-LABEL: define dso_local void @named_arg_aligned_member_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_ALIGNED_MEMBER_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_aligned_member_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(16) [[S_ALIGNED_MEMBER_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_ALIGNED_MEMBER_8_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_member_8, align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_ALIGNED_MEMBER_8_COERCE_FCA_0_EXTRACT]], ptr @gs_aligned_member_8, align 16, !tbaa [[TBAA15:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct aligned_member_8 s_aligned_member_8) {
@@ -289,14 +302,15 @@ __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, 
     gs_aligned_member_8 = s_aligned_member_8;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_aligned_member_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_aligned_member_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -306,9 +320,9 @@ void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct aligned_member_8);
 }
 
-// CHECK-LABEL: define dso_local void @test_aligned_member_8
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_aligned_member_8(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_ALIGNED_MEMBER_8:%.*]] = alloca [[STRUCT_ALIGNED_MEMBER_8:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
@@ -320,6 +334,7 @@ void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_aligned_member_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_aligned_member_8() {
     struct aligned_member_8 s_aligned_member_8;
     init(1, &s_aligned_member_8);
@@ -330,13 +345,14 @@ void test_aligned_member_8() {
 
 struct pragma_packed_struct_8 gs_pragma_packed_struct_8;
 
-// CHECK-LABEL: define dso_local void @named_arg_pragma_packed_struct_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PRAGMA_PACKED_STRUCT_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_pragma_packed_struct_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PRAGMA_PACKED_STRUCT_8_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PRAGMA_PACKED_STRUCT_8_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_8, align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_8_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_8, align 8, !tbaa [[TBAA17:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct pragma_packed_struct_8 s_pragma_packed_struct_8) {
@@ -344,14 +360,15 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, doubl
     gs_pragma_packed_struct_8 = s_pragma_packed_struct_8;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_pragma_packed_struct_8
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_pragma_packed_struct_8(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -361,9 +378,9 @@ void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct pragma_packed_struct_8);
 }
 
-// CHECK-LABEL: define dso_local void @test_pragma_packed_struct_8
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_pragma_packed_struct_8(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_8:%.*]] = alloca [[STRUCT_PRAGMA_PACKED_STRUCT_8:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
@@ -375,6 +392,7 @@ void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_pragma_packed_struct_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_pragma_packed_struct_8() {
     struct pragma_packed_struct_8 s_pragma_packed_struct_8;
     init(1, &s_pragma_packed_struct_8);
@@ -385,13 +403,14 @@ void test_pragma_packed_struct_8() {
 
 struct pragma_packed_struct_4 gs_pragma_packed_struct_4;
 
-// CHECK-LABEL: define dso_local void @named_arg_pragma_packed_struct_4
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PRAGMA_PACKED_STRUCT_4_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @named_arg_pragma_packed_struct_4(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double noundef [[D8:%.*]], [1 x <8 x i16>] alignstack(8) [[S_PRAGMA_PACKED_STRUCT_4_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [1 x <8 x i16>] [[S_PRAGMA_PACKED_STRUCT_4_COERCE]], 0
-// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA6]]
-// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_4, align 4, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store double [[D8]], ptr @gd, align 8, !tbaa [[TBAA5]]
+// CHECK-NEXT:    store <8 x i16> [[S_PRAGMA_PACKED_STRUCT_4_COERCE_FCA_0_EXTRACT]], ptr @gs_pragma_packed_struct_4, align 4, !tbaa [[TBAA19:![0-9]+]]
 // CHECK-NEXT:    ret void
+//
 __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, struct pragma_packed_struct_4 s_pragma_packed_struct_4) {
@@ -399,14 +418,15 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, doubl
     gs_pragma_packed_struct_4 = s_pragma_packed_struct_4;
 }
 
-// CHECK-LABEL: define dso_local void @variadic_pragma_packed_struct_4
-// CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @variadic_pragma_packed_struct_4(
+// CHECK-SAME: double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
                                  double d8, ...) {
@@ -416,9 +436,9 @@ void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
   on_callee_stack = va_arg(vl, struct pragma_packed_struct_4);
 }
 
-// CHECK-LABEL: define dso_local void @test_pragma_packed_struct_4
-// CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
-// CHECK-NEXT:  entry:
+// CHECK-LABEL: define dso_local void @test_pragma_packed_struct_4(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_4:%.*]] = alloca [[STRUCT_PRAGMA_PACKED_STRUCT_4:%.*]], align 16
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
@@ -430,6 +450,7 @@ void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_pragma_packed_struct_4(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
+//
 void test_pragma_packed_struct_4() {
     struct pragma_packed_struct_4 s_pragma_packed_struct_4;
     init(1, &s_pragma_packed_struct_4);
@@ -438,9 +459,22 @@ void test_pragma_packed_struct_4() {
     variadic_pragma_packed_struct_4(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, s_pragma_packed_struct_4);
 }
 //.
-// CHECK: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK: [[META7]] = !{!"double", [[META4]], i64 0}
-// CHECK: [[TBAA8]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+// CHECK: [[META6]] = !{!"double", [[META3]], i64 0}
+// CHECK: [[TBAA7]] = !{[[META8:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META8]] = !{!"non_packed_struct", [[META3]], i64 0}
+// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META10]] = !{!"packed_struct", [[META3]], i64 0}
+// CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META12]] = !{!"packed_member", [[META3]], i64 0}
+// CHECK: [[TBAA13]] = !{[[META14:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META14]] = !{!"aligned_struct_8", [[META3]], i64 0}
+// CHECK: [[TBAA15]] = !{[[META16:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META16]] = !{!"aligned_member_8", [[META3]], i64 0}
+// CHECK: [[TBAA17]] = !{[[META18:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META18]] = !{!"pragma_packed_struct_8", [[META3]], i64 0}
+// CHECK: [[TBAA19]] = !{[[META20:![0-9]+]], [[META3]], i64 0}
+// CHECK: [[META20]] = !{!"pragma_packed_struct_4", [[META3]], i64 0}
 //.

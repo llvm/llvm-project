@@ -423,12 +423,9 @@ TBAAAccessInfo CodeGenTBAA::getVTablePtrAccessInfo(llvm::Type *VTablePtrType) {
                         Size);
 }
 
-bool
-CodeGenTBAA::CollectFields(uint64_t BaseOffset,
-                           QualType QTy,
-                           SmallVectorImpl<llvm::MDBuilder::TBAAStructField> &
-                             Fields,
-                           bool MayAlias) {
+bool CodeGenTBAA::CollectFields(
+    uint64_t BaseOffset, llvm::MDNode *BaseType, QualType QTy,
+    SmallVectorImpl<llvm::MDBuilder::TBAAStructField> &Fields, bool MayAlias) {
   /* Things not handled yet include: C++ base classes, bitfields, */
 
   if (const auto *TTy = QTy->getAsCanonical<RecordType>()) {
@@ -485,7 +482,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
       }
 
       QualType FieldQTy = i->getType();
-      if (!CollectFields(Offset, FieldQTy, Fields,
+      if (!CollectFields(Offset, BaseType, FieldQTy, Fields,
                          MayAlias || TypeHasMayAlias(FieldQTy)))
         return false;
     }
@@ -496,7 +493,8 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
   uint64_t Offset = BaseOffset;
   uint64_t Size = Context.getTypeSizeInChars(QTy).getQuantity();
   llvm::MDNode *TBAAType = MayAlias ? getChar() : getTypeInfo(QTy);
-  llvm::MDNode *TBAATag = getAccessTagInfo(TBAAAccessInfo(TBAAType, Size));
+  llvm::MDNode *TBAATag =
+      getAccessTagInfo(TBAAAccessInfo(BaseType, TBAAType, Offset, Size));
   Fields.push_back(llvm::MDBuilder::TBAAStructField(Offset, Size, TBAATag));
   return true;
 }
@@ -512,7 +510,9 @@ CodeGenTBAA::getTBAAStructInfo(QualType QTy) {
     return N;
 
   SmallVector<llvm::MDBuilder::TBAAStructField, 4> Fields;
-  if (CollectFields(0, QTy, Fields, TypeHasMayAlias(QTy)))
+  const bool MayAlias = TypeHasMayAlias(QTy);
+  llvm::MDNode *TBAAType = MayAlias ? getChar() : getTypeInfo(QTy);
+  if (CollectFields(0, TBAAType, QTy, Fields, MayAlias))
     return MDHelper.createTBAAStructNode(Fields);
 
   // For now, handle any other kind of type conservatively.
