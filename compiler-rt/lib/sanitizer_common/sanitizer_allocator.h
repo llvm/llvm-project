@@ -24,19 +24,8 @@
 #include "sanitizer_procmaps.h"
 #include "sanitizer_type_traits.h"
 
-#if SANITIZER_AMDGPU
-#  if defined(__has_include)
-#    if __has_include("hsa.h")
-#      include "hsa.h"
-#      include "hsa_ext_amd.h"
-#    elif __has_include("hsa/hsa.h")
-#      include "hsa/hsa.h"
-#      include "hsa/hsa_ext_amd.h"
-#    endif
-#  else
-#    include "hsa/hsa.h"
-#    include "hsa/hsa_ext_amd.h"
-#  endif
+#if SANITIZER_AMDHSA
+#  include "sanitizer_common/sanitizer_hsa.h"
 #endif
 
 namespace __sanitizer {
@@ -88,7 +77,7 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_local_cache.h"
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 #  include "sanitizer_allocator_amdgpu.h"
 #endif
 #include "sanitizer_allocator_combined.h"

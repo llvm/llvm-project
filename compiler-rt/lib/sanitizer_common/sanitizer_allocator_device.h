@@ -390,7 +390,7 @@ class DeviceAllocatorT {
   mutable StaticSpinMutex mutex_;
 };
 
-#if !SANITIZER_AMDGPU
+#if !SANITIZER_AMDHSA
 template <class MapUnmapCallback>
 using DefaultDeviceAllocator =
     DeviceAllocatorT<MapUnmapCallback, NoOpDeviceAllocator>;
