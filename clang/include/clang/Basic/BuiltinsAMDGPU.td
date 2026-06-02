@@ -284,8 +284,14 @@ def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__am
 // Global Available/Visible memory accesses.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_av_load_b128: AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "gfx9-insts">;
-def __builtin_amdgcn_av_store_b128: AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "gfx9-insts">;
+def __builtin_amdgcn_av_load_b128
+    : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "gfx9-insts"> {
+  let Documentation = [DocAVLoadB128];
+}
+def __builtin_amdgcn_av_store_b128
+    : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "gfx9-insts"> {
+  let Documentation = [DocAVStoreB128];
+}
 
 //===----------------------------------------------------------------------===//
 // Async mark builtins.
