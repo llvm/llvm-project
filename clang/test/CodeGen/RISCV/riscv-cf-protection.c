@@ -5,8 +5,8 @@
 
 // RUN: not %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zicfilp1p0 -fcf-protection=branch \
-// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s 2>&1 | FileCheck \
-// RUN: --check-prefixes=FUNC-SIG-NOSUPPORT %s
+// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s -o - 2>&1 | \
+// RUN: FileCheck --check-prefixes=FUNC-SIG-NOSUPPORT %s
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN: -march=rv32i_zicfilp1p0 -mcf-branch-label-scheme=unlabeled -S \
@@ -23,8 +23,8 @@
 // RUN: --check-prefixes=BRANCH-PROT-FLAG,UNLABELED-FLAG %s
 
 // RUN: not %clang --target=riscv32 -fcf-protection=branch \
-// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s 2>&1 | FileCheck \
-// RUN: --check-prefixes=FUNC-SIG-NOSUPPORT %s
+// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s -o - 2>&1 | \
+// RUN: FileCheck --check-prefixes=FUNC-SIG-NOSUPPORT %s
 
 // RUN: %clang --target=riscv32 -mcf-branch-label-scheme=unlabeled -S \
 // RUN: -emit-llvm %s -o - 2>&1 | FileCheck \
@@ -41,8 +41,8 @@
 
 // RUN: not %clang --target=riscv64 -menable-experimental-extensions \
 // RUN: -march=rv64i_zicfilp1p0 -fcf-protection=branch \
-// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s 2>&1 | FileCheck \
-// RUN: --check-prefixes=FUNC-SIG-NOSUPPORT %s
+// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s -o - 2>&1 | \
+// RUN: FileCheck --check-prefixes=FUNC-SIG-NOSUPPORT %s
 
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
 // RUN: -march=rv64i_zicfilp1p0 -mcf-branch-label-scheme=unlabeled -S \
@@ -59,8 +59,8 @@
 // RUN: --check-prefixes=BRANCH-PROT-FLAG,UNLABELED-FLAG %s
 
 // RUN: not %clang --target=riscv64 -fcf-protection=branch \
-// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s 2>&1 | FileCheck \
-// RUN: --check-prefixes=FUNC-SIG-NOSUPPORT %s
+// RUN: -mcf-branch-label-scheme=func-sig -S -emit-llvm %s -o - 2>&1 | \
+// RUN: FileCheck --check-prefixes=FUNC-SIG-NOSUPPORT %s
 
 // RUN: %clang --target=riscv64 -mcf-branch-label-scheme=unlabeled -S \
 // RUN: -emit-llvm %s -o - 2>&1 | FileCheck \
@@ -71,12 +71,12 @@
 // RUN: --check-prefixes=NO-FLAG,FUNC-SIG-SCHEME-UNUSED %s
 
 // Default -mcf-branch-label-scheme is func-sig
-// RUN: not %clang --target=riscv32 -fcf-protection=branch -S -emit-llvm %s 2>&1 \
-// RUN: | FileCheck --check-prefixes=FORCE-UNLABELED %s
+// RUN: not %clang --target=riscv32 -fcf-protection=branch -S -emit-llvm %s \
+// RUN: -o - 2>&1 | FileCheck --check-prefixes=FORCE-UNLABELED %s
 
 // Default -mcf-branch-label-scheme is func-sig
-// RUN: not %clang --target=riscv64 -fcf-protection=branch -S -emit-llvm %s 2>&1 \
-// RUN: | FileCheck --check-prefixes=FORCE-UNLABELED %s
+// RUN: not %clang --target=riscv64 -fcf-protection=branch -S -emit-llvm %s \
+// RUN: -o - 2>&1 | FileCheck --check-prefixes=FORCE-UNLABELED %s
 
 // UNLABELED-SCHEME-UNUSED: warning: argument unused during compilation:
 // UNLABELED-SCHEME-UNUSED-SAME: '-mcf-branch-label-scheme=unlabeled'
