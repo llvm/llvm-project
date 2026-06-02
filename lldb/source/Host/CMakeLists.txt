@@ -55,6 +55,10 @@ add_host_subdirectory(common
   common/ZipFileResolver.cpp
   )
 
+add_host_subdirectory(common
+  common/ScriptInterpreterRuntimeLoader.cpp
+  )
+
 if (LLDB_ENABLE_PYTHON)
   add_host_subdirectory(common
     common/PythonRuntimeLoader.cpp

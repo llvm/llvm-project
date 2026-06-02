@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
-#include "lldb/Host/PythonRuntimeLoader.h"
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 
 #include "PythonRuntimeLoaderInternal.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -32,11 +29,20 @@ namespace lldb_private {
 
 namespace {
 
-/// Captured once by GetState; observers must treat it as read-only.
-struct PythonRuntimeState {
-  std::string path;
-  std::string error_message;
-};
+/// True if libpython is currently mapped into the process. A single-symbol
+/// probe can match an incompatible runtime that happens to export it, so
+/// pair an old symbol with one introduced in 3.8 to bound the version on
+/// both ends.
+bool IsPythonAlreadyLoaded() {
+#if defined(_WIN32)
+  HMODULE main = ::GetModuleHandleW(nullptr);
+  return ::GetProcAddress(main, "Py_IsInitialized") != nullptr &&
+         ::GetProcAddress(main, "Py_InitializeFromConfig") != nullptr;
+#else
+  return ::dlsym(RTLD_DEFAULT, "Py_IsInitialized") != nullptr &&
+         ::dlsym(RTLD_DEFAULT, "Py_InitializeFromConfig") != nullptr;
+#endif
+}
 
 llvm::Error TryLoad(const char *path) {
   std::string err_msg;
@@ -54,19 +60,20 @@ llvm::Error TryLoad(const char *path) {
   return llvm::Error::success();
 }
 
-llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
-  if (PythonRuntimeLoader::IsLoaded())
-    return llvm::Error::success();
+llvm::Expected<std::string> LoadPythonRuntime() {
+  if (IsPythonAlreadyLoaded())
+    return std::string();
 
   llvm::Error failures =
       llvm::createStringError("could not locate the Python runtime library");
+  std::string loaded;
 
   auto try_path = [&](const char *path) -> bool {
     if (llvm::Error err = TryLoad(path)) {
       failures = llvm::joinErrors(std::move(failures), std::move(err));
       return false;
     }
-    out_path = path;
+    loaded = path;
     return true;
   };
 
@@ -74,7 +81,7 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
       override_path && *override_path) {
     if (try_path(override_path)) {
       consumeError(std::move(failures));
-      return llvm::Error::success();
+      return loaded;
     }
   }
 
@@ -83,7 +90,7 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
   // plugin was compiled against, so prefer it over the platform fallbacks.
   if (try_path(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH)) {
     consumeError(std::move(failures));
-    return llvm::Error::success();
+    return loaded;
   }
 #endif
 
@@ -93,57 +100,63 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
 
   if (found) {
     consumeError(std::move(failures));
-    return llvm::Error::success();
+    return loaded;
   }
-  return failures;
+  return std::move(failures);
 }
 
-const PythonRuntimeState &GetState() {
-  static PythonRuntimeState g_state;
-  static llvm::once_flag g_once;
-  llvm::call_once(g_once, [] {
-    if (llvm::Error err = LoadPythonRuntimeImpl(g_state.path)) {
-      g_state.error_message = llvm::toString(std::move(err));
-      LLDB_LOG(GetLog(LLDBLog::Host), "Python runtime load failed: {0}",
-               g_state.error_message);
-    }
-  });
-  return g_state;
-}
+class PythonRuntimeLoader : public ScriptInterpreterRuntimeLoader {
+public:
+  llvm::Error Load() override {
+    EnsureLoaded();
+    if (m_error_message.empty())
+      return llvm::Error::success();
+    return llvm::createStringError(m_error_message);
+  }
+
+  llvm::Expected<llvm::StringRef> GetLoadedPath() override {
+    EnsureLoaded();
+    if (!m_error_message.empty())
+      return llvm::createStringError(m_error_message);
+    return llvm::StringRef(m_path);
+  }
+
+  bool IsLoaded() override { return IsPythonAlreadyLoaded(); }
+
+private:
+  void EnsureLoaded() {
+    llvm::call_once(m_once, [this] {
+      if (llvm::Expected<std::string> result = LoadPythonRuntime()) {
+        m_path = std::move(*result);
+      } else {
+        m_error_message = llvm::toString(result.takeError());
+        LLDB_LOG(GetLog(LLDBLog::Host), "Python runtime load failed: {0}",
+                 m_error_message);
+      }
+    });
+  }
+
+  llvm::once_flag m_once;
+  std::string m_path;
+  std::string m_error_message;
+};
 
 } // namespace
 
-bool PythonRuntimeLoader::IsLoaded() {
-  // A single-symbol probe can match an incompatible runtime that happens
-  // to export it, so pair an old symbol with one introduced in 3.8 to
-  // bound the version on both ends.
-#if defined(_WIN32)
-  HMODULE main = ::GetModuleHandleW(nullptr);
-  return ::GetProcAddress(main, "Py_IsInitialized") != nullptr &&
-         ::GetProcAddress(main, "Py_InitializeFromConfig") != nullptr;
-#else
-  return ::dlsym(RTLD_DEFAULT, "Py_IsInitialized") != nullptr &&
-         ::dlsym(RTLD_DEFAULT, "Py_InitializeFromConfig") != nullptr;
-#endif
+llvm::Expected<ScriptInterpreterRuntimeLoader &>
+ScriptInterpreterRuntimeLoader::Get(lldb::ScriptLanguage language) {
+  switch (language) {
+  case lldb::eScriptLanguagePython: {
+    static PythonRuntimeLoader instance;
+    return instance;
+  }
+  case lldb::eScriptLanguageLua:
+  case lldb::eScriptLanguageNone:
+  case lldb::eScriptLanguageUnknown:
+    return llvm::createStringError(
+        "no runtime loader for the requested script language");
+  }
+  llvm_unreachable("unhandled ScriptLanguage");
 }
 
-llvm::Error PythonRuntimeLoader::Load() {
-  const PythonRuntimeState &state = GetState();
-  if (state.error_message.empty())
-    return llvm::Error::success();
-  return llvm::createStringError(state.error_message);
-}
-
-llvm::StringRef PythonRuntimeLoader::GetLoadedPath() { return GetState().path; }
-
 } // namespace lldb_private
-
-#else // !LLDB_ENABLE_PYTHON
-
-namespace lldb_private {
-llvm::Error PythonRuntimeLoader::Load() { return llvm::Error::success(); }
-llvm::StringRef PythonRuntimeLoader::GetLoadedPath() { return {}; }
-bool PythonRuntimeLoader::IsLoaded() { return false; }
-} // namespace lldb_private
-
-#endif // LLDB_ENABLE_PYTHON
