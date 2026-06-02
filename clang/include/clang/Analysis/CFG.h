@@ -294,7 +294,7 @@ private:
 };
 
 /// Base class for representing elements related to the lifetime of automatic
-/// objects
+/// objects.
 class CFGScopeMarker : public CFGElement {
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL const Stmt *getTriggerStmt() const {
