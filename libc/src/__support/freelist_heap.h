@@ -37,14 +37,6 @@ using cpp::span;
 
 LIBC_INLINE constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
-template <typename T> LIBC_INLINE void init_free_store(T &, size_t) {}
-
-template <>
-LIBC_INLINE void init_free_store<TrieFreeStore>(TrieFreeStore &store,
-                                                size_t size) {
-  store.set_range({0, cpp::bit_ceil(size)});
-}
-
 template <typename FreeStoreType = TrieFreeStore> class FreeListHeapImpl {
 public:
   constexpr FreeListHeapImpl() : begin(&_end), end(&__llvm_libc_heap_limit) {}
