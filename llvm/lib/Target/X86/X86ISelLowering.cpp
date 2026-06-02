@@ -24774,8 +24774,7 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
   MVT VT = V.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<SDValue, 8> NewVecC;
-  SDLoc DL(V);
+  SmallVector<APInt, 8> NewVecC;
   for (unsigned i = 0; i < NumElts; ++i) {
     auto *Elt = dyn_cast<ConstantSDNode>(BV->getOperand(i));
     if (!Elt || Elt->isOpaque() || Elt->getSimpleValueType(0) != EltVT)
@@ -24789,10 +24788,9 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
                 (!IsInc && EltC.isMinSignedValue())))
       return SDValue();
 
-    NewVecC.push_back(DAG.getConstant(EltC + (IsInc ? 1 : -1), DL, EltVT));
+    NewVecC.push_back(EltC + (IsInc ? 1 : -1));
   }
-
-  return DAG.getBuildVector(VT, DL, NewVecC);
+  return getConstVector(NewVecC, VT, DAG, SDLoc(V));
 }
 
 /// As another special case, use PSUBUS[BW] when it's profitable. E.g. for
