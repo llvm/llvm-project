@@ -1014,11 +1014,16 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
 }
 
 static bool ShouldIgnoreLastMember(CodeGenFunction &CGF, const Expr *Base) {
-  auto &Ctx = CGF.getContext();
-  auto &SM = Ctx.getSourceManager();
-  auto FN = SM.getFilename(SM.getFileLoc(Base->getExprLoc()));
-  return Ctx.getNoSanitizeList().containsIgnoreFamFile(
-      SanitizerKind::ArrayBounds, FN);
+  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
+    auto *D = ME->getMemberDecl();
+    auto Loc = D->getSourceRange().getBegin();
+    auto &Ctx = CGF.getContext();
+    auto &SM = CGF.getContext().getSourceManager();
+    auto FN = SM.getFilename(SM.getFileLoc(Loc));
+    return Ctx.getNoSanitizeList().containsIgnoreFamFile(
+        SanitizerKind::ArrayBounds, FN);
+  }
+  return false;
 }
 
 /// If Base is known to point to the start of an array, return the length of
@@ -1036,13 +1041,13 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
   Base = Base->IgnoreParens();
 
-  if (ShouldIgnoreLastMember(CGF, Base))
-    StrictFlexArraysLevel = LangOptions::StrictFlexArraysLevelKind::Default;
-
   if (const auto *CE = dyn_cast<CastExpr>(Base)) {
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
-        !CE->getSubExpr()->isFlexibleArrayMemberLike(CGF.getContext(),
-                                                     StrictFlexArraysLevel)) {
+        !CE->getSubExpr()->isFlexibleArrayMemberLike(
+            CGF.getContext(),
+            ShouldIgnoreLastMember(CGF, CE->getSubExpr())
+                ? LangOptions::StrictFlexArraysLevelKind::Default
+                : StrictFlexArraysLevel)) {
       CodeGenFunction::SanitizerScope SanScope(&CGF);
 
       IndexedType = CE->getSubExpr()->getType();
