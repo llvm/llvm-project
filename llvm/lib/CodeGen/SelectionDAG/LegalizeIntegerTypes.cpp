@@ -2826,8 +2826,11 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   // sign-extended to int by the makeLibCall below.
   if (N->getOperand(1 + OpOffset).getScalarValueSizeInBits() >
       DAG.getLibInfo().getIntSize()) {
-    DAG.getContext()->emitError(
-        "powi/ldexp exponent does not match sizeof(int)");
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+        Twine(IsPowI ? "powi" : "ldexp") +
+            " exponent does not match sizeof(int)",
+        Fn, N->getDebugLoc()));
     if (IsStrict)
       ReplaceValueWith(SDValue(N, 1), Chain);
     ReplaceValueWith(SDValue(N, 0), DAG.getPOISON(N->getValueType(0)));
