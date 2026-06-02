@@ -16,6 +16,7 @@
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/HostProcessWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
+#include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -45,35 +46,25 @@ using namespace lldb_private;
 typedef BOOL WINAPI WaitForDebugEventFn(LPDEBUG_EVENT, DWORD);
 static WaitForDebugEventFn *g_wait_for_debug_event = nullptr;
 
-static WaitForDebugEventFn *GetWaitForDebugEventEx() {
-  HMODULE h_kernel32 = LoadLibraryW(L"kernel32.dll");
-  if (!h_kernel32) {
-    llvm::Error err = llvm::errorCodeToError(
-        std::error_code(GetLastError(), std::system_category()));
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(err),
-                   "Could not load kernel32: {0}");
-    return nullptr;
-  }
-
-  return reinterpret_cast<WaitForDebugEventFn *>(
-      GetProcAddress(h_kernel32, "WaitForDebugEventEx"));
-}
-
 /// WaitForDebugEventEx is only available on Windows 10+. This lazily checks if
 /// the function is available and falls back to WaitForDebugEvent if
 /// unavailable. The -Ex version ensures correct forwarding of
 /// OutputDebugStringW events.
 static void InitializeWaitForDebugEvent() {
+  static LazyImport<WaitForDebugEventFn *> s_wait_for_debug_event_ex = {
+      L"kernel32.dll", "WaitForDebugEventEx"};
+
   if (g_wait_for_debug_event)
     return;
 
-  g_wait_for_debug_event = GetWaitForDebugEventEx();
-  if (!g_wait_for_debug_event) {
+  if (!s_wait_for_debug_event_ex) {
     LLDB_LOG(
         GetLog(LLDBLog::Host),
         "WaitForDebugEventEx unavailable, using WaitForDebugEvent instead. "
         "Unicode strings from OutputDebugStringW might show incorrectly.");
     g_wait_for_debug_event = &WaitForDebugEvent;
+  } else {
+    g_wait_for_debug_event = *s_wait_for_debug_event_ex;
   }
 }
 
