@@ -181,6 +181,15 @@ first_trailing_one(T value) {
 }
 
 template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, T>
+floor_ilog2(T value) {
+  if (value == 0)
+    return 0;
+  return static_cast<T>(cpp::numeric_limits<T>::digits -
+                        cpp::countl_zero(value) - 1);
+}
+
+template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 count_zeros(T value) {
   return cpp::popcount<T>(static_cast<T>(~value));

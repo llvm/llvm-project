@@ -16,6 +16,8 @@ namespace LIBC_NAMESPACE_DECL {
 /// A best-fit store of variously-sized free blocks. Blocks can be inserted and
 /// removed in logarithmic time.
 class FreeStore {
+  template <typename> friend class FreeListHeap;
+
 public:
   FreeStore() = default;
   FreeStore(const FreeStore &other) = delete;
@@ -37,9 +39,9 @@ public:
 
   /// Remove a best-fit free block that can contain the given size when
   /// allocated. Returns nullptr if there is no such block.
-  Block *remove_best_fit(size_t size);
+  Block *find_and_remove_fit(size_t size);
 
-private:
+public:
   static constexpr size_t MIN_OUTER_SIZE =
       align_up(sizeof(Block) + sizeof(FreeList::Node), Block::MIN_ALIGN);
   static constexpr size_t MIN_LARGE_OUTER_SIZE =
@@ -47,6 +49,7 @@ private:
   static constexpr size_t NUM_SMALL_SIZES =
       (MIN_LARGE_OUTER_SIZE - MIN_OUTER_SIZE) / Block::MIN_ALIGN;
 
+private:
   LIBC_INLINE static bool too_small(Block *block) {
     return block->outer_size() < MIN_OUTER_SIZE;
   }
@@ -82,7 +85,7 @@ LIBC_INLINE void FreeStore::remove(Block *block) {
   }
 }
 
-LIBC_INLINE Block *FreeStore::remove_best_fit(size_t size) {
+LIBC_INLINE Block *FreeStore::find_and_remove_fit(size_t size) {
   if (FreeList *list = find_best_small_fit(size)) {
     Block *block = list->front();
     list->pop();

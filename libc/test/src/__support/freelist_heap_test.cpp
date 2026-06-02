@@ -1,21 +1,27 @@
-//===-- Unittests for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for freelist_heap.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/freelist_heap.h"
+#include "src/__support/freetable.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "src/string/memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "test/UnitTest/Test.h"
 
 asm(R"(
 .globl _end, __llvm_libc_heap_limit
-
 .bss
 _end:
   .fill 1024
@@ -26,38 +32,56 @@ using LIBC_NAMESPACE::Block;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
+using LIBC_NAMESPACE::FreeTable;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::span;
 
-// Similar to `LlvmLibcBlockTest` in block_test.cpp, we'd like to run the same
-// tests independently for different parameters. In this case, we'd like to test
-// functionality for a `FreeListHeap` and the global `freelist_heap` which was
-// constinit'd. Functionally, it should operate the same if the FreeListHeap
-// were initialized locally at runtime or at compile-time.
-//
-// Note that calls to `allocate` for each test case here don't always explicitly
-// `free` them afterwards, so when testing the global allocator, allocations
-// made in tests leak and aren't free'd. This is fine for the purposes of this
-// test file.
+// A test FreeTable configuration (192 bits table)
+using TestTable = FreeTable<32, 3, 2, 3>;
+
+// Macro that generates a test fixture that runs the given test logic
+// against both the FreeStore (Trie) and FreeTable (TLSF) backed heaps!
 #define TEST_FOR_EACH_ALLOCATOR(TestCase, BufferSize)                          \
   class LlvmLibcFreeListHeapTest##TestCase                                     \
       : public LIBC_NAMESPACE::testing::Test {                                 \
   public:                                                                      \
-    FreeListHeapBuffer<BufferSize> fake_global_buffer;                         \
-    void SetUp() override {                                                    \
-      freelist_heap =                                                          \
-          new (&fake_global_buffer) FreeListHeapBuffer<BufferSize>;            \
-    }                                                                          \
-    void RunTest(FreeListHeap &allocator, [[maybe_unused]] size_t N);          \
+    FreeListHeapBuffer<BufferSize, LIBC_NAMESPACE::FreeStore>                  \
+        fake_global_buffer_store;                                              \
+    FreeListHeapBuffer<BufferSize, TestTable> fake_global_buffer_table;        \
+    void RunTestStore(FreeListHeap<LIBC_NAMESPACE::FreeStore> &allocator,      \
+                      size_t N);                                               \
+    void RunTestTable(FreeListHeap<TestTable> &allocator, size_t N);           \
+    template <typename allocator_type>                                         \
+    void RunTestImpl(allocator_type &allocator, [[maybe_unused]] size_t N);    \
   };                                                                           \
   TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
-    byte buf[BufferSize] = {byte(0)};                                          \
-    FreeListHeap allocator(buf);                                               \
-    RunTest(allocator, BufferSize);                                            \
-    RunTest(*freelist_heap, freelist_heap->region().size());                   \
+    {                                                                          \
+      byte buf[BufferSize] = {byte(0)};                                        \
+      FreeListHeap<LIBC_NAMESPACE::FreeStore> allocator(buf);                  \
+      RunTestStore(allocator, BufferSize);                                     \
+    }                                                                          \
+    {                                                                          \
+      byte buf[BufferSize] = {byte(0)};                                        \
+      FreeListHeap<TestTable> allocator(buf);                                  \
+      RunTestTable(allocator, BufferSize);                                     \
+    }                                                                          \
+    {                                                                          \
+      freelist_heap = new (&fake_global_buffer_store)                          \
+          FreeListHeapBuffer<BufferSize, LIBC_NAMESPACE::FreeStore>;           \
+      RunTestStore(*freelist_heap, freelist_heap->region().size());            \
+    }                                                                          \
   }                                                                            \
-  void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap &allocator,    \
-                                                   [[maybe_unused]] size_t N)
+  void LlvmLibcFreeListHeapTest##TestCase::RunTestStore(                       \
+      FreeListHeap<LIBC_NAMESPACE::FreeStore> &allocator, size_t N) {          \
+    RunTestImpl(allocator, N);                                                 \
+  }                                                                            \
+  void LlvmLibcFreeListHeapTest##TestCase::RunTestTable(                       \
+      FreeListHeap<TestTable> &allocator, size_t N) {                          \
+    RunTestImpl(allocator, N);                                                 \
+  }                                                                            \
+  template <typename allocator_type>                                           \
+  void LlvmLibcFreeListHeapTest##TestCase::RunTestImpl(                        \
+      allocator_type &allocator, [[maybe_unused]] size_t N)
 
 TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
@@ -84,8 +108,6 @@ TEST_FOR_EACH_ALLOCATOR(AllocationsDontOverlap, 2048) {
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanFreeAndRealloc, 2048) {
-  // There's not really a nice way to test that free works, apart from to try
-  // and get that value back again.
   constexpr size_t ALLOC_SIZE = 512;
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
@@ -99,24 +121,50 @@ TEST_FOR_EACH_ALLOCATOR(ReturnsNullWhenAllocationTooLarge, 2048) {
   EXPECT_EQ(allocator.allocate(N), static_cast<void *>(nullptr));
 }
 
-// NOTE: This doesn't use TEST_FOR_EACH_ALLOCATOR because the first `allocate`
-// here will likely actually return a nullptr since the same global allocator
-// is used for other test cases and we don't explicitly free them.
-TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
-  constexpr size_t N = 2048;
-  byte buf[N];
+class LlvmLibcFreeListHeapHelper : public LIBC_NAMESPACE::testing::Test {
+public:
+  template <typename allocator_type> void test_returns_null_when_full() {
+    constexpr size_t N = 2048;
+    byte buf[N];
 
-  FreeListHeap allocator(buf);
+    allocator_type allocator(buf);
 
-  bool went_null = false;
-  for (size_t i = 0; i < N; i++) {
-    if (!allocator.allocate(1)) {
-      went_null = true;
-      break;
+    bool went_null = false;
+    for (size_t i = 0; i < N; i++) {
+      if (!allocator.allocate(1)) {
+        went_null = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(went_null);
+    EXPECT_EQ(allocator.allocate(1), static_cast<void *>(nullptr));
+  }
+
+  template <typename allocator_type>
+  void test_aligned_alloc_unaligned_buffer() {
+    byte buf[4096] = {byte(0)};
+
+    // Ensure the underlying buffer is poorly aligned.
+    allocator_type allocator(span<byte>(buf).subspan(1));
+
+    constexpr size_t ALIGNMENTS[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
+    constexpr size_t SIZE_SCALES[] = {1, 2, 3, 4, 5};
+
+    for (size_t alignment : ALIGNMENTS) {
+      for (size_t scale : SIZE_SCALES) {
+        size_t size = alignment * scale;
+        void *ptr = allocator.aligned_allocate(alignment, size);
+        EXPECT_NE(ptr, static_cast<void *>(nullptr));
+        EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignment, size_t(0));
+        allocator.free(ptr);
+      }
     }
   }
-  EXPECT_TRUE(went_null);
-  EXPECT_EQ(allocator.allocate(1), static_cast<void *>(nullptr));
+};
+
+TEST_F(LlvmLibcFreeListHeapHelper, ReturnsNullWhenFull) {
+  test_returns_null_when_full<FreeListHeap<LIBC_NAMESPACE::FreeStore>>();
+  test_returns_null_when_full<FreeListHeap<TestTable>>();
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
@@ -180,8 +228,52 @@ TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
 
-  // For smaller sizes, realloc will not shrink the block.
+  // For smaller sizes, realloc will shrink the block in-place, returning the
+  // same pointer.
   EXPECT_EQ(ptr1, ptr2);
+}
+
+constexpr size_t SMALL_HEAP_SIZE = 512;
+
+TEST_FOR_EACH_ALLOCATOR(ReallocShrinkAndAllocateTrailing, SMALL_HEAP_SIZE) {
+  constexpr size_t ALLOC_SIZE = (SMALL_HEAP_SIZE * 3) / 4;
+  constexpr size_t NEW_ALLOC_SIZE = SMALL_HEAP_SIZE / 4;
+  constexpr size_t TRAILING_ALLOC_SIZE = SMALL_HEAP_SIZE / 2;
+
+  void *ptr1 = allocator.allocate(ALLOC_SIZE);
+  ASSERT_NE(ptr1, static_cast<void *>(nullptr));
+
+  // Fill the block with a pattern to verify data preservation.
+  LIBC_NAMESPACE::inline_memset(ptr1, 0x5A, ALLOC_SIZE);
+
+  // Shrink the block in-place.
+  void *ptr2 = allocator.realloc(ptr1, NEW_ALLOC_SIZE);
+  EXPECT_EQ(ptr1, ptr2);
+
+  // Verify that the data in the shrunk block is preserved.
+  unsigned char *uptr2 = static_cast<unsigned char *>(ptr2);
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Allocate another trailing block from the newly split/freed space.
+  void *ptr3 = allocator.allocate(TRAILING_ALLOC_SIZE);
+  ASSERT_NE(ptr3, static_cast<void *>(nullptr));
+
+  // Verify that the trailing block does not overlap with the shrunk block.
+  uintptr_t addr2 = reinterpret_cast<uintptr_t>(ptr2);
+  uintptr_t addr3 = reinterpret_cast<uintptr_t>(ptr3);
+  EXPECT_GE(addr3, addr2 + NEW_ALLOC_SIZE);
+
+  // Verify that writing to the trailing block works without corrupting the
+  // shrunk block.
+  LIBC_NAMESPACE::inline_memset(ptr3, 0xAA, TRAILING_ALLOC_SIZE);
+
+  for (size_t i = 0; i < NEW_ALLOC_SIZE; ++i)
+    EXPECT_EQ(uptr2[i], static_cast<unsigned char>(0x5A));
+
+  // Free the allocations.
+  allocator.free(ptr2);
+  allocator.free(ptr3);
 }
 
 TEST_FOR_EACH_ALLOCATOR(ReallocTooLarge, 2048) {
@@ -249,29 +341,10 @@ TEST_FOR_EACH_ALLOCATOR(AlignedAlloc, 2048) {
   }
 }
 
-// This test is not part of the TEST_FOR_EACH_ALLOCATOR since we want to
-// explicitly ensure that the buffer can still return aligned allocations even
-// if the underlying buffer is unaligned. This is so we can check that we can
-// still get aligned allocations even if the underlying buffer is not aligned to
-// the alignments we request.
-TEST(LlvmLibcFreeListHeap, AlignedAllocUnalignedBuffer) {
-  byte buf[4096] = {byte(0)};
-
-  // Ensure the underlying buffer is poorly aligned.
-  FreeListHeap allocator(span<byte>(buf).subspan(1));
-
-  constexpr size_t ALIGNMENTS[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
-  constexpr size_t SIZE_SCALES[] = {1, 2, 3, 4, 5};
-
-  for (size_t alignment : ALIGNMENTS) {
-    for (size_t scale : SIZE_SCALES) {
-      size_t size = alignment * scale;
-      void *ptr = allocator.aligned_allocate(alignment, size);
-      EXPECT_NE(ptr, static_cast<void *>(nullptr));
-      EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % alignment, size_t(0));
-      allocator.free(ptr);
-    }
-  }
+TEST_F(LlvmLibcFreeListHeapHelper, AlignedAllocUnalignedBuffer) {
+  test_aligned_alloc_unaligned_buffer<
+      FreeListHeap<LIBC_NAMESPACE::FreeStore>>();
+  test_aligned_alloc_unaligned_buffer<FreeListHeap<TestTable>>();
 }
 
 TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {

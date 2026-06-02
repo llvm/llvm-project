@@ -59,6 +59,15 @@ add_header_library(
     .freetrie
 )
 
+add_header_library(
+  freetable
+  HDRS
+    freetable.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
 add_object_library(
   freelist_heap

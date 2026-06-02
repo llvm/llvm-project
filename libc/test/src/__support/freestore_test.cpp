@@ -37,7 +37,7 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   store.insert(too_small);
   store.insert(remainder);
 
-  EXPECT_EQ(store.remove_best_fit(too_small->inner_size()), remainder);
+  EXPECT_EQ(store.find_and_remove_fit(too_small->inner_size()), remainder);
   store.remove(too_small);
 }
 
@@ -68,20 +68,23 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   store.insert(remainder);
 
   // Find exact match for smallest.
-  ASSERT_EQ(store.remove_best_fit(smallest->inner_size()), smallest);
+  ASSERT_EQ(store.find_and_remove_fit(smallest->inner_size()), smallest);
   store.insert(smallest);
 
   // Find exact match for largest.
-  ASSERT_EQ(store.remove_best_fit(largest_small->inner_size()), largest_small);
+  ASSERT_EQ(store.find_and_remove_fit(largest_small->inner_size()),
+            largest_small);
   store.insert(largest_small);
 
   // Search small list for best fit.
   Block *next_smallest = largest_small == smallest ? remainder : largest_small;
-  ASSERT_EQ(store.remove_best_fit(smallest->inner_size() + 1), next_smallest);
+  ASSERT_EQ(store.find_and_remove_fit(smallest->inner_size() + 1),
+            next_smallest);
   store.insert(next_smallest);
 
   // Continue search for best fit to large blocks.
-  EXPECT_EQ(store.remove_best_fit(largest_small->inner_size() + 1), remainder);
+  EXPECT_EQ(store.find_and_remove_fit(largest_small->inner_size() + 1),
+            remainder);
 }
 
 TEST(LlvmLibcFreeStore, Remove) {
@@ -101,9 +104,9 @@ TEST(LlvmLibcFreeStore, Remove) {
   store.insert(remainder);
 
   store.remove(remainder);
-  ASSERT_EQ(store.remove_best_fit(remainder->inner_size()),
+  ASSERT_EQ(store.find_and_remove_fit(remainder->inner_size()),
             static_cast<Block *>(nullptr));
   store.remove(small);
-  ASSERT_EQ(store.remove_best_fit(small->inner_size()),
+  ASSERT_EQ(store.find_and_remove_fit(small->inner_size()),
             static_cast<Block *>(nullptr));
 }

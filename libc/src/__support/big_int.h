@@ -854,8 +854,8 @@ public:
       result[i] = lhs[i] OP rhs[i];                                            \
     return result;                                                             \
   }                                                                            \
-  LIBC_INLINE friend constexpr BigInt operator OP##=(BigInt &lhs,              \
-                                                     const BigInt &rhs) {      \
+  LIBC_INLINE friend constexpr BigInt operator OP## =                          \
+      (BigInt & lhs, const BigInt &rhs) {                                      \
     for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
       lhs[i] OP## = rhs[i];                                                    \
     return lhs;                                                                \
@@ -1387,6 +1387,16 @@ template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_trailing_one(T value) {
   return value == 0 ? 0 : cpp::countr_zero(value) + 1;
+}
+
+// Specialization of floor_ilog2 ('math_extras.h') for BigInt.
+template <typename T>
+[[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T>
+floor_ilog2(T value) {
+  if (value == 0)
+    return 0;
+  return static_cast<T>(cpp::numeric_limits<T>::digits -
+                        cpp::countl_zero(value) - 1);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

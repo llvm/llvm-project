@@ -53,6 +53,18 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freestore
       libc.src.__support.freetrie
   )
+
+  add_libc_test(
+    freetable_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freetable_test.cpp
+    DEPENDS
+      libc.src.__support.freetable
+      libc.src.__support.block
+      libc.src.__support.freelist
+  )
 endif()
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol
@@ -67,8 +79,10 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
     DEPENDS
       libc.src.__support.CPP.span
       libc.src.__support.freelist_heap
+      libc.src.__support.freetable
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
   )
 endif()
 

@@ -109,6 +109,19 @@ TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
     EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> size_t(i)), i);
 }
 
+TYPED_TEST(LlvmLibcBitTest, FloorILog2, UnsignedTypesNoBigInt) {
+  EXPECT_EQ(floor_ilog2<T>(static_cast<T>(0)), static_cast<T>(0));
+  for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto val = static_cast<T>(T(1) << size_t(i));
+    EXPECT_EQ(floor_ilog2<T>(val), static_cast<T>(i));
+    if (i > 0) {
+      auto val_plus =
+          static_cast<T>(val | static_cast<T>(T(1) << size_t(i - 1)));
+      EXPECT_EQ(floor_ilog2<T>(val_plus), static_cast<T>(i));
+    }
+  }
+}
+
 using UnsignedTypes = testing::TypeList<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
