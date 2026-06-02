@@ -7,6 +7,7 @@ add_libc_unittest(
   SRCS
     in_test.cpp
   DEPENDS
+    libc.hdr.types.struct_in6_addr
     libc.src.arpa.inet.htons
     libc.src.arpa.inet.htonl
     libc.src.string.memcmp
