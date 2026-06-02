@@ -64,10 +64,13 @@ void PluginManager::deinit() {
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
 #ifdef OMPT_SUPPORT
-  assert(TraceRecordManager != nullptr &&
-         "Trace record manager should have been non-null");
-  delete TraceRecordManager;
-  TraceRecordManager = nullptr;
+  // When offloading is disabled, the TRM is not initialized.
+  if (!OffloadPolicy::isOffloadDisabled()) {
+    assert(TraceRecordManager != nullptr &&
+           "Trace record manager should have been non-null");
+    delete TraceRecordManager;
+    TraceRecordManager = nullptr;
+  }
 #endif
 
   for (auto &Plugin : Plugins) {
