@@ -2113,8 +2113,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          (Subtarget->isSVEorStreamingSVEAvailable() &&
           Subtarget->hasSSVE_BitPerm()))) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
-        setOperationAction(ISD::PEXT, VT, Custom);
-        setOperationAction(ISD::PDEP, VT, Custom);
+        setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
       }
       setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Custom);
       setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Custom);
@@ -8666,19 +8665,15 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 
     if (VT.isScalarInteger()) {
       assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected scalar type");
-      EVT NeonVT = VT == MVT::i64 ? MVT::v2i64 : MVT::v4i32;
       EVT SveVT = VT == MVT::i64 ? MVT::nxv2i64 : MVT::nxv4i32;
-      auto ToScalable = [&](SDValue X) {
-        SDValue V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, NeonVT, X);
-        return DAG.getInsertSubvector(DL, DAG.getUNDEF(SveVT), V, 0);
-      };
-      SDValue Z0 = ToScalable(Op.getOperand(0));
-      SDValue Z1 = ToScalable(Op.getOperand(1));
+      SDValue Z0 =
+          DAG.getInsertVectorElt(DL, DAG.getUNDEF(SveVT), Op.getOperand(0), 0);
+      SDValue Z1 =
+          DAG.getInsertVectorElt(DL, DAG.getUNDEF(SveVT), Op.getOperand(1), 0);
       SDValue R =
           DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SveVT,
                       DAG.getTargetConstant(IntrID, DL, MVT::i32), Z0, Z1);
-      SDValue Fixed = DAG.getExtractSubvector(DL, NeonVT, R, 0);
-      return DAG.getExtractVectorElt(DL, VT, Fixed, 0);
+      return DAG.getExtractVectorElt(DL, VT, R, 0);
     }
 
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,

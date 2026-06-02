@@ -1792,10 +1792,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PDEP(SDNode *N) {
     if (SDValue Res = TLI.expandPDEP(N, DAG))
       return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
   }
-  // Only the mask operand needs zero-extension because the implicit AND from
-  // masking clears the corresponding bits in X anyway.
+  // Neither operand needs zero-extension because the upper operand bits could
+  // only result in depositing result bits that will be discarded.
   SDValue X = GetPromotedInteger(N->getOperand(0));
-  SDValue Y = ZExtPromotedInteger(N->getOperand(1));
+  SDValue Y = GetPromotedInteger(N->getOperand(1));
   return DAG.getNode(ISD::PDEP, DL, VT, X, Y);
 }
 

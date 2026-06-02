@@ -5,9 +5,8 @@
 define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 ; BITPERM-LABEL: pdep_i8:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    and w8, w1, #0xff
+; BITPERM-NEXT:    fmov s0, w1
 ; BITPERM-NEXT:    fmov s1, w0
-; BITPERM-NEXT:    fmov s0, w8
 ; BITPERM-NEXT:    bdep z0.s, z1.s, z0.s
 ; BITPERM-NEXT:    fmov w0, s0
 ; BITPERM-NEXT:    ret
@@ -56,9 +55,8 @@ define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 ; BITPERM-LABEL: pdep_i16:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    and w8, w1, #0xffff
+; BITPERM-NEXT:    fmov s0, w1
 ; BITPERM-NEXT:    fmov s1, w0
-; BITPERM-NEXT:    fmov s0, w8
 ; BITPERM-NEXT:    bdep z0.s, z1.s, z0.s
 ; BITPERM-NEXT:    fmov w0, s0
 ; BITPERM-NEXT:    ret
@@ -168,9 +166,9 @@ define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 define i32 @pdep_i32(i32 %val, i32 %mask) nounwind {
 ; BITPERM-LABEL: pdep_i32:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    fmov s0, w0
-; BITPERM-NEXT:    fmov s1, w1
-; BITPERM-NEXT:    bdep z0.s, z0.s, z1.s
+; BITPERM-NEXT:    fmov s0, w1
+; BITPERM-NEXT:    fmov s1, w0
+; BITPERM-NEXT:    bdep z0.s, z1.s, z0.s
 ; BITPERM-NEXT:    fmov w0, s0
 ; BITPERM-NEXT:    ret
 ;
@@ -369,9 +367,9 @@ define i32 @pdep_i32(i32 %val, i32 %mask) nounwind {
 define i64 @pdep_i64(i64 %val, i64 %mask) nounwind {
 ; BITPERM-LABEL: pdep_i64:
 ; BITPERM:       // %bb.0:
-; BITPERM-NEXT:    fmov d0, x0
-; BITPERM-NEXT:    fmov d1, x1
-; BITPERM-NEXT:    bdep z0.d, z0.d, z1.d
+; BITPERM-NEXT:    fmov d0, x1
+; BITPERM-NEXT:    fmov d1, x0
+; BITPERM-NEXT:    bdep z0.d, z1.d, z0.d
 ; BITPERM-NEXT:    fmov x0, d0
 ; BITPERM-NEXT:    ret
 ;
