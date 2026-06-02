@@ -66,9 +66,9 @@ struct Float128;
 }
 } // namespace LIBC_NAMESPACE_DECL
 
-#ifndef LIBC_TYPES_HAS_FLOAT128
-using float128 = LIBC_NAMESPACE::fputil::Float128;
-#endif // LIBC_TYPES_HAS_FLOAT128
+// #ifndef LIBC_TYPES_HAS_FLOAT128
+// using float128 = LIBC_NAMESPACE::fputil::Float128;
+// #endif // LIBC_TYPES_HAS_FLOAT128
 // -- bfloat16 support ---------------------------------------------------------
 
 namespace LIBC_NAMESPACE_DECL {
