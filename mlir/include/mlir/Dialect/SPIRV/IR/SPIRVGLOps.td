@@ -465,6 +465,38 @@ def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_F
 
 // -----
 
+def SPIRV_GLMatrixInverseOp : SPIRV_GLOp<"MatrixInverse", 34,
+    [Pure, SameOperandsAndResultType]> {
+  let summary = "Compute the inverse of a matrix";
+
+  let description = [{
+    Result is the inverse of the operand. The operand x must be a square matrix
+    of floating-point type.
+
+    Result Type and the type of x must be the same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.GL.MatrixInverse %matrix : !spirv.matrix<4 x vector<4xf32>>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_MatrixOf<SPIRV_Float>:$matrix
+  );
+
+  let results = (outs
+    SPIRV_MatrixOf<SPIRV_Float>:$result
+  );
+
+  let assemblyFormat = "$matrix attr-dict `:` type($matrix)";
+
+  let hasVerifier = 1;
+}
+
+// -----
+
 def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
   let summary = "Natural logarithm of the operand";
 
