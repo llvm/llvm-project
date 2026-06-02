@@ -456,8 +456,7 @@ public:
   }
   void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
                                         cir::GlobalOp gv) {
-    bool ok = emittedCompoundLiterals.insert({e, gv}).second;
-    (void)ok;
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
     assert(ok && "compound literal global already emitted");
   }
 
