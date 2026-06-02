@@ -1,0 +1,74 @@
+# Verify that in analysis mode an entry referencing an unknown opcode (e.g. a
+# sample that has bitrotted due to instruction renaming) is skipped with a
+# warning instead of aborting, and that the remaining valid entries are still
+# analyzed.
+
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-clustering-epsilon=0.1 -analysis-inconsistency-epsilon=0.1 -analysis-numpoints=1 -analysis-clustering=naive 2> %t.err | FileCheck -check-prefix=CHECK-CLUSTERS %s
+# RUN: FileCheck -check-prefix=CHECK-WARN %s < %t.err
+
+# CHECK-WARN: warning: skipping benchmark entry: No opcode with name 'NOT_A_REAL_OPCODE'
+
+# CHECK-CLUSTERS: {{^}}cluster_id,opcode_name,config,sched_class,
+# CHECK-CLUSTERS-NEXT: {{^}}0,
+
+---
+mode:            uops
+key:
+  instructions:
+    - 'NOT_A_REAL_OPCODE RAX'
+  config:          ''
+  register_initial_values: []
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements: []
+error:           ''
+...
+---
+mode:            uops
+key:
+  instructions:
+    - 'CMOV16rm AX AX RDI i_0x1 %noreg i_0x0 %noreg i_0x0'
+    - 'CMOV16rm BP BP RDI i_0x1 %noreg i_0x40 %noreg i_0x0'
+    - 'CMOV16rm BX BX RDI i_0x1 %noreg i_0x80 %noreg i_0x0'
+    - 'CMOV16rm CX CX RDI i_0x1 %noreg i_0xc0 %noreg i_0x0'
+    - 'CMOV16rm DX DX RDI i_0x1 %noreg i_0x100 %noreg i_0x0'
+    - 'CMOV16rm SI SI RDI i_0x1 %noreg i_0x140 %noreg i_0x0'
+    - 'CMOV16rm R8W R8W RDI i_0x1 %noreg i_0x180 %noreg i_0x0'
+    - 'CMOV16rm R9W R9W RDI i_0x1 %noreg i_0x1c0 %noreg i_0x0'
+    - 'CMOV16rm R10W R10W RDI i_0x1 %noreg i_0x200 %noreg i_0x0'
+    - 'CMOV16rm R11W R11W RDI i_0x1 %noreg i_0x240 %noreg i_0x0'
+    - 'CMOV16rm R12W R12W RDI i_0x1 %noreg i_0x280 %noreg i_0x0'
+    - 'CMOV16rm R13W R13W RDI i_0x1 %noreg i_0x2c0 %noreg i_0x0'
+    - 'CMOV16rm R14W R14W RDI i_0x1 %noreg i_0x300 %noreg i_0x0'
+    - 'CMOV16rm R15W R15W RDI i_0x1 %noreg i_0x340 %noreg i_0x0'
+  config:          ''
+  register_initial_values:
+    - 'AX=0x0'
+    - 'EFLAGS=0x0'
+    - 'BP=0x0'
+    - 'BX=0x0'
+    - 'CX=0x0'
+    - 'DX=0x0'
+    - 'SI=0x0'
+    - 'R8W=0x0'
+    - 'R9W=0x0'
+    - 'R10W=0x0'
+    - 'R11W=0x0'
+    - 'R12W=0x0'
+    - 'R13W=0x0'
+    - 'R14W=0x0'
+    - 'R15W=0x0'
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: Zn3Int, value: 1.0161, per_snippet_value: 14.2254 }
+  - { key: Zn3FPU, value: 0, per_snippet_value: 0 }
+  - { key: Zn3Load, value: 1.003, per_snippet_value: 14.042 }
+  - { key: Zn3Store, value: 0.0023, per_snippet_value: 0.0322 }
+  - { key: Zn3Divider, value: 0, per_snippet_value: 0 }
+  - { key: NumMicroOps, value: 1.0146, per_snippet_value: 14.2044 }
+error:           ''
+info:            instruction has tied variables, using static renaming.
+...
