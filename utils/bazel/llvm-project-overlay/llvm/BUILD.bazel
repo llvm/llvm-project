@@ -1818,16 +1818,39 @@ cc_library(
     ],
 )
 
+write_file(
+    name = "typeinfo_hack_h",
+    out = "typeinfo_hack.h",
+    content = [
+        "#ifndef TYPEINFO_HACK_H",
+        "#define TYPEINFO_HACK_H",
+        "namespace llvm {",
+        "  class Type;",
+        "  struct VPTypeInfoHack {",
+        "    template <typename T>",
+        "    Type *inferScalarType(T *ptr) {",
+        "      return ptr->getScalarType();",
+        "    }",
+        "  };",
+        "}",
+        "#define TypeInfo llvm::VPTypeInfoHack()",
+        "#endif",
+    ],
+)
+
 cc_library(
     name = "Vectorize",
     srcs = glob([
         "lib/Transforms/Vectorize/**/*.cpp",
         "lib/Transforms/Vectorize/**/*.h",
-    ]),
+    ]) + ["typeinfo_hack.h"],
     hdrs = glob([
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
-    copts = llvm_copts,
+    copts = llvm_copts + [
+        "-include",
+        "llvm/typeinfo_hack.h",
+    ],
     textual_hdrs = glob([
         "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.def",
     ]),
