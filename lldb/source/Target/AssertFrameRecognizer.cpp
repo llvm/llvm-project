@@ -16,15 +16,15 @@ using namespace lldb_private;
 namespace lldb_private {
 /// Fetches the abort frame location depending on the current platform.
 ///
-/// \param[in] triple
-///    The target's triple.
+/// \param[in] os
+///    The target's os type.
 /// \param[in,out] location
 ///    The struct that will contain the abort module spec and symbol names.
 /// \return
 ///    \b true, if the platform is supported
 ///    \b false, otherwise.
-bool GetAbortLocation(const llvm::Triple &triple, SymbolLocation &location) {
-  switch (triple.getOS()) {
+bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
+  switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
@@ -44,19 +44,6 @@ bool GetAbortLocation(const llvm::Triple &triple, SymbolLocation &location) {
     location.symbols.push_back(ConstString("pthread_kill"));
     location.symbols_are_regex = true;
     break;
-  case llvm::Triple::Win32:
-    if (!triple.isWindowsMSVCEnvironment()) {
-      Log *log = GetLog(LLDBLog::Unwind);
-      LLDB_LOG(log, "AssertFrameRecognizer::GetAbortLocation Unsupported "
-                    "Windows environment");
-      return false;
-    }
-    // Windows MSVC CRT can be statically or dynamically linked. With dynamic
-    // linking, abort lives in ucrtbase.dll. With static linking it's embedded
-    // in the executable.
-    // Match on the symbol only to handle both.
-    location.symbols.push_back(ConstString("abort"));
-    break;
   default:
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOG(log, "AssertFrameRecognizer::GetAbortLocation Unsupported OS");
@@ -68,15 +55,15 @@ bool GetAbortLocation(const llvm::Triple &triple, SymbolLocation &location) {
 
 /// Fetches the assert frame location depending on the current platform.
 ///
-/// \param[in] triple
-///    The target's triple.
+/// \param[in] os
+///    The target's os type.
 /// \param[in,out] location
 ///    The struct that will contain the assert module spec and symbol names.
 /// \return
 ///    \b true, if the platform is supported
 ///    \b false, otherwise.
-bool GetAssertLocation(const llvm::Triple &triple, SymbolLocation &location) {
-  switch (triple.getOS()) {
+bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
+  switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
@@ -93,16 +80,6 @@ bool GetAssertLocation(const llvm::Triple &triple, SymbolLocation &location) {
     location.symbols.push_back(ConstString("__assert_fail"));
     location.symbols.push_back(ConstString("__GI___assert_fail"));
     break;
-  case llvm::Triple::Win32:
-    if (!triple.isWindowsMSVCEnvironment()) {
-      Log *log = GetLog(LLDBLog::Unwind);
-      LLDB_LOG(log, "AssertFrameRecognizer::GetAssertLocation Unsupported "
-                    "Windows environment");
-      return false;
-    }
-    // See comment in GetAbortLocation for why we skip the module check.
-    location.symbols.push_back(ConstString("_wassert"));
-    break;
   default:
     Log *log = GetLog(LLDBLog::Unwind);
     LLDB_LOG(log, "AssertFrameRecognizer::GetAssertLocation Unsupported OS");
@@ -114,10 +91,10 @@ bool GetAssertLocation(const llvm::Triple &triple, SymbolLocation &location) {
 
 void RegisterAssertFrameRecognizer(Process *process) {
   Target &target = process->GetTarget();
-  const llvm::Triple &triple = target.GetArchitecture().GetTriple();
+  llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
   SymbolLocation location;
 
-  if (!GetAbortLocation(triple, location))
+  if (!GetAbortLocation(os, location))
     return;
 
   if (!location.symbols_are_regex) {
@@ -159,10 +136,10 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   ThreadSP thread_sp = frame_sp->GetThread();
   ProcessSP process_sp = thread_sp->GetProcess();
   Target &target = process_sp->GetTarget();
-  const llvm::Triple &triple = target.GetArchitecture().GetTriple();
+  llvm::Triple::OSType os = target.GetArchitecture().GetTriple().getOS();
   SymbolLocation location;
 
-  if (!GetAssertLocation(triple, location))
+  if (!GetAssertLocation(os, location))
     return RecognizedStackFrameSP();
 
   const uint32_t frames_to_fetch = 6;
@@ -183,11 +160,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
     SymbolContext sym_ctx =
         prev_frame_sp->GetSymbolContext(eSymbolContextEverything);
 
-    if (!sym_ctx.module_sp)
-      continue;
-    // On Windows the abort/assert symbols may live in the executable (static
-    // CRT) or a CRT DLL, so skip the module check there.
-    if (!triple.isOSWindows() &&
+    if (!sym_ctx.module_sp ||
         !sym_ctx.module_sp->GetFileSpec().FileEquals(location.module_spec))
       continue;
 

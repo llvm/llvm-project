@@ -365,7 +365,7 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #endif
 
 #ifdef RISCV_AVAILABLE
-  if (Arch == Triple::riscv64)
+  if (Arch == Triple::riscv64 || Arch == Triple::riscv32)
     return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
@@ -427,7 +427,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   // Read RISCV subtarget features from input file
   std::unique_ptr<SubtargetFeatures> Features;
   Triple TheTriple = File->makeTriple();
-  if (TheTriple.getArch() == llvm::Triple::riscv64) {
+  if (TheTriple.isRISCV()) {
     Expected<SubtargetFeatures> FeaturesOrErr = File->getFeatures();
     if (auto E = FeaturesOrErr.takeError()) {
       Err = std::move(E);
@@ -473,6 +473,13 @@ Error RewriteInstance::setProfile(StringRef Filename) {
     return errorCodeToError(make_error_code(errc::no_such_file_or_directory));
 
   if (ProfileReader) {
+    if (DataAggregator::checkPerfDataMagic(Filename) &&
+        // Poor man's RTTI
+        ProfileReader->getReaderName() == StringRef("perf data aggregator")) {
+      static_cast<DataAggregator *>(ProfileReader.get())
+          ->addInputFile(Filename);
+      return Error::success();
+    }
     // Already exists
     return make_error<StringError>(Twine("multiple profiles specified: ") +
                                        ProfileReader->getFilename() + " and " +
@@ -2099,9 +2106,9 @@ void RewriteInstance::adjustFunctionBoundaries(
       // Skip basic block labels. This happens on RISC-V with linker relaxation
       // enabled because every branch needs a relocation and corresponding
       // symbol. We don't want to add such symbols as entry points.
-      const auto PrivateLabelPrefix = BC->AsmInfo->getPrivateLabelPrefix();
-      if (!PrivateLabelPrefix.empty() &&
-          cantFail(Symbol.getName()).starts_with(PrivateLabelPrefix)) {
+      const auto InternalSymbolPrefix = BC->AsmInfo->getInternalSymbolPrefix();
+      if (!InternalSymbolPrefix.empty() &&
+          cantFail(Symbol.getName()).starts_with(InternalSymbolPrefix)) {
         ++NextSymRefI;
         continue;
       }
@@ -2324,6 +2331,17 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
+
+  // RV32 support is currently limited to statically linked, non-PIE
+  // programs. Reject anything that requires features still out of scope
+  // (PLT, GOT, dynamic relocations, TLS, instrumentation runtime).
+  if (BC->TheTriple->getArch() == llvm::Triple::riscv32 &&
+      (!BC->IsStaticExecutable || !BC->HasFixedLoadAddress ||
+       BC->HasInterpHeader)) {
+    BC->errs() << "BOLT-ERROR: RV32 support is currently limited to "
+                  "statically linked, non-PIE binaries\n";
+    exit(1);
+  }
 
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->adjustCommandLineOptions(*BC);

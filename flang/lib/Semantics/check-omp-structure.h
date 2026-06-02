@@ -70,21 +70,21 @@ public:
   OmpStructureChecker(SemanticsContext &context);
 
   void Enter(const parser::ProgramUnit &);
-  bool Enter(const parser::MainProgram &);
+  void Enter(const parser::MainProgram &);
   void Leave(const parser::MainProgram &);
-  bool Enter(const parser::BlockData &);
+  void Enter(const parser::BlockData &);
   void Leave(const parser::BlockData &);
-  bool Enter(const parser::Module &);
+  void Enter(const parser::Module &);
   void Leave(const parser::Module &);
-  bool Enter(const parser::Submodule &);
+  void Enter(const parser::Submodule &);
   void Leave(const parser::Submodule &);
-  bool Enter(const parser::SubroutineStmt &);
-  bool Enter(const parser::EndSubroutineStmt &);
-  bool Enter(const parser::FunctionStmt &);
-  bool Enter(const parser::EndFunctionStmt &);
-  bool Enter(const parser::MpSubprogramStmt &);
-  bool Enter(const parser::EndMpSubprogramStmt &);
-  bool Enter(const parser::BlockConstruct &);
+  void Enter(const parser::SubroutineStmt &);
+  void Enter(const parser::EndSubroutineStmt &);
+  void Enter(const parser::FunctionStmt &);
+  void Enter(const parser::EndFunctionStmt &);
+  void Enter(const parser::MpSubprogramStmt &);
+  void Enter(const parser::EndMpSubprogramStmt &);
+  void Enter(const parser::BlockConstruct &);
   void Leave(const parser::BlockConstruct &);
   void Enter(const parser::InternalSubprogram &);
   void Enter(const parser::ModuleSubprogram &);
@@ -302,6 +302,8 @@ private:
       const std::string &clauseName);
   void CheckMultListItems();
   void CheckStructureComponent(
+      const parser::OmpObject &object, llvm::omp::Clause clauseId);
+  void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
       const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
@@ -328,7 +330,6 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
-  bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &obj, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,

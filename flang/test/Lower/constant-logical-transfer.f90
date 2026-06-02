@@ -20,4 +20,4 @@ end module
 ! CHECK:          %[[BITCAST_1:.*]] = fir.bitcast %[[CONSTANT_1]] : (i64) -> !fir.logical<8>
 ! CHECK:          hlfir.assign %[[BITCAST_1]] to %{{.*}} : !fir.logical<8>, !fir.ref<!fir.logical<8>>
 
-! CHECK:        fir.global @_QMconstant_logicalEvar(dense<[1, 3, 0]> : tensor<3xi32>) : !fir.array<3x!fir.logical<4>>
+! CHECK:        fir.global @_QMconstant_logicalEvar(dense<[1, 3, 0]> : tensor<3xi32>) {alignment = 64 : i64} : !fir.array<3x!fir.logical<4>>

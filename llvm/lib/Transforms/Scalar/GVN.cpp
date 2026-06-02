@@ -1648,7 +1648,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         ++NumPRELoadMoved2CEPred;
         ICF->insertInstructionTo(NewLoad, UnavailableBlock);
         LoadInst *OldLoad = It->second;
-        combineMetadataForCSE(NewLoad, OldLoad, false);
+        combineMetadataForCSE(NewLoad, OldLoad, /*DoesKMove=*/true);
         OldLoad->replaceAllUsesWith(NewLoad);
         replaceValuesPerBlockEntry(ValuesPerBlock, OldLoad, NewLoad);
         if (uint32_t ValNo = VN.lookup(OldLoad, false))

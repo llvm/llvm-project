@@ -1118,14 +1118,22 @@ define <4 x double> @sitofp_4xi32_4f64(i32 %a0, i32 %a1, i32 %a2, i32 %a3) #0 {
 }
 
 define <4 x double> @sitofp_with_const_4xi32_4f64(i32 %a2, i32 %a3) #0 {
-; CHECK-LABEL: @sitofp_with_const_4xi32_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[RES0]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[RES31]]
+; SSE-LABEL: @sitofp_with_const_4xi32_4f64(
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
+; SSE-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> [[RES0]], <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[RES31]]
+;
+; AVX-LABEL: @sitofp_with_const_4xi32_4f64(
+; AVX-NEXT:    [[CVT2:%.*]] = sitofp i32 [[A2:%.*]] to double
+; AVX-NEXT:    [[CVT3:%.*]] = sitofp i32 [[A3:%.*]] to double
+; AVX-NEXT:    [[RES0:%.*]] = insertelement <4 x double> zeroinitializer, double 1.000000e+00, i32 3
+; AVX-NEXT:    [[RES2:%.*]] = insertelement <4 x double> [[RES0]], double [[CVT2]], i32 0
+; AVX-NEXT:    [[RES3:%.*]] = insertelement <4 x double> [[RES2]], double [[CVT3]], i32 1
+; AVX-NEXT:    ret <4 x double> [[RES3]]
 ;
   %cvt2 = sitofp i32 %a2 to double
   %cvt3 = sitofp i32 %a3 to double
@@ -1136,13 +1144,20 @@ define <4 x double> @sitofp_with_const_4xi32_4f64(i32 %a2, i32 %a3) #0 {
 }
 
 define <4 x double> @sitofp_with_zeroinitializer_4xi32_4f64(i32 %a2, i32 %a3) #0 {
-; CHECK-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
+; SSE-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A2:%.*]], i32 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[A3:%.*]], i32 1
+; SSE-NEXT:    [[TMP3:%.*]] = sitofp <2 x i32> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[RES31:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; SSE-NEXT:    ret <4 x double> [[RES31]]
+;
+; AVX-LABEL: @sitofp_with_zeroinitializer_4xi32_4f64(
+; AVX-NEXT:    [[CVT2:%.*]] = sitofp i32 [[A2:%.*]] to double
+; AVX-NEXT:    [[CVT3:%.*]] = sitofp i32 [[A3:%.*]] to double
+; AVX-NEXT:    [[RES2:%.*]] = insertelement <4 x double> zeroinitializer, double [[CVT2]], i32 0
+; AVX-NEXT:    [[RES3:%.*]] = insertelement <4 x double> [[RES2]], double [[CVT3]], i32 1
+; AVX-NEXT:    ret <4 x double> [[RES3]]
 ;
   %cvt2 = sitofp i32 %a2 to double
   %cvt3 = sitofp i32 %a3 to double

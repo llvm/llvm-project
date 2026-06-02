@@ -155,11 +155,6 @@ defm UnalignedDSAccess : AMDGPUSubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
-defm RelaxedBufferOOBMode : AMDGPUSubtargetFeature<"relaxed-buffer-oob-mode",
-  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially"
-  "cause an adjacent access to be treated as if it were also OOB"
->;
-
 defm DX10ClampAndIEEEMode : AMDGPUSubtargetFeature<"dx10-clamp-and-ieee-mode",
   "Target has DX10_CLAMP and IEEE_MODE kernel descriptor bits"
 >;
@@ -210,6 +205,10 @@ def FeatureSupportsXNACK : SubtargetFeature<"xnack-support",
   "SupportsXNACK",
   "true",
   "Hardware supports XNACK"
+>;
+
+defm XNACKAnyOnly : AMDGPUSubtargetFeature<"xnack-any-only",
+  "Target only supports XnackSetting to be Any"
 >;
 
 // XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
@@ -858,6 +857,18 @@ defm QsadInsts : AMDGPUSubtargetFeature<"qsad-insts",
   "Has v_qsad* instructions"
 >;
 
+defm MsadInsts : AMDGPUSubtargetFeature<"msad-insts",
+  "Has v_msad_u8 instruction"
+>;
+
+defm MqsadPkInsts : AMDGPUSubtargetFeature<"mqsad-pk-insts",
+  "Has v_mqsad_pk_u16_u8 instruction"
+>;
+
+defm MqsadInsts : AMDGPUSubtargetFeature<"mqsad-insts",
+  "Has v_mqsad_u32_u8 instruction"
+>;
+
 defm CvtNormInsts : AMDGPUSubtargetFeature<"cvt-norm-insts",
   "Has v_cvt_norm* instructions"
 >;
@@ -1401,8 +1412,9 @@ def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
   FeatureGDS, FeatureGWS, FeatureDefaultComponentZero,
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
-  FeatureSadInsts, FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode,
-  FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
+  FeatureSadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
+  FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode, FeatureMTBUFInsts,
+  FeatureFormattedMUBUFInsts
   ]
 >;
 
@@ -1417,7 +1429,8 @@ def FeatureSeaIslands : GCNSubtargetFeatureGeneration<"SEA_ISLANDS",
   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
   FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
   FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
-  FeatureSadInsts, FeatureQsadInsts, FeatureCvtPkNormVOP2Insts,
+  FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
+  FeatureMqsadInsts, FeatureCvtPkNormVOP2Insts,
   FeatureDX10ClampAndIEEEMode, FeatureInstCacheLineSize64,
   FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
   ]
@@ -1437,7 +1450,8 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
    FeatureUnalignedBufferAccess, FeatureImageInsts, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureVmemWriteVgprInOrder, FeatureCubeInsts,
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts,
+   FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtPkNormVOP2Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
   ]
@@ -1460,6 +1474,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
    FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad,
    FeatureCubeInsts, FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureMsadInsts, FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
@@ -1487,7 +1502,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureVmemWriteVgprInOrder, FeatureVMemToLDSLoad, FeatureCubeInsts,
-   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts,
+   FeatureLerpInst, FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts,
+   FeatureMqsadPkInsts, FeatureMqsadInsts,
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
@@ -1514,7 +1530,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureVmemWriteVgprInOrder, FeatureCubeInsts, FeatureLerpInst,
-   FeatureSadInsts, FeatureQsadInsts, FeatureCvtNormInsts,
+   FeatureSadInsts, FeatureQsadInsts, FeatureMsadInsts, FeatureMqsadPkInsts,
+   FeatureMqsadInsts, FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts
   ]
@@ -1826,7 +1843,10 @@ def FeatureISAVersion10_Common : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureNSAEncoding,
-   FeatureBackOffBarrier]>;
+   FeatureBackOffBarrier,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -1921,6 +1941,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureRealTrue16Insts,
    FeatureD16Writes32BitVgpr,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
 ]>;
 
 // There are few workarounds that need to be added to all targets. This
@@ -2054,6 +2077,9 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureLerpInst,
    FeatureSadInsts,
    FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
@@ -2155,6 +2181,9 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLerpInst,
    FeatureSadInsts,
    FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
@@ -2169,6 +2198,9 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureLerpInst,
    FeatureSadInsts,
    FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
@@ -2180,8 +2212,11 @@ def FeatureISAVersion12_Generic: FeatureSet<
     [FeatureRequiresCOV6])>;
 
 def FeatureISAVersion12_5_Generic: FeatureSet<
-  !listconcat(FeatureISAVersion12_50.Features,
-    [FeatureRequiresCOV6])>;
+  !listconcat(FeatureISAVersion12_50_Common.Features,
+  [FeatureAddressableLocalMemorySize327680,
+   FeatureSetregVGPRMSBFixup,
+   FeatureRequiresCOV6,
+   FeatureXNACKAnyOnly])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2239,6 +2274,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureLerpInst,
    FeatureSadInsts,
    FeatureQsadInsts,
+   FeatureMsadInsts,
+   FeatureMqsadPkInsts,
+   FeatureMqsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
@@ -2750,6 +2788,9 @@ def NotHasMADIntraFwdBug : Predicate<"!Subtarget->hasMADIntraFwdBug()">;
 
 def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
   AssemblerPredicate<(all_of (not FeatureSALUFloatInsts))>;
+
+def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts()">,
+  AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 

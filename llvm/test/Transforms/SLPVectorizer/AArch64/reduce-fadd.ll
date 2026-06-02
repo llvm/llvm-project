@@ -486,8 +486,11 @@ define float @reduce_fast_float_case1(ptr %a) {
 ; CHECK-LABEL: define float @reduce_fast_float_case1(
 ; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <5 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[ADD4:%.*]] = call fast float @llvm.vector.reduce.fadd.v5f32(float 0.000000e+00, <5 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[LOAD4:%.*]] = load float, ptr [[GEP4]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd fast float [[TMP1]], [[LOAD4]]
 ; CHECK-NEXT:    ret float [[ADD4]]
 ;
 entry:

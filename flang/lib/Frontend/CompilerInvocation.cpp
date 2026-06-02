@@ -873,6 +873,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
   }
 
+  // -f{no-}acc-allow-default-none-scalars
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
+      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
+                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+                   false));
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
@@ -1721,6 +1728,9 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
 
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
+
   success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
@@ -1900,6 +1910,12 @@ void CompilerInvocation::setFortranOpts() {
   // Add the ordered list of -intrinsic-modules-path
   fortranOptions.searchDirectories.insert(
       fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 

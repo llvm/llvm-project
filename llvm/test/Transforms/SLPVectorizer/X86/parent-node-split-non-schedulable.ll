@@ -45,11 +45,13 @@ define i32 @main(ptr %c, i32 %0, i1 %tobool4.not, i16 %1) {
 ; CHECK-NEXT:    br label %[[AH:.*]]
 ; CHECK:       [[AH]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = phi <8 x i32> [ [[TMP20]], %[[AH]] ], [ [[TMP18]], %[[IF_END14]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <8 x i32> [[TMP21]], <8 x i32> poison, <3 x i32> <i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i32> [[TMP21]], <8 x i32> poison, <3 x i32> <i32 poison, i32 7, i32 poison>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <3 x i32> [[TMP27]], <3 x i32> <i32 0, i32 poison, i32 0>, <3 x i32> <i32 3, i32 1, i32 5>
-; CHECK-NEXT:    [[TMP25:%.*]] = add <3 x i32> [[TMP26]], [[TMP24]]
-; CHECK-NEXT:    [[OR27:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[TMP25]])
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i32> [[TMP21]], i32 5
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i32> [[TMP21]], i32 7
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i32> [[TMP21]], i32 4
+; CHECK-NEXT:    [[TMP29:%.*]] = or i32 [[ADD]], [[TMP28]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <8 x i32> [[TMP21]], i32 6
+; CHECK-NEXT:    [[OR27:%.*]] = or i32 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    store i32 [[OR27]], ptr [[C]], align 4
 ; CHECK-NEXT:    br i1 [[TOBOOL4_NOT]], label %[[WHILE_COND_PREHEADER]], label %[[AH]]
 ; CHECK:       [[WHILE_COND_PREHEADER]]:
