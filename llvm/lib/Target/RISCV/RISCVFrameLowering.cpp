@@ -1690,9 +1690,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // For Zilsd on RV32, append GPRPair registers to the CSR list. This prevents
   // the need to create register sets for each abi which is a lot more complex.
   // Don't use Zilsd for callee-saved coalescing if the required alignment
-  // exceeds the stack alignment.
+  // exceeds the stack alignment or when Zcmp/Xqccmp or save/restore libcalls
+  // are enabled.
   bool UseZilsd = !STI.is64Bit() && STI.hasStdExtZilsd() &&
-                  STI.getZilsdAlign() <= getStackAlign();
+                  STI.getZilsdAlign() <= getStackAlign() &&
+                  !RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF);
   if (UseZilsd) {
     SmallVector<MCPhysReg, 32> NewCSRs;
     SmallSet<MCPhysReg, 16> CSRSet;
