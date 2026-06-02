@@ -421,7 +421,7 @@ Block::BlockInfo Block::allocate(Block *block, size_t alignment, size_t size) {
   }
 
   // Now get a block for the requested size.
-  if (optional<Block *> next = info.block->split(size, MIN_ALIGN))
+  if (optional<Block *> next = info.block->split(size))
     info.next = *next;
 
   return info;

@@ -165,10 +165,7 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
   uintptr_t next_block_start = Block::next_possible_block_start(
       reinterpret_cast<uintptr_t>(block) + min_outer_size, Block::MIN_ALIGN);
   size_t new_outer_size = next_block_start - reinterpret_cast<uintptr_t>(block);
-  // only split the block if the trailing part can be inserted into freelist
-  if (block->outer_size() >= new_outer_size &&
-      block->outer_size() - new_outer_size >= FreeStore::MIN_OUTER_SIZE) {
-    // We must temporarily mark the block as free to allow splitting.
+  if (block->outer_size() >= new_outer_size) {
     // A block's usable space overlaps with the next block's prev_ field. When
     // the next block is created via splitting, its header constructor writes to
     // its prev_ field (initializing it to 0). Since the original block is
@@ -179,7 +176,7 @@ LIBC_INLINE bool FreeListHeap::shrink_in_place(Block *block, size_t size) {
         reinterpret_cast<cpp::byte *>(block) + new_outer_size;
     size_t backup;
     LIBC_NAMESPACE::inline_memcpy(&backup, overlap_ptr, sizeof(size_t));
-    optional<Block *> next = block->split(size, Block::MIN_ALIGN);
+    optional<Block *> next = block->split(size);
 
     LIBC_NAMESPACE::inline_memcpy(overlap_ptr, &backup, sizeof(size_t));
 
