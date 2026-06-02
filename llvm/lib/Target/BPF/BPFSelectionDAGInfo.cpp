@@ -45,7 +45,7 @@ SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (!ConstantSize)
     return SDValue();
 
-  // BPF::MEMCPY supports alignment up to 8 bytes.
+  // `BPFInstrInfo::expandMEMCPY` supports alignment up to 8 bytes.
   if (Alignment.value() > 8)
     return SDValue();
 
