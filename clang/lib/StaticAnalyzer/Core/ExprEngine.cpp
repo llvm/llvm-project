@@ -1145,6 +1145,9 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
 
 void ExprEngine::ProcessLifetimeEnd(const Stmt *S, const VarDecl *D,
                                     ExplodedNode *Pred) {
+  PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
+                                S->getBeginLoc(),
+                                "Error evaluating end of a lifetime");
   ExplodedNodeSet Src;
   NodeBuilder Bldr(Pred, Src, *currBldrCtx);
   LifetimeEnd PP(S, D, Pred->getStackFrame());
