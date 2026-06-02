@@ -1693,7 +1693,7 @@ define <32 x i8> @constant_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y) nounwind {
 ; AVX512VL-NEXT:    vpsllw $8, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64,128,64,32,16,8,4,2,1,128,1,2,4,8,16,32,64]
 ; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | ymm1 | ymm2
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | ymm2 | ymm1
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: constant_funnnel_v32i8:

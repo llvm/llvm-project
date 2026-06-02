@@ -894,12 +894,12 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-SKX-NOVBMI-NEXT:    vpandn %ymm3, %ymm5, %ymm3
 ; CHECK-SKX-NOVBMI-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm1
 ; CHECK-SKX-NOVBMI-NEXT:    vpsllw $8, %ymm1, %ymm1
-; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm4 & ymm5)
+; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm5 & ymm4)
 ; CHECK-SKX-NOVBMI-NEXT:    vpmullw %ymm2, %ymm0, %ymm3
 ; CHECK-SKX-NOVBMI-NEXT:    vpandn %ymm2, %ymm5, %ymm2
 ; CHECK-SKX-NOVBMI-NEXT:    vpmaddubsw %ymm2, %ymm0, %ymm0
 ; CHECK-SKX-NOVBMI-NEXT:    vpsllw $8, %ymm0, %ymm0
-; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm3 & ymm5)
+; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm5 & ymm3)
 ; CHECK-SKX-NOVBMI-NEXT:    vmovdqa %ymm0, (%rdx)
 ; CHECK-SKX-NOVBMI-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-SKX-NOVBMI-NEXT:    vzeroupper
@@ -937,12 +937,12 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512-NEXT:    vpandn %ymm3, %ymm5, %ymm3
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm3, %ymm1, %ymm1
 ; CHECK-AVX512-NEXT:    vpsllw $8, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm4 & ymm5)
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 | (ymm5 & ymm4)
 ; CHECK-AVX512-NEXT:    vpmullw %ymm2, %ymm0, %ymm3
 ; CHECK-AVX512-NEXT:    vpandn %ymm2, %ymm5, %ymm2
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm2, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    vpsllw $8, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm3 & ymm5)
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm5 & ymm3)
 ; CHECK-AVX512-NEXT:    vmovdqa %ymm0, (%rdx)
 ; CHECK-AVX512-NEXT:    vmovdqa %ymm1, 32(%rdx)
 ; CHECK-AVX512-NEXT:    vzeroupper
@@ -985,7 +985,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-SKX-NOVBMI-NEXT:    vpandnq %zmm1, %zmm3, %zmm1
 ; CHECK-SKX-NOVBMI-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
 ; CHECK-SKX-NOVBMI-NEXT:    vpsllw $8, %zmm0, %zmm0
-; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm2 & zmm3)
+; CHECK-SKX-NOVBMI-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm2)
 ; CHECK-SKX-NOVBMI-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-SKX-NOVBMI-NEXT:    vzeroupper
 ; CHECK-SKX-NOVBMI-NEXT:    retq
@@ -1012,7 +1012,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512-NEXT:    vpandnq %zmm1, %zmm3, %zmm1
 ; CHECK-AVX512-NEXT:    vpmaddubsw %zmm1, %zmm0, %zmm0
 ; CHECK-AVX512-NEXT:    vpsllw $8, %zmm0, %zmm0
-; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm2 & zmm3)
+; CHECK-AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm2)
 ; CHECK-AVX512-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; CHECK-AVX512-NEXT:    vzeroupper
 ; CHECK-AVX512-NEXT:    retq

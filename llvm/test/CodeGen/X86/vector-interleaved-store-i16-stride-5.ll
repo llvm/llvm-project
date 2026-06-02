@@ -3409,7 +3409,7 @@ define void @store_i16_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[0,1,1,1]
 ; AVX512-NEXT:    vpandnq %ymm11, %ymm20, %ymm11
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm11, %zmm11
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm11 = zmm11 | (zmm13 & zmm20)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm11 = zmm11 | (zmm20 & zmm13)
 ; AVX512-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX512-NEXT:    vpbroadcastq 8(%rdi), %xmm2
 ; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
@@ -3535,7 +3535,7 @@ define void @store_i16_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,1,1]
 ; AVX512-FCP-NEXT:    vpandnq %ymm3, %ymm17, %ymm3
 ; AVX512-FCP-NEXT:    vinserti64x4 $1, %ymm15, %zmm3, %zmm3
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm12 & zmm17)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm17 & zmm12)
 ; AVX512-FCP-NEXT:    vmovdqa (%rdi), %ymm12
 ; AVX512-FCP-NEXT:    vpshufd {{.*#+}} ymm0 = ymm12[0,1,2,1,4,5,6,5]
 ; AVX512-FCP-NEXT:    vmovdqa (%rsi), %ymm15
@@ -3716,7 +3716,7 @@ define void @store_i16_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vpermq {{.*#+}} ymm11 = ymm11[0,1,1,1]
 ; AVX512DQ-NEXT:    vpandnq %ymm11, %ymm20, %ymm11
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm2, %zmm11, %zmm11
-; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm11 = zmm11 | (zmm13 & zmm20)
+; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm11 = zmm11 | (zmm20 & zmm13)
 ; AVX512DQ-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
 ; AVX512DQ-NEXT:    vpbroadcastq 8(%rdi), %xmm2
 ; AVX512DQ-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2,3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
@@ -3842,7 +3842,7 @@ define void @store_i16_stride5_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,1,1]
 ; AVX512DQ-FCP-NEXT:    vpandnq %ymm3, %ymm17, %ymm3
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $1, %ymm15, %zmm3, %zmm3
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm12 & zmm17)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm17 & zmm12)
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdi), %ymm12
 ; AVX512DQ-FCP-NEXT:    vpshufd {{.*#+}} ymm0 = ymm12[0,1,2,1,4,5,6,5]
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rsi), %ymm15
@@ -6987,8 +6987,8 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vpandnq 80(%r8){1to4}, %ymm23, %ymm27
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm27, %zmm8, %zmm8
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535]
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm26 = zmm26 | (zmm29 & zmm1)
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm22 = zmm22 | (zmm16 & zmm1)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm26 = zmm26 | (zmm1 & zmm29)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm22 = zmm22 | (zmm1 & zmm16)
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm14, %zmm11, %zmm11
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm14 = [65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535]
 ; AVX512-NEXT:    vpternlogq $184, {{[-0-9]+}}(%r{{[sb]}}p), %zmm14, %zmm11 # 64-byte Folded Reload
@@ -7020,8 +7020,8 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm21 ^ (zmm30 & (zmm18 ^ zmm21))
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm20 ^ (zmm30 & (zmm7 ^ zmm20))
 ; AVX512-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535]
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm18 & zmm3)
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm8 = zmm8 | (zmm7 & zmm3)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm18)
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm8 = zmm8 | (zmm3 & zmm7)
 ; AVX512-NEXT:    vmovdqa64 %zmm8, 384(%r9)
 ; AVX512-NEXT:    vmovdqa64 %zmm0, 64(%r9)
 ; AVX512-NEXT:    vmovdqa64 %zmm4, 256(%r9)
@@ -7303,15 +7303,15 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm8, %zmm20 # 64-byte Folded Reload
 ; AVX512-FCP-NEXT:    # zmm20 = mem ^ (zmm8 & (zmm20 ^ mem))
 ; AVX512-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535]
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm21 = zmm21 | (zmm10 & zmm7)
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm17 = zmm17 | (zmm20 & zmm7)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm21 = zmm21 | (zmm7 & zmm10)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm17 = zmm17 | (zmm7 & zmm20)
 ; AVX512-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm2, %zmm28 # 64-byte Folded Reload
 ; AVX512-FCP-NEXT:    # zmm28 = mem ^ (zmm2 & (zmm28 ^ mem))
 ; AVX512-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm2, %zmm19 # 64-byte Folded Reload
 ; AVX512-FCP-NEXT:    # zmm19 = mem ^ (zmm2 & (zmm19 ^ mem))
 ; AVX512-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535]
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm18 | (zmm28 & zmm2)
-; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm16 = zmm16 | (zmm19 & zmm2)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm18 | (zmm2 & zmm28)
+; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} zmm16 = zmm16 | (zmm2 & zmm19)
 ; AVX512-FCP-NEXT:    vpbroadcastq 64(%r8), %ymm2
 ; AVX512-FCP-NEXT:    vinserti64x4 $1, %ymm9, %zmm2, %zmm2
 ; AVX512-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm8 = [65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535]
@@ -7596,8 +7596,8 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vpandnq 80(%r8){1to4}, %ymm23, %ymm27
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm27, %zmm8, %zmm8
 ; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm1 = [65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535]
-; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm26 = zmm26 | (zmm29 & zmm1)
-; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm22 = zmm22 | (zmm16 & zmm1)
+; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm26 = zmm26 | (zmm1 & zmm29)
+; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm22 = zmm22 | (zmm1 & zmm16)
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm14, %zmm11, %zmm11
 ; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm14 = [65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535,0,0,65535,65535,65535]
 ; AVX512DQ-NEXT:    vpternlogq $184, {{[-0-9]+}}(%r{{[sb]}}p), %zmm14, %zmm11 # 64-byte Folded Reload
@@ -7629,8 +7629,8 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm21 ^ (zmm30 & (zmm18 ^ zmm21))
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm7 = zmm20 ^ (zmm30 & (zmm7 ^ zmm20))
 ; AVX512DQ-NEXT:    vmovdqa64 {{.*#+}} zmm3 = [65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535]
-; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm18 & zmm3)
-; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm8 = zmm8 | (zmm7 & zmm3)
+; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 | (zmm3 & zmm18)
+; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm8 = zmm8 | (zmm3 & zmm7)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm8, 384(%r9)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm0, 64(%r9)
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm4, 256(%r9)
@@ -7912,15 +7912,15 @@ define void @store_i16_stride5_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm8, %zmm20 # 64-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # zmm20 = mem ^ (zmm8 & (zmm20 ^ mem))
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm7 = [65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535]
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm21 = zmm21 | (zmm10 & zmm7)
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm17 = zmm17 | (zmm20 & zmm7)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm21 = zmm21 | (zmm7 & zmm10)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm17 = zmm17 | (zmm7 & zmm20)
 ; AVX512DQ-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm2, %zmm28 # 64-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # zmm28 = mem ^ (zmm2 & (zmm28 ^ mem))
 ; AVX512DQ-FCP-NEXT:    vpternlogq $226, {{[-0-9]+}}(%r{{[sb]}}p), %zmm2, %zmm19 # 64-byte Folded Reload
 ; AVX512DQ-FCP-NEXT:    # zmm19 = mem ^ (zmm2 & (zmm19 ^ mem))
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535]
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm18 | (zmm28 & zmm2)
-; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm16 = zmm16 | (zmm19 & zmm2)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm18 = zmm18 | (zmm2 & zmm28)
+; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} zmm16 = zmm16 | (zmm2 & zmm19)
 ; AVX512DQ-FCP-NEXT:    vpbroadcastq 64(%r8), %ymm2
 ; AVX512DQ-FCP-NEXT:    vinserti64x4 $1, %ymm9, %zmm2, %zmm2
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 {{.*#+}} zmm8 = [65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535,65535,65535,0,65535,65535]

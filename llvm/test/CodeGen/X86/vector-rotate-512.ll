@@ -841,39 +841,39 @@ define <16 x i32> @splatconstant_rotate_mask_v16i32(<16 x i32> %a) nounwind {
 define <32 x i16> @splatconstant_rotate_mask_v32i16(<32 x i16> %a) nounwind {
 ; AVX512F-LABEL: splatconstant_rotate_mask_v32i16:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpsllw $5, %ymm0, %ymm1
+; AVX512F-NEXT:    vpsrlw $11, %ymm0, %ymm1
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512F-NEXT:    vpsllw $5, %ymm2, %ymm3
+; AVX512F-NEXT:    vpsrlw $11, %ymm2, %ymm3
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512F-NEXT:    vpsrlw $11, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsrlw $11, %ymm2, %ymm2
+; AVX512F-NEXT:    vpsllw $5, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsllw $5, %ymm2, %ymm2
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst & (zmm0 | zmm1)
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splatconstant_rotate_mask_v32i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsllw $5, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpsrlw $11, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512VL-NEXT:    vpsllw $5, %ymm2, %ymm3
+; AVX512VL-NEXT:    vpsrlw $11, %ymm2, %ymm3
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512VL-NEXT:    vpsrlw $11, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsrlw $11, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpsllw $5, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllw $5, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst & (zmm0 | zmm1)
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatconstant_rotate_mask_v32i16:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsllw $5, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpsrlw $11, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpsrlw $11, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpsllw $5, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst & (zmm0 | zmm1)
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: splatconstant_rotate_mask_v32i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpsllw $5, %zmm0, %zmm1
-; AVX512VLBW-NEXT:    vpsrlw $11, %zmm0, %zmm0
+; AVX512VLBW-NEXT:    vpsrlw $11, %zmm0, %zmm1
+; AVX512VLBW-NEXT:    vpsllw $5, %zmm0, %zmm0
 ; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst & (zmm0 | zmm1)
 ; AVX512VLBW-NEXT:    retq
 ;

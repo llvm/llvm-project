@@ -1570,8 +1570,8 @@ define <16 x i16> @splatconstant_rotate_mask_v16i16(<16 x i16> %a) nounwind {
 ;
 ; AVX512VL-LABEL: splatconstant_rotate_mask_v16i16:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpsllw $5, %ymm0, %ymm1
-; AVX512VL-NEXT:    vpsrlw $11, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrlw $11, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpsllw $5, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = m32bcst & (ymm0 | ymm1)
 ; AVX512VL-NEXT:    retq
 ;
@@ -1585,8 +1585,8 @@ define <16 x i16> @splatconstant_rotate_mask_v16i16(<16 x i16> %a) nounwind {
 ;
 ; AVX512VLBW-LABEL: splatconstant_rotate_mask_v16i16:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpsllw $5, %ymm0, %ymm1
-; AVX512VLBW-NEXT:    vpsrlw $11, %ymm0, %ymm0
+; AVX512VLBW-NEXT:    vpsrlw $11, %ymm0, %ymm1
+; AVX512VLBW-NEXT:    vpsllw $5, %ymm0, %ymm0
 ; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} ymm0 = m32bcst & (ymm0 | ymm1)
 ; AVX512VLBW-NEXT:    retq
 ;

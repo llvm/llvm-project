@@ -33,7 +33,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
 #include <functional>
-#include <optional>
 
 using namespace llvm;
 
@@ -4698,8 +4697,17 @@ bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
                                      SDNode *ParentB, SDNode *ParentC,
                                      SDValue A, SDValue B, SDValue C,
                                      uint8_t Imm) {
-  assert(A.isOperandOf(ParentA) && B.isOperandOf(ParentB) &&
-         C.isOperandOf(ParentC) && "Incorrect parent node");
+  // Unused operand slots may be padded with an IMPLICIT_DEF (e.g. when a tree
+  // folds to a VPTERNLOG with fewer than three distinct inputs); padding has no
+  // parent node.
+  auto IsPad = [](SDValue V) {
+    return V.isMachineOpcode() &&
+           V.getMachineOpcode() == TargetOpcode::IMPLICIT_DEF;
+  };
+  assert((IsPad(A) || A.isOperandOf(ParentA)) &&
+         (IsPad(B) || B.isOperandOf(ParentB)) &&
+         (IsPad(C) || C.isOperandOf(ParentC)) && "Incorrect parent node");
+  (void)IsPad;
 
   auto tryFoldLoadOrBCast =
       [this](SDNode *Root, SDNode *P, SDValue &L, SDValue &Base, SDValue &Scale,
@@ -4817,7 +4825,17 @@ bool X86DAGToDAGISel::matchVPTERNLOG(SDNode *Root, SDNode *ParentA,
   return true;
 }
 
-// Try to match logic trees to one or more VPTERNLOG operations.
+// Try to match a tree of bitwise logic ops to one or more VPTERNLOG ops.
+//
+// VPTERNLOG implements an arbitrary 3-input bitwise function via an 8-bit
+// truth-table immediate.  We evaluate the logic sub-DAG rooted at N
+// symbolically: each of the (up to three) distinct leaf inputs is seeded with a
+// canonical truth-table column (0xF0/0xCC/0xAA) and AND/OR/XOR/ANDNP/NOT are
+// folded bitwise over those seeds, yielding the control immediate.  Operand
+// reuse, inverted inputs and arbitrary nesting depth all fall out of the
+// recursion.  Trees with more than three distinct leaves are split by leaving
+// one subtree "opaque" (it selects into its own VPTERNLOG when isel reaches it)
+// and folding the rest around it.
 bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   MVT NVT = N->getSimpleValueType(0);
 
@@ -4830,421 +4848,168 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
     return false;
 
-  auto IsLogicOpcode = [](unsigned Opc) {
+  auto IsLogic = [](unsigned Opc) {
     return Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
            Opc == X86ISD::ANDNP;
   };
-
-  auto IsAllOnesVec = [](SDValue V) {
-    return ISD::isBuildVectorAllOnes(V.getNode());
-  };
-
-  auto IsAllOnesXor = [](SDValue V) {
+  auto IsNot = [](SDValue V) {
     return V.getOpcode() == ISD::XOR &&
            ISD::isBuildVectorAllOnes(V.getOperand(1).getNode());
   };
-
-  auto PeelSingleUseBitcast = [](SDValue V) {
+  auto PeelBitcast = [](SDValue V) {
     if (V.getOpcode() == ISD::BITCAST && V.hasOneUse())
       return V.getOperand(0);
     return V;
   };
-
-  std::function<bool(SDValue, unsigned)> IsHomogeneousAssociativeTree =
-      [&](SDValue V, unsigned Opc) {
-        V = PeelSingleUseBitcast(V);
-        if (V.getOpcode() != Opc)
-          return true;
-        if (!V.hasOneUse())
-          return false;
-        return IsHomogeneousAssociativeTree(V.getOperand(0), Opc) &&
-               IsHomogeneousAssociativeTree(V.getOperand(1), Opc);
-      };
-
   auto IsLoadLike = [](SDValue V) {
     return isa<LoadSDNode>(V.getNode()) ||
            V.getOpcode() == X86ISD::VBROADCAST_LOAD;
   };
 
-  // Fast-path: X ^ -1 -> ~X.
-  //
-  // Use X for all three VPTERNLOG inputs and select an immediate that yields
-  // ~X when A == B == C == X (imm bit0 = 1, bit7 = 0; other bits are don't
-  // care). This avoids introducing undef register operands.
-  //
-  // Keep this for register-like X only. For load-like X, this can cause an
-  // extra move/load before a folded-load VPTERNLOG form, which is usually not
-  // profitable.
-  if (N->getOpcode() == ISD::XOR) {
-    for (unsigned Idx = 0; Idx != 2; ++Idx) {
-      if (!IsAllOnesVec(N->getOperand(Idx)))
-        continue;
-
-      SDValue X = N->getOperand(Idx ^ 1);
-      SDValue XNoCast = PeelSingleUseBitcast(X);
-      if (IsLogicOpcode(XNoCast.getOpcode()) || IsAllOnesXor(XNoCast) ||
-          IsLoadLike(XNoCast))
-        continue;
-
-      if (matchVPTERNLOG(N, N, N, N, X, X, X, 0x01))
-        return true;
-    }
-  }
-
-  // Avoid consuming OR into a stand-alone VPTERNLOG if it is part of a
-  // higher-level A & ~(B | C) shape. Let the parent AND/ANDNP matcher absorb
-  // the whole pattern instead.
-  if (N->getOpcode() == ISD::OR && N->hasOneUse()) {
-    SDNode *User = *N->user_begin();
-    while (User->getOpcode() == ISD::BITCAST && User->hasOneUse())
-      User = *User->user_begin();
-
-    if (User->getOpcode() == ISD::XOR && User->hasOneUse() &&
-        (ISD::isBuildVectorAllOnes(User->getOperand(0).getNode()) ||
-         ISD::isBuildVectorAllOnes(User->getOperand(1).getNode()))) {
-      SDNode *NextUser = *User->user_begin();
-      while (NextUser->getOpcode() == ISD::BITCAST && NextUser->hasOneUse())
-        NextUser = *NextUser->user_begin();
-      unsigned NextOpc = NextUser->getOpcode();
-      if (NextOpc == ISD::AND || NextOpc == X86ISD::ANDNP)
-        return false;
-    }
-  }
-
-  // Avoid consuming xor(logic_op, -1) (i.e. NOT of a logic sub-tree) into a
-  // stand-alone VPTERNLOG when the parent is also a logic op.  The parent's
-  // ComputeTernlog will fold the NOT directly into the truth-table immediate,
-  // producing fewer instructions overall.
-  if (N->getOpcode() == ISD::XOR && N->hasOneUse() &&
-      (ISD::isBuildVectorAllOnes(N->getOperand(0).getNode()) ||
-       ISD::isBuildVectorAllOnes(N->getOperand(1).getNode()))) {
-    SDValue Inner = ISD::isBuildVectorAllOnes(N->getOperand(1).getNode())
-                        ? N->getOperand(0)
-                        : N->getOperand(1);
-    SDValue InnerNoCast = PeelSingleUseBitcast(Inner);
-    if (IsLogicOpcode(InnerNoCast.getOpcode())) {
-      SDNode *User = *N->user_begin();
-      while (User->getOpcode() == ISD::BITCAST && User->hasOneUse())
-        User = *User->user_begin();
-      if (IsLogicOpcode(User->getOpcode()))
-        return false;
-    }
-  }
-
-  // Fast-path: A & ~(B | C) -> vpternlog(A, B, C, 0x10)
-  if (N->getOpcode() == ISD::AND) {
-    for (unsigned Idx = 0; Idx != 2; ++Idx) {
-      SDValue NotSide = N->getOperand(Idx);
-      SDValue A = N->getOperand(Idx ^ 1);
-
-      SDValue NotSideNoCast = PeelSingleUseBitcast(NotSide);
-      if (!NotSideNoCast.hasOneUse() || !IsAllOnesXor(NotSideNoCast))
-        continue;
-
-      SDValue Inner = PeelSingleUseBitcast(NotSideNoCast.getOperand(0));
-      if (!Inner.hasOneUse() || Inner.getOpcode() != ISD::OR)
-        continue;
-
-      SDValue B = Inner.getOperand(0);
-      SDValue C = Inner.getOperand(1);
-      if (matchVPTERNLOG(N, N, Inner.getNode(), Inner.getNode(), A, B, C, 0x10))
-        return true;
-    }
-  }
-
-  struct LeafInfo {
-    SDValue Leaf;
+  struct Leaf {
+    SDValue V;
     SDNode *Parent;
-    uint8_t Magic;
   };
 
-  auto ComputeTernlog = [&](SDValue Root, SDNode *OpaqueSubtree,
-                            SmallVectorImpl<LeafInfo> &Leaves, uint8_t &ImmOut,
-                            bool &TooManyLeaves) {
-    TooManyLeaves = false;
-
-    auto lookupLeaf = [&](SDValue Leaf) -> std::optional<uint8_t> {
-      for (const LeafInfo &L : Leaves)
-        if (L.Leaf == Leaf)
-          return L.Magic;
-      return std::nullopt;
-    };
-
-    std::function<int(SDValue, SDNode *, bool)> ComputeRec =
+  // Symbolically evaluate the tree rooted at Root.  Opaque, if non-null, is
+  // treated as a leaf even when it is a logic op (used for cascading).  On
+  // success fills Leaves (the distinct inputs in seed order, at most three),
+  // Imm and NumOps (the number of logic/NOT nodes folded - a profitability
+  // signal), and returns true.  Returns false when more than three distinct
+  // leaves are required.  Single-use is required to fold a node; bitcasts are
+  // peeled.
+  auto Evaluate = [&](SDValue Root, SDNode *Opaque,
+                      SmallVectorImpl<Leaf> &Leaves, uint8_t &Imm,
+                      unsigned &NumOps) -> bool {
+    static constexpr uint8_t Seeds[] = {0xF0, 0xCC, 0xAA};
+    NumOps = 0;
+    std::function<int(SDValue, SDNode *, bool)> Eval =
         [&](SDValue Op, SDNode *Parent, bool IsRoot) -> int {
-      if (Op.getNode() != OpaqueSubtree) {
-        // Peek through single-use bitcasts.
+      if (Op.getNode() != Opaque) {
         if (Op.getOpcode() == ISD::BITCAST && (IsRoot || Op.hasOneUse())) {
           Parent = Op.getNode();
           Op = Op.getOperand(0);
         }
-
-        if ((IsRoot || Op.hasOneUse()) && IsAllOnesXor(Op)) {
-          int Inner = ComputeRec(Op.getOperand(0), Op.getNode(), false);
-          return Inner < 0 ? -1 : ((~Inner) & 0xFF);
+        if ((IsRoot || Op.hasOneUse()) && IsNot(Op)) {
+          ++NumOps;
+          int Inner = Eval(Op.getOperand(0), Op.getNode(), false);
+          return Inner < 0 ? -1 : (~Inner & 0xFF);
         }
-
-        if ((IsRoot || Op.hasOneUse()) && IsLogicOpcode(Op.getOpcode())) {
-          int L = ComputeRec(Op.getOperand(0), Op.getNode(), false);
-          int R = ComputeRec(Op.getOperand(1), Op.getNode(), false);
+        if ((IsRoot || Op.hasOneUse()) && IsLogic(Op.getOpcode())) {
+          ++NumOps;
+          int L = Eval(Op.getOperand(0), Op.getNode(), false);
+          int R = Eval(Op.getOperand(1), Op.getNode(), false);
           if (L < 0 || R < 0)
             return -1;
-
           switch (Op.getOpcode()) {
-          default:
-            llvm_unreachable("Unexpected opcode");
           case ISD::AND:
-            return (L & R) & 0xFF;
+            return L & R;
           case ISD::OR:
-            return (L | R) & 0xFF;
+            return L | R;
           case ISD::XOR:
             return (L ^ R) & 0xFF;
           case X86ISD::ANDNP:
-            return ((~L) & R) & 0xFF;
+            return ~L & R;
+          default:
+            llvm_unreachable("Checked by IsLogic");
           }
         }
       }
-
-      if (auto Existing = lookupLeaf(Op))
-        return *Existing;
-
-      if (Leaves.size() >= 3) {
-        TooManyLeaves = true;
+      // Leaf: reuse the seed of an identical input, else allocate a new one.
+      for (unsigned I = 0, E = Leaves.size(); I != E; ++I)
+        if (Leaves[I].V == Op)
+          return Seeds[I];
+      if (Leaves.size() >= 3)
         return -1;
-      }
-
-      static constexpr uint8_t Magics[] = {0xF0, 0xCC, 0xAA};
-      uint8_t Magic = Magics[Leaves.size()];
-      Leaves.push_back({Op, Parent, Magic});
-      return Magic;
+      uint8_t Seed = Seeds[Leaves.size()];
+      Leaves.push_back({Op, Parent});
+      return Seed;
     };
-
-    int Imm = ComputeRec(Root, Root.getNode(), true);
-    if (Imm < 0)
+    int Result = Eval(Root, Root.getNode(), /*IsRoot=*/true);
+    if (Result < 0)
       return false;
-    ImmOut = static_cast<uint8_t>(Imm & 0xFF);
+    Imm = Result & 0xFF;
     return true;
   };
 
-  auto EmitFromLeaves = [&](SDNode *Root,
-                            const SmallVectorImpl<LeafInfo> &InLeaves,
-                            uint8_t Imm) {
-    assert(!InLeaves.empty() && "Expected at least one leaf");
-    SDValue A = InLeaves[0].Leaf;
-    SDNode *ParentA = InLeaves[0].Parent;
-    SDValue B = A;
-    SDNode *ParentB = ParentA;
-    SDValue C = A;
-    SDNode *ParentC = ParentA;
-
-    if (InLeaves.size() > 1) {
-      B = InLeaves[1].Leaf;
-      ParentB = InLeaves[1].Parent;
+  // Emit one VPTERNLOG from up to three leaves.  Unused operand slots are
+  // padded with undef so that, e.g., a NOT of a single memory operand folds the
+  // load with no false dependency on the other inputs.
+  auto Emit = [&](ArrayRef<Leaf> Leaves, uint8_t Imm) {
+    SDValue Undef(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, SDLoc(N), NVT), 0);
+    SDValue Ops[3] = {Undef, Undef, Undef};
+    SDNode *Parents[3] = {N, N, N};
+    for (unsigned I = 0, E = Leaves.size(); I != E; ++I) {
+      Ops[I] = Leaves[I].V;
+      Parents[I] = Leaves[I].Parent;
     }
-    if (InLeaves.size() > 2) {
-      C = InLeaves[2].Leaf;
-      ParentC = InLeaves[2].Parent;
-    }
-
-    return matchVPTERNLOG(Root, ParentA, ParentB, ParentC, A, B, C, Imm);
+    return matchVPTERNLOG(N, Parents[0], Parents[1], Parents[2], Ops[0], Ops[1],
+                          Ops[2], Imm);
   };
 
-  SmallVector<LeafInfo, 3> Leaves;
+  // A cover is profitable when it folds at least two logic ops into one
+  // VPTERNLOG, or when it is a NOT of a single memory operand (which saves
+  // materializing an all-ones vector).  A lone binary op (and/or/xor/andn) is
+  // left to its dedicated, cheaper instruction.
+  auto Profitable = [&](ArrayRef<Leaf> Leaves, unsigned NumOps) {
+    if (NumOps >= 2)
+      return true;
+    return Leaves.size() == 1 && IsLoadLike(PeelBitcast(Leaves[0].V));
+  };
+
+  // Whole tree fits in a single VPTERNLOG (<= 3 distinct leaves).
+  SmallVector<Leaf, 3> Leaves;
   uint8_t Imm = 0;
-  bool TooManyLeaves = false;
-  if (ComputeTernlog(SDValue(N, 0), /*OpaqueSubtree=*/nullptr, Leaves, Imm,
-                     TooManyLeaves)) {
-    if (Leaves.empty())
+  unsigned NumOps = 0;
+  if (Evaluate(SDValue(N, 0), /*Opaque=*/nullptr, Leaves, Imm, NumOps)) {
+    if (!Profitable(Leaves, NumOps))
       return false;
-    // A single-leaf load folded into VPTERNLOG causes a redundant explicit
-    // load (for the tied src1=dst) plus a folded load, doubling memory
-    // traffic. Bail out and let default lowering handle it (e.g.
-    // SETALLONES + VPXORQ mem for NOT-of-load).
-    if (Leaves.size() == 1 && IsLoadLike(PeelSingleUseBitcast(Leaves[0].Leaf)))
-      return false;
-    return EmitFromLeaves(N, Leaves, Imm);
+    return Emit(Leaves, Imm);
   }
 
-  // Generic cascading for >3 leaves: keep one direct root operand as an opaque
-  // input leaf, then fold the remaining logic around it. This allows
-  // multi-level trees to be selected as chained VPTERNLOG operations.
-  if (TooManyLeaves) {
-    bool IsAssocOp = N->getOpcode() == ISD::OR || N->getOpcode() == ISD::AND ||
-                     N->getOpcode() == ISD::XOR;
-    bool IsHomogeneousAssoc = IsAssocOp && IsHomogeneousAssociativeTree(
-                                               SDValue(N, 0), N->getOpcode());
-
-    // For homogeneous associative trees, prefer choosing an opaque subtree
-    // from one level below the root-side logic node so we can expose two fresh
-    // siblings and form 3-input VPTERNLOG combines (e.g. OR reductions as
-    // repeated imm=254), rather than creating long 2-input $252/$250 chains.
-    if (IsHomogeneousAssoc) {
-      for (unsigned RootIdx = 0; RootIdx != 2; ++RootIdx) {
-        SDValue Side = PeelSingleUseBitcast(N->getOperand(RootIdx));
-        if (!Side.hasOneUse() || Side.getOpcode() != N->getOpcode())
-          continue;
-
-        for (unsigned ChildIdx = 0; ChildIdx != 2; ++ChildIdx) {
-          SDValue Child = PeelSingleUseBitcast(Side.getOperand(ChildIdx));
-          if (!Child.hasOneUse() || Child.getOpcode() != N->getOpcode())
-            continue;
-
-          SmallVector<LeafInfo, 3> AssocLeaves;
-          uint8_t AssocImm = 0;
-          bool AssocTooManyLeaves = false;
-          if (!ComputeTernlog(SDValue(N, 0), Child.getNode(), AssocLeaves,
-                              AssocImm, AssocTooManyLeaves))
-            continue;
-
-          if (AssocLeaves.size() < 2)
-            continue;
-
-          if (EmitFromLeaves(N, AssocLeaves, AssocImm))
-            return true;
-        }
-      }
-      // Fall through to generic cascading — for balanced trees all
-      // grandchildren may be leaves, so the child-as-opaque strategy below
-      // can still produce a valid 3-input combine.
+  // More than three leaves: cascade.  Collect the single-use logic subtrees
+  // that could be made opaque (NOTs are transparent - cutting at one would just
+  // spill it to a separate instruction).
+  SmallVector<SDNode *, 8> Candidates;
+  std::function<void(SDValue)> Collect = [&](SDValue V) {
+    V = PeelBitcast(V);
+    if (!V.hasOneUse())
+      return;
+    if (IsNot(V)) {
+      Collect(V.getOperand(0));
+      return;
     }
-
-    auto IsGoodOpaqueCandidate = [&](SDValue V) {
-      SDValue P = PeelSingleUseBitcast(V);
-      if (IsAllOnesXor(P))
-        P = PeelSingleUseBitcast(P.getOperand(0));
-      return IsLogicOpcode(P.getOpcode());
-    };
-
-    SmallVector<unsigned, 2> CandidateOrder;
-    if (IsGoodOpaqueCandidate(N->getOperand(0)))
-      CandidateOrder.push_back(0);
-    if (IsGoodOpaqueCandidate(N->getOperand(1)))
-      CandidateOrder.push_back(1);
-    if (CandidateOrder.empty())
-      return false;
-
-    // Prefer single-use subtrees first; they are better cascading anchors.
-    if (CandidateOrder.size() == 2 &&
-        !N->getOperand(CandidateOrder[0]).hasOneUse() &&
-        N->getOperand(CandidateOrder[1]).hasOneUse())
-      std::swap(CandidateOrder[0], CandidateOrder[1]);
-
-    // Collect all opaque subtree candidates: direct children and, if a direct
-    // child is itself a logic op, its grandchildren.  Trying grandchildren
-    // allows the root VPTERNLOG to absorb more distinct operands (3 instead
-    // of 2), which produces tighter cascades.  Example:
-    //
-    //      xor              With child "and" opaque: 2 leaves (and, e)
-    //     /   \             With grandchild "or" opaque: 3 leaves (or, d, e)
-    //   and    e            → saves one instruction in the cascade.
-    //  /   \
-    // or    d
-    //
-    // Try direct children first.  Only explore grandchildren when all direct
-    // children produce ≤2 leaves (i.e. a degenerate 2-input fold that wastes
-    // a VPTERNLOG slot) AND the opaque subtree itself has >3 leaves, meaning
-    // a single VPTERNLOG cannot handle it. When the opaque child fits in one
-    // VPTERNLOG (≤3 leaves), going deeper just reshuffles the split without
-    // saving instructions.
-    bool TriedDirect = false;
-    bool NeedsGrandchild = false;
-    for (unsigned Idx : CandidateOrder) {
-      SmallVector<LeafInfo, 3> CascadedLeaves;
-      uint8_t CascadedImm = 0;
-      bool CascadedTooManyLeaves = false;
-      SDNode *OpaqueSubtree = N->getOperand(Idx).getNode();
-
-      if (!ComputeTernlog(SDValue(N, 0), OpaqueSubtree, CascadedLeaves,
-                          CascadedImm, CascadedTooManyLeaves))
-        continue;
-
-      if (CascadedLeaves.empty())
-        continue;
-
-      // If the direct child yields a 3-leaf fold, emit it right away — this
-      // is already optimal for this level.
-      if (CascadedLeaves.size() == 3) {
-        if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
-          return true;
-      }
-      TriedDirect = true;
-
-      // Check if the opaque subtree itself has >3 leaves: if so, it cannot
-      // be handled by a single VPTERNLOG, and going one level deeper may
-      // help reduce the total instruction count.
-      if (CascadedLeaves.size() <= 2) {
-        SmallVector<LeafInfo, 3> SubLeaves;
-        uint8_t SubImm = 0;
-        bool SubTooMany = false;
-        if (!ComputeTernlog(SDValue(N->getOperand(Idx)),
-                            /*OpaqueSubtree=*/nullptr, SubLeaves, SubImm,
-                            SubTooMany) &&
-            SubTooMany)
-          NeedsGrandchild = true;
-      }
+    if (IsLogic(V.getOpcode())) {
+      Candidates.push_back(V.getNode());
+      Collect(V.getOperand(0));
+      Collect(V.getOperand(1));
     }
+  };
+  Collect(N->getOperand(0));
+  Collect(N->getOperand(1));
 
-    // Direct children only yielded ≤2-leaf folds and the opaque subtree has
-    // >3 leaves (can't fit in one VPTERNLOG).  Try grandchildren — making a
-    // deeper subtree opaque exposes more leaves at the root level, reducing
-    // the total instruction count.
-    if (NeedsGrandchild) {
-      for (unsigned Idx : CandidateOrder) {
-        SDValue Child = N->getOperand(Idx);
-        SDValue ChildNoCast = PeelSingleUseBitcast(Child);
-        if (!ChildNoCast.hasOneUse() || !IsLogicOpcode(ChildNoCast.getOpcode()))
-          continue;
-
-        for (unsigned GIdx = 0; GIdx != 2; ++GIdx) {
-          SDValue GChild = ChildNoCast.getOperand(GIdx);
-          SDValue GChildNoCast = PeelSingleUseBitcast(GChild);
-
-          // Skip NOT-wrappers (xor X, -1): ComputeTernlog already folds NOT
-          // into the truth table, so cutting at a NOT boundary just pushes
-          // the NOT into a separate instruction without saving anything.
-          if (IsAllOnesXor(GChildNoCast))
-            continue;
-
-          if (!IsLogicOpcode(GChildNoCast.getOpcode()))
-            continue;
-
-          SmallVector<LeafInfo, 3> CascadedLeaves;
-          uint8_t CascadedImm = 0;
-          bool CascadedTooManyLeaves = false;
-
-          if (!ComputeTernlog(SDValue(N, 0), GChild.getNode(), CascadedLeaves,
-                              CascadedImm, CascadedTooManyLeaves))
-            continue;
-
-          if (CascadedLeaves.size() < 3)
-            continue;
-
-          if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
-            return true;
-        }
-      }
-    }
-
-    // Fall back to direct-child opaque with ≤2 leaves if nothing else worked.
-    if (TriedDirect) {
-      for (unsigned Idx : CandidateOrder) {
-        SmallVector<LeafInfo, 3> CascadedLeaves;
-        uint8_t CascadedImm = 0;
-        bool CascadedTooManyLeaves = false;
-        SDNode *OpaqueSubtree = N->getOperand(Idx).getNode();
-
-        if (!ComputeTernlog(SDValue(N, 0), OpaqueSubtree, CascadedLeaves,
-                            CascadedImm, CascadedTooManyLeaves))
-          continue;
-
-        if (CascadedLeaves.empty())
-          continue;
-
-        if (EmitFromLeaves(N, CascadedLeaves, CascadedImm))
-          return true;
-      }
+  // Pick the cut that lets the root fold the most leaves (a tighter cascade),
+  // breaking ties towards folding more ops.
+  SmallVector<Leaf, 3> BestLeaves;
+  uint8_t BestImm = 0;
+  unsigned BestNumOps = 0;
+  for (SDNode *S : Candidates) {
+    SmallVector<Leaf, 3> CutLeaves;
+    uint8_t CutImm = 0;
+    unsigned CutNumOps = 0;
+    if (!Evaluate(SDValue(N, 0), S, CutLeaves, CutImm, CutNumOps))
+      continue;
+    if (CutLeaves.size() > BestLeaves.size() ||
+        (CutLeaves.size() == BestLeaves.size() && CutNumOps > BestNumOps)) {
+      BestLeaves = std::move(CutLeaves);
+      BestImm = CutImm;
+      BestNumOps = CutNumOps;
     }
   }
+
+  if (!BestLeaves.empty() && Profitable(BestLeaves, BestNumOps))
+    return Emit(BestLeaves, BestImm);
 
   return false;
 }

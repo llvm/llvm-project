@@ -118,9 +118,8 @@ define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = m64bcst | (xmm0 ^ xmm1)
+; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = m64bcst | ~xmm0
 ; CHECK-AVX512VL-NEXT:    retq
   %urem = urem <4 x i32> %X, <i32 3, i32 1, i32 1, i32 9>
   %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 42, i32 0, i32 42>

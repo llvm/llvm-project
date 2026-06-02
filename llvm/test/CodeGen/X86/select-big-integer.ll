@@ -71,8 +71,7 @@ define void @test_not_i128(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; AVX512VL-LABEL: test_not_i128:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpxor (%rsi), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm0 = ~mem
 ; AVX512VL-NEXT:    negb %dl
 ; AVX512VL-NEXT:    kmovd %edx, %k1
 ; AVX512VL-NEXT:    vmovdqa32 (%rdi), %xmm0 {%k1}
@@ -166,8 +165,7 @@ define void @test_not_i256(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; AVX512VL-LABEL: test_not_i256:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpxor (%rsi), %ymm0, %ymm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ~mem
 ; AVX512VL-NEXT:    negb %dl
 ; AVX512VL-NEXT:    kmovd %edx, %k1
 ; AVX512VL-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1}
@@ -284,8 +282,7 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; AVX512F-LABEL: test_not_i512:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; AVX512F-NEXT:    vpxord (%rsi), %zmm0, %zmm0
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = ~mem
 ; AVX512F-NEXT:    negl %edx
 ; AVX512F-NEXT:    kmovw %edx, %k1
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}
@@ -294,8 +291,7 @@ define void @test_not_i512(ptr %p0, ptr %p1, i1 zeroext %a2, ptr %p3) nounwind {
 ;
 ; AVX512VL-LABEL: test_not_i512:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = -1
-; AVX512VL-NEXT:    vpxord (%rsi), %zmm0, %zmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = ~mem
 ; AVX512VL-NEXT:    negl %edx
 ; AVX512VL-NEXT:    kmovd %edx, %k1
 ; AVX512VL-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1}

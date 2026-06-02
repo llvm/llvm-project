@@ -651,8 +651,7 @@ define void @vec256_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; AVX512-LABEL: vec256_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~mem
 ; AVX512-NEXT:    vmovdqa %xmm0, 16(%rsi)
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
@@ -1092,8 +1091,7 @@ define void @vec384_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; AVX512-LABEL: vec384_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~mem
 ; AVX512-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX512-NEXT:    vmovdqa %xmm0, 16(%rsi)
 ; AVX512-NEXT:    vmovdqa %xmm0, 32(%rsi)
@@ -1658,8 +1656,7 @@ define void @vec512_i128(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; AVX512-LABEL: vec512_i128:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~mem
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -1731,8 +1728,7 @@ define void @vec512_i256(ptr %in.elt.ptr, ptr %out.vec.ptr) nounwind {
 ;
 ; AVX512-LABEL: vec512_i256:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
-; AVX512-NEXT:    vpxor (%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ~mem
 ; AVX512-NEXT:    vmovdqa %ymm0, (%rsi)
 ; AVX512-NEXT:    vmovdqa %ymm0, 32(%rsi)
 ; AVX512-NEXT:    vzeroupper
