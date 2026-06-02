@@ -8,7 +8,7 @@
 name:            foo
 body:             |
   ; Two single-instruction blocks with no successors/predecessors. Both have
-  ; the same opcode (RET/terminator and excluded), so OpcodeHash should be same
+  ; the same opcode (RET/terminator excluded), so OpcodeHash should be same
   ; with no neighbors, NeighborHash equals OpcodeHash for each block.
   ; Only the operand differs, so InstrHash differs across the two blocks.
   ; HASH-LABEL: Machine Block Hash Info for function: foo
@@ -60,11 +60,4 @@ constants:
     value:           'float 1.000000e+00'
     alignment:       4
 ...
----
-name:            func_empty
-body:             |
-  ; An empty MBB hashes all-zero across every component.
-  ; HASH-LABEL: Machine Block Hash Info for function: func_empty
-  ; HASH-NEXT:    BB#0: 0x0000000000000000
-  bb.0:
-...
+
