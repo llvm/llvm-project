@@ -1246,7 +1246,7 @@ unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
   // workgroup must share".
 
   // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
+  if (STI.getFeatureBits().test(FeatureCuModeOnly)) {
     assert(STI.getFeatureBits().test(FeatureCuMode));
     return 4;
   }

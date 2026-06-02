@@ -236,6 +236,13 @@ def FeatureCuMode : SubtargetFeature<"cumode",
   "Enable CU wavefront execution mode"
 >;
 
+defm CuModeOnly : AMDGPUSubtargetFeature<"cumode-only",
+  "Target supports only CU mode",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureCuMode]
+>;
+
 def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
@@ -2094,7 +2101,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
-   FeatureCuMode,
+   FeatureCuModeOnly,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
