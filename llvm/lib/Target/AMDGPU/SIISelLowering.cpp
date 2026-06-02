@@ -18412,11 +18412,11 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   SDValue RHS = Cond.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
 
-  // Fold: select (setcc X, NonNaN, SETUO), 0, (fp_to_sint X) -> fp_to_sint X
-  // Fold: select (setcc X, NonNaN, SETO), (fp_to_sint X), 0 -> fp_to_sint X
+  // Fold: select (setcc X, NonNaN, SETUO), 0, (fp_to_sint X)
+  //   -> fp_to_sint_sat X
+  // Fold: select (setcc X, NonNaN, SETO), (fp_to_sint X), 0
+  //   -> fp_to_sint_sat X
   // Also look through an AND mask on the fp_to_sint result.
-  // V_CVT_I32_F32, V_CVT_U32_F32, V_CVT_I32_F64, V_CVT_U32_F64 already
-  // return 0 for NaN inputs, so the isnan guard is redundant.
   {
     // Identify the guarded value and the zero constant based on SETUO/SETO.
     SDValue GuardedVal;
@@ -18429,20 +18429,39 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
       // RHS of the comparison must be a known non-NaN value or equal to LHS
       // (fcmp uno X, X). SETUO is true when either operand is NaN, so we
       // must ensure RHS cannot independently be NaN.
-      bool RHSSafe =
-          RHS == LHS || isNullFPConstant(RHS) ||
-          (isa<ConstantFPSDNode>(RHS) && !cast<ConstantFPSDNode>(RHS)->isNaN());
+      bool RHSSafe = RHS == LHS || (isa<ConstantFPSDNode>(RHS) &&
+                                    !cast<ConstantFPSDNode>(RHS)->isNaN());
 
       if (RHSSafe) {
+        // Generate the new node (ISD::FP_TO_[SU]INT_SAT) to replace the select.
+        SDValue NewNode;
+
         // Look through an AND mask to find the fp_to_sint/uint underneath.
         SDValue Conv = GuardedVal;
-        if (Conv.getOpcode() == ISD::AND)
+        bool HasAndMask = false;
+        if (Conv.getOpcode() == ISD::AND) {
           Conv = Conv.getOperand(0);
+          HasAndMask = true;
+        }
 
-        if ((Conv.getOpcode() == ISD::FP_TO_SINT ||
-             Conv.getOpcode() == ISD::FP_TO_UINT) &&
-            Conv.getOperand(0) == LHS && Conv.getValueType() == MVT::i32)
-          return GuardedVal;
+        if (Conv.getOperand(0) == LHS && Conv.getValueType() == MVT::i32) {
+          if (Conv.getOpcode() == ISD::FP_TO_SINT)
+            NewNode = DCI.DAG.getNode(ISD::FP_TO_SINT_SAT, SDLoc(N), MVT::i32,
+                                      LHS, DCI.DAG.getValueType(MVT::i32));
+          if (Conv.getOpcode() == ISD::FP_TO_UINT)
+            NewNode = DCI.DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N), MVT::i32,
+                                      LHS, DCI.DAG.getValueType(MVT::i32));
+        }
+
+        // Replace the node if we created a new one
+        if (NewNode) {
+          // If there was an AND mask, reapply it to the new node.
+          if (HasAndMask)
+            NewNode =
+                DCI.DAG.getNode(ISD::AND, SDLoc(N), GuardedVal.getValueType(),
+                                NewNode, GuardedVal.getOperand(1));
+          return NewNode;
+        }
       }
     }
   }
