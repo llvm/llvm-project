@@ -208,15 +208,16 @@ public:
 
 class LifetimeEnd {
   template <typename CHECKER>
-  static void _checkCall(void *checker, const VarDecl *D, CheckerContext &C) {
+  static void _checkLifetimeEnd(void *checker, const VarDecl *D,
+                                CheckerContext &C) {
     ((const CHECKER *)checker)->checkLifetimeEnd(D, C);
   }
 
 public:
   template <typename CHECKER>
   static void _register(CHECKER *checker, CheckerManager &mgr) {
-    mgr._registerForLifetimeEnd(
-        CheckerManager::CheckLifetimeEndFunc(checker, _checkCall<CHECKER>));
+    mgr._registerForLifetimeEnd(CheckerManager::CheckLifetimeEndFunc(
+        checker, _checkLifetimeEnd<CHECKER>));
   }
 };
 
