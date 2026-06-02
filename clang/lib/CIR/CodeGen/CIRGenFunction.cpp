@@ -269,6 +269,18 @@ void CIRGenFunction::LexicalScope::cleanup() {
     forceCleanup();
   }
 
+  // A switch case that declares a variable with a non-trivial destructor
+  // extends that variable's lifetime to the end of the switch body, so its
+  // cleanup is owned by the switch's lexical scope rather than by a nested
+  // case scope.  forceCleanup() pops that cleanup and leaves the insertion
+  // point inside the case region (after the variable's cir.cleanup.scope),
+  // which is a different region from the cir.scope that wraps the switch.
+  // The scope-terminating yield must land in the switch scope's own region,
+  // so bring the insertion point back to the end of that region.
+  if (isSwitch() && builder.getInsertionBlock() &&
+      builder.getInsertionBlock()->getParent() != entryBlock->getParent())
+    builder.setInsertionPointToEnd(&entryBlock->getParent()->back());
+
   mlir::Block *curBlock = builder.getBlock();
   if (isGlobalInit() && !curBlock)
     return;
