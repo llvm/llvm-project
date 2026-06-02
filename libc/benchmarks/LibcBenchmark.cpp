@@ -69,15 +69,15 @@ namespace llvm {
 #endif
   std::abort();
 }
-void report_fatal_error(const char *reason, bool gen_crash_diag) {
+[[noreturn]] void report_fatal_error(const char *reason, bool gen_crash_diag) {
   report_fatal_error(std::string_view(reason), gen_crash_diag);
 }
-void report_fatal_error(StringRef reason, bool gen_crash_diag) {
+[[noreturn]] void report_fatal_error(StringRef reason, bool gen_crash_diag) {
   report_fatal_error(std::string_view(reason.data(), reason.size()),
                      gen_crash_diag);
 }
-void report_fatal_error(const Twine &reason, bool gen_crash_diag) {
-  report_fatal_error(reason.str(), gen_crash_diag);
+[[noreturn]] void report_fatal_error(const Twine &reason, bool gen_crash_diag) {
+  report_fatal_error("(unknown twine error)", gen_crash_diag);
 }
 } // namespace llvm
 #endif
