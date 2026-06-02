@@ -98,8 +98,7 @@ struct SimpleValue {
   }
 
   bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    return Inst == DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -157,10 +156,6 @@ struct SimpleValue {
 template <> struct llvm::DenseMapInfo<SimpleValue> {
   static inline SimpleValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline SimpleValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   static unsigned getHashValue(SimpleValue Val);
@@ -483,8 +478,7 @@ struct CallValue {
   }
 
   bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    return Inst == DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -508,10 +502,6 @@ struct CallValue {
 template <> struct llvm::DenseMapInfo<CallValue> {
   static inline CallValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline CallValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   static unsigned getHashValue(CallValue Val);
@@ -561,8 +551,7 @@ struct GEPValue {
   }
 
   bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    return Inst == DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -575,10 +564,6 @@ struct GEPValue {
 template <> struct llvm::DenseMapInfo<GEPValue> {
   static inline GEPValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline GEPValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
   }
 
   static unsigned getHashValue(const GEPValue &Val);
@@ -1243,7 +1228,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     auto Len = MSI->getLengthInBytes();
     if (!Len)
       return nullptr;
-    TypeSize LoadSize = SQ.DL.getTypeStoreSize(MemInst.getValueType());
+    Type *InstType = MemInst.getValueType();
+    if (!InstType)
+      return nullptr;
+    TypeSize LoadSize = SQ.DL.getTypeStoreSize(InstType);
     if (LoadSize.isScalable() || Len->ult(LoadSize.getFixedValue()))
       return nullptr;
     if (!isOperatingOnInvariantMemAt(MemInst.get(), InVal.Generation) &&

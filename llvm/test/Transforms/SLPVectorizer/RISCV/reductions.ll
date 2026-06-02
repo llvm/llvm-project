@@ -364,11 +364,10 @@ define void @reduce_or_2() {
 ; ZVFHDEFAULT-NEXT:    ret void
 ;
 ; ZVFH256-LABEL: @reduce_or_2(
-; ZVFH256-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> zeroinitializer)
-; ZVFH256-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]
-; ZVFH256:       2:
+; ZVFH256-NEXT:    br i1 false, label [[TMP2:%.*]], label [[TMP1:%.*]]
+; ZVFH256:       1:
 ; ZVFH256-NEXT:    ret void
-; ZVFH256:       3:
+; ZVFH256:       2:
 ; ZVFH256-NEXT:    ret void
 ;
 ; ZVFH512-LABEL: @reduce_or_2(
@@ -1229,7 +1228,7 @@ define half @fadd_4xf16(ptr %p) {
 ;
 ; ZVFH-LABEL: @fadd_4xf16(
 ; ZVFH-NEXT:    [[TMP1:%.*]] = load <4 x half>, ptr [[P:%.*]], align 2
-; ZVFH-NEXT:    [[TMP2:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0xH0000, <4 x half> [[TMP1]])
+; ZVFH-NEXT:    [[TMP2:%.*]] = call fast half @llvm.vector.reduce.fadd.v4f16(half 0.000000e+00, <4 x half> [[TMP1]])
 ; ZVFH-NEXT:    ret half [[TMP2]]
 ;
   %x0 = load half, ptr %p

@@ -275,6 +275,9 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
   }
+  constexpr bool isFloatOrFloatVector() const {
+    return isFloat() || isFloatVector();
+  }
 
   constexpr bool isScalar() const {
     return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||
@@ -717,11 +720,6 @@ template <> struct DenseMapInfo<LLT> {
   static inline LLT getEmptyKey() {
     LLT Invalid;
     Invalid.Info = LLT::Kind::POINTER;
-    return Invalid;
-  }
-  static inline LLT getTombstoneKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::VECTOR_ANY;
     return Invalid;
   }
   static inline unsigned getHashValue(const LLT &Ty) {

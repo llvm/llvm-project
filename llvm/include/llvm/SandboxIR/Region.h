@@ -14,6 +14,8 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/SandboxIR/BasicBlock.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -114,6 +116,47 @@ protected:
   void removeFromAux(Instruction *I);
 
   LLVM_ABI Region(Context &Ctx, RegionClassID ID);
+
+  template <typename RegionT, typename RegionFactoryT>
+  static SmallVector<std::unique_ptr<RegionT>>
+  createRegionsFromMD(Function &F, RegionFactoryT Factory) {
+    SmallVector<std::unique_ptr<RegionT>> Regions;
+    DenseMap<MDNode *, RegionT *> MDNToRegion;
+    for (BasicBlock &BB : F) {
+      for (Instruction &Inst : BB) {
+        auto *LLVMI = cast<llvm::Instruction>(Inst.Val);
+        RegionT *R = nullptr;
+        if (auto *MDN = LLVMI->getMetadata(MDKind)) {
+          auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
+          if (Inserted) {
+            Regions.push_back(Factory());
+            R = Regions.back().get();
+            It->second = R;
+          } else {
+            R = It->second;
+          }
+          R->addRaw(&Inst);
+        }
+        if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
+          llvm::Constant *IdxC =
+              dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
+          auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
+          if (R == nullptr) {
+            errs() << "No region specified for Aux: '" << *LLVMI << "'\n";
+            reportFatalUsageError("No region specified for Aux!");
+          }
+          R->setAux(Idx, &Inst);
+        }
+      }
+    }
+#ifndef NDEBUG
+    // Check that there are no gaps in the Aux vector.
+    for (auto &RPtr : Regions)
+      for (auto *I : RPtr->getAux())
+        assert(I != nullptr && "Gap in Aux!");
+#endif
+    return Regions;
+  }
 
 public:
   LLVM_ABI Region(Context &Ctx) : Region(Ctx, RegionClassID::RegionID) {}

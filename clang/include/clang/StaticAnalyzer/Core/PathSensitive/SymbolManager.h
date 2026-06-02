@@ -83,16 +83,15 @@ class SymbolConjured : public SymbolData {
   ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   const void *SymbolTag;
 
   friend class SymExprAllocator;
-  SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
-                 const LocationContext *lctx, QualType t, unsigned count,
-                 const void *symbolTag)
-      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), LCtx(lctx),
+  SymbolConjured(SymbolID sym, ConstCFGElementRef elem, const StackFrame *SF,
+                 QualType t, unsigned count, const void *symbolTag)
+      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), SF(SF),
         SymbolTag(symbolTag) {
-    assert(lctx);
+    assert(SF);
     assert(isValidTypeForSymbol(t));
   }
 
@@ -113,18 +112,18 @@ public:
   void dumpToStream(raw_ostream &os) const override;
 
   static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
-                      const LocationContext *LCtx, QualType T, unsigned Count,
+                      const StackFrame *SF, QualType T, unsigned Count,
                       const void *SymbolTag) {
     profile.AddInteger((unsigned)ClassKind);
     profile.Add(Elem);
-    profile.AddPointer(LCtx);
+    profile.AddPointer(SF);
     profile.Add(T);
     profile.AddInteger(Count);
     profile.AddPointer(SymbolTag);
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, Elem, LCtx, T, Count, SymbolTag);
+    Profile(profile, Elem, SF, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -222,7 +221,7 @@ class SymbolMetadata : public SymbolData {
   const MemRegion* R;
   const Stmt *S;
   QualType T;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   /// Count can be used to differentiate regions corresponding to
   /// different loop iterations, thus, making the symbol path-dependent.
   unsigned Count;
@@ -230,13 +229,13 @@ class SymbolMetadata : public SymbolData {
 
   friend class SymExprAllocator;
   SymbolMetadata(SymbolID sym, const MemRegion *r, const Stmt *s, QualType t,
-                 const LocationContext *LCtx, unsigned count, const void *tag)
-      : SymbolData(ClassKind, sym), R(r), S(s), T(t), LCtx(LCtx), Count(count),
+                 const StackFrame *SF, unsigned count, const void *tag)
+      : SymbolData(ClassKind, sym), R(r), S(s), T(t), SF(SF), Count(count),
         Tag(tag) {
     assert(r);
     assert(s);
     assert(isValidTypeForSymbol(t));
-    assert(LCtx);
+    assert(SF);
     assert(tag);
   }
 
@@ -248,7 +247,7 @@ class SymbolMetadata : public SymbolData {
     const Stmt *getStmt() const { return S; }
 
     LLVM_ATTRIBUTE_RETURNS_NONNULL
-    const LocationContext *getLocationContext() const { return LCtx; }
+    const StackFrame *getStackFrame() const { return SF; }
 
     unsigned getCount() const { return Count; }
 
@@ -262,19 +261,19 @@ class SymbolMetadata : public SymbolData {
     void dumpToStream(raw_ostream &os) const override;
 
     static void Profile(llvm::FoldingSetNodeID &profile, const MemRegion *R,
-                        const Stmt *S, QualType T, const LocationContext *LCtx,
+                        const Stmt *S, QualType T, const StackFrame *SF,
                         unsigned Count, const void *Tag) {
       profile.AddInteger((unsigned)ClassKind);
       profile.AddPointer(R);
       profile.AddPointer(S);
       profile.Add(T);
-      profile.AddPointer(LCtx);
+      profile.AddPointer(SF);
       profile.AddInteger(Count);
       profile.AddPointer(Tag);
     }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, R, S, T, LCtx, Count, Tag);
+    Profile(profile, R, S, T, SF, Count, Tag);
   }
 
   // Implement isa<T> support.
@@ -535,11 +534,11 @@ public:
   const SymExprT *acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
-                                      const LocationContext *LCtx, QualType T,
+                                      const StackFrame *SF, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
 
-    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
+    return acquire<SymbolConjured>(Elem, SF, T, VisitCount, SymbolTag);
   }
 
   QualType getType(const SymExpr *SE) const {
@@ -578,7 +577,7 @@ class SymbolReaper {
   // lazyCompoundVal.
   RegionSetTy LazilyCopiedRegionRoots;
 
-  const StackFrameContext *LCtx;
+  const StackFrame *SF;
   const Stmt *Loc;
   SymbolManager& SymMgr;
   StoreRef reapedStore;
@@ -586,22 +585,21 @@ class SymbolReaper {
 
 public:
   /// Construct a reaper object, which removes everything which is not
-  /// live before we execute statement s in the given location context.
+  /// live before we execute statements in the given stack frame.
   ///
-  /// If the statement is NULL, everything is this and parent contexts is
+  /// If the statement is NULL, everything in this and parent stack frames are
   /// considered live.
-  /// If the stack frame context is NULL, everything on stack is considered
-  /// dead.
-  SymbolReaper(const StackFrameContext *Ctx, const Stmt *s,
-               SymbolManager &symmgr, StoreManager &storeMgr)
-      : LCtx(Ctx), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
+  /// If the stack frame is NULL, everything on stack is considered dead.
+  SymbolReaper(const StackFrame *SF, const Stmt *s, SymbolManager &symmgr,
+               StoreManager &storeMgr)
+      : SF(SF), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
 
   /// It might return null.
-  const LocationContext *getLocationContext() const { return LCtx; }
+  const StackFrame *getStackFrame() const { return SF; }
 
   bool isLive(SymbolRef sym);
   bool isLiveRegion(const MemRegion *region);
-  bool isLive(const Expr *ExprVal, const LocationContext *LCtx) const;
+  bool isLive(const Expr *ExprVal, const StackFrame *SF) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
 
   /// Unconditionally marks a symbol as live.

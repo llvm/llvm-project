@@ -20,6 +20,7 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 
+include "mlir/Dialect/LLVMIR/NVVMEnums.td"
 include "mlir/Dialect/NVGPU/IR/NVGPU.td"
 include "mlir/Dialect/NVGPU/IR/NVGPUTypes.td"
 
@@ -660,12 +661,12 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
     The input and output must be of the same vector type and shape.
   }];
   let arguments = (ins VectorOfNonZeroRankOf<[F32]>:$in,
-                       DefaultValuedAttr<RcpRoundingModeAttr, "RcpRoundingMode::APPROX">:$rounding,
-                       UnitAttr:$ftz);
+                       DefaultValuedAttr<FPRoundingModeAttr, "::mlir::NVVM::FPRoundingMode::NONE">:$rounding,
+                       DefaultValuedAttr<BoolAttr, "false">:$approx,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
   let assemblyFormat = [{
-    $in `{` `rounding` `=` $rounding (`,` `ftz` $ftz^)? `}` 
-    attr-dict `:` type($out)
+    $in attr-dict `:` type($out)
   }];
   let hasVerifier = 1;
 }

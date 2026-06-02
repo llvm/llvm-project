@@ -5,6 +5,6 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-taskwait.c:3:1, line:5:1> line:3:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-taskwait.c:3:1, line:5:1> line:3:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:5:1>
 // CHECK-NEXT:     `-OMPTaskwaitDirective {{.*}} <line:4:1, col:21> openmp_standalone_directive

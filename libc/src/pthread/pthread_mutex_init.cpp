@@ -28,9 +28,12 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
                     const pthread_mutexattr_t *__restrict attr)) {
   auto mutexattr = attr == nullptr ? DEFAULT_MUTEXATTR : *attr;
   bool is_recursive = false;
+  bool is_error_checking = false;
   switch (get_mutexattr_type(mutexattr)) {
   case PTHREAD_MUTEX_NORMAL:
+    break;
   case PTHREAD_MUTEX_ERRORCHECK:
+    is_error_checking = true;
     break;
   case PTHREAD_MUTEX_RECURSIVE:
     is_recursive = true;
@@ -43,8 +46,8 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
 
   bool is_pshared = get_mutexattr_pshared(mutexattr) == PTHREAD_PROCESS_SHARED;
 
-  new (m)
-      Mutex(/*is_priority_inherit=*/false, is_recursive, is_robust, is_pshared);
+  new (m) Mutex(/*is_priority_inherit=*/false, is_recursive, is_robust,
+                is_pshared, is_error_checking);
   return 0;
 }
 

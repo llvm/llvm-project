@@ -6,84 +6,33 @@
 #//
 #//===----------------------------------------------------------------------===//
 
-include(LibompCheckFortranFlag)
+# Build the module files if a Fortran compiler is available.
 
-set(LIBOMP_FFLAGS "" CACHE STRING
-  "Appended user specified Fortran compiler flags.  These are only used if LIBOMP_FORTRAN_MODULES==TRUE.")
-
-# Enabling Fortran if it is needed
-if (LIBOMP_FORTRAN_MODULES)
-  enable_language(Fortran)
-
-  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
-endif ()
-
-# Building the Fortran module files
-# One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-configure_file(omp_lib.F90.var omp_lib.F90 @ONLY)
+configure_file(omp_lib.F90.var "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90" @ONLY)
 configure_file(omp_lib.h.var "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h" @ONLY)
 
-set(BUILD_FORTRAN_MODULES False)
-if (LIBOMP_FORTRAN_MODULES_COMPILER)
-  # If libomp is built as an LLVM runtime and the flang compiler is available,
-  # compile the Fortran module files.
-  message(STATUS "configuring openmp to build Fortran module files using '${LIBOMP_FORTRAN_MODULES_COMPILER}'")
-  set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  # omp_lib_kinds uses iso_c_binding, which depends on these intrinsic modules.
-  # List them so omp_lib.mod is regenerated when intrinsic modules change; otherwise
-  # stale omp_lib.mod can reference an incompatible iso_c_binding.mod (see flang
-  # tests that load omp_lib.mod with -J).
-  set(_libomp_flang_intrinsic_mod_deps "")
-  if(LLVM_BINARY_DIR)
-    set(_flang_intrinsic_mod_dir "${LLVM_BINARY_DIR}/include/flang")
-    list(APPEND _libomp_flang_intrinsic_mod_deps
-      "${_flang_intrinsic_mod_dir}/__fortran_builtins.mod"
-      "${_flang_intrinsic_mod_dir}/__fortran_type_info.mod"
-      "${_flang_intrinsic_mod_dir}/iso_c_binding.mod"
-    )
-  endif()
-  add_custom_target(libomp-mod ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod")
-  add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
-    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}" ${_libomp_flang_intrinsic_mod_deps}
-  )
-  set(BUILD_FORTRAN_MODULES True)
-elseif (LIBOMP_FORTRAN_MODULES)
-  # The following requests explicit building of the Fortran module files
-  # Workaround for gfortran to build modules with the
-  # omp_sched_monotonic integer parameter
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
-  endif ()
-  add_custom_target(libomp-mod ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod")
-  set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Misc")
-  libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
-  if (CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
-  else ()
-    message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
-  endif ()
-  add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
-    COMMAND ${CMAKE_Fortran_COMPILER} -c ${ADDITIONAL_Fortran_FLAGS}
-            ${LIBOMP_CONFIGURED_FFLAGS} ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
-  )
-  set_property(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src" PROPERTY ADDITIONAL_MAKE_CLEAN_FILES "omp_lib${CMAKE_C_OUTPUT_EXTENSION}")
-  set(BUILD_FORTRAN_MODULES True)
+# One compilation step creates both, omp_lib.mod and omp_lib_kinds.mod. Only
+# these files are used, the object file itself can be discarded.
+# TODO: Adding it to libomp ($<TARGET_OBJECTS:libomp-mod>) would allow implementing Fortran API in Fortran
+add_library(libomp-mod OBJECT
+  "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
+)
+set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
+
+# The following requests explicit building of the Fortran module files
+# Workaround for gfortran to build modules with the
+# omp_sched_monotonic integer parameter
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  target_compile_options(libomp-mod PRIVATE -fno-range-check)
 endif ()
 
+flang_module_target(libomp-mod PUBLIC)
+add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
 
-if (BUILD_FORTRAN_MODULES)
-  set(destination "${LIBOMP_HEADERS_INSTALL_PATH}")
-  if (LIBOMP_MODULES_INSTALL_PATH)
-    set(destination "${LIBOMP_MODULES_INSTALL_PATH}")
-  endif ()
-  install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod"
-    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
-    "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
-    DESTINATION ${destination}
-  )
-endif ()
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
+  DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+    COMPONENT openmp
+)
+
+openmp_register_meta_dep(libomp-mod)

@@ -518,6 +518,15 @@ private:
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
                    std::optional<spirv::Opcode> expectedOpcode = std::nullopt);
 
+  /// If `opcode` is a SPV_INTEL_long_composites splittable opcode and the
+  /// next binary instruction(s) are matching `*ContinuedINTEL` ops, consumes
+  /// them and rebinds `operands` to a buffer (held in `mergedStorage`)
+  /// containing the parent + continuation operands concatenated.
+  void
+  mergeLongCompositeContinuations(spirv::Opcode opcode,
+                                  ArrayRef<uint32_t> &operands,
+                                  SmallVectorImpl<uint32_t> &mergedStorage);
+
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it
   /// checks the instruction opcode and dispatches to the corresponding handler.
@@ -553,6 +562,11 @@ private:
   /// the instruction opcode. The op deserializer is then invoked using the
   /// other entries.
   LogicalResult processExtInst(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpExtInst with given `operands` for a DebugInfo
+  /// extension instruction.
+  LogicalResult processDebugInfoExtInst(ArrayRef<uint32_t> operands,
+                                        bool deferInstructions);
 
   /// Dispatches the deserialization of extended instruction set operation based
   /// on the extended instruction set name, and instruction opcode. This is
@@ -622,6 +636,9 @@ private:
   /// don't immediately emit a constant op into the module, we keep its value
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
+
+  // Result <id> to debug location for constants materialized from constantMap.
+  DenseMap<uint32_t, LocationAttr> constantLocMap;
 
   // Result <id> to replicated constant attribute and type mapping.
   ///

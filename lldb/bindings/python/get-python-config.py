@@ -72,7 +72,15 @@ def main():
                     sys.exit(1)
     elif args.variable_name == "LLDB_PYTHON_EXT_SUFFIX":
         if args.stable_abi:
-            print(".abi3%s" % sysconfig.get_config_var("SHLIB_SUFFIX"))
+            shlib_suffix = sysconfig.get_config_var("SHLIB_SUFFIX")
+            if shlib_suffix:
+                print(".abi3%s" % shlib_suffix)
+            else:
+                assert os.name == "nt"
+                if sysconfig.get_config_var("EXT_SUFFIX").startswith("_d"):
+                    print("_d.pyd")
+                else:
+                    print(".pyd")
         else:
             print(sysconfig.get_config_var("EXT_SUFFIX"))
     else:

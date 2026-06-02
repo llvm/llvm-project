@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
@@ -297,8 +297,14 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+annotated with ``noescape`` do not actually escape. The optimizer may make
+assumptions based on the fact that it knows that a call to the function does
+not escape a certain parameter, so incorrectly annotating a parameter with
+``noescape`` leads to undefined behavior. The callee is also not allowed to
+deallocate memory through a ``noescape`` parameter: the optimizer does not make
+assumptions based on this information at the moment, but may do so in the
+future. Some cases of invalid uses of ``noescape`` can be found with
+:ref:`-Wlifetime-safety-noescape <Wlifetime-safety-noescape>`.
 
 For example:
 
@@ -312,6 +318,23 @@ For example:
 
   void escapingFunc(__attribute__((noescape)) int *p) {
     gp = p; // Not OK.
+  }
+
+  void freeingFunc(__attribute__((noescape)) int *p) {
+    free(p); // Not OK.
+  }
+
+Since ``noescape`` is a parameter attribute and not a type attribute, it only
+applies to the outermost pointer level, regardless of where in the parameter
+declaration you place it:
+
+.. code-block:: c
+
+  int **gp;
+
+  void nestingEscapes(__attribute__((noescape)) int **p) {
+    gp = p; // Not OK.
+    *gp = *p; // OK, p does not escape.
   }
 
 Additionally, when the parameter is a `block pointer
@@ -330,6 +353,36 @@ applies to copies of the block. For example:
   void escapingFunc(__attribute__((noescape)) BlockTy block) {
     g0 = block; // Not OK.
     g1 = Block_copy(block); // Not OK either.
+  }
+
+The function *is* allowed to leak information about the memory address of the
+pointer, but not any provenance of the allocation:
+
+.. code-block:: c
+
+  bool isNull(__attribute__((noescape)) void *p) {
+    return !p; // OK.
+  }
+
+  uintptr_t gi;
+
+  void escapingAddress(__attribute__((noescape)) int *p) {
+    // OK *if and only if* gi is never casted back to a pointer.
+    gi = (uintptr_t)p;
+  }
+
+  bool usingEscapedAddress(int *p) {
+    return (uintptr_t)p > gi; // OK.
+  }
+
+  bool usingEscapedPointer(int *p) {
+    return p > (int*)gi; // Not OK.
+  }
+
+  int *gp;
+
+  void escapingEndFunc(__attribute__((noescape)) int *p, size_t len) {
+    gp = p + len; // Not OK.
   }
 
   }];
@@ -1663,7 +1716,9 @@ safely deallocated with the standard ``free()``.
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
 leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -7841,7 +7896,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,

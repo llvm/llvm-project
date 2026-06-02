@@ -298,6 +298,11 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
+  // Add MacroFusion mutation first with a higher priority than later clustering
+  const auto &MacroFusions = ST.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+
   if (ST.enableMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
@@ -316,6 +321,11 @@ ScheduleDAGInstrs *
 RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMI *DAG = createSchedPostRA(C);
+
+  // Add MacroFusion mutation first with a higher priority than later clustering
+  const auto &MacroFusions = ST.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
 
   if (ST.enablePostMISchedLoadClustering())
     DAG->addMutation(createLoadClusterDAGMutation(

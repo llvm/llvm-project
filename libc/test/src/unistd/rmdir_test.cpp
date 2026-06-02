@@ -13,6 +13,7 @@
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 
 using LlvmLibcRmdirTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

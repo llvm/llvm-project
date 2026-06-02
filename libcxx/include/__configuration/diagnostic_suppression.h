@@ -12,6 +12,7 @@
 
 #include <__config_site>
 #include <__configuration/compiler.h>
+#include <__configuration/utility.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header

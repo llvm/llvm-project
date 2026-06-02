@@ -369,6 +369,7 @@ def SPV_AMD_shader_fragment_mask                 : I32EnumAttrCase<"SPV_AMD_shad
 def SPV_AMD_shader_image_load_store_lod          : I32EnumAttrCase<"SPV_AMD_shader_image_load_store_lod", 2004>;
 def SPV_AMD_texture_gather_bias_lod              : I32EnumAttrCase<"SPV_AMD_texture_gather_bias_lod", 2005>;
 def SPV_AMD_shader_early_and_late_fragment_tests : I32EnumAttrCase<"SPV_AMD_shader_early_and_late_fragment_tests", 2006>;
+def SPV_AMD_weak_linkage                         : I32EnumAttrCase<"SPV_AMD_weak_linkage", 2007>;
 
 def SPV_GOOGLE_decorate_string           : I32EnumAttrCase<"SPV_GOOGLE_decorate_string", 3000>;
 def SPV_GOOGLE_hlsl_functionality1       : I32EnumAttrCase<"SPV_GOOGLE_hlsl_functionality1", 3001>;
@@ -456,7 +457,7 @@ def SPIRV_ExtensionAttr :
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
       SPV_AMD_shader_image_load_store_lod, SPV_AMD_texture_gather_bias_lod,
-      SPV_AMD_shader_early_and_late_fragment_tests,
+      SPV_AMD_shader_early_and_late_fragment_tests, SPV_AMD_weak_linkage,
       SPV_GOOGLE_decorate_string, SPV_GOOGLE_hlsl_functionality1, SPV_GOOGLE_user_type,
       SPV_INTEL_device_side_avc_motion_estimation, SPV_INTEL_media_block_io,
       SPV_INTEL_shader_integer_functions2, SPV_INTEL_subgroups, SPV_INTEL_vector_compute,
@@ -3718,10 +3719,16 @@ def SPIRV_LT_LinkOnceODR : I32EnumAttrCase<"LinkOnceODR", 2> {
     Capability<[SPIRV_C_Linkage]>
   ];
 }
+def SPIRV_LT_Weak        : I32EnumAttrCase<"Weak", 3> {
+  list<Availability> availability = [
+    Extension<[SPV_AMD_weak_linkage]>,
+    Capability<[SPIRV_C_Linkage]>
+  ];
+}
 
 def SPIRV_LinkageTypeAttr :
     SPIRV_I32EnumAttr<"LinkageType", "valid SPIR-V LinkageType", "linkage_type", [
-      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR
+      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR, SPIRV_LT_Weak
     ]>;
 
 def SPIRV_LC_None                      : I32BitEnumAttrCaseNone<"None">;
@@ -4294,7 +4301,13 @@ def SPIRV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPIRV_Float16or32 : FloatOfWidths<[16, 32]>;
 def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT, SPIRV_Float8E5M2EXT]>;
 def SPIRV_Vector : VectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16],
-                                       [SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat]>;
+                                       [SPIRV_Bool, SPIRV_Integer, SPIRV_Float]>;
+def SPIRV_FloatVector : VectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16],
+                                       [SPIRV_Float]>;
+def SPIRV_ExtendedFloatVector : VectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16],
+                                       [SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT,
+                                        SPIRV_Float8E5M2EXT]>;
+def SPIRV_AnyFloatVector : AnyTypeOf<[SPIRV_FloatVector, SPIRV_ExtendedFloatVector]>;
 // Component type check is done in the type parser for the following SPIR-V
 // dialect-specific types so we use "Any" here.
 def SPIRV_AnyPtr : DialectType<SPIRV_Dialect, SPIRV_IsPtrType,
@@ -4323,17 +4336,19 @@ def SPIRV_AnyNamedBarrier : DialectType<SPIRV_Dialect, SPIRV_IsNamedBarrierType,
 def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
                                  "any SPIR-V tensorArm type">;
 
-def SPIRV_Numerical : AnyTypeOf<[SPIRV_Integer, SPIRV_AnyFloat]>;
+def SPIRV_Numerical : AnyTypeOf<[SPIRV_Integer, SPIRV_Float]>;
 def SPIRV_Scalar : AnyTypeOf<[SPIRV_Numerical, SPIRV_Bool]>;
 def SPIRV_Aggregate : AnyTypeOf<[SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct]>;
 def SPIRV_Composite :
-    AnyTypeOf<[SPIRV_Vector, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
-               SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnyTensorArm]>;
+    AnyTypeOf<[SPIRV_Vector, SPIRV_ExtendedFloatVector, SPIRV_AnyArray,
+               SPIRV_AnyRTArray, SPIRV_AnyStruct, SPIRV_AnyCooperativeMatrix,
+               SPIRV_AnyMatrix, SPIRV_AnyTensorArm]>;
 def SPIRV_Type : AnyTypeOf<[
     SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat, SPIRV_Vector,
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
     SPIRV_AnyCooperativeMatrix, SPIRV_AnyMatrix, SPIRV_AnySampledImage,
-    SPIRV_AnySampler, SPIRV_AnyImage, SPIRV_AnyTensorArm
+    SPIRV_AnySampler, SPIRV_AnyImage, SPIRV_AnyTensorArm,
+    SPIRV_AnyFloatVector
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
@@ -4368,14 +4383,17 @@ class SPIRV_MatrixOf<Type type> :
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
+def SPIRV_ScalarOrVectorOrPtrOrCoopMatrix :
+    AnyTypeOf<[SPIRV_ScalarOrVectorOrPtr, SPIRV_AnyCooperativeMatrix]>;
 
 class SPIRV_Vec4<Type type> : VectorOfRankAndLengthAndType<[1], [4], [type]>;
 def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
 def SPIRV_IOrUIVec4 : SPIRV_Vec4<SPIRV_SignlessOrUnsignedInt>;
 def SPIRV_Int32Vec4 : SPIRV_Vec4<AnyI32>;
 
-// TODO: From 1.4, this should also include Composite type.
-def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr]>;
+def SPIRV_SelectType : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector, SPIRV_AnyPtr,
+                                  SPIRV_AnyMatrix, SPIRV_AnyArray, SPIRV_AnyStruct,
+                                  SPIRV_AnyFloat, SPIRV_AnyFloatVector]>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V OpTrait definitions
@@ -4527,6 +4545,7 @@ def SPIRV_OC_OpAll                            : I32EnumAttrCase<"OpAll", 155>;
 def SPIRV_OC_OpIsNan                          : I32EnumAttrCase<"OpIsNan", 156>;
 def SPIRV_OC_OpIsInf                          : I32EnumAttrCase<"OpIsInf", 157>;
 def SPIRV_OC_OpIsFinite                       : I32EnumAttrCase<"OpIsFinite", 158>;
+def SPIRV_OC_OpIsNormal                       : I32EnumAttrCase<"OpIsNormal", 159>;
 def SPIRV_OC_OpOrdered                        : I32EnumAttrCase<"OpOrdered", 162>;
 def SPIRV_OC_OpUnordered                      : I32EnumAttrCase<"OpUnordered", 163>;
 def SPIRV_OC_OpLogicalEqual                   : I32EnumAttrCase<"OpLogicalEqual", 164>;
@@ -4573,6 +4592,8 @@ def SPIRV_OC_OpEmitVertex                     : I32EnumAttrCase<"OpEmitVertex", 
 def SPIRV_OC_OpEndPrimitive                   : I32EnumAttrCase<"OpEndPrimitive", 219>;
 def SPIRV_OC_OpControlBarrier                 : I32EnumAttrCase<"OpControlBarrier", 224>;
 def SPIRV_OC_OpMemoryBarrier                  : I32EnumAttrCase<"OpMemoryBarrier", 225>;
+def SPIRV_OC_OpAtomicLoad                     : I32EnumAttrCase<"OpAtomicLoad", 227>;
+def SPIRV_OC_OpAtomicStore                    : I32EnumAttrCase<"OpAtomicStore", 228>;
 def SPIRV_OC_OpAtomicExchange                 : I32EnumAttrCase<"OpAtomicExchange", 229>;
 def SPIRV_OC_OpAtomicCompareExchange          : I32EnumAttrCase<"OpAtomicCompareExchange", 230>;
 def SPIRV_OC_OpAtomicCompareExchangeWeak      : I32EnumAttrCase<"OpAtomicCompareExchangeWeak", 231>;
@@ -4673,7 +4694,12 @@ def SPIRV_OC_OpSetMeshOutputsEXT              : I32EnumAttrCase<"OpSetMeshOutput
 def SPIRV_OC_OpSubgroupBlockReadINTEL         : I32EnumAttrCase<"OpSubgroupBlockReadINTEL", 5575>;
 def SPIRV_OC_OpSubgroupBlockWriteINTEL        : I32EnumAttrCase<"OpSubgroupBlockWriteINTEL", 5576>;
 def SPIRV_OC_OpAssumeTrueKHR                  : I32EnumAttrCase<"OpAssumeTrueKHR", 5630>;
+def SPIRV_OC_OpExpectKHR                      : I32EnumAttrCase<"OpExpectKHR", 5631>;
 def SPIRV_OC_OpAtomicFAddEXT                  : I32EnumAttrCase<"OpAtomicFAddEXT", 6035>;
+def SPIRV_OC_OpTypeStructContinuedINTEL       : I32EnumAttrCase<"OpTypeStructContinuedINTEL", 6090>;
+def SPIRV_OC_OpConstantCompositeContinuedINTEL : I32EnumAttrCase<"OpConstantCompositeContinuedINTEL", 6091>;
+def SPIRV_OC_OpSpecConstantCompositeContinuedINTEL : I32EnumAttrCase<"OpSpecConstantCompositeContinuedINTEL", 6092>;
+def SPIRV_OC_OpCompositeConstructContinuedINTEL : I32EnumAttrCase<"OpCompositeConstructContinuedINTEL", 6096>;
 def SPIRV_OC_OpConvertFToBF16INTEL            : I32EnumAttrCase<"OpConvertFToBF16INTEL", 6116>;
 def SPIRV_OC_OpConvertBF16ToFINTEL            : I32EnumAttrCase<"OpConvertBF16ToFINTEL", 6117>;
 def SPIRV_OC_OpControlBarrierArriveINTEL      : I32EnumAttrCase<"OpControlBarrierArriveINTEL", 6142>;
@@ -4732,7 +4758,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpISubBorrow, SPIRV_OC_OpUMulExtended, SPIRV_OC_OpSMulExtended,
       SPIRV_OC_OpAny, SPIRV_OC_OpAll,
       SPIRV_OC_OpIsNan, SPIRV_OC_OpIsInf, SPIRV_OC_OpIsFinite,
-      SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
+      SPIRV_OC_OpIsNormal, SPIRV_OC_OpOrdered, SPIRV_OC_OpUnordered,
       SPIRV_OC_OpLogicalEqual, SPIRV_OC_OpLogicalNotEqual, SPIRV_OC_OpLogicalOr,
       SPIRV_OC_OpLogicalAnd, SPIRV_OC_OpLogicalNot, SPIRV_OC_OpSelect,
       SPIRV_OC_OpIEqual, SPIRV_OC_OpINotEqual, SPIRV_OC_OpUGreaterThan,
@@ -4749,7 +4775,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpNot, SPIRV_OC_OpBitFieldInsert, SPIRV_OC_OpBitFieldSExtract,
       SPIRV_OC_OpBitFieldUExtract, SPIRV_OC_OpBitReverse, SPIRV_OC_OpBitCount,
       SPIRV_OC_OpEmitVertex, SPIRV_OC_OpEndPrimitive, SPIRV_OC_OpControlBarrier,
-      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicExchange,
+      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicLoad, SPIRV_OC_OpAtomicStore,
+      SPIRV_OC_OpAtomicExchange,
       SPIRV_OC_OpAtomicCompareExchange, SPIRV_OC_OpAtomicCompareExchangeWeak,
       SPIRV_OC_OpAtomicIIncrement, SPIRV_OC_OpAtomicIDecrement,
       SPIRV_OC_OpAtomicIAdd, SPIRV_OC_OpAtomicISub, SPIRV_OC_OpAtomicSMin,
@@ -4796,7 +4823,11 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpSpecConstantCompositeReplicateEXT,
       SPIRV_OC_OpEmitMeshTasksEXT, SPIRV_OC_OpSetMeshOutputsEXT,
       SPIRV_OC_OpSubgroupBlockReadINTEL, SPIRV_OC_OpSubgroupBlockWriteINTEL,
-      SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpAtomicFAddEXT,
+      SPIRV_OC_OpAssumeTrueKHR, SPIRV_OC_OpExpectKHR, SPIRV_OC_OpAtomicFAddEXT,
+      SPIRV_OC_OpTypeStructContinuedINTEL,
+      SPIRV_OC_OpConstantCompositeContinuedINTEL,
+      SPIRV_OC_OpSpecConstantCompositeContinuedINTEL,
+      SPIRV_OC_OpCompositeConstructContinuedINTEL,
       SPIRV_OC_OpConvertFToBF16INTEL, SPIRV_OC_OpConvertBF16ToFINTEL,
       SPIRV_OC_OpControlBarrierArriveINTEL, SPIRV_OC_OpControlBarrierWaitINTEL,
       SPIRV_OC_OpGroupIMulKHR, SPIRV_OC_OpGroupFMulKHR,
@@ -5033,5 +5064,16 @@ def SPIRV_TosaExtRoundingModeAttr : SPIRV_I32EnumAttr<
       I32EnumAttrCase<"InexactRound", 2>,
       I32EnumAttrCase<"DoubleRound", 3>,
   ]>;
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Common Constraints.
+//===----------------------------------------------------------------------===//
+
+class SPIRV_ExecutionScopeAttrIs<string operand, list<string> values> : PredOpTrait<
+  operand # " must be '" # !interleave(values, "' or '") # "'",
+  CPred<"::llvm::is_contained({::mlir::spirv::Scope::" # !interleave(values, ", ::mlir::spirv::Scope::") #
+        "}, ::llvm::cast<::mlir::spirv::ScopeAttr>(getProperties()." # operand #
+        ").getValue())">
+>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

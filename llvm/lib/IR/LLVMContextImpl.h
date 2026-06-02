@@ -77,9 +77,6 @@ class ValueHandleBase;
 
 template <> struct DenseMapInfo<APFloat> {
   static inline APFloat getEmptyKey() { return APFloat(APFloat::Bogus(), 1); }
-  static inline APFloat getTombstoneKey() {
-    return APFloat(APFloat::Bogus(), 2);
-  }
 
   static unsigned getHashValue(const APFloat &Key) {
     return static_cast<unsigned>(hash_value(Key));
@@ -114,10 +111,6 @@ struct AnonStructTypeKeyInfo {
     return DenseMapInfo<StructType *>::getEmptyKey();
   }
 
-  static inline StructType *getTombstoneKey() {
-    return DenseMapInfo<StructType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(hash_combine_range(Key.ETypes), Key.isPacked);
   }
@@ -127,7 +120,7 @@ struct AnonStructTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const StructType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return LHS == KeyTy(RHS);
   }
@@ -165,10 +158,6 @@ struct FunctionTypeKeyInfo {
     return DenseMapInfo<FunctionType *>::getEmptyKey();
   }
 
-  static inline FunctionType *getTombstoneKey() {
-    return DenseMapInfo<FunctionType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(Key.ReturnType, hash_combine_range(Key.Params),
                         Key.isVarArg);
@@ -179,7 +168,7 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const FunctionType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return LHS == KeyTy(RHS);
   }
@@ -212,10 +201,6 @@ struct TargetExtTypeKeyInfo {
     return DenseMapInfo<TargetExtType *>::getEmptyKey();
   }
 
-  static inline TargetExtType *getTombstoneKey() {
-    return DenseMapInfo<TargetExtType *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) {
     return hash_combine(Key.Name, hash_combine_range(Key.TypeParams),
                         hash_combine_range(Key.IntParams));
@@ -226,7 +211,7 @@ struct TargetExtTypeKeyInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const TargetExtType *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return LHS == KeyTy(RHS);
   }
@@ -339,6 +324,8 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 
   unsigned getHashValue() const {
+    uint64_t LineColumnAndImplicitCode =
+        Line | (uint64_t(Column) << 32) | (uint64_t(ImplicitCode) << 48);
     // Hashing AtomGroup and AtomRank substantially impacts performance whether
     // Key Instructions is enabled or not. We can't detect whether it's enabled
     // here cheaply; avoiding hashing zero values is a good approximation. This
@@ -347,9 +334,9 @@ template <> struct MDNodeKeyImpl<DILocation> {
     // outweighed by the overall compile time savings by performing this check.
     // * (hash_combine(x) != hash_combine(x, 0))
     if (AtomGroup || AtomRank)
-      return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode,
-                          AtomGroup, (uint8_t)AtomRank);
-    return hash_combine(Line, Column, Scope, InlinedAt, ImplicitCode);
+      return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
+                          AtomGroup | (uint64_t(AtomRank) << 61));
+    return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt);
   }
 };
 
@@ -1525,10 +1512,6 @@ struct DIArgListInfo {
     return DenseMapInfo<DIArgList *>::getEmptyKey();
   }
 
-  static inline DIArgList *getTombstoneKey() {
-    return DenseMapInfo<DIArgList *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
 
   static unsigned getHashValue(const DIArgList *N) {
@@ -1536,7 +1519,7 @@ struct DIArgListInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const DIArgList *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return LHS.isKeyOf(RHS);
   }
@@ -1555,10 +1538,6 @@ template <class NodeTy> struct MDNodeInfo {
     return DenseMapInfo<NodeTy *>::getEmptyKey();
   }
 
-  static inline NodeTy *getTombstoneKey() {
-    return DenseMapInfo<NodeTy *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const KeyTy &Key) { return Key.getHashValue(); }
 
   static unsigned getHashValue(const NodeTy *N) {
@@ -1566,7 +1545,7 @@ template <class NodeTy> struct MDNodeInfo {
   }
 
   static bool isEqual(const KeyTy &LHS, const NodeTy *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return SubsetEqualTy::isSubsetEqual(LHS, RHS) || LHS.isKeyOf(RHS);
   }
@@ -1574,7 +1553,7 @@ template <class NodeTy> struct MDNodeInfo {
   static bool isEqual(const NodeTy *LHS, const NodeTy *RHS) {
     if (LHS == RHS)
       return true;
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+    if (RHS == getEmptyKey())
       return false;
     return SubsetEqualTy::isSubsetEqual(LHS, RHS);
   }
@@ -1697,7 +1676,7 @@ public:
   using VectorConstantsTy = ConstantUniqueMap<ConstantVector>;
   VectorConstantsTy VectorConstants;
 
-  DenseMap<PointerType *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
+  DenseMap<Type *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
 
   DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
 

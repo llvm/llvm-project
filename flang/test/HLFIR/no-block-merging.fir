@@ -1,7 +1,7 @@
 // Test that the HLFIR pipeline does not call MLIR canonicalizer with block
 // merging enabled (moving fir.shape to block argument would cause failures
 // when translating the FIR to LLVM).
-// RUN: %flang_fc1 %s -flang-experimental-hlfir -emit-llvm -O2 -o - | FileCheck %s
+// RUN: %flang_fc1 %s -emit-llvm -O2 -o - | FileCheck %s
 
 func.func @no_shape_merge(%cdt: i1, %from: !fir.ref<!fir.array<?xf64>>, %to : !fir.ref<f64>) {
   %c10 = arith.constant 10 : index

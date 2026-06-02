@@ -498,10 +498,6 @@ namespace llvm {
       return {};
     }
 
-    static clang::FileID getTombstoneKey() {
-      return clang::FileID::getSentinel();
-    }
-
     static unsigned getHashValue(clang::FileID S) {
       return S.getHashValue();
     }
@@ -518,11 +514,6 @@ namespace llvm {
     static clang::SourceLocation getEmptyKey() {
       constexpr clang::SourceLocation::UIntTy Zero = 0;
       return clang::SourceLocation::getFromRawEncoding(~Zero);
-    }
-
-    static clang::SourceLocation getTombstoneKey() {
-      constexpr clang::SourceLocation::UIntTy Zero = 0;
-      return clang::SourceLocation::getFromRawEncoding(~Zero - 1);
     }
 
     static unsigned getHashValue(clang::SourceLocation Loc) {
@@ -542,10 +533,6 @@ namespace llvm {
   template <> struct DenseMapInfo<clang::SourceRange> {
     static clang::SourceRange getEmptyKey() {
       return DenseMapInfo<clang::SourceLocation>::getEmptyKey();
-    }
-
-    static clang::SourceRange getTombstoneKey() {
-      return DenseMapInfo<clang::SourceLocation>::getTombstoneKey();
     }
 
     static unsigned getHashValue(clang::SourceRange Range) {
