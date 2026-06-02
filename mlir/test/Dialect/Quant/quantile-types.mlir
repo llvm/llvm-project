@@ -1,28 +1,28 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file | FileCheck %s
 
 // -----
-// Quantile type: ui4 storage with f16 expressed, 16 entries (default range 0..15).
+// Quantile type: ui4 storage-type with f16 expressed-type, 16 entries (default range 0..15).
 // CHECK-LABEL: func private @quantile_ui4_f16
 // CHECK-SAME: !quant.quantile<ui4:f16, {
 func.func private @quantile_ui4_f16(!quant.quantile<ui4:f16, {-1.0,-0.8667,-0.7333,-0.6,-0.4667,-0.3333,-0.2,-0.0667,0.0667,0.2,0.3333,0.4667,0.6,0.7333,0.8667,1.0}>) -> ()
 
 // -----
-// Quantile type: si8 storage with f32 expressed, explicit range -2:2 (5 entries).
+// Quantile type: si8 storage-type with f32 expressed-type, explicit range -2:2 (5 entries).
 // CHECK: func private @quantile_si8_f32(!quant.quantile<si8:f32, {-1.000000e+00,-5.000000e-01,0.000000e+00,5.000000e-01,1.000000e+00}, <-2:2>>)
 func.func private @quantile_si8_f32(!quant.quantile<si8:f32, {-1.0,-0.5,0.0,0.5,1.0}, <-2:2>>) -> ()
 
 // -----
-// Quantile type: i8 (signless) storage with f32 expressed, explicit range -1:1 (3 entries).
+// Quantile type: i8 (signless) storage-type with f32 expressed-type, explicit range -1:1 (3 entries).
 // CHECK: func private @quantile_i8_f32(!quant.quantile<i8:f32, {-1.000000e+00,0.000000e+00,1.000000e+00}, <-1:1>>)
 func.func private @quantile_i8_f32(!quant.quantile<i8:f32, {-1.0,0.0,1.0}, <-1:1>>) -> ()
 
 // -----
-// Quantile type: f8E4M3FN float storage with f32 expressed, explicit range -1:1 (3 entries).
+// Quantile type: f8E4M3FN float storage-type with f32 expressed-type, explicit range -1:1 (3 entries).
 // CHECK: func private @quantile_f8_f32(!quant.quantile<f8E4M3FN:f32, {-1.000000e+00,0.000000e+00,1.000000e+00}, <-1:1>>)
 func.func private @quantile_f8_f32(!quant.quantile<f8E4M3FN:f32, {-1.0,0.0,1.0}, <-1:1>>) -> ()
 
 // -----
-// Quantile type: ui4 storage with bf16 expressed, 16 entries.
+// Quantile type: ui4 storage-type with bf16 expressed-type, 16 entries.
 // CHECK-LABEL: func private @quantile_ui4_bf16
 // CHECK-SAME: !quant.quantile<ui4:bf16, {
 func.func private @quantile_ui4_bf16(!quant.quantile<ui4:bf16, {-1.0,-0.8667,-0.7333,-0.6,-0.4667,-0.3333,-0.2,-0.0667,0.0667,0.2,0.3333,0.4667,0.6,0.7333,0.8667,1.0}>) -> ()
@@ -55,7 +55,7 @@ func.func private @quantile_with_range(!quant.quantile<ui4:f16, {-1.0,-0.75,-0.5
 func.func private @quantile_signed_range(!quant.quantile<si8:f32, {-1.0,0.0,1.0}, <-1:1>>) -> ()
 
 // -----
-// Signed 4-bit storage uses full 16-entry LUT (range -8..7).
+// Signed 4-bit storage-type uses full 16-entry LUT (range -8..7).
 // CHECK-LABEL: func private @quantile_negatives
 // CHECK-SAME: !quant.quantile<si4:f32, {-2.000000e+00,-1.875000e+00,-1.750000e+00,-1.625000e+00,-1.500000e+00,-1.375000e+00,-1.250000e+00,-1.125000e+00,-1.000000e+00,-8.750000e-01,-7.500000e-01,-6.250000e-01,-5.000000e-01,-3.750000e-01,-2.500000e-01,-1.250000e-01}>
 func.func private @quantile_negatives(!quant.quantile<si4:f32, {-2.0,-1.875,-1.75,-1.625,-1.5,-1.375,-1.25,-1.125,-1.0,-0.875,-0.75,-0.625,-0.5,-0.375,-0.25,-0.125}>) -> ()

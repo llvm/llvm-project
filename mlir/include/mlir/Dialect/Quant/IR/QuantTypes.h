@@ -552,12 +552,12 @@ public:
 
     ```
     quantile-type ::= `!quant.quantile` `<` type `:` type `,` `{` float-list `}`
-   `,` `<` int `,` int `>`? `>`
+   (`,` `<` int `,` int `>`)? `>`
     ```
 
     A quantile type represents a quantile-based floating point encoding, where
     discrete storage values are totally defined by the floating-point values
-   entries in a quantile lookup table of F8/F16/F32.
+   entries in a quantile lookup table of F8/F16/F32/F64.
 
     Optionally, explicit minimum and maximum storage values can be specified
     after the LUT as `<min:max>`.
@@ -570,6 +570,20 @@ public:
    MLIR:
     !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
     !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}, <-8,7>>
+
+    As an additional explanation for better understanding and readability of the
+   above example, the quantile type can be broken down as follows:
+    - `!quant.quantile`: This indicates that we are defining a quantile type.
+    - `<ui4:f16`: This specifies the storage type and the quantile type. In this
+   case, `ui4` indicates an unsigned 4-bit integer storage type, and `f16`
+   indicates that the quantile values are represented as 16-bit floating-point
+   numbers.
+    - `{-1.0,-0.696,0.0,0.079,1.0}`: This is the quantile lookup table (LUT)
+   that defines the discrete storage values. Each value in the LUT corresponds
+   to a specific quantized value that can be stored in the `ui4` storage type.
+    - `, <-8,7>`: This optional part specifies the explicit minimum and maximum
+   storage values. In this case, the minimum storage value is -8 and the maximum
+   storage value is 7.
 */
 
 class QuantileType
