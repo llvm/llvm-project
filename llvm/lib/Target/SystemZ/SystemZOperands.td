@@ -444,6 +444,28 @@ defm imm64hh16c : Immediate<i64, [{
          SystemZ::isImmHH(uint64_t(~Imm.getZExtValue()));
 }], HH16, "U16Imm">;
 
+// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one
+// or zero-extended from a 16-bit.
+defm imm32ll8c : Immediate<i32, [{
+  if (!Imm.isIntN(32)) return false;
+  uint64_t Val = Imm.getZExtValue();
+  // Case 1: Upper 24 bits are all ones.
+  if ((Val & 0xffffff00ULL) == 0xffffff00ULL)
+    return true;
+  // Case 2: Zero-extended i16 where the upper 16 bits are zero and the 
+  // second least significant byte is 0xff (0x0000ff00).
+  if ((Val & 0xffffff00ULL) == 0x0000ff00ULL) {
+    return true;
+  }
+  return false;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i64, with the other bits being one.
+defm imm64ll8c : Immediate<i64, [{
+  return Imm.isIntN(64) &&
+         (uint64_t(~Imm.getZExtValue()) & 0xffffffffffffff00ULL) == 0;
+}], UIMM8, "U8Imm">;
+
 // Immediates for the lower and upper 32 bits of an i64, with the other
 // bits of the i32 being zero.
 defm imm64lf32 : Immediate<i64, [{
@@ -681,6 +703,16 @@ def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
 def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
 def bdvaddr12only     : BDVMode<            "64", "12">;
 
+// 12-bit unsigned displacement variants (for NI, OI, XI)
+def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
+def bdaddr12off3 : ComplexPattern<i64, 2, "selectBDAddr12off3">;
+def bdaddr12off7 : ComplexPattern<i64, 2, "selectBDAddr12off7">;
+
+// 20-bit signed displacement variants (for NIY, OIY, XIY)
+def bdaddr20off1 : ComplexPattern<i64, 2, "selectBDAddr20off1">;
+def bdaddr20off3 : ComplexPattern<i64, 2, "selectBDAddr20off3">;
+def bdaddr20off7 : ComplexPattern<i64, 2, "selectBDAddr20off7">;
+
 //===----------------------------------------------------------------------===//
 // Miscellaneous
 //===----------------------------------------------------------------------===//
@@ -694,32 +726,3 @@ def cond4 : ImmLeaf<i32, [{ return (Imm.getZExtValue() < 16); }],
   let IsAPInt = true;
   let FastIselShouldIgnore = true;
 }
-
-// These patterns target the Least Significant Byte (LSB) of multi-byte 
-// integers (i16, i32, i64). On SystemZ (Big-Endian), the LSB is located at 
-// a fixed positive offset from the base address:
-// i16: offset +1 (byte 1 of 2)
-// i32: offset +3 (byte 3 of 4)
-// i64: offset +7 (byte 7 of 8)
-
-// 12-bit unsigned displacement variants (for NI, OI, XI)
-def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
-def bdaddr12off3 : ComplexPattern<i64, 2, "selectBDAddr12off3">;
-def bdaddr12off7 : ComplexPattern<i64, 2, "selectBDAddr12off7">;
-
-// 20-bit signed displacement variants (for NIY, OIY, XIY)
-def bdaddr20off1 : ComplexPattern<i64, 2, "selectBDAddr20off1">;
-def bdaddr20off3 : ComplexPattern<i64, 2, "selectBDAddr20off3">;
-def bdaddr20off7 : ComplexPattern<i64, 2, "selectBDAddr20off7">;
-
-// Normalizes the immediate to i32.
-def as_i32imm : SDNodeXForm<imm, [{
-  uint64_t Val = N->getAPIntValue().zextOrTrunc(32).getZExtValue();
-  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
-}]>;
-
-// Extracts only the bottom 8 bits.
-def as_i8imm : SDNodeXForm<imm, [{
-  uint64_t Val = N->getZExtValue() & 0xFF;
-  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
-}]>;

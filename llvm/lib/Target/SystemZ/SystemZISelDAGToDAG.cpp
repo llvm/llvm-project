@@ -704,12 +704,11 @@ bool SystemZDAGToDAGISel::selectBDAddr(SystemZAddressingMode::DispRange DR,
                                        SDValue Addr, SDValue &Base,
                                        SDValue &Disp, int64_t Offset) const {
   SystemZAddressingMode AM(SystemZAddressingMode::FormBD, DR);
+  AM.Disp += Offset;
   if (!selectAddress(Addr, AM))
     return false;
 
-  AM.Disp += Offset;
   getAddressOperands(AM, Addr.getValueType(), Base, Disp);
-  Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(Addr), MVT::i64);
   return true;
 }
 
