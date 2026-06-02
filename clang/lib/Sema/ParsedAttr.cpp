@@ -230,8 +230,6 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
   case AT_AddressSpace:
   case AT_OpenCLPrivateAddressSpace:
   case AT_OpenCLGlobalAddressSpace:
-  case AT_OpenCLGlobalDeviceAddressSpace:
-  case AT_OpenCLGlobalHostAddressSpace:
   case AT_OpenCLLocalAddressSpace:
   case AT_OpenCLConstantAddressSpace:
   case AT_OpenCLGenericAddressSpace:

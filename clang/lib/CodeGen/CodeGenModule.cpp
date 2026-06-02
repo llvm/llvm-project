@@ -2731,9 +2731,6 @@ static unsigned ArgInfoAddressSpace(LangAS AS) {
     return 3;
   case LangAS::opencl_generic:
     return 4; // Not in SPIR 2.0 specs.
-  case LangAS::opencl_global_device:
-    return 5;
-  case LangAS::opencl_global_host:
     return 6;
   default:
     return 0; // Assume private.
@@ -6128,8 +6125,6 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
   if (LangOpts.OpenCL) {
     LangAS AS = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
     assert(AS == LangAS::opencl_global ||
-           AS == LangAS::opencl_global_device ||
-           AS == LangAS::opencl_global_host ||
            AS == LangAS::opencl_constant ||
            AS == LangAS::opencl_local ||
            AS >= LangAS::FirstTargetAddressSpace);

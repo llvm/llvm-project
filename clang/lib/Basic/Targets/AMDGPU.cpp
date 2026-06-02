@@ -34,14 +34,10 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsGenMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
     llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // sycl_global_host
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // sycl_local
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // sycl_private
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr
@@ -65,15 +61,11 @@ const LangASMap AMDGPUTargetInfo::AMDGPUDefIsPrivMap = {
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // opencl_constant
     llvm::AMDGPUAS::PRIVATE_ADDRESS,  // opencl_private
     llvm::AMDGPUAS::FLAT_ADDRESS,     // opencl_generic
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_device
-    llvm::AMDGPUAS::GLOBAL_ADDRESS,   // opencl_global_host
     llvm::AMDGPUAS::GLOBAL_ADDRESS,   // cuda_device
     llvm::AMDGPUAS::CONSTANT_ADDRESS, // cuda_constant
     llvm::AMDGPUAS::LOCAL_ADDRESS,    // cuda_shared
     // SYCL address space values for this map are dummy
     llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_device
-    llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_global_host
     llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_local
     llvm::AMDGPUAS::FLAT_ADDRESS,     // sycl_private
     llvm::AMDGPUAS::FLAT_ADDRESS,     // ptr32_sptr

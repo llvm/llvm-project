@@ -1263,11 +1263,7 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
     return LangAddressSpace::OffloadPrivate;
   case LangAS::opencl_generic:
     return LangAddressSpace::OffloadGeneric;
-  case LangAS::opencl_global_device:
-  case LangAS::opencl_global_host:
   case LangAS::sycl_global:
-  case LangAS::sycl_global_device:
-  case LangAS::sycl_global_host:
   case LangAS::sycl_local:
   case LangAS::sycl_private:
   case LangAS::ptr32_sptr:

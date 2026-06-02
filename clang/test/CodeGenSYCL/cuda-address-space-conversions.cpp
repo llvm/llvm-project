@@ -25,10 +25,6 @@ void tmpl(T t);
   // CHECK-DAG: [[LOC:%[a-zA-Z0-9]+]] = alloca ptr addrspace(3), align 8
   __attribute__((opencl_private)) int *PRIV;
   // CHECK-DAG: [[PRIV:%[a-zA-Z0-9]+]] = alloca ptr, align 8
-  __attribute__((opencl_global_device)) int *GLOBDEVICE;
-  // CHECK-DAG: [[GLOB_DEVICE:%[a-zA-Z0-9]+]] = alloca ptr addrspace(1), align 8
-  __attribute__((opencl_global_host)) int *GLOBHOST;
-  // CHECK-DAG: [[GLOB_HOST:%[a-zA-Z0-9]+]] = alloca ptr addrspace(1), align 8
   LOC = nullptr;
   // CHECK-DAG: store ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr [[LOC]], align 8
   GLOB = nullptr;
@@ -55,12 +51,6 @@ void tmpl(T t);
   PRIV = (__attribute__((opencl_private)) int *)NoAS;
   // CHECK-DAG: [[NoAS_LOAD:%[a-zA-Z0-9]+]] = load ptr, ptr [[NoAS]], align 8
   // CHECK-DAG: store ptr [[NoAS_LOAD]], ptr [[PRIV]], align 8
-  GLOB = (__attribute__((opencl_global)) int *)GLOBDEVICE;
-  // CHECK-DAG: [[GLOBDEVICE_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB_DEVICE]], align 8
-  // CHECK-DAG: store ptr addrspace(1) [[GLOBDEVICE_LOAD]], ptr %GLOB, align 8
-  GLOB = (__attribute__((opencl_global)) int *)GLOBHOST;
-  // CHECK-DAG: [[GLOB_HOST_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB_HOST]], align 8
-  // CHECK-DAG: store ptr addrspace(1) [[GLOB_HOST_LOAD]], ptr [[GLOB]], align 8
   bar(*GLOB);
   // CHECK-DAG: [[GLOB_LOAD:%[a-zA-Z0-9]+]] = load ptr addrspace(1), ptr [[GLOB]], align 8
   // CHECK-DAG: [[GLOB_CAST:%[a-zA-Z0-9]+]] = addrspacecast ptr addrspace(1) [[GLOB_LOAD]] to ptr
@@ -113,8 +103,8 @@ void tmpl(T t);
   // CHECK-DAG: [[PRIV_LOAD5:%[a-zA-Z0-9]+]] = load ptr, ptr [[PRIV]], align 8
   // CHECK-DAG: call void @_Z4tmplIPiEvT_(ptr noundef [[PRIV_LOAD5]])
   tmpl(NoAS);
-// CHECK-DAG: %33 = load ptr, ptr %NoAS, align 8
-// CHECK-DAG: call void @_Z4tmplIPiEvT_(ptr noundef %33)
+// CHECK-DAG: [[NoAS_LOAD5:%[a-zA-Z0-9]+]] = load ptr, ptr %NoAS, align 8
+// CHECK-DAG: call void @_Z4tmplIPiEvT_(ptr noundef [[NoAS_LOAD5]])
 }
 
 // CHECK-DAG: void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef

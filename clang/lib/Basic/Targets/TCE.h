@@ -35,16 +35,12 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     3, // opencl_local
     2, // opencl_constant
     0, // opencl_private
-    1, // opencl_global_device
-    1, // opencl_global_host
     // FIXME: generic has to be added to the target
     0, // opencl_generic
     0, // cuda_device
     0, // cuda_constant
     0, // cuda_shared
     0, // sycl_global
-    0, // sycl_global_device
-    0, // sycl_global_host
     0, // sycl_local
     0, // sycl_private
     0, // ptr32_sptr

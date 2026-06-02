@@ -2459,7 +2459,7 @@ void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
   // where:
   //  <language_addr_space> ::= <OpenCL-addrspace> | <CUDA-addrspace>
   //    <OpenCL-addrspace> ::= "CL" [ "global" | "local" | "constant" |
-  //                                "private"| "generic" | "device" | "host" ]
+  //                                "private"| "generic" ]
   //    <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
   //    Note that the above were chosen to match the Itanium mangling for this.
   //
@@ -2482,12 +2482,6 @@ void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
       llvm_unreachable("Not a language specific address space");
     case LangAS::opencl_global:
       Extra.mangleSourceName("_ASCLglobal");
-      break;
-    case LangAS::opencl_global_device:
-      Extra.mangleSourceName("_ASCLdevice");
-      break;
-    case LangAS::opencl_global_host:
-      Extra.mangleSourceName("_ASCLhost");
       break;
     case LangAS::opencl_local:
       Extra.mangleSourceName("_ASCLlocal");

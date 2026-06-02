@@ -937,8 +937,7 @@ std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
 LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
   if (langOpts.OpenCL) {
     LangAS as = d ? d->getType().getAddressSpace() : LangAS::opencl_global;
-    assert(as == LangAS::opencl_global || as == LangAS::opencl_global_device ||
-           as == LangAS::opencl_global_host || as == LangAS::opencl_constant ||
+    assert(as == LangAS::opencl_global || as == LangAS::opencl_constant ||
            as == LangAS::opencl_local || as >= LangAS::FirstTargetAddressSpace);
     return as;
   }
