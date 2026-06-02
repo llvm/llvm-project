@@ -4,7 +4,7 @@
 
 from datetime import timezone, datetime
 
-__versioninfo__ = (22, 1, 7)
+__versioninfo__ = (22, 1, 8)
 __version__ = (
     ".".join(str(v) for v in __versioninfo__)
     + "dev"
