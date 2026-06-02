@@ -1005,7 +1005,6 @@ void lifetimebound_ctor_c_style_cast() {
   {
     MyObj obj;
     v = (LifetimeBoundCtor)(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
-                                  // expected-note {{local variable 'obj' aliases the storage of local variable 'obj'}} \
                                   // expected-note {{expression aliases the storage of local variable 'obj'}}
   }                               // expected-note {{destroyed here}}
   (void)v;                        // expected-note {{later used here}}
@@ -1290,7 +1289,6 @@ void parentheses(bool cond) {
   {
     MyObj a;
     p = ((GetPointer((a))));  // expected-warning {{local variable 'a' does not live long enough}} \
-                              // expected-note {{local variable 'a' aliases the storage of local variable 'a'}} \
                               // expected-note {{expression aliases the storage of local variable 'a'}}
   }                           // expected-note {{destroyed here}}
   (void)*p;                   // expected-note {{later used here}}
@@ -1336,14 +1334,16 @@ void use_trivial_temporary_after_destruction() {
 
 namespace FullExprCleanupLoc {
 void var_initializer() {
-  View v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+  View v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}} \
+                                                // expected-note {{expression aliases the storage of local temporary object}}
                .getView(); // expected-note {{destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
 
 void expr_statement() {
   View v;
-  v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}}
+  v = non_trivially_destructed_temporary() // expected-warning {{local temporary object does not live long enough}} \
+                                           // expected-note {{expression aliases the storage of local temporary object}}
           .getView(); // expected-note {{destroyed here}}
   v.use(); // expected-note {{later used here}}
 }
@@ -2394,9 +2394,9 @@ struct S {
 
 void indexing_with_static_operator() {
   S()(1, 2);
-  S& x = S()("1",
-             2,  // expected-warning {{local temporary object does not live long enough}}
-             3); // expected-warning {{local temporary object does not live long enough}} expected-note 2 {{destroyed here}}
+  S& x = S()("1", // expected-note 2 {{expression aliases the storage of local temporary object}}
+             2,   // expected-warning {{local temporary object does not live long enough}}
+             3);  // expected-warning {{local temporary object does not live long enough}} expected-note 2 {{destroyed here}}
 
   (void)x; // expected-note 2 {{later used here}}
 
@@ -3636,7 +3636,7 @@ void transitive_capture() {
   {
     MyObj local;
     setCaptureBy(v1, local); // expected-warning {{local variable 'local' does not live long enough}}
-    setCaptureBy(v2, v1);   
+    setCaptureBy(v2, v1);    // expected-note {{local variable 'v1' aliases the storage of local variable 'local'}}
   }                 // expected-note {{destroyed here}}
   (void)v2;         // expected-note {{later used here}}   
 }

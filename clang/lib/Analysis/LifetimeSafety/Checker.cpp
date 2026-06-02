@@ -266,17 +266,8 @@ public:
         } else {
           // Scope-based expiry (use-after-scope).
 
-          llvm::SmallVector<OriginID> OriginFlowChain;
-
-          for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
-               Cur = Cur->peelOuterOrigin())
-            if (LoanPropagation.getLoans(Cur->getOuterOriginID(), UF)
-                    .contains(LID)) {
-              OriginFlowChain = LoanPropagation.buildOriginFlowChain(
-                  FactMgr, UF, Cur->getOuterOriginID(), LID);
-              break;
-            }
-
+          llvm::SmallVector<OriginID> OriginFlowChain =
+              LoanPropagation.buildOriginFlowChain(FactMgr, UF, LID);
           const llvm::SmallVector<const Expr *> ExprChain =
               getExprChain(OriginFlowChain);
           SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),

@@ -295,4 +295,21 @@ LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
                                               const LoanID TargetLoan) const {
   return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan);
 }
+
+llvm::SmallVector<OriginID>
+LoanPropagationAnalysis::buildOriginFlowChain(const FactManager &FactMgr,
+                                              const UseFact *UF,
+                                              const LoanID TargetLoan) const {
+  llvm::SmallVector<OriginID> OriginFlowChain;
+
+  for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+       Cur = Cur->peelOuterOrigin())
+    if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan)) {
+      OriginFlowChain = buildOriginFlowChain(
+          FactMgr, UF, Cur->getOuterOriginID(), TargetLoan);
+      break;
+    }
+
+  return OriginFlowChain;
+}
 } // namespace clang::lifetimes::internal

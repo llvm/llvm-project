@@ -489,25 +489,29 @@ private:
     return "expression";
   }
 
+  bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
+    CurrExpr = CurrExpr->IgnoreImpCasts()->IgnoreParens();
+    LastExpr = LastExpr->IgnoreImpCasts()->IgnoreParens();
+
+    if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
+      return false;
+    if (isa<MaterializeTemporaryExpr>(CurrExpr) &&
+        isa<MaterializeTemporaryExpr>(LastExpr))
+      return false;
+
+    return true;
+  }
+
   void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
-    std::string IssueStr;
-    const Expr *IssueExpr = nullptr;
-    const Expr *LastExpr = nullptr;
+    if (OriginExprChain.empty())
+      return;
+
+    const Expr *LastExpr = OriginExprChain.back();
+    std::string IssueStr = getDiagSubjectDescription(LastExpr);
 
     for (const Expr *CurrExpr : reverse(OriginExprChain)) {
-      if (!IssueExpr) {
-        IssueStr = getDiagSubjectDescription(CurrExpr);
-        IssueExpr = CurrExpr;
-        LastExpr = CurrExpr;
+      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
         continue;
-      }
-
-      if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
-        continue;
-      if (isa<MaterializeTemporaryExpr>(CurrExpr) &&
-          isa<MaterializeTemporaryExpr>(IssueExpr))
-        continue;
-
       S.Diag(CurrExpr->getBeginLoc(),
              diag::note_lifetime_safety_aliases_storage)
           << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)

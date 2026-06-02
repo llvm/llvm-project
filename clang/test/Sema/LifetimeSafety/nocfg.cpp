@@ -1055,9 +1055,9 @@ void operator_star_arrow_reference() {
   const char* x = temporary().begin()->data();    // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note 3 {{expression aliases the storage of local temporary object}}
   const char* y = (*temporary().begin()).data();  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                  // cfg-note 4 {{expression aliases the storage of local temporary object}}
-  const std::string& z = (*temporary().begin());  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                   // cfg-note 3 {{expression aliases the storage of local temporary object}}
+  const std::string& z = (*temporary().begin());  // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                  // cfg-note 2 {{expression aliases the storage of local temporary object}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }
