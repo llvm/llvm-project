@@ -215,9 +215,9 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
-  Align Align = Flags.getNonZeroByValAlign();
+  Align Alignment = Flags.getNonZeroByValAlign();
   return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Align, Align,
+      Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
       /*isVolatile=*/false, /*AlwaysInline=*/false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
 }
