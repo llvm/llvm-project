@@ -464,6 +464,7 @@ public:
   }
   void setIndex(uint32_t I) { Index = I; }
   void setOutputName(const Twine &Name) { OutputName = Name.str(); }
+  void setExternallyOwnedContents() { OwnsOutputContents = false; }
   void setAnonymous(bool Flag) { IsAnonymous = Flag; }
   bool isLinkOnly() const { return IsLinkOnly; }
   void setLinkOnly() { IsLinkOnly = true; }
