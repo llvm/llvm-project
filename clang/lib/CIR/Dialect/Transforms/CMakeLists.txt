@@ -11,6 +11,7 @@ add_clang_library(MLIRCIRTransforms
   FlattenCFG.cpp
   HoistAllocas.cpp
   LoweringPrepare.cpp
+  LoweringPrepareCXXABI.cpp
   GotoSolver.cpp
   IdiomRecognizer.cpp
 

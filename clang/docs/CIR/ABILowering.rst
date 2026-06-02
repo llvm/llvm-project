@@ -564,6 +564,41 @@ The pass takes one of two driver modes via pass options:
 
 Exactly one of the two options must be set.
 
+Variadic Aggregate Arguments
+============================
+
+Passing aggregates through a variadic function has two halves, and both are
+governed by the same target ABI classification that the design above will
+ultimately provide through the LLVM ABI library.  Until that classifier is
+wired into the CIR pipeline, both halves are only partially supported.
+
+On the **callee** side, ``__builtin_va_arg`` of an aggregate is expanded by the
+``cir-lowering-prepare`` pass into the x86-64 System V register-save-area
+sequence (the ``gp_offset`` / ``reg_save_area`` / ``overflow_arg_area`` dance).
+The generic lowering would otherwise emit an ``llvm.va_arg`` instruction, which
+Selection-DAG cannot lower for aggregate types.  The current expansion only
+covers aggregates whose eightbytes are all of INTEGER class (integers,
+pointers, bools), plus larger integer-compatible aggregates that are always
+passed in memory (MEMORY class).  Aggregates with floating-point members
+require SSE / ``fp_offset`` accounting, and over-aligned aggregates require
+extra rounding; these, along with non-x86-64 targets, are reported as
+not-yet-implemented rather than emitting an ``llvm.va_arg`` that crashes the
+backend.
+
+On the **caller** side, passing an aggregate through the variadic ellipsis is
+not yet implemented at all.  Correct lowering requires classifying the
+aggregate into eightbytes, tracking the available integer and SSE registers
+across the whole call, coercing the aggregate into register-sized pieces when
+registers remain, and spilling it ``byval`` once they are exhausted.  CIRGen
+therefore reports an aggregate variadic argument as not-yet-implemented instead
+of passing it uncoerced (which would silently miscompile the call).
+
+Both limitations are resolved by the same work: a full x86-64 eightbyte
+classifier (INTEGER and SSE) provided through the LLVM ABI library and MLIR
+integration layer described in this document.  That classifier replaces the
+focused callee expansion above and supplies the caller-side coercion, after
+which the not-yet-implemented diagnostics can be removed.
+
 Open Questions
 ==============
 

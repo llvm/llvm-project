@@ -5,44 +5,50 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-struct Bar {
-  float f1;
-  float f2;
-  unsigned u;
+struct S {
+  int a, b, c;
 };
 
-struct Bar varargs_aggregate(int count, ...) {
+int get(int n, ...) {
   __builtin_va_list args;
-  __builtin_va_start(args, count);
-  struct Bar res = __builtin_va_arg(args, struct Bar);
+  __builtin_va_start(args, n);
+  struct S s = __builtin_va_arg(args, struct S);
   __builtin_va_end(args);
-  return res;
+  return s.a + s.b + s.c;
 }
 
-// CIR-LABEL: cir.func {{.*}} @varargs_aggregate(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca !rec_Bar, !cir.ptr<!rec_Bar>, ["__retval", init]
-// CIR:   %[[VAAREA:.+]] = cir.alloca !cir.array<!rec___va_list_tag x 1>, !cir.ptr<!cir.array<!rec___va_list_tag x 1>>, ["args"]
-// CIR:   %[[TMP_ADDR:.+]] = cir.alloca !rec_Bar, !cir.ptr<!rec_Bar>, ["vaarg.tmp"]
-// CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   cir.va_start %[[VA_PTR0]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_PTR1:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[VA_ARG:.+]] = cir.va_arg %[[VA_PTR1]] : (!cir.ptr<!rec___va_list_tag>) -> !rec_Bar
-// CIR:   cir.store{{.*}} %[[VA_ARG]], %[[TMP_ADDR]] : !rec_Bar, !cir.ptr<!rec_Bar>
-// CIR:   cir.copy %[[TMP_ADDR]] to %[[RET_ADDR]] : !cir.ptr<!rec_Bar>
-// CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
-// CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!rec_Bar>, !rec_Bar
-// CIR:   cir.return %[[RETVAL]] : !rec_Bar
+// Aggregate __builtin_va_arg expands into the x86-64 register-save-area dance.
 
-// LLVM-LABEL: define dso_local %struct.Bar @varargs_aggregate(
-// LLVM:   call void @llvm.va_start.p0(ptr %{{.*}})
-// LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %{{.*}}, i32 0
-// LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], %struct.Bar
-// LLVM:   store %struct.Bar %[[VA_ARG]], ptr %{{.*}}
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 12, i1 false)
+// CIR-LABEL: cir.func {{.*}} @get(
+// CIR:   cir.va_start
+// CIR:   %{{.+}} = cir.scope {
+// CIR:     %[[GP_P:.+]] = cir.get_member %{{.+}}[0] {name = "gp_offset"}
+// CIR:     %[[GP:.+]] = cir.load %[[GP_P]]
+// CIR:     %[[LIMIT:.+]] = cir.const #cir.int<32> : !u32i
+// CIR:     %[[FITS:.+]] = cir.cmp le %[[GP]], %[[LIMIT]]
+// CIR:     cir.brcond %[[FITS]]
+// CIR:     cir.get_member %{{.+}}[3] {name = "reg_save_area"}
+// CIR:     cir.get_member %{{.+}}[2] {name = "overflow_arg_area"}
+// CIR:     cir.yield %{{.+}} : !rec_S
+// CIR:   } : !rec_S
+// CIR-NOT: cir.va_arg
 
-// OGCG-LABEL: define dso_local { <2 x float>, i32 } @varargs_aggregate
-// OGCG:   call void @llvm.va_start.p0(ptr %{{.*}})
-// OGCG:   %[[VAARG_ADDR:.+]] = phi ptr [ %{{.*}}, %vaarg.in_reg ], [ %{{.*}}, %vaarg.in_mem ]
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %[[VAARG_ADDR]], i64 12, i1 false)
+// LLVM-LABEL: define dso_local i32 @get(i32 noundef %{{.+}}, ...)
+// LLVM:   call void @llvm.va_start
+// LLVM:   %[[GP:.+]] = load i32, ptr
+// LLVM:   icmp ule i32 %[[GP]], 32
+// LLVM:   getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 3
+// LLVM:   getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 2
+// LLVM:   phi ptr
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.+}}, ptr %{{.+}}, i64 12, i1 false)
+// LLVM-NOT: va_arg
 
+// OGCG-LABEL: define dso_local i32 @get(i32 noundef %{{.+}}, ...)
+// OGCG:   call void @llvm.va_start
+// OGCG:   %[[GP:.+]] = load i32, ptr %{{.+}}, align 16
+// OGCG:   icmp ule i32 %[[GP]], 32
+// OGCG:   load ptr, ptr %{{.+}}, align 16
+// OGCG:   load ptr, ptr %{{.+}}, align 8
+// OGCG:   phi ptr
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.+}}, ptr align 4 %{{.+}}, i64 12, i1 false)
+// OGCG-NOT: va_arg

@@ -1508,8 +1508,17 @@ void CIRGenFunction::emitCallArgs(
   }
 
   // If we still have any arguments, emit them using the type of the argument.
-  for (const clang::Expr *a : llvm::drop_begin(argRange, argTypes.size()))
-    argTypes.push_back(isVariadic ? getVarArgType(a) : a->getType());
+  // An aggregate passed through the variadic ellipsis needs ABI classification
+  // and call-site coercion (register vs. memory) that CIR does not implement
+  // yet.  Passing it uncoerced would silently miscompile the call, so report
+  // it as not-yet-implemented instead.
+  for (const clang::Expr *a : llvm::drop_begin(argRange, argTypes.size())) {
+    QualType argType = isVariadic ? getVarArgType(a) : a->getType();
+    if (isVariadic && argType->isRecordType())
+      cgm.errorNYI(a->getSourceRange(),
+                   "aggregate argument passed through variadic ellipsis");
+    argTypes.push_back(argType);
+  }
   assert(argTypes.size() == (size_t)(argRange.end() - argRange.begin()));
 
   // We must evaluate arguments from right to left in the MS C++ ABI, because
