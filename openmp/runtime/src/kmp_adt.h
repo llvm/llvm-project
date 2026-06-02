@@ -24,6 +24,7 @@
 #include <cctype>
 #include <cstddef>
 #include <cstring>
+#include <functional>
 #include <string_view>
 
 #include "kmp.h"
@@ -33,14 +34,16 @@ class kmp_str_ref final {
   std::string_view sv;
 
 public:
+  static constexpr size_t npos = SIZE_MAX;
+
   kmp_str_ref(const char *str) : sv(str) {}
   kmp_str_ref(std::string_view sv) : sv(sv) {}
 
   kmp_str_ref(const kmp_str_ref &other) = default;
   kmp_str_ref &operator=(const kmp_str_ref &other) = default;
 
-  // Check if the string starts with the given prefix and remove it from the
-  // string afterwards.
+  /// Check if the string starts with the given prefix and remove it from the
+  /// string afterwards.
   bool consume_front(kmp_str_ref prefix) {
     if (length() < prefix.length())
       return false;
@@ -50,9 +53,9 @@ public:
     return true;
   }
 
-  // Start consuming an integer from the start of the string and remove it from
-  // the string afterwards.
-  // The maximum integer value that can currently be parsed is INT_MAX - 1.
+  /// Start consuming an integer from the start of the string and remove it from
+  /// the string afterwards.
+  /// The maximum integer value that can currently be parsed is INT_MAX - 1.
   bool consume_integer(int &value, bool allow_zero = true,
                        bool allow_negative = false) {
     kmp_str_ref orig = *this; // save state
@@ -61,16 +64,14 @@ public:
       *this = orig;
       return false;
     }
-    size_t num_digits = count_while([](char c) {
-      return static_cast<bool>(isdigit(static_cast<unsigned char>(c)));
-    });
+    size_t num_digits = count_while(
+        [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
     if (!num_digits) {
       *this = orig;
       return false;
     }
-    assert(num_digits <= INT_MAX);
-    value = __kmp_basic_str_to_int(sv.data(), static_cast<int>(num_digits));
-    if (value == INT_MAX) {
+    value = __kmp_basic_str_to_int(sv.data(), num_digits);
+    if (value == SIZE_MAX) {
       *this = orig;
       return false;
     }
@@ -84,8 +85,8 @@ public:
     return true;
   }
 
-  // Get an own duplicate of the string.
-  // Must be freed with KMP_INTERNAL_FREE().
+  /// Get an own duplicate of the string.
+  /// Must be freed with KMP_INTERNAL_FREE().
   char *copy() const {
     char *copy_str = static_cast<char *>(KMP_INTERNAL_MALLOC(length() + 1));
     assert(copy_str && "copy() failed to allocate memory");
@@ -94,44 +95,61 @@ public:
     return copy_str;
   }
 
-  // Count the number of characters in the string while the predicate returns
-  // true.
-  size_t count_while(bool (*predicate)(char)) const {
-    size_t i = 0;
-    while (i < length() && predicate(sv[i]))
-      ++i;
-    return i;
+  /// Count the number of characters in the string while the predicate returns
+  /// true.
+  size_t count_while(std::function<bool(char)> predicate) const {
+    size_t len = find_if_not(predicate);
+    return len == npos ? length() : len;
   }
 
-  // Drop the first n characters from the string.
-  // (Limit n to the length of the string.)
+  /// Drop the first n characters from the string.
+  /// (Limit n to the length of the string.)
   void drop_front(size_t n) { sv.remove_prefix(std::min(n, length())); }
 
-  // Drop characters from the string while the predicate returns true.
-  void drop_while(bool (*predicate)(char)) {
+  /// Drop characters from the string while the predicate returns true.
+  void drop_while(std::function<bool(char)> predicate) {
     drop_front(count_while(predicate));
   }
 
-  // Check if the string is empty.
+  /// Check if the string is empty.
   bool empty() const { return sv.empty(); }
 
-  // Get the length of the string.
-  size_t length() const { return sv.length(); }
+  /// Return the index of the first character in the string for which the
+  /// predicate returns true.
+  /// Returns npos if no match is found.
+  size_t find_if(std::function<bool(char)> predicate) const {
+    size_t i = 0;
+    size_t len = length();
+    while (i < len && !predicate(sv[i]))
+      ++i;
+    return i < len ? i : npos;
+  }
 
-  // Drop space from the start of the string.
+  /// Return the index of the first character in the string for which the
+  /// predicate returns false.
+  /// Returns npos if no match is found.
+  size_t find_if_not(std::function<bool(char)> predicate) const {
+    return find_if([predicate](char c) { return !predicate(c); });
+  }
+
+  /// Get the length of the string.
+  size_t length() const { return sv.length(); }
+  size_t size() const { return length(); }
+
+  /// Drop space from the start of the string.
   void skip_space() {
     drop_while([](char c) {
       return static_cast<bool>(isspace(static_cast<unsigned char>(c)));
     });
   }
 
-  // Construct a new string with the longest prefix of the original string that
-  // satisfies the predicate. Doesn't modify the original string.
-  kmp_str_ref take_while(bool (*predicate)(char)) const {
+  /// Construct a new string with the longest prefix of the original string that
+  /// satisfies the predicate. Doesn't modify the original string.
+  kmp_str_ref take_while(std::function<bool(char)> predicate) const {
     return kmp_str_ref(sv.substr(0, count_while(predicate)));
   }
 
-  // Iterator support (raw pointers work as iterators for contiguous storage)
+  /// Iterator support (raw pointers work as iterators for contiguous storage)
   const char *begin() const { return sv.data(); }
   const char *end() const { return sv.data() + length(); }
 };

@@ -50,6 +50,13 @@ TEST(kmp_str_ref_test, Length) {
   EXPECT_EQ(kmp_str_ref("hello world").length(), 11u);
 }
 
+TEST(kmp_str_ref_test, Size) {
+  EXPECT_EQ(kmp_str_ref("").size(), 0u);
+  EXPECT_EQ(kmp_str_ref("a").size(), 1u);
+  EXPECT_EQ(kmp_str_ref("hello").size(), 5u);
+  EXPECT_EQ(kmp_str_ref("hello world").size(), 11u);
+}
+
 //===----------------------------------------------------------------------===//
 // empty
 //===----------------------------------------------------------------------===//
@@ -422,6 +429,130 @@ TEST(kmp_str_ref_test, DropWhileAll) {
   });
 
   EXPECT_EQ(s.length(), 0u);
+}
+
+//===----------------------------------------------------------------------===//
+// count_while
+//===----------------------------------------------------------------------===//
+
+TEST(kmp_str_ref_test, CountWhileDigits) {
+  kmp_str_ref s("123abc");
+
+  size_t n = s.count_while(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(n, 3u);
+}
+
+TEST(kmp_str_ref_test, CountWhileAll) {
+  kmp_str_ref s("12345");
+
+  size_t n = s.count_while(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(n, s.length());
+}
+
+TEST(kmp_str_ref_test, CountWhileNone) {
+  kmp_str_ref s("abc");
+
+  size_t n = s.count_while(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(n, 0u);
+}
+
+TEST(kmp_str_ref_test, CountWhileEmpty) {
+  kmp_str_ref s("");
+
+  size_t n = s.count_while([](char c) { return c == 'a'; });
+
+  EXPECT_EQ(n, 0u);
+}
+
+//===----------------------------------------------------------------------===//
+// find_if
+//===----------------------------------------------------------------------===//
+
+TEST(kmp_str_ref_test, FindIfDigit) {
+  kmp_str_ref s("abc123");
+
+  size_t i = s.find_if(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(i, 3u);
+}
+
+TEST(kmp_str_ref_test, FindIfFirstChar) {
+  kmp_str_ref s("hello");
+
+  size_t i = s.find_if([](char c) { return c == 'h'; });
+
+  EXPECT_EQ(i, 0u);
+}
+
+TEST(kmp_str_ref_test, FindIfLastChar) {
+  kmp_str_ref s("hello");
+
+  size_t i = s.find_if([](char c) { return c == 'o'; });
+
+  EXPECT_EQ(i, 4u);
+}
+
+TEST(kmp_str_ref_test, FindIfNoMatch) {
+  kmp_str_ref s("hello");
+
+  size_t i = s.find_if(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(i, kmp_str_ref::npos);
+}
+
+TEST(kmp_str_ref_test, FindIfEmpty) {
+  kmp_str_ref s("");
+
+  size_t i = s.find_if([](char c) { return c == 'a'; });
+
+  EXPECT_EQ(i, kmp_str_ref::npos);
+}
+
+//===----------------------------------------------------------------------===//
+// find_if_not
+//===----------------------------------------------------------------------===//
+
+TEST(kmp_str_ref_test, FindIfNotDigit) {
+  kmp_str_ref s("123abc");
+
+  size_t i = s.find_if_not(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(i, 3u);
+}
+
+TEST(kmp_str_ref_test, FindIfNotAllMatch) {
+  kmp_str_ref s("12345");
+
+  size_t i = s.find_if_not(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(i, kmp_str_ref::npos);
+}
+
+TEST(kmp_str_ref_test, FindIfNotNoneMatch) {
+  kmp_str_ref s("abc");
+
+  size_t i = s.find_if_not(
+      [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
+
+  EXPECT_EQ(i, 0u);
+}
+
+TEST(kmp_str_ref_test, FindIfNotEmpty) {
+  kmp_str_ref s("");
+
+  size_t i = s.find_if_not([](char c) { return c == 'a'; });
+
+  EXPECT_EQ(i, kmp_str_ref::npos);
 }
 
 //===----------------------------------------------------------------------===//

@@ -619,7 +619,7 @@ char *__kmp_str_token(
   return token;
 } // __kmp_str_token
 
-int __kmp_basic_str_to_int(char const *str, int maxlen) {
+int __kmp_basic_str_to_int(char const *str, size_t maxlen) {
   int result;
   char const *t;
 
