@@ -2,6 +2,14 @@
 ; RUN: sed 's/"amdgpu-dynamic-vgpr-block-size"="16"/"amdgpu-dynamic-vgpr-block-size"="0"/' %s \
 ; RUN:   | llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 | FileCheck -check-prefix=NODVGPR %s
 
+; Test a set of functions with mixed use of DVGPR (enabled or disabled). Also
+; test chain functions directly calling other chain functions without going
+; through `first_retry_wrapper` helper. A chain function will not propagate VGPR
+; counts to a directly called chain function, regardless of whether either has
+; DVGPRs enabled or disabled.
+
+; func.2 and func.4 have DVGPRs disabled
+
 ; DVGPR:  .set .Lgfx_func_a.num_vgpr, 40
 ; DVGPR:  .set .Lamdgpu_cs_main.num_vgpr, max(42, .Lgfx_func_a.num_vgpr)
 ; DVGPR:  .set .Lfunc.0.num_vgpr, max(11, .Lgfx_func_a.num_vgpr)

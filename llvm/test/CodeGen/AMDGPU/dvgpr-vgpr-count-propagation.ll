@@ -2,6 +2,15 @@
 ; RUN: sed 's/"amdgpu-dynamic-vgpr-block-size"="16"/"amdgpu-dynamic-vgpr-block-size"="0"/' %s \
 ; RUN:   | llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 | FileCheck -check-prefix=NODVGPR %s
 
+; Chain calls are treated as indirect calls, but with dynamic VGPRs enabled each
+; function will get its own VGPR allocation. Chain functions that have no
+; indirect non-chain calls should have their num_vgpr count set to the max of
+; their local count and the counts of all direct callees.
+
+; With DVGPRs enabled "max_num_vgpr" represents the maximum VGPR count of all
+; non-chain functions. With DVGPRs disabled, it represents module-wide max VGPR
+; count.
+
 ; DVGPR:  .set .Lgfx_func_a.num_vgpr, 40
 ; DVGPR:  .set .Lgfx_func_b2.num_vgpr, 80
 ; DVGPR:  .set .Lgfx_func_b.num_vgpr, max(61, .Lgfx_func_b2.num_vgpr)
