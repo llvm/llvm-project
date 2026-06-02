@@ -10,20 +10,20 @@
 // IteratorModeling is enabled.
 //===----------------------------------------------------------------------===//
 
-void iteratorDerefSource() {
+std::string iteratorDeref(int rng) {
   std::list<std::string> l1;
   l1.push_back("l1");
   std::list<std::string> l2;
 
-  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
-  *l1.cbegin(); // expected-warning {{Method called on moved-from object 'l1'}}
-}
-
-void iteratorDerefDest() {
-  std::list<std::string> l1;
-  l1.push_back("l1");
-  std::list<std::string> l2;
-
-  std::move(l1.begin(), l1.end(), std::back_inserter(l2));
-  *l2.cbegin(); // no-warning
+  switch (rng) {
+    case 10: {
+      std::move(l1.begin(), l1.end(), std::back_inserter(l2));
+      return *l1.cbegin(); // expected-warning {{Method called on moved-from object 'l1'}}
+    }
+    case 20: {
+      std::move(l1.begin(), l1.end(), std::back_inserter(l2));
+      return *l2.cbegin(); // no-warning: only l1 was invalidated and not l2!
+    }
+  }
+  return 0;
 }

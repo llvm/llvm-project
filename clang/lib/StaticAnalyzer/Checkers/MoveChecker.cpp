@@ -518,31 +518,29 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   if (!StdMoveCall.matches(Call))
     return false;
 
-  const auto *BeginCall =
-      dyn_cast<CXXMemberCallExpr>(CE->getArg(0)->IgnoreImpCasts());
-  if (!BeginCall)
+  const auto *POS = getIteratorPosition(State, Call.getArgSVal(0));
+  if (!POS)
     return false;
 
-  const Expr *ContainerExpr = BeginCall->getImplicitObjectArgument();
-  const auto *DRE = dyn_cast<DeclRefExpr>(ContainerExpr->IgnoreImpCasts());
-  if (!DRE)
+  const MemRegion *ContainerRegion = POS->getContainer();
+  if (!ContainerRegion)
     return false;
 
-  const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-  if (!VD)
+  const auto *TypedRegion =
+      dyn_cast_if_present<TypedValueRegion>(ContainerRegion);
+  if (!TypedRegion)
     return false;
 
-  const MemRegion *Region =
-      State->getLValue(VD, C.getLocationContext()).getAsRegion();
-  if (!Region)
-    return false;
+  QualType ObjTy = TypedRegion->getValueType();
 
-  const CXXRecordDecl *RD = ContainerExpr->getType()->getAsCXXRecordDecl();
+  const auto *RD = ObjTy->getAsCXXRecordDecl();
   if (!RD)
     return false;
 
-  ObjectKind OK = classifyObject(State, Region, RD);
+  ObjectKind OK = classifyObject(State, ContainerRegion, RD);
 
+  // FIXME: Also apply getIteratorPosition from IteratorModeling to recover the
+  // destination region instead of doing AST pattern matching.
   const auto *BackInsCall = dyn_cast<CallExpr>(CE->getArg(2)->IgnoreImpCasts());
   if (!BackInsCall)
     return false;
@@ -573,7 +571,8 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
                                    /*CausesPointerEscape=*/false);
 
   if (shouldBeTracked(OK))
-    State = State->set<TrackedContentsMap>(Region, RegionState::getMoved());
+    State = State->set<TrackedContentsMap>(ContainerRegion,
+                                           RegionState::getMoved());
 
   C.addTransition(State);
   return true;
@@ -736,10 +735,19 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
 
     if (const auto *POS = getIteratorPosition(State, Val)) {
       const MemRegion *ContainerRegion = POS->getContainer();
+      if (!ContainerRegion)
+        return;
 
-      const auto *TypedRegion = cast<TypedValueRegion>(ContainerRegion);
+      const auto *TypedRegion =
+          dyn_cast_if_present<TypedValueRegion>(ContainerRegion);
+      if (!TypedRegion)
+        return;
+
       QualType ObjTy = TypedRegion->getValueType();
       const auto *R = ObjTy->getAsCXXRecordDecl();
+      if (!R)
+        return;
+
       if (State->get<TrackedContentsMap>(ContainerRegion)) {
         ExplodedNode *N = tryToReportBug(ContainerRegion, R, C, MK_FunCall);
         if (!N || N->isSink())
