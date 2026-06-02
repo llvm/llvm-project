@@ -539,12 +539,9 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                          EC.message());
   }
 
-  // Emit an intermediate assembly file phase if requested by the user.
-  if (Conf.SaveTempsAsmHook) {
-    SmallString<0> AsmBuf;
-    raw_svector_ostream AsmOS(AsmBuf);
-
-    legacy::PassManager CodeGenPasses;
+  auto addCodeGenPasses = [&](legacy::PassManager &CodeGenPasses,
+                              raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                              CodeGenFileType FileType) {
     TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
     CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
@@ -556,9 +553,18 @@ static void codegen(const Config &Conf, TargetMachine *TM,
           createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
     if (Conf.PreCodeGenPassesHook)
       Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, AsmOS, nullptr,
-                                CodeGenFileType::AssemblyFile))
+    if (TM->addPassesToEmitFile(CodeGenPasses, Out, DwoOut, FileType))
       report_fatal_error("Failed to setup codegen");
+  };
+
+  // Emit an intermediate assembly file phase if requested by the user.
+  if (Conf.SaveTempsAsmHook) {
+    SmallString<0> AsmBuf;
+    raw_svector_ostream AsmOS(AsmBuf);
+
+    legacy::PassManager CodeGenPasses;
+    addCodeGenPasses(CodeGenPasses, AsmOS, nullptr,
+                     CodeGenFileType::AssemblyFile);
     CodeGenPasses.run(Mod);
 
     Conf.SaveTempsAsmHook(Task, Mod, AsmBuf.str());
@@ -593,27 +599,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   // keep the pointer and may use it until their destruction. See #138194.
   {
     legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
-    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        Mod.getTargetTriple(), TM->Options.ExceptionModel,
-        TM->Options.FloatABIType, TM->Options.EABIVersion,
-        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
-
-    // No need to make index available if the module is empty.
-    // In theory these passes should not use the index for an empty
-    // module, however, this guards against doing any unnecessary summary-based
-    // analysis in the case of a ThinLTO build where this might be an empty
-    // regular LTO combined module, with a large combined index from ThinLTO.
-    if (!isEmptyModule(Mod))
-      CodeGenPasses.add(
-          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-    if (Conf.PreCodeGenPassesHook)
-      Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                                DwoOut ? &DwoOut->os() : nullptr,
-                                Conf.CGFileType))
-      report_fatal_error("Failed to setup codegen");
+    addCodeGenPasses(CodeGenPasses, *Stream->OS,
+                     DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType);
     CodeGenPasses.run(Mod);
 
     if (DwoOut)

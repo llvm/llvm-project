@@ -72,14 +72,14 @@ static cl::list<std::string> SelectSaveTemps(
     "select-save-temps",
     cl::value_desc("One, or multiple of: "
                    "resolution,preopt,promote,internalize,import,opt,precodegen"
-                   ",combinedindex"),
+                   ",combinedindex,asm"),
     cl::desc("Save selected temporary files. Cannot be specified together with "
              "-save-temps"),
     cl::CommaSeparated);
 
 constexpr const char *SaveTempsValues[] = {
-    "resolution", "preopt", "promote",    "internalize",
-    "import",     "opt",    "precodegen", "combinedindex"};
+    "resolution", "preopt",     "promote",       "internalize", "import",
+    "opt",        "precodegen", "combinedindex", "asm"};
 
 static cl::opt<bool>
     ThinLTODistributedIndexes("thinlto-distributed-indexes",
