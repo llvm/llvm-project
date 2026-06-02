@@ -1331,8 +1331,8 @@ bool ToolChain::HasNativeLLVMSupport() const {
 LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
 
 bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
-                           bool IsOffload) const {
-  return getLTOMode(Args, IsOffload) != LTOK_None;
+                           Action::OffloadKind Kind) const {
+  return getLTOMode(Args, Kind != Action::OFK_None) != LTOK_None;
 }
 
 static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,

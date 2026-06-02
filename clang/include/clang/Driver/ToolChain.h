@@ -472,7 +472,8 @@ public:
                      bool IsOffload = false) const;
 
   /// Returns true if LTO is active for this toolchain given the args.
-  bool isUsingLTO(const llvm::opt::ArgList &Args, bool IsOffload = false) const;
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.

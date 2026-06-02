@@ -49,7 +49,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   }
 
   // Link the bitcode library late if we're using device LTO.
-  if (isUsingLTO(DriverArgs, /*IsOffload=*/true))
+  if (isUsingLTO(DriverArgs, DeviceOffloadingKind))
     return;
 }
 
