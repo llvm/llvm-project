@@ -13,17 +13,17 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/fcntl_macros.h" // For open flags
-#include <sys/syscall.h> // For syscall numbers
+#include <sys/syscall.h>      // For syscall numbers
 
 namespace LIBC_NAMESPACE_DECL {
 
 ErrorOr<int> platform_opendir(const char *name) {
   int open_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, name, open_flags);
-#elif defined(SYS_openat)
+#ifdef SYS_openat
   int fd =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, name, open_flags);
+#elif defined(SYS_open)
+  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, name, open_flags);
 #else
 #error                                                                         \
     "SYS_open and SYS_openat syscalls not available to perform an open operation."

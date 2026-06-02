@@ -92,12 +92,12 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
   constexpr long OPEN_MODE =
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-#ifdef SYS_open
-  int fd =
-      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
-#elif defined(SYS_openat)
+#ifdef SYS_openat
   int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path,
                                              open_flags, OPEN_MODE);
+#elif defined(SYS_open)
+  int fd =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, open_flags, OPEN_MODE);
 #else
 #error "open and openat syscalls not available."
 #endif
