@@ -124,6 +124,18 @@
 ; RUN: llvm-objdump --offloading %t/no-entry-points.out | FileCheck %s --check-prefix=NO-ENTRY-POINTS
 ; NO-ENTRY-POINTS: OFFLOADING IMAGE [0]:
 ; NO-ENTRY-POINTS: producer        sycl
+;
+; Real (non-dry-run) run: input1/input2 have different
+; sycl-module-id values, so two images are produced and packaged on disk.
+; Covers write on disk logic not reachable under --dry-run.
+; RUN: clang-sycl-linker %t/input1.bc %t/input2.bc -o %t/srcsplit.out
+; RUN: llvm-objdump --offloading %t/srcsplit.out | FileCheck %s --check-prefix=SRCSPLIT
+; SRCSPLIT:      OFFLOADING IMAGE [0]:
+; SRCSPLIT:      kind            spir-v
+; SRCSPLIT:      triple          spirv64
+; SRCSPLIT:      OFFLOADING IMAGE [1]:
+; SRCSPLIT:      kind            spir-v
+; SRCSPLIT:      triple          spirv64
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
