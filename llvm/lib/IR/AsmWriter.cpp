@@ -2115,7 +2115,7 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Out << "!DILocation(";
   MDFieldPrinter Printer(Out, WriterCtx);
   // Always output the line, since 0 is a relevant and important value for it.
-  Printer.printInt("line", DL->getLine(), /*ShouldSkipZero=*/false);
+  Printer.printInt("line", DL->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", DL->getColumn());
   Printer.printMetadata("scope", DL->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printMetadata("inlinedAt", DL->getRawInlinedAt());
