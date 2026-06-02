@@ -1418,6 +1418,43 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       return BinaryOperator::CreateNUWAdd(X,
                                           ConstantInt::get(Ty, C1->udiv(*C2)));
     }
+    Value *MulOp;
+    // Match signed exact division of the form:
+    //
+    //   sdiv exact ((X * C2) + C1), C2
+    //
+    // where C1 is a multiple of C2.
+    //
+    // Algebraically:
+    //
+
+    //   ((X * C2) + C1) / C2
+    //      = X + (C1 / C2)
+    //
+    // This allows folding the division into a simpler add operation.
+    if (IsSigned && I.isExact() &&
+        match(Op0, m_Add(m_Value(MulOp), m_APInt(C1))) &&
+        match(MulOp, m_Mul(m_Value(X), m_SpecificInt(*C2))) &&
+        isMultiple(*C1, *C2, Quotient, IsSigned)) {
+      // Preserve NSW if:
+      // 1. Original multiplication was NSW
+      // 2. Multiplier magnitude is > 1, ensuring the fold remains safe
+      bool CanNSW = cast<OverflowingBinaryOperator>(MulOp)->hasNoSignedWrap() &&
+                    C2->abs().ugt(1);
+
+      // Replace:
+      //   sdiv exact ((X * C2) + C1), C2
+      //
+      // with:
+      //   X + (C1 / C2)
+      auto *NewAdd =
+          BinaryOperator::CreateAdd(X, ConstantInt::get(Ty, Quotient));
+
+      // Propagate NSW flag if valid.
+      NewAdd->setHasNoSignedWrap(CanNSW);
+
+      return NewAdd;
+    }
 
     if (!C2->isZero()) // avoid X udiv 0
       if (Instruction *FoldedDiv = foldBinOpIntoSelectOrPhi(I))
