@@ -24,14 +24,12 @@ class TriggerCrashModulePass
     : public OptionalPassInfoMixin<TriggerCrashModulePass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static StringRef name() { return "TriggerCrashModulePass"; }
 };
 
 class TriggerCrashFunctionPass
     : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static StringRef name() { return "TriggerCrashFunctionPass"; }
 };
 
 FunctionPass *createTriggerCrashFunctionPass();

@@ -1,3 +1,5 @@
+; REQUIRES: backtrace
+
 ; RUN: not --crash opt -O2 -opt-pipeline-trigger-crash %s -disable-output 2>&1 | \
 ; RUN: FileCheck %s --check-prefix=OPT
 ;
