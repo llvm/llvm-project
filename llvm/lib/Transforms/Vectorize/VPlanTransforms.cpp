@@ -7497,8 +7497,9 @@ void VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-        Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, *VPI,
-                                            *VPI, VPI->getDebugLoc());
+        Replacement = new VPWidenCallRecipe(
+            CI, Decision.Variant, Ops, *VPI, *VPI,
+            VPIRAttributes(*CI, *Decision.Variant), VPI->getDebugLoc());
         break;
       }
       case CallWideningDecision::KindTy::Scalarize:

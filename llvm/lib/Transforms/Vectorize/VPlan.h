@@ -35,6 +35,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
@@ -1216,6 +1217,33 @@ public:
 #endif
 };
 
+/// Manage IR per-argument and return attributes for call recipes. Only
+/// attributes that are valid to propagate to the widened call are stored.
+class VPIRAttributes {
+  AttributeList CallAttrs;
+
+public:
+  VPIRAttributes() = default;
+
+  /// Stores the per-arg/return attributes from \p CI that are valid to
+  /// propagate to a widened call to \p Variant.
+  VPIRAttributes(CallInst &CI, const Function &Variant);
+
+  VPIRAttributes(const VPIRAttributes &Other) = default;
+  VPIRAttributes &operator=(const VPIRAttributes &Other) = default;
+
+  /// Apply the stored per-arg/return attributes to widened call \p V.
+  void applyAttrs(CallInst &V) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print return-value attributes carried with this object.
+  void printRetAttrs(raw_ostream &O) const;
+
+  /// Print per-arg attributes for argument \p ArgIdx.
+  void printParamAttrs(raw_ostream &O, unsigned ArgIdx) const;
+#endif
+};
+
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
@@ -2094,7 +2122,8 @@ public:
 
 /// A recipe for widening Call instructions using library calls.
 class LLVM_ABI_FOR_TEST VPWidenCallRecipe : public VPRecipeWithIRFlags,
-                                            public VPIRMetadata {
+                                            public VPIRMetadata,
+                                            public VPIRAttributes {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
@@ -2104,11 +2133,12 @@ public:
   VPWidenCallRecipe(Value *UV, Function *Variant,
                     ArrayRef<VPValue *> CallArguments,
                     const VPIRFlags &Flags = {},
-                    const VPIRMetadata &Metadata = {}, DebugLoc DL = {})
+                    const VPIRMetadata &Metadata = {},
+                    const VPIRAttributes &Attrs = {}, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCallSC, CallArguments,
                             toScalarizedTy(Variant->getReturnType()), Flags,
                             DL),
-        VPIRMetadata(Metadata), Variant(Variant) {
+        VPIRMetadata(Metadata), VPIRAttributes(Attrs), Variant(Variant) {
     setUnderlyingValue(UV);
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
@@ -2122,7 +2152,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), Variant, operands(),
-                                 *this, *this, getDebugLoc());
+                                 *this, *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCallSC)
