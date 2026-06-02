@@ -538,6 +538,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
   LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
   NewLd->copyMetadata(LI);
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);
+  NewLd->setMetadata(LLVMContext::MD_noundef, nullptr);
 
   unsigned ShAmt = Adjust * 8;
   Value *NewVal = IRB.CreateBitCast(

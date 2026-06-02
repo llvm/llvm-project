@@ -1562,6 +1562,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
     Type *I32Ty = Builder.getInt32Ty();
     LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
     WidenLoad->copyMetadata(I);
+    WidenLoad->setMetadata(LLVMContext::MD_noundef, nullptr);
 
     // If we have range metadata, we need to convert the type, and not make
     // assumptions about the high bits.
