@@ -180,7 +180,8 @@ public:
   bool divHasSpecialOptimization(BinaryOperator &I,
                                  Value *Num, Value *Den) const;
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
-                         unsigned MaxDivBits, bool Signed) const;
+                         unsigned MaxDivBits, bool Signed,
+                         unsigned *LHSBits = nullptr) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -1023,7 +1024,8 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
                                                  Value *Den,
                                                  unsigned MaxDivBits,
-                                                 bool IsSigned) const {
+                                                 bool IsSigned,
+                                                 unsigned *LHSBits) const {
   assert(Num->getType()->getScalarSizeInBits() ==
          Den->getType()->getScalarSizeInBits());
   unsigned SSBits = Num->getType()->getScalarSizeInBits();
@@ -1061,9 +1063,24 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
+  unsigned LHSBits = 0;
+
+  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned, &LHSBits);
   if (DivBits > 24)
     return nullptr;
+
+  // v_rcp_f32(float(X)) can have an error of 1 ulp.
+  // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
+  // when Y has bit 23 (i.e. 0x800000) set.
+  // For example,
+  // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
+  // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
+  //
+  // Note that for IsSigned, abs(Y) is at most
+  // 0x7fffff so it cannot hit this issue.
+  if (!IsSigned && LHSBits == 24)
+    return nullptr;
+
   return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
 }
 
