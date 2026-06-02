@@ -1,4 +1,5 @@
-//===-- Definition for EFloat128 data type  ----------------------*- C++ -*-===//
+//===-- Definition for Float128 data type  -----------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,12 +19,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-struct EFloat128 {
+struct Float128 {
   UInt128 bits;
 
-  LIBC_INLINE EFloat128() = default;
+  LIBC_INLINE Float128() = default;
 
-  LIBC_INLINE constexpr explicit EFloat128(double x) : bits(0) {
+  LIBC_INLINE constexpr explicit Float128(double x) : bits(0) {
     uint64_t d = cpp::bit_cast<uint64_t>(x);
     bits = static_cast<UInt128>(d) << 64U;
   }
@@ -32,10 +33,10 @@ struct EFloat128 {
     return cpp::bit_cast<double>(static_cast<uint64_t>(bits >> 64U));
   }
 
-  LIBC_INLINE constexpr bool operator==(EFloat128 other) const {
+  LIBC_INLINE constexpr bool operator==(Float128 other) const {
     return bits == other.bits;
   }
-  LIBC_INLINE constexpr bool operator!=(EFloat128 other) const {
+  LIBC_INLINE constexpr bool operator!=(Float128 other) const {
     return bits != other.bits;
   }
 };
