@@ -180,7 +180,7 @@ private:
   void processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
                            BucketLocalWriter &LocalWriter);
 
-  void processBucket(size_t Idx, std::vector<std::vector<DWARFUnit *>> &PartVec,
+  void processBucket(size_t Idx, SmallVector<SmallVector<DWARFUnit *>> &PartVec,
                      std::vector<std::unique_ptr<DIEBuilder>> &BucketDIEBlders,
                      std::vector<BucketLocalWriter> &LocalWriters,
                      DWARF5AcceleratorTable &DebugNamesTable,

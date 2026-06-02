@@ -603,7 +603,7 @@ static void emitDWOBuilder(const std::string &DWOName,
                          StrOffstsWriter, StrWriter, TempRangesSectionWriter);
 }
 
-static std::vector<std::vector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
+static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
   SmallVector<DWARFUnit *, 0> AllCUs;
   for (auto &CU : DwCtx.compile_units())
     AllCUs.push_back(CU.get());
@@ -638,39 +638,56 @@ static std::vector<std::vector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
         }
     if (RefAddrAbbrevs.empty())
       continue;
-    // Track CUs involved in cross-CU references via DW_FORM_ref_addr.
-    for (const DWARFDebugInfoEntry &Entry : CU->dies()) {
-      DWARFDie Die(CU, &Entry);
+    // Track CUs involved in cross-CU references via DW_FORM_ref_addr. Use the
+    // low-level extractor instead of DWARFUnit::dies() to avoid materializing
+    // every DIE in the unit.
+    uint64_t DIEOffset = CU->getOffset() + CU->getHeaderSize();
+    const uint64_t NextCUOffset = CU->getNextUnitOffset();
+    DWARFDataExtractor DebugInfoData = CU->getDebugInfoExtractor();
+    DWARFDebugInfoEntry DIEEntry;
+    SmallVector<uint32_t, 8> Parents;
+    Parents.push_back(UINT32_MAX);
+    do {
+      if (!DIEEntry.extractFast(*CU, &DIEOffset, DebugInfoData, NextCUOffset,
+                                Parents.back()))
+        break;
       const DWARFAbbreviationDeclaration *Abbrev =
-          Die.getAbbreviationDeclarationPtr();
-      if (!Abbrev || !RefAddrAbbrevs.count(Abbrev))
-        continue;
-      for (const DWARFAttribute &Attr : Die.attributes()) {
-        if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
-          continue;
-        auto OptRef = Attr.Value.getAsDebugInfoReference();
-        if (!OptRef)
-          continue;
-        DWARFUnit *TargetCU = FindCuForOffset(*OptRef);
-        if (!TargetCU)
-          continue;
-        if (CrossRefSet.insert(CU).second)
-          EC.insert(CU);
-        if (CrossRefSet.insert(TargetCU).second)
-          EC.insert(TargetCU);
-        EC.unionSets(CU, TargetCU);
+          DIEEntry.getAbbreviationDeclarationPtr();
+      if (Abbrev) {
+        if (RefAddrAbbrevs.count(Abbrev)) {
+          DWARFDie Die(CU, &DIEEntry);
+          for (const DWARFAttribute &Attr : Die.attributes()) {
+            if (Attr.Value.getForm() != dwarf::DW_FORM_ref_addr)
+              continue;
+            auto OptRef = Attr.Value.getAsDebugInfoReference();
+            if (!OptRef)
+              continue;
+            DWARFUnit *TargetCU = FindCuForOffset(*OptRef);
+            if (!TargetCU)
+              continue;
+            if (CrossRefSet.insert(CU).second)
+              EC.insert(CU);
+            if (CrossRefSet.insert(TargetCU).second)
+              EC.insert(TargetCU);
+            EC.unionSets(CU, TargetCU);
+          }
+        }
+        if (Abbrev->hasChildren())
+          Parents.push_back(0);
+      } else {
+        Parents.pop_back();
       }
-    }
+    } while (!Parents.empty());
   }
 
-  DenseMap<DWARFUnit *, std::vector<DWARFUnit *>> MembersByLeader;
+  DenseMap<DWARFUnit *, SmallVector<DWARFUnit *>> MembersByLeader;
   for (DWARFUnit *CU : AllCUs) {
     if (!CrossRefSet.count(CU))
       continue;
     MembersByLeader[EC.getLeaderValue(CU)].push_back(CU);
   }
 
-  std::vector<DWARFUnit *> Leaders;
+  SmallVector<DWARFUnit *> Leaders;
   Leaders.reserve(MembersByLeader.size());
   for (auto &[Leader, Members] : MembersByLeader)
     Leaders.push_back(Leader);
@@ -680,7 +697,7 @@ static std::vector<std::vector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
   });
 
   // Emit cross-ref buckets, then singleton non-cross-ref CUs.
-  std::vector<std::vector<DWARFUnit *>> Vec;
+  SmallVector<SmallVector<DWARFUnit *>> Vec;
   for (DWARFUnit *Leader : Leaders)
     Vec.push_back(std::move(MembersByLeader[Leader]));
   for (DWARFUnit *CU : AllCUs) {
@@ -942,13 +959,13 @@ void DWARFRewriter::processMainBinaryCU(DWARFUnit &Unit, DIEBuilder &DIEBlder,
 }
 
 void DWARFRewriter::processBucket(
-    size_t Idx, std::vector<std::vector<DWARFUnit *>> &PartVec,
+    size_t Idx, SmallVector<SmallVector<DWARFUnit *>> &PartVec,
     std::vector<std::unique_ptr<DIEBuilder>> &BucketDIEBlders,
     std::vector<BucketLocalWriter> &LocalWriters,
     DWARF5AcceleratorTable &DebugNamesTable,
     std::unordered_map<uint64_t, std::string> &DWOToNameMap,
     GDBIndex &GDBIndexSection) {
-  std::vector<DWARFUnit *> &Vec = PartVec[Idx];
+  SmallVector<DWARFUnit *> &Vec = PartVec[Idx];
   std::unique_ptr<DIEBuilder> &BucketDIEBlder = BucketDIEBlders[Idx];
   BucketDIEBlder =
       std::make_unique<DIEBuilder>(BC, BC.DwCtx.get(), DebugNamesTable);
@@ -1058,7 +1075,7 @@ void DWARFRewriter::updateDebugInfo() {
       *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, GDBIndexSection);
   CUOffsetMap OffsetMap =
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
-  std::vector<std::vector<DWARFUnit *>> PartVec = partitionCUs(*BC.DwCtx);
+  SmallVector<SmallVector<DWARFUnit *>> PartVec = partitionCUs(*BC.DwCtx);
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
   llvm::ThreadPoolInterface &ThreadPool =

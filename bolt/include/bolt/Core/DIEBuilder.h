@@ -290,7 +290,7 @@ public:
   /// Constructs IR for all the CUs.
   void buildCompileUnits(const bool Init = true);
   /// Constructs IR for CUs in a vector.
-  void buildCompileUnits(const std::vector<DWARFUnit *> &CUs);
+  void buildCompileUnits(const SmallVector<DWARFUnit *> &CUs);
   /// Preventing implicit conversions.
   template <class T> void buildCompileUnits(T) = delete;
   /// Builds DWO Unit. For DWARF5 this includes the type units.
