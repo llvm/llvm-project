@@ -112,7 +112,7 @@ struct AcceleratorActions {
   std::string session_name;
   /// Unique identifier for this action within the plugin.
   int64_t identifier = 0;
-  /// Breakpoints to set in the native process.
+  /// New breakpoints to set. Nothing to set if this is empty.
   std::vector<AcceleratorBreakpointInfo> breakpoints;
 };
 

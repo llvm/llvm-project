@@ -174,8 +174,7 @@ support. Not needed for non-hardware-accelerator debugging.
 ## jAcceleratorPluginBreakpointHit
 
 Sent by the client when a breakpoint requested by an accelerator plugin
-is hit in the native process. Breakpoints can originate from any response
-that contains `AcceleratorActions`. This packet requires the
+is hit in the native process. This packet requires the
 `accelerator-plugins+` feature from `qSupported`.
 
 ```
@@ -197,7 +196,7 @@ The response JSON has the following fields:
 |----------------------|------|-------------|
 | `disable_bp`         | bool   | If true, the client should disable this breakpoint. |
 | `auto_resume_native` | bool   | If true, the native process should automatically resume after handling the hit. |
-| `actions`            | object | Optional `AcceleratorActions` containing new breakpoints to set and other actions to perform. |
+| `actions`            | object | Optional `AcceleratorActions` for the client to perform. |
 
 Example:
 ```
