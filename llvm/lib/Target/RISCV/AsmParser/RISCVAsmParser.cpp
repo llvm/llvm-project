@@ -2603,7 +2603,7 @@ ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
 
   SMLoc S = getLoc();
   StringRef Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_front("L"))
+  if (!Name.consume_front("L") && !Name.consume_front("l"))
     return ParseStatus::NoMatch;
 
   unsigned Lambda;

@@ -16,6 +16,11 @@ vmttl.v v8, (a0), a1, L4
 # CHECK-ENCODING: [0x07,0x74,0xb5,0x76]
 # CHECK-ERROR: instruction requires the following: 'Zvvmttls' (Transposing Matrix Tile Load/Store){{$}}
 
+vmttl.v v8, (a0), a1, l2
+# CHECK-INST: vmttl.v v8, (a0), a1, L2
+# CHECK-ENCODING: [0x07,0x74,0xb5,0x56]
+# CHECK-ERROR: instruction requires the following: 'Zvvmttls' (Transposing Matrix Tile Load/Store){{$}}
+
 vmttl.v v8, (a0), a1, v0.t
 # CHECK-INST: vmttl.v v8, (a0), a1, v0.t
 # CHECK-ENCODING: [0x07,0x74,0xb5,0x14]
@@ -49,6 +54,11 @@ vmtts.v v12, (a0), a1, v0.t
 vmtts.v v12, (a0), a1, L4, v0.t
 # CHECK-INST: vmtts.v v12, (a0), a1, L4, v0.t
 # CHECK-ENCODING: [0x27,0x76,0xb5,0x74]
+# CHECK-ERROR: instruction requires the following: 'Zvvmttls' (Transposing Matrix Tile Load/Store){{$}}
+
+vmtts.v v12, (a0), a1, l2, v0.t
+# CHECK-INST: vmtts.v v12, (a0), a1, L2, v0.t
+# CHECK-ENCODING: [0x27,0x76,0xb5,0x54]
 # CHECK-ERROR: instruction requires the following: 'Zvvmttls' (Transposing Matrix Tile Load/Store){{$}}
 
 vmtts.v v12, (a0), zero, L64, v0.t
