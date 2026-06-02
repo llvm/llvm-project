@@ -880,6 +880,23 @@ def CBufferLoadLegacy : DXILOp<59, cbufferLoadLegacy> {
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
 }
 
+def SampleBias : DXILOp<61, sampleBias> {
+  let Doc = "samples a texture after applying the input bias to the mip level";
+  // Handle, Sampler, Coord0, Coord1, Coord2, Coord3,
+  // Offset0, Offset1, Offset2, Bias, Clamp
+  let arguments = [HandleTy, HandleTy, FloatTy, FloatTy, FloatTy, FloatTy,
+                   Int32Ty, Int32Ty, Int32Ty, FloatTy, FloatTy];
+  let result = OverloadTy;
+  let overloads =
+      [Overloads<DXIL1_0, [ResRetHalfTy, ResRetFloatTy]>,
+       Overloads<DXIL1_7,
+                 [ResRetHalfTy, ResRetFloatTy, ResRetInt16Ty, ResRetInt32Ty]>];
+  let stages = [Stages<DXIL1_0, [library, pixel]>,
+                Stages<DXIL1_6, [library, pixel, compute, amplification, mesh,
+                                 node]>];
+  let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
 def TextureLoad : DXILOp<66, textureLoad> {
   let Doc = "reads from a texture resource";
   // Handle, MipLevelOrSampleCount, Coord0, Coord1, Coord2, Offset0, Offset1, Offset2

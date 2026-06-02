@@ -676,10 +676,6 @@ struct DenseMapInfo<mlir::tblgen::DagNode> {
     return mlir::tblgen::DagNode(
         llvm::DenseMapInfo<llvm::DagInit *>::getEmptyKey());
   }
-  static mlir::tblgen::DagNode getTombstoneKey() {
-    return mlir::tblgen::DagNode(
-        llvm::DenseMapInfo<llvm::DagInit *>::getTombstoneKey());
-  }
   static unsigned getHashValue(mlir::tblgen::DagNode node) {
     return llvm::hash_value(node.getAsOpaquePointer());
   }
@@ -693,10 +689,6 @@ struct DenseMapInfo<mlir::tblgen::DagLeaf> {
   static mlir::tblgen::DagLeaf getEmptyKey() {
     return mlir::tblgen::DagLeaf(
         llvm::DenseMapInfo<llvm::Init *>::getEmptyKey());
-  }
-  static mlir::tblgen::DagLeaf getTombstoneKey() {
-    return mlir::tblgen::DagLeaf(
-        llvm::DenseMapInfo<llvm::Init *>::getTombstoneKey());
   }
   static unsigned getHashValue(mlir::tblgen::DagLeaf leaf) {
     return llvm::hash_value(leaf.getAsOpaquePointer());

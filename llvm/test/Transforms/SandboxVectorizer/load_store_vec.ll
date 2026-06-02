@@ -139,11 +139,8 @@ define void @load_store_vec_mixed_int_float(ptr %ptr) {
 ; CHECK-LABEL: define void @load_store_vec_mixed_int_float(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i32, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; CHECK-NEXT:    store i32 [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META7:![0-9]+]]
-; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META7]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i32>, ptr [[PTR0]], align 1, !sandboxvec [[META7:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i32, ptr %ptr, i32 0
@@ -159,11 +156,8 @@ define void @load_store_vec_mixed_int_float_vectors(ptr %ptr) {
 ; CHECK-LABEL: define void @load_store_vec_mixed_int_float_vectors(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr i32, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i32, ptr [[PTR]], i32 1
-; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load <2 x float>, ptr [[PTR1]], align 8
-; CHECK-NEXT:    store i32 [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META8:![0-9]+]]
-; CHECK-NEXT:    store <2 x float> [[LD1]], ptr [[PTR1]], align 8, !sandboxvec [[META8]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <3 x i32>, ptr [[PTR0]], align 1, !sandboxvec [[META8:![0-9]+]]
+; CHECK-NEXT:    store <3 x i32> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META8]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr0 = getelementptr i32, ptr %ptr, i32 0

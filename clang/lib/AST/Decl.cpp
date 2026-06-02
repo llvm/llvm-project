@@ -51,6 +51,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2666,14 +2667,6 @@ bool VarDecl::checkForConstantInitialization(
   return Eval->HasConstantInitialization;
 }
 
-template<typename DeclT>
-static DeclT *getDefinitionOrSelf(DeclT *D) {
-  assert(D);
-  if (auto *Def = D->getDefinition())
-    return Def;
-  return D;
-}
-
 bool VarDecl::isEscapingByref() const {
   return hasAttr<BlocksAttr>() && NonParmVarDeclBits.EscapingByref;
 }
@@ -2715,7 +2708,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTD = NewVTD;
         }
-        return getDefinitionOrSelf(VTD->getTemplatedDecl());
+        return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
@@ -2725,27 +2718,14 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTPSD = NewVTPSD;
         }
-        return getDefinitionOrSelf<VarDecl>(VTPSD);
+        return VTPSD;
       }
     }
   }
 
-  // If this is the pattern of a variable template, find where it was
-  // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
-    while (!VarTemplate->isMemberSpecialization()) {
-      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
-      if (!NewVT)
-        break;
-      VarTemplate = NewVT;
-    }
-
-    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
-  }
-
   if (VD == this)
     return nullptr;
-  return getDefinitionOrSelf(const_cast<VarDecl*>(VD));
+  return const_cast<VarDecl *>(VD);
 }
 
 VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
@@ -4225,6 +4205,7 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
   case TSK_ExplicitSpecialization:
     return false;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return true;
 
@@ -4269,7 +4250,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (isGenericLambdaCallOperatorSpecialization(
           dyn_cast<CXXMethodDecl>(this))) {
     assert(getPrimaryTemplate() && "not a generic lambda call operator?");
-    return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
+    return getPrimaryTemplate()->getTemplatedDecl();
   }
 
   // Check for a declaration of this function that was instantiated from a
@@ -4282,7 +4263,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     if (ForDefinition &&
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
-    return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
+    return cast<FunctionDecl>(Info->getInstantiatedFrom());
   }
 
   if (ForDefinition &&
@@ -4299,7 +4280,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
       Primary = NewPrimary;
     }
 
-    return getDefinitionOrSelf(Primary->getTemplatedDecl());
+    return Primary->getTemplatedDecl();
   }
 
   return nullptr;
@@ -4345,12 +4326,21 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
   return nullptr;
 }
 
+const TemplateParameterList *
+FunctionDecl::getTemplateSpecializationParameters() const {
+  if (const auto *Info = getTemplateSpecializationInfo())
+    return Info->TemplateParameters;
+  if (const auto *Info = getDependentSpecializationInfo())
+    return Info->TemplateParameters;
+  return nullptr;
+}
+
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
     TemplateArgumentList *TemplateArgs, void *InsertPos,
-    TemplateSpecializationKind TSK,
+    TemplateSpecializationKind TSK, const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
-    SourceLocation PointOfInstantiation) {
+    SourceLocation PointOfInstantiation, bool AddSpecialization) {
   assert((TemplateOrSpecialization.isNull() ||
           isa<MemberSpecializationInfo *>(TemplateOrSpecialization)) &&
          "Member function is already a specialization");
@@ -4362,21 +4352,23 @@ void FunctionDecl::setFunctionTemplateSpecialization(
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =
       FunctionTemplateSpecializationInfo::Create(
-          C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
-          PointOfInstantiation,
+          C, this, Template, TSK, TemplateArgs, TemplateParams,
+          TemplateArgsAsWritten, PointOfInstantiation,
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  if (AddSpecialization)
+    Template->addSpecialization(Info, InsertPos);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
     ASTContext &Context, const UnresolvedSetImpl &Templates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(TemplateOrSpecialization.isNull());
   DependentFunctionTemplateSpecializationInfo *Info =
-      DependentFunctionTemplateSpecializationInfo::Create(Context, Templates,
-                                                          TemplateArgs);
+      DependentFunctionTemplateSpecializationInfo::Create(
+          Context, Templates, TemplateParams, TemplateArgs);
   TemplateOrSpecialization = Info;
 }
 
@@ -4389,19 +4381,22 @@ FunctionDecl::getDependentSpecializationInfo() const {
 DependentFunctionTemplateSpecializationInfo *
 DependentFunctionTemplateSpecializationInfo::Create(
     ASTContext &Context, const UnresolvedSetImpl &Candidates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TArgs) {
   const auto *TArgsWritten =
       TArgs ? ASTTemplateArgumentListInfo::Create(Context, *TArgs) : nullptr;
   return new (Context.Allocate(
       totalSizeToAlloc<FunctionTemplateDecl *>(Candidates.size())))
-      DependentFunctionTemplateSpecializationInfo(Candidates, TArgsWritten);
+      DependentFunctionTemplateSpecializationInfo(Candidates, TemplateParams,
+                                                  TArgsWritten);
 }
 
 DependentFunctionTemplateSpecializationInfo::
     DependentFunctionTemplateSpecializationInfo(
         const UnresolvedSetImpl &Candidates,
+        const TemplateParameterList *TemplateParams,
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
-    : NumCandidates(Candidates.size()),
+    : NumCandidates(Candidates.size()), TemplateParameters(TemplateParams),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
   std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
@@ -4506,6 +4501,26 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     llvm_unreachable("Function cannot have a template specialization kind");
 }
 
+bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
+  auto HasImplicitAttr = [this](const Attr *A) {
+    return A ? A->isImplicit() : isImplicit();
+  };
+  if (!HasImplicitAttr(getAttr<CUDAHostAttr>()) ||
+      !HasImplicitAttr(getAttr<CUDADeviceAttr>()))
+    return false;
+  auto IsExplicitInstTSK = [](TemplateSpecializationKind TSK) {
+    return TSK == TSK_ExplicitInstantiationDeclaration ||
+           TSK == TSK_ExplicitInstantiationDefinition;
+  };
+  if (IsExplicitInstTSK(getTemplateSpecializationKind()))
+    return true;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(this))
+    if (const auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent()))
+      return IsExplicitInstTSK(Spec->getTemplateSpecializationKind());
+  return false;
+}
+
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
   if (FunctionTemplateSpecializationInfo *FTSInfo
         = TemplateOrSpecialization.dyn_cast<
@@ -4539,6 +4554,17 @@ bool FunctionDecl::isOutOfLine() const {
   }
 
   return false;
+}
+
+SourceLocation FunctionDecl::getFunctionLocStart() const {
+  if (const TemplateParameterList *TemplateParams =
+          getTemplateSpecializationParameters()) {
+    const ASTContext &Ctx = getASTContext();
+    return Lexer::findNextToken(TemplateParams->getSourceRange().getEnd(),
+                                Ctx.getSourceManager(), Ctx.getLangOpts())
+        ->getLocation();
+  }
+  return getInnerLocStart();
 }
 
 SourceRange FunctionDecl::getSourceRange() const {
@@ -5137,7 +5163,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return ::getDefinitionOrSelf(ED);
+      return ED;
     }
   }
 
