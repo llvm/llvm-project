@@ -27,8 +27,7 @@ namespace lldb_private {
 
 namespace {
 
-/// Resolve the absolute path of \p module (or the running executable when
-/// \p module is null) so we can synthesize lldb-relative candidate paths.
+/// Absolute path of \p module, or the running executable when null.
 std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
   while (buffer.size() <= PATHCCH_MAX_CCH) {
@@ -48,9 +47,6 @@ std::string GetModulePath(HMODULE module) {
 }
 
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-/// Path to LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME relative to the current
-/// executable, per the build-time configured layout. Used as a candidate so
-/// the common loader's getPermanentLibrary() can map it by absolute path.
 std::string ExeRelativeCandidate() {
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
   std::string exe = GetModulePath(nullptr);
@@ -72,17 +68,9 @@ std::string ExeRelativeCandidate() {
 
 void ForEachPythonRuntimeCandidate(
     llvm::function_ref<bool(const char *)> callback) {
-  // Tried in order: bare DLL name (lets the loader use PATH and the system
-  // search list), then the build-relative location next to lldb.exe. Bare
-  // names work when Python is on PATH or already mapped in the process; the
-  // exe-relative path covers shipped layouts where Python sits next to
-  // liblldb.
-  //
-  // The common loader maps each candidate via getPermanentLibrary, so on
-  // first success the Python DLL is in the process by base name. When the
-  // ScriptInterpreterPython plugin is dlopen'd later, its delay-load thunks'
-  // implicit LoadLibrary call matches the already-mapped module and resolves
-  // without consulting any DLL search path.
+  // Mapping the DLL by base name first lets the plugin's delay-load thunks
+  // (which LoadLibrary by base name) resolve against the already-mapped
+  // module on first use, bypassing DLL search rules.
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
   if (callback(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME))
     return;

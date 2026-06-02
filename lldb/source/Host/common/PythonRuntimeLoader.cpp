@@ -32,19 +32,12 @@ namespace lldb_private {
 
 namespace {
 
-/// Process-wide state of the Python runtime load attempt. Populated once via
-/// GetState and observed read-only thereafter.
+/// Captured once by GetState; observers must treat it as read-only.
 struct PythonRuntimeState {
-  /// Path of the Python runtime that was loaded, empty if Python was already
-  /// in the process or no load was attempted.
   std::string path;
-  /// Aggregated error message, empty if no attempt has been made or the load
-  /// succeeded.
   std::string error_message;
 };
 
-/// Returns success only if the load succeeded and the resulting library
-/// exposes Py_IsInitialized (a stable-ABI symbol).
 llvm::Error TryLoad(const char *path) {
   std::string err_msg;
   llvm::sys::DynamicLibrary lib =
@@ -52,6 +45,8 @@ llvm::Error TryLoad(const char *path) {
   if (!lib.isValid())
     return llvm::createStringErrorV("could not load '{0}': {1}", path, err_msg);
 
+  // A successful load does not imply the library is actually libpython,
+  // so reject anything that doesn't expose a stable-ABI symbol.
   if (!lib.getAddressOfSymbol("Py_IsInitialized"))
     return llvm::createStringErrorV(
         "'{0}' does not export Py_IsInitialized; not a Python runtime", path);
@@ -75,8 +70,6 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
     return true;
   };
 
-  // Honor an explicit override via LLDB_PYTHON_LIBRARY. Empty values are
-  // ignored so an exported-but-unset variable doesn't trigger dlopen("").
   if (const char *override_path = std::getenv("LLDB_PYTHON_LIBRARY");
       override_path && *override_path) {
     if (try_path(override_path)) {
@@ -86,18 +79,14 @@ llvm::Error LoadPythonRuntimeImpl(std::string &out_path) {
   }
 
 #ifdef LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH
-  // Try the Python lldb was linked against at build time. The stable-ABI
-  // guarantees most closely match what the plugin was built for, so prefer
-  // it over the platform search list when an env override hasn't been set
-  // (or has been set but didn't load).
+  // The build-time Python is the closest stable-ABI match for what the
+  // plugin was compiled against, so prefer it over the platform fallbacks.
   if (try_path(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH)) {
     consumeError(std::move(failures));
     return llvm::Error::success();
   }
 #endif
 
-  // Walk platform-specific well-known locations. The first candidate that
-  // loads cleanly wins; the rest of the list is not enumerated.
   bool found = false;
   ForEachPythonRuntimeCandidate(
       [&](const char *candidate) { return found = try_path(candidate); });
@@ -124,15 +113,10 @@ const PythonRuntimeState &GetState() {
 
 } // namespace
 
-/// True if libpython is mapped into the current process. This is the case
-/// when LLDB is imported into a Python interpreter (we must not dlopen
-/// another libpython on top of it), and after Load() has placed one there.
-///
-/// Probe two stable-ABI symbols. Py_IsInitialized has existed forever
-/// (including incompatible Python 2), but Py_InitializeFromConfig is 3.8+.
-/// Requiring both rejects a stale Python 2 libpython, a stub, or another
-/// tool's vendored runtime that happens to export Py_IsInitialized.
 bool PythonRuntimeLoader::IsLoaded() {
+  // A single-symbol probe can match an incompatible runtime that happens
+  // to export it, so pair an old symbol with one introduced in 3.8 to
+  // bound the version on both ends.
 #if defined(_WIN32)
   HMODULE main = ::GetModuleHandleW(nullptr);
   return ::GetProcAddress(main, "Py_IsInitialized") != nullptr &&

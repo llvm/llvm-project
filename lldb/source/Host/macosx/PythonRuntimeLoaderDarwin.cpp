@@ -29,18 +29,12 @@ namespace lldb_private {
 
 namespace {
 
-// Apple Xcode and Command Line Tools ship Python3.framework, whose framework
-// binary is named "Python3" (matching the framework name).
+// Apple ships Python3.framework; python.org and Homebrew ship Python.framework.
 constexpr llvm::StringLiteral kAppleFrameworkSuffix =
     "Library/Frameworks/Python3.framework/Versions/Current/Python3";
-// python.org and Homebrew distribute Python.framework, whose framework binary
-// is named "Python".
 constexpr llvm::StringLiteral kPythonOrgFrameworkSuffix =
     "Library/Frameworks/Python.framework/Versions/Current/Python";
 
-/// Build an absolute path by joining \p base and \p relative; emit it via the
-/// callback only if the file exists. Returns the callback's result so the
-/// caller can short-circuit on first success.
 bool TryIfExists(llvm::function_ref<bool(const char *)> callback,
                  llvm::StringRef base, llvm::StringRef relative) {
   llvm::SmallString<256> path(base);
@@ -50,10 +44,8 @@ bool TryIfExists(llvm::function_ref<bool(const char *)> callback,
   return callback(path.c_str());
 }
 
-/// Invoke `xcrun -f python3` and follow the resulting interpreter path back
-/// to its enclosing Python3.framework. Empty string on any failure or when
-/// the framework binary is not at the conventional location relative to the
-/// developer dir.
+/// Locates the Python3.framework that `xcrun -f python3` points at. Returns
+/// an empty string on any failure or unexpected layout.
 std::string FindPythonViaXcrun() {
   llvm::ErrorOr<std::string> xcrun = llvm::sys::findProgramByName("xcrun");
   if (!xcrun)
@@ -82,10 +74,8 @@ std::string FindPythonViaXcrun() {
   if (python.empty())
     return {};
 
-  // python is e.g. /Applications/Xcode.app/Contents/Developer/usr/bin/python3.
-  // Validate the structure (.../usr/bin/python3) before deriving the developer
-  // dir; if xcrun returned a non-Xcode interpreter (e.g. a Homebrew shim)
-  // there's no framework at the expected location and we should bail.
+  // xcrun is not guaranteed to return an Xcode-layout interpreter, so verify
+  // the .../usr/bin/python3 structure before deriving a developer dir.
   if (llvm::sys::path::filename(python) != "python3")
     return {};
   llvm::StringRef parent = llvm::sys::path::parent_path(python);
@@ -126,15 +116,12 @@ void ForEachPythonRuntimeCandidate(
   if (TryIfExists(callback, "/usr/local", kPythonOrgFrameworkSuffix))
     return;
 
-  // Subprocess fallback: ask `xcrun` to locate the user's selected Xcode if
-  // none of the well-known paths matched. Spawned only on the cold path so
-  // the common case never pays for it.
+  // xcrun is a subprocess; only run it when the well-known paths miss.
   if (std::string xcrun_path = FindPythonViaXcrun(); !xcrun_path.empty())
     if (callback(xcrun_path.c_str()))
       return;
 
-  // Final fallback: let dyld search DYLD_LIBRARY_PATH and the system dyld
-  // cache. dlopen with a bare name is the only way to hit the cache.
+  // Bare-name dlopen is the only way to hit the dyld shared cache.
   callback("libpython3.dylib");
 }
 

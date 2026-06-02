@@ -16,9 +16,8 @@
 
 using namespace lldb_private;
 
-// PythonRuntimeLoader::Load is a process-global once_flag, so we can exercise
-// it only once per process. Verify that subsequent calls return a result
-// consistent with the first.
+// Load() uses a process-wide once_flag, so this is the only test that can
+// exercise it in this process.
 TEST(PythonRuntimeLoaderTest, LoadIsIdempotent) {
   llvm::Error first = PythonRuntimeLoader::Load();
   const bool first_result = static_cast<bool>(first);

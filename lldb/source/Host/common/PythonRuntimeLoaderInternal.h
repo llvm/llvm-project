@@ -13,18 +13,10 @@
 
 namespace lldb_private {
 
-/// Platform-specific candidate enumeration. Calls \p callback once per
-/// candidate path in priority order; stops at the first call that returns
-/// true. Implemented in PythonRuntimeLoaderDarwin.cpp /
-/// PythonRuntimeLoaderLinux.cpp / PythonRuntimeLoaderWindows.cpp.
-///
-/// Using a callback (rather than returning a vector) lets the caller
-/// short-circuit on the first candidate that loads cleanly, so platforms
-/// that synthesize candidates lazily (e.g. Darwin invokes `xcrun` only when
-/// hardcoded paths miss) don't pay for the more expensive ones up front.
-///
-/// The callback receives a null-terminated C string so it can be handed
-/// straight to dlopen / getPermanentLibrary without an extra copy.
+/// Visits candidate Python runtime paths in priority order, stopping at
+/// the first call that returns true. A callback (rather than a vector)
+/// lets platforms defer expensive synthesis until cheaper candidates miss.
+/// Paths are null-terminated for direct use with the dynamic loader API.
 void ForEachPythonRuntimeCandidate(
     llvm::function_ref<bool(const char *)> callback);
 

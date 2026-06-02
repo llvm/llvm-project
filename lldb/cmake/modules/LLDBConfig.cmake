@@ -211,13 +211,11 @@ if (LLDB_ENABLE_PYTHON)
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
-  # Capture the build-time libpython path so Config.h can expose it as a
-  # runtime fallback for the dynamic Python plugin loader. Going through
-  # Config.h.cmake's R"(...)" substitution avoids the per-platform escaping
-  # hazards of stuffing the path into a target_compile_definitions string.
-  # Skip on Windows: FindPython3 exposes only the import library (.lib) path,
-  # and the .dll lives in a different directory; the FILENAME-based candidate
-  # in PythonRuntimeLoaderWindows.cpp covers Windows instead.
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
   if(TARGET Python3::Python AND NOT WIN32)
     get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
     if(_Python3_LIB_PATH)

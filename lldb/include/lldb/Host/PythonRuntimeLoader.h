@@ -16,42 +16,22 @@ namespace lldb_private {
 
 class PythonRuntimeLoader {
 public:
-  /// Make the Python runtime available in the current process so the
-  /// ScriptInterpreterPython plugin's undefined Python symbols can resolve.
-  ///
-  /// On POSIX this dlopens libpython into the process via
-  /// llvm::sys::DynamicLibrary::getPermanentLibrary, leaving Python's
-  /// stable-ABI symbols visible in the global namespace. On Windows this
-  /// configures the DLL search path so the plugin's delay-load thunks can
-  /// find the Python DLL.
-  ///
-  /// No-op when Python is already loaded in the current process (i.e. when
-  /// LLDB is imported into a Python interpreter).
-  ///
-  /// Honors the LLDB_PYTHON_LIBRARY environment variable (full path to a
-  /// libpython binary or framework Python file). Otherwise walks a
-  /// platform-specific list of well-known locations (Xcode, Command Line
-  /// Tools, /Library/Frameworks, /opt/homebrew, /usr/local on Darwin; SONAME
-  /// variants on Linux).
-  ///
-  /// The first call drives the load; subsequent calls return the cached
-  /// outcome. Returns success on no-op, on first successful load, or on
-  /// builds without Python support. Returns an Error aggregating the
-  /// per-candidate failures when no Python runtime can be located.
+  /// Resolves the Python runtime so the script interpreter plugin's
+  /// undefined symbols can bind. The first call drives the search and
+  /// subsequent calls return the cached outcome. Returns success when
+  /// Python is already in the process, when a runtime was loaded, or on
+  /// builds without Python support. LLDB_PYTHON_LIBRARY overrides the
+  /// default search.
   static llvm::Error Load();
 
-  /// Path of the Python runtime that was loaded, for diagnostics. Empty if
-  /// Python was already in the process, if loading failed, or on builds
-  /// without Python support. Triggers the load on first call, mirroring
-  /// Load().
+  /// Absolute path of the loaded Python runtime, for diagnostics. Empty
+  /// when the load failed, when Python was already in the process, or on
+  /// builds without Python support. Drives the load on first call.
   static llvm::StringRef GetLoadedPath();
 
-  /// True if libpython is currently mapped into the process (whether we put
-  /// it there or it was already loaded). Lets callers distinguish the
-  /// lldb-in-python case (Load() success, GetLoadedPath() empty, IsLoaded()
-  /// true) from a build without Python support (Load() success,
-  /// GetLoadedPath() empty, IsLoaded() false). Always false on builds
-  /// without Python support.
+  /// True if libpython is currently mapped into the process. Distinguishes
+  /// the lldb-in-python case from a build without Python support; both
+  /// otherwise yield a successful Load() with an empty GetLoadedPath().
   static bool IsLoaded();
 };
 
