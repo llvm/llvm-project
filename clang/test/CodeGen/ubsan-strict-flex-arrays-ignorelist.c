@@ -1,12 +1,18 @@
 // RUN: rm -rf %t && split-file %s %t
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds -fsanitize-ignorelist=%t/ignore.list %t/test.c -o - | FileCheck %s --check-prefix=CHECK-IGNORED
-// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds -fsanitize-ignorelist=%t/ignore.list %t/test2.c -o - | FileCheck %s --check-prefix=CHECK-NOT-IGNORED
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -fstrict-flex-arrays=3 -fsanitize=array-bounds -fsanitize-ignorelist=%t/ignore.list %t/test.c -o - | FileCheck %s --check-prefix=CHECK
 
 //--- ignore.list
 ignorelastmembersrc:*test.h
 
 //--- test.h
-struct Three {
+struct StructInTestH {
+  int ignored;
+  int a[3];
+  int b[3];
+};
+
+//--- test2.h
+struct StructInTest2H {
   int ignored;
   int a[3];
   int b[3];
@@ -14,34 +20,29 @@ struct Three {
 
 //--- test.c
 #include "test.h"
-// CHECK-IGNORED-LABEL: define {{.*}} @{{.*}}test_three_a{{.*}}(
-int test_three_a(struct Three *p, int i) {
-  // CHECK-IGNORED: call void @__ubsan_handle_out_of_bounds_abort(
+#include "test2.h"
+
+// CHECK-LABEL: define {{.*}} @{{.*}}test_struct_in_test_h_a{{.*}}(
+int test_struct_in_test_h_a(struct StructInTestH *p, int i) {
+  // CHECK: call void @__ubsan_handle_out_of_bounds_abort(
   return p->a[i];
 }
 
-// CHECK-IGNORED-LABEL: define {{.*}} @{{.*}}test_three_b{{.*}}(
-int test_three_b(struct Three *p, int i) {
-  // CHECK-IGNORED-NOT: call void @__ubsan_handle_out_of_bounds_abort(
+// CHECK-LABEL: define {{.*}} @{{.*}}test_struct_in_test_h_b{{.*}}(
+int test_struct_in_test_h_b(struct StructInTestH *p, int i) {
+  // CHECK-NOT: call void @__ubsan_handle_out_of_bounds_abort(
   return p->b[i];
 }
 
-//--- test2.h
-struct Three {
-  int ignored;
-  int a[3];
-};
 
-//--- test2.c
-#include "test2.h"
-// CHECK-NOT-IGNORED-LABEL: define {{.*}} @{{.*}}test_three2_a{{.*}}(
-int test_three2_a(struct Three *p, int i) {
-  // CHECK-NOT-IGNORED: call void @__ubsan_handle_out_of_bounds_abort(
+// CHECK-LABEL: define {{.*}} @{{.*}}test_struct_in_test2_h_a{{.*}}(
+int test_struct_in_test2_h_a(struct StructInTest2H *p, int i) {
+  // CHECK: call void @__ubsan_handle_out_of_bounds_abort(
   return p->a[i];
 }
 
-// CHECK-NOT-IGNORED-LABEL: define {{.*}} @{{.*}}test_three2_b{{.*}}(
-int test_three2_b(struct Three *p, int i) {
-  // CHECK-NOT-IGNORED: call void @__ubsan_handle_out_of_bounds_abort(
-  return p->a[i];
+// CHECK-LABEL: define {{.*}} @{{.*}}test_struct_in_test2_h_b{{.*}}(
+int test_struct_in_test2_h_b(struct StructInTest2H *p, int i) {
+  // CHECK: call void @__ubsan_handle_out_of_bounds_abort(
+  return p->b[i];
 }
