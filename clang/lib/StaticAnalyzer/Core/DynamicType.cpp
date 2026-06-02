@@ -64,11 +64,11 @@ const DynamicTypeInfo *getRawDynamicTypeInfo(ProgramStateRef State,
   return State->get<DynamicTypeMap>(MR);
 }
 
-static void unbox(QualType &Ty) {
+static void unbox(QualType &Ty, const ASTContext &Ctx) {
   // FIXME: Why are we being fed references to pointers in the first place?
   while (Ty->isReferenceType() || Ty->isPointerType())
     Ty = Ty->getPointeeType();
-  Ty = Ty.getCanonicalType().getUnqualifiedType();
+  Ty = Ty.getCanonicalType().getUnqualifiedType(Ctx);
 }
 
 const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
@@ -79,8 +79,8 @@ const DynamicCastInfo *getDynamicCastInfo(ProgramStateRef State,
   if (!Lookup)
     return nullptr;
 
-  unbox(CastFromTy);
-  unbox(CastToTy);
+  unbox(CastFromTy, State->getStateManager().getContext());
+  unbox(CastToTy, State->getStateManager().getContext());
 
   for (const DynamicCastInfo &Cast : *Lookup)
     if (Cast.equals(CastFromTy, CastToTy))
@@ -121,8 +121,8 @@ ProgramStateRef setDynamicTypeAndCastInfo(ProgramStateRef State,
     State = State->set<DynamicTypeMap>(MR, CastToTy);
   }
 
-  unbox(CastFromTy);
-  unbox(CastToTy);
+  unbox(CastFromTy, State->getStateManager().getContext());
+  unbox(CastToTy, State->getStateManager().getContext());
 
   DynamicCastInfo::CastResult ResultKind =
       CastSucceeds ? DynamicCastInfo::CastResult::Success

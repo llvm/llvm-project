@@ -2328,7 +2328,7 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         LangOpts.CUDAIsDevice)
       CheckDeviceType(Ty);
 
-    QualType UnqualTy = Ty.getCanonicalType().getUnqualifiedType();
+    QualType UnqualTy = Ty.getCanonicalType().getUnqualifiedType(Context);
     const TargetInfo &TI = Context.getTargetInfo();
     if (!TI.hasLongDoubleType() && UnqualTy == Context.LongDoubleTy) {
       PartialDiagnostic PD = PDiag(diag::err_target_unsupported_type);

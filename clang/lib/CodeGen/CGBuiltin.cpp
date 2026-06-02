@@ -2728,7 +2728,7 @@ private:
 
     if (D.Ty->isAtomicType()) {
       auto Unwrapped = D;
-      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType();
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType(CGF.getContext());
       Stack.push_back(Unwrapped);
       return;
     }

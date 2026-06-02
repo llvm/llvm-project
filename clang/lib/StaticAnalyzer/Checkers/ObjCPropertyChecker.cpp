@@ -47,9 +47,10 @@ void ObjCPropertyChecker::checkCopyMutable(const ObjCPropertyDecl *D,
   if (!T->isObjCObjectPointerType())
     return;
 
-  const std::string &PropTypeName(T->getPointeeType().getCanonicalType()
-                                                     .getUnqualifiedType()
-                                                     .getAsString());
+  const std::string &PropTypeName(T->getPointeeType()
+                                      .getCanonicalType()
+                                      .getUnqualifiedType(BR.getContext())
+                                      .getAsString());
   if (!StringRef(PropTypeName).starts_with("NSMutable"))
     return;
 

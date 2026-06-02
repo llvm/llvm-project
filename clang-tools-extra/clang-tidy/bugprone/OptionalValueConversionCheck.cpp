@@ -23,9 +23,10 @@ namespace clang::tidy::bugprone {
 namespace {
 
 AST_MATCHER_P(QualType, hasCleanType, Matcher<QualType>, InnerMatcher) {
-  return InnerMatcher.matches(
-      Node.getNonReferenceType().getUnqualifiedType().getCanonicalType(),
-      Finder, Builder);
+  return InnerMatcher.matches(Node.getNonReferenceType()
+                                  .getUnqualifiedType(Finder->getASTContext())
+                                  .getCanonicalType(),
+                              Finder, Builder);
 }
 
 constexpr std::array<StringRef, 2> MakeSmartPtrList{
@@ -129,7 +130,7 @@ void OptionalValueConversionCheck::check(
   diag(MatchedExpr->getExprLoc(),
        "conversion from %0 into %1 and back into %0, remove potentially "
        "error-prone optional dereference")
-      << *OptionalType << ValueType->getUnqualifiedType();
+      << *OptionalType << ValueType->getUnqualifiedType(*Result.Context);
 
   if (const auto *OperatorExpr =
           Result.Nodes.getNodeAs<CXXOperatorCallExpr>("op-call")) {

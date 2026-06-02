@@ -93,7 +93,7 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
 
   CallArgList Args;
   const ParmVarDecl *ArgDecl = *BoxingMethod->param_begin();
-  QualType ArgQT = ArgDecl->getType().getUnqualifiedType();
+  QualType ArgQT = ArgDecl->getType().getUnqualifiedType(getContext());
 
   // ObjCBoxedExpr supports boxing of structs and unions
   // via [NSValue valueWithBytes:objCType:]
@@ -114,7 +114,8 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
 
     // Cast type encoding to correct type
     const ParmVarDecl *EncodingDecl = BoxingMethod->parameters()[1];
-    QualType EncodingQT = EncodingDecl->getType().getUnqualifiedType();
+    QualType EncodingQT =
+        EncodingDecl->getType().getUnqualifiedType(getContext());
     llvm::Value *Cast = Builder.CreateBitCast(GV, ConvertType(EncodingQT));
 
     Args.add(RValue::get(Cast), EncodingQT);
@@ -221,15 +222,15 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   CallArgList Args;
   ObjCMethodDecl::param_const_iterator PI = MethodWithObjects->param_begin();
   const ParmVarDecl *argDecl = *PI++;
-  QualType ArgQT = argDecl->getType().getUnqualifiedType();
+  QualType ArgQT = argDecl->getType().getUnqualifiedType(getContext());
   Args.add(RValue::get(Objects, *this), ArgQT);
   if (DLE) {
     argDecl = *PI++;
-    ArgQT = argDecl->getType().getUnqualifiedType();
+    ArgQT = argDecl->getType().getUnqualifiedType(getContext());
     Args.add(RValue::get(Keys, *this), ArgQT);
   }
   argDecl = *PI;
-  ArgQT = argDecl->getType().getUnqualifiedType();
+  ArgQT = argDecl->getType().getUnqualifiedType(getContext());
   llvm::Value *Count =
     llvm::ConstantInt::get(CGM.getTypes().ConvertType(ArgQT), NumElements);
   Args.add(RValue::get(Count), ArgQT);
@@ -1655,9 +1656,9 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
   QualType argType = argDecl->getType().getNonReferenceType();
   DeclRefExpr arg(getContext(), argDecl, false, argType, VK_LValue,
                   SourceLocation());
-  ImplicitCastExpr argLoad(ImplicitCastExpr::OnStack,
-                           argType.getUnqualifiedType(), CK_LValueToRValue,
-                           &arg, VK_PRValue, FPOptionsOverride());
+  ImplicitCastExpr argLoad(
+      ImplicitCastExpr::OnStack, argType.getUnqualifiedType(getContext()),
+      CK_LValueToRValue, &arg, VK_PRValue, FPOptionsOverride());
 
   // The property type can differ from the ivar type in some situations with
   // Objective-C pointer types, we can always bit cast the RHS in these cases.

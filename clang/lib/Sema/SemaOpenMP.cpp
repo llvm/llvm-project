@@ -2983,8 +2983,8 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
       // variable is not added to IdResolver, so the code in the OpenMP
       // region uses original variable for proper diagnostics.
       VarDecl *VDPrivate = buildVarDecl(
-          SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(), VD->getName(),
-          VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
+          SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(SemaRef.Context),
+          VD->getName(), VD->hasAttrs() ? &VD->getAttrs() : nullptr, DRE);
       SemaRef.ActOnUninitializedDecl(VDPrivate);
       if (VDPrivate->isInvalidDecl()) {
         PrivateCopies.push_back(nullptr);
@@ -7046,7 +7046,7 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPDeclareSimdDirective(
           }
           QualType QTy = PVD->getType()
                              .getNonReferenceType()
-                             .getUnqualifiedType()
+                             .getUnqualifiedType(getASTContext())
                              .getCanonicalType();
           const Type *Ty = QTy.getTypePtrOrNull();
           if (!Ty || (!Ty->isArrayType() && !Ty->isPointerType())) {
@@ -7689,9 +7689,10 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
       FnPtrType = Context.getPointerType(AdjustedFnType);
     }
     QualType VarianPtrType = Context.getPointerType(VariantRef->getType());
-    if (VarianPtrType.getUnqualifiedType() != FnPtrType.getUnqualifiedType()) {
+    if (VarianPtrType.getUnqualifiedType(Context) !=
+        FnPtrType.getUnqualifiedType(Context)) {
       ImplicitConversionSequence ICS = SemaRef.TryImplicitConversion(
-          VariantRef, FnPtrType.getUnqualifiedType(),
+          VariantRef, FnPtrType.getUnqualifiedType(Context),
           /*SuppressUserConversions=*/false, Sema::AllowedExplicit::None,
           /*InOverloadResolution=*/false,
           /*CStyle=*/false,
@@ -7705,7 +7706,7 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
         return std::nullopt;
       }
       VariantRefCast = SemaRef.PerformImplicitConversion(
-          VariantRef, FnPtrType.getUnqualifiedType(),
+          VariantRef, FnPtrType.getUnqualifiedType(Context),
           AssignmentAction::Converting);
       if (!VariantRefCast.isUsable())
         return std::nullopt;
@@ -18947,7 +18948,8 @@ static bool isValidInteropVariable(Sema &SemaRef, Expr *InteropVarExpr,
     return false;
   }
 
-  QualType VarType = InteropVarExpr->getType().getUnqualifiedType();
+  QualType VarType =
+      InteropVarExpr->getType().getUnqualifiedType(SemaRef.Context);
   if (!SemaRef.Context.hasSameType(InteropType, VarType)) {
     SemaRef.Diag(VarLoc, diag::err_omp_interop_variable_wrong_type);
     return false;
@@ -19469,7 +19471,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     // the new private variable in CodeGen. This new variable is not added to
     // IdResolver, so the code in the OpenMP region uses original variable for
     // proper diagnostics.
-    Type = Type.getUnqualifiedType();
+    Type = Type.getUnqualifiedType(SemaRef.Context);
     VarDecl *VDPrivate =
         buildVarDecl(SemaRef, ELoc, Type, D->getName(),
                      D->hasAttrs() ? &D->getAttrs() : nullptr,
@@ -19478,7 +19480,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
     if (VDPrivate->isInvalidDecl())
       continue;
     DeclRefExpr *VDPrivateRefExpr = buildDeclRefExpr(
-        SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(), ELoc);
+        SemaRef, VDPrivate,
+        RefExpr->getType().getUnqualifiedType(SemaRef.Context), ELoc);
 
     DeclRefExpr *Ref = nullptr;
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
@@ -19710,7 +19713,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       continue;
     }
 
-    Type = Type.getUnqualifiedType();
+    Type = Type.getUnqualifiedType(SemaRef.Context);
     VarDecl *VDPrivate =
         buildVarDecl(SemaRef, ELoc, Type, D->getName(),
                      D->hasAttrs() ? &D->getAttrs() : nullptr,
@@ -19728,7 +19731,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
           buildVarDecl(SemaRef, RefExpr->getExprLoc(), ElemType, D->getName());
       VDInitRefExpr = buildDeclRefExpr(SemaRef, VDInit, ElemType, ELoc);
       Expr *Init = SemaRef.DefaultLvalueConversion(VDInitRefExpr).get();
-      ElemType = ElemType.getUnqualifiedType();
+      ElemType = ElemType.getUnqualifiedType(SemaRef.Context);
       VarDecl *VDInitTemp = buildVarDecl(SemaRef, RefExpr->getExprLoc(),
                                          ElemType, ".firstprivate.temp");
       InitializedEntity Entity =
@@ -19760,9 +19763,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       continue;
     }
     SemaRef.CurContext->addDecl(VDPrivate);
-    DeclRefExpr *VDPrivateRefExpr = buildDeclRefExpr(
-        SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(),
-        RefExpr->getExprLoc());
+    DeclRefExpr *VDPrivateRefExpr =
+        buildDeclRefExpr(SemaRef, VDPrivate,
+                         RefExpr->getType().getUnqualifiedType(SemaRef.Context),
+                         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate) {
@@ -19918,11 +19922,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
     //  lastprivate clause requires an accessible, unambiguous copy assignment
     //  operator for the class type.
     Type = getASTContext().getBaseElementType(Type).getNonReferenceType();
-    VarDecl *SrcVD = buildVarDecl(SemaRef, ERange.getBegin(),
-                                  Type.getUnqualifiedType(), ".lastprivate.src",
-                                  D->hasAttrs() ? &D->getAttrs() : nullptr);
-    DeclRefExpr *PseudoSrcExpr =
-        buildDeclRefExpr(SemaRef, SrcVD, Type.getUnqualifiedType(), ELoc);
+    VarDecl *SrcVD = buildVarDecl(
+        SemaRef, ERange.getBegin(), Type.getUnqualifiedType(getASTContext()),
+        ".lastprivate.src", D->hasAttrs() ? &D->getAttrs() : nullptr);
+    DeclRefExpr *PseudoSrcExpr = buildDeclRefExpr(
+        SemaRef, SrcVD, Type.getUnqualifiedType(getASTContext()), ELoc);
     VarDecl *DstVD =
         buildVarDecl(SemaRef, ERange.getBegin(), Type, ".lastprivate.dst",
                      D->hasAttrs() ? &D->getAttrs() : nullptr);
@@ -20292,7 +20296,7 @@ buildDeclareReductionRef(Sema &SemaRef, SourceLocation Loc, SourceRange Range,
                          /*DetectVirtual=*/false);
       if (SemaRef.IsDerivedFrom(Loc, Ty, VD->getType(), Paths)) {
         if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
-                VD->getType().getUnqualifiedType()))) {
+                VD->getType().getUnqualifiedType(SemaRef.Context)))) {
           if (SemaRef.CheckBaseClassAccess(
                   Loc, VD->getType(), Ty, Paths.front(),
                   /*DiagID=*/0) != Sema::AR_inaccessible) {
@@ -20831,7 +20835,7 @@ static bool actOnOMPReductionKindClause(
       }
     }
 
-    Type = Type.getNonLValueExprType(Context).getUnqualifiedType();
+    Type = Type.getNonLValueExprType(Context).getUnqualifiedType(Context);
     VarDecl *LHSVD = buildVarDecl(S, ELoc, Type, ".reduction.lhs",
                                   D->hasAttrs() ? &D->getAttrs() : nullptr);
     VarDecl *RHSVD = buildVarDecl(S, ELoc, Type, D->getName(),
@@ -21370,7 +21374,7 @@ bool SemaOpenMP::CheckOpenMPLinearDecl(const ValueDecl *D, SourceLocation ELoc,
     return true;
 
   // A list item must be of integral or pointer type.
-  Type = Type.getUnqualifiedType().getCanonicalType();
+  Type = Type.getUnqualifiedType(SemaRef.Context).getCanonicalType();
   const auto *Ty = Type.getTypePtrOrNull();
   if (!Ty || (LinKind != OMPC_LINEAR_ref && !Ty->isDependentType() &&
               !Ty->isIntegralType(getASTContext()) && !Ty->isPointerType())) {
@@ -21439,7 +21443,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
 
     if (CheckOpenMPLinearDecl(D, ELoc, LinKind, Type))
       continue;
-    Type = Type.getNonReferenceType().getUnqualifiedType().getCanonicalType();
+    Type = Type.getNonReferenceType()
+               .getUnqualifiedType(SemaRef.Context)
+               .getCanonicalType();
 
     // Build private copy of original var.
     VarDecl *Private =
@@ -21583,10 +21589,10 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
     if (LinKind == OMPC_LINEAR_uval)
       CapturedRef = cast<VarDecl>(DE->getDecl())->getInit();
     else
-      CapturedRef =
-          buildDeclRefExpr(SemaRef, cast<VarDecl>(DE->getDecl()),
-                           DE->getType().getUnqualifiedType(), DE->getExprLoc(),
-                           /*RefersToCapture=*/true);
+      CapturedRef = buildDeclRefExpr(
+          SemaRef, cast<VarDecl>(DE->getDecl()),
+          DE->getType().getUnqualifiedType(SemaRef.Context), DE->getExprLoc(),
+          /*RefersToCapture=*/true);
 
     // Build update: Var = InitExpr + IV * Step
     ExprResult Update;
@@ -21658,7 +21664,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPAlignedClause(
     // OpenMP  [2.8.1, simd construct, Restrictions]
     // The type of list items appearing in the aligned clause must be
     // array, pointer, reference to array, or reference to pointer.
-    QType = QType.getNonReferenceType().getUnqualifiedType().getCanonicalType();
+    QType = QType.getNonReferenceType()
+                .getUnqualifiedType(SemaRef.Context)
+                .getCanonicalType();
     const Type *Ty = QType.getTypePtrOrNull();
     if (!Ty || (!Ty->isArrayType() && !Ty->isPointerType())) {
       Diag(ELoc, diag::err_omp_aligned_expected_array_or_ptr)
@@ -21770,10 +21778,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyinClause(ArrayRef<Expr *> VarList,
     QualType ElemType =
         getASTContext().getBaseElementType(Type).getNonReferenceType();
     VarDecl *SrcVD =
-        buildVarDecl(SemaRef, DE->getBeginLoc(), ElemType.getUnqualifiedType(),
+        buildVarDecl(SemaRef, DE->getBeginLoc(),
+                     ElemType.getUnqualifiedType(getASTContext()),
                      ".copyin.src", VD->hasAttrs() ? &VD->getAttrs() : nullptr);
     DeclRefExpr *PseudoSrcExpr = buildDeclRefExpr(
-        SemaRef, SrcVD, ElemType.getUnqualifiedType(), DE->getExprLoc());
+        SemaRef, SrcVD, ElemType.getUnqualifiedType(getASTContext()),
+        DE->getExprLoc());
     VarDecl *DstVD =
         buildVarDecl(SemaRef, DE->getBeginLoc(), ElemType, ".copyin.dst",
                      VD->hasAttrs() ? &VD->getAttrs() : nullptr);
@@ -21885,7 +21895,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPCopyprivateClause(ArrayRef<Expr *> VarList,
     //  operator for the class type.
     Type = getASTContext()
                .getBaseElementType(Type.getNonReferenceType())
-               .getUnqualifiedType();
+               .getUnqualifiedType(getASTContext());
     VarDecl *SrcVD =
         buildVarDecl(SemaRef, RefExpr->getBeginLoc(), Type, ".copyprivate.src",
                      D->hasAttrs() ? &D->getAttrs() : nullptr);
@@ -23210,7 +23220,7 @@ static ExprResult buildUserDefinedMapperRef(Sema &SemaRef, Scope *S,
                        /*DetectVirtual=*/false);
     if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
       if (!Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
-              VD->getType().getUnqualifiedType()))) {
+              VD->getType().getUnqualifiedType(SemaRef.Context)))) {
         if (SemaRef.CheckBaseClassAccess(
                 Loc, VD->getType(), Type, Paths.front(),
                 /*DiagID=*/0) != Sema::AR_inaccessible) {
@@ -23382,8 +23392,8 @@ static bool hasUserDefinedMapper(Sema &SemaRef, Scope *S,
   CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
                      /*DetectVirtual=*/false);
   if (SemaRef.IsDerivedFrom(Loc, Type, VD->getType(), Paths)) {
-    bool IsAmbiguous = !Paths.isAmbiguous(
-        SemaRef.Context.getCanonicalType(VD->getType().getUnqualifiedType()));
+    bool IsAmbiguous = !Paths.isAmbiguous(SemaRef.Context.getCanonicalType(
+        VD->getType().getUnqualifiedType(SemaRef.Context)));
     if (IsAmbiguous)
       return false;
     if (SemaRef.CheckBaseClassAccess(Loc, VD->getType(), Type, Paths.front(),
@@ -25161,7 +25171,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPUseDevicePtrClause(
       continue;
 
     QualType Type = D->getType();
-    Type = Type.getNonReferenceType().getUnqualifiedType();
+    Type = Type.getNonReferenceType().getUnqualifiedType(SemaRef.Context);
 
     auto *VD = dyn_cast<VarDecl>(D);
 
@@ -25182,7 +25192,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPUseDevicePtrClause(
 
     SemaRef.CurContext->addDecl(VDPrivate);
     DeclRefExpr *VDPrivateRefExpr = buildDeclRefExpr(
-        SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(), ELoc);
+        SemaRef, VDPrivate,
+        RefExpr->getType().getUnqualifiedType(SemaRef.Context), ELoc);
 
     // Add temporary variable to initialize the private copy of the pointer.
     VarDecl *VDInit =

@@ -4878,7 +4878,7 @@ ResolveOverloadedFunctionForReferenceBinding(Sema &S,
       Sequence.AddAddressOverloadResolutionStep(Fn, Found,
                                                 HadMultipleCandidates);
       SourceType = Fn->getType();
-      UnqualifiedSourceType = SourceType.getUnqualifiedType();
+      UnqualifiedSourceType = SourceType.getUnqualifiedType(S.Context);
     } else if (!UnqualifiedTargetType->isRecordType()) {
       Sequence.SetFailed(InitializationSequence::FK_AddressOfOverloadFailed);
       return true;
@@ -5269,9 +5269,9 @@ static OverloadingResult TryRefInitWithConversionFunction(
     InitializationSequence &Sequence) {
   QualType DestType = Entity.getType();
   QualType cv1T1 = DestType->castAs<ReferenceType>()->getPointeeType();
-  QualType T1 = cv1T1.getUnqualifiedType();
+  QualType T1 = cv1T1.getUnqualifiedType(S.Context);
   QualType cv2T2 = Initializer->getType();
-  QualType T2 = cv2T2.getUnqualifiedType();
+  QualType T2 = cv2T2.getUnqualifiedType(S.Context);
 
   assert(!S.CompareReferenceRelationship(Initializer->getBeginLoc(), T1, T2) &&
          "Must have incompatible references when binding via conversion");
@@ -5675,7 +5675,7 @@ static void TryReferenceInitializationCore(Sema &S,
       Qualifiers T2BaseQuals =
           T2ForQualConv.getQualifiers().withoutObjCLifetime();
       T2ForQualConv = S.Context.getQualifiedType(
-          T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
+          T2ForQualConv.getUnqualifiedType(S.Context), T2BaseQuals);
     }
     QualType cv1T4 = S.Context.getQualifiedType(T2ForQualConv, T1QualsIgnoreAS);
     if (T1QualsIgnoreAS != T2QualsIgnoreAS)
@@ -6316,7 +6316,7 @@ static void TryUserDefinedConversion(Sema &S,
     // subsumed by the initialization. Per DR5, the created temporary is of the
     // cv-unqualified type of the destination.
     Sequence.AddUserConversionStep(Function, Best->FoundDecl,
-                                   DestType.getUnqualifiedType(),
+                                   DestType.getUnqualifiedType(S.Context),
                                    HadMultipleCandidates);
 
     // C++14 and before:
@@ -8695,7 +8695,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         auto InvalidType = [&] {
           S.Diag(Record->getLocation(),
                  diag::err_std_initializer_list_malformed)
-              << Step->Type.getUnqualifiedType();
+              << Step->Type.getUnqualifiedType(S.Context);
           return ExprError();
         };
 

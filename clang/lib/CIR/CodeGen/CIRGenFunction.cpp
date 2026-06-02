@@ -524,7 +524,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     // is set up before EmitFunctionProlog runs).
     // TODO(cir): Align prolog handling with classic codegen.
     if (fd && fd->hasImplicitReturnZero()) {
-      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Type cirRetTy =
+          convertType(returnType.getUnqualifiedType(getContext()));
       mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
       mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
       builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,

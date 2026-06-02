@@ -1497,7 +1497,7 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
                                   RValue TypeIdentity, Address NewPtr,
                                   llvm::Value *AllocSize, CharUnits AllocAlign,
                                   const CallArgList &NewArgs) {
-  unsigned NumNonPlacementArgs = E->getNumImplicitArgs();
+  unsigned NumNonPlacementArgs = E->getNumImplicitArgs(CGF.getContext());
 
   // If we're not inside a conditional branch, then the cleanup will
   // dominate and we can do the easier (and more efficient) thing.
@@ -1514,7 +1514,7 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
     DirectCleanup *Cleanup = CGF.EHStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
         TypeIdentity, NewPtr.emitRawPointer(CGF), AllocSize,
-        E->implicitAllocationParameters(), AllocAlign);
+        E->implicitAllocationParameters(CGF.getContext()), AllocAlign);
     for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
       auto &Arg = NewArgs[I + NumNonPlacementArgs];
       Cleanup->setPlacementArg(I, Arg.getRValue(CGF), Arg.Ty);
@@ -1543,7 +1543,7 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
       CGF.EHStack.pushCleanupWithExtra<ConditionalCleanup>(
           EHCleanup, E->getNumPlacementArgs(), E->getOperatorDelete(),
           SavedTypeIdentity, SavedNewPtr, SavedAllocSize,
-          E->implicitAllocationParameters(), AllocAlign);
+          E->implicitAllocationParameters(CGF.getContext()), AllocAlign);
   for (unsigned I = 0, N = E->getNumPlacementArgs(); I != N; ++I) {
     auto &Arg = NewArgs[I + NumNonPlacementArgs];
     Cleanup->setPlacementArg(
@@ -1614,7 +1614,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   } else {
     const FunctionProtoType *allocatorType =
         allocator->getType()->castAs<FunctionProtoType>();
-    ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
+    ImplicitAllocationParameters IAP =
+        E->implicitAllocationParameters(getContext());
     unsigned ParamsToSkip = 0;
     if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
       QualType SpecializedTypeIdentity = allocatorType->getParamType(0);

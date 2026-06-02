@@ -1220,8 +1220,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
       if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
         Out << "?__N";
-        mangleTemplateArgValue(TPO->getType().getUnqualifiedType(),
-                               TPO->getValue(), TplArgKind::ClassNTTP);
+        mangleTemplateArgValue(
+            TPO->getType().getUnqualifiedType(getASTContext()), TPO->getValue(),
+            TplArgKind::ClassNTTP);
         break;
       }
 
@@ -1820,7 +1821,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     } else if (TA.getParamTypeForDecl()->isRecordType()) {
       Out << "$";
       auto *TPO = cast<TemplateParamObjectDecl>(ND);
-      mangleTemplateArgValue(TPO->getType().getUnqualifiedType(),
+      mangleTemplateArgValue(TPO->getType().getUnqualifiedType(getASTContext()),
                              TPO->getValue(), TplArgKind::ClassNTTP);
     } else if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
       mangleVarDecl(VD, cast<NonTypeTemplateParmDecl>(Parm),
@@ -3208,7 +3209,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       }
     } else {
       if (ResultType->isVoidType())
-        ResultType = ResultType.getUnqualifiedType();
+        ResultType = ResultType.getUnqualifiedType(getASTContext());
       mangleType(ResultType, Range, QMM_Result);
     }
   }

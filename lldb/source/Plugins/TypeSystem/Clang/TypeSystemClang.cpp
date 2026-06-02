@@ -140,8 +140,8 @@ bool isOverload(clang::CXXMethodDecl *m1, clang::CXXMethodDecl *m2) {
 
   auto compareArgTypes = [&context](const clang::QualType &m1p,
                                     const clang::QualType &m2p) {
-    return context.hasSameType(m1p.getUnqualifiedType(),
-                               m2p.getUnqualifiedType());
+    return context.hasSameType(m1p.getUnqualifiedType(context),
+                               m2p.getUnqualifiedType(context));
   };
 
   // FIXME: In C++14 and later, we can just pass m2Type->param_type_end()
@@ -1172,8 +1172,8 @@ bool TypeSystemClang::AreTypesSame(CompilerType type1, CompilerType type2,
   QualType type2_qual = ClangUtil::GetQualType(type2);
 
   if (ignore_qualifiers) {
-    type1_qual = type1_qual.getUnqualifiedType();
-    type2_qual = type2_qual.getUnqualifiedType();
+    type1_qual = type1_qual.getUnqualifiedType(ast->getASTContext());
+    type2_qual = type2_qual.getUnqualifiedType(ast->getASTContext());
   }
 
   return ast->getASTContext().hasSameType(type1_qual, type2_qual);
@@ -2948,7 +2948,7 @@ bool TypeSystemClang::IsRuntimeGeneratedType(
 }
 
 bool TypeSystemClang::IsCharType(lldb::opaque_compiler_type_t type) {
-  return GetQualType(type).getUnqualifiedType()->isCharType();
+  return GetQualType(type).getUnqualifiedType(getASTContext())->isCharType();
 }
 
 bool TypeSystemClang::IsCompleteType(lldb::opaque_compiler_type_t type) {
@@ -4285,7 +4285,7 @@ static clang::QualType GetFullyUnqualifiedType_Impl(clang::ASTContext *ast,
         arr->getSize(), arr->getSizeExpr(), arr->getSizeModifier(),
         arr->getIndexTypeQualifiers().getAsOpaqueValue());
   } else
-    qual_type = qual_type.getUnqualifiedType();
+    qual_type = qual_type.getUnqualifiedType(*ast);
   qual_type.removeLocalConst();
   qual_type.removeLocalRestrict();
   qual_type.removeLocalVolatile();
@@ -7596,11 +7596,12 @@ void TypeSystemClang::SetIntegerInitializerForVariable(
   // Bools are handled separately because the clang AST printer handles bools
   // separately from other integral types.
   if (qt->isSpecificBuiltinType(BuiltinType::Bool)) {
-    var->setInit(CXXBoolLiteralExpr::Create(
-        ast, !init_value.isZero(), qt.getUnqualifiedType(), SourceLocation()));
+    var->setInit(CXXBoolLiteralExpr::Create(ast, !init_value.isZero(),
+                                            qt.getUnqualifiedType(ast),
+                                            SourceLocation()));
   } else {
     var->setInit(IntegerLiteral::Create(
-        ast, init_value, qt.getUnqualifiedType(), SourceLocation()));
+        ast, init_value, qt.getUnqualifiedType(ast), SourceLocation()));
   }
 }
 
@@ -7612,7 +7613,7 @@ void TypeSystemClang::SetFloatingInitializerForVariable(
   QualType qt = var->getType();
   assert(qt->isFloatingType() && "only floating point types supported");
   var->setInit(FloatingLiteral::Create(
-      ast, init_value, true, qt.getUnqualifiedType(), SourceLocation()));
+      ast, init_value, true, qt.getUnqualifiedType(ast), SourceLocation()));
 }
 
 llvm::SmallVector<clang::ParmVarDecl *>
@@ -7836,7 +7837,7 @@ TypeSystemClang::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
     return nullptr;
 
   return std::make_unique<clang::CXXBaseSpecifier>(
-      clang::SourceRange(), is_virtual, base_of_class,
+      getASTContext(), clang::SourceRange(), is_virtual, base_of_class,
       TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access),
       getASTContext().getTrivialTypeSourceInfo(GetQualType(type)),
       clang::SourceLocation());

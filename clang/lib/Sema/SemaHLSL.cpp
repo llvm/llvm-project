@@ -585,8 +585,9 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
       if (BaseDecl) {
         TypeSourceInfo *TSI =
             AST.getTrivialTypeSourceInfo(AST.getCanonicalTagType(BaseDecl));
-        Base = CXXBaseSpecifier(SourceRange(), false, StructDecl->isClass(),
-                                AS_none, TSI, SourceLocation());
+        Base =
+            CXXBaseSpecifier(AST, SourceRange(), false, StructDecl->isClass(),
+                             AS_none, TSI, SourceLocation());
       }
     }
     if (BaseDecl) {
@@ -4639,20 +4640,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   return false;
 }
 
-static void BuildFlattenedTypeList(QualType BaseTy,
+static void BuildFlattenedTypeList(const ASTContext &Ctx, QualType BaseTy,
                                    llvm::SmallVectorImpl<QualType> &List) {
   llvm::SmallVector<QualType, 16> WorkList;
   WorkList.push_back(BaseTy);
   while (!WorkList.empty()) {
     QualType T = WorkList.pop_back_val();
-    T = T.getCanonicalType().getUnqualifiedType();
+    T = T.getCanonicalType().getUnqualifiedType(Ctx);
     if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
       llvm::SmallVector<QualType, 16> ElementFields;
       // Generally I've avoided recursion in this algorithm, but arrays of
       // structs could be time-consuming to flatten and churn through on the
       // work list. Hopefully nesting arrays of structs containing arrays
       // of structs too many levels deep is unlikely.
-      BuildFlattenedTypeList(AT->getElementType(), ElementFields);
+      BuildFlattenedTypeList(Ctx, AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
         llvm::append_range(List, ElementFields);
@@ -4757,17 +4758,17 @@ bool SemaHLSL::IsScalarizedLayoutCompatible(QualType T1, QualType T2) const {
   if (T1.isNull() || T2.isNull())
     return false;
 
-  T1 = T1.getCanonicalType().getUnqualifiedType();
-  T2 = T2.getCanonicalType().getUnqualifiedType();
+  T1 = T1.getCanonicalType().getUnqualifiedType(SemaRef.getASTContext());
+  T2 = T2.getCanonicalType().getUnqualifiedType(SemaRef.getASTContext());
 
   // If both types are the same canonical type, they're obviously compatible.
   if (SemaRef.getASTContext().hasSameType(T1, T2))
     return true;
 
   llvm::SmallVector<QualType, 16> T1Types;
-  BuildFlattenedTypeList(T1, T1Types);
+  BuildFlattenedTypeList(SemaRef.getASTContext(), T1, T1Types);
   llvm::SmallVector<QualType, 16> T2Types;
-  BuildFlattenedTypeList(T2, T2Types);
+  BuildFlattenedTypeList(SemaRef.getASTContext(), T2, T2Types);
 
   // Check the flattened type list
   return llvm::equal(T1Types, T2Types,
@@ -4902,7 +4903,7 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
     SrcTy = SrcMatTy->getElementType();
 
   llvm::SmallVector<QualType> DestTypes;
-  BuildFlattenedTypeList(DestTy, DestTypes);
+  BuildFlattenedTypeList(SemaRef.getASTContext(), DestTy, DestTypes);
 
   for (unsigned I = 0, Size = DestTypes.size(); I < Size; ++I) {
     if (DestTypes[I]->isUnionType())
@@ -4931,9 +4932,9 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
     return false;
 
   llvm::SmallVector<QualType> DestTypes;
-  BuildFlattenedTypeList(DestTy, DestTypes);
+  BuildFlattenedTypeList(SemaRef.getASTContext(), DestTy, DestTypes);
   llvm::SmallVector<QualType> SrcTypes;
-  BuildFlattenedTypeList(SrcTy, SrcTypes);
+  BuildFlattenedTypeList(SemaRef.getASTContext(), SrcTy, SrcTypes);
 
   // Usually the size of SrcTypes must be greater than or equal to the size of
   // DestTypes.
@@ -6035,7 +6036,7 @@ public:
       const IncompleteArrayType *IAT = Ctx.getAsIncompleteArrayType(InitTy);
       InitTy = IAT->getElementType();
     }
-    BuildFlattenedTypeList(InitTy, DestTypes);
+    BuildFlattenedTypeList(SemaRef.getASTContext(), InitTy, DestTypes);
     DstIt = DestTypes.begin();
   }
 

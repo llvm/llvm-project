@@ -302,7 +302,7 @@ Address AtomicInfo::CreateTempAlloca() const {
   // alloca pointer element.
   QualType TmpTy = (LVal.isBitField() && ValueSizeInBits > AtomicSizeInBits)
                        ? ValueTy
-                       : AtomicTy.getUnqualifiedType();
+                       : AtomicTy.getUnqualifiedType(CGF.getContext());
   Address TempAlloca =
       CGF.CreateMemTemp(TmpTy, getAtomicAlignment(), "atomic-temp");
   // Cast to pointer to value type for bitfields.
@@ -1099,7 +1099,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
     break;
   }
 
-  QualType RValTy = E->getType().getUnqualifiedType();
+  QualType RValTy = E->getType().getUnqualifiedType(getContext());
   bool ShouldCastToIntPtrTy =
       shouldCastToInt(ConvertTypeForMem(MemTy), E->isCmpXChg());
 

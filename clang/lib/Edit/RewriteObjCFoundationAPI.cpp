@@ -112,7 +112,7 @@ maybeAdjustInterfaceForSubscriptingCheck(const ObjCInterfaceDecl *IFace,
   assert(IFace && Receiver);
 
   // If the receiver has type 'id'...
-  if (!Ctx.isObjCIdType(Receiver->getType().getUnqualifiedType()))
+  if (!Ctx.isObjCIdType(Receiver->getType().getUnqualifiedType(Ctx)))
     return IFace;
 
   const ObjCMessageExpr *

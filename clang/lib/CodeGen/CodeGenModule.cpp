@@ -2796,7 +2796,7 @@ void CodeGenModule::GenKernelArgMetadata(llvm::Function *Fn,
         accessQuals.push_back(llvm::MDString::get(VMContext, "none"));
 
       auto getTypeSpelling = [&](QualType Ty) {
-        auto typeName = Ty.getUnqualifiedType().getAsString(Policy);
+        auto typeName = Ty.getUnqualifiedType(getContext()).getAsString(Policy);
 
         if (Ty.isCanonical()) {
           StringRef typeNameRef = typeName;
@@ -4111,7 +4111,7 @@ bool CodeGenModule::isInNoSanitizeList(SanitizerMask Kind,
     // not sanitized, we also don't instrument arrays of them.
     while (auto AT = dyn_cast<ArrayType>(Ty.getTypePtr()))
       Ty = AT->getElementType();
-    Ty = Ty.getCanonicalType().getUnqualifiedType();
+    Ty = Ty.getCanonicalType().getUnqualifiedType(getContext());
     // Only record types (classes, structs etc.) are ignored.
     if (Ty->isRecordType()) {
       std::string TypeStr = Ty.getAsString(getContext().getPrintingPolicy());

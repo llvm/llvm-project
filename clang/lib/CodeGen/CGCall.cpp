@@ -3289,7 +3289,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
   // return statements.
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl)) {
     if (FD->hasImplicitReturnZero()) {
-      QualType RetTy = FD->getReturnType().getUnqualifiedType();
+      QualType RetTy = FD->getReturnType().getUnqualifiedType(getContext());
       llvm::Type *LLVMTy = CGM.getTypes().ConvertType(RetTy);
       llvm::Constant *Zero = llvm::Constant::getNullValue(LLVMTy);
       Builder.CreateStore(Zero, ReturnValue);

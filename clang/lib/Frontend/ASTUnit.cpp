@@ -394,8 +394,8 @@ void ASTUnit::CacheCodeCompletionResults() {
         CachedResult.TypeClass = STC_Void;
         CachedResult.Type = 0;
       } else {
-        CanQualType CanUsageType
-          = Ctx->getCanonicalType(UsageType.getUnqualifiedType());
+        CanQualType CanUsageType =
+            Ctx->getCanonicalType(UsageType.getUnqualifiedType(*Ctx));
         CachedResult.TypeClass = getSimplifiedTypeClass(CanUsageType);
 
         // Determine whether we have already seen this type. If so, we save
@@ -1985,9 +1985,8 @@ void AugmentedCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &S,
                                          S.getLangOpts(),
                                Context.getPreferredType()->isAnyPointerType());
       } else if (C->Type) {
-        CanQualType Expected
-          = S.Context.getCanonicalType(
-                               Context.getPreferredType().getUnqualifiedType());
+        CanQualType Expected = S.Context.getCanonicalType(
+            Context.getPreferredType().getUnqualifiedType(S.Context));
         SimplifiedTypeClass ExpectedSTC = getSimplifiedTypeClass(Expected);
         if (ExpectedSTC == C->TypeClass) {
           // We know this type is similar; check for an exact match.

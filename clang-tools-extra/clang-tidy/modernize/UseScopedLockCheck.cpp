@@ -45,8 +45,8 @@ static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
 
   for (const Decl *Decl : DS->decls()) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
-      const QualType Type =
-          VD->getType().getCanonicalType().getUnqualifiedType();
+      const QualType Type = VD->getType().getCanonicalType().getUnqualifiedType(
+          VD->getASTContext());
       if (isLockGuard(Type))
         LockGuards.push_back(VD);
     }

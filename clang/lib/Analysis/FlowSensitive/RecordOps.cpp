@@ -56,8 +56,9 @@ static void copySyntheticField(QualType FieldType, StorageLocation &SrcFieldLoc,
 
 void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
                 Environment &Env, const QualType TypeToCopy) {
-  auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType();
-  auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType();
+  const ASTContext &Ctx = Src.getType()->getAsRecordDecl()->getASTContext();
+  auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType(Ctx);
+  auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType(Ctx);
 
   auto SrcDecl = SrcType->getAsCXXRecordDecl();
   auto DstDecl = DstType->getAsCXXRecordDecl();
@@ -133,15 +134,16 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
 
 bool recordsEqual(const RecordStorageLocation &Loc1, const Environment &Env1,
                   const RecordStorageLocation &Loc2, const Environment &Env2) {
+  const ASTContext &Ctx = Loc1.getType()->getAsRecordDecl()->getASTContext();
   LLVM_DEBUG({
-    if (Loc2.getType().getCanonicalType().getUnqualifiedType() !=
-        Loc1.getType().getCanonicalType().getUnqualifiedType()) {
+    if (Loc2.getType().getCanonicalType().getUnqualifiedType(Ctx) !=
+        Loc1.getType().getCanonicalType().getUnqualifiedType(Ctx)) {
       llvm::dbgs() << "Loc1 type " << Loc1.getType() << "\n";
       llvm::dbgs() << "Loc2 type " << Loc2.getType() << "\n";
     }
   });
-  assert(Loc2.getType().getCanonicalType().getUnqualifiedType() ==
-         Loc1.getType().getCanonicalType().getUnqualifiedType());
+  assert(Loc2.getType().getCanonicalType().getUnqualifiedType(Ctx) ==
+         Loc1.getType().getCanonicalType().getUnqualifiedType(Ctx));
 
   for (auto [Field, FieldLoc1] : Loc1.children()) {
     StorageLocation *FieldLoc2 = Loc2.getChild(*Field);

@@ -652,9 +652,10 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
   // The synthesized body assumes that oldVaue, newValue and *theValue all
   // share the same type. When the user provided declaration uses mis-matched
   // types, refuse to model the call.
-  QualType OldCanonical = OldValueTy.getCanonicalType().getUnqualifiedType();
-  QualType NewCanonical = NewValueTy.getCanonicalType().getUnqualifiedType();
-  QualType PointeeCanonical = PointeeTy.getCanonicalType().getUnqualifiedType();
+  QualType OldCanonical = OldValueTy.getCanonicalType().getUnqualifiedType(C);
+  QualType NewCanonical = NewValueTy.getCanonicalType().getUnqualifiedType(C);
+  QualType PointeeCanonical =
+      PointeeTy.getCanonicalType().getUnqualifiedType(C);
   if (OldCanonical != NewCanonical || OldCanonical != PointeeCanonical)
     return nullptr;
 

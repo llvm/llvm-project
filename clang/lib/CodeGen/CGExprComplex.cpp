@@ -302,7 +302,7 @@ public:
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
       if (!Ctx.getTargetInfo().hasLongDoubleType() &&
-          HigherElementType.getCanonicalType().getUnqualifiedType() ==
+          HigherElementType.getCanonicalType().getUnqualifiedType(Ctx) ==
               Ctx.LongDoubleTy)
         return QualType();
       FPHasBeenPromoted = true;
@@ -507,10 +507,10 @@ ComplexPairTy ComplexExprEmitter::EmitComplexToComplexCast(ComplexPairTy Val,
                                                            QualType DestType,
                                                            SourceLocation Loc) {
   // Get the src/dest element type.
-  SrcType = SrcType.getAtomicUnqualifiedType()
+  SrcType = SrcType.getAtomicUnqualifiedType(CGF.getContext())
                 ->castAs<ComplexType>()
                 ->getElementType();
-  DestType = DestType.getAtomicUnqualifiedType()
+  DestType = DestType.getAtomicUnqualifiedType(CGF.getContext())
                  ->castAs<ComplexType>()
                  ->getElementType();
 
@@ -538,7 +538,7 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
                                            QualType DestTy) {
-  DestTy = DestTy.getAtomicUnqualifiedType();
+  DestTy = DestTy.getAtomicUnqualifiedType(CGF.getContext());
   switch (CK) {
   case CK_Dependent:
     llvm_unreachable("dependent cast kind in IR gen!");
@@ -1217,7 +1217,8 @@ LValue ComplexExprEmitter::EmitCompoundAssignLValue(
     ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &), RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
+  QualType LHSTy =
+      E->getLHS()->getType().getAtomicUnqualifiedType(CGF.getContext());
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());

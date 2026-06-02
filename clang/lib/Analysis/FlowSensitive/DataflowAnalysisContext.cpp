@@ -59,7 +59,10 @@ FieldSet DataflowAnalysisContext::computeModeledFields(QualType Type) {
 }
 
 const FieldSet &DataflowAnalysisContext::getModeledFields(QualType Type) {
-  QualType CanonicalType = Type.getCanonicalType().getUnqualifiedType();
+  const RecordDecl *RD = Type->getAsRecordDecl();
+  assert(RD != nullptr && "getModeledFields requires a record-typed QualType");
+  const ASTContext &Ctx = RD->getASTContext();
+  QualType CanonicalType = Type.getCanonicalType().getUnqualifiedType(Ctx);
   std::unique_ptr<FieldSet> &Fields = CachedModeledFields[CanonicalType];
   if (Fields == nullptr)
     Fields = std::make_unique<FieldSet>(computeModeledFields(CanonicalType));

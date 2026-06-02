@@ -1652,10 +1652,10 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   llvm::Type *PtrDiffLTy =
       CGF.ConvertType(CGF.getContext().getPointerDiffType());
 
-  llvm::Value *SrcRTTI =
-      CGF.CGM.GetAddrOfRTTIDescriptor(SrcRecordTy.getUnqualifiedType());
-  llvm::Value *DestRTTI =
-      CGF.CGM.GetAddrOfRTTIDescriptor(DestRecordTy.getUnqualifiedType());
+  llvm::Value *SrcRTTI = CGF.CGM.GetAddrOfRTTIDescriptor(
+      SrcRecordTy.getUnqualifiedType(CGF.getContext()));
+  llvm::Value *DestRTTI = CGF.CGM.GetAddrOfRTTIDescriptor(
+      DestRecordTy.getUnqualifiedType(CGF.getContext()));
 
   // Compute the offset hint.
   const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
@@ -4612,7 +4612,7 @@ static unsigned extractPBaseFlags(ASTContext &Ctx, QualType &Type) {
     Flags |= ItaniumRTTIBuilder::PTI_Volatile;
   if (Type.isRestrictQualified())
     Flags |= ItaniumRTTIBuilder::PTI_Restrict;
-  Type = Type.getUnqualifiedType();
+  Type = Type.getUnqualifiedType(Ctx);
 
   // Itanium C++ ABI 2.9.5p7:
   //   When the abi::__pbase_type_info is for a direct or indirect pointer to an

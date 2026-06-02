@@ -983,7 +983,7 @@ static unsigned extractPBaseFlags(const ASTContext &ctx, QualType &ty) {
   if (ty.isRestrictQualified())
     flags |= PTI_Restrict;
 
-  ty = ty.getUnqualifiedType();
+  ty = ty.getUnqualifiedType(ctx);
 
   if (containsIncompleteClassType(ty))
     flags |= PTI_Incomplete;
@@ -2317,10 +2317,12 @@ static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     mlir::Location loc,
                                                     QualType srcRecordTy,
                                                     QualType destRecordTy) {
-  auto srcRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, srcRecordTy.getUnqualifiedType()));
-  auto destRtti = mlir::cast<cir::GlobalViewAttr>(
-      cgf.cgm.getAddrOfRTTIDescriptor(loc, destRecordTy.getUnqualifiedType()));
+  auto srcRtti =
+      mlir::cast<cir::GlobalViewAttr>(cgf.cgm.getAddrOfRTTIDescriptor(
+          loc, srcRecordTy.getUnqualifiedType(cgf.getContext())));
+  auto destRtti =
+      mlir::cast<cir::GlobalViewAttr>(cgf.cgm.getAddrOfRTTIDescriptor(
+          loc, destRecordTy.getUnqualifiedType(cgf.getContext())));
 
   cir::FuncOp runtimeFuncOp = getItaniumDynamicCastFn(cgf);
   cir::FuncOp badCastFuncOp = getBadCastFn(cgf);

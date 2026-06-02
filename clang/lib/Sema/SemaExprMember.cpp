@@ -1285,7 +1285,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   if (const auto *ATy = BaseType->getAs<AtomicType>()) {
     S.DiagRuntimeBehavior(OpLoc, BaseExpr.get(),
                           S.PDiag(diag::warn_atomic_member_access));
-    BaseType = ATy->getValueType().getUnqualifiedType();
+    BaseType = ATy->getValueType().getUnqualifiedType(S.Context);
     BaseExpr = ImplicitCastExpr::Create(
         S.Context, IsArrow ? S.Context.getPointerType(BaseType) : BaseType,
         CK_AtomicToNonAtomic, BaseExpr.get(), nullptr,

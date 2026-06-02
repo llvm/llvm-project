@@ -6069,7 +6069,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       T = getReferenceInitTemporaryType(VD->getInit(), nullptr);
 
     OS << ".~";
-    T.getUnqualifiedType().print(OS, PrintingPolicy(Helper.getLangOpts()));
+    T.getUnqualifiedType(VD->getASTContext())
+        .print(OS, PrintingPolicy(Helper.getLangOpts()));
     OS << "() (Implicit destructor)";
     break;
   }

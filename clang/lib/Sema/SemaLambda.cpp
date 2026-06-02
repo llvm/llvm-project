@@ -436,10 +436,11 @@ bool Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
     return false;
 
   ParmVarDecl *Param = Method->getParamDecl(0);
-  QualType ExplicitObjectParameterType = Param->getType()
-                                             .getNonReferenceType()
-                                             .getUnqualifiedType()
-                                             .getDesugaredType(getASTContext());
+  QualType ExplicitObjectParameterType =
+      Param->getType()
+          .getNonReferenceType()
+          .getUnqualifiedType(getASTContext())
+          .getDesugaredType(getASTContext());
   CanQualType LambdaType = getASTContext().getCanonicalTagType(RD);
   if (LambdaType == ExplicitObjectParameterType)
     return false;
@@ -801,7 +802,7 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
     const Expr *RetE = RS->getRetValue();
 
     QualType ReturnType =
-        (RetE ? RetE->getType() : Context.VoidTy).getUnqualifiedType();
+        (RetE ? RetE->getType() : Context.VoidTy).getUnqualifiedType(Context);
     if (Context.getCanonicalFunctionResultType(ReturnType) ==
           Context.getCanonicalFunctionResultType(CSI.ReturnType)) {
       // Use the return type with the strictest possible nullability annotation.

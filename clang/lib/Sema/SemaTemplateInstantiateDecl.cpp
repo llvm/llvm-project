@@ -2148,7 +2148,8 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
         // derived TypeSourceInfo which strips qualifiers including the weird
         // ones like _Atomic where it forms a different type.
         if (NewTI->getType()->isAtomicType())
-          Enum->setIntegerType(NewTI->getType().getAtomicUnqualifiedType());
+          Enum->setIntegerType(
+              NewTI->getType().getAtomicUnqualifiedType(SemaRef.Context));
         else
           Enum->setIntegerTypeSourceInfo(NewTI);
       }

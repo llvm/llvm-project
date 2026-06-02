@@ -1699,7 +1699,7 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
     //
     // Don't need to worry about array types here, since _Atomic can't be
     // applied to such types.
-    SplitQualType Split = T.getSplitUnqualifiedType();
+    SplitQualType Split = T.getSplitUnqualifiedType(Context);
     T = BuildAtomicType(QualType(Split.Ty, 0),
                         DS ? DS->getAtomicSpecLoc() : Loc);
     if (T.isNull())
@@ -10027,7 +10027,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(IDExpr)) {
     const ValueDecl *VD = DRE->getDecl();
     QualType T = VD->getType();
-    return isa<TemplateParamObjectDecl>(VD) ? T.getUnqualifiedType() : T;
+    return isa<TemplateParamObjectDecl>(VD) ? T.getUnqualifiedType(Context) : T;
   }
   if (const auto *ME = dyn_cast<MemberExpr>(IDExpr)) {
     if (const auto *VD = ME->getMemberDecl())
@@ -10181,7 +10181,7 @@ QualType Sema::BuiltinDecay(QualType BaseType, SourceLocation Loc) {
   if (Underlying->isFunctionType())
     return BuiltinAddPointer(BaseType, Loc);
 
-  SplitQualType Split = Underlying.getSplitUnqualifiedType();
+  SplitQualType Split = Underlying.getSplitUnqualifiedType(Context);
   // std::decay is supposed to produce 'std::remove_cv', but since 'restrict' is
   // in the same group of qualifiers as 'const' and 'volatile', we're extending
   // '__decay(T)' so that it removes all qualifiers.

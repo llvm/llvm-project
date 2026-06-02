@@ -1159,7 +1159,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         QualType RecordType = FD->getParamDecl(0)
                                   ->getType()
                                   .getNonReferenceType()
-                                  .getUnqualifiedType();
+                                  .getUnqualifiedType(Context);
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_comparison_synthesized_at)
                      << (int)DFK.asComparison() << RecordType);
@@ -2463,8 +2463,8 @@ QualType TemplateInstantiator::BuildSubstTemplateTypeParmType(
     Qualifiers RQs;
     RQs = Replacement.getQualifiers();
     RQs.removeObjCLifetime();
-    Replacement =
-        SemaRef.Context.getQualifiedType(Replacement.getUnqualifiedType(), RQs);
+    Replacement = SemaRef.Context.getQualifiedType(
+        Replacement.getUnqualifiedType(SemaRef.Context), RQs);
   }
 
   // TODO: only do this uniquing once, at the start of instantiation.

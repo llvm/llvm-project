@@ -48,7 +48,7 @@ const llvm::abi::Type *QualTypeMapper::convertType(QualType QT) {
   // for instance,  __attribute__((aligned(N))) are lost here. Capture the
   // effective alignment from the original QT and thread it through
   // convertTypeImpl.
-  QT = QT.getCanonicalType().getUnqualifiedType();
+  QT = QT.getCanonicalType().getUnqualifiedType(ASTCtx);
 
   // Results are cached since type conversion may be expensive.
   auto It = TypeCache.find(QT);

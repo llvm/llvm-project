@@ -746,8 +746,8 @@ DeclResult SemaObjC::actOnObjCTypeParam(
         Qualifiers quals = typeBound.getQualifiers();
         quals.removeCVRQualifiers();
         if (!quals.empty()) {
-          typeBoundInfo =
-             Context.getTrivialTypeSourceInfo(typeBound.getUnqualifiedType());
+          typeBoundInfo = Context.getTrivialTypeSourceInfo(
+              typeBound.getUnqualifiedType(Context));
         }
       }
     }
@@ -5587,7 +5587,7 @@ Decl *SemaObjC::ActOnIvar(Scope *S, SourceLocation DeclStart, Declarator &D,
   ASTContext &Context = getASTContext();
   if (Context.getLangOpts().PointerAuthObjcInterfaceSel &&
       !T.getPointerAuth()) {
-    if (Context.isObjCSelType(T.getUnqualifiedType())) {
+    if (Context.isObjCSelType(T.getUnqualifiedType(Context))) {
       if (auto PAQ = Context.getObjCMemberSelTypePtrAuth())
         T = Context.getPointerAuthType(T, PAQ);
     }

@@ -152,7 +152,7 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
 
     ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
     if (Ctx.getLangOpts().ObjC) {
-      QualType UnqualT = T.getUnqualifiedType();
+      QualType UnqualT = T.getUnqualifiedType(Ctx);
       if (Ctx.isObjCIdType(UnqualT))
         TK = CXType_ObjCId;
       else if (Ctx.isObjCClassType(UnqualT))
@@ -514,7 +514,8 @@ try_again:
 }
 
 CXType clang_getUnqualifiedType(CXType CT) {
-  return MakeCXType(GetQualType(CT).getUnqualifiedType(), GetTU(CT));
+  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
+  return MakeCXType(GetQualType(CT).getUnqualifiedType(Ctx), GetTU(CT));
 }
 
 CXType clang_getNonReferenceType(CXType CT) {

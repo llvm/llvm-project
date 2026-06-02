@@ -591,7 +591,8 @@ SplitQualType QualType::getSplitDesugaredType(QualType T) {
   }
 }
 
-SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
+SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type,
+                                                    const ASTContext &Ctx) {
   SplitQualType split = type.split();
 
   // All the qualifiers we've seen so far.
@@ -1716,11 +1717,11 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   return visitor.recurse(*this);
 }
 
-QualType QualType::getAtomicUnqualifiedType() const {
+QualType QualType::getAtomicUnqualifiedType(const ASTContext &Ctx) const {
   QualType T = *this;
   if (const auto AT = T.getTypePtr()->getAs<AtomicType>())
     T = AT->getValueType();
-  return T.getUnqualifiedType();
+  return T.getUnqualifiedType(Ctx);
 }
 
 std::optional<ArrayRef<QualType>>
@@ -3686,7 +3687,7 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   // See also C99 6.3.2.1p2.
   if (!Context.getLangOpts().CPlusPlus ||
       (!getTypePtr()->isDependentType() && !getTypePtr()->isRecordType()))
-    return getUnqualifiedType();
+    return getUnqualifiedType(Context);
 
   return *this;
 }
@@ -4217,7 +4218,8 @@ TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType(
+                     Context)
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
@@ -4232,7 +4234,8 @@ QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
     return getKind() == TypeOfKind::Unqualified
-               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType(
+                     Context)
                : QT;
   }
   return QualType(this, 0);
@@ -4249,7 +4252,8 @@ TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
                        TypeOfKind Kind)
     : Type(TypeOf,
            Kind == TypeOfKind::Unqualified
-               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType(
+                     Context)
                : Can,
            T->getDependence()),
       TOType(T), Context(Context) {
@@ -4259,7 +4263,8 @@ TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
 QualType TypeOfType::desugar() const {
   QualType QT = getUnmodifiedType();
   return getKind() == TypeOfKind::Unqualified
-             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType(
+                   Context)
              : QT;
 }
 

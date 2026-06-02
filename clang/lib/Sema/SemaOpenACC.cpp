@@ -509,7 +509,7 @@ bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
   }
 
   QualType Ty = VarExpr->getType();
-  Ty = Ty.getNonReferenceType().getUnqualifiedType();
+  Ty = Ty.getNonReferenceType().getUnqualifiedType(getASTContext());
 
   // Nothing we can do if this is a dependent type.
   if (Ty->isDependentType())
@@ -643,7 +643,7 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   if (InnerTy.isNull() || InnerTy->isDependentType())
     return VarExpr;
 
-  InnerTy = InnerTy.getUnqualifiedType();
+  InnerTy = InnerTy.getUnqualifiedType(S.getASTContext());
   if (auto *RefTy = InnerTy->getAs<ReferenceType>())
     InnerTy = RefTy->getPointeeType();
 
@@ -2778,8 +2778,8 @@ OpenACCPrivateRecipe SemaOpenACC::CreatePrivateInitRecipe(const Expr *VarExpr) {
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCPrivateRecipe::Empty();
 
-  QualType VarTy =
-      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+  QualType VarTy = VarExpr->getType().getNonReferenceType().getUnqualifiedType(
+      getASTContext());
 
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =
@@ -2814,8 +2814,8 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCFirstPrivateRecipe::Empty();
 
-  QualType VarTy =
-      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+  QualType VarTy = VarExpr->getType().getNonReferenceType().getUnqualifiedType(
+      getASTContext());
 
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =
@@ -2916,8 +2916,8 @@ OpenACCReductionRecipeWithStorage SemaOpenACC::CreateReductionInitRecipe(
   if (!VarExpr || VarExpr->getType()->isDependentType())
     return OpenACCReductionRecipeWithStorage::Empty();
 
-  QualType VarTy =
-      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+  QualType VarTy = VarExpr->getType().getNonReferenceType().getUnqualifiedType(
+      getASTContext());
 
   // Array sections are special, and we have to treat them that way.
   if (const auto *ASE =

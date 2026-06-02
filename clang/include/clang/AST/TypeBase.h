@@ -1261,7 +1261,7 @@ public:
   /// Note: In C, the _Atomic qualifier is special (see C23 6.2.5p32 for
   /// details), and it is not stripped by this function. Use
   /// getAtomicUnqualifiedType() to strip qualifiers including _Atomic.
-  inline QualType getUnqualifiedType() const;
+  inline QualType getUnqualifiedType(const ASTContext &Ctx) const;
 
   /// Retrieve the unqualified variant of the given type, removing as little
   /// sugar as possible.
@@ -1272,7 +1272,7 @@ public:
   /// The resulting type might still be qualified if it's sugar for an array
   /// type.  To strip qualifiers even from within a sugared array type, use
   /// ASTContext::getUnqualifiedArrayType.
-  inline SplitQualType getSplitUnqualifiedType() const;
+  inline SplitQualType getSplitUnqualifiedType(const ASTContext &Ctx) const;
 
   /// Determine whether this type is more qualified than the other
   /// given type, requiring exact equality for non-CVR qualifiers.
@@ -1639,7 +1639,7 @@ public:
   /// Like getUnqualifiedType(), the type may still be qualified if it is a
   /// sugared array type.  To strip qualifiers even from within a sugared array
   /// type, use in conjunction with ASTContext::getUnqualifiedArrayType.
-  QualType getAtomicUnqualifiedType() const;
+  QualType getAtomicUnqualifiedType(const ASTContext &Ctx) const;
 
 private:
   // These methods are implemented in a separate translation unit;
@@ -1648,7 +1648,8 @@ private:
   static bool isConstant(QualType T, const ASTContext& Ctx);
   static QualType getDesugaredType(QualType T, const ASTContext &Context);
   static SplitQualType getSplitDesugaredType(QualType T);
-  static SplitQualType getSplitUnqualifiedTypeImpl(QualType type);
+  static SplitQualType getSplitUnqualifiedTypeImpl(QualType type,
+                                                   const ASTContext &Ctx);
   static QualType getSingleStepDesugaredTypeImpl(QualType type,
                                                  const ASTContext &C);
   static QualType IgnoreParens(QualType T);
@@ -8536,18 +8537,19 @@ inline bool QualType::hasQualifiers() const {
          getCommonPtr()->CanonicalType.hasLocalQualifiers();
 }
 
-inline QualType QualType::getUnqualifiedType() const {
+inline QualType QualType::getUnqualifiedType(const ASTContext &Ctx) const {
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
     return QualType(getTypePtr(), 0);
 
-  return QualType(getSplitUnqualifiedTypeImpl(*this).Ty, 0);
+  return QualType(getSplitUnqualifiedTypeImpl(*this, Ctx).Ty, 0);
 }
 
-inline SplitQualType QualType::getSplitUnqualifiedType() const {
+inline SplitQualType
+QualType::getSplitUnqualifiedType(const ASTContext &Ctx) const {
   if (!getTypePtr()->getCanonicalTypeInternal().hasLocalQualifiers())
     return split();
 
-  return getSplitUnqualifiedTypeImpl(*this);
+  return getSplitUnqualifiedTypeImpl(*this, Ctx);
 }
 
 inline void QualType::removeLocalConst() {
@@ -8612,7 +8614,7 @@ inline bool QualType::isAtLeastAsQualifiedAs(QualType other,
   Qualifiers OtherQuals = other.getQualifiers();
 
   // Ignore __unaligned qualifier if this type is a void.
-  if (getUnqualifiedType()->isVoidType())
+  if (getUnqualifiedType(Ctx)->isVoidType())
     OtherQuals.removeUnaligned();
 
   return getQualifiers().compatiblyIncludes(OtherQuals, Ctx);

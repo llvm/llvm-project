@@ -23,7 +23,8 @@ namespace {
 // FIXME move to ASTMatchers
 AST_MATCHER_P(QualType, hasUnqualifiedType,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
-  return InnerMatcher.matches(Node.getUnqualifiedType(), Finder, Builder);
+  return InnerMatcher.matches(Node.getUnqualifiedType(Finder->getASTContext()),
+                              Finder, Builder);
 }
 
 enum class Qualifier { Const, Volatile, Restrict };

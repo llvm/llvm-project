@@ -45,9 +45,9 @@ static bool isRealCharType(const QualType &Ty) {
 /// passed integer type. If the passed type is already signed then its name is
 /// just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingSignedTypeName(const QualType &QT) {
+getCorrespondingSignedTypeName(const QualType &QT, const ASTContext &Ctx) {
   using namespace clang;
-  const auto UQT = QT.getUnqualifiedType();
+  const auto UQT = QT.getUnqualifiedType(Ctx);
   if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::UChar:
@@ -97,9 +97,9 @@ getCorrespondingSignedTypeName(const QualType &QT) {
 /// the passed integer type. If the passed type is already unsigned then its
 /// name is just returned. Only supports BuiltinTypes.
 static std::optional<std::string>
-getCorrespondingUnsignedTypeName(const QualType &QT) {
+getCorrespondingUnsignedTypeName(const QualType &QT, const ASTContext &Ctx) {
   using namespace clang;
-  const auto UQT = QT.getUnqualifiedType();
+  const auto UQT = QT.getUnqualifiedType(Ctx);
   if (const auto *BT = dyn_cast<BuiltinType>(UQT)) {
     switch (BT->getKind()) {
     case BuiltinType::SChar:
@@ -148,10 +148,11 @@ getCorrespondingUnsignedTypeName(const QualType &QT) {
 }
 
 static std::optional<std::string>
-castTypeForArgument(ConversionSpecifier::Kind ArgKind, const QualType &QT) {
+castTypeForArgument(ConversionSpecifier::Kind ArgKind, const QualType &QT,
+                    const ASTContext &Ctx) {
   if (ArgKind == ConversionSpecifier::Kind::uArg)
-    return getCorrespondingUnsignedTypeName(QT);
-  return getCorrespondingSignedTypeName(QT);
+    return getCorrespondingUnsignedTypeName(QT, Ctx);
+  return getCorrespondingSignedTypeName(QT, Ctx);
 }
 
 static bool isMatchingSignedness(ConversionSpecifier::Kind ArgKind,
@@ -461,7 +462,7 @@ bool FormatStringConverter::emitIntegerArgument(
     // same.
     if (const auto *ED = ArgType->getAsEnumDecl()) {
       if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ED->getIntegerType()))
+              castTypeForArgument(ArgKind, ED->getIntegerType(), *Context))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else
@@ -475,7 +476,7 @@ bool FormatStringConverter::emitIntegerArgument(
     // Even -Wformat doesn't warn for this. std::format will format as
     // unsigned unless we cast it.
     if (const std::optional<std::string> MaybeCastType =
-            castTypeForArgument(ArgKind, ArgType))
+            castTypeForArgument(ArgKind, ArgType, *Context))
       ArgFixes.emplace_back(
           ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
     else

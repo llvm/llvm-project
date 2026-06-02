@@ -214,7 +214,7 @@ using CanQualType = CanQual<Type>;
 
 inline CanQualType Type::getCanonicalTypeUnqualified() const {
   return CanQualType::CreateUnsafe(
-      getCanonicalTypeInternal().getUnqualifiedType());
+      getCanonicalTypeInternal().getLocalUnqualifiedType());
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,

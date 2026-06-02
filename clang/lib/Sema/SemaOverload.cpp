@@ -1737,7 +1737,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         FromLoc = From->getBeginLoc();
       }
       QualType FromCanon =
-          S.Context.getCanonicalType(FromType.getUnqualifiedType());
+          S.Context.getCanonicalType(FromType.getUnqualifiedType(S.Context));
       QualType ToCanon
         = S.Context.getCanonicalType(ToType).getUnqualifiedType();
       if ((FromCanon == ToCanon ||
@@ -2422,8 +2422,8 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     SCS.First = ICK_HLSL_Array_RValue;
 
     // Don't consider qualifiers, which include things like address spaces
-    if (FromType.getCanonicalType().getUnqualifiedType() !=
-        ToType.getCanonicalType().getUnqualifiedType())
+    if (FromType.getCanonicalType().getUnqualifiedType(S.Context) !=
+        ToType.getCanonicalType().getUnqualifiedType(S.Context))
       return false;
 
     SCS.setAllToTypes(ToType);
@@ -2446,7 +2446,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // cv-unqualified version of T. Otherwise, the type of the rvalue
     // is T (C++ 4.1p1). C++ can't get here with class types; in C, we
     // just strip the qualifiers because they don't matter.
-    FromType = FromType.getUnqualifiedType();
+    FromType = FromType.getUnqualifiedType(S.Context);
   } else if (FromType->isArrayType()) {
     // Array-to-pointer conversion (C++ 4.2)
     SCS.First = ICK_Array_To_Pointer;
@@ -2505,23 +2505,23 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   } else if (S.IsIntegralPromotion(From, FromType, ToType)) {
     // Integral promotion (C++ 4.5).
     SCS.Second = ICK_Integral_Promotion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (S.IsFloatingPointPromotion(FromType, ToType)) {
     // Floating point promotion (C++ 4.6).
     SCS.Second = ICK_Floating_Promotion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (S.IsComplexPromotion(FromType, ToType)) {
     // Complex promotion (Clang extension)
     SCS.Second = ICK_Complex_Promotion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (S.IsOverflowBehaviorTypePromotion(FromType, ToType)) {
     // OverflowBehaviorType promotions
     SCS.Second = ICK_Integral_Promotion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (S.IsOverflowBehaviorTypeConversion(FromType, ToType)) {
     // OverflowBehaviorType conversions
     SCS.Second = ICK_Integral_Conversion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (ToType->isBooleanType() &&
              (FromType->isArithmeticType() || FromType->isAnyPointerType() ||
               FromType->isBlockPointerType() ||
@@ -2533,20 +2533,20 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              ToType->isIntegralType(S.Context)) {
     // Integral conversions (C++ 4.7).
     SCS.Second = ICK_Integral_Conversion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (FromType->isAnyComplexType() && ToType->isAnyComplexType()) {
     // Complex conversions (C99 6.3.1.6)
     SCS.Second = ICK_Complex_Conversion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if ((FromType->isAnyComplexType() && ToType->isArithmeticType()) ||
              (ToType->isAnyComplexType() && FromType->isArithmeticType())) {
     // Complex-real conversions (C99 6.3.1.7)
     SCS.Second = ICK_Complex_Real;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (IsFloatingPointConversion(S, FromType, ToType)) {
     // Floating point conversions (C++ 4.8).
     SCS.Second = ICK_Floating_Conversion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if ((FromType->isRealFloatingType() &&
               ToType->isIntegralType(S.Context)) ||
              (FromType->isIntegralOrUnscopedEnumerationType() &&
@@ -2554,7 +2554,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
     // Floating-integral conversions (C++ 4.9).
     SCS.Second = ICK_Floating_Integral;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (S.IsBlockPointerConversion(FromType, ToType, FromType)) {
     SCS.Second = ICK_Block_Pointer_Conversion;
   } else if (AllowObjCWritebackConversion &&
@@ -2565,7 +2565,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Pointer conversions (C++ 4.10).
     SCS.Second = ICK_Pointer_Conversion;
     SCS.IncompatibleObjC = IncompatibleObjC;
-    FromType = FromType.getUnqualifiedType();
+    FromType = FromType.getUnqualifiedType(S.Context);
   } else if (S.IsMemberPointerConversion(From, FromType, ToType,
                                          InOverloadResolution, FromType)) {
     // Pointer to member conversions (4.11).
@@ -2574,17 +2574,17 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                 From, InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (IsMatrixConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
     SCS.Dimension = DimensionICK;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (!S.getLangOpts().CPlusPlus &&
              S.Context.typesAreCompatible(ToType, FromType)) {
     // Compatible conversions (Clang extension for C function overloading)
     SCS.Second = ICK_Compatible_Conversion;
-    FromType = ToType.getUnqualifiedType();
+    FromType = ToType.getUnqualifiedType(S.Context);
   } else if (IsTransparentUnionStandardConversion(
                  S, From, ToType, InOverloadResolution, SCS, CStyle)) {
     SCS.Second = ICK_TransparentUnionConversion;
@@ -2997,7 +2997,7 @@ BuildSimilarlyQualifiedPointerType(const Type *FromPtr,
 
   /// Conversions to 'id' subsume cv-qualifier conversions.
   if (ToType->isObjCIdType() || ToType->isObjCQualifiedIdType())
-    return ToType.getUnqualifiedType();
+    return ToType.getUnqualifiedType(Context);
 
   QualType CanonFromPointee
     = Context.getCanonicalType(FromPtr->getPointeeType());
@@ -3011,7 +3011,7 @@ BuildSimilarlyQualifiedPointerType(const Type *FromPtr,
   if (CanonToPointee.getLocalQualifiers() == Quals) {
     // ToType is exactly what we need. Return it.
     if (!ToType.isNull())
-      return ToType.getUnqualifiedType();
+      return ToType.getUnqualifiedType(Context);
 
     // Build a pointer to ToPointee. It has the right qualifiers
     // already.
@@ -3188,7 +3188,7 @@ static QualType AdoptQualifiers(ASTContext &Context, QualType T, Qualifiers Qs){
   if (Qs.compatiblyIncludes(TQs, Context))
     return Context.getQualifiedType(T, Qs);
 
-  return Context.getQualifiedType(T.getUnqualifiedType(), Qs);
+  return Context.getQualifiedType(T.getUnqualifiedType(Context), Qs);
 }
 
 bool Sema::isObjCPointerConversion(QualType FromType, QualType ToType,
@@ -3412,7 +3412,7 @@ bool Sema::IsBlockPointerConversion(QualType FromType, QualType ToType,
     QualType LHS = ToFunctionType->getReturnType();
     if ((!getLangOpts().CPlusPlus || !RHS->isRecordType()) &&
         !RHS.hasQualifiers() && LHS.hasQualifiers())
-       LHS = LHS.getUnqualifiedType();
+      LHS = LHS.getUnqualifiedType(Context);
 
      if (Context.hasSameType(RHS,LHS)) {
        // OK exact match.
@@ -3596,9 +3596,9 @@ bool Sema::FunctionParamTypesAreEqual(ArrayRef<QualType> Old,
     // Ignore address spaces in pointee type. This is to disallow overloading
     // on __ptr32/__ptr64 address spaces.
     QualType OldType =
-        Context.removePtrSizeAddrSpace(Type.getUnqualifiedType());
-    QualType NewType =
-        Context.removePtrSizeAddrSpace((New.begin() + J)->getUnqualifiedType());
+        Context.removePtrSizeAddrSpace(Type.getUnqualifiedType(Context));
+    QualType NewType = Context.removePtrSizeAddrSpace(
+        (New.begin() + J)->getUnqualifiedType(Context));
 
     if (!Context.hasSameType(OldType, NewType)) {
       if (ArgPos)
@@ -3959,7 +3959,8 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
 
   // If FromType and ToType are the same type, this is not a
   // qualification conversion.
-  if (FromType.getUnqualifiedType() == ToType.getUnqualifiedType())
+  if (FromType.getUnqualifiedType(Context) ==
+      ToType.getUnqualifiedType(Context))
     return false;
 
   // (C++ 4.4p4):
@@ -4795,8 +4796,10 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     if (SCS2.First == ICK_Array_To_Pointer)
       FromType2 = S.Context.getArrayDecayedType(FromType2);
 
-    QualType FromPointee1 = FromType1->getPointeeType().getUnqualifiedType();
-    QualType FromPointee2 = FromType2->getPointeeType().getUnqualifiedType();
+    QualType FromPointee1 =
+        FromType1->getPointeeType().getUnqualifiedType(S.Context);
+    QualType FromPointee2 =
+        FromType2->getPointeeType().getUnqualifiedType(S.Context);
 
     if (S.IsDerivedFrom(Loc, FromPointee2, FromPointee1))
       return ImplicitConversionSequence::Better;
@@ -5076,13 +5079,17 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
       FromType1->isPointerType() && FromType2->isPointerType() &&
       ToType1->isPointerType() && ToType2->isPointerType()) {
     QualType FromPointee1 =
-        FromType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+        FromType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType(
+            S.Context);
     QualType ToPointee1 =
-        ToType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+        ToType1->castAs<PointerType>()->getPointeeType().getUnqualifiedType(
+            S.Context);
     QualType FromPointee2 =
-        FromType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+        FromType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType(
+            S.Context);
     QualType ToPointee2 =
-        ToType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType();
+        ToType2->castAs<PointerType>()->getPointeeType().getUnqualifiedType(
+            S.Context);
 
     //   -- conversion of C* to B* is better than conversion of C* to A*,
     if (FromPointee1 == FromPointee2 && ToPointee1 != ToPointee2) {
@@ -5385,8 +5392,8 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
               DeclLoc,
               Conv->getConversionType()
                   .getNonReferenceType()
-                  .getUnqualifiedType(),
-              DeclType.getNonReferenceType().getUnqualifiedType()) ==
+                  .getUnqualifiedType(S.Context),
+              DeclType.getNonReferenceType().getUnqualifiedType(S.Context)) ==
               Sema::Ref_Incompatible)
         continue;
     } else {
@@ -7106,9 +7113,9 @@ ExprResult Sema::PerformContextualImplicitConversion(
       } else {
         if (!ConvTemplate && getLangOpts().CPlusPlus14) {
           if (ToType.isNull())
-            ToType = CurToType.getUnqualifiedType();
+            ToType = CurToType.getUnqualifiedType(Context);
           else if (HasUniqueTargetType &&
-                   (CurToType.getUnqualifiedType() != ToType))
+                   (CurToType.getUnqualifiedType(Context) != ToType))
             HasUniqueTargetType = false;
         }
         ViableConversions.addDecl(I.getDecl(), I.getAccess());
@@ -8600,8 +8607,8 @@ void Sema::AddConversionCandidate(
   // We won't go through a user-defined type conversion function to convert a
   // derived to base as such conversions are given Conversion Rank. They only
   // go through a copy constructor. 13.3.3.1.2-p4 [over.ics.user]
-  QualType FromCanon
-    = Context.getCanonicalType(From->getType().getUnqualifiedType());
+  QualType FromCanon =
+      Context.getCanonicalType(From->getType().getUnqualifiedType(Context));
   QualType ToCanon = Context.getCanonicalType(ToType).getUnqualifiedType();
   if (FromCanon == ToCanon ||
       IsDerivedFrom(CandidateSet.getLocation(), FromCanon, ToCanon)) {
@@ -9842,10 +9849,10 @@ public:
           bool Reversed = C->isReversed();
           QualType FirstParamType = C->Function->getParamDecl(Reversed ? 1 : 0)
                                         ->getType()
-                                        .getUnqualifiedType();
+                                        .getUnqualifiedType(S.Context);
           QualType SecondParamType = C->Function->getParamDecl(Reversed ? 0 : 1)
                                          ->getType()
-                                         .getUnqualifiedType();
+                                         .getUnqualifiedType(S.Context);
 
           // Skip if either parameter isn't of enumeral type.
           if (!FirstParamType->isEnumeralType() ||
@@ -13652,8 +13659,7 @@ QualType Sema::ExtractUnqualifiedFunctionType(QualType PossiblyAFunctionType) {
   else if (const MemberPointerType *MemTypePtr =
     PossiblyAFunctionType->getAs<MemberPointerType>())
     Ret = MemTypePtr->getPointeeType();
-  Ret =
-    Context.getCanonicalType(Ret).getUnqualifiedType();
+  Ret = Context.getCanonicalType(Ret).getUnqualifiedType();
   return Ret;
 }
 
@@ -16280,9 +16286,8 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     if (difference) {
       std::string qualsString = difference.getAsString();
       Diag(LParenLoc, diag::err_pointer_to_member_call_drops_quals)
-        << fnType.getUnqualifiedType()
-        << qualsString
-        << (qualsString.find(' ') == std::string::npos ? 1 : 2);
+          << fnType.getUnqualifiedType(Context) << qualsString
+          << (qualsString.find(' ') == std::string::npos ? 1 : 2);
     }
 
     CXXMemberCallExpr *call = CXXMemberCallExpr::Create(

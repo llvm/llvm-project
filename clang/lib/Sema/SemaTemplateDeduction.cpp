@@ -1221,10 +1221,10 @@ static TemplateDeductionResult DeduceForEachType(
         return TemplateDeductionResult::MiscellaneousDeductionFailure;
       }
 
-      if (TemplateDeductionResult Result =
-              DeductFunc(S, TemplateParams, ParamIdx, ArgIdx,
-                         Params[ParamIdx].getUnqualifiedType(),
-                         Args[ArgIdx].getUnqualifiedType(), Info, Deduced, POK);
+      if (TemplateDeductionResult Result = DeductFunc(
+              S, TemplateParams, ParamIdx, ArgIdx,
+              Params[ParamIdx].getUnqualifiedType(S.Context),
+              Args[ArgIdx].getUnqualifiedType(S.Context), Info, Deduced, POK);
           Result != TemplateDeductionResult::Success)
         return Result;
 
@@ -1251,8 +1251,8 @@ static TemplateDeductionResult DeduceForEachType(
         // Deduce template arguments from the pattern.
         if (TemplateDeductionResult Result = DeductFunc(
                 S, TemplateParams, ParamIdx, ArgIdx,
-                Pattern.getUnqualifiedType(), Args[ArgIdx].getUnqualifiedType(),
-                Info, Deduced, POK);
+                Pattern.getUnqualifiedType(S.Context),
+                Args[ArgIdx].getUnqualifiedType(S.Context), Info, Deduced, POK);
             Result != TemplateDeductionResult::Success)
           return Result;
         PackScope.nextPackElement();
@@ -1765,8 +1765,8 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         !DeducedQs.hasObjCLifetime())
       DeducedQs.setObjCLifetime(Qualifiers::OCL_Strong);
 
-    DeducedType =
-        S.Context.getQualifiedType(DeducedType.getUnqualifiedType(), DeducedQs);
+    DeducedType = S.Context.getQualifiedType(
+        DeducedType.getUnqualifiedType(S.Context), DeducedQs);
 
     DeducedTemplateArgument NewDeduced(DeducedType, DeducedFromArrayBound);
     DeducedTemplateArgument Result =
@@ -2193,7 +2193,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
           MPA->isSugared()
               ? S.Context.getCanonicalTagType(MPA->getMostRecentCXXRecordDecl())
               : QualType(MPA->getQualifier().getAsType(), 0)
-                    .getUnqualifiedType();
+                    .getUnqualifiedType(S.Context);
       assert(!TA.isNull() && "member pointer with non-type class");
 
       return DeduceTemplateArgumentsByTypeMatch(
@@ -3791,7 +3791,8 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
       // Qualifiers are compatible, so have the argument type adopt the
       // deduced argument type's qualifiers as if we had performed the
       // qualification conversion.
-      A = Context.getQualifiedType(A.getUnqualifiedType(), DeducedAQuals);
+      A = Context.getQualifiedType(A.getUnqualifiedType(Context),
+                                   DeducedAQuals);
     }
   }
 
@@ -4264,7 +4265,7 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
   //   If P is a cv-qualified type, the top level cv-qualifiers of P's type
   //   are ignored for type deduction.
   if (ParamType.hasQualifiers())
-    ParamType = ParamType.getUnqualifiedType();
+    ParamType = ParamType.getUnqualifiedType(S.Context);
 
   //   [...] If P is a reference type, the type referred to by P is
   //   used for type deduction.
@@ -4314,7 +4315,7 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     else {
       // - If A is a cv-qualified type, the top level cv-qualifiers of A's
       //   type are ignored for type deduction.
-      ArgType = ArgType.getUnqualifiedType();
+      ArgType = ArgType.getUnqualifiedType(S.Context);
     }
   }
 
@@ -4923,8 +4924,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     // removed from P and A in this case, unless P was a reference type. This
     // seems to mostly match what other compilers are doing.
     if (!IsReferenceP) {
-      A = A.getUnqualifiedType();
-      P = P.getUnqualifiedType();
+      A = A.getUnqualifiedType(Context);
+      P = P.getUnqualifiedType(Context);
     }
 
   // C++ [temp.deduct.conv]p3:
@@ -4946,13 +4947,13 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     //   - If P is a cv-qualified type, the top level cv-qualifiers of
     //     P's type are ignored for type deduction.
     else
-      P = P.getUnqualifiedType();
+      P = P.getUnqualifiedType(Context);
 
     // C++0x [temp.deduct.conv]p4:
     //   If A is a cv-qualified type, the top level cv-qualifiers of A's
     //   type are ignored for type deduction. If A is a reference type, the type
     //   referred to by A is used for type deduction.
-    A = A.getUnqualifiedType();
+    A = A.getUnqualifiedType(Context);
   }
 
   // Unevaluated SFINAE context.

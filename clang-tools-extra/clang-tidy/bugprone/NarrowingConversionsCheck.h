@@ -29,25 +29,28 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void diagNarrowType(SourceLocation SourceLoc, const Expr &Lhs,
-                      const Expr &Rhs);
+  void diagNarrowType(const ASTContext &Context, SourceLocation SourceLoc,
+                      const Expr &Lhs, const Expr &Rhs);
 
-  void diagNarrowTypeToSignedInt(SourceLocation SourceLoc, const Expr &Lhs,
+  void diagNarrowTypeToSignedInt(const ASTContext &Context,
+                                 SourceLocation SourceLoc, const Expr &Lhs,
                                  const Expr &Rhs);
 
-  void diagNarrowIntegerConstant(SourceLocation SourceLoc, const Expr &Lhs,
+  void diagNarrowIntegerConstant(const ASTContext &Context,
+                                 SourceLocation SourceLoc, const Expr &Lhs,
                                  const Expr &Rhs, const llvm::APSInt &Value);
 
-  void diagNarrowIntegerConstantToSignedInt(SourceLocation SourceLoc,
+  void diagNarrowIntegerConstantToSignedInt(const ASTContext &Context,
+                                            SourceLocation SourceLoc,
                                             const Expr &Lhs, const Expr &Rhs,
                                             const llvm::APSInt &Value,
                                             uint64_t HexBits);
 
-  void diagNarrowConstant(SourceLocation SourceLoc, const Expr &Lhs,
-                          const Expr &Rhs);
+  void diagNarrowConstant(const ASTContext &Context, SourceLocation SourceLoc,
+                          const Expr &Lhs, const Expr &Rhs);
 
-  void diagConstantCast(SourceLocation SourceLoc, const Expr &Lhs,
-                        const Expr &Rhs);
+  void diagConstantCast(const ASTContext &Context, SourceLocation SourceLoc,
+                        const Expr &Lhs, const Expr &Rhs);
 
   void diagNarrowTypeOrConstant(const ASTContext &Context,
                                 SourceLocation SourceLoc, const Expr &Lhs,

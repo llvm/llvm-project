@@ -715,7 +715,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   //   version of the type of the lvalue; otherwise, the value has the
   //   type of the lvalue.
   if (T.hasQualifiers())
-    T = T.getUnqualifiedType();
+    T = T.getUnqualifiedType(Context);
 
   // Under the MS ABI, lock down the inheritance model now.
   if (T->isMemberPointerType() &&
@@ -748,7 +748,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   //   ... if the lvalue has atomic type, the value has the non-atomic version
   //   of the type of the lvalue ...
   if (const AtomicType *Atomic = T->getAs<AtomicType>()) {
-    T = Atomic->getValueType().getUnqualifiedType();
+    T = Atomic->getValueType().getUnqualifiedType(Context);
     Res = ImplicitCastExpr::Create(Context, T, CK_AtomicToNonAtomic, Res.get(),
                                    nullptr, VK_PRValue, FPOptionsOverride());
   }
@@ -1627,8 +1627,8 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
 static void CheckUnicodeArithmeticConversions(Sema &SemaRef, Expr *LHS,
                                               Expr *RHS, SourceLocation Loc,
                                               ArithConvKind ACK) {
-  QualType LHSType = LHS->getType().getUnqualifiedType();
-  QualType RHSType = RHS->getType().getUnqualifiedType();
+  QualType LHSType = LHS->getType().getUnqualifiedType(SemaRef.Context);
+  QualType RHSType = RHS->getType().getUnqualifiedType(SemaRef.Context);
 
   if (!SemaRef.getLangOpts().CPlusPlus || !LHSType->isUnicodeCharacterType() ||
       !RHSType->isUnicodeCharacterType())
@@ -1720,8 +1720,8 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   // For conversion purposes, we ignore any qualifiers.
   // For example, "const float" and "float" are equivalent.
-  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
-  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType(Context);
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType(Context);
 
   // For conversion purposes, we ignore any atomic qualifier on the LHS.
   if (const AtomicType *AtomicLHS = LHSType->getAs<AtomicType>())
@@ -3471,7 +3471,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     //   [...] The expression is an lvalue if the entity is a [...] template
     //   parameter object.
     if (type->isRecordType()) {
-      type = type.getUnqualifiedType().withConst();
+      type = type.getUnqualifiedType(Context).withConst();
       valueKind = VK_LValue;
       break;
     }
@@ -3479,7 +3479,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     // For non-references, we need to strip qualifiers just in case
     // the template parameter was declared as 'const int' or whatever.
     valueKind = VK_PRValue;
-    type = type.getUnqualifiedType();
+    type = type.getUnqualifiedType(Context);
     break;
   }
 
@@ -7003,8 +7003,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         // Construct a new arg type with address space of Param
         Qualifiers ArgPtQuals = ArgPtTy.getQualifiers();
         ArgPtQuals.setAddressSpace(ParamAS);
-        auto NewArgPtTy =
-            Context.getQualifiedType(ArgPtTy.getUnqualifiedType(), ArgPtQuals);
+        auto NewArgPtTy = Context.getQualifiedType(
+            ArgPtTy.getUnqualifiedType(Context), ArgPtQuals);
         auto NewArgTy =
             Context.getQualifiedType(Context.getPointerType(NewArgPtTy),
                                      ArgTy.getQualifiers());
@@ -8512,8 +8512,10 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
   lhQual.removeAddressSpace();
   rhQual.removeAddressSpace();
 
-  lhptee = S.Context.getQualifiedType(lhptee.getUnqualifiedType(), lhQual);
-  rhptee = S.Context.getQualifiedType(rhptee.getUnqualifiedType(), rhQual);
+  lhptee =
+      S.Context.getQualifiedType(lhptee.getUnqualifiedType(S.Context), lhQual);
+  rhptee =
+      S.Context.getQualifiedType(rhptee.getUnqualifiedType(S.Context), rhQual);
 
   QualType CompositeTy = S.Context.mergeTypes(
       lhptee, rhptee, /*OfBlockPointer=*/false, /*Unqualified=*/false,
@@ -8552,7 +8554,8 @@ static QualType checkConditionalPointerCompatibility(Sema &S, ExprResult &LHS,
       Qualifiers CompositeQuals = CompositeTy.getQualifiers();
       CompositeQuals.setAddressSpace(ResultAddrSpace);
       return S.Context
-          .getQualifiedType(CompositeTy.getUnqualifiedType(), CompositeQuals)
+          .getQualifiedType(CompositeTy.getUnqualifiedType(S.Context),
+                            CompositeQuals)
           .withCVRQualifiers(MergedCVRQual);
     }
     return CompositeTy.withCVRQualifiers(MergedCVRQual);
@@ -8676,9 +8679,9 @@ static QualType OpenCLArithmeticConversions(Sema &S, ExprResult &LHS,
   // For conversion purposes, we ignore any qualifiers.
   // For example, "const float" and "float" are equivalent.
   QualType LHSType =
-    S.Context.getCanonicalType(LHS.get()->getType()).getUnqualifiedType();
+      S.Context.getCanonicalType(LHS.get()->getType()).getUnqualifiedType();
   QualType RHSType =
-    S.Context.getCanonicalType(RHS.get()->getType()).getUnqualifiedType();
+      S.Context.getCanonicalType(RHS.get()->getType()).getUnqualifiedType();
 
   if (!LHSType->isIntegerType() && !LHSType->isRealFloatingType()) {
     S.Diag(QuestionLoc, diag::err_typecheck_cond_expect_int_float)
@@ -8735,7 +8738,7 @@ OpenCLConvertScalarsToVectors(Sema &S, ExprResult &LHS, ExprResult &RHS,
       != S.Context.getTypeSize(ResTy)) {
     // Since VectorTy is created internally, it does not pretty print
     // with an OpenCL name. Instead, we just print a description.
-    std::string EleTyName = ResTy.getUnqualifiedType().getAsString();
+    std::string EleTyName = ResTy.getUnqualifiedType(S.Context).getAsString();
     SmallString<64> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << "(vector of " << NumElements << " '" << EleTyName << "' values)";
@@ -8965,8 +8968,8 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // FIXME: Type of conditional expression must be complete in C mode.
   if (LHSTy->isRecordType() &&
       Context.hasSameUnqualifiedType(LHSTy, RHSTy)) // C99 6.5.15p3
-    return Context.getCommonSugaredType(LHSTy.getUnqualifiedType(),
-                                        RHSTy.getUnqualifiedType());
+    return Context.getCommonSugaredType(LHSTy.getUnqualifiedType(Context),
+                                        RHSTy.getUnqualifiedType(Context));
 
   // C99 6.5.15p5: "If both operands have void type, the result has void type."
   // The following || allows only one side to be void (a GCC-ism).
@@ -9580,8 +9583,10 @@ static AssignConvertType checkBlockPointerTypesForAssignment(Sema &S,
   //  * unqualified types should be compatible.
   if (S.getLangOpts().OpenCL) {
     if (!S.Context.typesAreBlockPointerCompatible(
-            S.Context.getQualifiedType(LHSType.getUnqualifiedType(), LQuals),
-            S.Context.getQualifiedType(RHSType.getUnqualifiedType(), RQuals)))
+            S.Context.getQualifiedType(LHSType.getUnqualifiedType(S.Context),
+                                       LQuals),
+            S.Context.getQualifiedType(RHSType.getUnqualifiedType(S.Context),
+                                       RQuals)))
       return AssignConvertType::IncompatibleBlockPointer;
   } else if (!S.Context.typesAreBlockPointerCompatible(LHSType, RHSType))
     return AssignConvertType::IncompatibleBlockPointer;
@@ -10177,19 +10182,20 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       // cv-unqualified type of the left operand.
       QualType RHSType = RHS.get()->getType();
       if (Diagnose) {
-        RHS = PerformImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
+        RHS = PerformImplicitConversion(RHS.get(),
+                                        LHSType.getUnqualifiedType(Context),
                                         AssignmentAction::Assigning);
       } else {
-        ImplicitConversionSequence ICS =
-            TryImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
-                                  /*SuppressUserConversions=*/false,
-                                  AllowedExplicit::None,
-                                  /*InOverloadResolution=*/false,
-                                  /*CStyle=*/false,
-                                  /*AllowObjCWritebackConversion=*/false);
+        ImplicitConversionSequence ICS = TryImplicitConversion(
+            RHS.get(), LHSType.getUnqualifiedType(Context),
+            /*SuppressUserConversions=*/false, AllowedExplicit::None,
+            /*InOverloadResolution=*/false,
+            /*CStyle=*/false,
+            /*AllowObjCWritebackConversion=*/false);
         if (ICS.isFailure())
           return AssignConvertType::Incompatible;
-        RHS = PerformImplicitConversion(RHS.get(), LHSType.getUnqualifiedType(),
+        RHS = PerformImplicitConversion(RHS.get(),
+                                        LHSType.getUnqualifiedType(Context),
                                         ICS, AssignmentAction::Assigning);
       }
       if (RHS.isInvalid())
@@ -10244,7 +10250,7 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
 
   // The constraints are expressed in terms of the atomic, qualified, or
   // unqualified type of the LHS.
-  QualType LHSTypeAfterConversion = LHSType.getAtomicUnqualifiedType();
+  QualType LHSTypeAfterConversion = LHSType.getAtomicUnqualifiedType(Context);
 
   // C99 6.5.16.1p1: the left operand is a pointer and the right is
   // a null pointer constant <C23>or its type is nullptr_t;</C23>.
@@ -10272,8 +10278,9 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       if (Kind != CK_NoOp && !getLangOpts().CPlusPlus &&
           !RHS.get()->getBeginLoc().isMacroID()) {
         QualType CanRHS =
-            RHS.get()->getType().getCanonicalType().getUnqualifiedType();
-        QualType CanLHS = LHSType.getCanonicalType().getUnqualifiedType();
+            RHS.get()->getType().getCanonicalType().getUnqualifiedType(Context);
+        QualType CanLHS =
+            LHSType.getCanonicalType().getUnqualifiedType(Context);
         if (CanRHS->isVoidPointerType() && CanLHS->isPointerType()) {
           Ret = checkPointerTypesForAssignment(*this, CanLHS, CanRHS,
                                                RHS.get()->getExprLoc());
@@ -10526,7 +10533,7 @@ static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
   if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
-  QualType IntTy = Int->get()->getType().getUnqualifiedType();
+  QualType IntTy = Int->get()->getType().getUnqualifiedType(S.Context);
 
   // Reject cases where the value of the Int is unknown as that would
   // possibly cause truncation, but accept cases where the scalar can be
@@ -10567,7 +10574,7 @@ static bool canConvertIntTyToFloatTy(Sema &S, ExprResult *Int,
   if (Int->get()->containsErrors())
     return false;
 
-  QualType IntTy = Int->get()->getType().getUnqualifiedType();
+  QualType IntTy = Int->get()->getType().getUnqualifiedType(S.Context);
 
   // Determine if the integer constant can be expressed as a floating point
   // number of the appropriate type.
@@ -10611,8 +10618,8 @@ static bool canConvertIntTyToFloatTy(Sema &S, ExprResult *Int,
 /// type without causing truncation of Scalar.
 static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
                                         ExprResult *Vector) {
-  QualType ScalarTy = Scalar->get()->getType().getUnqualifiedType();
-  QualType VectorTy = Vector->get()->getType().getUnqualifiedType();
+  QualType ScalarTy = Scalar->get()->getType().getUnqualifiedType(S.Context);
+  QualType VectorTy = Vector->get()->getType().getUnqualifiedType(S.Context);
   QualType VectorEltTy;
 
   if (const auto *VT = VectorTy->getAs<VectorType>()) {
@@ -10718,8 +10725,8 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
 
   // For conversion purposes, we ignore any qualifiers.
   // For example, "const float" and "float" are equivalent.
-  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
-  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType(Context);
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType(Context);
 
   const VectorType *LHSVecType = LHSType->getAs<VectorType>();
   const VectorType *RHSVecType = RHSType->getAs<VectorType>();
@@ -10982,8 +10989,8 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   if (RHS.isInvalid())
     return QualType();
 
-  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
-  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType(Context);
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType(Context);
 
   const BuiltinType *LHSBuiltinTy = LHSType->getAs<BuiltinType>();
   const BuiltinType *RHSBuiltinTy = RHSType->getAs<BuiltinType>();
@@ -11876,9 +11883,9 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
       if (!rpointee->isVoidType() && !rpointee->isFunctionType()) {
         CharUnits ElementSize = Context.getTypeSizeInChars(rpointee);
         if (ElementSize.isZero()) {
-          Diag(Loc,diag::warn_sub_ptr_zero_size_types)
-            << rpointee.getUnqualifiedType()
-            << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
+          Diag(Loc, diag::warn_sub_ptr_zero_size_types)
+              << rpointee.getUnqualifiedType(Context)
+              << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
         }
       }
 
@@ -12870,7 +12877,8 @@ void Sema::CheckPtrComparisonWithNullChar(ExprResult &E, ExprResult &NullE) {
                                             NullValue ? "NULL" : "(void *)0");
     } else if (const auto *CE = dyn_cast<CStyleCastExpr>(E.get())) {
         TypeSourceInfo *TI = CE->getTypeInfoAsWritten();
-        QualType T = Context.getCanonicalType(TI->getType()).getUnqualifiedType();
+        QualType T =
+            Context.getCanonicalType(TI->getType()).getUnqualifiedType();
         if (T == Context.CharTy)
           Diag(E.get()->getExprLoc(), diag::warn_pointer_compare)
               << NullValue
@@ -13058,8 +13066,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       RHSType->castAs<PointerType>()->getPointeeType().getCanonicalType();
 
     // C99 6.5.9p2 and C99 6.5.8p2
-    if (Context.typesAreCompatible(LCanPointeeTy.getUnqualifiedType(),
-                                   RCanPointeeTy.getUnqualifiedType())) {
+    if (Context.typesAreCompatible(LCanPointeeTy.getUnqualifiedType(Context),
+                                   RCanPointeeTy.getUnqualifiedType(Context))) {
       if (IsRelational) {
         // Pointers both need to point to complete or incomplete types
         if ((LCanPointeeTy->isIncompleteType() !=
@@ -13725,8 +13733,8 @@ QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
 
   // For conversion purposes, we ignore any qualifiers.
   // For example, "const float" and "float" are equivalent.
-  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
-  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType(Context);
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType(Context);
 
   const MatrixType *LHSMatType = LHSType->getAs<MatrixType>();
   const MatrixType *RHSMatType = RHSType->getAs<MatrixType>();
@@ -13779,8 +13787,8 @@ QualType Sema::CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
 
     if (Context.hasSameType(LHSMatType, RHSMatType))
       return Context.getCommonSugaredType(
-          LHS.get()->getType().getUnqualifiedType(),
-          RHS.get()->getType().getUnqualifiedType());
+          LHS.get()->getType().getUnqualifiedType(Context),
+          RHS.get()->getType().getUnqualifiedType(Context));
 
     QualType LHSELTy = LHSMatType->getElementType(),
              RHSELTy = RHSMatType->getElementType();
@@ -14495,8 +14503,8 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   if (getLangOpts().OpenCL &&
       !getOpenCLOptions().isAvailableOption("cl_khr_fp16", getLangOpts()) &&
       LHSType->isHalfType()) {
-    Diag(Loc, diag::err_opencl_half_load_store) << 1
-        << LHSType.getUnqualifiedType();
+    Diag(Loc, diag::err_opencl_half_load_store)
+        << 1 << LHSType.getUnqualifiedType(Context);
     return QualType();
   }
 
@@ -14609,7 +14617,8 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // non-atomic version of the type of the lvalue.
   // C++ 5.17p1: the type of the assignment expression is that of its left
   // operand.
-  return getLangOpts().CPlusPlus ? LHSType : LHSType.getAtomicUnqualifiedType();
+  return getLangOpts().CPlusPlus ? LHSType
+                                 : LHSType.getAtomicUnqualifiedType(Context);
 }
 
 // Scenarios to ignore if expression E is:
@@ -14797,7 +14806,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     return ResType;
   } else {
     VK = VK_PRValue;
-    return ResType.getUnqualifiedType();
+    return ResType.getUnqualifiedType(S.Context);
   }
 }
 
@@ -16135,12 +16144,12 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       // assignment, but is not an lvalue.
       return CompoundAssignOperator::Create(
           Context, LHSExpr, RHSExpr, Opc,
-          LHSExpr->getType().getUnqualifiedType(), VK_PRValue, OK_Ordinary,
-          OpLoc, CurFPFeatureOverrides());
+          LHSExpr->getType().getUnqualifiedType(Context), VK_PRValue,
+          OK_Ordinary, OpLoc, CurFPFeatureOverrides());
     QualType ResultType;
     switch (Opc) {
     case BO_Assign:
-      ResultType = LHSExpr->getType().getUnqualifiedType();
+      ResultType = LHSExpr->getType().getUnqualifiedType(Context);
       break;
     case BO_LT:
     case BO_GT:
@@ -16622,7 +16631,7 @@ ExprResult Sema::ActOnStmtExprResult(ExprResult ER) {
   // FIXME: Provide a better location for the initialization.
   return PerformCopyInitialization(
       InitializedEntity::InitializeStmtExprResult(
-          E->getBeginLoc(), E->getType().getAtomicUnqualifiedType()),
+          E->getBeginLoc(), E->getType().getAtomicUnqualifiedType(Context)),
       SourceLocation(), E);
 }
 
@@ -17591,8 +17600,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     CheckInferredResultType = DstType->isObjCObjectPointerType() &&
       SrcType->isObjCObjectPointerType();
     if (CheckInferredResultType) {
-      SrcType = SrcType.getUnqualifiedType();
-      DstType = DstType.getUnqualifiedType();
+      SrcType = SrcType.getUnqualifiedType(Context);
+      DstType = DstType.getUnqualifiedType(Context);
     } else {
       ConvHints.tryToFixConversion(SrcExpr, SrcType, DstType, *this);
     }
@@ -19507,7 +19516,7 @@ static bool captureInCapturedRegion(
     // Using an LValue reference type is consistent with Lambdas (see below).
     if (S.OpenMP().isOpenMPCapturedDecl(Var)) {
       bool HasConst = DeclRefType.isConstQualified();
-      DeclRefType = DeclRefType.getUnqualifiedType();
+      DeclRefType = DeclRefType.getUnqualifiedType(S.Context);
       // Don't lose diagnostics about assignments to const.
       if (HasConst)
         DeclRefType.addConst();
@@ -19965,7 +19974,7 @@ bool Sema::tryCaptureVariable(
               (IsGlobal && !IsGlobalCap)) {
             Nested = !IsTargetCap;
             bool HasConst = DeclRefType.isConstQualified();
-            DeclRefType = DeclRefType.getUnqualifiedType();
+            DeclRefType = DeclRefType.getUnqualifiedType(Context);
             // Don't lose diagnostics about assignments to const.
             if (HasConst)
               DeclRefType.addConst();

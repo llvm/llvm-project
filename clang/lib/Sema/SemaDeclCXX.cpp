@@ -2879,8 +2879,8 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
 
   // Create the base specifier.
   return new (Context) CXXBaseSpecifier(
-      SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
-      Access, TInfo, EllipsisLoc);
+      Context, SpecifierRange, Virtual,
+      Class->getTagKind() == TagTypeKind::Class, Access, TInfo, EllipsisLoc);
 }
 
 BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
@@ -4977,9 +4977,9 @@ BuildImplicitBaseInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     SemaRef.MarkDeclRefReferenced(cast<DeclRefExpr>(CopyCtorArg));
 
     // Cast to the base class to avoid ambiguities.
-    QualType ArgTy =
-      SemaRef.Context.getQualifiedType(BaseSpec->getType().getUnqualifiedType(),
-                                       ParamType.getQualifiers());
+    QualType ArgTy = SemaRef.Context.getQualifiedType(
+        BaseSpec->getType().getUnqualifiedType(SemaRef.Context),
+        ParamType.getQualifiers());
 
     if (Moving) {
       CopyCtorArg = CastForMoving(SemaRef, CopyCtorArg);
@@ -10074,7 +10074,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD,
     DeclarationName Name =
       Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     ImplicitDeallocationParameters IDP = {
-        DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+        Context, DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
         AlignedAllocationMode::No, SizedDeallocationMode::No};
     if (FindDeallocationFunction(MD->getLocation(), MD->getParent(), Name,
                                  OperatorDelete, IDP,
@@ -10321,25 +10321,25 @@ static bool checkTrivialSubobjectCall(Sema &S, SourceLocation SubobjLoc,
 
     if (!Selected && CSM == CXXSpecialMemberKind::DefaultConstructor) {
       S.Diag(SubobjLoc, diag::note_nontrivial_no_def_ctor)
-        << Kind << SubType.getUnqualifiedType();
+          << Kind << SubType.getUnqualifiedType(S.Context);
       if (CXXConstructorDecl *CD = findUserDeclaredCtor(SubRD))
         S.Diag(CD->getLocation(), diag::note_user_declared_ctor);
     } else if (!Selected)
       S.Diag(SubobjLoc, diag::note_nontrivial_no_copy)
-          << Kind << SubType.getUnqualifiedType() << CSM << SubType;
+          << Kind << SubType.getUnqualifiedType(S.Context) << CSM << SubType;
     else if (Selected->isUserProvided()) {
       if (Kind == TSK_CompleteObject)
         S.Diag(Selected->getLocation(), diag::note_nontrivial_user_provided)
-            << Kind << SubType.getUnqualifiedType() << CSM;
+            << Kind << SubType.getUnqualifiedType(S.Context) << CSM;
       else {
         S.Diag(SubobjLoc, diag::note_nontrivial_user_provided)
-            << Kind << SubType.getUnqualifiedType() << CSM;
+            << Kind << SubType.getUnqualifiedType(S.Context) << CSM;
         S.Diag(Selected->getLocation(), diag::note_declared_at);
       }
     } else {
       if (Kind != TSK_CompleteObject)
         S.Diag(SubobjLoc, diag::note_nontrivial_subobject)
-            << Kind << SubType.getUnqualifiedType() << CSM;
+            << Kind << SubType.getUnqualifiedType(S.Context) << CSM;
 
       // Explain why the defaulted or deleted special member isn't trivial.
       S.SpecialMemberIsTrivial(Selected, CSM,
@@ -12525,7 +12525,7 @@ bool Sema::isInitListConstructor(const FunctionDecl *Ctor) {
 
   QualType ArgType = Ctor->getParamDecl(0)->getType();
   if (const ReferenceType *RT = ArgType->getAs<ReferenceType>())
-    ArgType = RT->getPointeeType().getUnqualifiedType();
+    ArgType = RT->getPointeeType().getUnqualifiedType(Context);
 
   return isStdInitializerList(ArgType, nullptr);
 }
@@ -15434,7 +15434,7 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
   for (auto &Base : ClassDecl->bases()) {
     // Form the assignment:
     //   static_cast<Base*>(this)->Base::operator=(static_cast<Base&>(other));
-    QualType BaseType = Base.getType().getUnqualifiedType();
+    QualType BaseType = Base.getType().getUnqualifiedType(Context);
     if (!BaseType->isRecordType()) {
       Invalid = true;
       continue;
@@ -15823,7 +15823,7 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
 
     // Form the assignment:
     //   static_cast<Base*>(this)->Base::operator=(static_cast<Base&&>(other));
-    QualType BaseType = Base.getType().getUnqualifiedType();
+    QualType BaseType = Base.getType().getUnqualifiedType(Context);
     if (!BaseType->isRecordType()) {
       Invalid = true;
       continue;
@@ -16659,7 +16659,7 @@ static CanQualType RemoveAddressSpaceFromPtr(Sema &SemaRef,
   Qualifiers PtrQuals = PtrTy->getPointeeType().getQualifiers();
   PtrQuals.removeAddressSpace();
   return Ctx.getPointerType(Ctx.getCanonicalType(Ctx.getQualifiedType(
-      PtrTy->getPointeeType().getUnqualifiedType(), PtrQuals)));
+      PtrTy->getPointeeType().getUnqualifiedType(Ctx), PtrQuals)));
 }
 
 enum class AllocationOperatorKind { New, Delete };
@@ -16799,7 +16799,7 @@ static inline bool CheckOperatorNewDeleteTypes(
     CanQualType CanExpectedTy =
         NormalizeType(SemaRef.Context.getCanonicalType(ExpectedType));
     auto ActualParamType =
-        NormalizeType(ParamDecl->getType().getUnqualifiedType());
+        NormalizeType(ParamDecl->getType().getUnqualifiedType(SemaRef.Context));
     if (ActualParamType == CanExpectedTy)
       return false;
     unsigned Diagnostic = ActualParamType->isDependentType()
@@ -17198,7 +17198,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
   } else if (FnDecl->param_size() == 1) {
     const ParmVarDecl *Param = FnDecl->getParamDecl(0);
 
-    QualType ParamType = Param->getType().getUnqualifiedType();
+    QualType ParamType = Param->getType().getUnqualifiedType(Context);
 
     // Only unsigned long long int, long double, any character type, and const
     // char * are allowed as the only parameters.
@@ -17213,7 +17213,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
       QualType InnerType = Ptr->getPointeeType();
 
       // Pointer parameter must be a const char *.
-      if (!(Context.hasSameType(InnerType.getUnqualifiedType(),
+      if (!(Context.hasSameType(InnerType.getUnqualifiedType(Context),
                                 Context.CharTy) &&
             InnerType.isConstQualified() && !InnerType.isVolatileQualified())) {
         Diag(Param->getSourceRange().getBegin(),
@@ -17244,7 +17244,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
 
     // First, verify that the first parameter is correct.
 
-    QualType FirstParamType = (*Param)->getType().getUnqualifiedType();
+    QualType FirstParamType = (*Param)->getType().getUnqualifiedType(Context);
 
     // Two parameter function must have a pointer to const as a
     // first parameter; let's strip those qualifiers.
@@ -17266,7 +17266,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
       return true;
     }
 
-    QualType InnerType = PointeeType.getUnqualifiedType();
+    QualType InnerType = PointeeType.getUnqualifiedType(Context);
     // Only const char *, const wchar_t*, const char8_t*, const char16_t*, and
     // const char32_t* are allowed as the first parameter to a two-parameter
     // function
@@ -17285,7 +17285,7 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
     ++Param;
 
     // The second parameter must be a std::size_t.
-    QualType SecondParamType = (*Param)->getType().getUnqualifiedType();
+    QualType SecondParamType = (*Param)->getType().getUnqualifiedType(Context);
     if (!Context.hasSameType(SecondParamType, Context.getSizeType())) {
       Diag((*Param)->getSourceRange().getBegin(),
            diag::err_literal_operator_param)

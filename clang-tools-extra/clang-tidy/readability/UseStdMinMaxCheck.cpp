@@ -76,13 +76,14 @@ static QualType getNonTemplateAlias(QualType QT) {
 }
 
 static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
-                                       QualType ComparedType) {
+                                       QualType ComparedType,
+                                       const ASTContext &Ctx) {
   const QualType LhsType = CondLhs->getType();
   const QualType RhsType = CondRhs->getType();
   const QualType LhsCanonicalType =
-      LhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+      LhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType(Ctx);
   const QualType RhsCanonicalType =
-      RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+      RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType(Ctx);
   QualType GlobalImplicitCastType;
   if (LhsCanonicalType != RhsCanonicalType) {
     if (isa<IntegerLiteral>(CondRhs))
@@ -95,11 +96,10 @@ static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
   return GlobalImplicitCastType;
 }
 
-static std::string
-createReplacement(const Expr *CondLhs, const Expr *CondRhs,
-                  const Expr *AssignLhs, const SourceManager &Source,
-                  const LangOptions &LO, StringRef FunctionName,
-                  const BinaryOperator *BO, StringRef Comment = "") {
+static std::string createReplacement(
+    const Expr *CondLhs, const Expr *CondRhs, const Expr *AssignLhs,
+    const SourceManager &Source, const LangOptions &LO, const ASTContext &Ctx,
+    StringRef FunctionName, const BinaryOperator *BO, StringRef Comment = "") {
   const StringRef CondLhsStr = Lexer::getSourceText(
       Source.getExpansionRange(CondLhs->getSourceRange()), Source, LO);
   const StringRef CondRhsStr = Lexer::getSourceText(
@@ -108,7 +108,7 @@ createReplacement(const Expr *CondLhs, const Expr *CondRhs,
       Source.getExpansionRange(AssignLhs->getSourceRange()), Source, LO);
 
   const QualType GlobalImplicitCastType =
-      getReplacementCastType(CondLhs, CondRhs, BO->getLHS()->getType());
+      getReplacementCastType(CondLhs, CondRhs, BO->getLHS()->getType(), Ctx);
 
   return (AssignLhsStr + " = " + FunctionName +
           (!GlobalImplicitCastType.isNull()
@@ -226,7 +226,8 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
                SourceRange(IfLocation, Lexer::getLocForEndOfToken(
                                            ThenLocation, 0, Source, LO)),
                createReplacement(CondLhs, CondRhs, AssignLhs, Source, LO,
-                                 FunctionName, BinaryOp, Comment))
+                                 *Result.Context, FunctionName, BinaryOp,
+                                 Comment))
         << IncludeInserter.createIncludeInsertion(
                Source.getFileID(If->getBeginLoc()), AlgorithmHeader);
   };

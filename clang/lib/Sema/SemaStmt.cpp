@@ -875,7 +875,8 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     auto DoTypesMatch = [this, &PD](QualType A, QualType B,
                                     unsigned Select) -> bool {
       if (!Context.hasSimilarType(A, B)) {
-        PD << Select << A.getUnqualifiedType() << B.getUnqualifiedType();
+        PD << Select << A.getUnqualifiedType(Context)
+           << B.getUnqualifiedType(Context);
         return false;
       }
       return true;
@@ -1757,7 +1758,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
   if (ED->hasAttr<FlagEnumAttr>()) {
     if (!IsValueInFlagEnum(ED, *RHSVal, /*AllowMask=*/true))
       Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-          << DstType.getUnqualifiedType();
+          << DstType.getUnqualifiedType(Context);
     return;
   }
 
@@ -1784,7 +1785,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
 
   Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-      << DstType.getUnqualifiedType();
+      << DstType.getUnqualifiedType(Context);
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -3631,7 +3632,7 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
       // for a block). These rules differ from the stated C++11 rules only in
       // that they remove top-level cv-qualifiers.
       if (!CurContext->isDependentContext())
-        FnRetType = RetValExp->getType().getUnqualifiedType();
+        FnRetType = RetValExp->getType().getUnqualifiedType(Context);
       else
         FnRetType = CurCap->ReturnType = Context.DependentTy;
     } else {
@@ -4285,11 +4286,12 @@ public:
   /// Used when creating a CatchHandlerType from a handler type; will determine
   /// whether the type is a pointer or reference and will strip off the top
   /// level pointer and cv-qualifiers.
-  CatchHandlerType(QualType Q) : QT(Q), IsPointer(false) {
+  CatchHandlerType(QualType Q, const ASTContext &Ctx)
+      : QT(Q), IsPointer(false) {
     if (QT->isPointerType())
       IsPointer = true;
 
-    QT = QT.getUnqualifiedType();
+    QT = QT.getUnqualifiedType(Ctx);
     if (IsPointer || QT->isReferenceType())
       QT = QT->getPointeeType();
   }
@@ -4428,7 +4430,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
     // Walk the type hierarchy to diagnose when this type has already been
     // handled (duplication), or cannot be handled (derivation inversion). We
     // ignore top-level cv-qualifiers, per [except.handle]p3
-    CatchHandlerType HandlerCHT = H->getCaughtType().getCanonicalType();
+    CatchHandlerType HandlerCHT(H->getCaughtType().getCanonicalType(), Context);
 
     // We can ignore whether the type is a reference or a pointer; we need the
     // underlying declaration type in order to get at the underlying record
@@ -4461,13 +4463,13 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
       // Strip the qualifiers here because we're going to be comparing this
       // type to the base type specifiers of a class, which are ignored in a
       // base specifier per [class.derived.general]p2.
-      HandledBaseTypes[Underlying.getUnqualifiedType()] = H;
+      HandledBaseTypes[Underlying.getUnqualifiedType(Context)] = H;
     }
 
     // Add the type the list of ones we have handled; diagnose if we've already
     // handled it.
-    auto R = HandledTypes.insert(
-        std::make_pair(H->getCaughtType().getCanonicalType(), H));
+    auto R = HandledTypes.insert(std::make_pair(
+        CatchHandlerType(H->getCaughtType().getCanonicalType(), Context), H));
     if (!R.second) {
       const CXXCatchStmt *Problem = R.first->second;
       Diag(H->getExceptionDecl()->getTypeSpecStartLoc(),

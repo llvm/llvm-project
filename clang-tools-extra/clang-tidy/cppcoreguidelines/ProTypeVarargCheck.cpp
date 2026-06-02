@@ -67,7 +67,7 @@ namespace {
 AST_MATCHER(QualType, isVAList) {
   const ASTContext &Context = Finder->getASTContext();
   const QualType Desugar = Node.getDesugaredType(Context);
-  const QualType NodeTy = Node.getUnqualifiedType();
+  const QualType NodeTy = Node.getUnqualifiedType(Context);
 
   auto CheckVaList = [](QualType NodeTy, QualType Expected,
                         const ASTContext &Context) {

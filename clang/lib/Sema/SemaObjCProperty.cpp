@@ -1667,7 +1667,8 @@ bool SemaObjC::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
     return false;
   QualType GetterType = GetterMethod->getReturnType().getNonReferenceType();
   QualType PropertyRValueType =
-      property->getType().getNonReferenceType().getAtomicUnqualifiedType();
+      property->getType().getNonReferenceType().getAtomicUnqualifiedType(
+          Context);
   bool compat = Context.hasSameType(PropertyRValueType, GetterType);
   if (!compat) {
     const ObjCObjectPointerType *propertyObjCPtr = nullptr;
@@ -2426,7 +2427,7 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
 
     // The getter returns the declared property type with all qualifiers
     // removed.
-    QualType resultTy = property->getType().getAtomicUnqualifiedType();
+    QualType resultTy = property->getType().getAtomicUnqualifiedType(Context);
 
     // If the property is null_resettable, the getter returns nonnull.
     if (property->getPropertyAttributes() &
@@ -2502,8 +2503,9 @@ void SemaObjC::ProcessPropertyDecl(ObjCPropertyDecl *property) {
               : ObjCImplementationControl::Required);
 
       // Remove all qualifiers from the setter's parameter type.
-      QualType paramTy =
-          property->getType().getUnqualifiedType().getAtomicUnqualifiedType();
+      QualType paramTy = property->getType()
+                             .getUnqualifiedType(Context)
+                             .getAtomicUnqualifiedType(Context);
 
       // If the property is null_resettable, the setter accepts a
       // nullable value.

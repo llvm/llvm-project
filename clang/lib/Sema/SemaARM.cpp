@@ -907,7 +907,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
   // task is to insert the appropriate casts into the AST. First work out just
   // what the appropriate type is.
   QualType ValType = pointerType->getPointeeType();
-  QualType AddrType = ValType.getUnqualifiedType().withVolatile();
+  QualType AddrType = ValType.getUnqualifiedType(Context).withVolatile();
   if (IsLdrex)
     AddrType.addConst();
 

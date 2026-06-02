@@ -1635,11 +1635,11 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   if (Ty->isVoidType()) {
     if (Exprs.empty())
       return new (Context) CXXScalarValueInitExpr(
-          Ty.getUnqualifiedType(), TInfo, Kind.getRange().getEnd());
+          Ty.getUnqualifiedType(Context), TInfo, Kind.getRange().getEnd());
     if (ListInitialization &&
         cast<InitListExpr>(Exprs[0])->getNumInits() == 0) {
       return CXXFunctionalCastExpr::Create(
-          Context, Ty.getUnqualifiedType(), VK_PRValue, TInfo, CK_ToVoid,
+          Context, Ty.getUnqualifiedType(Context), VK_PRValue, TInfo, CK_ToVoid,
           Exprs[0], /*Path=*/nullptr, CurFPFeatureOverrides(),
           Exprs[0]->getBeginLoc(), Exprs[0]->getEndLoc());
     }
@@ -1768,7 +1768,7 @@ namespace {
                        SourceLocation Loc)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
           Destroying(false),
-          IDP({AllocType, TypeAwareAllocationMode::No,
+          IDP({S.Context, AllocType, TypeAwareAllocationMode::No,
                AlignedAllocationMode::No, SizedDeallocationMode::No}),
           CUDAPref(SemaCUDA::CFP_Native) {
       // A function template declaration is only a usual deallocation function
@@ -2014,7 +2014,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   //   If the deallocation functions have class scope, the one without a
   //   parameter of type std::size_t is selected.
   ImplicitDeallocationParameters IDP = {
-      allocType, PassType,
+      S.Context, allocType, PassType,
       alignedAllocationModeFromBool(hasNewExtendedAlignment(S, allocType)),
       SizedDeallocationMode::No};
   auto Best = resolveDeallocationOverload(S, ops, IDP, loc);
@@ -2436,7 +2436,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
   ImplicitAllocationParameters IAP = {
-      AllocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+      Context, AllocType, ShouldUseTypeAwareOperatorNewOrDelete(),
       alignedAllocationModeFromBool(getLangOpts().AlignedAllocation &&
                                     Alignment > NewAlignment)};
 
@@ -2700,7 +2700,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-           << AllocType.getUnqualifiedType()
+           << AllocType.getUnqualifiedType(Context)
            << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
 
   else if (getLangOpts().ObjCAutoRefCount) {
@@ -3260,7 +3260,7 @@ bool Sema::FindAllocationFunctions(
     // with a size_t where possible (which it always is in this case).
     llvm::SmallVector<UsualDeallocFnInfo, 4> BestDeallocFns;
     ImplicitDeallocationParameters IDP = {
-        AllocElemType, OriginalTypeAwareState,
+        Context, AllocElemType, OriginalTypeAwareState,
         alignedAllocationModeFromBool(
             hasNewExtendedAlignment(*this, AllocElemType)),
         sizedDeallocationModeFromBool(FoundGlobalDelete)};
@@ -3329,8 +3329,8 @@ bool Sema::FindAllocationFunctions(
       bool IsSizedDelete = isSizedDeallocation(Info.IDP.PassSize);
       if (IsSizedDelete && !FoundGlobalDelete) {
         ImplicitDeallocationParameters SizeTestingIDP = {
-            AllocElemType, Info.IDP.PassTypeIdentity, Info.IDP.PassAlignment,
-            SizedDeallocationMode::No};
+            Context, AllocElemType, Info.IDP.PassTypeIdentity,
+            Info.IDP.PassAlignment, SizedDeallocationMode::No};
         auto NonSizedDelete = resolveDeallocationOverload(
             *this, FoundDelete, SizeTestingIDP, StartLoc);
         if (NonSizedDelete &&
@@ -3667,7 +3667,7 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
   ImplicitDeallocationParameters IDP = {
-      DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+      Context, DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
       AlignedAllocationMode::No, SizedDeallocationMode::No};
 
   if (!LookForGlobal) {
@@ -4100,7 +4100,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         !getLangOpts().OpenCLCPlusPlus)
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
-             << Pointee.getUnqualifiedType()
+             << Pointee.getUnqualifiedType(Context)
              << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
@@ -4142,7 +4142,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {
-          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
+          Context, Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
           AlignedAllocationMode::No, SizedDeallocationMode::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
@@ -4198,7 +4198,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
       // Look for a global declaration.
       ImplicitDeallocationParameters IDP = {
-          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
+          Context, Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
           alignedAllocationModeFromBool(Overaligned),
           sizedDeallocationModeFromBool(CanProvideSize)};
       OperatorDelete = FindUsualDeallocationFunction(StartLoc, IDP, DeleteName);
@@ -4247,7 +4247,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         // for access and ambiguity.
         Qs.removeCVRQualifiers();
         QualType Unqual = Context.getPointerType(
-            Context.getQualifiedType(Pointee.getUnqualifiedType(), Qs));
+            Context.getQualifiedType(Pointee.getUnqualifiedType(Context), Qs));
         Ex = ImpCastExprToType(Ex.get(), Unqual, CK_NoOp);
       }
       Ex = PerformImplicitConversion(Ex.get(), ParamType,
@@ -4845,7 +4845,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   switch (SCS.First) {
   case ICK_Identity:
     if (const AtomicType *FromAtomic = FromType->getAs<AtomicType>()) {
-      FromType = FromAtomic->getValueType().getUnqualifiedType();
+      FromType = FromAtomic->getValueType().getUnqualifiedType(Context);
       From = ImplicitCastExpr::Create(Context, FromType, CK_AtomicToNonAtomic,
                                       From, /*BasePath=*/nullptr, VK_PRValue,
                                       FPOptionsOverride());
@@ -5258,7 +5258,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
            "Invalid cast");
     CastKind Kind =
         AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion : CK_BitCast;
-    From = ImpCastExprToType(From, ToType.getUnqualifiedType(), Kind,
+    From = ImpCastExprToType(From, ToType.getUnqualifiedType(Context), Kind,
                              VK_PRValue, /*BasePath=*/nullptr, CCK)
                .get();
     break;
@@ -5850,8 +5850,8 @@ QualType Sema::CheckVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
       return {};
   } else {
     // Both are scalar.
-    LHSType = LHSType.getUnqualifiedType();
-    RHSType = RHSType.getUnqualifiedType();
+    LHSType = LHSType.getUnqualifiedType(Context);
+    RHSType = RHSType.getUnqualifiedType(Context);
     QualType ResultElementTy =
         Context.hasSameType(LHSType, RHSType)
             ? Context.getCommonSugaredType(LHSType, RHSType)

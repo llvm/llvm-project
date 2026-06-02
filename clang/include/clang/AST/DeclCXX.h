@@ -182,12 +182,15 @@ class CXXBaseSpecifier {
   /// range does not include the \c virtual or the access specifier.
   TypeSourceInfo *BaseTypeInfo;
 
+  const ASTContext *Ctx;
+
 public:
   CXXBaseSpecifier() = default;
-  CXXBaseSpecifier(SourceRange R, bool V, bool BC, AccessSpecifier A,
-                   TypeSourceInfo *TInfo, SourceLocation EllipsisLoc)
-    : Range(R), EllipsisLoc(EllipsisLoc), Virtual(V), BaseOfClass(BC),
-      Access(A), InheritConstructors(false), BaseTypeInfo(TInfo) {}
+  CXXBaseSpecifier(const ASTContext &Ctx, SourceRange R, bool V, bool BC,
+                   AccessSpecifier A, TypeSourceInfo *TInfo,
+                   SourceLocation EllipsisLoc)
+      : Range(R), EllipsisLoc(EllipsisLoc), Virtual(V), BaseOfClass(BC),
+        Access(A), InheritConstructors(false), BaseTypeInfo(TInfo), Ctx(&Ctx) {}
 
   /// Retrieves the source range that contains the entire base specifier.
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
@@ -247,7 +250,7 @@ public:
   ///
   /// This type will always be an unqualified class type.
   QualType getType() const {
-    return BaseTypeInfo->getType().getUnqualifiedType();
+    return BaseTypeInfo->getType().getUnqualifiedType(*Ctx);
   }
 
   /// Retrieves the type and source location of the base class.

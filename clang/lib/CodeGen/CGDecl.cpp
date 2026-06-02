@@ -1397,7 +1397,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
   while (getContext().getAsVariableArrayType(Type1D)) {
     auto VlaSize = getVLAElements1D(Type1D);
     if (auto *C = dyn_cast<llvm::ConstantInt>(VlaSize.NumElts))
-      Dimensions.emplace_back(C, Type1D.getUnqualifiedType());
+      Dimensions.emplace_back(C, Type1D.getUnqualifiedType(getContext()));
     else {
       // Generate a locally unique name for the size expression.
       Twine Name = Twine("__vla_expr") + Twine(VLAExprCounter++);
@@ -1409,7 +1409,7 @@ void CodeGenFunction::EmitAndRegisterVariableArrayDimensions(
           CreateDefaultAlignTempAlloca(VlaSize.NumElts->getType(), NameRef);
       Builder.CreateStore(VlaSize.NumElts, SizeExprAddr);
       Dimensions.emplace_back(SizeExprAddr.getPointer(),
-                              Type1D.getUnqualifiedType());
+                              Type1D.getUnqualifiedType(getContext()));
     }
     Type1D = VlaSize.Type;
   }

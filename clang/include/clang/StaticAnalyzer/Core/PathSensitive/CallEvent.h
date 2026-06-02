@@ -1150,7 +1150,7 @@ public:
   /// C++17 aligned operator new() calls that have alignment implicitly
   /// passed as the second argument, and to 1 for other operator new() calls.
   unsigned getNumImplicitArgs() const {
-    return getOriginExpr()->getNumImplicitArgs();
+    return getOriginExpr()->getNumImplicitArgs(getASTContext());
   }
 
   unsigned getNumArgs() const override {

@@ -4208,7 +4208,9 @@ public:
       return QualType();
     if (const Type *T = dyn_cast<const Type *>(IntegerType))
       return QualType(T, 0);
-    return cast<TypeSourceInfo *>(IntegerType)->getType().getUnqualifiedType();
+    return cast<TypeSourceInfo *>(IntegerType)
+        ->getType()
+        .getUnqualifiedType(getASTContext());
   }
 
   /// Set the underlying integer type.

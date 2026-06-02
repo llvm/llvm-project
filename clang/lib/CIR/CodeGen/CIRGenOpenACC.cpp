@@ -69,7 +69,8 @@ CIRGenFunction::OpenACCDataOperandInfo
 CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   const Expr *curVarExpr = e->IgnoreParenImpCasts();
   QualType origType =
-      curVarExpr->getType().getNonReferenceType().getUnqualifiedType();
+      curVarExpr->getType().getNonReferenceType().getUnqualifiedType(
+          getContext());
   // Array sections are special, and we have to treat them that way.
   if (const auto *section =
           dyn_cast<ArraySectionExpr>(curVarExpr->IgnoreParenImpCasts()))
@@ -138,7 +139,8 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
             emitMemberExpr(memExpr).getPointer(),
             exprString,
             origType,
-            curVarExpr->getType().getNonReferenceType().getUnqualifiedType(),
+            curVarExpr->getType().getNonReferenceType().getUnqualifiedType(
+                getContext()),
             std::move(bounds),
             std::move(boundTypes)};
 
@@ -151,7 +153,8 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
           emitDeclRefLValue(dre).getPointer(),
           exprString,
           origType,
-          curVarExpr->getType().getNonReferenceType().getUnqualifiedType(),
+          curVarExpr->getType().getNonReferenceType().getUnqualifiedType(
+              getContext()),
           std::move(bounds),
           std::move(boundTypes)};
 }

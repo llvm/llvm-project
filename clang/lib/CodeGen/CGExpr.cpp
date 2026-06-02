@@ -911,8 +911,8 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     // Compute a deterministic hash of the mangled name of the type.
     SmallString<64> MangledName;
     llvm::raw_svector_ostream Out(MangledName);
-    CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
-                                                     Out);
+    CGM.getCXXABI().getMangleContext().mangleCXXRTTI(
+        Ty.getUnqualifiedType(CGM.getContext()), Out);
 
     // Contained in NoSanitizeList based on the mangled type.
     if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
@@ -951,11 +951,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // diagnostic.
       llvm::Value *EqualHash = Builder.CreateICmpEQ(CacheVal, Hash);
       llvm::Constant *StaticData[] = {
-        EmitCheckSourceLocation(Loc),
-        EmitCheckTypeDescriptor(Ty),
-        CGM.GetAddrOfRTTIDescriptor(Ty.getUnqualifiedType()),
-        llvm::ConstantInt::get(Int8Ty, TCK)
-      };
+          EmitCheckSourceLocation(Loc), EmitCheckTypeDescriptor(Ty),
+          CGM.GetAddrOfRTTIDescriptor(Ty.getUnqualifiedType(CGM.getContext())),
+          llvm::ConstantInt::get(Int8Ty, TCK)};
       llvm::Value *DynamicData[] = { Ptr, Hash };
       EmitCheck(std::make_pair(EqualHash, SanitizerKind::SO_Vptr),
                 SanitizerHandler::DynamicTypeCacheMiss, StaticData,
@@ -1961,7 +1959,7 @@ CodeGenFunction::tryEmitAsConstant(const DeclRefExpr *RefExpr) {
   if (CEK != CEK_AsReferenceOnly &&
       RefExpr->EvaluateAsRValue(result, getContext())) {
     resultIsReference = false;
-    resultType = RefExpr->getType().getUnqualifiedType();
+    resultType = RefExpr->getType().getUnqualifiedType(getContext());
 
   // Otherwise, try to evaluate as an l-value.
   } else if (CEK != CEK_AsValueOnly &&
@@ -7365,7 +7363,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
 
   while (!WorkList.empty()) {
     auto [LVal, T, IdxList] = WorkList.pop_back_val();
-    T = T.getCanonicalType().getUnqualifiedType();
+    T = T.getCanonicalType().getUnqualifiedType(getContext());
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {

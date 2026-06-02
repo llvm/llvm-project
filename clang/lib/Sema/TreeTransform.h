@@ -5622,8 +5622,8 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
         QualType Deduced = AutoTy->getDeducedType();
         Qualifiers Qs = Deduced.getQualifiers();
         Qs.removeObjCLifetime();
-        Deduced =
-            SemaRef.Context.getQualifiedType(Deduced.getUnqualifiedType(), Qs);
+        Deduced = SemaRef.Context.getQualifiedType(
+            Deduced.getUnqualifiedType(SemaRef.Context), Qs);
         T = SemaRef.Context.getAutoType(AutoTy->getDeducedKind(), Deduced,
                                         AutoTy->getKeyword(),
                                         AutoTy->getTypeConstraintConcept(),

@@ -574,7 +574,7 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
     }
 
     // Remove qualifiers even if they're non-local.
-    typeArg = typeArg.getUnqualifiedType();
+    typeArg = typeArg.getUnqualifiedType(S.Context);
 
     finalTypeArgs.push_back(typeArg);
 
@@ -1352,10 +1352,10 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
   // Remove qualifiers from the pointee type we're converting from; they
   // aren't used in the compatibility check belong, and we'll be adding back
   // qualifiers (with __autoreleasing) if the compatibility check succeeds.
-  FromPointee = FromPointee.getUnqualifiedType();
+  FromPointee = FromPointee.getUnqualifiedType(Context);
 
   // The unqualified form of the pointee types must be compatible.
-  ToPointee = ToPointee.getUnqualifiedType();
+  ToPointee = ToPointee.getUnqualifiedType(Context);
   bool IncompatibleObjC;
   if (Context.typesAreCompatible(FromPointee, ToPointee))
     FromPointee = ToPointee;

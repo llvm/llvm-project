@@ -1642,7 +1642,7 @@ void TemplateParamObjectDecl::printAsExpr(llvm::raw_ostream &OS) const {
 
 void TemplateParamObjectDecl::printAsExpr(llvm::raw_ostream &OS,
                                           const PrintingPolicy &Policy) const {
-  getType().getUnqualifiedType().print(OS, Policy);
+  getType().getUnqualifiedType(getASTContext()).print(OS, Policy);
   printAsInit(OS, Policy);
 }
 

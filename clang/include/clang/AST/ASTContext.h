@@ -2574,7 +2574,7 @@ public:
       return type;
     Qualifiers Qs = type.getQualifiers();
     Qs.removeObjCLifetime();
-    return getQualifiedType(type.getUnqualifiedType(), Qs);
+    return getQualifiedType(type.getUnqualifiedType(*this), Qs);
   }
 
   /// \brief Return a type with the given __ptrauth qualifier.

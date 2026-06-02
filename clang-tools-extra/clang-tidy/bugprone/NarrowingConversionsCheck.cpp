@@ -190,8 +190,8 @@ static const BuiltinType *getBuiltinType(const Expr &E) {
   return E.getType().getCanonicalType().getTypePtr()->getAs<BuiltinType>();
 }
 
-static QualType getUnqualifiedType(const Expr &E) {
-  return E.getType().getUnqualifiedType();
+static QualType getUnqualifiedType(const ASTContext &Ctx, const Expr &E) {
+  return E.getType().getUnqualifiedType(Ctx);
 }
 
 static APValue getConstantExprValue(const ASTContext &Ctx, const Expr &E) {
@@ -329,50 +329,54 @@ bool NarrowingConversionsCheck::isWarningInhibitedByEquivalentSize(
   return false;
 }
 
-void NarrowingConversionsCheck::diagNarrowType(SourceLocation SourceLoc,
+void NarrowingConversionsCheck::diagNarrowType(const ASTContext &Context,
+                                               SourceLocation SourceLoc,
                                                const Expr &Lhs,
                                                const Expr &Rhs) {
   diag(SourceLoc, "narrowing conversion from %0 to %1")
-      << getUnqualifiedType(Rhs) << getUnqualifiedType(Lhs);
+      << getUnqualifiedType(Context, Rhs) << getUnqualifiedType(Context, Lhs);
 }
 
 void NarrowingConversionsCheck::diagNarrowTypeToSignedInt(
-    SourceLocation SourceLoc, const Expr &Lhs, const Expr &Rhs) {
+    const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
+    const Expr &Rhs) {
   diag(SourceLoc, "narrowing conversion from %0 to signed type %1 is "
                   "implementation-defined")
-      << getUnqualifiedType(Rhs) << getUnqualifiedType(Lhs);
+      << getUnqualifiedType(Context, Rhs) << getUnqualifiedType(Context, Lhs);
 }
 
 void NarrowingConversionsCheck::diagNarrowIntegerConstant(
-    SourceLocation SourceLoc, const Expr &Lhs, const Expr &Rhs,
-    const llvm::APSInt &Value) {
+    const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
+    const Expr &Rhs, const llvm::APSInt &Value) {
   diag(SourceLoc,
        "narrowing conversion from constant value %0 of type %1 to %2")
-      << getValueAsString(Value, /*NoHex*/ 0) << getUnqualifiedType(Rhs)
-      << getUnqualifiedType(Lhs);
+      << getValueAsString(Value, /*NoHex*/ 0)
+      << getUnqualifiedType(Context, Rhs) << getUnqualifiedType(Context, Lhs);
 }
 
 void NarrowingConversionsCheck::diagNarrowIntegerConstantToSignedInt(
-    SourceLocation SourceLoc, const Expr &Lhs, const Expr &Rhs,
-    const llvm::APSInt &Value, const uint64_t HexBits) {
+    const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
+    const Expr &Rhs, const llvm::APSInt &Value, const uint64_t HexBits) {
   diag(SourceLoc, "narrowing conversion from constant value %0 of type %1 "
                   "to signed type %2 is implementation-defined")
-      << getValueAsString(Value, HexBits) << getUnqualifiedType(Rhs)
-      << getUnqualifiedType(Lhs);
+      << getValueAsString(Value, HexBits) << getUnqualifiedType(Context, Rhs)
+      << getUnqualifiedType(Context, Lhs);
 }
 
-void NarrowingConversionsCheck::diagNarrowConstant(SourceLocation SourceLoc,
+void NarrowingConversionsCheck::diagNarrowConstant(const ASTContext &Context,
+                                                   SourceLocation SourceLoc,
                                                    const Expr &Lhs,
                                                    const Expr &Rhs) {
   diag(SourceLoc, "narrowing conversion from constant %0 to %1")
-      << getUnqualifiedType(Rhs) << getUnqualifiedType(Lhs);
+      << getUnqualifiedType(Context, Rhs) << getUnqualifiedType(Context, Lhs);
 }
 
-void NarrowingConversionsCheck::diagConstantCast(SourceLocation SourceLoc,
+void NarrowingConversionsCheck::diagConstantCast(const ASTContext &Context,
+                                                 SourceLocation SourceLoc,
                                                  const Expr &Lhs,
                                                  const Expr &Rhs) {
   diag(SourceLoc, "constant value should be of type of type %0 instead of %1")
-      << getUnqualifiedType(Lhs) << getUnqualifiedType(Rhs);
+      << getUnqualifiedType(Context, Lhs) << getUnqualifiedType(Context, Rhs);
 }
 
 void NarrowingConversionsCheck::diagNarrowTypeOrConstant(
@@ -380,11 +384,11 @@ void NarrowingConversionsCheck::diagNarrowTypeOrConstant(
     const Expr &Rhs) {
   APValue Constant = getConstantExprValue(Context, Rhs);
   if (Constant.isInt())
-    diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, Constant.getInt());
+    diagNarrowIntegerConstant(Context, SourceLoc, Lhs, Rhs, Constant.getInt());
   else if (Constant.isFloat())
-    diagNarrowConstant(SourceLoc, Lhs, Rhs);
+    diagNarrowConstant(Context, SourceLoc, Lhs, Rhs);
   else
-    diagNarrowType(SourceLoc, Lhs, Rhs);
+    diagNarrowType(Context, SourceLoc, Lhs, Rhs);
 }
 
 void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
@@ -414,13 +418,13 @@ void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
     llvm::APSInt IntegerConstant;
     if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
       if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
-        diagNarrowIntegerConstantToSignedInt(SourceLoc, Lhs, Rhs,
+        diagNarrowIntegerConstantToSignedInt(Context, SourceLoc, Lhs, Rhs,
                                              IntegerConstant,
                                              Context.getTypeSize(FromType));
       return;
     }
     if (!isWideEnoughToHold(Context, *FromType, *ToType))
-      diagNarrowTypeToSignedInt(SourceLoc, Lhs, Rhs);
+      diagNarrowTypeToSignedInt(Context, SourceLoc, Lhs, Rhs);
   }
 }
 
@@ -442,7 +446,8 @@ void NarrowingConversionsCheck::handleIntegralToFloating(
     llvm::APSInt IntegerConstant;
     if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
       if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
-        diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, IntegerConstant);
+        diagNarrowIntegerConstant(Context, SourceLoc, Lhs, Rhs,
+                                  IntegerConstant);
       return;
     }
 
@@ -450,7 +455,7 @@ void NarrowingConversionsCheck::handleIntegralToFloating(
     if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
       return;
     if (!isWideEnoughToHold(Context, *FromType, *ToType))
-      diagNarrowType(SourceLoc, Lhs, Rhs);
+      diagNarrowType(Context, SourceLoc, Lhs, Rhs);
   }
 }
 
@@ -460,10 +465,10 @@ void NarrowingConversionsCheck::handleFloatingToIntegral(
   llvm::APFloat FloatConstant(0.0);
   if (getFloatingConstantExprValue(Context, Rhs, FloatConstant)) {
     if (!isFloatExactlyRepresentable(Context, FloatConstant, Lhs.getType()))
-      diagNarrowConstant(SourceLoc, Lhs, Rhs);
+      diagNarrowConstant(Context, SourceLoc, Lhs, Rhs);
 
     else if (PedanticMode)
-      diagConstantCast(SourceLoc, Lhs, Rhs);
+      diagConstantCast(Context, SourceLoc, Lhs, Rhs);
 
     return;
   }
@@ -472,7 +477,7 @@ void NarrowingConversionsCheck::handleFloatingToIntegral(
   const BuiltinType *ToType = getBuiltinType(Lhs);
   if (isWarningInhibitedByEquivalentSize(Context, *FromType, *ToType))
     return;
-  diagNarrowType(SourceLoc, Lhs, Rhs); // Assumed always lossy.
+  diagNarrowType(Context, SourceLoc, Lhs, Rhs); // Assumed always lossy.
 }
 
 void NarrowingConversionsCheck::handleFloatingToBoolean(
@@ -508,14 +513,14 @@ void NarrowingConversionsCheck::handleFloatingCast(const ASTContext &Context,
       Tmp.convert(Context.getFloatTypeSemantics(ToType->desugar()),
                   llvm::APFloatBase::rmNearestTiesToEven, &UnusedLosesInfo);
       if (Tmp.isInfinity())
-        diagNarrowConstant(SourceLoc, Lhs, Rhs);
+        diagNarrowConstant(Context, SourceLoc, Lhs, Rhs);
       return;
     }
     const BuiltinType *FromType = getBuiltinType(Rhs);
     if (!llvm::APFloatBase::isRepresentableBy(
             Context.getFloatTypeSemantics(FromType->desugar()),
             Context.getFloatTypeSemantics(ToType->desugar())))
-      diagNarrowType(SourceLoc, Lhs, Rhs);
+      diagNarrowType(Context, SourceLoc, Lhs, Rhs);
   }
 }
 

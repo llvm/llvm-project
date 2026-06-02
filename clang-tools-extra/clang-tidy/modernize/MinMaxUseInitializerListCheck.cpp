@@ -87,7 +87,7 @@ generateReplacements(const MatchFinder::MatchResult &Match,
                                   ->getReturnType()
                                   .getCanonicalType()
                                   .getNonReferenceType()
-                                  .getUnqualifiedType();
+                                  .getUnqualifiedType(*Match.Context);
 
   // check if the type is trivial
   const bool IsResultTypeTrivial = ResultType.isTrivialType(*Match.Context);
@@ -112,7 +112,7 @@ generateReplacements(const MatchFinder::MatchResult &Match,
       const QualType ArgType = Arg->IgnoreParenImpCasts()
                                    ->getType()
                                    .getCanonicalType()
-                                   .getUnqualifiedType();
+                                   .getUnqualifiedType(*Match.Context);
 
       if (ArgType == ResultType)
         continue;

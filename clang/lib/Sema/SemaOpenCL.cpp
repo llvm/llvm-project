@@ -160,7 +160,8 @@ bool SemaOpenCL::checkBuiltinNDRangeAndBlock(CallExpr *TheCall) {
 
   // First argument is an ndrange_t type.
   Expr *NDRangeArg = TheCall->getArg(0);
-  if (NDRangeArg->getType().getUnqualifiedType().getAsString() != "ndrange_t") {
+  if (NDRangeArg->getType().getUnqualifiedType(getASTContext()).getAsString() !=
+      "ndrange_t") {
     Diag(NDRangeArg->getBeginLoc(), diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << "'ndrange_t'";
     return true;
@@ -268,7 +269,8 @@ bool SemaOpenCL::checkBuiltinEnqueueKernel(CallExpr *TheCall) {
   }
 
   // Third argument is always an ndrange_t type.
-  if (Arg2->getType().getUnqualifiedType().getAsString() != "ndrange_t") {
+  if (Arg2->getType().getUnqualifiedType(Context).getAsString() !=
+      "ndrange_t") {
     Diag(TheCall->getArg(2)->getBeginLoc(),
          diag::err_opencl_builtin_expected_type)
         << TheCall->getDirectCallee() << "'ndrange_t'";
@@ -570,8 +572,8 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
   default:
     llvm_unreachable("Invalid builtin function");
   }
-  Call->setType(getASTContext().getPointerType(
-      getASTContext().getQualifiedType(RT.getUnqualifiedType(), Qual)));
+  Call->setType(getASTContext().getPointerType(getASTContext().getQualifiedType(
+      RT.getUnqualifiedType(getASTContext()), Qual)));
 
   return false;
 }

@@ -2285,13 +2285,13 @@ inline SizedDeallocationMode sizedDeallocationModeFromBool(bool IsSized) {
 }
 
 struct ImplicitAllocationParameters {
-  ImplicitAllocationParameters(QualType AllocType,
+  ImplicitAllocationParameters(const ASTContext &Ctx, QualType AllocType,
                                TypeAwareAllocationMode PassTypeIdentity,
                                AlignedAllocationMode PassAlignment)
       : Type(AllocType), PassTypeIdentity(PassTypeIdentity),
         PassAlignment(PassAlignment) {
     if (!Type.isNull())
-      Type = Type.getUnqualifiedType();
+      Type = Type.getUnqualifiedType(Ctx);
   }
   explicit ImplicitAllocationParameters(AlignedAllocationMode PassAlignment)
       : PassTypeIdentity(TypeAwareAllocationMode::No),
@@ -2312,14 +2312,14 @@ struct ImplicitAllocationParameters {
 };
 
 struct ImplicitDeallocationParameters {
-  ImplicitDeallocationParameters(QualType DeallocType,
+  ImplicitDeallocationParameters(const ASTContext &Ctx, QualType DeallocType,
                                  TypeAwareAllocationMode PassTypeIdentity,
                                  AlignedAllocationMode PassAlignment,
                                  SizedDeallocationMode PassSize)
       : Type(DeallocType), PassTypeIdentity(PassTypeIdentity),
         PassAlignment(PassAlignment), PassSize(PassSize) {
     if (!Type.isNull())
-      Type = Type.getUnqualifiedType();
+      Type = Type.getUnqualifiedType(Ctx);
   }
 
   ImplicitDeallocationParameters(AlignedAllocationMode PassAlignment,
@@ -2512,8 +2512,8 @@ public:
     return const_cast<CXXNewExpr *>(this)->getPlacementArg(I);
   }
 
-  unsigned getNumImplicitArgs() const {
-    return implicitAllocationParameters().getNumImplicitArgs();
+  unsigned getNumImplicitArgs(const ASTContext &Ctx) const {
+    return implicitAllocationParameters(Ctx).getNumImplicitArgs();
   }
 
   bool isParenTypeId() const { return CXXNewExprBits.IsParenTypeId; }
@@ -2563,9 +2563,10 @@ public:
 
   /// Provides the full set of information about expected implicit
   /// parameters in this call
-  ImplicitAllocationParameters implicitAllocationParameters() const {
+  ImplicitAllocationParameters
+  implicitAllocationParameters(const ASTContext &Ctx) const {
     return ImplicitAllocationParameters{
-        getAllocatedType(),
+        Ctx, getAllocatedType(),
         typeAwareAllocationModeFromBool(CXXNewExprBits.ShouldPassTypeIdentity),
         alignedAllocationModeFromBool(CXXNewExprBits.ShouldPassAlignment)};
   }

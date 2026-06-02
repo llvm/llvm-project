@@ -676,8 +676,9 @@ public:
       // The assignment operator can have an arbitrary return type. We model the
       // return value only if the return type is the same as or a base class of
       // the destination type.
-      if (S->getType().getCanonicalType().getUnqualifiedType() !=
-          LocDst->getType().getCanonicalType().getUnqualifiedType()) {
+      const ASTContext &Ctx = Method->getASTContext();
+      if (S->getType().getCanonicalType().getUnqualifiedType(Ctx) !=
+          LocDst->getType().getCanonicalType().getUnqualifiedType(Ctx)) {
         auto ReturnDecl = S->getType()->getAsCXXRecordDecl();
         auto DstDecl = LocDst->getType()->getAsCXXRecordDecl();
         if (ReturnDecl == nullptr || DstDecl == nullptr)
@@ -857,8 +858,9 @@ public:
         Loc.setChild(*Field, &Env.createObject(Field->getType(), Init));
         continue;
       }
-      assert(Field->getType().getCanonicalType().getUnqualifiedType() ==
-             Init->getType().getCanonicalType().getUnqualifiedType());
+      const ASTContext &Ctx = Field->getASTContext();
+      assert(Field->getType().getCanonicalType().getUnqualifiedType(Ctx) ==
+             Init->getType().getCanonicalType().getUnqualifiedType(Ctx));
       StorageLocation *FieldLoc = Loc.getChild(*Field);
       // Locations for non-reference fields must always be non-null.
       assert(FieldLoc != nullptr);

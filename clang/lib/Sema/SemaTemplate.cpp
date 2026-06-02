@@ -1472,7 +1472,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
       T->isUndeducedType()) {
     // C++ [temp.param]p5: The top-level cv-qualifiers on the template-parameter
     // are ignored when determining its type.
-    return T.getUnqualifiedType();
+    return T.getUnqualifiedType(Context);
   }
 
   // C++ [temp.param]p8:
@@ -1490,7 +1490,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   // used during instantiation, so that should be OK. (Using the
   // qualified type is equally wrong.)
   if (T->isDependentType())
-    return T.getUnqualifiedType();
+    return T.getUnqualifiedType(Context);
 
   // C++20 [temp.param]p6:
   //   -- a structural type
@@ -1506,7 +1506,7 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
   }
 
   Diag(Loc, diag::warn_cxx17_compat_template_nontype_parm_type) << T;
-  return T.getUnqualifiedType();
+  return T.getUnqualifiedType(Context);
 }
 
 NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
@@ -7251,7 +7251,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     // not the type of the template argument deduced from A, against the
     // template parameter type.
     Diag(StartLoc, diag::err_deduced_non_type_template_arg_type_mismatch)
-        << Arg->getType() << ParamType.getUnqualifiedType();
+        << Arg->getType() << ParamType.getUnqualifiedType(Context);
     NoteTemplateParameterLocation(*Param);
     return ExprError();
   }
@@ -7527,7 +7527,7 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
 
     // From here on out, all we care about is the unqualified form
     // of the argument type.
-    ArgType = ArgType.getUnqualifiedType();
+    ArgType = ArgType.getUnqualifiedType(Context);
 
     // Try to convert the argument to the parameter's type.
     if (Context.hasSameType(ParamType, ArgType)) {

@@ -1039,10 +1039,10 @@ bool MicrosoftCXXABI::shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
 llvm::Value *MicrosoftCXXABI::emitDynamicCastCall(
     CodeGenFunction &CGF, Address This, QualType SrcRecordTy, QualType DestTy,
     QualType DestRecordTy, llvm::BasicBlock *CastEnd) {
-  llvm::Value *SrcRTTI =
-      CGF.CGM.GetAddrOfRTTIDescriptor(SrcRecordTy.getUnqualifiedType());
-  llvm::Value *DestRTTI =
-      CGF.CGM.GetAddrOfRTTIDescriptor(DestRecordTy.getUnqualifiedType());
+  llvm::Value *SrcRTTI = CGF.CGM.GetAddrOfRTTIDescriptor(
+      SrcRecordTy.getUnqualifiedType(CGF.getContext()));
+  llvm::Value *DestRTTI = CGF.CGM.GetAddrOfRTTIDescriptor(
+      DestRecordTy.getUnqualifiedType(CGF.getContext()));
 
   llvm::Value *Offset;
   std::tie(This, Offset, std::ignore) =
@@ -3993,14 +3993,14 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   // Member pointer types like "const int A::*" are represented by having RTTI
   // for "int A::*" and separately storing the const qualifier.
   if (const auto *MPTy = T->getAs<MemberPointerType>())
-    T = Context.getMemberPointerType(PointeeType.getUnqualifiedType(),
+    T = Context.getMemberPointerType(PointeeType.getUnqualifiedType(Context),
                                      MPTy->getQualifier(),
                                      MPTy->getMostRecentCXXRecordDecl());
 
   // Pointer types like "const int * const *" are represented by having RTTI
   // for "const int **" and separately storing the const qualifier.
   if (T->isPointerType())
-    T = Context.getPointerType(PointeeType.getUnqualifiedType());
+    T = Context.getPointerType(PointeeType.getUnqualifiedType(Context));
 
   return T;
 }

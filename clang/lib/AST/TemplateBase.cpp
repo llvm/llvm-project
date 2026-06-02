@@ -536,7 +536,9 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     ValueDecl *VD = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
       if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
-        TPO->getType().getUnqualifiedType().print(Out, Policy);
+        TPO->getType()
+            .getUnqualifiedType(VD->getASTContext())
+            .print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }

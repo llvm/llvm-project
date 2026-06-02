@@ -10300,8 +10300,8 @@ ASTRecordReader::readCXXBaseSpecifier() {
   TypeSourceInfo *TInfo = readTypeSourceInfo();
   SourceRange Range = readSourceRange();
   SourceLocation EllipsisLoc = readSourceLocation();
-  CXXBaseSpecifier Result(Range, isVirtual, isBaseOfClass, AS, TInfo,
-                          EllipsisLoc);
+  CXXBaseSpecifier Result(getContext(), Range, isVirtual, isBaseOfClass, AS,
+                          TInfo, EllipsisLoc);
   Result.setInheritConstructors(inheritConstructors);
   return Result;
 }

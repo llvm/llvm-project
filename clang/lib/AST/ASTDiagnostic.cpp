@@ -1934,7 +1934,7 @@ class TemplateDiff {
         // FIXME: Diffing the APValue would be neat.
         // FIXME: Suppress this and use the full name of the declaration if the
         // parameter is a pointer or reference.
-        TPO->getType().getUnqualifiedType().print(OS, Policy);
+        TPO->getType().getUnqualifiedType(Context).print(OS, Policy);
         TPO->printAsInit(OS, Policy);
         return;
       }

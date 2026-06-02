@@ -886,8 +886,8 @@ static void handleDiagnoseAsBuiltinAttr(Sema &S, Decl *D,
     QualType T1 = AttrFD->getParamDecl(I - 1)->getType();
     QualType T2 = DeclFD->getParamDecl(Index - 1)->getType();
 
-    if (T1.getCanonicalType().getUnqualifiedType() !=
-        T2.getCanonicalType().getUnqualifiedType()) {
+    if (T1.getCanonicalType().getUnqualifiedType(S.Context) !=
+        T2.getCanonicalType().getUnqualifiedType(S.Context)) {
       S.Diag(IndexExpr->getBeginLoc(), diag::err_attribute_parameter_types)
           << AL << Index << DeclFD << T2 << I << AttrFD << T1;
       return;

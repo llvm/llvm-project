@@ -175,7 +175,8 @@ static bool checkGenericCastToPtr(Sema &SemaRef, CallExpr *Call) {
   }
   Qual.setAddressSpace(AddrSpace);
   Call->setType(SemaRef.getASTContext().getPointerType(
-      SemaRef.getASTContext().getQualifiedType(RT.getUnqualifiedType(), Qual)));
+      SemaRef.getASTContext().getQualifiedType(
+          RT.getUnqualifiedType(SemaRef.getASTContext()), Qual)));
 
   return false;
 }

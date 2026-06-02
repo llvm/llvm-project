@@ -65,12 +65,13 @@ void StaticAccessedThroughInstanceCheck::check(
 
   const Expr *BaseExpr = MemberExpression->getBase();
 
+  const ASTContext *AstContext = Result.Context;
   const QualType BaseType =
       BaseExpr->getType()->isPointerType()
-          ? BaseExpr->getType()->getPointeeType().getUnqualifiedType()
-          : BaseExpr->getType().getUnqualifiedType();
+          ? BaseExpr->getType()->getPointeeType().getUnqualifiedType(
+                *AstContext)
+          : BaseExpr->getType().getUnqualifiedType(*AstContext);
 
-  const ASTContext *AstContext = Result.Context;
   PrintingPolicy PrintingPolicyWithSuppressedTag(AstContext->getLangOpts());
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;

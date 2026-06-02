@@ -923,7 +923,7 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
                                   Address newPtr, mlir::Value allocSize,
                                   CharUnits allocAlign,
                                   const CallArgList &newArgs) {
-  unsigned numNonPlacementArgs = e->getNumImplicitArgs();
+  unsigned numNonPlacementArgs = e->getNumImplicitArgs(cgf.getContext());
 
   // If we're not inside a conditional branch, then the cleanup will
   // dominate and we can do the easier (and more efficient) thing.
@@ -940,8 +940,8 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     assert(!cir::MissingFeatures::typeAwareAllocation());
     DirectCleanup *cleanup = cgf.ehStack.pushCleanupWithExtra<DirectCleanup>(
         EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
-        newPtr.getPointer(), allocSize, e->implicitAllocationParameters(),
-        allocAlign);
+        newPtr.getPointer(), allocSize,
+        e->implicitAllocationParameters(cgf.getContext()), allocAlign);
     for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
       const CallArg &arg = newArgs[i + numNonPlacementArgs];
       cleanup->setPlacementArg(
@@ -986,8 +986,8 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
   ConditionalCleanup *cleanup =
       cgf.ehStack.pushCleanupWithExtra<ConditionalCleanup>(
           EHCleanup, e->getNumPlacementArgs(), e->getOperatorDelete(),
-          savedNewPtr, savedAllocSize, e->implicitAllocationParameters(),
-          allocAlign);
+          savedNewPtr, savedAllocSize,
+          e->implicitAllocationParameters(cgf.getContext()), allocAlign);
   for (auto i : llvm::seq<unsigned>(0, e->getNumPlacementArgs())) {
     const CallArg &arg = newArgs[i + numNonPlacementArgs];
     cleanup->setPlacementArg(

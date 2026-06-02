@@ -1495,7 +1495,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     }
 
     QualType ValType = PtrType->getPointeeType();
-    ValType = ValType.getUnqualifiedType();
+    ValType = ValType.getUnqualifiedType(Context);
     if (!ValType->isIntegerType() && !ValType->isAnyPointerType() &&
         !ValType->isBlockPointerType() && !ValType->isFloatingType() &&
         !ValType->isVectorType() && !ValType->isRVVSizelessBuiltinType()) {

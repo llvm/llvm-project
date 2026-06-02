@@ -27,12 +27,12 @@ AST_MATCHER(ImplicitCastExpr, isMultiLevelPointerConversion) {
   const QualType TargetType = Node.getType()
                                   .getCanonicalType()
                                   .getNonReferenceType()
-                                  .getUnqualifiedType();
+                                  .getUnqualifiedType(Finder->getASTContext());
   const QualType SourceType = Node.getSubExpr()
                                   ->getType()
                                   .getCanonicalType()
                                   .getNonReferenceType()
-                                  .getUnqualifiedType();
+                                  .getUnqualifiedType(Finder->getASTContext());
 
   if (TargetType == SourceType)
     return false;
@@ -50,7 +50,8 @@ AST_MATCHER(ImplicitCastExpr, isMultiLevelPointerConversion) {
 
 AST_MATCHER(QualType, isPointerType) {
   const QualType Type =
-      Node.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+      Node.getCanonicalType().getNonReferenceType().getUnqualifiedType(
+          Finder->getASTContext());
 
   return !Type.isNull() && Type->isPointerType();
 }

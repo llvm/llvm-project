@@ -445,7 +445,7 @@ class Sema;
               N && N->isMemberFunctionPointer())
             T = C.getDecayedType(N->getPointeeType());
 
-          return T.getAtomicUnqualifiedType();
+          return T.getAtomicUnqualifiedType(C);
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.

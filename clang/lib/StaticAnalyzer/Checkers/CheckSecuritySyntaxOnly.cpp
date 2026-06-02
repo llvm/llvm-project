@@ -371,7 +371,8 @@ void WalkAST::checkCall_bcmp(const CallExpr *CE, const FunctionDecl *FD) {
     if (!PT)
       return;
 
-    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().VoidTy)
+    if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+        BR.getContext().VoidTy)
       return;
   }
 
@@ -413,7 +414,8 @@ void WalkAST::checkCall_bcopy(const CallExpr *CE, const FunctionDecl *FD) {
     if (!PT)
       return;
 
-    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().VoidTy)
+    if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+        BR.getContext().VoidTy)
       return;
   }
 
@@ -455,7 +457,8 @@ void WalkAST::checkCall_bzero(const CallExpr *CE, const FunctionDecl *FD) {
   if (!PT)
     return;
 
-  if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().VoidTy)
+  if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+      BR.getContext().VoidTy)
     return;
 
   // Verify the second argument type is integer.
@@ -497,7 +500,8 @@ void WalkAST::checkCall_gets(const CallExpr *CE, const FunctionDecl *FD) {
   if (!PT)
     return;
 
-  if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+  if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+      BR.getContext().CharTy)
     return;
 
   // Issue a warning.
@@ -537,7 +541,8 @@ void WalkAST::checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD) {
   if (!PT)
     return;
 
-  if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+  if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+      BR.getContext().CharTy)
     return;
 
   // Issue a warning.
@@ -578,7 +583,8 @@ void WalkAST::checkCall_mktemp(const CallExpr *CE, const FunctionDecl *FD) {
     return;
 
   // Verify that the argument is a 'char*'.
-  if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+  if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+      BR.getContext().CharTy)
     return;
 
   // Issue a warning.
@@ -846,7 +852,8 @@ bool WalkAST::checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD) {
       return false;
 
     // Verify that the argument is a 'char*'.
-    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+    if (PT->getPointeeType().getUnqualifiedType(BR.getContext()) !=
+        BR.getContext().CharTy)
       return false;
   }
 

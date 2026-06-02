@@ -49,13 +49,14 @@ static bool needsConstCast(QualType SourceType, QualType DestType) {
   return false;
 }
 
-static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2) {
+static bool pointedUnqualifiedTypesAreEqual(QualType T1, QualType T2,
+                                            const ASTContext &Ctx) {
   while ((T1->isPointerType() && T2->isPointerType()) ||
          (T1->isReferenceType() && T2->isReferenceType())) {
     T1 = T1->getPointeeType();
     T2 = T2->getPointeeType();
   }
-  return T1.getUnqualifiedType() == T2.getUnqualifiedType();
+  return T1.getUnqualifiedType(Ctx) == T2.getUnqualifiedType(Ctx);
 }
 
 static CharSourceRange getReplaceRange(const ExplicitCastExpr *Expr) {
@@ -132,9 +133,10 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
   };
 
   const QualType DestTypeAsWritten =
-      CastExpr->getTypeAsWritten().getUnqualifiedType();
+      CastExpr->getTypeAsWritten().getUnqualifiedType(*Result.Context);
   const QualType SourceTypeAsWritten =
-      CastExpr->getSubExprAsWritten()->getType().getUnqualifiedType();
+      CastExpr->getSubExprAsWritten()->getType().getUnqualifiedType(
+          *Result.Context);
   const QualType SourceType = SourceTypeAsWritten.getCanonicalType();
   const QualType DestType = DestTypeAsWritten.getCanonicalType();
 
@@ -229,7 +231,8 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     if (needsConstCast(SourceType, DestType) &&
-        pointedUnqualifiedTypesAreEqual(SourceType, DestType)) {
+        pointedUnqualifiedTypesAreEqual(SourceType, DestType,
+                                        *Result.Context)) {
       ReplaceWithNamedCast("const_cast");
       return;
     }

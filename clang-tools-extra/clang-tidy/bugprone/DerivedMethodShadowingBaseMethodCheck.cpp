@@ -19,10 +19,11 @@ static bool sameBasicType(const ParmVarDecl *Lhs, const ParmVarDecl *Rhs) {
          Lhs->getType()
                  .getCanonicalType()
                  .getNonReferenceType()
-                 .getUnqualifiedType() == Rhs->getType()
-                                              .getCanonicalType()
-                                              .getNonReferenceType()
-                                              .getUnqualifiedType();
+                 .getUnqualifiedType(Lhs->getASTContext()) ==
+             Rhs->getType()
+                 .getCanonicalType()
+                 .getNonReferenceType()
+                 .getUnqualifiedType(Rhs->getASTContext());
 }
 
 static bool namesCollide(const CXXMethodDecl &Lhs, const CXXMethodDecl &Rhs) {

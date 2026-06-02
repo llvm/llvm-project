@@ -2567,8 +2567,9 @@ void CStringChecker::evalStrsep(CheckerContext &C,
   SourceArgExpr SearchStrPtr = {{Call.getArgExpr(0), 0}};
 
   QualType CharPtrTy = SearchStrPtr.Expression->getType()->getPointeeType();
-  if (CharPtrTy.isNull() || Call.getResultType().getUnqualifiedType() !=
-                                CharPtrTy.getUnqualifiedType())
+  if (CharPtrTy.isNull() ||
+      Call.getResultType().getUnqualifiedType(C.getASTContext()) !=
+          CharPtrTy.getUnqualifiedType(C.getASTContext()))
     return;
 
   CurrentFunctionDescription = "strsep()";

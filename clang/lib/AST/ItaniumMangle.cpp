@@ -1520,8 +1520,9 @@ void CXXNameMangler::mangleUnqualifiedName(
     if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
       // Proposed in https://github.com/itanium-cxx-abi/cxx-abi/issues/63.
       Out << "TA";
-      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
-                               TPO->getValue(), /*TopLevel=*/true);
+      mangleValueInTemplateArg(
+          TPO->getType().getUnqualifiedType(getASTContext()), TPO->getValue(),
+          /*TopLevel=*/true);
       break;
     }
 
@@ -6370,17 +6371,18 @@ void CXXNameMangler::mangleTemplateArg(TemplateArgument A, bool NeedExactType) {
     //  <expr-primary> ::= L <mangled-name> E # external name
     ValueDecl *D = A.getAsDecl();
 
+    ASTContext &Ctx = getASTContext();
+
     // Template parameter objects are modeled by reproducing a source form
     // produced as if by aggregate initialization.
     if (A.getParamTypeForDecl()->isRecordType()) {
       auto *TPO = cast<TemplateParamObjectDecl>(D);
-      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(),
+      mangleValueInTemplateArg(TPO->getType().getUnqualifiedType(Ctx),
                                TPO->getValue(), /*TopLevel=*/true,
                                NeedExactType);
       break;
     }
 
-    ASTContext &Ctx = Context.getASTContext();
     APValue Value;
     if (D->isCXXInstanceMember())
       // Simple pointer-to-member with no conversion.
@@ -6850,7 +6852,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
           Out << "ad";
         Out << "so";
         mangleType(T->isVoidPointerType()
-                       ? getLValueType(Ctx, V).getUnqualifiedType()
+                       ? getLValueType(Ctx, V).getUnqualifiedType(Ctx)
                        : T->getPointeeType());
         Kind = Path;
       } else {

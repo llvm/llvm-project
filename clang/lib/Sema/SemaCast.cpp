@@ -78,7 +78,7 @@ namespace {
       // the qualifier.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
           !DestType->isArrayType() && !DestType.getPointerAuth()) {
-        DestType = DestType.getAtomicUnqualifiedType();
+        DestType = DestType.getAtomicUnqualifiedType(S.Context);
       }
 
       if (const BuiltinType *placeholder =
@@ -883,7 +883,7 @@ void CastOperation::CheckDynamicCast() {
     }
   } else {
     Self.Diag(OpRange.getBegin(), diag::err_bad_dynamic_cast_not_class)
-      << DestPointee.getUnqualifiedType() << DestRange;
+        << DestPointee.getUnqualifiedType(Self.Context) << DestRange;
     SrcExpr = ExprError();
     return;
   }
@@ -928,7 +928,8 @@ void CastOperation::CheckDynamicCast() {
     }
   } else {
     Self.Diag(OpRange.getBegin(), diag::err_bad_dynamic_cast_not_class)
-      << SrcPointee.getUnqualifiedType() << SrcExpr.get()->getSourceRange();
+        << SrcPointee.getUnqualifiedType(Self.Context)
+        << SrcExpr.get()->getSourceRange();
     SrcExpr = ExprError();
     return;
   }
@@ -974,7 +975,8 @@ void CastOperation::CheckDynamicCast() {
   assert(SrcDecl && "Definition missing");
   if (!cast<CXXRecordDecl>(SrcDecl)->isPolymorphic()) {
     Self.Diag(OpRange.getBegin(), diag::err_bad_dynamic_cast_not_polymorphic)
-      << SrcPointee.getUnqualifiedType() << SrcExpr.get()->getSourceRange();
+        << SrcPointee.getUnqualifiedType(Self.Context)
+        << SrcExpr.get()->getSourceRange();
     SrcExpr = ExprError();
   }
 
@@ -1631,8 +1633,8 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
   QualType FromType = SrcExpr->getType();
   QualType ToType = R->getPointeeType();
   if (CStyle) {
-    FromType = FromType.getUnqualifiedType();
-    ToType = ToType.getUnqualifiedType();
+    FromType = FromType.getUnqualifiedType(Self.Context);
+    ToType = ToType.getUnqualifiedType(Self.Context);
   }
 
   Sema::ReferenceConversions RefConv;
@@ -1807,9 +1809,9 @@ TryCastResult TryStaticDowncast(Sema &Self, CanQualType SrcType,
     }
 
     Self.Diag(OpRange.getBegin(), diag::err_ambiguous_base_to_derived_cast)
-      << QualType(SrcType).getUnqualifiedType()
-      << QualType(DestType).getUnqualifiedType()
-      << PathDisplayStr << OpRange;
+        << QualType(SrcType).getUnqualifiedType(Self.Context)
+        << QualType(DestType).getUnqualifiedType(Self.Context) << PathDisplayStr
+        << OpRange;
     msg = 0;
     return TC_Failed;
   }
@@ -2143,7 +2145,7 @@ static void DiagnoseCastOfObjCSEL(Sema &Self, const ExprResult &SrcExpr,
       QualType DT = DestType;
       if (isa<PointerType>(DestType))
         DT = DestType->getPointeeType();
-      if (!DT.getUnqualifiedType()->isVoidType())
+      if (!DT->isVoidType())
         Self.Diag(SrcExpr.get()->getExprLoc(),
                   diag::warn_cast_pointer_from_sel)
         << SrcType << DestType << SrcExpr.get()->getSourceRange();
@@ -3000,7 +3002,7 @@ static void DiagnoseBadFunctionCast(Sema &Self, const ExprResult &SrcExpr,
     return;
 
   QualType SrcType = SrcExpr.get()->getType();
-  if (DestType.getUnqualifiedType()->isVoidType())
+  if (DestType->isVoidType())
     return;
   if ((SrcType->isAnyPointerType() || SrcType->isBlockPointerType())
       && (DestType->isAnyPointerType() || DestType->isBlockPointerType()))

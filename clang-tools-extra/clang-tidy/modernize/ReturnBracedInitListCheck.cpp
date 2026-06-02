@@ -83,8 +83,8 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
             MatchedConstructExpr->getConstructor()->getParamDecl(I))) {
       const auto ArgType = MatchedConstructExpr->getArg(I)->getType();
       const auto ParamType = VD->getType().getNonReferenceType();
-      if (ArgType.getCanonicalType().getUnqualifiedType() !=
-          ParamType.getCanonicalType().getUnqualifiedType())
+      if (ArgType.getCanonicalType().getUnqualifiedType(*Result.Context) !=
+          ParamType.getCanonicalType().getUnqualifiedType(*Result.Context))
         return;
     }
   }

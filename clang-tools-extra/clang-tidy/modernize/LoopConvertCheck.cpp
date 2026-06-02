@@ -745,7 +745,7 @@ void LoopConvertCheck::doConversion(
 
   QualType Type = Context->getAutoDeductType();
   if (!Descriptor.ElemType.isNull() && Descriptor.ElemType->isFundamentalType())
-    Type = Descriptor.ElemType.getUnqualifiedType();
+    Type = Descriptor.ElemType.getUnqualifiedType(*Context);
   Type = Type.getDesugaredType(*Context);
 
   // If the new variable name is from the aliased variable, then the reference

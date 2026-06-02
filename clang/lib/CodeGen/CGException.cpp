@@ -530,7 +530,8 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
 
     for (unsigned I = 0; I != NumExceptions; ++I) {
       QualType Ty = Proto->getExceptionType(I);
-      QualType ExceptType = Ty.getNonReferenceType().getUnqualifiedType();
+      QualType ExceptType =
+          Ty.getNonReferenceType().getUnqualifiedType(getContext());
       llvm::Value *EHType = CGM.GetAddrOfRTTIDescriptor(ExceptType,
                                                         /*ForEH=*/true);
       Filter->setFilter(I, EHType);

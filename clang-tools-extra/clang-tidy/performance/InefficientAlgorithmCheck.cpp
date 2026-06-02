@@ -80,11 +80,11 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
   if (AlgCall->getNumArgs() == 4 && !Unordered) {
     const Expr *Arg = AlgCall->getArg(3);
     const QualType AlgCmp =
-        Arg->getType().getUnqualifiedType().getCanonicalType();
+        Arg->getType().getUnqualifiedType(*Result.Context).getCanonicalType();
     const unsigned CmpPosition = IneffContName.contains("map") ? 2 : 1;
     const QualType ContainerCmp = IneffCont->getTemplateArgs()[CmpPosition]
                                       .getAsType()
-                                      .getUnqualifiedType()
+                                      .getUnqualifiedType(*Result.Context)
                                       .getCanonicalType();
     if (AlgCmp != ContainerCmp) {
       diag(Arg->getBeginLoc(),

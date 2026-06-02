@@ -2004,7 +2004,8 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->isParenTypeId());
 
   Record.push_back(E->isGlobalNew());
-  ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
+  ImplicitAllocationParameters IAP =
+      E->implicitAllocationParameters(Record.getASTContext());
   Record.push_back(isAlignedAllocation(IAP.PassAlignment));
   Record.push_back(isTypeAwareAllocation(IAP.PassTypeIdentity));
   Record.push_back(E->doesUsualArrayDeleteWantSize());

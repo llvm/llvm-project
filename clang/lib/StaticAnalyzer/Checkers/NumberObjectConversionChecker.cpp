@@ -129,13 +129,13 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
   llvm::raw_svector_ostream OS(Msg);
 
   // Remove ObjC ARC qualifiers.
-  QualType ObjT = Obj->getType().getUnqualifiedType();
+  QualType ObjT = Obj->getType().getUnqualifiedType(ACtx);
 
   // Remove consts from pointers.
   if (IsCpp) {
     assert(ObjT.getCanonicalType()->isPointerType());
     ObjT = ACtx.getPointerType(
-        ObjT->getPointeeType().getCanonicalType().getUnqualifiedType());
+        ObjT->getPointeeType().getCanonicalType().getUnqualifiedType(ACtx));
   }
 
   if (IsComparison)

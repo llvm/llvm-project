@@ -424,7 +424,7 @@ bool SemaPPC::CheckPPCMMAType(QualType Type, SourceLocation TypeLoc) {
   if (Type->isPointerType() || Type->isArrayType())
     return false;
 
-  QualType CoreType = Type.getCanonicalType().getUnqualifiedType();
+  QualType CoreType = Type.getCanonicalType().getUnqualifiedType(Context);
 #define PPC_VECTOR_TYPE(Name, Id, Size) || CoreType == Context.Id##Ty
   if (false
 #include "clang/Basic/PPCTypes.def"
@@ -524,7 +524,8 @@ bool SemaPPC::BuiltinPPCMMACall(CallExpr *TheCall, unsigned BuiltinID,
     // Strip Restrict/Volatile qualifiers.
     if (StrippedRVType.isRestrictQualified() ||
         StrippedRVType.isVolatileQualified())
-      StrippedRVType = StrippedRVType.getCanonicalType().getUnqualifiedType();
+      StrippedRVType =
+          StrippedRVType.getCanonicalType().getUnqualifiedType(Context);
 
     // The only case where the argument type and expected type are allowed to
     // mismatch is if the argument type is a non-void pointer (or array) and

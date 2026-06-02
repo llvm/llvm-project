@@ -319,7 +319,7 @@ static bool isCompatibleWithArrayReference(QualType ArgType, QualType ParamType,
   if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
     return false;
 
-  return ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType();
+  return ParamType.getUnqualifiedType(Ctx) == ArgType.getUnqualifiedType(Ctx);
 }
 
 static QualType convertToPointeeOrArrayElementQualType(QualType TypeToConvert) {
@@ -377,7 +377,7 @@ static bool arePointerTypesCompatible(QualType ArgType, QualType ParamType,
                                         IsParamContinuouslyConst, Ctx))
       return false;
 
-    if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
+    if (ParamType.getUnqualifiedType(Ctx) == ArgType.getUnqualifiedType(Ctx))
       return true;
 
   } while (ParamType->isPointerType() && ArgType->isPointerType());
@@ -408,7 +408,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   ArgType = ArgType.getNonReferenceType();
   ParamType = ParamType.getNonReferenceType();
 
-  if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
+  if (ParamType.getUnqualifiedType(Ctx) == ArgType.getUnqualifiedType(Ctx))
     return true;
 
   // Arithmetic types are interconvertible, except scoped enums.
@@ -449,7 +449,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   if (!ParamType.isAtLeastAsQualifiedAs(ArgType, Ctx))
     return false;
 
-  if (ParamType.getUnqualifiedType() == ArgType.getUnqualifiedType())
+  if (ParamType.getUnqualifiedType(Ctx) == ArgType.getUnqualifiedType(Ctx))
     return true;
 
   // At this point, all possible C language implicit conversion were checked.

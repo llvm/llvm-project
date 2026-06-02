@@ -871,7 +871,8 @@ bool ASTContext::isUnaryOverflowPatternExcluded(const UnaryOperator *UO) {
 /// presence within an ignorelist.
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                           const QualType &Ty) const {
-  std::string TyName = Ty.getUnqualifiedType().getAsString(getPrintingPolicy());
+  std::string TyName =
+      Ty.getUnqualifiedType(*this).getAsString(getPrintingPolicy());
   return NoSanitizeL->containsType(Mask, TyName);
 }
 
@@ -3649,7 +3650,7 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   if (T->isFunctionType()) {
     encodeTypeForFunctionPointerAuth(*this, Out, T);
   } else {
-    T = T.getUnqualifiedType();
+    T = T.getUnqualifiedType(*this);
     // Calls to member function pointers don't need to worry about
     // language interop or the laxness of the C type compatibility rules.
     // We just mangle the member pointer type directly, which is
@@ -7130,7 +7131,7 @@ CanQualType ASTContext::getCanonicalParamType(QualType T) const {
 
 QualType ASTContext::getUnqualifiedArrayType(QualType type,
                                              Qualifiers &quals) const {
-  SplitQualType splitType = type.getSplitUnqualifiedType();
+  SplitQualType splitType = type.getSplitUnqualifiedType(*this);
 
   // FIXME: getSplitUnqualifiedType() actually walks all the way to
   // the unqualified desugared type and then drops it on the floor.
@@ -8127,7 +8128,7 @@ QualType ASTContext::getAdjustedParameterType(QualType T) const {
 QualType ASTContext::getSignatureParameterType(QualType T) const {
   T = getVariableArrayDecayedType(T);
   T = getAdjustedParameterType(T);
-  return T.getUnqualifiedType();
+  return T.getUnqualifiedType(*this);
 }
 
 QualType ASTContext::getExceptionObjectType(QualType T) const {
@@ -8140,7 +8141,7 @@ QualType ASTContext::getExceptionObjectType(QualType T) const {
   T = getVariableArrayDecayedType(T);
   if (T->isArrayType() || T->isFunctionType())
     T = getDecayedType(T);
-  return T.getUnqualifiedType();
+  return T.getUnqualifiedType(*this);
 }
 
 /// getArrayDecayedType - Return the properly qualified result of decaying the
@@ -11519,7 +11520,7 @@ QualType ASTContext::mergeTransparentUnionType(QualType T, QualType SubType,
     RecordDecl *UD = UT->getDecl()->getMostRecentDecl();
     if (UD->hasAttr<TransparentUnionAttr>()) {
       for (const auto *I : UD->fields()) {
-        QualType ET = I->getType().getUnqualifiedType();
+        QualType ET = I->getType().getUnqualifiedType(*this);
         QualType MT = mergeTypes(ET, SubType, OfBlockPointer, Unqualified);
         if (!MT.isNull())
           return MT;
@@ -11579,7 +11580,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     return {};
 
   if (Unqualified)
-    retType = retType.getUnqualifiedType();
+    retType = retType.getUnqualifiedType(*this);
 
   CanQualType LRetType = getCanonicalType(lbase->getReturnType());
   CanQualType RRetType = getCanonicalType(rbase->getReturnType());
@@ -11700,20 +11701,20 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     // Check parameter type compatibility
     SmallVector<QualType, 10> types;
     for (unsigned i = 0, n = lproto->getNumParams(); i < n; i++) {
-      QualType lParamType = lproto->getParamType(i).getUnqualifiedType();
-      QualType rParamType = rproto->getParamType(i).getUnqualifiedType();
+      QualType lParamType = lproto->getParamType(i).getUnqualifiedType(*this);
+      QualType rParamType = rproto->getParamType(i).getUnqualifiedType(*this);
       QualType paramType = mergeFunctionParameterTypes(
           lParamType, rParamType, OfBlockPointer, Unqualified);
       if (paramType.isNull())
         return {};
 
       if (Unqualified)
-        paramType = paramType.getUnqualifiedType();
+        paramType = paramType.getUnqualifiedType(*this);
 
       types.push_back(paramType);
       if (Unqualified) {
-        lParamType = lParamType.getUnqualifiedType();
-        rParamType = rParamType.getUnqualifiedType();
+        lParamType = lParamType.getUnqualifiedType(*this);
+        rParamType = rParamType.getUnqualifiedType(*this);
       }
 
       if (getCanonicalType(paramType) != getCanonicalType(lParamType))
@@ -11891,8 +11892,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     return *MergedOBT;
 
   if (Unqualified) {
-    LHS = LHS.getUnqualifiedType();
-    RHS = RHS.getUnqualifiedType();
+    LHS = LHS.getUnqualifiedType(*this);
+    RHS = RHS.getUnqualifiedType(*this);
   }
 
   QualType LHSCan = getCanonicalType(LHS),
@@ -12021,8 +12022,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     QualType LHSPointee = LHS->castAs<PointerType>()->getPointeeType();
     QualType RHSPointee = RHS->castAs<PointerType>()->getPointeeType();
     if (Unqualified) {
-      LHSPointee = LHSPointee.getUnqualifiedType();
-      RHSPointee = RHSPointee.getUnqualifiedType();
+      LHSPointee = LHSPointee.getUnqualifiedType(*this);
+      RHSPointee = RHSPointee.getUnqualifiedType(*this);
     }
     QualType ResultType = mergeTypes(LHSPointee, RHSPointee, false,
                                      Unqualified);
@@ -12040,8 +12041,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     QualType LHSPointee = LHS->castAs<BlockPointerType>()->getPointeeType();
     QualType RHSPointee = RHS->castAs<BlockPointerType>()->getPointeeType();
     if (Unqualified) {
-      LHSPointee = LHSPointee.getUnqualifiedType();
-      RHSPointee = RHSPointee.getUnqualifiedType();
+      LHSPointee = LHSPointee.getUnqualifiedType(*this);
+      RHSPointee = RHSPointee.getUnqualifiedType(*this);
     }
     if (getLangOpts().OpenCL) {
       Qualifiers LHSPteeQual = LHSPointee.getQualifiers();
@@ -12073,8 +12074,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     QualType LHSValue = LHS->castAs<AtomicType>()->getValueType();
     QualType RHSValue = RHS->castAs<AtomicType>()->getValueType();
     if (Unqualified) {
-      LHSValue = LHSValue.getUnqualifiedType();
-      RHSValue = RHSValue.getUnqualifiedType();
+      LHSValue = LHSValue.getUnqualifiedType(*this);
+      RHSValue = RHSValue.getUnqualifiedType(*this);
     }
     QualType ResultType = mergeTypes(LHSValue, RHSValue, false,
                                      Unqualified);
@@ -12096,8 +12097,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     QualType LHSElem = getAsArrayType(LHS)->getElementType();
     QualType RHSElem = getAsArrayType(RHS)->getElementType();
     if (Unqualified) {
-      LHSElem = LHSElem.getUnqualifiedType();
-      RHSElem = RHSElem.getUnqualifiedType();
+      LHSElem = LHSElem.getUnqualifiedType(*this);
+      RHSElem = RHSElem.getUnqualifiedType(*this);
     }
 
     QualType ResultType = mergeTypes(LHSElem, RHSElem, false, Unqualified);

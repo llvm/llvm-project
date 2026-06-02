@@ -37,8 +37,8 @@ bool MatchesAnyListedTypeNameMatcher::matches(
   PrintingPolicyWithSuppressedTag.SuppressScope = false;
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
-  std::string TypeName =
-      Node.getUnqualifiedType().getAsString(PrintingPolicyWithSuppressedTag);
+  std::string TypeName = Node.getUnqualifiedType(Finder->getASTContext())
+                             .getAsString(PrintingPolicyWithSuppressedTag);
 
   return llvm::any_of(NameMatchers, [&TypeName](const llvm::Regex &NM) {
     return NM.isValid() && NM.match(TypeName);
