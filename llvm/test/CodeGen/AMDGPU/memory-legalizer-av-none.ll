@@ -7,7 +7,9 @@
 ; Test that !amdgcn-av-none suppresses MakeAvailable/MakeVisible (cache
 ; writeback/invalidation) while preserving ordering (waits).
 
-; Fences: one per scope, varying orderings.
+; Fences: one per scope, varying orderings. Wait counters are preserved;
+; cache writeback (buffer_wbl2, global_wb) and invalidation (buffer_wbinvl1_vol,
+; buffer_inv, global_inv) are suppressed.
 
 define amdgpu_kernel void @workgroup_acq_rel_fence_av_none() {
 ; GFX90A-LABEL: workgroup_acq_rel_fence_av_none:
@@ -160,7 +162,7 @@ entry:
   ret void
 }
 
-; Atomic loads: acquire across scopes.
+; Atomic loads: acquire across scopes. No post-load cache invalidation.
 
 define i32 @workgroup_acquire_load_av_none(ptr addrspace(1) %ptr) {
 ; GFX90A-LABEL: workgroup_acquire_load_av_none:
@@ -321,7 +323,7 @@ entry:
   ret i32 %val
 }
 
-; Atomic stores: release across scopes.
+; Atomic stores: release across scopes. No pre-store cache writeback.
 
 define void @workgroup_release_store_av_none(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX90A-LABEL: workgroup_release_store_av_none:
@@ -506,7 +508,7 @@ entry:
   ret void
 }
 
-; Atomicrmw: agent acq_rel and system seq_cst.
+; Atomicrmw: agent acq_rel and system seq_cst. No writeback or invalidation.
 
 define i32 @agent_acq_rel_atomicrmw_av_none(ptr addrspace(1) %ptr, i32 %val) {
 ; GFX90A-LABEL: agent_acq_rel_atomicrmw_av_none:
@@ -634,7 +636,7 @@ entry:
   ret i32 %ret
 }
 
-; Cmpxchg: cluster acq_rel.
+; Cmpxchg: cluster acq_rel. No writeback or invalidation.
 
 define { i32, i1 } @cluster_acq_rel_cmpxchg_av_none(ptr addrspace(1) %ptr, i32 %cmp, i32 %new) {
 ; GFX90A-LABEL: cluster_acq_rel_cmpxchg_av_none:
@@ -719,4 +721,72 @@ entry:
   ret { i32, i1 } %ret
 }
 
+; Combined synchronize-as and av-none: synchronize-as restricts the fence to
+; the global address space (dropping lgkmcnt waits), while av-none suppresses
+; cache writeback/invalidation.
+
+define amdgpu_kernel void @agent_acq_rel_fence_syncas_global_av_none() {
+; GFX90A-LABEL: agent_acq_rel_fence_syncas_global_av_none:
+; GFX90A:       ; %bb.0: ; %entry
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: agent_acq_rel_fence_syncas_global_av_none:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: agent_acq_rel_fence_syncas_global_av_none:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: agent_acq_rel_fence_syncas_global_av_none:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
+entry:
+  fence syncscope("agent") acq_rel, !mmra !1
+  ret void
+}
+
+define amdgpu_kernel void @system_seq_cst_fence_syncas_global_av_none() {
+; GFX90A-LABEL: system_seq_cst_fence_syncas_global_av_none:
+; GFX90A:       ; %bb.0: ; %entry
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-NEXT:    s_endpgm
+;
+; GFX90A-TGSPLIT-LABEL: system_seq_cst_fence_syncas_global_av_none:
+; GFX90A-TGSPLIT:       ; %bb.0: ; %entry
+; GFX90A-TGSPLIT-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-TGSPLIT-NEXT:    s_endpgm
+;
+; GFX12-WGP-LABEL: system_seq_cst_fence_syncas_global_av_none:
+; GFX12-WGP:       ; %bb.0: ; %entry
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
+; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_storecnt 0x0
+; GFX12-WGP-NEXT:    s_endpgm
+;
+; GFX12-CU-LABEL: system_seq_cst_fence_syncas_global_av_none:
+; GFX12-CU:       ; %bb.0: ; %entry
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_endpgm
+entry:
+  fence seq_cst, !mmra !1
+  ret void
+}
+
 !0 = !{!"amdgcn-av", !"none"}
+!1 = !{!0, !2}
+!2 = !{!"amdgpu-synchronize-as", !"global"}
