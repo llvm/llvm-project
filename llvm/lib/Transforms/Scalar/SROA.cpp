@@ -3018,6 +3018,22 @@ public:
       return Vals[0];
     };
 
+    // Replace a full-width load with a load of the freshly-merged alloca.
+    // The merge stored a value of type Merged->getType() into NewAI; we load
+    // that same type back so every access to NewAI stays consistently typed
+    // (otherwise the alloca is no longer promotable).
+    auto ReplaceFullLoad = [&](LoadInst *LoadToReplace, Value *Merged) {
+      IRBuilder<> LoadBuilder(LoadToReplace);
+      Value *NewLoad = LoadBuilder.CreateAlignedLoad(
+          Merged->getType(), &NewAI, getSliceAlign(),
+          LoadToReplace->isVolatile(),
+          LoadToReplace->getName() + ".sroa.new.load");
+      if (NewLoad->getType() != LoadToReplace->getType())
+        NewLoad = LoadBuilder.CreateBitCast(NewLoad, LoadToReplace->getType());
+      LoadToReplace->replaceAllUsesWith(NewLoad);
+      DeletedValues.push_back(LoadToReplace);
+    };
+
     if (IsStoresOnlyPattern) {
       // Stores should not overlap and should cover the whole alloca.
       // Sort by begin offset to verify this with a single linear scan.
@@ -3080,12 +3096,7 @@ public:
       Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
 
       // Replace the original load with a load of the newly-merged alloca.
-      // Later promotion will forward the store we just created to this load.
-      IRBuilder<> LoadBuilder(FullLoad);
-      FullLoad->replaceAllUsesWith(LoadBuilder.CreateAlignedLoad(
-          FullLoad->getType(), &NewAI, getSliceAlign(), FullLoad->isVolatile(),
-          FullLoad->getName() + ".sroa.new.load"));
-      DeletedValues.push_back(FullLoad);
+      ReplaceFullLoad(FullLoad, Merged);
       return DeletedValues;
     }
 
@@ -3246,13 +3257,8 @@ public:
 
     // Replace the optional final full-width load with a load of the newly
     // merged alloca. Later promotion will forward the store above to it.
-    if (FullLoad) {
-      IRBuilder<> LoadBuilder(FullLoad);
-      FullLoad->replaceAllUsesWith(LoadBuilder.CreateAlignedLoad(
-          FullLoad->getType(), &NewAI, getSliceAlign(), FullLoad->isVolatile(),
-          FullLoad->getName() + ".sroa.new.load"));
-      DeletedValues.push_back(FullLoad);
-    }
+    if (FullLoad)
+      ReplaceFullLoad(FullLoad, Merged);
 
     return DeletedValues;
   }

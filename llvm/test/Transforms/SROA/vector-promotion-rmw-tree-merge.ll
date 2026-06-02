@@ -289,3 +289,38 @@ entry:
   %result = load <16 x float>, ptr %alloca, align 64
   ret <16 x float> %result
 }
+
+; The init store type (<2 x double>) differs from the final load type
+; (<4 x float>). The rewrite must reconcile them with bitcasts so every
+; access to the new alloca stays the same type and it remains promotable.
+define <4 x float> @rmw_init_wider_eltty(<2 x double> %init, <2 x float> %a, <2 x float> %b) {
+; CHECK-LABEL: define <4 x float> @rmw_init_wider_eltty(
+; CHECK-SAME: <2 x double> [[INIT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[INIT_CAST:%.*]] = bitcast <2 x double> [[INIT]] to <2 x i64>
+; CHECK-NEXT:    [[INIT_EXTRACT:%.*]] = shufflevector <2 x i64> [[INIT_CAST]], <2 x i64> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[INIT_EXTRACT1:%.*]] = shufflevector <2 x i64> [[INIT_CAST]], <2 x i64> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[INIT_EXTRACT]] to <2 x float>
+; CHECK-NEXT:    [[R0:%.*]] = fadd <2 x float> [[TMP0]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[INIT_EXTRACT1]] to <2 x float>
+; CHECK-NEXT:    [[R1:%.*]] = fadd <2 x float> [[TMP1]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[R0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x float> [[R1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x i64> [[TMP2]], <1 x i64> [[TMP3]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP4]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[TMP5]]
+;
+entry:
+  %alloca = alloca <4 x float>, align 16
+  store <2 x double> %init, ptr %alloca, align 16
+  %p0 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 0
+  %v0 = load <2 x float>, ptr %p0, align 8
+  %r0 = fadd <2 x float> %v0, %a
+  store <2 x float> %r0, ptr %p0, align 8
+  %p1 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 2
+  %v1 = load <2 x float>, ptr %p1, align 8
+  %r1 = fadd <2 x float> %v1, %b
+  store <2 x float> %r1, ptr %p1, align 8
+  %result = load <4 x float>, ptr %alloca, align 16
+  ret <4 x float> %result
+}
