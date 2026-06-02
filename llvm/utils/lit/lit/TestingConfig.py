@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import TYPE_CHECKING, Any, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Union
 
 if TYPE_CHECKING:
     from lit.LitConfig import LitConfig
+    from lit.formats.base import TestFormat
 
 
 class TestingConfig:
@@ -175,23 +176,23 @@ class TestingConfig:
 
     def __init__(
         self,
-        parent: None,
+        parent: Optional["TestingConfig"],
         name: str,
         suffixes: Set[Any],
-        test_format: None,
+        test_format: Optional["TestFormat"],
         environment: Dict[str, str],
         substitutions: List[Any],
         unsupported: bool,
-        test_exec_root: None,
-        test_source_root: None,
+        test_exec_root: Optional[str],
+        test_source_root: Optional[str],
         excludes: List[Any],
         available_features: List[Any],
         pipefail: bool,
         limit_to_features: List[Any] = [],
         is_early: bool = False,
-        parallelism_group: None = None,
+        parallelism_group: Optional[Union[str, Callable]] = None,
         standalone_tests: bool = False,
-        maxIndividualTestTime: None = 0,
+        maxIndividualTestTime: Optional[int] = 0,
     ) -> None:
         self.parent = parent
         self.name = str(name)

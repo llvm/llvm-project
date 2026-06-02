@@ -166,9 +166,9 @@ class Result:
         self,
         code: ResultCode,
         output: str = "",
-        elapsed: None = None,
+        elapsed: Optional[float] = None,
         attempts: int = 1,
-        max_allowed_attempts: None = None,
+        max_allowed_attempts: Optional[int] = None,
         test_updater_outputs: List[Any] = [],
     ) -> None:
         # The result code.
@@ -177,8 +177,8 @@ class Result:
         self.output = output
         # The wall timing to execute the test, if timing.
         self.elapsed = elapsed
-        self.start = None
-        self.pid = None
+        self.start: Optional[float] = None
+        self.pid: Optional[int] = None
         # The metrics reported by this test.
         self.metrics = {}
         # The micro-test results reported by this test.
@@ -261,10 +261,10 @@ class Test:
     def __init__(
         self,
         suite: TestSuite,
-        path_in_suite: Union[Tuple[str], Tuple[str, str]],
+        path_in_suite: Tuple[str, ...],
         config: TestingConfig,
-        file_path: None = None,
-        gtest_json_file: None = None,
+        file_path: Optional[str] = None,
+        gtest_json_file: Optional[str] = None,
     ) -> None:
         self.suite = suite
         self.path_in_suite = path_in_suite

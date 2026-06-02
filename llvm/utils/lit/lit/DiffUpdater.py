@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import shutil
 import os
 import shlex
 import pathlib
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from lit.ShellEnvironment import ShellCommandResult
+    from lit.Test import Test
 
 """
 This file provides the `diff_test_updater` function, which is invoked on failed RUN lines when lit is executed with --update-tests.
@@ -23,24 +30,30 @@ Possible improvements:
 
 
 class NormalFileTarget:
-    def __init__(self, target):
+    def __init__(self, target: str) -> None:
         self.target = target
 
-    def copyFrom(self, source):
+    def copyFrom(self, source: str) -> None:
         shutil.copy(source, self.target)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.target
 
 
 class SplitFileTarget:
-    def __init__(self, slice_start_idx, test_path, lines, filename):
+    def __init__(
+        self,
+        slice_start_idx: int,
+        test_path: pathlib.Path,
+        lines: List[str],
+        filename: str,
+    ) -> None:
         self.slice_start_idx = slice_start_idx
         self.test_path = test_path
         self.lines = lines
         self.filename = filename
 
-    def copyFrom(self, source):
+    def copyFrom(self, source: str) -> None:
         lines_before = self.lines[: self.slice_start_idx + 1]
         self.lines = self.lines[self.slice_start_idx + 1 :]
         slice_end_idx = None
@@ -58,11 +71,11 @@ class SplitFileTarget:
             for l in new_lines:
                 f.write(l)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"slice {self.filename} in {self.test_path}"
 
     @staticmethod
-    def get_target_dir(commands, test_path):
+    def get_target_dir(commands: List[str], test_path: pathlib.Path) -> Optional[str]:
         # posix=True breaks Windows paths because \ is treated as an escaping character
         for cmd in commands:
             split = shlex.split(cmd, posix=False)
@@ -79,7 +92,9 @@ class SplitFileTarget:
         return None
 
     @staticmethod
-    def create(path, commands, test_path, target_dir):
+    def create(
+        path: str, commands: List[str], test_path: pathlib.Path, target_dir: str
+    ) -> Optional[SplitFileTarget]:
         path = pathlib.Path(path)
         with open(test_path, "r") as f:
             lines = f.readlines()
@@ -93,7 +108,7 @@ class SplitFileTarget:
         return SplitFileTarget(idx, test_path, lines, p)
 
     @staticmethod
-    def _get_split_line_path(l):
+    def _get_split_line_path(l: str) -> Optional[str]:
         if len(l) < 6:
             return None
         if l.startswith("//"):
@@ -107,19 +122,21 @@ class SplitFileTarget:
         return l.rstrip()
 
 
-def unquote(s):
+def unquote(s: str) -> str:
     if len(s) > 1 and s[0] == s[-1] and (s[0] == '"' or s[0] == "'"):
         return s[1:-1]
     return s
 
 
-def get_source_and_target(a, b, test_path, commands):
+def get_source_and_target(
+    a: str, b: str, test_path: pathlib.Path, commands: List[str]
+) -> Optional[Tuple[str, Union[NormalFileTarget, SplitFileTarget]]]:
     """
     Try to figure out which file is the test output and which is the reference.
     """
     split_target_dir = SplitFileTarget.get_target_dir(commands, test_path)
-    a_target = None
-    b_target = None
+    a_target: Optional[Union[NormalFileTarget, SplitFileTarget]] = None
+    b_target: Optional[Union[NormalFileTarget, SplitFileTarget]] = None
     if split_target_dir:
         a_target = SplitFileTarget.create(a, commands, test_path, split_target_dir)
         b_target = SplitFileTarget.create(b, commands, test_path, split_target_dir)
@@ -148,11 +165,13 @@ def get_source_and_target(a, b, test_path, commands):
     return None
 
 
-def filter_flags(args):
+def filter_flags(args: List[str]) -> List[str]:
     return [arg for arg in args if not arg.startswith("-")]
 
 
-def diff_test_updater(result, test, commands):
+def diff_test_updater(
+    result: ShellCommandResult, test: Test, commands: List[str]
+) -> Optional[str]:
     args = filter_flags(result.command.args)
     if len(args) != 3:
         return None

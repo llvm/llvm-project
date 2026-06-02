@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import unittest
 
 import lit.discovery
 import lit.LitConfig
 import lit.worker
+from typing import TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from lit.Test import Test
+    from unittest.suite import TestSuite
 
 """
 TestCase adaptor for providing a Python 'unittest' compatible interface to 'lit'
@@ -15,18 +22,18 @@ class UnresolvedError(RuntimeError):
 
 
 class LitTestCase(unittest.TestCase):
-    def __init__(self, test, lit_config):
+    def __init__(self, test: Test, lit_config: lit.LitConfig.LitConfig) -> None:
         unittest.TestCase.__init__(self)
         self._test = test
         self._lit_config = lit_config
 
-    def id(self):
+    def id(self) -> str:
         return self._test.getFullName()
 
-    def shortDescription(self):
+    def shortDescription(self) -> str:
         return self._test.getFullName()
 
-    def runTest(self):
+    def runTest(self) -> None:
         # Run the test.
         result = lit.worker._execute(self._test, self._lit_config)
 
@@ -37,7 +44,7 @@ class LitTestCase(unittest.TestCase):
             self.fail(result.output)
 
 
-def load_test_suite(inputs):
+def load_test_suite(inputs: List[str]) -> TestSuite:
     import platform
 
     windows = platform.system() == "Windows"
