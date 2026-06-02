@@ -320,8 +320,8 @@ protected:
 /// Represents the point where the lifetime of an automatic object ends
 class CFGLifetimeEnds : public CFGScopeMarker {
 public:
-  explicit CFGLifetimeEnds(const VarDecl *var, const Stmt *stmt)
-      : CFGScopeMarker(LifetimeEnds, stmt, var) {}
+  explicit CFGLifetimeEnds(const VarDecl *Var, const Stmt *Stmt)
+      : CFGScopeMarker(LifetimeEnds, Stmt, Var) {}
 
   const VarDecl *getVarDecl() const {
     return static_cast<const VarDecl *>(Data2.getPointer());
