@@ -2723,37 +2723,36 @@ def int_amdgcn_cs_chain:
 // Waterfall intrinsics are used to mark a region as requiring waterfall loops to
 // activate and deactivate lanes in a loop (and sometimes transform VGPR values
 // into SGPR values).
-// Best case (all lanes have the same values) the loop will execute once, worst case (all lanes
-// have different values) the loop will execute wave-size times.
+// Best case (all lanes have the same values) the loop will execute once,
+// worst case (all lanes have different values) the loop will execute wave-size times.
+//
 // The waterfall.begin intrinsic returns a new token that must be threaded through the
 // corresponding waterfall.readfirstlane and waterfall.end intrinsics, forming a
 // waterfall group of intrinsics that together define a waterfall region.
 // All intrinsics in a waterfall group must reside within the same basic block.
+// TODO: extend the support to allow spanning multiple blocks
+//
 // Where the intrinsic specifies "llvm_any_ty", the intrinsic will accept any of
 // the following types:
 // i16, v2i16, v4i16, i32, v2i32, v4i32, v8i32, f16, v2f16, v4f16, f32, v2f32,
 // v4f32, v8f32
-// TODO: extend the support to allow spanning multiple blocks
+//
+// The waterfall.begin intrinsic marks the beginning of a waterfall region of code.
 def int_amdgcn_waterfall_begin :
     Intrinsic<[llvm_token_ty],  // Returns token to be used by the rest of the waterfall loop
               [llvm_token_ty,   // Previous begin token / poison if first
                llvm_any_ty],    // Non-uniform value for waterfall index
               [IntrConvergent]>;
 
-// Often the index operand of begin is the same as the non-uniform operand
-// of readfirstlane, however, this isn't always the case.
-// The readfirstlane intrinsic is a no-op if the index is used directly
-// in the body of the waterfall loop.
+// The waterfall.readfirstlane intrinsic reads the first active lane's value
+// and returns it as a uniform value for use within a waterfall region.
 def int_amdgcn_waterfall_readfirstlane :
     Intrinsic<[llvm_any_ty],     // Uniform value read from the first active lane
               [llvm_token_ty,    // Token from final begin
                LLVMMatchType<0>], // Non-uniform value to read
               [IntrConvergent]>;
 
-// Effectively a no-op, but this intrinsic is used to indicate the end of the
-// region for waterfall by tagging a value as the end of the section.
-// Waterfall will happen for all values dependent on the begin until the end
-// intrinsic is reached,
+// The waterfall.end intrinsic marks the end of a waterfall region of code.
 def int_amdgcn_waterfall_end :
     Intrinsic<[llvm_any_ty],      // Returns any value
               [llvm_token_ty,     // Token from final begin

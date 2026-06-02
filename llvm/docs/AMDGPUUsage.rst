@@ -2056,7 +2056,7 @@ for a frontend.
 
 A group of waterfall intrinsics that depend on the same token defines a
 single waterfall loop. The group identifies a region of code, the
-non-uniform operands that need to be made uniform, and the operands
+non-uniform operands that need to be made uniform, and the values
 to use as the "index" of the loop.
 
 A waterfall group must contain at least one
@@ -2073,6 +2073,16 @@ Each ``waterfall.begin`` specifies a value that is part of the index. Each
 uniform. The index can be disjoint from the non-uniform operands. For
 example, ``waterfall.begin`` can take an index while
 ``waterfall.readfirstlane`` takes a descriptor derived from that index.
+
+For example::
+
+  %tok0 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx0)
+  %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx1)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(..., <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, ...)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %tok1, <4 x float> %r)
+  ...
 
 Each waterfall group must be contained within a single basic block.
 A single basic block can contain more than one waterfall group.
@@ -2093,13 +2103,13 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
                                                    Multiple values of different types can be combined as
                                                    an index by threading tokens through multiple ``waterfall.begin`` intrinsics::
 
-                                                     %tok0 = llvm.amdgcn.waterfall.begin(i32 0, i32 %idx0)
-                                                     %tok1 = llvm.amdgcn.waterfall.begin(i32 %tok0, i32 %idx1)
+                                                     %tok0 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx0)
+                                                     %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok0, i32 %idx1)
                                                      ...
 
-                                                   The intrinsic takes a token
-                                                   (use a null/zero value if this is the first ``waterfall.begin`` in a
-                                                   waterfall group) and an operand.
+                                                   The intrinsic takes a token and a non-uniform value.
+                                                   Use ``poison`` as a token if this is the first ``waterfall.begin`` in a
+                                                   waterfall group.
 
                                                    The intrinsic returns a new token that must be threaded through the
                                                    corresponding ``waterfall.readfirstlane`` and ``waterfall.end``
@@ -2114,8 +2124,12 @@ If all operands are uniform, the compiler will not insert the waterfall loop.
                                                    The correctness requirement is that lanes with the same index values
                                                    must have the same values for all ``waterfall.readfirstlane`` operands.
 
+                                                   The ``waterfall.readfirstlane`` intrinsic is a no-op if the index value
+                                                   is used directly in the body of the waterfall loop.
+
   ``llvm.amdgcn.waterfall.end``                    Marks the end of a waterfall region.
-                                                   Takes the token from the final ``waterfall.begin`` in the group.
+                                                   Takes the token from the final ``waterfall.begin`` in the group and
+                                                   a value. Effectively a no-op tagging a value as the end of the section.
 
   ==============================================   =========================================================================
 
