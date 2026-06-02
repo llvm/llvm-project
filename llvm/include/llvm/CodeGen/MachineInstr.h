@@ -1921,10 +1921,7 @@ public:
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
-  void setDebugLoc(DebugLoc DL) {
-    DbgLoc = std::move(DL);
-    assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-  }
+  void setDebugLoc(DebugLoc DL) { DbgLoc = std::move(DL); }
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.

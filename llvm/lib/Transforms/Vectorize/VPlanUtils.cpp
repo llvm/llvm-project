@@ -220,6 +220,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
+  // Handle shl by constant: x << c is equivalent to x * (1 << c).
+  uint64_t ShiftAmt;
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+    return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getMulExpr(Ops[0],
+                           SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
+    });
   if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
@@ -236,22 +243,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getTruncateExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getZeroExtendExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_SExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
 
     // Mirror SCEV's createSCEV handling for sext(sub nsw): push sign extension
     // onto the operands before computing the subtraction.
@@ -644,8 +648,8 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanonicalIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
@@ -833,16 +837,16 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 /// inserted for predicated reductions or tail folding.
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res = vputils::findUserOf<VPInstruction::ComputeReductionResult>(
-          BackedgeVal))
+  if (auto *Res =
+          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR = vputils::findUserOf(
-      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  VPRecipeBase *SelR =
+      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+  return findUserOf<VPInstruction::ComputeReductionResult>(
       cast<VPSingleDefRecipe>(SelR));
 }
 

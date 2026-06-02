@@ -9,13 +9,21 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
 
+extern cl::opt<int> CostThreshold; // Defined in TransactionAcceptOrRevert.cpp
+
 namespace sandboxir {
+
+#define DEBUG_PREFIX_LOCAL DEBUG_PREFIX "LoadStoreVec: "
 
 std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
                                                  Scheduler &Sched) {
@@ -25,19 +33,6 @@ std::optional<Type *> LoadStoreVec::canVectorize(ArrayRef<Instruction *> Bndl,
 
   // Check if instructions repeat.
   if (!LegalityAnalysis::areUnique(Bndl))
-    return std::nullopt;
-
-  // TODO: This is target-dependent.
-  // Don't mix integer with floating point.
-  bool IsFloat = false;
-  bool IsInteger = false;
-  for ([[maybe_unused]] auto *I : Bndl) {
-    if (Utils::getExpectedType(I)->getScalarType()->isFloatingPointTy())
-      IsFloat = true;
-    else
-      IsInteger = true;
-  }
-  if (IsFloat && IsInteger)
     return std::nullopt;
 
   // Check scheduling.
@@ -83,6 +78,9 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   if (!canVectorize(Bndl, Sched))
     return false;
 
+  const auto &SB = cast<RegionWithScore>(Rgn).getScoreboard();
+  InstructionCost CostBefore = SB.getAfterCost() - SB.getBeforeCost();
+
   SmallVector<Value *, 4> Operands;
   Operands.reserve(Bndl.size());
   for (auto *I : Bndl) {
@@ -109,6 +107,10 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   if (!AllLoads && !AllConstants)
     return false;
 
+  // Vectorizing mixed floats and integers with external uses may not be
+  // profitable on some targets, so save state here.
+  Ctx.save();
+
   Value *VecOp = nullptr;
   if (AllLoads) {
     // TODO: Try to avoid the extra copy to an instruction vector.
@@ -119,10 +121,14 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
     bool Consecutive = VecUtils::areConsecutive<LoadInst, Instruction>(
         Loads, A.getScalarEvolution(), *DL);
-    if (!Consecutive)
+    if (!Consecutive) {
+      Ctx.accept();
       return false;
-    if (!canVectorize(Loads, Sched))
+    }
+    if (!canVectorize(Loads, Sched)) {
+      Ctx.accept();
       return false;
+    }
 
     // Generate vector load.
     Type *Ty = VecUtils::getCombinedVectorTypeFor(Bndl, *DL);
@@ -163,6 +169,20 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &A) {
   StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, Ctx);
 
   tryEraseDeadInstrs(Bndl, Operands);
+
+  // Check the cost.
+  InstructionCost CostAfter = SB.getAfterCost() - SB.getBeforeCost();
+  InstructionCost CostGain = CostAfter - CostBefore;
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "CostGain=" << CostGain
+                    << " (After=" << CostAfter << " Before=" << CostBefore
+                    << ")\n");
+  if (CostGain > CostThreshold) {
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Not profitable, reverting.\n");
+    Ctx.revert();
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX_LOCAL << "Profitable accepting.\n");
+  Ctx.accept();
   return true;
 }
 

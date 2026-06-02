@@ -140,6 +140,10 @@ Makes programs 10x faster by doing Special New Thing.
   Use the new ``remove_if`` member to erase matching elements in a single pass
   instead of erasing while iterating.
 
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -174,6 +178,12 @@ Makes programs 10x faster by doing Special New Thing.
   are now deprecated. Use `"amdgpu-waves-per-eu"` instead. The backend still
   honors the attributes; Clang emits a `-Wdeprecated-declarations` warning when
   the source attributes are used.
+* The `relaxed-buffer-oob-mode` subtarget feature has been replaced by two
+  module flags, `amdgpu.buffer.oob.mode` and `amdgpu.tbuffer.oob.mode`, which
+  control out-of-bounds semantics (see the AMDGPU User Guide). Frontends that
+  previously relied on the subtarget feature to enable misaligned buffer merging
+  must now set the corresponding module flag to `1` (relaxed). An absent flag is
+  treated as strict by the backend.
 
 ### Changes to the ARM Backend
 
