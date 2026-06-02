@@ -3290,7 +3290,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         }
 
         if (!SemaRef.getLangOpts().CPlusPlus20)
-          SemaRef.Diag(AutoRange.getBegin(), diag::ext_auto_arg);
+          SemaRef.DiagCompat(AutoRange.getBegin(), diag_compat::auto_param);
 
         if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
           Error = 21;

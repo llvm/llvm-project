@@ -22,7 +22,7 @@ namespace unconstrained {
   static_assert(is_same_v<decltype(f3(1)), const int &>);
   static_assert(is_same_v<decltype(f3('c')), const char &>);
 
-  decltype(auto) f4(auto (*x)(auto y)) { return x; } // expected-error{{'auto' not allowed in function prototype}} ext-warning {{'auto' parameters are a C++20 extension}}
+  decltype(auto) f4(auto (*x)(auto y)) { return x; } // expected-error{{'auto' not allowed in function prototype}} ext-warning 2 {{'auto' parameters are a C++20 extension}}
 
   decltype(auto) f5(void (*x)(decltype(auto) y)) { return x; } // expected-error{{'decltype(auto)' not allowed in function prototype}}
 
