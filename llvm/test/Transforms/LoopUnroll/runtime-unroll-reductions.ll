@@ -484,6 +484,146 @@ exit:
   ret float %res
 }
 
+; FIXME: The combines of the partial reduction results below are incorrect:
+; partial results of sub/fsub reductions each apply their subtractions
+; starting from the identity value, so they must be combined with add/fadd.
+; The chained sub/fsub combines flip the sign of every other partial result.
+define i32 @test_sub_reduction(ptr %a, i64 %n) {
+;
+; CHECK-LABEL: define i32 @test_sub_reduction(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK:       [[ENTRY_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[GEP_A]], align 2
+; CHECK-NEXT:    [[RDX_NEXT]] = sub i32 [[RDX]], [[TMP2]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[GEP_A_1]], align 2
+; CHECK-NEXT:    [[RDX_NEXT_1]] = sub i32 [[RDX_1]], [[TMP3]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi i32 [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = sub i32 [[RDX_NEXT_1]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_EPIL_INIT:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
+; CHECK:       [[LOOP_EPIL]]:
+; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[GEP_A_EPIL]], align 2
+; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = sub i32 [[RDX_EPIL_INIT]], [[TMP4]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ 0, %entry ], [ %rdx.next, %loop ]
+  %gep.a = getelementptr inbounds nuw i32, ptr %a, i64 %iv
+  %1 = load i32, ptr %gep.a, align 2
+  %rdx.next = sub i32 %rdx, %1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %res = phi i32 [ %rdx.next, %loop ]
+  ret i32 %res
+}
+
+define float @test_fsub_reduction(ptr %a, i64 %n) {
+;
+; CHECK-LABEL: define float @test_fsub_reduction(
+; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
+; CHECK:       [[ENTRY_NEW]]:
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_1:%.*]] = phi float [ -0.000000e+00, %[[ENTRY_NEW]] ], [ [[RDX_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY_NEW]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[GEP_A]], align 16
+; CHECK-NEXT:    [[RDX_NEXT]] = fsub reassoc float [[RDX]], [[TMP2]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[GEP_A_1]], align 16
+; CHECK-NEXT:    [[RDX_NEXT_1]] = fsub reassoc float [[RDX_1]], [[TMP3]]
+; CHECK-NEXT:    [[IV_NEXT_1]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT_UNR_LCSSA]]:
+; CHECK-NEXT:    [[RES_PH:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX_UNR:%.*]] = phi float [ [[RDX_NEXT_1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fsub reassoc float [[RDX_NEXT_1]], [[RDX_NEXT]]
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[LOOP_EPIL_PREHEADER]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_EPIL_PREHEADER]]:
+; CHECK-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[RDX_EPIL_INIT:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ], [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    br label %[[LOOP_EPIL:.*]]
+; CHECK:       [[LOOP_EPIL]]:
+; CHECK-NEXT:    [[GEP_A_EPIL:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_EPIL_INIT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[GEP_A_EPIL]], align 16
+; CHECK-NEXT:    [[RDX_NEXT_EPIL:%.*]] = fsub reassoc float [[RDX_EPIL_INIT]], [[TMP4]]
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi float [ [[BIN_RDX]], %[[EXIT_UNR_LCSSA]] ], [ [[RDX_NEXT_EPIL]], %[[LOOP_EPIL]] ]
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi float [ 0.0, %entry ], [ %rdx.next, %loop ]
+  %gep.a = getelementptr inbounds nuw float, ptr %a, i64 %iv
+  %1 = load float, ptr %gep.a, align 16
+  %rdx.next = fsub reassoc float %rdx, %1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop, !llvm.loop !0
+
+exit:
+  %res = phi float [ %rdx.next, %loop ]
+  ret float %res
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.unroll.count", i32 2}
 
@@ -500,4 +640,6 @@ exit:
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.
