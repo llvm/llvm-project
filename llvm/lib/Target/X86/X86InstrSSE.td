@@ -4206,8 +4206,8 @@ def VMOVPDI2DIrr  : VS2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128:$src),
 def VMOVPDI2DImr  : VS2I<0x7E, MRMDestMem, (outs),
                          (ins i32mem:$dst, VR128:$src),
                          "movd\t{$src, $dst|$dst, $src}",
-                         [(store (i32 (extractelt (v4i32 VR128:$src),
-                                       (iPTR 0))), addr:$dst)]>,
+                         [(any_store_32 (i32 (extractelt (v4i32 VR128:$src),
+                                          (iPTR 0))), addr:$dst)]>,
                          VEX, Sched<[WriteVecStore]>;
 def MOVPDI2DIrr  : S2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128:$src),
                        "movd\t{$src, $dst|$dst, $src}",
@@ -4216,8 +4216,8 @@ def MOVPDI2DIrr  : S2I<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128:$src),
                    Sched<[WriteVecMoveToGpr]>;
 def MOVPDI2DImr  : S2I<0x7E, MRMDestMem, (outs), (ins i32mem:$dst, VR128:$src),
                        "movd\t{$src, $dst|$dst, $src}",
-                       [(store (i32 (extractelt (v4i32 VR128:$src),
-                                     (iPTR 0))), addr:$dst)]>,
+                       [(any_store_32 (i32 (extractelt (v4i32 VR128:$src),
+                                        (iPTR 0))), addr:$dst)]>,
                        Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
 
@@ -4346,13 +4346,13 @@ def MOVQI2PQIrm : I<0x7E, MRMSrcMem, (outs VR128:$dst), (ins i64mem:$src),
 let ExeDomain = SSEPackedInt, SchedRW = [WriteVecStore] in {
 def VMOVPQI2QImr : VS2I<0xD6, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
                         "movq\t{$src, $dst|$dst, $src}",
-                        [(store (i64 (extractelt (v2i64 VR128:$src),
-                                      (iPTR 0))), addr:$dst)]>,
+                        [(any_store_64 (i64 (extractelt (v2i64 VR128:$src),
+                                         (iPTR 0))), addr:$dst)]>,
                         VEX, WIG;
 def MOVPQI2QImr : S2I<0xD6, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
                       "movq\t{$src, $dst|$dst, $src}",
-                      [(store (i64 (extractelt (v2i64 VR128:$src),
-                                    (iPTR 0))), addr:$dst)]>;
+                      [(any_store_64 (i64 (extractelt (v2i64 VR128:$src),
+                                       (iPTR 0))), addr:$dst)]>;
 } // ExeDomain, SchedRW
 
 // For disassembler only
@@ -5280,8 +5280,8 @@ multiclass SS41I_extract16<bits<8> opc, string OpcodeStr> {
                  (ins i16mem:$dst, VR128:$src1, u8imm:$src2),
                  !strconcat(OpcodeStr,
                   "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
-                 [(store (i16 (trunc (X86pextrw (v8i16 VR128:$src1), timm:$src2))),
-                          addr:$dst)]>, Sched<[WriteVecExtractSt]>;
+                 [(any_store_16 (i16 (trunc (X86pextrw (v8i16 VR128:$src1), timm:$src2))),
+                             addr:$dst)]>, Sched<[WriteVecExtractSt]>;
 }
 
 let Predicates = [HasAVX, NoBWI] in

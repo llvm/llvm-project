@@ -2,17 +2,16 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
 
-// Padding-only union: CIR keeps only a tail pad member, so
-// getLargestMember() is null and getABIAlignment must not call
-// getTypeABIAlignment on null.
+// Padding-only union: CIR has no storage member and stores size in padding
+// field, so getUnionStorageType() is null and getABIAlignment returns 1.
 union Empty {};
-// CIR: !rec_Empty = !cir.record<union "Empty" padded {!u8i}>
+// CIR: !rec_Empty = !cir.union<"Empty" {}, padding = {!u8i}>
 // LLVM-DAG: %union.Empty = type { i8 }
 // OGCG-DAG: %union.Empty = type { i8 }
 
 // Aligned empty union (should have aligned integer member in CIR)
 union alignas(16) EmptyAligned {};
-// CIR: !rec_EmptyAligned = !cir.record<union "EmptyAligned" padded {!cir.array<!u8i x 16>}>
+// CIR: !rec_EmptyAligned = !cir.union<"EmptyAligned" {}, padding = {!cir.array<!u8i x 16>}>
 // LLVM-DAG: %union.EmptyAligned = type { [16 x i8] }
 // OGCG-DAG: %union.EmptyAligned = type { [16 x i8] }
 
@@ -27,8 +26,8 @@ struct WrapEmpty {
   int s;
 };
 WrapEmpty w;
-// CIR:      !rec_OuterWithEmpty = !cir.record<union "OuterWithEmpty" {!rec_Empty, !s32i}>
-// CIR:      !rec_WrapEmpty = !cir.record<struct "WrapEmpty" {!rec_OuterWithEmpty, !s32i}>
+// CIR:      !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {!rec_Empty, !s32i}>
+// CIR:      !rec_WrapEmpty = !cir.struct<"WrapEmpty" {!rec_OuterWithEmpty, !s32i}>
 // CIR:      cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
 // LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
 // LLVM-DAG: %union.OuterWithEmpty = type { i32 }

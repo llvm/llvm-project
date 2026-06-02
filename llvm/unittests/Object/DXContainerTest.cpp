@@ -50,6 +50,12 @@ TEST(DXCFile, EmptyFile) {
       FailedWithMessage("Reading structure out of file bounds"));
 }
 
+TEST(DXCFile, NullBuffer) {
+  EXPECT_THAT_EXPECTED(
+      DXContainer::create(MemoryBufferRef(StringRef(), "")),
+      FailedWithMessage("Reading structure out of file bounds"));
+}
+
 TEST(DXCFile, ParseHeader) {
   uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

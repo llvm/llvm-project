@@ -7,19 +7,19 @@
 
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
-// CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
-// CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>  
-// CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
-// CIR-DAG: !rec_NodeS = !cir.record<struct "NodeS" {!cir.ptr<!cir.record<struct "NodeS">>}>
-// CIR-DAG: !rec_RightS = !cir.record<struct "RightS" {!cir.ptr<!cir.record<struct "LeftS" {!cir.ptr<!cir.record<struct "RightS">>}>>}>
-// CIR-DAG: !rec_LeftS = !cir.record<struct "LeftS" {!cir.ptr<!rec_RightS>}>
-// CIR-DAG: !rec_CycleEnd = !cir.record<struct "CycleEnd" {!cir.ptr<!cir.record<struct "CycleStart" {!cir.ptr<!cir.record<struct "CycleMiddle" {!cir.ptr<!cir.record<struct "CycleEnd">>}>>}>>}>
-// CIR-DAG: !rec_CycleMiddle = !cir.record<struct "CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
-// CIR-DAG: !rec_CycleStart = !cir.record<struct "CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
-// CIR-DAG: !rec_IncompleteArray = !cir.record<struct "IncompleteArray" {!cir.array<!s32i x 0>}>
+// CIR-DAG: !rec_IncompleteS = !cir.struct<"IncompleteS" incomplete>
+// CIR-DAG: !rec_CompleteS = !cir.struct<"CompleteS" {!s32i, !s8i}>
+// CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {!rec_InnerS, !s32i}>  
+// CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
+// CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {!cir.ptr<!cir.struct<"NodeS">>}>
+// CIR-DAG: !rec_RightS = !cir.struct<"RightS" {!cir.ptr<!cir.struct<"LeftS" {!cir.ptr<!cir.struct<"RightS">>}>>}>
+// CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {!cir.ptr<!rec_RightS>}>
+// CIR-DAG: !rec_CycleEnd = !cir.struct<"CycleEnd" {!cir.ptr<!cir.struct<"CycleStart" {!cir.ptr<!cir.struct<"CycleMiddle" {!cir.ptr<!cir.struct<"CycleEnd">>}>>}>>}>
+// CIR-DAG: !rec_CycleMiddle = !cir.struct<"CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
+// CIR-DAG: !rec_CycleStart = !cir.struct<"CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
+// CIR-DAG: !rec_IncompleteArray = !cir.struct<"IncompleteArray" {!cir.array<!s32i x 0>}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }

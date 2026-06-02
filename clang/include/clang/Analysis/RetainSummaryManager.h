@@ -251,11 +251,6 @@ template <> struct DenseMapInfo<ObjCSummaryKey> {
                           DenseMapInfo<Selector>::getEmptyKey());
   }
 
-  static inline ObjCSummaryKey getTombstoneKey() {
-    return ObjCSummaryKey(DenseMapInfo<IdentifierInfo*>::getTombstoneKey(),
-                          DenseMapInfo<Selector>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const ObjCSummaryKey &V) {
     typedef std::pair<IdentifierInfo*, Selector> PairTy;
     return DenseMapInfo<PairTy>::getHashValue(PairTy(V.getIdentifier(),

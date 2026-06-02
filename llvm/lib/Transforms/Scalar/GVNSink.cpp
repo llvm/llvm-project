@@ -260,11 +260,6 @@ template <> struct llvm::DenseMapInfo<ModelledPHI> {
     return Dummy;
   }
 
-  static inline ModelledPHI &getTombstoneKey() {
-    static ModelledPHI Dummy = ModelledPHI::createDummy(1);
-    return Dummy;
-  }
-
   static unsigned getHashValue(const ModelledPHI &V) { return V.hash(); }
 
   static bool isEqual(const ModelledPHI &LHS, const ModelledPHI &RHS) {

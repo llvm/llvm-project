@@ -30,12 +30,12 @@ void Mother::MotherKey() {}
 void Father::FatherKey() {}
 void Child::MotherKey() {}
 
-// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
-// CIR-DAG: !rec_Father = !cir.record<class "Father" {!cir.vptr}
-// CIR-DAG: !rec_Mother = !cir.record<class "Mother" {!cir.vptr}
-// CIR-DAG: !rec_Child = !cir.record<class "Child" {!rec_Mother, !rec_Father}
+// CIR-DAG: [[MOTHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-DAG: [[FATHER_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: [[CHILD_VTABLE_TYPE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR-DAG: !rec_Father = !cir.struct<class "Father" {!cir.vptr}
+// CIR-DAG: !rec_Mother = !cir.struct<class "Mother" {!cir.vptr}
+// CIR-DAG: !rec_Child = !cir.struct<class "Child" {!rec_Mother, !rec_Father}
 
 // Child vtable
 

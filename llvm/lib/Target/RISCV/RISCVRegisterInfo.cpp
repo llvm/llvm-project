@@ -729,13 +729,7 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
-    if (isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset))
-      return false;
-
-    // If the FP-relative offset doesn't fit, fall through to check the
-    // SP-relative offset. getFrameIndexReference may select SP over FP when
-    // the SP offset fits in the compressed instruction immediate range, so a
-    // base register might not be needed.
+    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
   }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible

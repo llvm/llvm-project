@@ -494,13 +494,10 @@ private:
   // The invariant is that all real keys will have the file and architecture
   // set.
   // The empty key has an empty file and an empty arch.
-  // The tombstone key has an invalid arch and an empty file.
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
     static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
-
-    static ModuleCacheKey getTombstoneKey() { return ModuleCacheKey("", "T"); }
 
     static unsigned getHashValue(const ModuleCacheKey &key) {
       return llvm::hash_combine(key.first, key.second);

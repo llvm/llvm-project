@@ -2626,7 +2626,7 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())

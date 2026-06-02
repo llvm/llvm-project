@@ -22,6 +22,10 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: _SC_NPROCESSORS_ONLN
     macro_header: unistd-macros.h
+  - macro_name: _SC_THREADS
+    macro_header: unistd-macros.h
+  - macro_name: _POSIX_THREADS
+    macro_header: unistd-macros.h
 types:
   - type_name: uid_t
   - type_name: gid_t

@@ -292,6 +292,9 @@ define void @interrupt() "interrupt"="machine" {
 
 declare i32 @setjmp(ptr) returns_twice
 
+; Note: This test doesn't have +c or +relax, so no .p2align 2 or .option exact
+; is emitted before the setjmp call. See lpad-setjmp.ll for tests with those
+; attributes enabled.
 define i32 @test_returns_twice() {
 ; RV32-LABEL: test_returns_twice:
 ; RV32:       # %bb.0:

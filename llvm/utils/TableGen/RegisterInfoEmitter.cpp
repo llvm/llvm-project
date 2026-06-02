@@ -1264,7 +1264,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
           "const override;\n";
   }
   if (!RegisterClasses.empty()) {
-    OS << "  const TargetRegisterClass *getDefaultMinimalPhysRegClass("
+    OS << "  const TargetRegisterClass *getMinimalPhysRegClass("
           "MCRegister Reg) const override;\n";
   }
 
@@ -1728,7 +1728,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
     OS << "\n// Register to minimal register class mapping\n\n";
     OS << "const TargetRegisterClass *" << ClassName
-       << "::getDefaultMinimalPhysRegClass(MCRegister Reg)" << " const {\n";
+       << "::getMinimalPhysRegClass(MCRegister Reg)" << " const {\n";
     OS << "  static const uint16_t InvalidRegClassID = UINT16_MAX;\n\n";
     OS << "  static const uint16_t Mapping[" << Regs.size() + 1 << "] = {\n";
     OS << "    InvalidRegClassID,  // NoRegister\n";

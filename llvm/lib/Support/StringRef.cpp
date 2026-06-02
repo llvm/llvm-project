@@ -610,9 +610,6 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 hash_code llvm::hash_value(StringRef S) { return hash_combine_range(S); }
 
 unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
-  assert(Val.data() != getEmptyKey().data() &&
-         "Cannot hash the empty key!");
-  assert(Val.data() != getTombstoneKey().data() &&
-         "Cannot hash the tombstone key!");
+  assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
   return (unsigned)(hash_value(Val));
 }

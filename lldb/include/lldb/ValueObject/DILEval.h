@@ -106,6 +106,9 @@ private:
                                                        CompilerType result_type,
                                                        uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                      lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>

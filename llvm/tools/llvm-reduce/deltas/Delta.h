@@ -62,11 +62,6 @@ struct DenseMapInfo<Chunk> {
             DenseMapInfo<int>::getEmptyKey()};
   }
 
-  static inline Chunk getTombstoneKey() {
-    return {DenseMapInfo<int>::getTombstoneKey(),
-            DenseMapInfo<int>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const Chunk Val) {
     std::pair<int, int> PairVal = std::make_pair(Val.Begin, Val.End);
     return DenseMapInfo<std::pair<int, int>>::getHashValue(PairVal);

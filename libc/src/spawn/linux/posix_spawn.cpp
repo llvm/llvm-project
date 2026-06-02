@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/spawn/posix_spawn.h"
-
-#include "src/__support/CPP/optional.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -38,21 +37,6 @@ pid_t fork() {
 #else
 #error "fork or clone syscalls not available."
 #endif
-}
-
-cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, oflags, mode);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, oflags,
-                                             mode);
-#endif
-  if (fd >= 0)
-    return fd;
-  // The open function is called as part of the child process' preparatory
-  // steps. If an open fails, the child process just exits. So, unlike
-  // the public open function, we do not need to set errno here.
-  return cpp::nullopt;
 }
 
 void close(int fd) { LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd); }
@@ -94,7 +78,8 @@ void child_process(const char *__restrict path,
       switch (act->type) {
       case BaseSpawnFileAction::OPEN: {
         auto *open_act = reinterpret_cast<SpawnFileOpenAction *>(act);
-        auto fd = open(open_act->path, open_act->oflag, open_act->mode);
+        ErrorOr<int> fd = linux_syscalls::open(open_act->path, open_act->oflag,
+                                               open_act->mode);
         if (!fd)
           exit();
         int actual_fd = *fd;

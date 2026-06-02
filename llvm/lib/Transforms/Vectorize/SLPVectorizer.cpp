@@ -6426,12 +6426,6 @@ private:
       return V;
     }
 
-    static OrdersType getTombstoneKey() {
-      OrdersType V;
-      V.push_back(~2U);
-      return V;
-    }
-
     static unsigned getHashValue(const OrdersType &V) {
       return static_cast<unsigned>(hash_combine_range(V));
     }
@@ -6489,11 +6483,6 @@ template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   static BoUpSLP::EdgeInfo getEmptyKey() {
     return BoUpSLP::EdgeInfo(FirstInfo::getEmptyKey(),
                              SecondInfo::getEmptyKey());
-  }
-
-  static BoUpSLP::EdgeInfo getTombstoneKey() {
-    return BoUpSLP::EdgeInfo(FirstInfo::getTombstoneKey(),
-                             SecondInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const BoUpSLP::EdgeInfo &Val) {

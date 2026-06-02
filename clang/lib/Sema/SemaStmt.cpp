@@ -4276,7 +4276,7 @@ class CatchHandlerType {
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's
-  // getEmptyKey() and getTombstoneKey() functions.
+  // getEmptyKey() function.
   friend struct llvm::DenseMapInfo<CatchHandlerType>;
   enum Unique { ForDenseMap };
   CatchHandlerType(QualType QT, Unique) : QT(QT), IsPointer(false) {}
@@ -4318,11 +4318,6 @@ namespace llvm {
 template <> struct DenseMapInfo<CatchHandlerType> {
   static CatchHandlerType getEmptyKey() {
     return CatchHandlerType(DenseMapInfo<QualType>::getEmptyKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
-  static CatchHandlerType getTombstoneKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getTombstoneKey(),
                        CatchHandlerType::ForDenseMap);
   }
 

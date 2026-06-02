@@ -14,11 +14,38 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
+
+// Emit the `amdgcn.dispatch.ptr` intrinsic, address-space-casting the
+// result to match \p e's return type when needed.
+// If \p e is null, returns the raw AS-4 pointer.
+static mlir::Value emitAMDGPUDispatchPtr(CIRGenFunction &cgf,
+                                         const CallExpr *e = nullptr) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc =
+      e ? cgf.getLoc(e->getExprLoc()) : builder.getUnknownLoc();
+  // The intrinsic always returns a pointer in the constant AS.
+  mlir::Type retTy = cir::PointerType::get(
+      cir::VoidType::get(builder.getContext()),
+      cir::TargetAddressSpaceAttr::get(builder.getContext(),
+                                       llvm::AMDGPUAS::CONSTANT_ADDRESS));
+  mlir::Value call = builder.emitIntrinsicCallOp(loc, "amdgcn.dispatch.ptr",
+                                                 retTy, mlir::ValueRange{});
+  if (!e)
+    return call;
+  // Only cast when the caller-visible AS differs from the intrinsic's AS;
+  auto expectedPtrTy =
+      mlir::cast<cir::PointerType>(cgf.convertType(e->getType()));
+  auto callPtrTy = mlir::cast<cir::PointerType>(call.getType());
+  if (expectedPtrTy.getAddrSpace() == callPtrTy.getAddrSpace())
+    return call;
+  return builder.createAddrSpaceCast(loc, call, expectedPtrTy);
+}
 
 static mlir::Value emitBinaryExpMaybeConstrainedFPBuiltin(
     CIRGenFunction &cgf, const CallExpr *e, llvm::StringRef intrinsicName,
@@ -268,12 +295,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_dispatch_ptr: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_dispatch_ptr:
+    return emitAMDGPUDispatchPtr(*this, expr);
   case AMDGPU::BI__builtin_amdgcn_logf:
   case AMDGPU::BI__builtin_amdgcn_log_bf16: {
     cgm.errorNYI(expr->getSourceRange(),

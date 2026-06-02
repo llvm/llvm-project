@@ -7116,6 +7116,34 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
                                ExtendLaneArg, FloatTy, Ops, E, "fdot4_lane");
 
+  case NEON::BI__builtin_neon_vdot_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_f32_f16: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
+
+  case NEON::BI__builtin_neon_vdot_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdot_laneq_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_laneq_f32_f16: {
+    llvm::FixedVectorType *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::FixedVectorType *LaneTy = llvm::FixedVectorType::get(
+        HalfTy, Ops[2]->getType()->getPrimitiveSizeInBits() / 16);
+    // Treat the lane argument as a splat and use non-lane version of the
+    // intrinsic.
+    Ops[2] = Builder.CreateBitCast(Ops[2], LaneTy);
+    Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]),
+                           InputTy->getElementCount());
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    Ops.pop_back();
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
+
   case NEON::BI__builtin_neon_vmlalbq_f16_mf8_fpm:
     return EmitFP8NeonCall(Intrinsic::aarch64_neon_fp8_fmlalb,
                            {llvm::FixedVectorType::get(HalfTy, 8)}, Ops, E,

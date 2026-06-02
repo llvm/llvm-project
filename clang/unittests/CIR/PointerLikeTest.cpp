@@ -161,11 +161,14 @@ protected:
   }
 
   // Structures and unions are accessed in the same way, so use a common test.
-  void testRecordType(mlir::Type ty1, mlir::Type ty2,
-                      cir::RecordType::RecordKind kind) {
-    // Build the structure pointer type.
-    cir::RecordType structTy =
-        cir::RecordType::get(&context, getUniqueRecordName("S"), kind);
+  void testRecordType(mlir::Type ty1, mlir::Type ty2, bool is_union) {
+    // Build the structure/union type.
+    cir::RecordType structTy;
+    if (is_union)
+      structTy = cir::UnionType::get(&context, getUniqueRecordName("S"));
+    else
+      structTy = cir::StructType::get(&context, getUniqueRecordName("S"),
+                                      /*is_class=*/false);
     structTy.complete({ty1, ty2}, false, false);
     mlir::Type ptrTy = cir::PointerType::get(structTy);
 
@@ -223,11 +226,11 @@ protected:
   }
 
   void testStructType(mlir::Type ty1, mlir::Type ty2) {
-    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Struct);
+    testRecordType(ty1, ty2, /*is_union=*/false);
   }
 
   void testUnionType(mlir::Type ty1, mlir::Type ty2) {
-    testRecordType(ty1, ty2, cir::RecordType::RecordKind::Union);
+    testRecordType(ty1, ty2, /*is_union=*/true);
   }
 
   // This is testing a case like this:
@@ -246,8 +249,8 @@ protected:
     // type.
     mlir::Type ptrTy = cir::PointerType::get(ty);
     cir::RecordType structTy =
-        cir::RecordType::get(&context, getUniqueRecordName("S"),
-                             cir::RecordType::RecordKind::Struct);
+        cir::StructType::get(&context, getUniqueRecordName("S"),
+                             /*is_class=*/false);
     structTy.complete({ptrTy, ptrTy}, false, false);
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
@@ -355,8 +358,9 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToArrayMember) {
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToStructMember) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  cir::RecordType structTy = cir::RecordType::get(
-      &context, getUniqueRecordName("S"), cir::RecordType::RecordKind::Struct);
+  cir::RecordType structTy =
+      cir::StructType::get(&context, getUniqueRecordName("S"),
+                           /*is_class=*/false);
   structTy.complete({i32Ty, i32Ty}, false, false);
   testPointerToMemberType(structTy, mlir::acc::VariableTypeCategory::composite);
 }

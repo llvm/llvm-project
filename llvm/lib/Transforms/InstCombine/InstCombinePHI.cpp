@@ -1051,9 +1051,6 @@ template <> struct llvm::DenseMapInfo<LoweredPHIRecord> {
   static inline LoweredPHIRecord getEmptyKey() {
     return LoweredPHIRecord(nullptr, 0);
   }
-  static inline LoweredPHIRecord getTombstoneKey() {
-    return LoweredPHIRecord(nullptr, 1);
-  }
   static unsigned getHashValue(const LoweredPHIRecord &Val) {
     return DenseMapInfo<PHINode *>::getHashValue(Val.PN) ^ (Val.Shift >> 3) ^
            (Val.Width >> 3);

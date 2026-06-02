@@ -134,6 +134,15 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                  // built-in types.
                  binaryOperation(hasOperatorName("="),
                                  hasLHS(ignoringParenImpCasts(DeclRefMatcher))),
+                 // std::tie() assignment: std::tie(a, b) = expr reinitializes
+                 // all variables passed to std::tie because the tuple
+                 // assignment writes back through the stored references.
+                 binaryOperation(
+                     hasOperatorName("="),
+                     hasLHS(ignoringImplicit(ignoringParenImpCasts(
+                         callExpr(callee(functionDecl(hasName("::std::tie"))),
+                                  hasAnyArgument(ignoringParenImpCasts(
+                                      DeclRefMatcher))))))),
                  // Declaration. We treat this as a type of reinitialization
                  // too, so we don't need to treat it separately.
                  declStmt(hasDescendant(equalsNode(MovedVariable))),

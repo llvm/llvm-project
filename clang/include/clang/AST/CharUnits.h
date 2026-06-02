@@ -237,13 +237,6 @@ template<> struct DenseMapInfo<clang::CharUnits> {
     return clang::CharUnits::fromQuantity(Quantity);
   }
 
-  static clang::CharUnits getTombstoneKey() {
-    clang::CharUnits::QuantityType Quantity =
-      DenseMapInfo<clang::CharUnits::QuantityType>::getTombstoneKey();
-
-    return clang::CharUnits::fromQuantity(Quantity);
-  }
-
   static unsigned getHashValue(const clang::CharUnits &CU) {
     clang::CharUnits::QuantityType Quantity = CU.getQuantity();
     return DenseMapInfo<clang::CharUnits::QuantityType>::getHashValue(Quantity);

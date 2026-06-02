@@ -1,0 +1,12 @@
+# Check perf2bolt pre-aggregated profile emission from branch-stack perf data.
+
+REQUIRES: system-linux, perf-brstack
+
+RUN: %clang %S/Inputs/perf_test.c -no-pie -fuse-ld=lld -o %t
+RUN: perf record -Fmax -j any,u -e cycles:u -o %t.perf.data -- %t
+RUN: perf2bolt %t -p=%t.perf.data -o %t.fdata -ignore-build-id
+RUN: perf2bolt %t -p=%t.perf.data -o %t.preagg -ignore-build-id --profile-format=preagg
+RUN: perf2bolt %t -pa -p=%t.preagg -o %t.roundtrip.fdata -ignore-build-id
+RUN: sort %t.fdata > %t.fdata.sorted
+RUN: sort %t.roundtrip.fdata > %t.roundtrip.fdata.sorted
+RUN: diff %t.fdata.sorted %t.roundtrip.fdata.sorted

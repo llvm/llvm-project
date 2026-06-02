@@ -274,9 +274,9 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
+                                   Loop *CurrentParentLoop)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))
@@ -1653,9 +1653,7 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
 VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
                                                VPValue *TrueVal,
                                                VPValue *FalseVal, DebugLoc DL) {
-  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
-             .inferScalarType(ChainOp)
-             ->isIntegerTy(1) &&
+  assert(ChainOp->getScalarType()->isIntegerTy(1) &&
          "ChainOp must be i1 for AnyOf reduction");
   VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
                   FastMathFlags());
@@ -1899,7 +1897,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
-    Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
+    Tys.push_back(toVectorizedTy(Op->getScalarType(), VF));
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
@@ -1932,7 +1930,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
           if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
             continue;
           // Check if scatter is legal for this store. If so, don't count it.
-          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          Type *Ty = RepR->getOperand(0)->getScalarType();
           auto *VTy = VectorType::get(Ty, VF);
           const Align Alignment =
               getLoadStoreAlignment(RepR->getUnderlyingInstr());

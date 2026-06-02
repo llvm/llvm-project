@@ -422,6 +422,86 @@ struct CalibratedQuantizedTypeStorage : public QuantizedTypeStorage {
   double max;
 };
 
+struct QuantileTypeStorage : public mlir::TypeStorage {
+  mlir::Type storageType;
+  mlir::Type quantileType;
+  const double *quantilesElements;
+  size_t quantilesParamsSize;
+  std::optional<int64_t> storageMin;
+  std::optional<int64_t> storageMax;
+
+  struct KeyTy {
+    KeyTy(mlir::Type storageType, mlir::Type quantileType,
+          ArrayRef<double> quantiles,
+          std::optional<int64_t> storageMin = std::nullopt,
+          std::optional<int64_t> storageMax = std::nullopt)
+        : storageType(storageType), quantileType(quantileType),
+          quantiles(quantiles), storageMin(storageMin), storageMax(storageMax) {
+    }
+
+    mlir::Type storageType;
+    mlir::Type quantileType;
+    ArrayRef<double> quantiles;
+    std::optional<int64_t> storageMin;
+    std::optional<int64_t> storageMax;
+
+    mlir::Type getQuantileType() const { return quantileType; }
+    ArrayRef<double> getQuantiles() const { return quantiles; }
+
+    bool operator==(const KeyTy &other) const {
+      return storageType == other.storageType &&
+             quantileType == other.quantileType &&
+             quantiles == other.quantiles && storageMin == other.storageMin &&
+             storageMax == other.storageMax;
+    }
+
+    static llvm::hash_code hashOptInt(std::optional<int64_t> opt) {
+      return opt ? llvm::hash_combine(true, *opt)
+                 : llvm::hash_combine(false, int64_t{0});
+    }
+
+    unsigned getHashValue() const {
+      const int64_t *quantilesCast =
+          llvm::bit_cast<const int64_t *>(quantiles.data());
+      ArrayRef<int64_t> quantilesBits(quantilesCast, quantiles.size());
+      return static_cast<unsigned>(llvm::hash_combine(
+          llvm::hash_combine_range(quantilesBits.begin(), quantilesBits.end()),
+          storageType, quantileType, hashOptInt(storageMin),
+          hashOptInt(storageMax)));
+    }
+  };
+
+  bool operator==(const KeyTy &key) const {
+    return storageType == key.storageType && quantileType == key.quantileType &&
+           getQuantiles() == key.quantiles && storageMin == key.storageMin &&
+           storageMax == key.storageMax;
+  }
+
+  QuantileTypeStorage(const KeyTy &key, ArrayRef<double> quantiles)
+      : storageType(key.storageType), quantileType(key.quantileType),
+        quantilesElements(quantiles.data()),
+        quantilesParamsSize(quantiles.size()), storageMin(key.storageMin),
+        storageMax(key.storageMax) {}
+
+  static QuantileTypeStorage *construct(mlir::TypeStorageAllocator &allocator,
+                                        KeyTy key) {
+    ArrayRef<double> quantiles = allocator.copyInto(key.quantiles);
+    return new (allocator.allocate<QuantileTypeStorage>())
+        QuantileTypeStorage(key, quantiles);
+  }
+
+  static unsigned hashKey(const KeyTy &key) { return key.getHashValue(); }
+
+  ArrayRef<double> getQuantiles() const {
+    return ArrayRef<double>(quantilesElements, quantilesParamsSize);
+  }
+
+  mlir::Type getStorageType() const { return storageType; }
+  mlir::Type getQuantileType() const { return quantileType; }
+  std::optional<int64_t> getStorageMin() const { return storageMin; }
+  std::optional<int64_t> getStorageMax() const { return storageMax; }
+};
+
 } // namespace detail
 } // namespace quant
 } // namespace mlir

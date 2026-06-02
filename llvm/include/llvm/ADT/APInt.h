@@ -2533,12 +2533,6 @@ template <> struct DenseMapInfo<APInt, void> {
     return V;
   }
 
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~1ULL;
-    return V;
-  }
-
   LLVM_ABI static unsigned getHashValue(const APInt &Key);
 
   static bool isEqual(const APInt &LHS, const APInt &RHS) {

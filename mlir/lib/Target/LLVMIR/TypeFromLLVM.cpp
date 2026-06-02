@@ -73,7 +73,7 @@ private:
     if (type->isMetadataTy())
       return LLVM::LLVMMetadataType::get(&context);
     if (type->isTokenTy())
-      return LLVM::LLVMTokenType::get(&context);
+      return TokenType::get(&context);
     llvm_unreachable("not a primitive type");
   }
 

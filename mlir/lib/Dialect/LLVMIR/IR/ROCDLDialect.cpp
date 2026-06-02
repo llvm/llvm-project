@@ -88,7 +88,8 @@ ParseResult RawBufferAtomicFAddOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
   Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
+      parser.addTypeToList(type, result.types))
     return failure();
 
   auto bldr = parser.getBuilder();
@@ -112,7 +113,8 @@ ParseResult RawBufferAtomicFMaxOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
   Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
+      parser.addTypeToList(type, result.types))
     return failure();
 
   auto bldr = parser.getBuilder();
@@ -136,7 +138,8 @@ ParseResult RawBufferAtomicSMaxOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
   Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
+      parser.addTypeToList(type, result.types))
     return failure();
 
   auto bldr = parser.getBuilder();
@@ -160,7 +163,8 @@ ParseResult RawBufferAtomicUMinOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
   Type type;
-  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
+      parser.addTypeToList(type, result.types))
     return failure();
 
   auto bldr = parser.getBuilder();

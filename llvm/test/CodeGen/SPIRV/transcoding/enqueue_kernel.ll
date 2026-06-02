@@ -24,7 +24,6 @@
 ; CHECK-DAG: %[[#TypeNDRangeStruct:]] = OpTypeStruct %[[#typeInt32]] %[[#Array3x64]] %[[#Array3x64]] %[[#Array3x64]]
 
 ; CHECK-DAG: %[[#pointerInt8:]] = OpTypePointer Generic %[[#typeInt8]]
-; CHECK-DAG: %[[#nullPtrInt8:]] = OpConstantNull %[[#pointerInt8]]
 ; CHECK-DAG: %[[#nullArray3x64:]] = OpConstantNull %[[#Array3x64]]
 
 ; CHECK-DAG: %[[#typeEvent:]] = OpTypeDeviceEvent
@@ -60,9 +59,8 @@
 ;;
 ;;     const size_t gs[] = {1,2,4};
 ;;
-; TODO: Fix int8 type came from clang in case of NULL events passed in opencl's enqueue_kernel.
 ;;     // enqueue empty kernel
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrInt8]] %[[#nullPtrInt8]] %[[#InvokeKernel1]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel1]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue,
 ;;             CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
 ;;             ndrange_3D(gs),
@@ -103,7 +101,7 @@
 ;;             101, 102, 104);
 ;;
 ;;     // null event, no var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrInt8]] %[[#event2]] %[[#InvokeKernel6]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 0, NULL, &clk_event,
 ;;             ^(void) {
 ;;             a[i] = b[i];

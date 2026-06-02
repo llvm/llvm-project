@@ -29,11 +29,6 @@ template <typename... Ts> struct DenseMapInfo<std::variant<Ts...>> {
     return Variant(std::in_place_index<0>, DenseMapInfo<FirstT>::getEmptyKey());
   }
 
-  static inline Variant getTombstoneKey() {
-    return Variant(std::in_place_index<0>,
-                   DenseMapInfo<FirstT>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Variant &Val) {
     return std::visit(
         [&Val](auto &&Alternative) {

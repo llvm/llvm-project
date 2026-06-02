@@ -222,11 +222,12 @@ define <4 x i64> @test_256_combine(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z) {
 ;
 ; AVX512-NOVL-LABEL: test_256_combine:
 ; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
 ; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} ymm3 = [67108863,67108863,67108863,67108863]
 ; AVX512-NOVL-NEXT:    vpand %ymm3, %ymm0, %ymm0
 ; AVX512-NOVL-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; AVX512-NOVL-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
-; AVX512-NOVL-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
+; AVX512-NOVL-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512-NOVL-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_256_combine:
@@ -274,11 +275,13 @@ define <2 x i64> @test_128_combine(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z) {
 ;
 ; AVX512-NOVL-LABEL: test_128_combine:
 ; AVX512-NOVL:       # %bb.0:
+; AVX512-NOVL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
 ; AVX512-NOVL-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [67108863,67108863]
 ; AVX512-NOVL-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX512-NOVL-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX512-NOVL-NEXT:    vpmuldq %xmm1, %xmm0, %xmm0
-; AVX512-NOVL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; AVX512-NOVL-NEXT:    vpmadd52luq %zmm2, %zmm1, %zmm0
+; AVX512-NOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512-NOVL-NEXT:    vzeroupper
 ; AVX512-NOVL-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_128_combine:

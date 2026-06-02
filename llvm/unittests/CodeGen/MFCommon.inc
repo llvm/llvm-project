@@ -62,6 +62,11 @@ public:
     return &Bogus[0];
   }
 
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
+  }
+
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }

@@ -3,7 +3,10 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = additive_expression ;
+expression = shift_expression ;
+
+shift_expression = additive_expression {"<<" additive_expression}
+                 | additive_expression {">>" additive_expression} ;
 
 additive_expression = multiplicative_expression {"+" multiplicative_expression}
                       multiplicative_expression {"-" multiplicative_expression} ;

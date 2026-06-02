@@ -16,7 +16,7 @@ out_of_line_destructor::~out_of_line_destructor() {
     some_function();
 }
 
-// CIR: !rec_out_of_line_destructor = !cir.record<struct "out_of_line_destructor" {!s32i}>
+// CIR: !rec_out_of_line_destructor = !cir.struct<"out_of_line_destructor" {!s32i}>
 
 // CIR: cir.func {{.*}} @_ZN22out_of_line_destructorD2Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
 // CIR:   cir.call @_Z13some_functionv() nothrow : () -> () 

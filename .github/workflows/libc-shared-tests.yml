@@ -96,6 +96,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_USE_LINKER=lld-23 \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 

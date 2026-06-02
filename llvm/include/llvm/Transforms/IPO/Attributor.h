@@ -325,7 +325,7 @@ struct RangeTy {
   /// Constants used to represent special offsets or sizes.
   /// - We cannot assume that Offsets and Size are non-negative.
   /// - The constants should not clash with DenseMapInfo, such as EmptyKey
-  ///   (INT64_MAX) and TombstoneKey (INT64_MIN).
+  ///   (INT64_MAX).
   /// We use values "in the middle" of the 64 bit range to represent these
   /// special cases.
   static constexpr int64_t Unassigned = std::numeric_limits<int32_t>::min();
@@ -434,9 +434,6 @@ struct DenseMapInfo<AA::ValueAndContext>
   static inline AA::ValueAndContext getEmptyKey() {
     return Base::getEmptyKey();
   }
-  static inline AA::ValueAndContext getTombstoneKey() {
-    return Base::getTombstoneKey();
-  }
   static unsigned getHashValue(const AA::ValueAndContext &VAC) {
     return Base::getHashValue(VAC);
   }
@@ -452,9 +449,6 @@ struct DenseMapInfo<AA::ValueScope> : public DenseMapInfo<unsigned char> {
   using Base = DenseMapInfo<unsigned char>;
   static inline AA::ValueScope getEmptyKey() {
     return AA::ValueScope(Base::getEmptyKey());
-  }
-  static inline AA::ValueScope getTombstoneKey() {
-    return AA::ValueScope(Base::getTombstoneKey());
   }
   static unsigned getHashValue(const AA::ValueScope &S) {
     return Base::getHashValue(S);
@@ -472,10 +466,6 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
   static inline const AA::InstExclusionSetTy *getEmptyKey() {
     return static_cast<const AA::InstExclusionSetTy *>(super::getEmptyKey());
   }
-  static inline const AA::InstExclusionSetTy *getTombstoneKey() {
-    return static_cast<const AA::InstExclusionSetTy *>(
-        super::getTombstoneKey());
-  }
   static unsigned getHashValue(const AA::InstExclusionSetTy *BES) {
     unsigned H = 0;
     if (BES)
@@ -487,8 +477,7 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
                       const AA::InstExclusionSetTy *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
-        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+    if (LHS == getEmptyKey() || RHS == getEmptyKey())
       return false;
     auto SizeLHS = LHS ? LHS->size() : 0;
     auto SizeRHS = RHS ? RHS->size() : 0;
@@ -957,7 +946,6 @@ struct IRPosition {
   ///
   ///{
   LLVM_ABI static const IRPosition EmptyKey;
-  LLVM_ABI static const IRPosition TombstoneKey;
   ///}
 
   /// Conversion into a void * to allow reuse of pointer hashing.
@@ -1095,9 +1083,6 @@ private:
 /// Helper that allows IRPosition as a key in a DenseMap.
 template <> struct DenseMapInfo<IRPosition> {
   static inline IRPosition getEmptyKey() { return IRPosition::EmptyKey; }
-  static inline IRPosition getTombstoneKey() {
-    return IRPosition::TombstoneKey;
-  }
   static unsigned getHashValue(const IRPosition &IRP) {
     return (DenseMapInfo<void *>::getHashValue(IRP) << 4) ^
            (DenseMapInfo<Value *>::getHashValue(IRP.getCallBaseContext()));

@@ -7,9 +7,9 @@
 !u8i = !cir.int<u, 8>
 !void = !cir.void
 
-!rec_S = !cir.record<struct "S" {!s32i, !s32i}>
-!rec_Base = !cir.record<struct "Base" {!u8i}>
-!rec_Derived = !cir.record<struct "Derived" {!rec_Base, !s32i}>
+!rec_S = !cir.struct<"S" {!s32i, !s32i}>
+!rec_Base = !cir.struct<"Base" {!u8i}>
+!rec_Derived = !cir.struct<"Derived" {!rec_Base, !s32i}>
 
 module {
 

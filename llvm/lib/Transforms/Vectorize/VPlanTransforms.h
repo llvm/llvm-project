@@ -145,6 +145,16 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
+  /// Finalize SCEV predicates by adding induction predicates from \p Plan to
+  /// \p PSE and checking constraints. Returns false if predicated IVs have
+  /// outside-loop uses via ExitingIVValue, if SCEV predicate complexity exceeds
+  /// \p SCEVCheckThreshold, or if predicates are needed but \p OptForSize is
+  /// true.
+  static bool
+  finalizeSCEVPredicates(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         bool OptForSize, unsigned SCEVCheckThreshold,
+                         OptimizationRemarkEmitter *ORE, Loop *TheLoop);
+
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.

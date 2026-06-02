@@ -16,6 +16,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <optional>
 #include <random>
 
 namespace llvm::ubi {
@@ -28,6 +29,7 @@ enum class MemInitKind {
 
 enum class MemAllocKind {
   Global,
+  BlockAddress,
   Stack,
   Malloc,
   New,
@@ -107,6 +109,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemoryObjectState State;
   MemAllocKind AllocKind;
   bool IsConstant = false;
+  bool IsIRGlobalValue = false;
 
   // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
@@ -116,7 +119,8 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind, MemAllocKind AllocKind);
+               MemInitKind InitKind, MemAllocKind AllocKind,
+               bool IsIRGlobalValue = false);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -130,6 +134,7 @@ public:
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
   MemAllocKind getAllocKind() const { return AllocKind; }
+  bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -251,7 +256,8 @@ class Context {
       ValidFuncTargets;
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
-  AnyValue getConstantValueImpl(Constant *C);
+  DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
+  std::optional<AnyValue> getConstantValueImpl(Constant *C);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -313,11 +319,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue &getConstantValue(Constant *C);
+  const AnyValue *getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
-                                            MemAllocKind AllocKind);
+                                            MemAllocKind AllocKind,
+                                            bool IsIRGlobalValue = false);
   bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.

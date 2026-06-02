@@ -636,6 +636,10 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::Shl:
+    return value_object(l << r);
+  case BinaryOpKind::Shr:
+    return value_object(l >> r);
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -834,6 +838,47 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                 lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'>>', '<<'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  CompilerType orig_lhs_type = lhs->GetCompilerType();
+  CompilerType orig_rhs_type = rhs->GetCompilerType();
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs, location);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+  if (!lhs_type.IsInteger() || !rhs_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  bool success;
+  uint64_t amount = rhs->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "could not get the shift amount as an integer", location);
+  llvm::Expected<uint64_t> lhs_size =
+      lhs_type.GetBitSize(m_exe_ctx_scope.get());
+  if (!lhs_size)
+    return lhs_size.takeError();
+  if (amount >= *lhs_size)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid shift amount",
+                                                location);
+
+  return EvaluateScalarOp(kind, lhs, rhs, lhs_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
   if (!lhs_or_err)
@@ -865,6 +910,9 @@ Interpreter::Visit(const BinaryOpNode &node) {
     return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Shl:
+  case BinaryOpKind::Shr:
+    return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -1226,7 +1274,11 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
       type->GetBitSize(m_exe_ctx_scope.get());
   if (!type_bitsize)
     return type_bitsize.takeError();
+  // Literal itself cannot be a negative value, so we do an unsigned extension.
   scalar.TruncOrExtendTo(*type_bitsize, false);
+  // If the picked compiler type is signed, make the scalar signed as well.
+  if (type->IsSigned())
+    scalar.MakeSigned();
   return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
                                                   *type, "result");
 }

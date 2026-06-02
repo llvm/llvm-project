@@ -224,10 +224,6 @@ template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
     return reinterpret_cast<ImmutableListImpl<T>*>(-1);
   }
 
-  static inline ImmutableList<T> getTombstoneKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-2);
-  }
-
   static unsigned getHashValue(ImmutableList<T> X) {
     uintptr_t PtrVal = reinterpret_cast<uintptr_t>(X.getInternalPointer());
     return (unsigned((uintptr_t)PtrVal) >> 4) ^

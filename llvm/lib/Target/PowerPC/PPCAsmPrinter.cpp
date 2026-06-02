@@ -125,9 +125,6 @@ struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
   static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
-  static inline TOCKey getTombstoneKey() {
-    return {(const MCSymbol *)1, PPC::S_None};
-  }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
         DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),

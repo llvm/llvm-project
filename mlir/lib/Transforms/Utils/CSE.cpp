@@ -38,8 +38,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     auto *rhs = const_cast<Operation *>(rhsC);
     if (lhs == rhs)
       return true;
-    if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
-        rhs == getTombstoneKey() || rhs == getEmptyKey())
+    if (lhs == getEmptyKey() || rhs == getEmptyKey())
       return false;
     return OperationEquivalence::isEquivalentTo(
         const_cast<Operation *>(lhsC), const_cast<Operation *>(rhsC),

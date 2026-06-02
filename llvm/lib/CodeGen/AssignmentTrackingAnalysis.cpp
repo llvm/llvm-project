@@ -73,9 +73,6 @@ template <> struct llvm::DenseMapInfo<VariableID> {
   static inline VariableID getEmptyKey() {
     return static_cast<VariableID>(Wrapped::getEmptyKey());
   }
-  static inline VariableID getTombstoneKey() {
-    return static_cast<VariableID>(Wrapped::getTombstoneKey());
-  }
   static unsigned getHashValue(const VariableID &Val) {
     return Wrapped::getHashValue(static_cast<unsigned>(Val));
   }

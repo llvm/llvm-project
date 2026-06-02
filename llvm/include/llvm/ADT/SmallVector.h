@@ -1353,10 +1353,6 @@ template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
     return {DenseMapInfo<T>::getEmptyKey()};
   }
 
-  static SmallVector<T, N> getTombstoneKey() {
-    return {DenseMapInfo<T>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const SmallVector<T, N> &V) {
     return static_cast<unsigned>(hash_combine_range(V));
   }

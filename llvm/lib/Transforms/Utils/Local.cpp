@@ -1436,13 +1436,7 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       return DenseMapInfo<PHINode *>::getEmptyKey();
     }
 
-    static PHINode *getTombstoneKey() {
-      return DenseMapInfo<PHINode *>::getTombstoneKey();
-    }
-
-    static bool isSentinel(PHINode *PN) {
-      return PN == getEmptyKey() || PN == getTombstoneKey();
-    }
+    static bool isSentinel(PHINode *PN) { return PN == getEmptyKey(); }
 
     // WARNING: this logic must be kept in sync with
     //          Instruction::isIdenticalToWhenDefined()!
@@ -2827,18 +2821,13 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
           return DenseMapInfo<CatchPadInst *>::getEmptyKey();
         }
 
-        static CatchPadInst *getTombstoneKey() {
-          return DenseMapInfo<CatchPadInst *>::getTombstoneKey();
-        }
-
         static unsigned getHashValue(CatchPadInst *CatchPad) {
           return static_cast<unsigned>(hash_combine_range(
               CatchPad->value_op_begin(), CatchPad->value_op_end()));
         }
 
         static bool isEqual(CatchPadInst *LHS, CatchPadInst *RHS) {
-          if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
-              RHS == getEmptyKey() || RHS == getTombstoneKey())
+          if (LHS == getEmptyKey() || RHS == getEmptyKey())
             return LHS == RHS;
           return LHS->isIdenticalTo(RHS);
         }

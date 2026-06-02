@@ -386,6 +386,7 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -422,28 +423,6 @@ bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
         return MFA ? &MFA->getMF() : nullptr;
       });
 }
-
-// Passes for testing crashes.
-// DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass
-    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
-public:
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashModulePass"; }
-};
-
-class TriggerCrashFunctionPass
-    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
-public:
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashFunctionPass"; }
-};
 
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!

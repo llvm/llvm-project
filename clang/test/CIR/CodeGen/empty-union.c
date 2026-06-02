@@ -4,13 +4,13 @@
 
 // Empty union (no padding, size 0 in CIR)
 union Empty {};
-// CIR: !rec_Empty = !cir.record<union "Empty" {}>
+// CIR: !rec_Empty = !cir.union<"Empty" {}>
 // LLVM: %union.Empty = type {}
 // OGCG: %union.Empty = type {}
 
 // Aligned empty union (size 0, alignment 16)
 union EmptyAligned {} __attribute__((aligned(16)));
-// CIR: !rec_EmptyAligned = !cir.record<union "EmptyAligned" {}>
+// CIR: !rec_EmptyAligned = !cir.union<"EmptyAligned" {}>
 // LLVM: %union.EmptyAligned = type {}
 // OGCG: %union.EmptyAligned = type {}
 

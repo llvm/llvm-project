@@ -758,13 +758,6 @@ static inline clang::ProgramPoint getEmptyKey() {
                               nullptr);
 }
 
-static inline clang::ProgramPoint getTombstoneKey() {
-  uintptr_t x =
-   reinterpret_cast<uintptr_t>(DenseMapInfo<void*>::getTombstoneKey()) & ~0x7;
-  return clang::BlockEntrance(nullptr, reinterpret_cast<clang::CFGBlock *>(x),
-                              nullptr);
-}
-
 static unsigned getHashValue(const clang::ProgramPoint &Loc) {
   return Loc.getHashValue();
 }

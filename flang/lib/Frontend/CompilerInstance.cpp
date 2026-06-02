@@ -385,6 +385,8 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
   tOpts.VecLib = convertDriverVectorLibraryToVectorLibrary(CGOpts.getVecLib());
   tOpts.DisableIntegratedAS = CGOpts.DisableIntegratedAS;
+  tOpts.FunctionSections = CGOpts.FunctionSections;
+  tOpts.DataSections = CGOpts.DataSections;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

@@ -20,6 +20,7 @@
 
 namespace llvm {
 class MCContext;
+class MCExpr;
 class MCInst;
 class MCStreamer;
 class MCSubtargetInfo;
@@ -50,6 +51,12 @@ private:
   /// Recursion guard to prevent infinite loops when emitting instructions.
   bool Guard = false;
 
+  /// Deferred `.tlsdesccall` symbol. The directive attaches a
+  /// R_AARCH64_TLSDESC_CALL relocation to the following BLR. Since LFI inserts
+  /// a guard before that BLR, the marker is deferred and re-emitted between
+  /// the guard and the branch so the relocation stays on the BLR.
+  const MCExpr *PendingTLSDescCall = nullptr;
+
   // Instruction classification. Returns the reserved register that may be
   // modified, or an invalid register if no reserved register is touched.
   MCRegister mayModifyReserved(const MCInst &Inst) const;
@@ -61,6 +68,7 @@ private:
                    const MCSubtargetInfo &STI);
   void emitBranch(unsigned Opcode, MCRegister Target, MCStreamer &Out,
                   const MCSubtargetInfo &STI);
+  void emitPendingTLSDescCall(MCStreamer &Out, const MCSubtargetInfo &STI);
   void emitMov(MCRegister Dest, MCRegister Src, MCStreamer &Out,
                const MCSubtargetInfo &STI);
 

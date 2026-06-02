@@ -53,9 +53,6 @@ template<> struct DenseMapInfo<Attribute::AttrKind> {
   static Attribute::AttrKind getEmptyKey() {
     return Attribute::EmptyKey;
   }
-  static Attribute::AttrKind getTombstoneKey() {
-    return Attribute::TombstoneKey;
-  }
   static unsigned getHashValue(Attribute::AttrKind AK) {
     return hash_combine(AK);
   }

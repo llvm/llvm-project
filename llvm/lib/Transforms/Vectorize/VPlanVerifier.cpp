@@ -30,7 +30,6 @@ using namespace VPlanPatternMatch;
 namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
-  VPTypeAnalysis &TypeInfo;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -67,8 +66,7 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
-      : VPDT(VPDT), TypeInfo(TypeInfo) {}
+  VPlanVerifier(VPDominatorTree &VPDT) : VPDT(VPDT) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -239,8 +237,7 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
 
   auto CheckOperandTypes = [&]() -> bool {
     if (all_of(drop_begin(R.operands()), [&R](VPValue *Op) {
-          return getScalarTypeOrInfer(R.getOperand(0)) ==
-                 getScalarTypeOrInfer(Op);
+          return R.getOperand(0)->getScalarType() == Op->getScalarType();
         }))
       return true;
     errs() << "Recipe operand types do not match";
@@ -264,7 +261,7 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
   case VPRecipeBase::VPScalarIVStepsSC:
   case VPRecipeBase::VPWidenPointerInductionSC:
   case VPRecipeBase::VPDerivedIVSC:
-    return CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
+    return CheckScalarType(R.getOperand(0)->getScalarType());
   case VPRecipeBase::VPWidenPHISC:
   case VPRecipeBase::VPPredInstPHISC:
   case VPRecipeBase::VPReductionPHISC:
@@ -272,7 +269,7 @@ bool VPlanVerifier::verifyRecipeTypes(const VPRecipeBase &R) const {
   case VPRecipeBase::VPCurrentIterationPHISC:
   case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     return CheckOperandTypes() &&
-           CheckScalarType(getScalarTypeOrInfer(R.getOperand(0)));
+           CheckScalarType(R.getOperand(0)->getScalarType());
   case VPRecipeBase::VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(&R);
     if (isa<VPInstructionWithType>(VPI) ||
@@ -334,11 +331,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     if (!verifyRecipeTypes(R))
       return false;
     for (const VPValue *V : R.definedValues()) {
-      // Verify that we can infer a scalar type for each defined value. With
-      // assertions enabled, inferScalarType will perform some consistency
-      // checks during type inference.
-      if (!TypeInfo.inferScalarType(V)) {
-        errs() << "Failed to infer scalar type!\n";
+      // Verify that each defined value has a scalar type.
+      if (!V->getScalarType()) {
+        errs() << "VPValue without scalar type!\n";
         return false;
       }
 
@@ -615,7 +610,6 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
 
 bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
-  VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo);
+  VPlanVerifier Verifier(VPDT);
   return Verifier.verify(Plan);
 }

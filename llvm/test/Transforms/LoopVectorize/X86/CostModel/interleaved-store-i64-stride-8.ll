@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @test() {
 ; SSE2-LABEL: 'test'
-; SSE2:  Cost of 56 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; SSE2:  Cost of 56 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
@@ -22,7 +22,7 @@ define void @test() {
 ; SSE2:    store ir<%v5> to index 5
 ; SSE2:    store ir<%v6> to index 6
 ; SSE2:    store ir<%v7> to index 7
-; SSE2:  Cost of 112 for VF 4: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; SSE2:  Cost of 112 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
@@ -31,7 +31,7 @@ define void @test() {
 ; SSE2:    store ir<%v5> to index 5
 ; SSE2:    store ir<%v6> to index 6
 ; SSE2:    store ir<%v7> to index 7
-; SSE2:  Cost of 224 for VF 8: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; SSE2:  Cost of 224 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
@@ -40,7 +40,7 @@ define void @test() {
 ; SSE2:    store ir<%v5> to index 5
 ; SSE2:    store ir<%v6> to index 6
 ; SSE2:    store ir<%v7> to index 7
-; SSE2:  Cost of 448 for VF 16: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; SSE2:  Cost of 448 for VF 16: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
 ; SSE2:    store ir<%v2> to index 2
@@ -51,7 +51,7 @@ define void @test() {
 ; SSE2:    store ir<%v7> to index 7
 ;
 ; AVX1-LABEL: 'test'
-; AVX1:  Cost of 40 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX1:  Cost of 40 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:    store ir<%v2> to index 2
@@ -60,7 +60,7 @@ define void @test() {
 ; AVX1:    store ir<%v5> to index 5
 ; AVX1:    store ir<%v6> to index 6
 ; AVX1:    store ir<%v7> to index 7
-; AVX1:  Cost of 88 for VF 4: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX1:  Cost of 88 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:    store ir<%v2> to index 2
@@ -69,7 +69,7 @@ define void @test() {
 ; AVX1:    store ir<%v5> to index 5
 ; AVX1:    store ir<%v6> to index 6
 ; AVX1:    store ir<%v7> to index 7
-; AVX1:  Cost of 176 for VF 8: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX1:  Cost of 176 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:    store ir<%v2> to index 2
@@ -78,7 +78,7 @@ define void @test() {
 ; AVX1:    store ir<%v5> to index 5
 ; AVX1:    store ir<%v6> to index 6
 ; AVX1:    store ir<%v7> to index 7
-; AVX1:  Cost of 352 for VF 16: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX1:  Cost of 352 for VF 16: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:    store ir<%v2> to index 2
@@ -87,7 +87,7 @@ define void @test() {
 ; AVX1:    store ir<%v5> to index 5
 ; AVX1:    store ir<%v6> to index 6
 ; AVX1:    store ir<%v7> to index 7
-; AVX1:  Cost of 704 for VF 32: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX1:  Cost of 704 for VF 32: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:    store ir<%v2> to index 2
@@ -98,7 +98,7 @@ define void @test() {
 ; AVX1:    store ir<%v7> to index 7
 ;
 ; AVX2-LABEL: 'test'
-; AVX2:  Cost of 40 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX2:  Cost of 40 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX2:    store ir<%v> to index 0
 ; AVX2:    store ir<%v1> to index 1
 ; AVX2:    store ir<%v2> to index 2
@@ -107,7 +107,7 @@ define void @test() {
 ; AVX2:    store ir<%v5> to index 5
 ; AVX2:    store ir<%v6> to index 6
 ; AVX2:    store ir<%v7> to index 7
-; AVX2:  Cost of 88 for VF 4: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX2:  Cost of 88 for VF 4: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX2:    store ir<%v> to index 0
 ; AVX2:    store ir<%v1> to index 1
 ; AVX2:    store ir<%v2> to index 2
@@ -116,7 +116,7 @@ define void @test() {
 ; AVX2:    store ir<%v5> to index 5
 ; AVX2:    store ir<%v6> to index 6
 ; AVX2:    store ir<%v7> to index 7
-; AVX2:  Cost of 176 for VF 8: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX2:  Cost of 176 for VF 8: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX2:    store ir<%v> to index 0
 ; AVX2:    store ir<%v1> to index 1
 ; AVX2:    store ir<%v2> to index 2
@@ -125,7 +125,7 @@ define void @test() {
 ; AVX2:    store ir<%v5> to index 5
 ; AVX2:    store ir<%v6> to index 6
 ; AVX2:    store ir<%v7> to index 7
-; AVX2:  Cost of 352 for VF 16: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX2:  Cost of 352 for VF 16: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX2:    store ir<%v> to index 0
 ; AVX2:    store ir<%v1> to index 1
 ; AVX2:    store ir<%v2> to index 2
@@ -134,7 +134,7 @@ define void @test() {
 ; AVX2:    store ir<%v5> to index 5
 ; AVX2:    store ir<%v6> to index 6
 ; AVX2:    store ir<%v7> to index 7
-; AVX2:  Cost of 704 for VF 32: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX2:  Cost of 704 for VF 32: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX2:    store ir<%v> to index 0
 ; AVX2:    store ir<%v1> to index 1
 ; AVX2:    store ir<%v2> to index 2
@@ -145,7 +145,7 @@ define void @test() {
 ; AVX2:    store ir<%v7> to index 7
 ;
 ; AVX512-LABEL: 'test'
-; AVX512:  Cost of 37 for VF 2: INTERLEAVE-GROUP with factor 8 at <badref>, ir<%out0>
+; AVX512:  Cost of 37 for VF 2: INTERLEAVE-GROUP with factor 8, ir<%out0>
 ; AVX512:    store ir<%v> to index 0
 ; AVX512:    store ir<%v1> to index 1
 ; AVX512:    store ir<%v2> to index 2

@@ -1,5 +1,5 @@
 // RUN: llvm-tblgen -print-records %p/../../lib/Target/AArch64/AArch64.td -I %p/../../lib/Target/AArch64 -I %p/../../include \
-// RUN:    | sed -e "s/, /, \n/g" -e "s/\[/\[\n/g" \
+// RUN:    | awk '{gsub(/\[/,"[\n"); gsub(/, /,",\n"); print}' \
 // RUN:    | FileCheck %s --implicit-check-not="def TuneApple"
 
 // Verify the resolved tuning feature lists for Apple CPUs.

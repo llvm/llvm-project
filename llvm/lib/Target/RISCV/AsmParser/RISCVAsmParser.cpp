@@ -2235,45 +2235,19 @@ ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
 
-  StringRef Identifier;
-  AsmToken Tok = getLexer().getTok();
-
-  if (getParser().parseIdentifier(Identifier))
-    return ParseStatus::Failure;
-
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
-
+  StringRef Identifier = getTok().getIdentifier();
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
     const MCExpr *V = Sym->getVariableValue();
-    if (!isa<MCSymbolRefExpr>(V)) {
-      getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
+    if (!isa<MCSymbolRefExpr>(V))
       return ParseStatus::NoMatch;
-    }
-    Res = V;
-  } else
-    Res = MCSymbolRefExpr::create(Sym, getContext());
-
-  MCBinaryExpr::Opcode Opcode;
-  switch (getLexer().getKind()) {
-  default:
-    Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
-    return ParseStatus::Success;
-  case AsmToken::Plus:
-    Opcode = MCBinaryExpr::Add;
-    getLexer().Lex();
-    break;
-  case AsmToken::Minus:
-    Opcode = MCBinaryExpr::Sub;
-    getLexer().Lex();
-    break;
   }
 
-  const MCExpr *Expr;
-  if (getParser().parseExpression(Expr, E))
+  SMLoc E;
+  if (getParser().parseExpression(Res, E))
     return ParseStatus::Failure;
-  Res = MCBinaryExpr::create(Opcode, Res, Expr, getContext());
+
   Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }

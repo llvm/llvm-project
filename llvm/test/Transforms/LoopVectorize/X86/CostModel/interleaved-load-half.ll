@@ -9,7 +9,7 @@ target triple = "i386-unknown-linux-gnu"
 
 define void @stride8(half %k, i32 %width_) {
 ; CHECK-LABEL: 'stride8'
-; CHECK:  Cost of 148 for VF 32: INTERLEAVE-GROUP with factor 8 at %0, ir<%arrayidx>
+; CHECK:  Cost of 148 for VF 32: INTERLEAVE-GROUP with factor 8, ir<%arrayidx>
 ;
 entry:
 
@@ -98,7 +98,7 @@ for.body:
 
 define void @stride3(half %k, i32 %width_) {
 ; CHECK-LABEL: 'stride3'
-; CHECK:  Cost of 18 for VF 32: INTERLEAVE-GROUP with factor 3 at %0, ir<%arrayidx>
+; CHECK:  Cost of 18 for VF 32: INTERLEAVE-GROUP with factor 3, ir<%arrayidx>
 ;
 entry:
 

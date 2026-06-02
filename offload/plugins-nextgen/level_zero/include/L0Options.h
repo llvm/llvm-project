@@ -21,7 +21,7 @@
 
 namespace llvm::omp::target::plugin {
 /// Command submission mode.
-enum class CommandModeTy { Sync = 0, Async, AsyncOrdered };
+enum class CommandModeTy { Sync = 0, Async, AsyncOrdered, InOrder };
 
 /// Specialization constants used for a module compilation.
 class SpecConstantsTy {

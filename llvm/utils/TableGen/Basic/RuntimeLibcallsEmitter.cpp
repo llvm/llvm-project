@@ -52,11 +52,6 @@ template <> struct DenseMapInfo<PredicateWithCC, void> {
         std::pair<const Record *, const Record *>>::getEmptyKey();
   }
 
-  static inline PredicateWithCC getTombstoneKey() {
-    return DenseMapInfo<
-        std::pair<const Record *, const Record *>>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const PredicateWithCC Val) {
     auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
     return DenseMapInfo<

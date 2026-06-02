@@ -401,6 +401,28 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) const {
     return std::nullopt;
   }
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+    // A deallocation between the elemental and the assignment would invalidate
+    // memory accessed by the elemental once its evaluation is moved down to the
+    // assignment. containsReadOrWriteEffectOn only covers Read/Write effects,
+    // so MemoryEffects::Free is checked explicitly here.
+    if (mlir::isa<mlir::MemoryEffects::Free>(effect.getEffect())) {
+      mlir::Value freed = effect.getValue();
+      auto mayAccessFreed = [&](llvm::ArrayRef<mlir::Value> vals) {
+        if (!freed)
+          return true; // unknown freed memory - be conservative
+        for (mlir::Value val : vals)
+          if (!aliasAnalysis.alias(val, freed).isNo())
+            return true;
+        return false;
+      };
+      if (mayAccessFreed(notToBeWrittenBeforeAssign) ||
+          mayAccessFreed(notToBeAccessedBeforeAssign)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed deallocation between elemental and assign: "
+                   << freed << " for " << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
     // not safe to access anything written in the elemental as this write
     // will be moved to the assignment
     for (mlir::Value val : notToBeAccessedBeforeAssign) {

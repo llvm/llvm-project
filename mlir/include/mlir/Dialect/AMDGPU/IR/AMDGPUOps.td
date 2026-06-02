@@ -500,14 +500,17 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 
 // Raw buffer atomic floating point add
 def AMDGPU_RawBufferAtomicFaddOp :
-    AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fadd", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Add (MI-* only)";
   let description = [{
@@ -523,7 +526,7 @@ def AMDGPU_RawBufferAtomicFaddOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -539,14 +542,17 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
 // Raw buffer atomic floating point max
 def AMDGPU_RawBufferAtomicFmaxOp :
-    AMDGPU_Op<"raw_buffer_atomic_fmax", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fmax", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, F64]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, F64]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Max (non-GFX9)";
   let description = [{
@@ -561,7 +567,8 @@ def AMDGPU_RawBufferAtomicFmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -578,13 +585,15 @@ def AMDGPU_RawBufferAtomicFmaxOp :
 // Raw buffer atomic signed integer max
 def AMDGPU_RawBufferAtomicSmaxOp :
     AMDGPU_Op<"raw_buffer_atomic_smax", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Signed Integer Atomic Max";
   let description = [{
@@ -599,7 +608,8 @@ def AMDGPU_RawBufferAtomicSmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -616,13 +626,15 @@ def AMDGPU_RawBufferAtomicSmaxOp :
 // Raw buffer atomic unsigned integer min
 def AMDGPU_RawBufferAtomicUminOp :
     AMDGPU_Op<"raw_buffer_atomic_umin", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Unsigned Integer Atomic Min";
   let description = [{
@@ -637,7 +649,8 @@ def AMDGPU_RawBufferAtomicUminOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.

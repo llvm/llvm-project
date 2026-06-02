@@ -26,6 +26,7 @@ endif()
 include(GNUInstallDirs)
 
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+option(LLDB_ENABLE_LIBCXX_TESTS "Set to OFF to acknowledge that libc++ is intentionally not built in-tree and silence the missing-libc++ warning." ON)
 
 if(LLDB_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")

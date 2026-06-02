@@ -191,13 +191,6 @@ llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
   return B;
 }
 
-clang::APValue::LValueBase
-llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getTombstoneKey();
-  return B;
-}
-
 namespace clang {
 llvm::hash_code hash_value(const APValue::LValueBase &Base) {
   if (Base.is<TypeInfoLValue>() || Base.is<DynamicAllocLValue>())

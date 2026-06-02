@@ -28,7 +28,11 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
                 "line": 4,
                 "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
                 "name": "bar",
-                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "source": {
+                    "name": "main.c",
+                    "path": "/home/labath/test/main.c",
+                    "presentationHint": "deemphasize",
+                },
                 "instructionPointerReference": "0x40011C",
             },
             {
@@ -37,7 +41,11 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
                 "line": 10,
                 "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
                 "name": "foo",
-                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "source": {
+                    "name": "main.c",
+                    "path": "/home/labath/test/main.c",
+                    "presentationHint": "deemphasize",
+                },
                 "instructionPointerReference": "0x400142",
             },
             {
@@ -46,7 +54,11 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
                 "line": 16,
                 "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
                 "name": "_start",
-                "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "source": {
+                    "name": "main.c",
+                    "path": "/home/labath/test/main.c",
+                    "presentationHint": "deemphasize",
+                },
                 "instructionPointerReference": "0x40015F",
             },
         ]

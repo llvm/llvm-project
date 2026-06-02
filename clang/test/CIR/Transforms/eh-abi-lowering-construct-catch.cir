@@ -22,8 +22,8 @@
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_E = !cir.record<struct "E" padded {!u8i}>
-!rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+!rec_E = !cir.struct<"E" padded {!u8i}>
+!rec_anon_struct = !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 

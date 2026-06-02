@@ -6642,6 +6642,23 @@ static SDValue coerceLoadedValue(SDValue LdOp, EVT FirstVT, EVT WidenVT,
   return LdOp;
 }
 
+/// Inverse of coerceLoadedValue: pull a FirstVT-sized scalar/vector out of the
+/// widened value so it can be issued in a single atomic store.
+static SDValue coerceStoredValue(SDValue StVal, EVT FirstVT, EVT WidenVT,
+                                 TypeSize FirstVTWidth, const SDLoc &dl,
+                                 SelectionDAG &DAG) {
+  TypeSize WidenWidth = WidenVT.getSizeInBits();
+  if (!FirstVT.isVector()) {
+    unsigned NumElts =
+        WidenWidth.getFixedValue() / FirstVTWidth.getFixedValue();
+    EVT NewVecVT = EVT::getVectorVT(*DAG.getContext(), FirstVT, NumElts);
+    SDValue VecOp = DAG.getNode(ISD::BITCAST, dl, NewVecVT, StVal);
+    return DAG.getExtractVectorElt(dl, FirstVT, VecOp, 0);
+  }
+  assert(FirstVT == WidenVT && "First value type must equal widen value type");
+  return StVal;
+}
+
 static std::optional<EVT> findMemType(SelectionDAG &DAG,
                                       const TargetLowering &TLI, unsigned Width,
                                       EVT WidenVT, unsigned Align,
@@ -7474,6 +7491,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_SUBVECTOR:  Res = WidenVecOp_EXTRACT_SUBVECTOR(N); break;
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::STORE:              Res = WidenVecOp_STORE(N); break;
+  case ISD::ATOMIC_STORE:
+    Res = WidenVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::VP_STORE:           Res = WidenVecOp_VP_STORE(N, OpNo); break;
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     Res = WidenVecOp_VP_STRIDED_STORE(N, OpNo);
@@ -8088,6 +8108,36 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   }
 
   report_fatal_error("Unable to widen vector store");
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_ATOMIC_STORE(AtomicSDNode *ST) {
+  EVT StVT = ST->getMemoryVT();
+  SDLoc dl(ST);
+
+  SDValue StVal = GetWidenedVector(ST->getVal());
+  EVT WidenVT = StVal.getValueType();
+
+  TypeSize StWidth = StVT.getSizeInBits();
+  TypeSize WidenWidth = WidenVT.getSizeInBits();
+  TypeSize WidthDiff = WidenWidth - StWidth;
+
+  // Find the vector type that can store the original memory width in one
+  // atomic operation. Pass StAlign=0 (like atomic loads); a real align would
+  // let findMemType widen the access past the value (e.g. <2 x i8> at align 4
+  // implies a 4-byte movl, writing undef bytes past its object).
+  std::optional<EVT> FirstVT =
+      findMemType(DAG, TLI, StWidth.getKnownMinValue(), WidenVT, /*StAlign=*/0,
+                  WidthDiff.getKnownMinValue());
+  if (!FirstVT)
+    return SDValue();
+
+  TypeSize FirstVTWidth = FirstVT->getSizeInBits();
+
+  SDValue StOp =
+      coerceStoredValue(StVal, *FirstVT, WidenVT, FirstVTWidth, dl, DAG);
+
+  return DAG.getAtomic(ISD::ATOMIC_STORE, dl, *FirstVT, ST->getChain(), StOp,
+                       ST->getBasePtr(), ST->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo) {

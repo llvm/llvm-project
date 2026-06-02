@@ -790,6 +790,13 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(0);
   }
 
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_PreAgg) {
+    if (std::error_code EC = writePreAggregatedFile(opts::OutputFilename))
+      report_error("cannot create output data file", EC);
+    exit(0);
+  }
+
   return Error::success();
 }
 
@@ -801,7 +808,7 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
 
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
-      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+      if (std::error_code EC = writeFdataFile(opts::OutputFilename))
         report_error("cannot create output data file", EC);
 
     // BAT YAML is handled by DataAggregator since normal YAML output requires
@@ -2325,7 +2332,25 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
 }
 
 std::error_code
-DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
+DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  for (const auto &[Trace, Info] : Traces)
+    OS << Trace << " " << Info.TakenCount << '\n';
+  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+  for (const auto &[PC, Count] : BasicSamples)
+    OS << formatv("S {0:x-} {1}\n", PC, Count);
+
+  outs() << "PERF2BOLT: wrote " << Traces.size() + BasicSamples.size()
+         << " pre-aggregated objects to " << OutputFilename << "\n";
+
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeFdataFile(StringRef OutputFilename) const {
   std::error_code EC;
   raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC)

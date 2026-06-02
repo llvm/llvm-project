@@ -180,7 +180,8 @@ private:
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<ivar_list_t> Read(Process *process,
+                                            lldb::addr_t addr);
   };
 
   struct ivar_t {
@@ -203,7 +204,7 @@ private:
              + sizeof(uint32_t); // uint32_t size;
     }
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<ivar_t> Read(Process *process, lldb::addr_t addr);
   };
 
   struct relative_list_entry_t {

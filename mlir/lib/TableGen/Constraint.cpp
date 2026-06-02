@@ -130,27 +130,18 @@ Constraint DenseMapInfo<Constraint>::getEmptyKey() {
                     Constraint::CK_Uncategorized);
 }
 
-Constraint DenseMapInfo<Constraint>::getTombstoneKey() {
-  return Constraint(RecordDenseMapInfo::getTombstoneKey(),
-                    Constraint::CK_Uncategorized);
-}
-
 unsigned DenseMapInfo<Constraint>::getHashValue(Constraint constraint) {
   if (constraint == getEmptyKey())
     return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
-  if (constraint == getTombstoneKey()) {
-    return RecordDenseMapInfo::getHashValue(
-        RecordDenseMapInfo::getTombstoneKey());
-  }
   return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
 }
 
 bool DenseMapInfo<Constraint>::isEqual(Constraint lhs, Constraint rhs) {
   if (lhs == rhs)
     return true;
-  if (lhs == getEmptyKey() || lhs == getTombstoneKey())
+  if (lhs == getEmptyKey())
     return false;
-  if (rhs == getEmptyKey() || rhs == getTombstoneKey())
+  if (rhs == getEmptyKey())
     return false;
   return lhs.getPredicate() == rhs.getPredicate() &&
          lhs.getSummary() == rhs.getSummary();

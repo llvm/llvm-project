@@ -43,9 +43,6 @@ private:
         : SourceFN(SourceFN), Target(Target) {}
 
     static inline TrampolineKey getEmptyKey() { return TrampolineKey(); };
-    static inline TrampolineKey getTombstoneKey() {
-      return TrampolineKey(FragmentNum(UINT_MAX), nullptr);
-    };
     static unsigned getHashValue(const TrampolineKey &Val) {
       return llvm::hash_combine(Val.SourceFN.get(), Val.Target);
     }

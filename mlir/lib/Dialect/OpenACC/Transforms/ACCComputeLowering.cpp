@@ -314,6 +314,13 @@ public:
           convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
       if (!forOp)
         return failure();
+      SmallVector<GPUParallelDimAttr> parDims =
+          getParallelDimensions(loopOp, policy, deviceType);
+      if (!parDims.empty()) {
+        auto parDimsAttr =
+            GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
+        setParDimsAttr(forOp, parDimsAttr);
+      }
       rewriter.replaceOp(loopOp, forOp);
     } else if (!isOpInComputeRegion(loopOp) &&
                !isSpecializedAccRoutine(

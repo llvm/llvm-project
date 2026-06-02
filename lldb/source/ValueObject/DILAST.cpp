@@ -23,6 +23,10 @@ BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
     return BinaryOpKind::Div;
   case Token::percent:
     return BinaryOpKind::Rem;
+  case Token::lessless:
+    return BinaryOpKind::Shl;
+  case Token::greatergreater:
+    return BinaryOpKind::Shr;
   default:
     break;
   }

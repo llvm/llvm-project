@@ -103,10 +103,6 @@ struct DenseMapInfo<clang::lifetimes::internal::utils::ID<Tag>> {
     return {DenseMapInfo<uint32_t>::getEmptyKey()};
   }
 
-  static inline ID getTombstoneKey() {
-    return {DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const ID &Val) {
     return DenseMapInfo<uint32_t>::getHashValue(Val.Value);
   }

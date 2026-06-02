@@ -358,10 +358,6 @@ struct DenseMapInfo<mlir::AffineExpr> {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
   }
-  static mlir::AffineExpr getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineExpr(static_cast<mlir::AffineExpr::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineExpr val) {
     return mlir::hash_value(val);
   }

@@ -58,9 +58,7 @@ public:
             .Case([this](LLVM::LLVMPPCFP128Type) {
               return llvm::Type::getPPC_FP128Ty(context);
             })
-            .Case([this](LLVM::LLVMTokenType) {
-              return llvm::Type::getTokenTy(context);
-            })
+            .Case([this](TokenType) { return llvm::Type::getTokenTy(context); })
             .Case([this](LLVM::LLVMLabelType) {
               return llvm::Type::getLabelTy(context);
             })

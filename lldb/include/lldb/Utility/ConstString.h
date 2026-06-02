@@ -431,10 +431,6 @@ template <> struct DenseMapInfo<lldb_private::ConstString> {
     return lldb_private::ConstString::FromStringPoolPointer(
         DenseMapInfo<const char *>::getEmptyKey());
   }
-  static inline lldb_private::ConstString getTombstoneKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getTombstoneKey());
-  }
   static unsigned getHashValue(lldb_private::ConstString val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);
   }

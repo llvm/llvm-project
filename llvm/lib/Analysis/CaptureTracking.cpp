@@ -278,11 +278,10 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     auto *Call = cast<CallBase>(I);
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
-    // marked with nocapture do not capture. This means that places like
-    // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
-    // in BasicAA also need to know about this property.
+    // marked with nocapture do not capture. This logic needs to stay in
+    // sync with isEscapeSource().
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-            Call, /*MustPreserveOffset=*/true))
+            Call, /*MustPreserveOffset=*/false))
       return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they

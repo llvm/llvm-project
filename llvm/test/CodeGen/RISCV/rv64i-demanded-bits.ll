@@ -206,3 +206,97 @@ entry:
   %ret = shl i64 1, %shamt
   ret i64 %ret
 }
+
+; The 0x0101010101010101 can be materialized with lui+addi+slli+add using 2
+; registers. The multiply makes the upper 10 bits of the and result unneeded
+; causing the mask to become 0x0001010101010101. Make sure we can still match
+; the lui+addi+slli+add sequence
+define i64 @and_mul_32bitsplat(i64 %x) {
+; CHECK-LABEL: and_mul_32bitsplat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 4112
+; CHECK-NEXT:    addi a1, a1, 257
+; CHECK-NEXT:    slli a2, a1, 32
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    lui a2, 65664
+; CHECK-NEXT:    addi a2, a2, 1024
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    slli a1, a2, 27
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %a = and i64 %x, u0x0101010101010101
+  %b = mul i64 %a, u0x0080402010080400
+  ret i64 %b
+}
+
+; ctpop expansion requires anding with constants that splat the same bit pattern
+; across every byte. SimplifyDemandedBits may use known bits to remove some of
+; the bits from these masks. Make sure we are able to recover them to use
+; lui+addi+slli+add instead of a constant pool.
+define i64 @ctop_hibit_zero(i63 zeroext %x) {
+; CHECK-LABEL: ctop_hibit_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 349525
+; CHECK-NEXT:    lui a2, 209715
+; CHECK-NEXT:    lui a3, 61681
+; CHECK-NEXT:    addi a1, a1, 1365
+; CHECK-NEXT:    addi a2, a2, 819
+; CHECK-NEXT:    addi a3, a3, -241
+; CHECK-NEXT:    slli a4, a1, 32
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    slli a4, a2, 32
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    slli a4, a3, 32
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    srli a4, a0, 1
+; CHECK-NEXT:    and a1, a4, a1
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    and a1, a0, a2
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    lui a2, 4112
+; CHECK-NEXT:    addi a2, a2, 257
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    srli a1, a0, 4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    slli a1, a2, 32
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    add a1, a2, a1
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 56
+; CHECK-NEXT:    ret
+  %a = zext i63 %x to i64
+  %b = call i64 @llvm.ctpop.i64(i64 %a)
+  ret i64 %b
+}
+
+; same as above, but with optsize. Make sure we use a constant pool.
+define i64 @ctpop_hibit_zero_optsize(i63 zeroext %x) optsize {
+; CHECK-LABEL: ctpop_hibit_zero_optsize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI15_0)(a1)
+; CHECK-NEXT:    srli a2, a0, 1
+; CHECK-NEXT:    lui a3, %hi(.LCPI15_1)
+; CHECK-NEXT:    ld a3, %lo(.LCPI15_1)(a3)
+; CHECK-NEXT:    and a1, a2, a1
+; CHECK-NEXT:    lui a2, %hi(.LCPI15_2)
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    and a1, a0, a3
+; CHECK-NEXT:    srli a0, a0, 2
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    lui a3, %hi(.LCPI15_3)
+; CHECK-NEXT:    ld a2, %lo(.LCPI15_2)(a2)
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    ld a1, %lo(.LCPI15_3)(a3)
+; CHECK-NEXT:    srli a3, a0, 4
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    and a0, a0, a2
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    srli a0, a0, 56
+; CHECK-NEXT:    ret
+  %a = zext i63 %x to i64
+  %b = call i64 @llvm.ctpop.i64(i64 %a)
+  ret i64 %b
+}

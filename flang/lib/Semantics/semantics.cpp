@@ -699,15 +699,24 @@ bool Semantics::Perform() {
       }
     }
   }
-  return ValidateLabels(context_, program_) &&
-      parser::CanonicalizeDo(program_) && // force line break
-      CanonicalizeAcc(context_.messages(), program_) &&
-      CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
-      PerformStatementSemantics(context_, program_) &&
-      CanonicalizeDirectives(context_.messages(), program_) &&
-      ModFileWriter{context_}
-          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
-          .WriteAll();
+  if (!(ValidateLabels(context_, program_) &&
+          parser::CanonicalizeDo(program_) && // force line break
+          CanonicalizeAcc(context_.messages(), program_) &&
+          CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
+          PerformStatementSemantics(context_, program_) &&
+          CanonicalizeDirectives(context_.messages(), program_))) {
+    return false;
+  }
+
+  // When compiling with offloading, write only the host's module file. The
+  // device invocations would otherwise overwrite the host's mod file.
+  if (context_.langOptions().OffloadDevice) {
+    return true;
+  }
+
+  return ModFileWriter{context_}
+      .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+      .WriteAll();
 }
 
 void Semantics::EmitMessages(llvm::raw_ostream &os) {

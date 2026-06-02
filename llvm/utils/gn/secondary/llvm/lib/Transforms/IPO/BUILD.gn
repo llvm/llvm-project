@@ -1,6 +1,20 @@
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+write_cmake_config("write_instrumentor_variables") {
+  input = "//llvm/include/llvm/Transforms/IPO/InstrumentorVariables.inc.in"
+  output =
+      "$root_gen_dir/llvm/include/llvm/Transforms/IPO/InstrumentorVariables.inc"
+  values =
+      [ "LLVM_INSTRUMENTOR_RUNTIME_HELPER=@file:" +
+        rebase_path(
+            "//llvm/include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h",
+            root_build_dir) ]
+}
+
 static_library("IPO") {
   output_name = "LLVMipo"
   deps = [
+    ":write_instrumentor_variables",
     "//llvm/lib/Analysis",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Bitcode/Writer",

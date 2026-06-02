@@ -17,6 +17,10 @@ RUN: cmp %t3.multi %t3.comma
 RUN: merge-fdata %t3 %t3 | sort > %t3.x2
 RUN: sort %t3.multi > %t3.multi.x2
 RUN: cmp %t3.x2 %t3.multi.x2
+# Pre-aggregated output: compare perf->preagg->fdata vs perf->fdata
+RUN: perf2bolt %t -p=%t2 -o %t2.pa -ba -ignore-build-id --profile-format=preagg
+RUN: perf2bolt %t -p=%t2.pa -o %t2.pa.fdata -ba -pa
+RUN: cmp %t2.pa.fdata %t3
 
 CHECK-NOT: PERF2BOLT-ERROR
 CHECK-NOT: !! WARNING !! This high mismatch ratio indicates the input binary is probably not the same binary used during profiling collection.

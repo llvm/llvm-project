@@ -422,45 +422,6 @@ public:
   }
 }; /// MemAllocatorTy
 
-// Simple generic wrapper to reuse objects
-// objects must have zero argument accessible constructor.
-template <class ObjTy> class ObjPool {
-  // Protection.
-  std::unique_ptr<std::mutex> Mtx;
-  // List of Objects.
-  std::list<ObjTy *> Objects;
-
-public:
-  ObjPool() { Mtx.reset(new std::mutex); }
-
-  ObjPool(const ObjPool &) = delete;
-  ObjPool(ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &) = delete;
-  ObjPool &operator=(const ObjPool &&) = delete;
-
-  ObjTy *get() {
-    if (!Objects.empty()) {
-      std::lock_guard<std::mutex> Lock(*Mtx);
-      if (!Objects.empty()) {
-        const auto Ret = Objects.back();
-        Objects.pop_back();
-        return Ret;
-      }
-    }
-    return new ObjTy();
-  }
-
-  void release(ObjTy *obj) {
-    std::lock_guard<std::mutex> Lock(*Mtx);
-    Objects.push_back(obj);
-  }
-
-  ~ObjPool() {
-    for (auto Object : Objects)
-      delete Object;
-  }
-};
-
 /// Common event pool used in the plugin. This event pool assumes all events
 /// from the pool are host-visible and use the same event pool flag.
 class EventPoolTy {

@@ -207,8 +207,6 @@ public:
     // Check that the DenseMap implementation has not changed.
     static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
                   static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
   }
   LLVM_ABI bool run(Module &M);
 

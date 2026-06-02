@@ -4,8 +4,8 @@
 
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
-!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
-!rec_S = !cir.record<struct "S" {!cir.vptr}>
+!rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_S = !cir.struct<"S" {!cir.vptr}>
 
 module {
   cir.global "private" external @_ZTV1S : !rec_anon_struct {alignment = 8 : i64}

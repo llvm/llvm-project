@@ -444,10 +444,6 @@ struct DenseMapInfo<mlir::Block::iterator> {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Block::iterator((mlir::Operation *)pointer);
   }
-  static mlir::Block::iterator getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
   static unsigned getHashValue(mlir::Block::iterator iter) {
     return hash_value(iter.getNodePtr());
   }

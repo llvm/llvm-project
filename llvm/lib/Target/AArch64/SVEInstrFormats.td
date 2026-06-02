@@ -13,103 +13,103 @@
 // Helper class to hold conversions of legal fixed-length vector types.
 class NEONType<ValueType VT> {
   // The largest legal scalable vector type that can hold VT.
-  ValueType SVEContainer = !cond(
-    !eq(VT, v8i8): nxv16i8,
-    !eq(VT, v16i8): nxv16i8,
-    !eq(VT, v4i16): nxv8i16,
-    !eq(VT, v8i16): nxv8i16,
-    !eq(VT, v2i32): nxv4i32,
-    !eq(VT, v4i32): nxv4i32,
-    !eq(VT, v1i64): nxv2i64,
-    !eq(VT, v2i64): nxv2i64,
-    !eq(VT, v4f16): nxv8f16,
-    !eq(VT, v8f16): nxv8f16,
-    !eq(VT, v2f32): nxv4f32,
-    !eq(VT, v4f32): nxv4f32,
-    !eq(VT, v1f64): nxv2f64,
-    !eq(VT, v2f64): nxv2f64,
-    !eq(VT, v4bf16): nxv8bf16,
-    !eq(VT, v8bf16): nxv8bf16,
-    true : untyped);
+  ValueType SVEContainer = !switch(VT,
+    v8i8: nxv16i8,
+    v16i8: nxv16i8,
+    v4i16: nxv8i16,
+    v8i16: nxv8i16,
+    v2i32: nxv4i32,
+    v4i32: nxv4i32,
+    v1i64: nxv2i64,
+    v2i64: nxv2i64,
+    v4f16: nxv8f16,
+    v8f16: nxv8f16,
+    v2f32: nxv4f32,
+    v4f32: nxv4f32,
+    v1f64: nxv2f64,
+    v2f64: nxv2f64,
+    v4bf16: nxv8bf16,
+    v8bf16: nxv8bf16,
+    untyped);
 }
 
 // Helper class to hold conversions of legal scalable vector types.
 class SVEType<ValueType VT> {
   // The largest legal scalable vector type that can hold VT.
   // Non-matches return VT because only packed types remain.
-  ValueType Packed = !cond(
-    !eq(VT, nxv2f16): nxv8f16,
-    !eq(VT, nxv4f16): nxv8f16,
-    !eq(VT, nxv2f32): nxv4f32,
-    !eq(VT, nxv2bf16): nxv8bf16,
-    !eq(VT, nxv4bf16): nxv8bf16,
-    true : VT);
+  ValueType Packed = !switch(VT,
+    nxv2f16: nxv8f16,
+    nxv4f16: nxv8f16,
+    nxv2f32: nxv4f32,
+    nxv2bf16: nxv8bf16,
+    nxv4bf16: nxv8bf16,
+    VT);
 
   // The legal scalable vector that is half the length of VT.
-  ValueType HalfLength = !cond(
-    !eq(VT, nxv8f16): nxv4f16,
-    !eq(VT, nxv4f16): nxv2f16,
-    !eq(VT, nxv4f32): nxv2f32,
-    !eq(VT, nxv8bf16): nxv4bf16,
-    !eq(VT, nxv4bf16): nxv2bf16,
-    true : untyped);
+  ValueType HalfLength = !switch(VT,
+    nxv8f16: nxv4f16,
+    nxv4f16: nxv2f16,
+    nxv4f32: nxv2f32,
+    nxv8bf16: nxv4bf16,
+    nxv4bf16: nxv2bf16,
+    untyped);
 
   // The legal scalable vector that is quarter the length of VT.
-  ValueType QuarterLength = !cond(
-    !eq(VT, nxv8f16): nxv2f16,
-    !eq(VT, nxv8bf16): nxv2bf16,
-    true : untyped);
+  ValueType QuarterLength = !switch(VT,
+    nxv8f16: nxv2f16,
+    nxv8bf16: nxv2bf16,
+    untyped);
 
   // The 64-bit vector subreg of VT.
-  ValueType DSub = !cond(
-    !eq(VT, nxv16i8): v8i8,
-    !eq(VT, nxv8i16): v4i16,
-    !eq(VT, nxv4i32): v2i32,
-    !eq(VT, nxv2i64): v1i64,
-    !eq(VT, nxv2f16): v4f16,
-    !eq(VT, nxv4f16): v4f16,
-    !eq(VT, nxv8f16): v4f16,
-    !eq(VT, nxv2f32): v2f32,
-    !eq(VT, nxv4f32): v2f32,
-    !eq(VT, nxv2f64): v1f64,
-    !eq(VT, nxv2bf16): v4bf16,
-    !eq(VT, nxv4bf16): v4bf16,
-    !eq(VT, nxv8bf16): v4bf16,
-    true : untyped);
+  ValueType DSub = !switch(VT,
+    nxv16i8: v8i8,
+    nxv8i16: v4i16,
+    nxv4i32: v2i32,
+    nxv2i64: v1i64,
+    nxv2f16: v4f16,
+    nxv4f16: v4f16,
+    nxv8f16: v4f16,
+    nxv2f32: v2f32,
+    nxv4f32: v2f32,
+    nxv2f64: v1f64,
+    nxv2bf16: v4bf16,
+    nxv4bf16: v4bf16,
+    nxv8bf16: v4bf16,
+    untyped);
 
     // The 128-bit vector subreg of VT.
-  ValueType ZSub = !cond(
-    !eq(VT, nxv16i8): v16i8,
-    !eq(VT, nxv8i16): v8i16,
-    !eq(VT, nxv4i32): v4i32,
-    !eq(VT, nxv2i64): v2i64,
-    !eq(VT, nxv2f16): v8f16,
-    !eq(VT, nxv4f16): v8f16,
-    !eq(VT, nxv8f16): v8f16,
-    !eq(VT, nxv2f32): v4f32,
-    !eq(VT, nxv4f32): v4f32,
-    !eq(VT, nxv2f64): v2f64,
-    !eq(VT, nxv2bf16): v8bf16,
-    !eq(VT, nxv4bf16): v8bf16,
-    !eq(VT, nxv8bf16): v8bf16,
-    true : untyped);
+  ValueType ZSub = !switch(VT,
+    nxv16i8: v16i8,
+    nxv8i16: v8i16,
+    nxv4i32: v4i32,
+    nxv2i64: v2i64,
+    nxv2f16: v8f16,
+    nxv4f16: v8f16,
+    nxv8f16: v8f16,
+    nxv2f32: v4f32,
+    nxv4f32: v4f32,
+    nxv2f64: v2f64,
+    nxv2bf16: v8bf16,
+    nxv4bf16: v8bf16,
+    nxv8bf16: v8bf16,
+    untyped);
 
   // The legal scalar used to hold a vector element.
-  ValueType EltAsScalar = !cond(
-    !eq(VT, nxv16i8): i32,
-    !eq(VT, nxv8i16): i32,
-    !eq(VT, nxv4i32): i32,
-    !eq(VT, nxv2i64): i64,
-    !eq(VT, nxv2f16): f16,
-    !eq(VT, nxv4f16): f16,
-    !eq(VT, nxv8f16): f16,
-    !eq(VT, nxv2f32): f32,
-    !eq(VT, nxv4f32): f32,
-    !eq(VT, nxv2f64): f64,
-    !eq(VT, nxv2bf16): bf16,
-    !eq(VT, nxv4bf16): bf16,
-    !eq(VT, nxv8bf16): bf16,
-    true : untyped);
+  ValueType EltAsScalar = !switch(VT,
+    nxv16i8: i32,
+    nxv8i16: i32,
+    nxv4i32: i32,
+    nxv2i64: i64,
+    nxv2f16: f16,
+    nxv4f16: f16,
+    nxv8f16: f16,
+    nxv2f32: f32,
+    nxv4f32: f32,
+    nxv2f64: f64,
+    nxv2bf16: bf16,
+    nxv4bf16: bf16,
+    nxv8bf16: bf16,
+    untyped);
 }
 
 def SDT_AArch64Setcc : SDTypeProfile<1, 4, [

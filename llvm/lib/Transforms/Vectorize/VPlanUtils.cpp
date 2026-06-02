@@ -243,22 +243,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getTruncateExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getZeroExtendExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_SExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
 
     // Mirror SCEV's createSCEV handling for sext(sub nsw): push sign extension
     // onto the operands before computing the subtraction.

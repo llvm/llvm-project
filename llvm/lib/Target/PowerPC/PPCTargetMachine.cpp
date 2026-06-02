@@ -246,8 +246,12 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
   if (JIT)
     return CodeModel::Small;
-  if (TT.isOSAIX())
+  if (TT.isOSAIX()) {
+    // Use large code model for 64-bit AIX by default.
+    if (TT.isArch64Bit())
+      return CodeModel::Large;
     return CodeModel::Small;
+  }
 
   assert(TT.isOSBinFormatELF() && "All remaining PPC OSes are ELF based.");
 

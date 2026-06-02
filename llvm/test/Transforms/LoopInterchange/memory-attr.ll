@@ -8,36 +8,24 @@
 ; The writeonly call may write to `%A` at some unknown index, so we cannot
 ; interchange the loops.
 ;
-; FIXME: These loops are now interchanged.
-;
 define void @call_writeonly(ptr %A) {
 ; CHECK-LABEL: define void @call_writeonly(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[INNER_PREHEADER:.*:]]
-; CHECK-NEXT:    br label %[[INNER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER1:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
-; CHECK:       [[OUTER_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER1]] ]
-; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
-; CHECK:       [[INNER]]:
+; CHECK-NEXT:  [[INNER:.*]]:
 ; CHECK-NEXT:    br label %[[INNER1:.*]]
 ; CHECK:       [[INNER1]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER]] ]
-; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER1]]
-; CHECK:       [[INNER_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER1:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER1]] ], [ [[TMP2:%.*]], %[[OUTER_HEADER_PREHEADER1]] ]
 ; CHECK-NEXT:    call void @writeonly(ptr [[A]])
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 100
-; CHECK-NEXT:    br label %[[OUTER_LATCH]]
-; CHECK:       [[INNER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 100
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[INNER1]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER1]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[I_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER_PREHEADER]]
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[INNER1]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

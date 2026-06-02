@@ -219,11 +219,6 @@ namespace llvm {
       return clang::GlobalDecl();
     }
 
-    static inline clang::GlobalDecl getTombstoneKey() {
-      return clang::GlobalDecl::
-        getFromOpaquePtr(reinterpret_cast<void*>(-1));
-    }
-
     static unsigned getHashValue(clang::GlobalDecl GD) {
       return DenseMapInfo<void*>::getHashValue(GD.getAsOpaquePtr());
     }
