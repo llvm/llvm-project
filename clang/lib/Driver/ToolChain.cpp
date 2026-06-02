@@ -1332,7 +1332,7 @@ LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
 
 bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
                            Action::OffloadKind Kind) const {
-  return getLTOMode(Args, Kind != Action::OFK_None) != LTOK_None;
+  return getLTOMode(Args, Kind) != LTOK_None;
 }
 
 static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
@@ -1351,7 +1351,8 @@ static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
 }
 
 LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
-                              bool IsOffload) const {
+                              Action::OffloadKind Kind) const {
+  bool IsOffload = Kind != Action::OFK_None;
   auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
   auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
 

@@ -469,7 +469,7 @@ public:
 
   /// Resolve the requested LTO mode for this toolchain.
   LTOKind getLTOMode(const llvm::opt::ArgList &Args,
-                     bool IsOffload = false) const;
+                     Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// Returns true if LTO is active for this toolchain given the args.
   bool isUsingLTO(const llvm::opt::ArgList &Args,

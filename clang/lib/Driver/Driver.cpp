@@ -3602,8 +3602,7 @@ class OffloadingActionBuilder final {
 
             CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
                 C, Args, Ph, CudaDeviceActions[I], Action::OFK_Cuda,
-                ToolChains[I]->getLTOMode(Args,
-                                          /*IsOffload=*/true));
+                ToolChains[I]->getLTOMode(Args, Action::OFK_Cuda));
 
             if (Ph == phases::Assemble)
               break;
@@ -3780,7 +3779,8 @@ class OffloadingActionBuilder final {
               BackendAction =
                   C.MakeAction<BackendJobAction>(CudaDeviceActions[I], Output);
             } else {
-              auto DevLTO = ToolChains[I]->getLTOMode(Args, /*IsOffload=*/true);
+              auto DevLTO =
+                  ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind);
               BackendAction = C.getDriver().ConstructPhaseAction(
                   C, Args, phases::Backend, CudaDeviceActions[I],
                   AssociatedOffloadKind, DevLTO);
@@ -3852,8 +3852,7 @@ class OffloadingActionBuilder final {
       for (unsigned I = 0, E = CudaDeviceActions.size(); I != E; ++I)
         CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
             C, Args, CurPhase, CudaDeviceActions[I], AssociatedOffloadKind,
-            ToolChains[I]->getLTOMode(Args,
-                                      /*IsOffload=*/true));
+            ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind));
 
       if (CompileDeviceOnly && CurPhase == FinalPhase && BundleOutput &&
           *BundleOutput) {
@@ -5036,10 +5035,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         // Propagate the ToolChain so we can use it in ConstructPhaseAction.
         A->propagateDeviceOffloadInfo(Kind, TCAndArch->second.data(),
                                       TCAndArch->first);
-        A = ConstructPhaseAction(
-            C, Args, Phase, A, Kind,
-            TCAndArch->first->getLTOMode(Args,
-                                         /*IsOffload=*/true));
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind,
+                                 TCAndArch->first->getLTOMode(Args, Kind));
 
         if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
             Kind == Action::OFK_OpenMP &&
