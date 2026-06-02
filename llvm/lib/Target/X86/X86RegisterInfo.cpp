@@ -27,7 +27,6 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TileShapeInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCContext.h"
@@ -50,6 +49,11 @@ static cl::opt<bool>
                             cl::init(false),
                             cl::desc("Disable two address hints for register "
                                      "allocation"));
+
+static cl::opt<unsigned> SetjmpCSRWarningThreshold(
+    "x86-setjmp-csr-warning-threshold", cl::Hidden, cl::init(50),
+    cl::desc("Basic block count threshold for emitting a warning about "
+             "callee-saved registers reserved due to setjmp"));
 
 extern cl::opt<bool> X86EnableAPXForRelocation;
 
@@ -269,8 +273,10 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_AllRegs_AVX_SaveList;
     return CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
-    return IsWin64 ? CSR_Win64_RT_MostRegs_SaveList
-                   : CSR_64_RT_MostRegs_SaveList;
+    if (IsWin64)
+      return (HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
+                      : CSR_Win64_RT_MostRegs_SaveList);
+    return CSR_64_RT_MostRegs_SaveList;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_SaveList;
@@ -284,11 +290,13 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX512_SaveList;
+      return (HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX512_SaveList
+                      : CSR_Win64_Intel_OCL_BI_AVX512_SaveList);
     if (HasAVX512 && Is64Bit)
       return CSR_64_Intel_OCL_BI_AVX512_SaveList;
     if (HasAVX && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX_SaveList;
+      return (HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX_SaveList
+                      : CSR_Win64_Intel_OCL_BI_AVX_SaveList);
     if (HasAVX && Is64Bit)
       return CSR_64_Intel_OCL_BI_AVX_SaveList;
     if (!HasAVX && !IsWin64 && Is64Bit)
@@ -298,15 +306,18 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_SaveList :
-                         CSR_Win64_RegCall_NoSSE_SaveList);
+        if (HasEGPR) {
+          assert(HasSSE && "EGPR on Windows X64 requires SSE");
+          return CSR_Win64_APX_RegCall_SaveList;
+        }
+        return (HasSSE ? CSR_Win64_RegCall_SaveList
+                       : CSR_Win64_RegCall_NoSSE_SaveList);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_SaveList :
-                         CSR_SysV64_RegCall_NoSSE_SaveList);
+        return (HasSSE ? CSR_SysV64_RegCall_SaveList
+                       : CSR_SysV64_RegCall_NoSSE_SaveList);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_SaveList :
-                       CSR_32_RegCall_NoSSE_SaveList);
+      return (HasSSE ? CSR_32_RegCall_SaveList : CSR_32_RegCall_NoSSE_SaveList);
     }
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
@@ -317,13 +328,18 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_MostRegs_SaveList;
     break;
   case CallingConv::Win64:
-    if (HasEGPR)
-      return HasSSE ? CSR_Win64_APX_SaveList : CSR_Win64_NoSSE_APX_SaveList;
+    if (HasEGPR) {
+      assert(HasSSE && "EGPR on Windows X64 requires SSE");
+      return CSR_Win64_APX_SaveList;
+    }
     return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_SaveList;
-    return IsWin64 ? CSR_Win64_SwiftTail_SaveList : CSR_64_SwiftTail_SaveList;
+    if (IsWin64)
+      return (HasEGPR ? CSR_Win64_APX_SwiftTail_SaveList
+                      : CSR_Win64_SwiftTail_SaveList);
+    return CSR_64_SwiftTail_SaveList;
   case CallingConv::X86_64_SysV:
     if (CallsEHReturn)
       return CSR_64EHRet_SaveList;
@@ -353,13 +369,18 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (Is64Bit) {
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
                      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
-    if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_SaveList
-                     : CSR_64_SwiftError_SaveList;
+    if (IsSwiftCC) {
+      if (IsWin64)
+        return (HasEGPR ? CSR_Win64_APX_SwiftError_SaveList
+                        : CSR_Win64_SwiftError_SaveList);
+      return CSR_64_SwiftError_SaveList;
+    }
 
     if (IsWin64 || IsUEFI64) {
-      if (HasEGPR)
-        return HasSSE ? CSR_Win64_APX_SaveList : CSR_Win64_NoSSE_APX_SaveList;
+      if (HasEGPR) {
+        assert(HasSSE && "EGPR on Windows X64 requires SSE");
+        return CSR_Win64_APX_SaveList;
+      }
       return HasSSE ? CSR_Win64_SaveList : CSR_Win64_NoSSE_SaveList;
     }
     if (CallsEHReturn)
@@ -391,6 +412,7 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   bool HasSSE = Subtarget.hasSSE1();
   bool HasAVX = Subtarget.hasAVX();
   bool HasAVX512 = Subtarget.hasAVX512();
+  bool HasEGPR = Subtarget.hasEGPR();
 
   switch (CC) {
   case CallingConv::GHC:
@@ -401,7 +423,10 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
   case CallingConv::PreserveMost:
-    return IsWin64 ? CSR_Win64_RT_MostRegs_RegMask : CSR_64_RT_MostRegs_RegMask;
+    if (IsWin64)
+      return (HasEGPR ? CSR_Win64_APX_RT_MostRegs_RegMask
+                      : CSR_Win64_RT_MostRegs_RegMask);
+    return CSR_64_RT_MostRegs_RegMask;
   case CallingConv::PreserveAll:
     if (HasAVX)
       return CSR_64_RT_AllRegs_AVX_RegMask;
@@ -414,11 +439,13 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     break;
   case CallingConv::Intel_OCL_BI: {
     if (HasAVX512 && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX512_RegMask;
+      return (HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX512_RegMask
+                      : CSR_Win64_Intel_OCL_BI_AVX512_RegMask);
     if (HasAVX512 && Is64Bit)
       return CSR_64_Intel_OCL_BI_AVX512_RegMask;
     if (HasAVX && IsWin64)
-      return CSR_Win64_Intel_OCL_BI_AVX_RegMask;
+      return (HasEGPR ? CSR_Win64_APX_Intel_OCL_BI_AVX_RegMask
+                      : CSR_Win64_Intel_OCL_BI_AVX_RegMask);
     if (HasAVX && Is64Bit)
       return CSR_64_Intel_OCL_BI_AVX_RegMask;
     if (!HasAVX && !IsWin64 && Is64Bit)
@@ -428,18 +455,25 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
-        return (HasSSE ? CSR_Win64_RegCall_RegMask :
-                         CSR_Win64_RegCall_NoSSE_RegMask);
+        if (HasEGPR) {
+          assert(HasSSE && "EGPR on Windows X64 requires SSE");
+          return CSR_Win64_APX_RegCall_RegMask;
+        }
+        return (HasSSE ? CSR_Win64_RegCall_RegMask
+                       : CSR_Win64_RegCall_NoSSE_RegMask);
       } else {
-        return (HasSSE ? CSR_SysV64_RegCall_RegMask :
-                         CSR_SysV64_RegCall_NoSSE_RegMask);
+        return (HasSSE ? CSR_SysV64_RegCall_RegMask
+                       : CSR_SysV64_RegCall_NoSSE_RegMask);
       }
     } else {
-      return (HasSSE ? CSR_32_RegCall_RegMask :
-                       CSR_32_RegCall_NoSSE_RegMask);
+      return (HasSSE ? CSR_32_RegCall_RegMask : CSR_32_RegCall_NoSSE_RegMask);
     }
   case CallingConv::CFGuard_Check:
     if (Is64Bit) {
+      if (HasEGPR) {
+        assert(HasSSE && "EGPR on Windows X64 requires SSE");
+        return CSR_Win64_APX_CFGuard_Check_RegMask;
+      }
       return (HasSSE ? CSR_Win64_CFGuard_Check_RegMask
                      : CSR_Win64_CFGuard_Check_NoSSE_RegMask);
     } else {
@@ -451,11 +485,14 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_MostRegs_RegMask;
     break;
   case CallingConv::Win64:
-    return CSR_Win64_APX_RegMask;
+    return (HasEGPR ? CSR_Win64_APX_RegMask : CSR_Win64_RegMask);
   case CallingConv::SwiftTail:
     if (!Is64Bit)
       return CSR_32_RegMask;
-    return IsWin64 ? CSR_Win64_SwiftTail_RegMask : CSR_64_SwiftTail_RegMask;
+    if (IsWin64)
+      return (HasEGPR ? CSR_Win64_APX_SwiftTail_RegMask
+                      : CSR_Win64_SwiftTail_RegMask);
+    return CSR_64_SwiftTail_RegMask;
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
@@ -486,10 +523,16 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     const Function &F = MF.getFunction();
     bool IsSwiftCC = Subtarget.getTargetLowering()->supportSwiftError() &&
                      F.getAttributes().hasAttrSomewhere(Attribute::SwiftError);
-    if (IsSwiftCC)
-      return IsWin64 ? CSR_Win64_SwiftError_RegMask : CSR_64_SwiftError_RegMask;
+    if (IsSwiftCC) {
+      if (IsWin64)
+        return (HasEGPR ? CSR_Win64_APX_SwiftError_RegMask
+                        : CSR_Win64_SwiftError_RegMask);
+      return CSR_64_SwiftError_RegMask;
+    }
 
-    return (IsWin64 || IsUEFI64) ? CSR_Win64_APX_RegMask : CSR_64_RegMask;
+    if (IsWin64 || IsUEFI64)
+      return (HasEGPR ? CSR_Win64_APX_RegMask : CSR_Win64_RegMask);
+    return CSR_64_RegMask;
   }
 
   return CSR_32_RegMask;
@@ -622,23 +665,21 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Due to specifics of setjmp unwinding in Win64 APX ABI, the unwinder
   // cannot restore R30/R31. Reserve them to prevent register allocation.
   // https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention#setjmplongjmp
-  if (MF.exposesReturnsTwice()) {
+  if (MF.exposesReturnsTwice() && ST.isTargetWin64()) {
     unsigned NumReservedCSRs = 0;
-    for (const MCPhysReg &Reg : CSR_Win64_EGPR_SaveList)
+    for (unsigned Reg = X86::R16; Reg <= X86::R31; ++Reg)
       if (isCalleeSavedPhysReg(Reg, MF)) {
         ++NumReservedCSRs;
         for (const MCPhysReg &SubReg : subregs_inclusive(Reg))
           Reserved.set(SubReg);
       }
-    if (NumReservedCSRs && MF.size() > 50 &&
+    if (NumReservedCSRs && MF.size() > SetjmpCSRWarningThreshold &&
         !MF.getRegInfo().reservedRegsFrozen()) {
-      const Function &F = MF.getFunction();
-      F.getContext().diagnose(DiagnosticInfoResourceLimit(
-          F,
-          "callee-saved registers reserved due to setjmp; "
-          "this may impact performance in large functions (" +
-              Twine(NumReservedCSRs) + " registers excluded from allocation)",
-          MF.size(), 50, DS_Warning));
+      MF.getContext().reportWarning(
+          SMLoc(), Twine(NumReservedCSRs) +
+                       " callee-saved register(s) reserved due to setjmp in '" +
+                       MF.getName() +
+                       "'; this may impact performance in large functions");
     }
   }
 

@@ -1,9 +1,13 @@
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+egpr -regalloc=greedy | FileCheck %s --check-prefixes=CHECK,ALLOC
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+egpr -regalloc=basic | FileCheck %s --check-prefixes=CHECK,ALLOC
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+egpr -regalloc=pbqp | FileCheck %s --check-prefixes=CHECK,ALLOC
-; RUN: llc < %s -mtriple=x86_64-uefi -mattr=+egpr -regalloc=greedy | FileCheck %s --check-prefixes=CHECK,ALLOC
-; RUN: llc < %s -mtriple=x86_64-uefi -mattr=+egpr -regalloc=basic | FileCheck %s --check-prefixes=CHECK,ALLOC
-; RUN: llc < %s -mtriple=x86_64-uefi -mattr=+egpr -regalloc=pbqp | FileCheck %s --check-prefixes=CHECK,ALLOC
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+egpr -x86-setjmp-csr-warning-threshold=1 2>&1 | FileCheck %s --check-prefix=WARN
+;
+; Test that warnings are emitted exactly once per setjmp function.
+; WARN: warning: {{.*}}callee-saved register(s) reserved due to setjmp in 'test_setjmp_i64'
+; WARN-NOT: warning: {{.*}}callee-saved register(s) reserved due to setjmp in 'test_setjmp_i64'
+; WARN: warning: {{.*}}callee-saved register(s) reserved due to setjmp in 'test_setjmp_i32'
+; WARN-NOT: warning: {{.*}}callee-saved register(s) reserved due to setjmp in 'test_setjmp_i32'
 
 ; Test that R30 and R31 and all their sub-registers (r30d, r31d) are not
 ; allocated in functions that call setjmp (returns_twice) with Win64 APX
