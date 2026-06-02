@@ -477,6 +477,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
+  UpgradeCFIFunctions(*M);
   UpgradeSectionAttributes(*M);
   copyModuleAttrToFunctions(*M);
 

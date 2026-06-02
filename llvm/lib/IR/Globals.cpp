@@ -106,6 +106,13 @@ GlobalValue::GUID GlobalValue::getGUIDOrFallback() const {
   return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
 }
 
+GlobalValue::GUID GlobalValue::getGUIDOrFallbackDropEscape() const {
+  auto GuidIfPresent = getGUIDIfAssigned();
+  return GuidIfPresent ? *GuidIfPresent
+                       : GlobalValue::getGUIDAssumingExternalLinkage(
+                             GlobalValue::dropLLVMManglingEscape(getName()));
+}
+
 std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
   // First check the metadata.
   auto *MD = getGUIDMetadata();

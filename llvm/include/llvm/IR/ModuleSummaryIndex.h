@@ -1341,8 +1341,12 @@ public:
 
   CfiFunctionIndex() = default;
   template <typename It> CfiFunctionIndex(It B, It E) {
-    for (; B != E; ++B)
-      emplace(*B);
+    for (; B != E; ++B) {
+      StringRef S(*B);
+      GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::dropLLVMManglingEscape(S));
+      Index[GUID].emplace(S);
+    }
   }
 
   std::vector<StringRef> symbols() const {
@@ -1367,21 +1371,9 @@ public:
     return make_range(I->second.begin(), I->second.end());
   }
 
-  template <typename... Args> void emplace(Args &&...A) {
-    StringRef S(std::forward<Args>(A)...);
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    Index[GUID].emplace(S);
-  }
+  void emplace(GlobalValue::GUID GUID, StringRef S) { Index[GUID].emplace(S); }
 
-  size_t count(StringRef S) const {
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    auto I = Index.find(GUID);
-    if (I == Index.end())
-      return 0;
-    return I->second.count(S);
-  }
+  size_t count(GlobalValue::GUID GUID) const { return Index.count(GUID); }
 
   bool empty() const { return Index.empty(); }
 };
