@@ -16,11 +16,11 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop:
 ; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop ]
-; CHECK-NEXT:    EMIT-SCALAR ir<%zext.nneg> = zext ir<3> to i64
+; CHECK-NEXT:    EMIT-SCALAR ir<%zext.nneg> = zext nneg ir<3> to i64
 ; CHECK-NEXT:    EMIT ir<%gep.zext> = getelementptr ir<%A>, ir<%zext.nneg>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%sext.plain> = sext ir<%iv> to i64
 ; CHECK-NEXT:    EMIT ir<%gep.sext> = getelementptr ir<%A>, ir<%sext.plain>
-; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.flags> = trunc ir<3> to i8
+; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.flags> = trunc nuw nsw ir<3> to i8
 ; CHECK-NEXT:    EMIT ir<%gep.trunc> = getelementptr ir<%B>, ir<%trunc.flags>
 ; CHECK-NEXT:    EMIT store ir<%gep.sext>, ir<%gep.zext>
 ; CHECK-NEXT:    EMIT store ir<0>, ir<%gep.trunc>
@@ -66,8 +66,8 @@ define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop:
 ; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop ]
-; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.nuw.only> = trunc ir<3> to i8
-; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.nsw.only> = trunc ir<3> to i8
+; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.nuw.only> = trunc nuw ir<3> to i8
+; CHECK-NEXT:    EMIT-SCALAR ir<%trunc.nsw.only> = trunc nsw ir<3> to i8
 ; CHECK-NEXT:    EMIT-SCALAR ir<%zext.plain> = zext ir<3> to i64
 ; CHECK-NEXT:    EMIT ir<%gep.a> = getelementptr ir<%A>, ir<%iv>
 ; CHECK-NEXT:    EMIT ir<%gep.b> = getelementptr ir<%B>, ir<%iv>

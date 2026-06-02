@@ -1848,10 +1848,6 @@ struct DenseMapInfo<mlir::AsmDialectResourceHandle> {
     return {DenseMapInfo<void *>::getEmptyKey(),
             DenseMapInfo<mlir::TypeID>::getEmptyKey(), nullptr};
   }
-  static inline mlir::AsmDialectResourceHandle getTombstoneKey() {
-    return {DenseMapInfo<void *>::getTombstoneKey(),
-            DenseMapInfo<mlir::TypeID>::getTombstoneKey(), nullptr};
-  }
   static unsigned getHashValue(const mlir::AsmDialectResourceHandle &handle) {
     return DenseMapInfo<void *>::getHashValue(handle.getResource());
   }
