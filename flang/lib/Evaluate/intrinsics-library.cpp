@@ -440,7 +440,8 @@ struct HostRuntimeLibrary<std::complex<double>, LibraryVersion::Libm> {
 //    clang libc++ (ok in GNU libstdc++). Instead, the Posix libm
 //    extensions are used when available below.
 
-#if _POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
+#if _POSIX_C_SOURCE >= 200112L || _POSIX_VERSION >= 200112L || \
+    _XOPEN_SOURCE >= 600 || _XOPEN_VERSION >= 600
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
@@ -557,7 +558,8 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 #endif // HAS_FLOAT80 || HAS_LDBL128
-#endif //_POSIX_VERSION >= 200112L || _XOPEN_VERSION >= 600
+#endif //_POSIX_C_SOURCE >= 200112L || _POSIX_VERSION >= 200112L ||
+       //_XOPEN_VERSION >= 600 || _XOPEN_VERSION >= 600
 
 #ifdef _WIN32
 template <> struct HostRuntimeLibrary<double, LibraryVersion::LibmExtensions> {
