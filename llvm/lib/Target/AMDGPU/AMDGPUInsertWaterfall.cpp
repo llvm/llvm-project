@@ -80,9 +80,9 @@ static unsigned getWFEndSize(const unsigned Opcode) {
 static void readFirstLaneReg(MachineBasicBlock &MBB, MachineRegisterInfo *MRI,
                              const SIRegisterInfo *RI, const SIInstrInfo *TII,
                              MachineBasicBlock::iterator &I, const DebugLoc &DL,
-                             Register RFLReg, Register RFLSrcReg,
-                             const MachineOperand &RFLSrcOp) {
-  auto RFLRegRC = MRI->getRegClass(RFLReg);
+                             Register RFLReg, const MachineOperand &RFLSrcOp) {
+  Register RFLSrcReg = RFLSrcOp.getReg();
+  const TargetRegisterClass *RFLRegRC = MRI->getRegClass(RFLReg);
   uint32_t RegSize = RI->getRegSizeInBits(*RFLRegRC) / 32;
   assert(RI->hasVGPRs(MRI->getRegClass(RFLSrcReg)) &&
          "unexpected uniform operand for readfirstlane");
@@ -467,11 +467,10 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
     for (auto RFLMI : NewRFLList) {
       auto DstReg = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst)->getReg();
       auto SrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
-      Register SrcReg = SrcOp->getReg();
 
       MachineBasicBlock::iterator RFLInsert(RFLMI);
       readFirstLaneReg(*RFLMI->getParent(), MRI, RI, TII, RFLInsert,
-                       RFLMI->getDebugLoc(), DstReg, SrcReg, *SrcOp);
+                       RFLMI->getDebugLoc(), DstReg, *SrcOp);
     }
 
     Item.eraseFromParent();
@@ -661,19 +660,18 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // Get the next index to use from the first enabled lane
     for (auto &CurrIdx : IndexList)
       readFirstLaneReg(LoopBB, MRI, RI, TII, J, DL, CurrIdx.CurrentIdxReg,
-                       CurrIdx.Index->getReg(), *CurrIdx.Index);
+                       *CurrIdx.Index);
 
     // Also process the readlane pseudo ops - if readfirstlane is using the
     // index then just replace with the CurrentIdxReg instead
     for (auto RFLMI : Item.RFLList) {
       auto RFLSrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
       auto RFLDstOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::dst);
-      Register RFLSrcReg = RFLSrcOp->getReg();
       Register RFLDstReg = RFLDstOp->getReg();
 
       bool MatchedIdx = false;
       for (auto &CurrIdx : IndexList) {
-        if (RFLSrcReg == CurrIdx.Index->getReg()) {
+        if (RFLSrcOp->getReg() == CurrIdx.Index->getReg()) {
           // Use the CurrentIdxReg for this
           Item.RFLRegs.push_back(CurrIdx.CurrentIdxReg);
           MRI->replaceRegWith(RFLDstReg, CurrIdx.CurrentIdxReg);
@@ -686,7 +684,7 @@ bool AMDGPUInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
         // Insert function to expand to required size here
         MachineBasicBlock::iterator RFLInsert(RFLMI);
         readFirstLaneReg(LoopBB, MRI, RI, TII, RFLInsert, DL, RFLDstReg,
-                         RFLSrcReg, *RFLSrcOp);
+                         *RFLSrcOp);
       }
     }
 
