@@ -9,12 +9,12 @@
 
 // <span>
 
-// template <class ElementType, size_t Extent>
-//     span<byte,
-//          Extent == dynamic_extent
-//              ? dynamic_extent
-//              : sizeof(ElementType) * Extent>
+// template<class ElementType, size_t Extent>
+//   span<byte, Extent == dynamic_extent ? dynamic_extent : sizeof(ElementType) * Extent>
 //     as_writable_bytes(span<ElementType, Extent> s) noexcept;
+//
+// Constraints:
+//   is_const_v<ElementType> is false and is_volatile_v<ElementType> is false.
 
 #include <span>
 #include <string>
@@ -37,6 +37,28 @@ void f() {
   std::as_writable_bytes(std::span<const std::string>());
   // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 
+  std::as_writable_bytes(std::span<volatile int>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile long>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile double>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile A>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile std::string>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+
+  std::as_writable_bytes(std::span<const volatile int>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile long>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile double>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile A>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile std::string>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+
   std::as_writable_bytes(std::span<const int, 0>());
   // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
   std::as_writable_bytes(std::span<const long, 0>());
@@ -48,8 +70,35 @@ void f() {
   std::as_writable_bytes(std::span<const std::string, (std::size_t)0>());
   // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 
+  std::as_writable_bytes(std::span<volatile int, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile long, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile double, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile A, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<volatile std::string, (std::size_t)0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+
+  std::as_writable_bytes(std::span<const volatile int, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile long, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile double, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile A, 0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile std::string, (std::size_t)0>());
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+
   std::as_writable_bytes(std::span<const int>(iArr2, 1));
   // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
   std::as_writable_bytes(std::span<const int, 1>(iArr2 + 5, 1));
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+
+  std::as_writable_bytes(std::span<const volatile int>(iArr2, 1));
+  // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
+  std::as_writable_bytes(std::span<const volatile int, 1>(iArr2 + 5, 1));
   // expected-error@-1 {{no matching function for call to 'as_writable_bytes'}}
 }

@@ -9,12 +9,12 @@
 
 // <span>
 
-// template <class ElementType, size_t Extent>
-//     span<byte,
-//          Extent == dynamic_extent
-//              ? dynamic_extent
-//              : sizeof(ElementType) * Extent>
+// template<class ElementType, size_t Extent>
+//   span<byte, Extent == dynamic_extent ? dynamic_extent : sizeof(ElementType) * Extent>
 //     as_writable_bytes(span<ElementType, Extent> s) noexcept;
+//
+// Constraints:
+//   is_const_v<ElementType> is false and is_volatile_v<ElementType> is false.
 
 #include <cassert>
 #include <cstddef>
