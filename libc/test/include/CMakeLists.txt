@@ -22,6 +22,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  unistd_macros_test
+  SUITE
+    libc_include_tests
+  SRCS
+    unistd_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.unistd_macros
+)
+
+
+add_libc_test(
   sys_queue_test
   SUITE
     libc_include_tests
