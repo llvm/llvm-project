@@ -4199,6 +4199,19 @@ defm : FSetCCPat<strict_fsetccs, f64, FCMPOD>;
 defm : FSetCCPat<strict_fsetccs, f128, XSCMPOQP>;
 }
 
+// Prefer VSX scalar compares over FPU compares when P8Vector is available.
+// Both have same cycle counts, but VSX instructions access all 64 VSX registers
+// vs only 32 FP registers, reducing register pressure and avoiding unnecessary copies.
+// Per Power ISA Programming Notes: xscmpudp and xscmpodp can operate on both
+// single-precision and double-precision source operands.
+let Predicates = [HasVSX, HasP8Vector], AddedComplexity = 400 in {
+  // Unordered compares: xscmpudp replaces fcmpu for f64
+  defm : FSetCCPat<any_fsetcc, f64, XSCMPUDP>;
+
+  // Ordered compares: xscmpodp replaces fcmpo for f64
+  defm : FSetCCPat<strict_fsetccs, f64, XSCMPODP>;
+}
+
 // This must be in this file because it relies on patterns defined in this file
 // after the inclusion of the instruction sets.
 let Predicates = [HasSPE] in {
