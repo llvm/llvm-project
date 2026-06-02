@@ -126,6 +126,15 @@ public:
                       NumWaitEvents, WaitEvents);
     return Plugin::success();
   }
+
+  Error appendBarrier(ze_event_handle_t SignalEvent = nullptr,
+                      uint32_t NumWaitEvents = 0,
+                      ze_event_handle_t *WaitEvents = nullptr) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, SignalEvent,
+                      NumWaitEvents, WaitEvents);
+    return Plugin::success();
+  }
 };
 
 } // namespace llvm::omp::target::plugin
