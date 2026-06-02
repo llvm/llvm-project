@@ -253,14 +253,14 @@ private:
                       MachineRegisterInfo *_MRI)
         : TII(_TII), MRI(_MRI), Final(nullptr) {
 
-      const MachineOperand *TokMO = TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
+      const MachineOperand *TokMO =
+          TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok_ret);
 
       assert(tokIsStart(TII->getNamedOperand(*_Begin, AMDGPU::OpName::tok)) &&
              "first begin does not have an undefined input token as expected");
 
       assert(TokMO &&
              "Unable to extract tok operand from SI_WATERFALL_BEGIN pseudo op");
-
 
       BeginList.push_back(_Begin);
       TokReg = TokMO->getReg();
