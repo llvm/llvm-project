@@ -1142,7 +1142,7 @@ static bool hoistInsertPastInsert(
   SmallSet<uint64_t, 4> SeenIndices;
   InsertElementInst *Inner =
       canBypassInsert(Ins, CurLoop, /*IsHoistedInstruction*/ true, SeenIndices);
-  if (!Inner)
+  if (!Inner && Inner != Ins)
     return false;
 
   Value *IOp1 = Ins->getOperand(1);
