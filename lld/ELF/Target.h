@@ -206,6 +206,7 @@ void setAArch64TargetInfo(Ctx &);
 void setAMDGPUTargetInfo(Ctx &);
 void setARMTargetInfo(Ctx &);
 void setAVRTargetInfo(Ctx &);
+void setEZHTargetInfo(Ctx &);
 void setHexagonTargetInfo(Ctx &);
 void setLoongArchTargetInfo(Ctx &);
 void setMSP430TargetInfo(Ctx &);
