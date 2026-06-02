@@ -117,13 +117,12 @@ void UseIfConstevalCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   std::optional<BraceFix> ElseBraceFix = BraceFix();
-  const Stmt *Else = If->getElse();
-  if (Else)
-    Else = Else->stripLabelLikeStatements();
-  if (Else && !isa<IfStmt>(Else)) {
+  if (If->getElse()) {
     ElseBraceFix = getBraceFix(If->getElse(), getLangOpts(),
                                *Result.SourceManager, If->getElseLoc());
   }
+  if (!ElseBraceFix)
+    return;
 
   const bool NeedsLeadingSpace = needsLeadingSpaceBeforeConsteval(
       If->getLParenLoc(), *Result.SourceManager);
