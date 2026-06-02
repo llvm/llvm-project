@@ -766,8 +766,14 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   ThreadPoolStrategy SavedStrategy = parallel::strategy;
   llvm::scope_exit RestoreStrategy([&] { parallel::strategy = SavedStrategy; });
   parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
-  Error ParseErrors = parallelForEachError(
-      Aggregators, [](DataAggregator *DA) { return DA->parseInput(); });
+  Error ParseErrors =
+      parallelForEachError(Aggregators, [](DataAggregator *DA) -> Error {
+        if (Error E = DA->parseInput())
+          return createStringError(inconvertibleErrorCode(), "%s: %s",
+                                   DA->Filename.c_str(),
+                                   toString(std::move(E)).c_str());
+        return Error::success();
+      });
   for (DataAggregator *DA : llvm::drop_begin(Aggregators)) {
     if (DA->Parsed)
       mergeFrom(*DA);

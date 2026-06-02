@@ -2143,20 +2143,21 @@ protected:
 /// lanes, which is handled by the llvm.experimental.vector.histogram family
 /// of intrinsics. The only update operations currently supported are
 /// 'add' and 'sub' where the other term is loop-invariant.
-class VPHistogramRecipe : public VPRecipeBase {
+class VPHistogramRecipe : public VPRecipeBase, public VPIRMetadata {
   /// Opcode of the update operation, currently either add or sub.
   unsigned Opcode;
 
 public:
   VPHistogramRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                    const VPIRMetadata &Metadata = {},
                     DebugLoc DL = DebugLoc::getUnknown())
       : VPRecipeBase(VPRecipeBase::VPHistogramSC, Operands, DL),
-        Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   ~VPHistogramRecipe() override = default;
 
   VPHistogramRecipe *clone() override {
-    return new VPHistogramRecipe(Opcode, operands(), getDebugLoc());
+    return new VPHistogramRecipe(Opcode, operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPHistogramSC);
@@ -2710,7 +2711,13 @@ public:
       : VPSingleDefRecipe(VPRecipeBase::VPWidenPHISC, IncomingValues,
                           getScalarTypeOrInfer(IncomingValues[0]),
                           /*UV=*/nullptr, DL),
-        Name(Name.str()) {}
+        Name(Name.str()) {
+    assert(all_of(IncomingValues,
+                  [this](VPValue *VPV) {
+                    return VPV->getScalarType() == getScalarType();
+                  }) &&
+           "all incoming values must have the same type");
+  }
 
   VPWidenPHIRecipe *clone() override {
     return new VPWidenPHIRecipe(operands(), getDebugLoc(), Name);
@@ -2911,6 +2918,17 @@ public:
       : VPRecipeWithIRFlags(VPRecipeBase::VPBlendSC, Operands,
                             Operands[0]->getScalarType(), Flags, DL) {
     assert(Operands.size() >= 2 && "Expected at least two operands!");
+    assert(all_of(seq<unsigned>(0, getNumIncomingValues()),
+                  [this](unsigned I) {
+                    return getIncomingValue(I)->getScalarType() ==
+                           getScalarType();
+                  }) &&
+           "all incoming values must have the same type");
+    assert(all_of(seq<unsigned>(isNormalized(), getNumIncomingValues()),
+                  [this](unsigned I) {
+                    return getMask(I)->getScalarType()->isIntegerTy(1);
+                  }) &&
+           "masks must be a bool");
     setUnderlyingValue(Phi);
   }
 
@@ -3180,7 +3198,17 @@ protected:
       : VPRecipeWithIRFlags(SC, Operands, Operands[0]->getScalarType(), FMFs,
                             DL),
         RdxKind(RdxKind), Style(Style) {
+    assert(all_of(Operands,
+                  [this](VPValue *VPV) {
+                    return VPV->getScalarType() == getScalarType() ||
+                           (isa<VPInstruction>(VPV) &&
+                            cast<VPInstruction>(VPV)->getOpcode() ==
+                                VPInstruction::ExplicitVectorLength);
+                  }) &&
+           "all incoming values must have the same type");
     if (CondOp) {
+      assert(CondOp->getScalarType()->isIntegerTy(1) &&
+             "CondOp must be a bool");
       IsConditional = true;
       addOperand(CondOp);
     }
@@ -4274,10 +4302,10 @@ struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
-                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
-                                  VPWidenCallRecipe, VPReplicateRecipe,
-                                  VPInterleaveBase, VPWidenMemoryRecipe> {};
+    : vpdetail::CastInfoMixinImpl<
+          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+          VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
+          VPInterleaveBase, VPWidenMemoryRecipe, VPHistogramRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
