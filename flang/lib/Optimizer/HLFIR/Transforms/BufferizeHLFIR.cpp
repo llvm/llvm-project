@@ -900,76 +900,58 @@ struct ConditionalOpConversion
         mlir::cast<hlfir::ExprType>(condOp.getResult().getType())};
     const mlir::Type tempBaseType{hlfir::getVariableType(exprType)};
 
-    // Clone branch body, assign into temp, replay cleanup region ops.
+    // Emit one branch: clone the region body, delegate buffer management
+    // to hlfir.associate (which the framework will convert via
+    // AssociateOpConversion, enabling buffer forwarding from producers
+    // like hlfir.elemental without an extra copy).
     auto emitBranch = [&](mlir::Region &region) {
       mlir::IRMapping mapper;
       auto yield{mlir::cast<hlfir::YieldOp>(region.front().getTerminator())};
       const mlir::Value yieldedEntity{yield.getEntity()};
 
-      // Clone cleanup region ops. If skipDestroyOf is set, skip any
-      // hlfir.destroy whose operand matches it (used by the forwarding
-      // path where ownership of that entity transfers to the caller).
-      auto replayCleanups = [&](mlir::Value skipDestroyOf = nullptr) {
-        if (yield.getCleanup().empty())
-          return;
-        for (auto &op : yield.getCleanup().front().without_terminator()) {
-          if (skipDestroyOf)
-            if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(&op);
-                destroy && destroy.getExpr() == skipDestroyOf)
-              continue;
-          builder.clone(op, mapper);
-        }
-      };
-
-      // Try to forward the yielded entity's storage directly to avoid using a
-      // temp.
-      hlfir::AsExprOp asExprToForward;
-      if (yieldedEntity.getType() == exprType) {
-        if (auto asExpr{yieldedEntity.getDefiningOp<hlfir::AsExprOp>()};
-            asExpr && asExpr.isMove() &&
-            asExpr->getBlock() == &region.front() &&
-            asExpr.getVar().getType() == tempBaseType &&
-            llvm::all_of(yieldedEntity.getUsers(), [&](mlir::Operation *user) {
-              return user == yield.getOperation() ||
-                     mlir::isa<hlfir::DestroyOp>(user);
-            }))
-          asExprToForward = asExpr;
-      }
       // Clone all non-terminator ops from the branch body.
-      for (auto &op : region.front().without_terminator()) {
-        if (asExprToForward && &op == asExprToForward.getOperation())
-          continue;
+      for (auto &op : region.front().without_terminator())
         builder.clone(op, mapper);
+
+      mlir::Value exprVal{mapper.lookupOrDefault(yieldedEntity)};
+      bool createdAsExpr = false;
+      // If the yielded value is not an hlfir.expr, wrap it in hlfir.as_expr.
+      if (!mlir::isa<hlfir::ExprType>(exprVal.getType())) {
+        if (yield.getCleanup().empty())
+          // A present mustFree operand selects the move path in
+          // AsExprOpConversion, while its boolean value controls whether
+          // later destruction frees the forwarded storage. With no cleanup
+          // region, this branch does not invalidate exprVal, so we forward
+          // the existing variable without transferring ownership.
+          exprVal = hlfir::AsExprOp::create(builder, loc, exprVal,
+                                            builder.createBool(loc, false));
+        else
+          exprVal = hlfir::AsExprOp::create(builder, loc, exprVal);
+        createdAsExpr = true;
       }
-      if (asExprToForward) {
-        // Forward storage and mustFree directly; ownership transfers to
-        // the caller so no destroy is needed.
-        const mlir::Value fwdVar{
-            mapper.lookupOrDefault(asExprToForward.getVar())};
-        const mlir::Value fwdMustFree{
-            mapper.lookupOrDefault(asExprToForward.getMustFree())};
-        replayCleanups(/*skipDestroyOf=*/yieldedEntity);
-        fir::ResultOp::create(builder, loc,
-                              mlir::ValueRange{fwdVar, fwdMustFree});
-        return;
-      }
-      // If the yielded entity is an hlfir.as_expr, unwrap to its underlying
-      // variable — it carries type descriptor info needed for polymorphic
-      // temp allocation.  The value is never a mutable box because lowering
-      // applied derefPointersAndAllocatables before yielding.
-      const mlir::Value mappedYield{mapper.lookupOrDefault(yieldedEntity)};
-      auto asExprOp{mappedYield.getDefiningOp<hlfir::AsExprOp>()};
-      const hlfir::Entity val{asExprOp ? asExprOp.getVar() : mappedYield};
-      auto [temp, isHeapAlloc]{hlfir::createTempFromMold(loc, builder, val)};
-      hlfir::AssignOp::create(builder, loc, val, temp,
-                              /*realloc=*/false,
-                              /*keep_lhs_length_if_realloc=*/false,
-                              /*temporary_lhs=*/true);
-      // Replay cleanup ops after the assign to avoid use-after-free.
-      replayCleanups();
-      temp = castTempToResultType(loc, builder, temp, tempBaseType);
-      const mlir::Value mustFreeVal{builder.createBool(loc, isHeapAlloc)};
-      fir::ResultOp::create(builder, loc, mlir::ValueRange{temp, mustFreeVal});
+
+      // Associate to obtain a variable + mustFree pair; buffer ownership
+      // transfers out via fir.result (no hlfir.end_associate needed).
+      auto associate = hlfir::AssociateOp::create(
+          builder, loc, exprVal, ".tmp.cond", /*shape=*/mlir::Value{},
+          /*typeparams=*/mlir::ValueRange{}, fir::FortranVariableFlagsAttr{});
+
+      // Replay cleanup ops after the associate so that buffer forwarding
+      // is safe (only destroy and associate use the expr).
+      if (!yield.getCleanup().empty())
+        for (auto &op : yield.getCleanup().front().without_terminator())
+          builder.clone(op, mapper);
+
+      // If we created an hlfir.as_expr, add a destroy for it so
+      // AssociateOpConversion can forward its buffer.
+      if (createdAsExpr)
+        hlfir::DestroyOp::create(builder, loc, exprVal);
+
+      // Forward storage + mustFree, casting to the canonical result type.
+      hlfir::Entity var{associate.getResult(0)};
+      var = castTempToResultType(loc, builder, var, tempBaseType);
+      fir::ResultOp::create(builder, loc,
+                            mlir::ValueRange{var, associate.getResult(2)});
     };
 
     // Generate fir.if returning (temp, mustFree) as two results.
