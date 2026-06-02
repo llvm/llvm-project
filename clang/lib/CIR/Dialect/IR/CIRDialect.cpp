@@ -312,7 +312,7 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
     if (!recTy)
       return op.emitOpError(
           "when 'num_elements' is present, 'addr' must be a pointer to a "
-          "!cir.record type");
+          "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy != ptrTy)
       return op.emitOpError("when 'num_elements' is present, 'addr' type must "
@@ -330,8 +330,8 @@ template <typename Op> static LogicalResult verifyArrayCtorDtor(Op op) {
 
     auto recTy = mlir::dyn_cast<cir::RecordType>(innerEltTy);
     if (!recTy)
-      return op.emitOpError(
-          "the block argument type must be a pointer to a !cir.record type");
+      return op.emitOpError("the block argument type must be a pointer to a "
+                            "!cir.struct or !cir.union type");
 
     if (expectedEltPtrTy.getPointee() != innerEltTy)
       return op.emitOpError(
@@ -3218,10 +3218,9 @@ LogicalResult cir::CopyOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::GetRuntimeMemberOp::verify() {
-  auto recordTy = mlir::cast<RecordType>(getAddr().getType().getPointee());
   cir::DataMemberType memberPtrTy = getMember().getType();
 
-  if (recordTy != memberPtrTy.getClassTy())
+  if (getAddr().getType().getPointee() != memberPtrTy.getClassTy())
     return emitError() << "record type does not match the member pointer type";
   if (getType().getPointee() != memberPtrTy.getMemberTy())
     return emitError() << "result type does not match the member pointer type";
@@ -3302,13 +3301,13 @@ LogicalResult cir::GetMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::ExtractMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError()
            << "cir.extract_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getType())
+  if (structTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3318,12 +3317,12 @@ LogicalResult cir::ExtractMemberOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::InsertMemberOp::verify() {
-  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
-  if (recordTy.getKind() == cir::RecordType::Union)
+  if (mlir::isa<cir::UnionType>(getRecord().getType()))
     return emitError() << "cir.insert_member currently does not support unions";
-  if (recordTy.getMembers().size() <= getIndex())
+  auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
+  if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+  if (structTy.getMembers()[getIndex()] != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();

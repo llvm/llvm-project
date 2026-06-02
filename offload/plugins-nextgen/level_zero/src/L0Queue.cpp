@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AsyncQueue.h"
+#include "L0Queue.h"
 #include "L0Device.h"
 #include "L0Kernel.h"
 #include "L0Plugin.h"
@@ -20,15 +20,15 @@ namespace llvm::omp::target::plugin {
 
 /// common methods
 
-Error AsyncQueueTy::init() {
-  auto CmdListOrErr = Device.getCmdListManager(IsInorder);
+Error L0QueueTy::init() {
+  auto CmdListOrErr = Device.getCmdListManager(CreateQueueInOrder);
   if (!CmdListOrErr)
     return CmdListOrErr.takeError();
   CmdList = *CmdListOrErr;
   return initImpl();
 }
 
-Error AsyncQueueTy::deinit() {
+Error L0QueueTy::deinit() {
   if (auto Err = deinitImpl())
     return Err;
   reset();
@@ -41,11 +41,11 @@ Error AsyncQueueTy::deinit() {
   return Plugin::success();
 }
 
-Error AsyncQueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
-                                         L0LaunchEnvTy &KEnv,
-                                         ze_event_handle_t SignalEvent,
-                                         uint32_t NumWaitEvents,
-                                         ze_event_handle_t *WaitEvents) {
+Error L0QueueTy::dispatchLaunchKernel(ze_kernel_handle_t Kernel,
+                                      L0LaunchEnvTy &KEnv,
+                                      ze_event_handle_t SignalEvent,
+                                      uint32_t NumWaitEvents,
+                                      ze_event_handle_t *WaitEvents) {
   // Unlock KEnv lock after launching the kernel.
   llvm::scope_exit UnlockGuard([&KEnv]() { KEnv.Lock.unlock(); });
   if (KEnv.IsPtrArg)
@@ -78,17 +78,15 @@ void L0AsyncQueueTy::resetImpl() {
 }
 
 void L0AsyncQueueTy::processCopyQueues() {
-  for (auto &USM2M : USM2MList) {
-    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
-                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
-  }
-  // Commit delayed H2M copies.
-  for (auto &H2M : H2MList) {
-    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
-                static_cast<char *>(std::get<1>(H2M)));
-  }
-  H2MList.clear();
-  USM2MList.clear();
+  auto processQueue = [](auto &Queue) {
+    for (auto &[Src, Dst, Size] : Queue)
+      std::copy_n(static_cast<const char *>(Src), Size,
+                  static_cast<char *>(Dst));
+    Queue.clear();
+  };
+
+  processQueue(USM2MList);
+  processQueue(H2MList);
 }
 
 Error L0AsyncQueueTy::synchronizeImpl() {
@@ -165,7 +163,8 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
     if (KernelEvent) {
       // Delay Host/Shared USM to host memory copy since it must wait for
       // kernel completion.
-      USM2MList.emplace_back(TgtPtr, HstPtr, Size);
+      USM2MList.emplace_back(
+          PendingCopyDescTy{TgtPtr, HstPtr, static_cast<size_t>(Size)});
       CopyNow = false;
     }
     if (CopyNow) {
@@ -190,7 +189,8 @@ Error L0AsyncQueueTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
     return Err;
 
   if (DstPtr != HstPtr)
-    H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
+    H2MList.emplace_back(
+        PendingCopyDescTy{DstPtr, HstPtr, static_cast<size_t>(Size)});
   return Plugin::success();
 }
 
@@ -331,16 +331,16 @@ Error L0SyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
 }
 
 // L0QueueCache implementation.
-Expected<AsyncQueueTy *> L0QueueCacheTy::getQueue() {
+Expected<L0QueueTy *> L0QueueCacheTy::getQueue() {
   {
     std::lock_guard<std::mutex> Lock(Mtx);
     if (!Queues.empty()) {
-      AsyncQueueTy *Queue = Queues.back();
+      L0QueueTy *Queue = Queues.back();
       Queues.pop_back();
       return Queue;
     }
   }
-  AsyncQueueTy *Queue = nullptr;
+  L0QueueTy *Queue = nullptr;
   switch (CachedCmdMode) {
   case CommandModeTy::Async:
     Queue = new L0AsyncQueueTy(Device);
@@ -364,7 +364,7 @@ Expected<AsyncQueueTy *> L0QueueCacheTy::getQueue() {
   return Queue;
 }
 
-void L0QueueCacheTy::releaseQueue(AsyncQueueTy *Queue) {
+void L0QueueCacheTy::releaseQueue(L0QueueTy *Queue) {
   if (!Queue)
     return;
   Queue->reset();

@@ -2945,7 +2945,7 @@ bool X86::mayFoldIntoStore(SDValue Op) {
       return false;
     User = *User->user_begin();
   }
-  return ISD::isNormalStore(User);
+  return ISD::isNormalStore(User) || User->getOpcode() == ISD::ATOMIC_STORE;
 }
 
 bool X86::mayFoldIntoZeroExtend(SDValue Op) {

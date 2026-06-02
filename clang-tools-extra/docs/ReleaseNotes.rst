@@ -219,6 +219,12 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-missing-end-comparison
+  <clang-tidy/checks/bugprone/missing-end-comparison>` check.
+
+  Finds instances where the result of a standard algorithm is used in a Boolean
+  context without being compared to the end iterator.
+
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
 
@@ -440,6 +446,11 @@ Changes in existing checks
 
   - Avoid false positives when moving object is reinitialized via the base
     class's ``operator=``.
+
+  - Fix a false positive when a moved-from variable is reinitialized
+    via a ``std::tie()`` assignment (e.g. ``std::tie(a, b) = f(std::move(a),
+    std::move(b))``). The tuple assignment writes back through the stored
+    references, which fully reinitializes the captured variables.
 
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by not inheriting
