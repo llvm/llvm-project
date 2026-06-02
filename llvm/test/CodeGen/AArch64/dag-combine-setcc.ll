@@ -338,10 +338,10 @@ define i16 @combine_setcc_slt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    cmgt v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI20_0]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %add0 = sub nsw <16 x i8> %a, %b
   %cmp1 = icmp slt <16 x i8> %add0, zeroinitializer
@@ -356,10 +356,10 @@ define i16 @combine_setcc_sgt_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    cmgt v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %add0 = sub nsw <16 x i8> %a, %b
   %cmp1 = icmp sgt <16 x i8> %add0, zeroinitializer
@@ -374,10 +374,10 @@ define i16 @combine_setcc_sle_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    cmge v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %add0 = sub nsw <16 x i8> %a, %b
   %cmp1 = icmp sle <16 x i8> %add0, zeroinitializer
@@ -391,10 +391,10 @@ define i16 @combine_setcc_sge_add_nsw(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-NEXT:    cmge v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w0, v0.h[0]
 ; CHECK-NEXT:    ret
   %add0 = sub nsw <16 x i8> %a, %b
   %cmp1 = icmp sge <16 x i8> %add0, zeroinitializer

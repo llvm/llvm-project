@@ -281,7 +281,8 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     // marked with nocapture do not capture. This means that places like
     // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
     // in BasicAA also need to know about this property.
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(Call, true))
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            Call, /*MustPreserveOffset=*/true))
       return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they

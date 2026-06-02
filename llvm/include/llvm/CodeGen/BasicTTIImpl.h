@@ -68,7 +68,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern cl::opt<unsigned> PartialUnrollingThreshold;
+extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -1554,6 +1554,10 @@ public:
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
       return 4;
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+    // FIXME: Arbitrary cost
+    if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+      return 4;
 
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
@@ -3539,7 +3543,7 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
+  LLVM_ABI explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
 };
 
 } // end namespace llvm

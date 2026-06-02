@@ -955,21 +955,13 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   using namespace llvm::Intrinsic;
 
   SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
+  auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  ArrayRef<IITDescriptor> tableRef = table;
   mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    IITDescriptor::IITDescriptorKind kind = tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
+  while (!tableRef.empty())
     argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1095,14 +1087,33 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    cir::AssumeOp::create(builder, loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue, cir::AssumeBundleKind::None,
+                          mlir::ValueRange{});
     return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::SeparateStorage,
+                          mlir::ValueRange{value0, value1});
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
+    mlir::Value sizeValue = emitScalarExpr(e->getArg(1));
+    // The `dereferenceable` operand bundle expects a pointer-sized unsigned
+    // integer; widen/narrow as needed.
+    mlir::Type uintPtrTy = convertType(getContext().getUIntPtrType());
+    if (sizeValue.getType() != uintPtrTy)
+      sizeValue = builder.createIntCast(sizeValue, uintPtrTy);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::Dereferenceable,
+                          mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
   }
 
@@ -1940,7 +1951,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin_launder: {
+    const Expr *arg = e->getArg(0);
+    QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        argTy.requiresBuiltinLaunder(cgm.getASTContext())) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
+    }
+    return RValue::get(ptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:
@@ -2067,7 +2089,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16:
-  case Builtin::BI__sync_synchronize:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__sync_synchronize: {
+    // We assume this is supposed to correspond to a C++0x-style
+    // sequentially-consistent fence (i.e. this is only usable for
+    // synchronization, not device I/O or anything like that). This intrinsic
+    // is really badly designed in the sense that in theory, there isn't
+    // any way to safely use it... but in practice, it mostly works
+    // to use it with non-atomic loads and stores to get acquire/release
+    // semantics.
+    cir::AtomicFenceOp::create(
+        builder, getLoc(e->getSourceRange()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
   case Builtin::BI__c11_atomic_is_lock_free:
@@ -2145,10 +2182,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (x.getType() != encompassingCIRTy)
-      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
-    if (y.getType() != encompassingCIRTy)
-      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy) {
+      x = builder.createCast(mlir::isa<cir::BoolType>(x.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             x, encompassingCIRTy);
+    }
+
+    if (y.getType() != encompassingCIRTy) {
+      y = builder.createCast(mlir::isa<cir::BoolType>(y.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             y, encompassingCIRTy);
+    }
 
     // Perform the operation on the extended values.
     mlir::Location loc = getLoc(e->getSourceRange());
@@ -2400,6 +2446,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
+      if (getTarget().getTriple().isNVPTX())
+        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
+        return errorBuiltinNYI(*this, e, builtinID);
+    }
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:

@@ -169,7 +169,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
   }
   File::add_file(file);
   if (do_seek) {
-    auto result = file->seek(0, SEEK_END);
+    result = file->seek(0, SEEK_END);
     if (!result.has_value()) {
       File::remove_file(file);
       delete file;

@@ -775,15 +775,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::CTTZ, MVT::v4i32, Custom);
     setOperationAction(ISD::CTTZ, MVT::v2i64, Custom);
 
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i8, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i16, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i32, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v1i64, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v8i8, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v4i16, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v2i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v1i64, Custom);
 
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v16i8, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i16, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i32, Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i64, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v16i8, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v8i16, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v4i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::v2i64, Custom);
 
     for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
       setOperationAction(ISD::MULHS, VT, Expand);
@@ -1025,7 +1025,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   if (!Subtarget->hasV5TOps() || Subtarget->isThumb1Only()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, LibCall);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, LibCall);
   }
 
   // @llvm.readcyclecounter requires the Performance Monitors extension.
@@ -3831,6 +3831,29 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Op);
   switch (IntNo) {
   default: return SDValue();    // Don't custom lower most intrinsics.
+  case Intrinsic::localaddress: {
+    const MachineFunction &MF = DAG.getMachineFunction();
+    const auto *RegInfo = Subtarget->getRegisterInfo();
+    unsigned Reg = RegInfo->getLocalAddressRegister(MF);
+    return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg,
+                              Op.getSimpleValueType());
+  }
+  case Intrinsic::eh_recoverfp: {
+    SDValue FnOp = Op.getOperand(1);
+    GlobalAddressSDNode *GSD = dyn_cast<GlobalAddressSDNode>(FnOp);
+    auto *Fn = dyn_cast_or_null<Function>(GSD ? GSD->getGlobal() : nullptr);
+    if (!Fn)
+      report_fatal_error(
+          "llvm.eh.recoverfp must take a function as the first argument");
+    const auto *RegInfo = Subtarget->getRegisterInfo();
+    Register BaseReg = RegInfo->getBaseRegister();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachineBasicBlock &MBB = *MF.begin();
+    if (!MBB.isLiveIn(BaseReg))
+      MBB.addLiveIn(BaseReg);
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getCopyFromReg(DAG.getEntryNode(), dl, BaseReg, PtrVT);
+  }
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
@@ -6285,7 +6308,7 @@ static SDValue LowerCTTZ(SDNode *N, SelectionDAG &DAG,
     }
 
     if ((ElemTy == MVT::i16 || ElemTy == MVT::i32) &&
-        (N->getOpcode() == ISD::CTTZ_ZERO_UNDEF)) {
+        (N->getOpcode() == ISD::CTTZ_ZERO_POISON)) {
       // Compute with: cttz(x) = (width - 1) - ctlz(lsb), if x != 0
       unsigned NumBits = ElemTy.getSizeInBits();
       SDValue WidthMinus1 =
@@ -7768,7 +7791,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Loads are better lowered with insert_vector_elt/ARMISD::BUILD_VECTOR.
   // Keep going if we are hitting this case.
-  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()))
+  if (isOnlyLowElement && !ISD::isNormalLoad(Value.getNode()) &&
+      (VT != MVT::v8f16 || ST->hasFullFP16()))
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);
 
   unsigned EltSize = VT.getScalarSizeInBits();
@@ -7898,7 +7922,8 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // scalar_to_vector for the elements followed by a shuffle (provided the
   // shuffle is valid for the target) and materialization element by element
   // on the stack followed by a load for everything else.
-  if (!isConstant && !usesOnlyOneValue) {
+  if ((!isConstant && !usesOnlyOneValue) ||
+      (VT == MVT::v8f16 && !ST->hasFullFP16())) {
     SDValue Vec = DAG.getUNDEF(VT);
     for (unsigned i = 0 ; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
@@ -8678,7 +8703,8 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  if (ST->hasMVEIntegerOps() && EltSize <= 32) {
+  if (ST->hasMVEIntegerOps() && EltSize <= 32 &&
+      (ST->hasFullFP16() || VT != MVT::v8f16)) {
     if (SDValue V = LowerVECTOR_SHUFFLEUsingOneOff(Op, ShuffleMask, DAG))
       return V;
 
@@ -8766,6 +8792,16 @@ static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   if (ST->hasMVEIntegerOps())
     if (SDValue NewOp = LowerVECTOR_SHUFFLEUsingMovs(Op, ShuffleMask, DAG))
       return NewOp;
+
+  // Lower v8f16 via v8i16 to avoid invalid f16 nodes.
+  if (VT == MVT::v8f16 && !ST->hasFullFP16()) {
+    SDValue BC0 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(0));
+    SDValue BC1 =
+        DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, MVT::v8i16, Op.getOperand(1));
+    SDValue Shuf = DAG.getVectorShuffle(MVT::v8i16, dl, BC0, BC1, ShuffleMask);
+    return DAG.getNode(ARMISD::VECTOR_REG_CAST, dl, VT, Shuf);
+  }
 
   return SDValue();
 }
@@ -10466,7 +10502,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
+  case ISD::CTTZ_ZERO_POISON: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
@@ -13317,6 +13353,17 @@ static SDValue PerformVSELECTCombine(SDNode *N,
   if (!Subtarget->hasMVEIntegerOps())
     return SDValue();
 
+  // Constant fold vselect 0, A, B -> B
+  //           and vselect 0xffff, A, B -> A
+  if (N->getOperand(0).getOpcode() == ARMISD::PREDICATE_CAST &&
+      isa<ConstantSDNode>(N->getOperand(0).getOperand(0))) {
+    unsigned C = N->getOperand(0).getConstantOperandVal(0);
+    if (C == 0)
+      return N->getOperand(2);
+    if (C == 0xffff)
+      return N->getOperand(1);
+  }
+
   if (SDValue V = PerformVQDMULHCombine(N, DCI.DAG))
     return V;
 
@@ -13781,7 +13828,7 @@ bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
 }
 
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
-  if (!Subtarget->hasNEON()) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps()) {
     if (Subtarget->isThumb1Only())
       return VT.getScalarSizeInBits() <= 32;
     return true;
@@ -15657,6 +15704,35 @@ static SDValue PerformExtractEltCombine(SDNode *N,
         Idx % Op0->getOperand(0).getValueType().getVectorNumElements();
     return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Op0.getOperand(Vec),
                            DCI.DAG.getConstant(SubIdx, dl, MVT::i32));
+  }
+
+  // extract(bitcast(BUILD_VECTOR(extract(bitcast(a)), ..))) -> extract(a)
+  if (ST->isLittle() && Op0.getOpcode() == ISD::BITCAST &&
+      Op0.getOperand(0).getOpcode() == ARMISD::BUILD_VECTOR &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      Op0.getScalarValueSizeInBits() <=
+          Op0.getOperand(0).getScalarValueSizeInBits()) {
+    unsigned Lane = N->getConstantOperandVal(1);
+    EVT ExtVT = Op0.getValueType();
+    EVT BVVT = Op0.getOperand(0).getValueType();
+    unsigned BVLane =
+        (Lane * BVVT.getVectorNumElements()) / ExtVT.getVectorNumElements();
+    assert(BVLane < Op0.getOperand(0).getNumOperands());
+    SDValue Ext = Op0.getOperand(0).getOperand(BVLane);
+    if (Ext.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Ext.getOperand(0).getOpcode() == ISD::BITCAST &&
+        isa<ConstantSDNode>(Ext.getOperand(1)) &&
+        Ext.getOperand(0).getOperand(0).getValueType() == ExtVT) {
+      unsigned InnerLane = Ext.getConstantOperandVal(1);
+      unsigned BVSubLane = Lane - (BVLane * ExtVT.getVectorNumElements()) /
+                                      BVVT.getVectorNumElements();
+      unsigned FinalLane = (InnerLane * ExtVT.getVectorNumElements()) /
+                               BVVT.getVectorNumElements() +
+                           BVSubLane;
+      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT,
+                             Ext.getOperand(0).getOperand(0),
+                             DCI.DAG.getConstant(FinalLane, dl, MVT::i32));
+    }
   }
 
   return SDValue();

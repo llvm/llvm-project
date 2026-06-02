@@ -272,7 +272,7 @@ VectorLegalizer::RecursivelyLegalizeResults(SDValue Op,
 SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   // Note that LegalizeOp may be reentered even from single-use nodes, which
   // means that we always must cache transformed nodes.
-  DenseMap<SDValue, SDValue>::iterator I = LegalizedNodes.find(Op);
+  auto I = LegalizedNodes.find(Op);
   if (I != LegalizedNodes.end()) return I->second;
 
   // Legalize the operands
@@ -379,6 +379,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::ABDS:
   case ISD::ABDU:
   case ISD::AVGCEILS:
@@ -389,8 +390,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::BITREVERSE:
   case ISD::CTLZ:
   case ISD::CTTZ:
-  case ISD::CTLZ_ZERO_UNDEF:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CLMUL:
   case ISD::CLMULH:
@@ -656,9 +657,12 @@ void VectorLegalizer::PromoteSETCC(SDNode *Node,
     Operands[4] = Node->getOperand(4); // evl
   }
 
-  SDValue Res = DAG.getNode(Node->getOpcode(), DL, Node->getSimpleValueType(0),
-                            Operands, Node->getFlags());
-
+  EVT ResVT =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), NewVecVT);
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), DL, ResVT, Operands, Node->getFlags());
+  if (ResVT != Node->getValueType(0))
+    Res = DAG.getBoolExtOrTrunc(Res, DL, Node->getValueType(0), NewVecVT);
   Results.push_back(Res);
 }
 
@@ -1105,6 +1109,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandSETCC(Node, Results);
     return;
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if (SDValue Expanded = TLI.expandABS(Node, DAG)) {
       Results.push_back(Expanded);
       return;
@@ -1151,28 +1156,28 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     }
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandCTLZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::VP_CTLZ:
-  case ISD::VP_CTLZ_ZERO_UNDEF:
+  case ISD::VP_CTLZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandVPCTLZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandCTTZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }
     break;
   case ISD::VP_CTTZ:
-  case ISD::VP_CTTZ_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ZERO_POISON:
     if (SDValue Expanded = TLI.expandVPCTTZ(Node, DAG)) {
       Results.push_back(Expanded);
       return;
@@ -2066,10 +2071,26 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   if (!TLI.isOperationLegalOrCustom(ISD::XOR, IntVT))
     return SDValue();
 
-  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
-      !VT.isScalableVector())
-    return SDValue();
+  // Heuristic check to determine whether vector should be expanded to integer
+  // operations or unrolled to scalar operations.
+  // 1. Scalable vector is never unrolled.
+  // 2. Fixed vector is unrolled if one of followings is true:
+  //      a. Vector only has 1 element and target knows how to handle scalar
+  //         FNEG (either legal or custom expand or promote).
+  //      b. Vector has more than 1 element and target supports scalar
+  //         FNEG natively and vector length <= 2(1 XOR + 1 CONST).
+  // FIXME: Scalar construction instruction count varies in every architecture,
+  // here we assume 1 instruction for now.
+  if (VT.isFixedLengthVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    unsigned NumElts = VT.getVectorNumElements();
+    if ((NumElts == 1 &&
+         TLI.isOperationLegalOrCustomOrPromote(ISD::FNEG, EltVT)) ||
+        (NumElts < 3 && TLI.isOperationLegal(ISD::FNEG, EltVT) &&
+         TLI.isExtractVecEltCheap(VT, 0) &&
+         (NumElts == 1 || TLI.isExtractVecEltCheap(VT, 1))))
+      return SDValue();
+  }
 
   SDLoc DL(Node);
   SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
@@ -2086,10 +2107,26 @@ SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
   if (!TLI.isOperationLegalOrCustom(ISD::AND, IntVT))
     return SDValue();
 
-  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
-      !VT.isScalableVector())
-    return SDValue();
+  // Heuristic check to determine whether vector should be expanded to integer
+  // operations or unrolled to scalar operations.
+  // 1. Scalable vector is never unrolled.
+  // 2. Fixed vector is unrolled if one of followings is true:
+  //      a. Vector only has 1 element and target knows how to handle scalar
+  //         FABS(either legal or custom expand or promote).
+  //      b. Vector has more than 1 element and target supports scalar
+  //         FABS natively and vector length <= 2(1 AND + 1 CONST).
+  // FIXME: Scalar construction instruction count varies in every architecture,
+  // here we assume 1 instruction for now.
+  if (VT.isFixedLengthVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    unsigned NumElts = VT.getVectorNumElements();
+    if ((NumElts == 1 &&
+         TLI.isOperationLegalOrCustomOrPromote(ISD::FABS, EltVT)) ||
+        (NumElts < 3 && TLI.isOperationLegal(ISD::FABS, EltVT) &&
+         TLI.isExtractVecEltCheap(VT, 0) &&
+         (NumElts == 1 || TLI.isExtractVecEltCheap(VT, 1))))
+      return SDValue();
+  }
 
   SDLoc DL(Node);
   SDValue Cast = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));
@@ -2108,10 +2145,26 @@ SDValue VectorLegalizer::ExpandFCOPYSIGN(SDNode *Node) {
       !TLI.isOperationLegalOrCustom(ISD::OR, IntVT))
     return SDValue();
 
-  // FIXME: The FSUB check is here to force unrolling v1f64 vectors on AArch64.
-  if (!TLI.isOperationLegalOrCustomOrPromote(ISD::FSUB, VT) &&
-      !VT.isScalableVector())
-    return SDValue();
+  // Heuristic check to determine whether vector should be expanded to integer
+  // operations or unrolled to scalar operations.
+  // 1. Scalable vector is never unrolled.
+  // 2. Fixed vector is unrolled if one of followings is true:
+  //      a. Vector only has 1 element and target knows how to handle scalar
+  //         FCOPYSIGN(either legal or custom expand or promote).
+  //      b. Vector has more than 1 element and target supports scalar
+  //         FCOPYSIGN natively and vector length <= 5(2 AND + 1 OR + 2 CONST).
+  // FIXME: Scalar construction instruction count varies in every architecture,
+  // here we assume 1 instruction for now.
+  if (VT.isFixedLengthVector()) {
+    EVT EltVT = VT.getVectorElementType();
+    unsigned NumElts = VT.getVectorNumElements();
+    if ((NumElts == 1 &&
+         TLI.isOperationLegalOrCustomOrPromote(ISD::FCOPYSIGN, EltVT)) ||
+        (NumElts < 6 && TLI.isOperationLegal(ISD::FCOPYSIGN, EltVT) &&
+         TLI.isExtractVecEltCheap(VT, 0) &&
+         (NumElts == 1 || TLI.isExtractVecEltCheap(VT, 1))))
+      return SDValue();
+  }
 
   SDLoc DL(Node);
   SDValue Mag = DAG.getNode(ISD::BITCAST, DL, IntVT, Node->getOperand(0));

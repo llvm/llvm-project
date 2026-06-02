@@ -84,6 +84,10 @@ static cl::opt<bool>
                   cl::desc("Disable interpreter-introduced non-determinism."),
                   cl::init(false), cl::cat(InterpreterCategory));
 
+static cl::opt<bool> FuseFMulAdd("fuse-fmuladd",
+                                 cl::desc("Fuse llvm.fmuladd.* intrinsic"),
+                                 cl::init(true), cl::cat(InterpreterCategory));
+
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
     cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
@@ -207,7 +211,9 @@ int main(int argc, char **argv) {
 
   // Load the bitcode...
   SMDiagnostic Err;
-  std::unique_ptr<Module> Owner = parseIRFile(InputFile, Err, Context);
+  AsmParserContext ParserContext;
+  std::unique_ptr<Module> Owner =
+      parseIRFile(InputFile, Err, Context, /*Callbacks=*/{}, &ParserContext);
   Module *Mod = Owner.get();
   if (!Mod) {
     Err.print(argv[0], errs());
@@ -229,11 +235,12 @@ int main(int argc, char **argv) {
   InputArgv.insert(InputArgv.begin(), InputFile);
 
   // Initialize the execution context and set parameters.
-  ubi::Context Ctx(*Mod);
+  ubi::Context Ctx(*Mod, &ParserContext);
   Ctx.setMemoryLimit(MaxMem);
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setFusedMultiplyAdd(FuseFMulAdd);
   Ctx.setDeterministic(Deterministic);
   Ctx.setUndefValueBehavior(UndefBehavior);
   Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);

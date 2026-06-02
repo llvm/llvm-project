@@ -9,7 +9,7 @@ module {
   omp.declare_mapper @_QQFdeclare_mapper_1my_type_omp_default_mapper : !fir.box<!fir.heap<!fir.array<?xi32>>> {
   ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
     %0 = fir.box_offset %arg0 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-    %1 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%0 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+    %1 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%0 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
     %2 = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "var%values(1:var%num_vals)"}
     omp.declare_mapper.info map_entries(%2, %1 :!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
   }

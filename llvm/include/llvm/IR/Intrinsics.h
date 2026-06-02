@@ -20,6 +20,7 @@
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace llvm {
 
@@ -259,10 +260,16 @@ struct IITDescriptor {
 /// Returns true if \p id has a struct return type.
 LLVM_ABI bool hasStructReturnType(ID id);
 
-/// Return the IIT table descriptor for the specified intrinsic into an array
-/// of IITDescriptors.
-LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
-                                           SmallVectorImpl<IITDescriptor> &T);
+/// Fill the IIT table descriptor for the intrinsic \p id into an array
+/// of IITDescriptors. Returns a tuple of 3 values:
+///  - ArrayRef for the descriptor table (for convenience).
+///  - Number of arguments.
+///  - if it's a variable argument intrinsic.
+///
+/// Note that for VarArg intrinsics, the last IIT `VarArg` token will be
+/// consumed and not a part of the returned ArrayRef.
+LLVM_ABI std::tuple<ArrayRef<IITDescriptor>, unsigned, bool>
+getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
 
 /// Returns true if \p FT is a valid function type for intrinsic \p ID. If
 /// `ID` is an overloaded intrinsic, the overload types are pushed into the

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <deque>
-
 #include "PassDetail.h"
 #include "TargetLowering/LowerModule.h"
 
@@ -23,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "llvm/ADT/ScopeExit.h"
@@ -442,7 +441,10 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
   }
 
   if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty)) {
-    auto convertedTy = mlir::cast<cir::RecordType>(tc.convertType(recordTy));
+    auto convertedTy =
+        mlir::dyn_cast<cir::RecordType>(tc.convertType(recordTy));
+    if (!convertedTy)
+      return {};
 
     if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
       return cir::ZeroAttr::get(convertedTy);
@@ -838,10 +840,20 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // Unnamed record types can't be referred to recursively, so we can just
     // convert this one. It also doesn't have uniqueness problems, so we can
     // just do a conversion on it.
-    if (!type.getName())
-      return cir::RecordType::get(
-          type.getContext(), convertRecordMemberTypes(type), type.getPacked(),
-          type.getPadded(), type.getKind());
+    if (!type.getName()) {
+      llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
+        mlir::Type loweredPadding;
+        if (mlir::Type pad = u.getPadding())
+          loweredPadding = convertType(pad);
+        return cir::UnionType::get(type.getContext(), converted,
+                                   type.getPacked(), loweredPadding);
+      }
+      auto s = mlir::cast<cir::StructType>(type);
+      return cir::StructType::get(type.getContext(), converted,
+                                  type.getPacked(), type.getPadded(),
+                                  s.getIsClass());
+    }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
 
@@ -854,8 +866,14 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     SmallVectorImpl<cir::RecordType> &recursiveStack =
         getCurrentThreadRecursiveStack();
 
-    auto convertedType = cir::RecordType::get(
-        type.getContext(), type.getABIConvertedName(), type.getKind());
+    cir::RecordType convertedType;
+    if (mlir::isa<cir::UnionType>(type))
+      convertedType =
+          cir::UnionType::get(type.getContext(), type.getABIConvertedName());
+    else
+      convertedType =
+          cir::StructType::get(type.getContext(), type.getABIConvertedName(),
+                               mlir::cast<cir::StructType>(type).getIsClass());
 
     // This type has already been converted, just return it.
     if (convertedType.isComplete())
@@ -874,8 +892,12 @@ class CIRABITypeConverter : public mlir::TypeConverter {
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
 
-    convertedType.complete(convertedMembers, type.getPacked(),
-                           type.getPadded());
+    mlir::Type loweredPadding;
+    if (auto u = mlir::dyn_cast<cir::UnionType>(type))
+      if (mlir::Type pad = u.getPadding())
+        loweredPadding = convertType(pad);
+    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
+                           loweredPadding);
     addConvertedRecordType(convertedType);
     return convertedType;
   }
@@ -926,7 +948,10 @@ public:
       return cir::FuncType::get(loweredInputTypes, loweredReturnType,
                                 /*isVarArg=*/type.getVarArg());
     });
-    addConversion([&](cir::RecordType type) -> mlir::Type {
+    addConversion([&](cir::StructType type) -> mlir::Type {
+      return convertRecordType(type);
+    });
+    addConversion([&](cir::UnionType type) -> mlir::Type {
       return convertRecordType(type);
     });
   }
@@ -1006,69 +1031,6 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 // The Pass
 //===----------------------------------------------------------------------===//
 
-// The applyPartialConversion function traverses blocks in the dominance order,
-// so it does not lower and operations that are not reachachable from the
-// operations passed in as arguments. Since we do need to lower such code in
-// order to avoid verification errors occur, we cannot just pass the module op
-// to applyPartialConversion. We must build a set of unreachable ops and
-// explicitly add them, along with the module, to the vector we pass to
-// applyPartialConversion.
-//
-// For instance, this CIR code:
-//
-//    cir.func @foo(%arg0: !s32i) -> !s32i {
-//      %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
-//      cir.if %4 {
-//        %5 = cir.const #cir.int<1> : !s32i
-//        cir.return %5 : !s32i
-//      } else {
-//        %5 = cir.const #cir.int<0> : !s32i
-//       cir.return %5 : !s32i
-//      }
-//      cir.return %arg0 : !s32i
-//    }
-//
-// contains an unreachable return operation (the last one). After the CXXABI
-// pass it will be placed into the unreachable block.  This will error because
-// it will have not converted the types in the block, making the legalizer fail.
-//
-// In the future we may want to get rid of this function and use a DCE pass or
-// something similar. But for now we need to guarantee the absence of the
-// dialect verification errors. Note: We do the same in LowerToLLVM as well,
-// this is a striaght copy/paste including most of the comment. We might wi sh
-// to combine these if we don't want to do a DCE pass/etc.
-static void collectUnreachable(mlir::Operation *parent,
-                               llvm::SmallVector<mlir::Operation *> &ops) {
-
-  llvm::SmallVector<mlir::Block *> unreachableBlocks;
-  parent->walk([&](mlir::Block *blk) { // check
-    if (blk->hasNoPredecessors() && !blk->isEntryBlock())
-      unreachableBlocks.push_back(blk);
-  });
-
-  std::set<mlir::Block *> visited;
-  for (mlir::Block *root : unreachableBlocks) {
-    // We create a work list for each unreachable block.
-    // Thus we traverse operations in some order.
-    std::deque<mlir::Block *> workList;
-    workList.push_back(root);
-
-    while (!workList.empty()) {
-      mlir::Block *blk = workList.back();
-      workList.pop_back();
-      if (visited.count(blk))
-        continue;
-      visited.emplace(blk);
-
-      for (mlir::Operation &op : *blk)
-        ops.push_back(&op);
-
-      for (mlir::Block *succ : blk->getSuccessors())
-        workList.push_back(succ);
-    }
-  }
-}
-
 void CXXABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
   mlir::MLIRContext *ctx = mod.getContext();
@@ -1098,7 +1060,7 @@ void CXXABILoweringPass::runOnOperation() {
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(mod);
-  collectUnreachable(mod, ops);
+  cir::collectUnreachable(mod, ops);
 
   if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();

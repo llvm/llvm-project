@@ -1008,7 +1008,7 @@ void ClangASTImporter::BuildNamespaceMap(const clang::NamespaceDecl *decl) {
     std::string namespace_string = decl->getDeclName().getAsString();
 
     context_md->m_map_completer->CompleteNamespaceMap(
-        new_map, ConstString(namespace_string.c_str()), parent_map);
+        new_map, ConstString(namespace_string), parent_map);
   }
 
   context_md->m_namespace_maps[decl] = new_map;

@@ -61,8 +61,9 @@ static void combineExitConditions(VPlan &Plan) {
   auto *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {MaskedCond});
   auto *LatchBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  auto *IsLatchExitTaken = Builder.createICmp(
-      CmpInst::ICMP_EQ, LatchBranch->getOperand(0), LatchBranch->getOperand(1));
+  assert(LatchBranch->getOpcode() == VPInstruction::BranchOnCond &&
+         "Unexpected terminator");
+  VPValue *IsLatchExitTaken = LatchBranch->getOperand(0);
   LatchBranch->eraseFromParent();
   Builder.setInsertPoint(LatchVPBB);
   Builder.createNaryOp(VPInstruction::BranchOnCond,

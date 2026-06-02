@@ -552,6 +552,7 @@ private:
   void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
   void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
   void visitInlineHistoryMetadata(Instruction &I, MDNode *MD);
+  void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -1617,6 +1618,9 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
 
+  CheckDI(N.getSourceLanguage().getDialect() <= dwarf::DW_LLVM_LANG_DIALECT_max,
+          "invalid language dialect", &N);
+
   if (auto *Array = N.getRawEnumTypes()) {
     CheckDI(isa<MDTuple>(Array), "invalid enum list", &N, Array);
     for (Metadata *Op : N.getEnumTypes()->operands()) {
@@ -2138,6 +2142,21 @@ Verifier::visitModuleFlag(const MDNode *Op,
         mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value,
           "SemanticInterposition metadata requires constant integer argument");
+  }
+
+  if (ID->getString() == "amdgpu.buffer.oob.mode" ||
+      ID->getString() == "amdgpu.tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    if (Value) {
+      Check(Value->getZExtValue() <= 2,
+            "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    }
   }
 
   if (ID->getString() == "CG Profile") {
@@ -2714,7 +2733,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
     unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
-    Check(FirstArgIdx > 0 && FirstArgIdx <= UpperBound,
+    Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
   }
 
@@ -2864,7 +2883,7 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
         "signed ptrauth constant deactivation symbol must be a pointer");
 
   Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
-            CPA->getDeactivationSymbol()->isNullValue(),
+            isa<ConstantPointerNull>(CPA->getDeactivationSymbol()),
         "signed ptrauth constant deactivation symbol must be a global value "
         "or null");
 }
@@ -5427,6 +5446,16 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
             "VP !prof indirect call or memop size expected to be applied to "
             "CallBase instructions only",
             MD);
+
+    DenseSet<uint64_t> ProfileValues;
+    for (unsigned I = 3; I < MD->getNumOperands(); I += 2) {
+      ConstantInt *ProfileValue =
+          mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+      Check(ProfileValue, "VP !prof value operand is not a const int", MD);
+      uint64_t ProfileValueInt = ProfileValue->getZExtValue();
+      auto [ValueIt, Inserted] = ProfileValues.insert(ProfileValueInt);
+      Check(Inserted, "VP !prof should not have duplicate profile values", MD);
+    }
   } else {
     CheckFailed("expected either branch_weights or VP profile name", MD);
   }
@@ -5684,6 +5713,80 @@ void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
+  Check(I.mayReadOrWriteMemory(),
+        "!mem.cache_hint is only valid on memory operations", &I);
+
+  Check(MD->getNumOperands() % 2 == 0,
+        "!mem.cache_hint must have even number of operands "
+        "(operand_no, hint_node pairs)",
+        MD);
+
+  const auto *CB = dyn_cast<CallBase>(&I);
+  if (CB)
+    Check(CB->getIntrinsicID() != Intrinsic::not_intrinsic,
+          "!mem.cache_hint is not supported on non-intrinsic calls", &I);
+
+  unsigned NumOperands = CB ? CB->arg_size() : I.getNumOperands();
+
+  SmallDenseSet<unsigned, 4> SeenOperandNos;
+  std::optional<uint64_t> LastOperandNo;
+
+  // Top-level metadata alternates: i32 operand_no, MDNode hint_node.
+  for (unsigned J = 0; J + 1 < MD->getNumOperands(); J += 2) {
+    auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(J));
+    Check(OpNoCI,
+          "!mem.cache_hint must alternate between i32 operand numbers and "
+          "metadata hint nodes",
+          MD);
+
+    Check(OpNoCI->getValue().isNonNegative(),
+          "!mem.cache_hint operand number must be non-negative", MD);
+
+    uint64_t OperandNo = OpNoCI->getZExtValue();
+    Check(OperandNo < NumOperands,
+          "!mem.cache_hint operand number is out of range", &I);
+
+    Value *Operand =
+        CB ? CB->getArgOperand(OperandNo) : I.getOperand(OperandNo);
+    Check(Operand->getType()->isPtrOrPtrVectorTy(),
+          "!mem.cache_hint operand number must refer to a pointer operand", &I);
+
+    bool Inserted = SeenOperandNos.insert(OperandNo).second;
+    Check(Inserted, "!mem.cache_hint contains duplicate operand number", MD);
+
+    Check(!Inserted || !LastOperandNo || OperandNo > *LastOperandNo,
+          "!mem.cache_hint operand numbers must be in increasing order", MD);
+    LastOperandNo = OperandNo;
+
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(J + 1));
+    Check(Node,
+          "!mem.cache_hint must alternate between i32 operand numbers and "
+          "metadata hint nodes",
+          MD);
+
+    Check(Node->getNumOperands() % 2 == 0,
+          "!mem.cache_hint hint node must have even number of operands "
+          "(key-value pairs)",
+          Node);
+
+    StringSet<> SeenKeys;
+    for (unsigned K = 0; K + 1 < Node->getNumOperands(); K += 2) {
+      const auto *Key = dyn_cast<MDString>(Node->getOperand(K));
+      Check(Key, "!mem.cache_hint key must be a string", Node);
+
+      StringRef KeyStr = Key->getString();
+      Check(SeenKeys.insert(KeyStr).second,
+            "!mem.cache_hint hint node contains duplicate key", Node);
+
+      const Metadata *Value = Node->getOperand(K + 1).get();
+      Check(isa_and_nonnull<MDString>(Value) ||
+                mdconst::dyn_extract<ConstantInt>(Value),
+            "!mem.cache_hint value must be a string or integer", Node);
+    }
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5918,6 +6021,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_inline_history))
     visitInlineHistoryMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint))
+    visitMemCacheHintMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
@@ -6683,19 +6789,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::udiv_fix:
   case Intrinsic::udiv_fix_sat: {
     Value *Op1 = Call.getArgOperand(0);
-    Value *Op2 = Call.getArgOperand(1);
-    Check(Op1->getType()->isIntOrIntVectorTy(),
-          "first operand of [us][mul|div]_fix[_sat] must be an int type or "
-          "vector of ints");
-    Check(Op2->getType()->isIntOrIntVectorTy(),
-          "second operand of [us][mul|div]_fix[_sat] must be an int type or "
-          "vector of ints");
-
     auto *Op3 = cast<ConstantInt>(Call.getArgOperand(2));
-    Check(Op3->getType()->isIntegerTy(),
-          "third operand of [us][mul|div]_fix[_sat] must be an int type");
-    Check(Op3->getBitWidth() <= 32,
-          "third operand of [us][mul|div]_fix[_sat] must fit within 32 bits");
 
     if (ID == Intrinsic::smul_fix || ID == Intrinsic::smul_fix_sat ||
         ID == Intrinsic::sdiv_fix || ID == Intrinsic::sdiv_fix_sat) {
@@ -6715,16 +6809,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::llround: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
-    auto *VTy = dyn_cast<VectorType>(ValTy);
-    auto *RTy = dyn_cast<VectorType>(ResultTy);
-    Check(ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
-          ExpectedName + ": argument must be floating-point or vector "
-                         "of floating-points, and result must be integer or "
-                         "vector of integers",
-          &Call);
     Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
           ExpectedName + ": argument and result disagree on vector use", &Call);
-    if (VTy) {
+    if (auto *VTy = dyn_cast<VectorType>(ValTy)) {
+      auto *RTy = dyn_cast<VectorType>(ResultTy);
       Check(VTy->getElementCount() == RTy->getElementCount(),
             ExpectedName + ": argument must be same length as result", &Call);
     }
@@ -7150,6 +7238,26 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
     break;
   }
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
+    // The data byte size immarg is operand 2 for every load-to-LDS intrinsic.
+    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(Size == 1 || Size == 2 || Size == 4 || Size == 12 || Size == 16,
+          "invalid data size for load-to-LDS intrinsic; must be 1, 2, 4, 12, "
+          "or 16",
+          &Call);
+    break;
+  }
   case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
   case Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
     Value *Src0 = Call.getArgOperand(0);
@@ -7271,6 +7379,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, Op);
     break;
   }
+  case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b128: {
+    // Last argument must be a MD string
+    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    auto *MD = dyn_cast<MDNode>(Op->getMetadata());
+    Check(MD && (MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+          "the last argument to av load/store intrinsics must be a "
+          "metadata string",
+          &Call, Op);
+    break;
+  }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
   case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
     Value *V = Call.getArgOperand(0);
@@ -7338,6 +7457,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     const Type *RetTy = Call.getFunctionType()->getReturnType();
     Check(RetTy->getPointerAddressSpace() == StackAS,
           "llvm.sponentry must return a pointer to the stack", &Call);
+    break;
+  }
+  case Intrinsic::write_volatile_register: {
+    auto *MD = cast<MDNode>(
+        cast<MetadataAsValue>(Call.getArgOperand(0))->getMetadata());
+    Check(MD->getNumOperands() == 1 && isa<MDString>(MD->getOperand(0)),
+          "llvm.write_volatile_register metadata must be a single MDString",
+          &Call);
     break;
   }
   };

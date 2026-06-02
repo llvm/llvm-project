@@ -995,6 +995,11 @@ LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
 LLVM_ABI bool isWritableObject(const Value *Object,
                                bool &ExplicitlyDereferenceableOnly);
 
+/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
+/// than monotonic atomic load/store.
+LLVM_ABI ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI);
+
 /// A manager for alias analyses.
 ///
 /// This class can have analyses registered with it and when run, it will run
