@@ -31,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -6136,15 +6137,28 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   }
 
   InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind);
-  for (LoadInst *LI : Loads)
+  for (LoadInst *LI : Loads) {
     OldCost += TTI.getInstructionCost(LI, CostKind);
+    if (auto *GEP = dyn_cast<GEPOperator>(LI->getPointerOperand())) {
+      SmallVector<const Value *> Indices(GEP->indices());
+      OldCost +=
+          TTI.getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
+                         Indices, LI->getType(), CostKind);
+    }
+  }
 
   int64_t StartByteOffset = ExpectedBaseBitOffset / 8;
+  Type *IndexTy = DL->getIndexType(CommonBase->getType());
+  auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset,
+                                                /*isSigned=*/true);
   int64_t OffsetFromFirstLoad = StartByteOffset - FirstLoadOffset;
   Align NewAlign = commonAlignment(FirstLI->getAlign(), OffsetFromFirstLoad);
   InstructionCost NewCost =
       TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign,
                           FirstLI->getPointerAddressSpace(), CostKind);
+  SmallVector<const Value *> NewIndices = {StartByteOffsetValue};
+  NewCost +=
+      TTI.getGEPCost(Builder.getInt8Ty(), CommonBase, NewIndices, VT, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found contiguous loads to fold: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -6153,7 +6167,6 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (OldCost <= NewCost)
     return false;
 
-  Type *IndexTy = DL->getIndexType(CommonBase->getType());
   Value *NewBasePtr = Builder.CreatePtrAdd(
       CommonBase, ConstantInt::get(IndexTy, StartByteOffset,
                                    /*isSigned=*/true));
