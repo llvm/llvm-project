@@ -27,13 +27,13 @@ using namespace ento;
 class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
   const BugType LifetimeEndNode{this, "LifetimeEndReporter"};
 
-  bool report(CheckerContext &C, StringRef Description) const {
+  bool report(CheckerContext &C, Twine Description) const {
     ExplodedNode *Node = C.generateNonFatalErrorNode(C.getState());
     if (!Node)
       return false;
 
-    auto Report = std::make_unique<PathSensitiveBugReport>(LifetimeEndNode,
-                                                           Description, Node);
+    auto Report = std::make_unique<PathSensitiveBugReport>(
+        LifetimeEndNode, Description.str(), Node);
     C.emitReport(std::move(Report));
     return true;
   }
@@ -41,7 +41,7 @@ class LifetimeEndReporter : public Checker<check::LifetimeEnd> {
 public:
   void checkLifetimeEnd(const VarDecl *D, CheckerContext &C) const {
     if (auto II = D->getIdentifier())
-      report(C, (II->getName() + " LIFETIME END").str());
+      report(C, II->getName() + " LIFETIME END");
   }
 };
 
