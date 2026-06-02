@@ -476,8 +476,9 @@ void SwitchMatcher::emit(MatchTable &Table) {
 
 //===- RuleMatcher --------------------------------------------------------===//
 
-RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-    : Matcher(Matcher::MK_Rule), SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand)
+    : Matcher(Matcher::MK_Rule), UsesRecordOperand(UsesRecordOperand),
+      SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 

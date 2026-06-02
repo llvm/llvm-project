@@ -379,7 +379,7 @@ protected:
   }
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc);
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand = true);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -397,7 +397,6 @@ public:
     return RequiredFeatures;
   }
 
-  void setUsesRecordOperand(bool Value) { UsesRecordOperand = Value; }
   bool usesRecordOperand() const { return UsesRecordOperand; }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }

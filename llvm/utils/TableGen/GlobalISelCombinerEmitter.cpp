@@ -1387,9 +1387,13 @@ bool CombineRuleBuilder::checkSemantics() {
 
 RuleMatcher &CombineRuleBuilder::addRuleMatcher(const PatternAlternatives &Alts,
                                                 Twine AdditionalComment) {
-  auto &RM = OutRMs.emplace_back(RuleDef.getLoc());
+  // C++ predicates in the combiner are much more flexible and do not depend on
+  // RecordNamedOperandMatcher. The drawback of this is that we need to assume
+  // any operand can be used by any C++ predicate, limiting optimizations in
+  // some cases.
+  auto &RM =
+      OutRMs.emplace_back(RuleDef.getLoc(), /*UsesRecordOperands=*/false);
   addFeaturePredicates(RM);
-  RM.setUsesRecordOperand(false);
   RM.setPermanentGISelFlags(GISF_IgnoreCopies);
   RM.addRequiredSimplePredicate(getIsEnabledPredicateEnumName(RuleID));
 
