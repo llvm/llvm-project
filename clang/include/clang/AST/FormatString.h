@@ -80,6 +80,9 @@ public:
     AsInt3264,          // 'I'   (MSVCRT, like __int3264 from MIDL)
     AsInt64,            // 'I64' (MSVCRT, like __int64)
     AsLongDouble,       // 'L'
+    AsDecimal32,        // 'H'  (C23, _Decimal32)
+    AsDecimal64,        // 'D'  (C23, _Decimal64)
+    AsDecimal128,       // 'DD' (C23, _Decimal128)
     AsAllocate,         // for '%as', GNU extension to C90 scanf
     AsMAllocate,        // for '%ms', GNU extension to scanf
     AsWide,             // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
@@ -97,6 +100,7 @@ public:
       return 1;
     case AsLongLong:
     case AsChar:
+    case AsDecimal128:
       return 2;
     case AsInt32:
     case AsInt64:

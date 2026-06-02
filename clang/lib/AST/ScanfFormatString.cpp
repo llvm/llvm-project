@@ -309,6 +309,9 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
     case LengthModifier::AsInt3264:
     case LengthModifier::AsWide:
     case LengthModifier::AsShortLong:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
     llvm_unreachable("Unsupported LengthModifier Type");
@@ -353,6 +356,9 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
     case LengthModifier::AsInt3264:
     case LengthModifier::AsWide:
     case LengthModifier::AsShortLong:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
     llvm_unreachable("Unsupported LengthModifier Type");
@@ -373,6 +379,12 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
       return ArgType::PtrTo(Ctx.DoubleTy);
     case LengthModifier::AsLongDouble:
       return ArgType::PtrTo(Ctx.LongDoubleTy);
+    case LengthModifier::AsDecimal32:
+      return ArgType::PtrTo(ArgType(Ctx.FloatTy, "_Decimal32"));
+    case LengthModifier::AsDecimal64:
+      return ArgType::PtrTo(ArgType(Ctx.DoubleTy, "_Decimal64"));
+    case LengthModifier::AsDecimal128:
+      return ArgType::PtrTo(ArgType(Ctx.LongDoubleTy, "_Decimal128"));
     default:
       return ArgType::Invalid();
     }
@@ -451,6 +463,9 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
     case LengthModifier::AsInt3264:
     case LengthModifier::AsWide:
     case LengthModifier::AsShortLong:
+    case LengthModifier::AsDecimal32:
+    case LengthModifier::AsDecimal64:
+    case LengthModifier::AsDecimal128:
       return ArgType::Invalid();
     }
 

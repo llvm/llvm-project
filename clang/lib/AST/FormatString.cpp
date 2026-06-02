@@ -286,6 +286,25 @@ bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
     ++I;
     lmKind = LengthModifier::AsInt3264;
     break;
+  case 'H':
+    if (LO.C23) {
+      lmKind = LengthModifier::AsDecimal32;
+      ++I;
+      break;
+    }
+    return false;
+  case 'D':
+    if (LO.C23) {
+      ++I;
+      if (I != E && *I == 'D') {
+        ++I;
+        lmKind = LengthModifier::AsDecimal128;
+      } else {
+        lmKind = LengthModifier::AsDecimal64;
+      }
+      break;
+    }
+    return false;
   case 'w':
     lmKind = LengthModifier::AsWide;
     ++I;
@@ -875,6 +894,12 @@ const char *analyze_format_string::LengthModifier::toString() const {
     return "I64";
   case AsLongDouble:
     return "L";
+  case AsDecimal32:
+    return "H";
+  case AsDecimal64:
+    return "D";
+  case AsDecimal128:
+    return "DD";
   case AsAllocate:
     return "a";
   case AsMAllocate:
@@ -1202,6 +1227,23 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
     default:
       return false;
     }
+
+  case LengthModifier::AsDecimal32:
+  case LengthModifier::AsDecimal64:
+  case LengthModifier::AsDecimal128:
+    switch (CS.getKind()) {
+    case ConversionSpecifier::aArg:
+    case ConversionSpecifier::AArg:
+    case ConversionSpecifier::eArg:
+    case ConversionSpecifier::EArg:
+    case ConversionSpecifier::fArg:
+    case ConversionSpecifier::FArg:
+    case ConversionSpecifier::gArg:
+    case ConversionSpecifier::GArg:
+      return LO.C23;
+    default:
+      return false;
+    }
   }
   llvm_unreachable("Invalid LengthModifier Kind!");
 }
@@ -1217,6 +1259,9 @@ bool FormatSpecifier::hasStandardLengthModifier() const {
   case LengthModifier::AsSizeT:
   case LengthModifier::AsPtrDiff:
   case LengthModifier::AsLongDouble:
+  case LengthModifier::AsDecimal32:
+  case LengthModifier::AsDecimal64:
+  case LengthModifier::AsDecimal128:
     return true;
   case LengthModifier::AsAllocate:
   case LengthModifier::AsMAllocate:
