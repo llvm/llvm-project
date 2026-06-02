@@ -394,10 +394,10 @@ struct Allocator {
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
     // Device-backed allocations use CombinedAllocator's device path. On
-    // SANITIZER_AMDGPU builds, enable it so InitMemFuncs() /
+    // SANITIZER_AMDHSA builds, enable it so InitMemFuncs() /
     // AmdgpuDeviceAllocator::Init() run at startup.
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0,
-                                    SANITIZER_AMDGPU);
+                                    SANITIZER_AMDHSA);
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
@@ -1481,7 +1481,12 @@ int __asan_update_allocation_context(void* addr) {
   return instance.UpdateAllocationStack((uptr)addr, &stack);
 }
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
+
+// Pull in the in-tree HSA type stubs for the wrapper implementations below.
+#  include "sanitizer_common/sanitizer_hsa.h"
+
+namespace __asan {
 
 DECLARE_REAL(hsa_status_t, hsa_init);
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
@@ -1506,8 +1511,12 @@ DECLARE_REAL(hsa_status_t, hsa_amd_pointer_info, const void* ptr,
 DECLARE_REAL(hsa_status_t, hsa_amd_register_system_event_handler,
              hsa_amd_system_event_callback_t, void*)
 
-namespace __asan {
-// Always align to page boundary to match current ROCr behavior
+// HSA allocation wrappers live in this TU (not `asan_hsa_linux.cpp`) because
+// they need access to ASan allocator internals (e.g. `instance`,
+// `get_allocator()`, `AsanChunk` layout) to translate between ROCr-visible
+// mappings and ASan user pointers / metadata.
+//
+// Always align to page boundary to match current ROCr behavior.
 static const size_t kPageSize_ = 4096;
 
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
@@ -1515,7 +1524,7 @@ hsa_status_t asan_hsa_amd_memory_pool_allocate(
     BufferedStackTrace* stack) {
   AmdgpuAllocationInfo aa_info;
   aa_info.alloc_func =
-      reinterpret_cast<void*>(asan_hsa_amd_memory_pool_allocate);
+      reinterpret_cast<void*>((uptr)&__asan::asan_hsa_amd_memory_pool_allocate);
   aa_info.memory_pool = memory_pool;
   aa_info.size = size;
   aa_info.flags = flags;
@@ -1540,17 +1549,16 @@ hsa_status_t asan_hsa_amd_agents_allow_access(uint32_t num_agents,
                                               const uint32_t* flags,
                                               const void* ptr,
                                               BufferedStackTrace* stack) {
+  (void)stack;
   void* p = get_allocator().GetBlockBegin(ptr);
   return REAL(hsa_amd_agents_allow_access)(num_agents, agents, flags,
                                            p ? p : ptr);
 }
 
-// IPC calls use static_assert to make sure kMetadataSize = 0
-//
 #  if SANITIZER_CAN_USE_ALLOCATOR64
-static struct AP64<LocalAddressSpaceView> AP_;
+static struct __asan::AP64<LocalAddressSpaceView> AP_;
 #  else
-static struct AP32<LocalAddressSpaceView> AP_;
+static struct __asan::AP32<LocalAddressSpaceView> AP_;
 #  endif
 
 hsa_status_t asan_hsa_amd_ipc_memory_create(void* ptr, size_t len,
@@ -1661,8 +1669,8 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
   }
 
   AmdgpuAllocationInfo aa_info;
-  aa_info.alloc_func =
-      reinterpret_cast<void*>(asan_hsa_amd_vmem_address_reserve_align);
+  aa_info.alloc_func = reinterpret_cast<void*>(
+      (uptr)&__asan::asan_hsa_amd_vmem_address_reserve_align);
   aa_info.memory_pool = {0};
   aa_info.size = size;
   aa_info.flags64 = flags;
@@ -1783,6 +1791,7 @@ hsa_status_t asan_hsa_init() {
   }
   return status;
 }
+
 }  // namespace __asan
 
-#endif  // SANITIZER_AMDGPU
+#endif  // SANITIZER_AMDHSA

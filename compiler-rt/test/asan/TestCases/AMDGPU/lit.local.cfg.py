@@ -1,7 +1,7 @@
 # Link against ROCm's HSA runtime. Tests under TestCases/AMDGPU run only when
 # lit finds a ROCm install (see lit.local.cfg.py): $ROCM_PATH or /opt/rocm,
 # with include/hsa/hsa.h and libhsa-runtime64. Compiler-rt must be built with
-# SANITIZER_AMDGPU enabled. The suite uses the dynamic ASan runtime only.
+# SANITIZER_AMDHSA enabled. The suite uses the dynamic ASan runtime only.
 
 import glob
 import os

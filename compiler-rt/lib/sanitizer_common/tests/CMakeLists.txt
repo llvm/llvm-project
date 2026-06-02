@@ -80,11 +80,10 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -Wno-gnu-zero-variadic-macro-arguments
   )
 
-# Do not pass -DSANITIZER_AMDGPU=1 to all unittests: that would pull <hsa.h>
-# and AMDGPU-only types into every TU without ROCm include paths. When
-# SANITIZER_AMDGPU is enabled, skip the NolibcMain subprocess test instead
-# (see NOT SANITIZER_AMDGPU targets below and sanitizer_nolibc_test.cpp).
-if(SANITIZER_AMDGPU)
+# Host HSA support (SANITIZER_AMDHSA) does not affect unittest compile flags.
+# When SANITIZER_AMDHSA is enabled, skip the NolibcMain subprocess test instead
+# (see NOT SANITIZER_AMDHSA targets below and sanitizer_nolibc_test.cpp).
+if(SANITIZER_AMDHSA)
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON
        -DCOMPILER_RT_SKIP_NOLIBC_SUBPROCESS_TEST=1)
 endif()
@@ -193,11 +192,11 @@ macro(add_sanitizer_tests_for_arch arch)
     LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON} ${TARGET_LINK_FLAGS} ${extra_flags})
 
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND "${arch}" STREQUAL "x86_64"
-     AND NOT SANITIZER_AMDGPU)
+     AND NOT SANITIZER_AMDHSA)
     # Test that the libc-independent part of sanitizer_common is indeed
     # independent of libc, by linking this binary without libc (here) and
     # executing it (unit test in sanitizer_nolibc_test.cpp). Omitted when
-    # SANITIZER_AMDGPU: AMDGPU runtime code needs libdl / libcdep and cannot
+    # SANITIZER_AMDHSA: AMDGPU runtime code needs libdl / libcdep and cannot
     # link with -nostdlib.
     get_target_flags_for_arch(${arch} TARGET_FLAGS)
     clang_compile(sanitizer_nolibc_test_main.${arch}.o
@@ -224,7 +223,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
                              $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
                              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>)
   else()
-    if(CAN_TARGET_x86_64 AND NOT SANITIZER_AMDGPU)
+    if(CAN_TARGET_x86_64 AND NOT SANITIZER_AMDHSA)
       add_sanitizer_common_lib("RTSanitizerCommon.test.nolibc.x86_64"
                                $<TARGET_OBJECTS:RTSanitizerCommon.x86_64>
                                $<TARGET_OBJECTS:RTSanitizerCommonNoLibc.x86_64>)

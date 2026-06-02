@@ -13,7 +13,7 @@
 #  error This file must be included inside sanitizer_allocator.h
 #endif
 
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 
 static const DeviceAllocationType DAT_AMDGPU =
     static_cast<DeviceAllocationType>(1);
@@ -99,4 +99,4 @@ template <class MapUnmapCallback>
 using DefaultDeviceAllocator =
     DeviceAllocatorT<MapUnmapCallback, AmdgpuDeviceAllocator>;
 
-#endif  // SANITIZER_AMDGPU
+#endif  // SANITIZER_AMDHSA
