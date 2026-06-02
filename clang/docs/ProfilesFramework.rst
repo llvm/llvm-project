@@ -528,9 +528,8 @@ The ``std::init`` Profile (initial slice)
 A first slice of the proposed initialization profile, intentionally minimal:
 no ``[[ref_to_uninit]]``, no field-level marker, no new dataflow analyses.
 The class-finalization dispatch (pattern 3) now exists in the framework but
-``std::init`` does not yet register any class-finalization callbacks; those
-land with the §6 / §6.2 work.  See the audit and plan documents in
-``.cursor/plans/`` for the deferred items.
+``std::init`` does not yet register any class-finalization callbacks; the
+paper §6 / §6.2 class rules are deferred to later stages.
 
 The slice introduces one new attribute and four rules.
 
