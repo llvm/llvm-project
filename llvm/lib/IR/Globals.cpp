@@ -452,11 +452,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
+bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_unique_id)
+    if (V.first != LLVMContext::MD_dbg)
       return true;
   return false;
 }
