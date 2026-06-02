@@ -421,8 +421,8 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // uniform - unless there are no begin instructions, in which case we always
   // remove
   bool LoopRemoved = false;
-  std::vector<MachineInstr *> NewRFLList;
-  std::vector<MachineInstr *> ToRemoveRFLList;
+  SmallVector<MachineInstr *, 4> NewRFLList;
+  SmallVector<MachineInstr *, 4> ToRemoveRFLList;
 
   for (auto RFLMI : Item.RFLList) {
     auto RFLSrcOp = TII->getNamedOperand(*RFLMI, AMDGPU::OpName::src);
