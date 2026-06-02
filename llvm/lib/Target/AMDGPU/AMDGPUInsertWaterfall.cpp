@@ -444,7 +444,7 @@ bool AMDGPUInsertWaterfall::removeRedundantWaterfall(WaterfallWorkitem &Item) {
   // Note: this test also returns true when there are NO RFL intrinsics, the
   // case where a prior pass has removed all of them and the loop is now
   // redundant
-  if (!Item.BeginList.size() || ToRemoveRFLList.size() == Item.RFLList.size()) {
+  if (Item.BeginList.empty() || ToRemoveRFLList.size() == Item.RFLList.size()) {
     // Removed all of the RFLs
     // We can remove the waterfall loop entirely
 
