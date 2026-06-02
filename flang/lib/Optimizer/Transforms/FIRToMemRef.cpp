@@ -329,9 +329,6 @@ bool FIRToMemRef::materializeShapeExtents(
   if (!shapeVal)
     return false;
 
-  while (auto convertOp = shapeVal.getDefiningOp<fir::ConvertOp>())
-    shapeVal = convertOp.getOperand();
-
   if (auto shapeOp = shapeVal.getDefiningOp<fir::ShapeOp>()) {
     shapeVec.append(shapeOp.getExtents().begin(), shapeOp.getExtents().end());
     return true;
@@ -688,10 +685,14 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     collectSliceInfoFrom(rebox, sliceInfo);
 
   if (!sliceInfo.hasProjectedSlice && sliceInfo.shapeVec.empty()) {
-    rewriter.setInsertionPoint(arrayCoorOp);
-    (void)materializeShapeExtents(arrayCoorOp.getShape(), rewriter, loc,
-                                  sliceInfo.shapeVec);
-    rewriter.setInsertionPointAfter(arrayCoorOp);
+    auto shapeVal = arrayCoorOp.getShape();
+    if (shapeVal && mlir::isa<fir::ShapeType>(shapeVal.getType())) {
+      rewriter.setInsertionPoint(arrayCoorOp);
+      if(!materializeShapeExtents(shapeVal, rewriter, loc,
+                                    sliceInfo.shapeVec))
+                                      return failure();
+      rewriter.setInsertionPointAfter(arrayCoorOp);
+    }
   }
 
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);

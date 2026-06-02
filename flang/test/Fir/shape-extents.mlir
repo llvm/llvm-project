@@ -40,3 +40,18 @@ func.func @shape_extents_block_arg(%pred : i1, %n1 : index, %n2 : index) {
   fir.fake_use %e : index
   return
 }
+
+// Check for proper insertion of casting when types of 
+// fir.shape ops and fir.shape_extents results do not match
+// PLAIN-LABEL: func @fold_shape_extents_cast
+// PLAIN:         fir.shape_extents
+// CANON-LABEL:   func @fold_shape_extents_cast
+// CANON-NOT:     fir.shape_extents
+// CANON:         fir.convert %{{.*}} : (i64) -> index
+// CANON:         fir.fake_use %{{.*}} : index
+func.func @fold_shape_extents_cast(%e : i64) {
+  %sh = fir.shape %e : (i64) -> !fir.shape<1>
+  %ext = fir.shape_extents %sh : (!fir.shape<1>) -> (index)
+  fir.fake_use %ext : index
+  return
+}

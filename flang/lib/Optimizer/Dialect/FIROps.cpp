@@ -4813,7 +4813,18 @@ struct FoldShapeExtentsOfShape
     auto shapeOp = op.getShape().getDefiningOp<fir::ShapeOp>();
     if (!shapeOp)
       return mlir::failure();
-    rewriter.replaceOp(op, shapeOp.getExtents());
+
+    llvm::SmallVector<mlir::Value> results;
+    for (auto [extent, resultType] : llvm::zip(shapeOp.getExtents(), op.getResultTypes())) {
+      if (extent.getType() == resultType) {
+        results.push_back(extent);
+      } else if (fir::ConvertOp::canBeConverted(extent.getType(), resultType)) {
+        results.push_back(fir::ConvertOp::create(rewriter, op.getLoc(), resultType, extent));
+      } else {
+        return mlir::failure();
+      }
+    }
+    rewriter.replaceOp(op, results);
     return mlir::success();
   }
 };
