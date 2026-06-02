@@ -7094,12 +7094,12 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           Plan.getDataLayout().getIndexType(TypeInfo.inferScalarType(Ptr));
       assert(IndexTy == TypeInfo.inferScalarType(StrideInBytes) &&
              "Stride type from SCEV must match the index type");
-      VPValue *CastedStride = Builder.createScalarSExtOrTrunc(
+      VPValue *CanIVTyStride = Builder.createScalarSExtOrTrunc(
           StrideInBytes, VectorLoop->getCanonicalIVType(), IndexTy,
           DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {VectorLoop->getCanonicalIV(), CastedStride},
+          Instruction::Mul, {VectorLoop->getCanonicalIV(), CanIVTyStride},
           {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
       auto *BasePtr = Builder.createNoWrapPtrAdd(
           StartVPV, Offset,
