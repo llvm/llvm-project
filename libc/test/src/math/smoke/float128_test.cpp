@@ -17,9 +17,15 @@ TEST(LlvmLibcFloat128Test, DefaultConstructor) {
   (void)x;
 }
 
-TEST(LlvmLibcFloat128Test, Equality) {
+TEST(LlvmLibcFloat128Test, operators) {
   Float128 a(1.0), b(1.0), c(2.0);
+
+  // comparison operators
   ASSERT_TRUE(a == b);
   ASSERT_TRUE(a != c);
   ASSERT_TRUE(b != c);
+  ASSERT_TRUE(c > b);
+  ASSERT_TRUE(a >= b);
+  ASSERT_TRUE(b <= c);
+  ASSERT_TRUE(a < c);
 }
