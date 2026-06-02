@@ -41,10 +41,9 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
   ProcessSP process_sp(thread.GetProcess());
   if (process_sp) {
     Status error;
-    const bool force_live_memory = true;
     if (process_sp->GetTarget().ReadMemory(
             range.GetBaseAddress(), function_text.data(), range.GetByteSize(),
-            error, force_live_memory) != range.GetByteSize()) {
+            error) != range.GetByteSize()) {
       return false;
     }
   }

@@ -3235,7 +3235,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL8:
   case PPC::BL:
   case PPC::BL8_NOP:
-  case PPC::BL_NOP: {
+  case PPC::BL_NOP:
+  case PPC::BL_LWZinto_toc:
+  case PPC::BL_LWZinto_toc_RM:
+  case PPC::BL8_LDinto_toc:
+  case PPC::BL8_LDinto_toc_RM: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
       auto *S = static_cast<MCSymbolXCOFF *>(

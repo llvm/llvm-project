@@ -22,7 +22,7 @@ define amdgpu_kernel void @udiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -48,7 +48,7 @@ define amdgpu_kernel void @udiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -125,7 +125,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, 
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -151,7 +151,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, 
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -228,7 +228,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr 
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -254,7 +254,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr 
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -331,7 +331,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -357,7 +357,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -434,7 +434,7 @@ define amdgpu_kernel void @udiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -462,7 +462,7 @@ define amdgpu_kernel void @udiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_cvt_f32_u32_e32 v0, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, v1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v3, v2
@@ -531,7 +531,7 @@ define amdgpu_kernel void @udiv23_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_and_b32 s5, s5, 0x7fffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -553,7 +553,7 @@ define amdgpu_kernel void @udiv23_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s2, s2, 0x7fffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
@@ -622,7 +622,7 @@ define amdgpu_kernel void @udiv24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_and_b32 s5, s5, 0xffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -644,7 +644,7 @@ define amdgpu_kernel void @udiv24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s2, s2, 0xffffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
@@ -716,7 +716,7 @@ define amdgpu_kernel void @no_udiv24_u23_u24_i32(ptr addrspace(1) %out, ptr addr
 ; SI-NEXT:    s_and_b32 s5, s5, 0xffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -738,7 +738,7 @@ define amdgpu_kernel void @no_udiv24_u23_u24_i32(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    s_and_b32 s2, s2, 0x7fffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
@@ -810,7 +810,7 @@ define amdgpu_kernel void @no_udiv24_u24_u23_i32(ptr addrspace(1) %out, ptr addr
 ; SI-NEXT:    s_and_b32 s5, s5, 0x7fffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -832,7 +832,7 @@ define amdgpu_kernel void @no_udiv24_u24_u23_i32(ptr addrspace(1) %out, ptr addr
 ; VI-NEXT:    s_and_b32 s2, s2, 0xffffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
@@ -891,7 +891,6 @@ define amdgpu_kernel void @no_udiv24_u24_u23_i32(ptr addrspace(1) %out, ptr addr
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: udiv25_i32:
 ; SI:       ; %bb.0:
@@ -905,7 +904,7 @@ define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_and_b32 s5, s5, 0x1ffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s5
 ; SI-NEXT:    s_sub_i32 s6, 0, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s6, v0
@@ -939,7 +938,7 @@ define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0x1ffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1010,7 +1009,6 @@ define amdgpu_kernel void @udiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_udiv24_i32_1:
 ; SI:       ; %bb.0:
@@ -1024,7 +1022,7 @@ define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    s_and_b32 s5, s5, 0x1ffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s5
 ; SI-NEXT:    s_sub_i32 s6, 0, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s6, v0
@@ -1058,7 +1056,7 @@ define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0xffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1129,7 +1127,6 @@ define amdgpu_kernel void @test_no_udiv24_i32_1(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_udiv24_i32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_udiv24_i32_2:
 ; SI:       ; %bb.0:
@@ -1143,7 +1140,7 @@ define amdgpu_kernel void @test_no_udiv24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    s_and_b32 s5, s5, 0xffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s5
 ; SI-NEXT:    s_sub_i32 s6, 0, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s6, v0
@@ -1177,7 +1174,7 @@ define amdgpu_kernel void @test_no_udiv24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0x1ffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1267,7 +1264,7 @@ define amdgpu_kernel void @urem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v3, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v4, v3
+; SI-NEXT:    v_rcp_f32_e32 v4, v3
 ; SI-NEXT:    v_mul_f32_e32 v4, v2, v4
 ; SI-NEXT:    v_trunc_f32_e32 v4, v4
 ; SI-NEXT:    v_fma_f32 v2, -v4, v3, v2
@@ -1295,7 +1292,7 @@ define amdgpu_kernel void @urem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v0
-; VI-NEXT:    v_rcp_iflag_f32_e32 v3, v2
+; VI-NEXT:    v_rcp_f32_e32 v3, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v1
 ; VI-NEXT:    v_mul_f32_e32 v3, v4, v3
@@ -1376,7 +1373,7 @@ define amdgpu_kernel void @urem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    v_cvt_f32_u32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_u32_e32 v3, v1
-; SI-NEXT:    v_rcp_iflag_f32_e32 v4, v3
+; SI-NEXT:    v_rcp_f32_e32 v4, v3
 ; SI-NEXT:    v_mul_f32_e32 v4, v2, v4
 ; SI-NEXT:    v_trunc_f32_e32 v4, v4
 ; SI-NEXT:    v_fma_f32 v2, -v4, v3, v2
@@ -1406,7 +1403,7 @@ define amdgpu_kernel void @urem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    v_cvt_f32_u32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_u32_e32 v3, v1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; VI-NEXT:    v_rcp_f32_e32 v4, v2
 ; VI-NEXT:    v_mul_f32_e32 v4, v3, v4
 ; VI-NEXT:    v_trunc_f32_e32 v4, v4
 ; VI-NEXT:    v_cvt_u32_f32_e32 v5, v4
@@ -1479,7 +1476,7 @@ define amdgpu_kernel void @urem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_and_b32 s7, s5, 0xffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s7
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -1504,7 +1501,7 @@ define amdgpu_kernel void @urem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_and_b32 s2, s4, 0xffffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
 ; VI-NEXT:    v_cvt_u32_f32_e32 v3, v2
@@ -1562,7 +1559,6 @@ define amdgpu_kernel void @urem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: urem25_i32:
 ; SI:       ; %bb.0:
@@ -1575,7 +1571,7 @@ define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_and_b32 s4, s5, 0x1ffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    s_sub_i32 s5, 0, s4
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s5, v0
@@ -1607,7 +1603,7 @@ define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0x1ffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1673,7 +1669,6 @@ define amdgpu_kernel void @urem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_urem24_i32_1:
 ; SI:       ; %bb.0:
@@ -1686,7 +1681,7 @@ define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    s_and_b32 s4, s5, 0x1ffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    s_sub_i32 s5, 0, s4
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s5, v0
@@ -1718,7 +1713,7 @@ define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0xffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1784,7 +1779,6 @@ define amdgpu_kernel void @test_no_urem24_i32_1(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
-; RCP_IFLAG is for URECIP in the full 32b alg
 define amdgpu_kernel void @test_no_urem24_i32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: test_no_urem24_i32_2:
 ; SI:       ; %bb.0:
@@ -1797,7 +1791,7 @@ define amdgpu_kernel void @test_no_urem24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; SI-NEXT:    s_and_b32 s4, s5, 0xffffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    s_sub_i32 s5, 0, s4
-; SI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; SI-NEXT:    v_rcp_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; SI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-NEXT:    v_mul_lo_u32 v1, s5, v0
@@ -1829,7 +1823,7 @@ define amdgpu_kernel void @test_no_urem24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; VI-NEXT:    s_sub_i32 s3, 0, s4
 ; VI-NEXT:    s_and_b32 s5, s2, 0x1ffffff
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; VI-NEXT:    v_rcp_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; VI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; VI-NEXT:    v_mul_lo_u32 v1, s3, v0
@@ -1908,7 +1902,7 @@ define amdgpu_kernel void @test_udiv24_u16_u23_i32(ptr addrspace(1) %out, ptr ad
 ; SI-NEXT:    s_and_b32 s5, s5, 0x7fffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -1930,7 +1924,7 @@ define amdgpu_kernel void @test_udiv24_u16_u23_i32(ptr addrspace(1) %out, ptr ad
 ; VI-NEXT:    s_and_b32 s2, s2, 0xffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2
@@ -1999,7 +1993,7 @@ define amdgpu_kernel void @test_udiv24_u23_u16_i32(ptr addrspace(1) %out, ptr ad
 ; SI-NEXT:    s_and_b32 s5, s5, 0xffff
 ; SI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; SI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; SI-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; SI-NEXT:    v_rcp_f32_e32 v2, v1
 ; SI-NEXT:    v_mul_f32_e32 v2, v0, v2
 ; SI-NEXT:    v_trunc_f32_e32 v2, v2
 ; SI-NEXT:    v_fma_f32 v0, -v2, v1, v0
@@ -2021,7 +2015,7 @@ define amdgpu_kernel void @test_udiv24_u23_u16_i32(ptr addrspace(1) %out, ptr ad
 ; VI-NEXT:    s_and_b32 s2, s2, 0x7fffff
 ; VI-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; VI-NEXT:    v_rcp_f32_e32 v2, v0
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; VI-NEXT:    v_trunc_f32_e32 v2, v2

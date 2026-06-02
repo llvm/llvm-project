@@ -1243,7 +1243,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     auto Len = MSI->getLengthInBytes();
     if (!Len)
       return nullptr;
-    TypeSize LoadSize = SQ.DL.getTypeStoreSize(MemInst.getValueType());
+    Type *InstType = MemInst.getValueType();
+    if (!InstType)
+      return nullptr;
+    TypeSize LoadSize = SQ.DL.getTypeStoreSize(InstType);
     if (LoadSize.isScalable() || Len->ult(LoadSize.getFixedValue()))
       return nullptr;
     if (!isOperatingOnInvariantMemAt(MemInst.get(), InVal.Generation) &&

@@ -4,9 +4,9 @@
 define double @bitcast_v2i32_select_to_double_const_rhs(double %i, <2 x i32> %i41) {
 ; CHECK-LABEL: define double @bitcast_v2i32_select_to_double_const_rhs(
 ; CHECK-SAME: double [[I:%.*]], <2 x i32> [[I41:%.*]]) {
-; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[I]], 0x7FF0000000000000
+; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[I]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[I41]] to double
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], double [[TMP1]], double 0x7FF8000000000000
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], double [[TMP1]], double +qnan
 ; CHECK-NEXT:    ret double [[ASTYPE13_I_I]]
 ;
   %i42 = fcmp one double %i, 0x7FF0000000000000
@@ -18,9 +18,9 @@ define double @bitcast_v2i32_select_to_double_const_rhs(double %i, <2 x i32> %i4
 define double @bitcast_v2i32_select_to_double_const_lhs(double %i, <2 x i32> %i41) {
 ; CHECK-LABEL: define double @bitcast_v2i32_select_to_double_const_lhs(
 ; CHECK-SAME: double [[I:%.*]], <2 x i32> [[I41:%.*]]) {
-; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[I]], 0x7FF0000000000000
+; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[I]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[I41]] to double
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], double 0x7FF8000000000000, double [[TMP1]]
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], double +qnan, double [[TMP1]]
 ; CHECK-NEXT:    ret double [[ASTYPE13_I_I]]
 ;
   %i42 = fcmp one double %i, 0x7FF0000000000000
@@ -61,7 +61,7 @@ define <2 x i32> @bitcast_select_double_to_v2i32_const_lhs(i64 %i, double %i41) 
 define double @bitcast_v2i32_vselect_to_double_const_rhs(<2 x double> %cmp.vec, <2 x i32> %val) {
 ; CHECK-LABEL: define double @bitcast_v2i32_vselect_to_double_const_rhs(
 ; CHECK-SAME: <2 x double> [[CMP_VEC:%.*]], <2 x i32> [[VAL:%.*]]) {
-; CHECK-NEXT:    [[VCMP:%.*]] = fcmp one <2 x double> [[CMP_VEC]], splat (double 0x7FF0000000000000)
+; CHECK-NEXT:    [[VCMP:%.*]] = fcmp one <2 x double> [[CMP_VEC]], splat (double +inf)
 ; CHECK-NEXT:    [[S_0_I_I:%.*]] = select <2 x i1> [[VCMP]], <2 x i32> [[VAL]], <2 x i32> <i32 0, i32 2146959360>
 ; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = bitcast <2 x i32> [[S_0_I_I]] to double
 ; CHECK-NEXT:    ret double [[ASTYPE13_I_I]]
@@ -75,9 +75,9 @@ define double @bitcast_v2i32_vselect_to_double_const_rhs(<2 x double> %cmp.vec, 
 define <2 x float> @bitcast_v4i16_select_to_v2f32_const_lhs(double %arg, <4 x i16> %vec.v4i16) {
 ; CHECK-LABEL: define <2 x float> @bitcast_v4i16_select_to_v2f32_const_lhs(
 ; CHECK-SAME: double [[ARG:%.*]], <4 x i16> [[VEC_V4I16:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[VEC_V4I16]] to <2 x float>
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> <float 0x4372A00000000000, float 0xB8B744E1E0000000>, <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> <float f0x5B950000, float f0x85BA270F>, <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[ASTYPE13_I_I]]
 ;
   %cmp = fcmp one double %arg, 0x7FF0000000000000
@@ -89,9 +89,9 @@ define <2 x float> @bitcast_v4i16_select_to_v2f32_const_lhs(double %arg, <4 x i1
 define <2 x float> @bitcast_v4i16_select_to_v2f32_const_rhs(double %arg, <4 x i16> %vec.v4i16) {
 ; CHECK-LABEL: define <2 x float> @bitcast_v4i16_select_to_v2f32_const_rhs(
 ; CHECK-SAME: double [[ARG:%.*]], <4 x i16> [[VEC_V4I16:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[VEC_V4I16]] to <2 x float>
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> [[TMP1]], <2 x float> <float 0x4372A00000000000, float 0xB8B744E1E0000000>
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> [[TMP1]], <2 x float> <float f0x5B950000, float f0x85BA270F>
 ; CHECK-NEXT:    ret <2 x float> [[ASTYPE13_I_I]]
 ;
   %cmp = fcmp one double %arg, 0x7FF0000000000000
@@ -103,9 +103,9 @@ define <2 x float> @bitcast_v4i16_select_to_v2f32_const_rhs(double %arg, <4 x i1
 define <2 x float> @bitcast_v2i32_select_to_v2f32_const_rhs(double %arg, <2 x i32> %vec) {
 ; CHECK-LABEL: define <2 x float> @bitcast_v2i32_select_to_v2f32_const_rhs(
 ; CHECK-SAME: double [[ARG:%.*]], <2 x i32> [[VEC:%.*]]) {
-; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[I42:%.*]] = fcmp one double [[ARG]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[VEC]] to <2 x float>
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], <2 x float> [[TMP1]], <2 x float> <float 0.000000e+00, float 0x7FFF000000000000>
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[I42]], <2 x float> [[TMP1]], <2 x float> <float 0.000000e+00, float +nan(0x380000)>
 ; CHECK-NEXT:    ret <2 x float> [[ASTYPE13_I_I]]
 ;
   %cmp = fcmp one double %arg, 0x7FF0000000000000
@@ -117,9 +117,9 @@ define <2 x float> @bitcast_v2i32_select_to_v2f32_const_rhs(double %arg, <2 x i3
 define <2 x float> @bitcast_v2i32_select_to_v2f32_const_lhs(double %arg, <2 x i32> %vec) {
 ; CHECK-LABEL: define <2 x float> @bitcast_v2i32_select_to_v2f32_const_lhs(
 ; CHECK-SAME: double [[ARG:%.*]], <2 x i32> [[VEC:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one double [[ARG]], +inf
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[VEC]] to <2 x float>
-; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> <float 0.000000e+00, float 0x7FFF000000000000>, <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = select i1 [[CMP]], <2 x float> <float 0.000000e+00, float +nan(0x380000)>, <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[ASTYPE13_I_I]]
 ;
   %cmp = fcmp one double %arg, 0x7FF0000000000000

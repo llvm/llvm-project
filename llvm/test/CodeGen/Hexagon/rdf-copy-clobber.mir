@@ -1,10 +1,10 @@
-# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=hexagon -run-pass=hexagon-rdf-opt -hexagon-aggressive-rdf-copy=true -hexagon-rdf-dump -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
 
 # Check that RDF graph has a phi node for R28 register in bb.3 and bb.4
 # R28 is clobbered by memcpy call. The clobbering def must be present in bb.4's IDF
 # This phi node should prevent $r27 from being replaced by $r28 by RDF copy propagation
 
-#CHECK-LABEL: Starting copy propagation on: foo
+#CHECK-LABEL: Starting aggressive copy propagation on: foo
 
 #CHECK-LABEL: --- %bb.3 ---
 #CHECK: p{{[0-9]+}}: phi [+d{{[0-9]+}}<R28>

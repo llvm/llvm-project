@@ -357,6 +357,20 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       }
       break;
     }
+    case WebAssembly::OPERAND_VALTYPE_LIST: {
+      // A vec of valtypes: a ULEB count followed by that many value types.
+      // Common valtypes (i32, i64, f32, f64, v128, funcref, externref, exnref)
+      // all encode as a single byte; read the raw byte to preserve the wasm
+      // type code for later printing.
+      if (!parseLEBImmediate(MI, Size, Bytes, false))
+        return MCDisassembler::Fail;
+      int64_t NumTypes = MI.getOperand(MI.getNumOperands() - 1).getImm();
+      for (int64_t I = 0; I < NumTypes; I++) {
+        if (!parseImmediate<uint8_t>(MI, Size, Bytes))
+          return MCDisassembler::Fail;
+      }
+      break;
+    }
     case MCOI::OPERAND_REGISTER:
       // The tablegen header currently does not have any register operands since
       // we use only the stack (_S) instructions.

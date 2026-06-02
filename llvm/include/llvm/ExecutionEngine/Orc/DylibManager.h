@@ -38,7 +38,7 @@ public:
   /// The result of the lookup is an array of target addresses that correspond
   /// to the lookup order. If a required symbol is not found then this method
   /// will return an error. If a weakly referenced symbol is not found then it
-  /// be assigned a '0' value.
+  /// will be assigned a '0' value.
   Expected<tpctypes::LookupResult>
   lookupSymbols(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols) {
     std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
@@ -56,7 +56,7 @@ public:
   /// The result of the lookup is an array of target addresses that correspond
   /// to the lookup order. If a required symbol is not found then this method
   /// will return an error. If a weakly referenced symbol is not found then it
-  /// be assigned a '0' value.
+  /// will be assigned a '0' value.
   virtual void lookupSymbolsAsync(tpctypes::DylibHandle H,
                                   const SymbolLookupSet &Symbols,
                                   SymbolLookupCompleteFn F) = 0;

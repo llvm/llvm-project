@@ -1,7 +1,7 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.record<struct "S" {!s32i}>
+!rec_S = !cir.struct<"S" {!s32i}>
 
 module {
 

@@ -43,9 +43,11 @@ def chained_fixups : Flag<["-"], "chained_fixups">,
 def dyld_info : Flag<["-"], "dyld_info">,
   HelpText<"print bind and rebase information">;
 
+def m : Flag<["-"], "m">,
+  HelpText<"don't use archive(member) syntax">;
+
 // Not (yet?) implemented:
 // -c print argument strings of a core file
-// -m don't use archive(member) syntax
 // -dyld_opcodes
 // -addr_slide=arg
 // -function_offsets

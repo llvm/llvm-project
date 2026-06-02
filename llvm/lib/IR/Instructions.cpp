@@ -133,7 +133,7 @@ PHINode::PHINode(const PHINode &PN)
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
-  SubclassOptionalData = PN.SubclassOptionalData;
+  FMF = PN.FMF;
 }
 
 // removeIncomingValue - Remove an incoming value.  This is useful if a
@@ -609,6 +609,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -801,7 +817,7 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.op_begin(), CI.op_end(), op_begin());
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
-  SubclassOptionalData = CI.SubclassOptionalData;
+  FMF = CI.FMF;
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
@@ -812,7 +828,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                                  Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
-  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->FMF = CI->FMF;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
@@ -2613,7 +2629,12 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
 
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S, const Twine &Name,
                                      InsertPosition InsertBefore) {
-  return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  switch (Op) {
+  case UnaryOps::FNeg:
+    return new FPUnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  default:
+    return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  }
 }
 
 void UnaryOperator::AssertOK() {
@@ -2719,7 +2740,16 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        InsertPosition InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
-  return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  switch (Op) {
+  case BinaryOps::FAdd:
+  case BinaryOps::FSub:
+  case BinaryOps::FMul:
+  case BinaryOps::FDiv:
+  case BinaryOps::FRem:
+    return new FPBinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  default:
+    return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  }
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
@@ -3526,15 +3556,12 @@ AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
 //===----------------------------------------------------------------------===//
 
 CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
-                 Value *RHS, const Twine &Name, InsertPosition InsertBefore,
-                 Instruction *FlagsSource)
+                 Value *RHS, const Twine &Name, InsertPosition InsertBefore)
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
   setPredicate(predicate);
   setName(Name);
-  if (FlagsSource)
-    copyIRFlags(FlagsSource);
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
@@ -4050,6 +4077,10 @@ CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
   return Cmp->getPredicate();
 }
 
+CmpPredicate CmpPredicate::getInverse(CmpPredicate P) {
+  return {CmpInst::getInversePredicate(P), P.hasSameSign()};
+}
+
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
   return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
@@ -4244,11 +4275,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }
@@ -4351,16 +4382,35 @@ UnaryOperator *UnaryOperator::cloneImpl() const {
   return Create(getOpcode(), Op<0>());
 }
 
+FPUnaryOperator *FPUnaryOperator::cloneImpl() const {
+  auto *I = static_cast<FPUnaryOperator *>(Create(getOpcode(), Op<0>()));
+  I->FMF = FMF;
+  return I;
+}
+
 BinaryOperator *BinaryOperator::cloneImpl() const {
+  assert(!isa<FPBinaryOperator>(this) &&
+         "Should call FPBinaryOperator::cloneImpl!");
   return Create(getOpcode(), Op<0>(), Op<1>());
 }
 
+FPBinaryOperator *FPBinaryOperator::cloneImpl() const {
+  auto *I =
+      static_cast<FPBinaryOperator *>(Create(getOpcode(), Op<0>(), Op<1>()));
+  I->FMF = FMF;
+  return I;
+}
+
 FCmpInst *FCmpInst::cloneImpl() const {
-  return new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *I = new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  I->FMF = FMF;
+  return I;
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  Result->setSameSign(hasSameSign());
+  return Result;
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {
@@ -4423,11 +4473,15 @@ SExtInst *SExtInst::cloneImpl() const {
 }
 
 FPTruncInst *FPTruncInst::cloneImpl() const {
-  return new FPTruncInst(getOperand(0), getType());
+  auto *I = new FPTruncInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 FPExtInst *FPExtInst::cloneImpl() const {
-  return new FPExtInst(getOperand(0), getType());
+  auto *I = new FPExtInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
@@ -4478,7 +4532,9 @@ CallInst *CallInst::cloneImpl() const {
 }
 
 SelectInst *SelectInst::cloneImpl() const {
-  return SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  auto *I = SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  I->FMF = FMF;
+  return I;
 }
 
 VAArgInst *VAArgInst::cloneImpl() const {

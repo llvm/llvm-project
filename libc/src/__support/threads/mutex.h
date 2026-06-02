@@ -21,7 +21,7 @@
 // Mutex with non-static methods having the following signature:
 //
 // MutexError lock();
-// MutexError trylock();
+// MutexError try_lock();
 // MutexError timed_lock(...);
 // MutexError unlock();
 // MutexError reset(); // Used to reset inconsistent robust mutexes.
@@ -56,12 +56,12 @@ namespace LIBC_NAMESPACE_DECL {
 /// only a single thread executes code requiring a mutex lock.
 // TODO: declare abstract interface for timed_lock
 struct Mutex {
-  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool) {}
+  LIBC_INLINE constexpr Mutex(bool, bool, bool, bool, bool = false) {}
 
   LIBC_INLINE MutexError lock() { return MutexError::NONE; }
   LIBC_INLINE MutexError unlock() { return MutexError::NONE; }
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
-  LIBC_INLINE MutexError trylock() { return MutexError::NONE; }
+  LIBC_INLINE MutexError try_lock() { return MutexError::NONE; }
   LIBC_INLINE bool is_robust() const { return false; }
 };
 

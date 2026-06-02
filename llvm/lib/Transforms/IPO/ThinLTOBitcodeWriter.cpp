@@ -198,6 +198,8 @@ void simplifyExternals(Module &M) {
                                            AttributeList::FunctionIndex,
                                            F.getAttributes().getFnAttrs()));
     NewF->takeName(&F);
+    NewF->setMetadata(LLVMContext::MD_unique_id,
+                      F.getMetadata(LLVMContext::MD_unique_id));
     F.replaceAllUsesWith(NewF);
     F.eraseFromParent();
   }
@@ -598,8 +600,6 @@ PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-
-  M.removeDebugIntrinsicDeclarations();
 
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
