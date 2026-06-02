@@ -88,6 +88,12 @@ class TestRunLocker(TestBase):
                 state_type = lldb.SBProcess.GetStateFromEvent(event)
                 self.assertState(state_type, eStateStopped, "Stop at entry stopped")
             process.Continue()
+            event_result = listener.WaitForEvent(10, event)
+            self.assertTrue(event_result, "timed out waiting for launch")
+            state_type = lldb.SBProcess.GetStateFromEvent(event)
+            self.assertState(
+                state_type, lldb.eStateRunning, "Didn't get a running event"
+            )
 
         # Okay, now the process is running, make sure we can't do things
         # you aren't supposed to do while running, and that we get some
