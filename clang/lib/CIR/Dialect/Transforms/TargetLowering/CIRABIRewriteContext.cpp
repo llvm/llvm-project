@@ -172,15 +172,18 @@ ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
   return ArrayAttr::get(ctx, {DictionaryAttr::get(ctx, attrs)});
 }
 
-/// Coerce \p src to type \p dstTy at the current builder insertion point.
+/// Coerce \p src to type \p dstTy at the current builder insertion point by
+/// going through memory: allocate a slot, store the source, then load the
+/// destination type back out.  Lowers uniformly for scalar, vector, and
+/// record types.
 ///
-/// If src and dst are the same type, returns src unchanged and leaves
-/// \p createdOps empty.  Otherwise coerces through memory: allocate a slot
-/// of the source type (using max(srcAlign, dstAlign) for the alloca
-/// alignment), store the source, bitcast the pointer to the destination
-/// type, and load the destination type back.  This mirrors classic
-/// CodeGen's coerce-through-memory behavior for ABI argument and return
-/// coercion and lowers uniformly for scalar, vector, and record types.
+/// The slot is sized to the larger of the two types so that neither the
+/// store nor the load ever runs past it: the coerced ABI type can be larger
+/// than the original (e.g. a 12-byte aggregate returned as `{i64, i64}`), so
+/// loading the destination out of a source-sized slot would over-read.
+/// Alignment is max(srcAlign, dstAlign) to satisfy both accesses.  The slot
+/// is accessed through a source-typed view for the store and a
+/// destination-typed view for the load.
 ///
 /// The temporary alloca is placed at the start of the enclosing function's
 /// entry block so that it composes correctly with the HoistAllocas pass
@@ -193,17 +196,15 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
                    FunctionOpInterface funcOp, const DataLayout &dl,
                    SmallPtrSetImpl<Operation *> &createdOps) {
   Type srcTy = src.getType();
-  if (srcTy == dstTy)
-    return src;
+  assert(srcTy != dstTy &&
+         "emitCoercion callers must pre-check that the types differ");
 
-  // Coerce through memory: alloca + store + ptr-cast + load.  The alloca
-  // goes at the start of the entry block so it composes with the
-  // HoistAllocas pass, with alignment = max(srcAlign, dstAlign) to satisfy
-  // both the store and the load.
   uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
   uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
+  Type slotTy = dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
 
+  auto slotPtrTy = cir::PointerType::get(slotTy);
   auto srcPtrTy = cir::PointerType::get(srcTy);
   auto dstPtrTy = cir::PointerType::get(dstTy);
 
@@ -212,20 +213,32 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
     OpBuilder::InsertionGuard guard(rewriter);
     Block &entry = funcOp->getRegion(0).front();
     rewriter.setInsertionPointToStart(&entry);
-    alloca = cir::AllocaOp::create(rewriter, loc, srcPtrTy, srcTy,
+    alloca = cir::AllocaOp::create(rewriter, loc, slotPtrTy, slotTy,
                                    rewriter.getStringAttr("coerce"),
                                    rewriter.getI64IntegerAttr(allocaAlign));
   }
   createdOps.insert(alloca);
 
-  auto store = cir::StoreOp::create(rewriter, loc, src, alloca);
+  // Store through a source-typed view of the slot.
+  Value srcSlot = alloca;
+  if (slotTy != srcTy) {
+    auto srcCast = cir::CastOp::create(rewriter, loc, srcPtrTy,
+                                       cir::CastKind::bitcast, alloca);
+    createdOps.insert(srcCast);
+    srcSlot = srcCast;
+  }
+  auto store = cir::StoreOp::create(rewriter, loc, src, srcSlot);
   createdOps.insert(store);
 
-  auto ptrCast = cir::CastOp::create(rewriter, loc, dstPtrTy,
-                                     cir::CastKind::bitcast, alloca);
-  createdOps.insert(ptrCast);
-
-  auto load = cir::LoadOp::create(rewriter, loc, ptrCast.getResult());
+  // Load through a destination-typed view of the slot.
+  Value dstSlot = alloca;
+  if (slotTy != dstTy) {
+    auto dstCast = cir::CastOp::create(rewriter, loc, dstPtrTy,
+                                       cir::CastKind::bitcast, alloca);
+    createdOps.insert(dstCast);
+    dstSlot = dstCast;
+  }
+  auto load = cir::LoadOp::create(rewriter, loc, dstSlot);
   createdOps.insert(load);
   return load;
 }

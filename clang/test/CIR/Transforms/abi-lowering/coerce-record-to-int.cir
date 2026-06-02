@@ -3,7 +3,7 @@
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
-!rec_Pair = !cir.record<struct "Pair" {!s32i, !s32i}>
+!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
 
 #coerce_pair_to_i64 = {
   return = { kind = "direct" },
