@@ -2122,34 +2122,6 @@ private:
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
 
-  /// Specify that this function declaration is actually a function
-  /// template specialization.
-  ///
-  /// \param C the ASTContext.
-  ///
-  /// \param Template the function template that this function template
-  /// specialization specializes.
-  ///
-  /// \param TemplateArgs the template arguments that produced this
-  /// function template specialization from the template.
-  ///
-  /// \param InsertPos If non-NULL, the position in the function template
-  /// specialization set where the function template specialization data will
-  /// be inserted.
-  ///
-  /// \param TSK the kind of template specialization this is.
-  ///
-  /// \param TemplateArgsAsWritten location info of template arguments.
-  ///
-  /// \param PointOfInstantiation point at which the function template
-  /// specialization was first instantiated.
-  void setFunctionTemplateSpecialization(
-      ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
-      const TemplateArgumentListInfo *TemplateArgsAsWritten,
-      SourceLocation PointOfInstantiation);
-
   /// Specify that this record is an instantiation of the
   /// member function FD.
   void setInstantiationOfMemberFunction(ASTContext &C, FunctionDecl *FD,
@@ -2244,6 +2216,8 @@ public:
       return FPT->getEllipsisLoc();
     return SourceLocation();
   }
+
+  SourceLocation getFunctionLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3070,8 +3044,13 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
+  /// Returns the template parameter list for an explicit specialization.
+  const TemplateParameterList *getTemplateSpecializationParameters() const;
+
   /// Specify that this function declaration is actually a function
   /// template specialization.
+  ///
+  /// \param C the ASTContext.
   ///
   /// \param Template the function template that this function template
   /// specialization specializes.
@@ -3085,25 +3064,30 @@ public:
   ///
   /// \param TSK the kind of template specialization this is.
   ///
+  /// \param TemplateParams the template parameters if this is an explicit
+  /// specialization.
+  ///
   /// \param TemplateArgsAsWritten location info of template arguments.
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
+  ///
+  /// \param AddSpecialization whether to add this specialization to the
+  /// template's specialization set.
+  ///
   void setFunctionTemplateSpecialization(
-      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
-      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
-      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
-      SourceLocation PointOfInstantiation = SourceLocation()) {
-    setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
-                                      PointOfInstantiation);
-  }
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateParameterList *TemplateParams,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation, bool AddSpecialization);
 
   /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(
       ASTContext &Context, const UnresolvedSetImpl &Templates,
+      const TemplateParameterList *TemplateParams,
       const TemplateArgumentListInfo *TemplateArgs);
 
   DependentFunctionTemplateSpecializationInfo *
@@ -3122,6 +3106,10 @@ public:
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
+
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
 
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.

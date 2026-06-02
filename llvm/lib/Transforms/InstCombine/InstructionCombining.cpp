@@ -398,21 +398,6 @@ static bool hasNoSignedWrap(BinaryOperator &I) {
   return OBO && OBO->hasNoSignedWrap();
 }
 
-/// Conservatively clears subclassOptionalData after a reassociation or
-/// commutation. We preserve fast-math flags when applicable as they can be
-/// preserved.
-static void ClearSubclassDataAfterReassociation(BinaryOperator &I) {
-  FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
-  if (!FPMO) {
-    I.clearSubclassOptionalData();
-    return;
-  }
-
-  FastMathFlags FMF = I.getFastMathFlags();
-  I.clearSubclassOptionalData();
-  I.setFastMathFlags(FMF);
-}
-
 /// Combine constant operands of associative operations either before or after a
 /// cast to eliminate one of the associative operations:
 /// (op (cast (op X, C2)), C1) --> (cast (op X, op (C1, C2)))
@@ -543,15 +528,15 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           // Conservatively clear all optional flags since they may not be
           // preserved by the reassociation. Reset nsw/nuw based on the above
           // analysis.
-          ClearSubclassDataAfterReassociation(I);
+          if (auto *PDI = dyn_cast<PossiblyDisjointInst>(&I))
+            PDI->setIsDisjoint(false);
 
           // Note: this is only valid because SimplifyBinOp doesn't look at
           // the operands to Op0.
-          if (IsNUW)
-            I.setHasNoUnsignedWrap(true);
-
-          if (IsNSW)
-            I.setHasNoSignedWrap(true);
+          if (isa<OverflowingBinaryOperator>(I)) {
+            I.setHasNoUnsignedWrap(IsNUW);
+            I.setHasNoSignedWrap(IsNSW);
+          }
 
           Changed = true;
           ++NumReassoc;
@@ -572,7 +557,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, C);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -600,7 +586,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, B);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -620,7 +607,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           replaceOperand(I, 1, V);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          ClearSubclassDataAfterReassociation(I);
+          if (!isa<FPMathOperator>(I))
+            I.dropPoisonGeneratingFlags();
           Changed = true;
           ++NumReassoc;
           continue;
@@ -655,7 +643,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         replaceOperand(I, 1, CRes);
         // Conservatively clear the optional flags, since they may not be
         // preserved by the reassociation.
-        ClearSubclassDataAfterReassociation(I);
+        if (!isa<FPMathOperator>(I))
+          I.dropPoisonGeneratingFlags();
         if (IsNUW)
           I.setHasNoUnsignedWrap(true);
 
@@ -3977,9 +3966,8 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       Instruction *I = cast<Instruction>(&*User);
 
       if (ICmpInst *C = dyn_cast<ICmpInst>(I)) {
-        replaceInstUsesWith(*C,
-                            ConstantInt::get(Type::getInt1Ty(C->getContext()),
-                                             C->isFalseWhenEqual()));
+        replaceInstUsesWith(
+            *C, ConstantInt::get(C->getType(), C->isFalseWhenEqual()));
       } else if (auto *SI = dyn_cast<StoreInst>(I)) {
         for (auto *DVR : DVRs)
           if (DVR->isAddressOfVariable())
@@ -4890,7 +4878,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
-    return TypeInfo->isNullValue();
+    return isa<ConstantPointerNull>(TypeInfo);
   }
   llvm_unreachable("invalid enum");
 }
@@ -5147,7 +5135,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // LFilter iff LFilter contains a zero.
         assert(FElts > 0 && "Should have eliminated the empty filter earlier!");
         for (unsigned l = 0; l != LElts; ++l)
-          if (LArray->getOperand(l)->isNullValue()) {
+          if (isa<ConstantPointerNull>(LArray->getOperand(l))) {
             // LFilter contains a zero - discard it.
             NewClauses.erase(J);
             MakeNewInstruction = true;

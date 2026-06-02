@@ -34,14 +34,6 @@ protected:
     NDM = cantFail(NativeDylibManager::Create(*S, CI));
   }
 
-  void TearDown() override {
-    if (NDM) {
-      std::future<void> F;
-      NDM->onShutdown(waitFor(F));
-      F.get();
-    }
-  }
-
   DirectCaller caller(const char *Name) {
     return DirectCaller(nullptr, reinterpret_cast<orc_rt_WrapperFunction>(
                                      const_cast<void *>(CI.at(Name))));
@@ -51,16 +43,8 @@ protected:
   void spsLoad(OnCompleteFn &&OnComplete, std::string Path) {
     using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper"),
+        caller("orc_rt_ci_sps_NativeDylibManager_load"),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), std::move(Path));
-  }
-
-  template <typename OnCompleteFn>
-  void spsUnload(OnCompleteFn &&OnComplete, void *Handle) {
-    using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
-    SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper"),
-        std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle);
   }
 
   template <typename OnCompleteFn>
@@ -69,7 +53,7 @@ protected:
     using SPSSig = SPSExpected<SPSSequence<SPSExecutorAddr>>(
         SPSExecutorAddr, SPSExecutorAddr, SPSSequence<SPSString>);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper"),
+        caller("orc_rt_ci_sps_NativeDylibManager_lookup"),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle,
         std::move(Names));
   }
@@ -80,20 +64,15 @@ protected:
 };
 
 TEST_F(NativeDylibManagerSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_load"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_lookup"));
 }
 
-TEST_F(NativeDylibManagerSPSCITest, LoadAndUnload) {
+TEST_F(NativeDylibManagerSPSCITest, Load) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
   void *Handle = cantFail(cantFail(LoadResult.get()));
   EXPECT_NE(Handle, nullptr);
-
-  std::future<Expected<Error>> UnloadResult;
-  spsUnload(waitFor(UnloadResult), Handle);
-  cantFail(cantFail(UnloadResult.get()));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LoadNonExistent) {
@@ -102,16 +81,6 @@ TEST_F(NativeDylibManagerSPSCITest, LoadNonExistent) {
   auto Handle = cantFail(LoadResult.get());
   EXPECT_FALSE(!!Handle);
   consumeError(Handle.takeError());
-}
-
-TEST_F(NativeDylibManagerSPSCITest, UnloadUnrecognizedHandle) {
-  // Use Session object address as bogus handle.
-  void *BadHandle = reinterpret_cast<void *>(&S);
-  std::future<Expected<Error>> UnloadResult;
-  spsUnload(waitFor(UnloadResult), BadHandle);
-  auto Handle = cantFail(UnloadResult.get());
-  EXPECT_TRUE(!!Handle);
-  consumeError(std::move(Handle));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
@@ -127,10 +96,6 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
 
   auto *Func = reinterpret_cast<int (*)()>(Addrs[0]);
   EXPECT_EQ(Func(), 42);
-
-  std::future<Expected<Error>> UnloadResult;
-  spsUnload(waitFor(UnloadResult), Handle);
-  cantFail(cantFail(UnloadResult.get()));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
@@ -150,10 +115,6 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   auto *Func2 = reinterpret_cast<int (*)()>(Addrs[1]);
   EXPECT_EQ(Func1(), 42);
   EXPECT_EQ(Func2(), 7);
-
-  std::future<Expected<Error>> UnloadResult;
-  spsUnload(waitFor(UnloadResult), Handle);
-  cantFail(cantFail(UnloadResult.get()));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LookupNonExistentSymbol) {
@@ -166,18 +127,4 @@ TEST_F(NativeDylibManagerSPSCITest, LookupNonExistentSymbol) {
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 1U);
   EXPECT_EQ(Addrs[0], nullptr);
-
-  std::future<Expected<Error>> UnloadResult;
-  spsUnload(waitFor(UnloadResult), Handle);
-  cantFail(cantFail(UnloadResult.get()));
-}
-
-TEST_F(NativeDylibManagerSPSCITest, LookupOnUnrecognizedHandle) {
-  // Use Session object address as bogus handle.
-  void *BadHandle = reinterpret_cast<void *>(&S);
-  std::future<Expected<Expected<std::vector<void *>>>> LookupResult;
-  spsLookup(waitFor(LookupResult), BadHandle, {"NativeDylibManagerTestFunc"});
-  auto Addrs = cantFail(LookupResult.get());
-  EXPECT_FALSE(!!Addrs);
-  consumeError(Addrs.takeError());
 }

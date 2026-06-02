@@ -2,7 +2,7 @@
 
 
 // CHECK-LABEL: builtin_rcp_half
-// CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 0xH3C00, %{{.*}}
+// CHECK: %hlsl.rcp = fdiv reassoc nnan ninf nsz arcp afn half 1.000000e+00, %{{.*}}
 // CHECK: ret half  %hlsl.rcp
 half builtin_rcp_half(half p0) {
   return __builtin_hlsl_elementwise_rcp(p0);

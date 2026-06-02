@@ -181,7 +181,7 @@ MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                          CallingConv::ID CC,
                                                          EVT VT) const {
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
+  if (VT.isVectorOf(MVT::i1)) {
     auto [RegisterVT, NumRegisters] =
         handleMaskRegisterForCallingConv(Subtarget, VT);
     if (RegisterVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
@@ -3955,6 +3955,18 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    // These are lowered in the AsmPrinter.
+    return BB;
+  default:
+    llvm_unreachable("Unexpected instruction with custom inserter");
+  }
 }
 
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(

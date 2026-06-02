@@ -1620,6 +1620,156 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  iscanonical
+  HDRS
+    iscanonical.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalbf16
+  HDRS
+    iscanonicalbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf
+  HDRS
+    iscanonicalf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf128
+  HDRS
+    iscanonicalf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf16
+  HDRS
+    iscanonicalf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicall
+  HDRS
+    iscanonicall.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnan
+  HDRS
+    isnan.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf
+  HDRS
+    isnanf.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanl
+  HDRS
+    isnanl.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf16
+  HDRS
+    isnanf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignaling
+  HDRS
+    issignaling.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingbf16
+  HDRS
+    issignalingbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf
+  HDRS
+    issignalingf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf128
+  HDRS
+    issignalingf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf16
+  HDRS
+    issignalingf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingl
+  HDRS
+    issignalingl.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.basic_operations
+)
 
 add_header_library(
   ldexp
@@ -1955,6 +2105,70 @@ add_header_library(
 )
 
 add_header_library(
+  nan
+  HDRS
+    nan.h
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+
+)
+
+add_header_library(
+  nanbf16
+  HDRS
+    nanbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+)
+
+add_header_library(
+  nanf
+  HDRS
+    nanf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanf128
+  HDRS
+    nanf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanf16
+  HDRS
+    nanf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanl
+  HDRS
+    nanl.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
   nearbyint
   HDRS
     nearbyint.h
@@ -2186,6 +2400,138 @@ add_header_library(
   rintl
   HDRS
     rintl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  round
+  HDRS
+    round.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundbf16
+  HDRS
+    roundbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundeven
+  HDRS
+    roundeven.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundevenbf16
+  HDRS
+    roundevenbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundevenf
+  HDRS
+    roundevenf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundevenf128
+  HDRS
+    roundevenf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  roundevenf16
+  HDRS
+    roundevenf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundevenl
+  HDRS
+    roundevenl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  roundf
+  HDRS
+    roundf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundf128
+  HDRS
+    roundf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  roundf16
+  HDRS
+    roundf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  roundl
+  HDRS
+    roundl.h
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
@@ -5220,6 +5566,72 @@ add_header_library(
 )
 
 add_header_library(
+  trunc
+  HDRS
+    trunc.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  truncbf16
+  HDRS
+    truncbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  truncf
+  HDRS
+    truncf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  truncf128
+  HDRS
+    truncf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  truncf16
+  HDRS
+    truncf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  truncl
+  HDRS
+    truncl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ufromfp
   HDRS
     ufromfp.h
@@ -5332,4 +5744,3 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
-

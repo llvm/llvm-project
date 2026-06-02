@@ -761,7 +761,8 @@ struct TypeSpec {
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // Legacy extension: RECORD /struct/
 struct DeclarationTypeSpec {
   UNION_CLASS_BOILERPLATE(DeclarationTypeSpec);
@@ -770,8 +771,10 @@ struct DeclarationTypeSpec {
   EMPTY_CLASS(ClassStar);
   EMPTY_CLASS(TypeStar);
   WRAPPER_CLASS(Record, Name);
+  WRAPPER_CLASS(TypeOf, common::Indirection<DataRef>);
+  WRAPPER_CLASS(ClassOf, common::Indirection<DataRef>);
   std::variant<IntrinsicTypeSpec, Type, Class, ClassStar, TypeStar, Record,
-      VectorTypeSpec>
+      VectorTypeSpec, TypeOf, ClassOf>
       u;
 };
 
@@ -3103,7 +3106,7 @@ struct ProcedureDeclarationStmt {
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... )
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
 struct PrefixSpec {
@@ -3114,11 +3117,12 @@ struct PrefixSpec {
   EMPTY_CLASS(Non_Recursive);
   EMPTY_CLASS(Pure);
   EMPTY_CLASS(Recursive);
+  EMPTY_CLASS(Simple);
   WRAPPER_CLASS(Attributes, std::list<common::CUDASubprogramAttrs>);
   WRAPPER_CLASS(Launch_Bounds, std::list<ScalarIntConstantExpr>);
   WRAPPER_CLASS(Cluster_Dims, std::list<ScalarIntConstantExpr>);
   std::variant<DeclarationTypeSpec, Elemental, Impure, Module, Non_Recursive,
-      Pure, Recursive, Attributes, Launch_Bounds, Cluster_Dims>
+      Pure, Recursive, Simple, Attributes, Launch_Bounds, Cluster_Dims>
       u;
 };
 
@@ -3192,10 +3196,13 @@ struct ProcedureStmt {
   std::tuple<Kind, std::list<Name>> t;
 };
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
-  std::variant<InterfaceBody, Statement<ProcedureStmt>> u;
+  std::variant<InterfaceBody, Statement<ProcedureStmt>,
+      common::Indirection<CompilerDirective>>
+      u;
 };
 
 // R1504 end-interface-stmt -> END INTERFACE [generic-spec]
@@ -5152,8 +5159,8 @@ struct OmpErrorDirective {
   WRAPPER_CLASS_BOILERPLATE(OmpErrorDirective, OmpDirectiveSpecification);
 };
 
-struct OpenMPUtilityConstruct {
-  UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
+struct OmpUtilityDirective {
+  UNION_CLASS_BOILERPLATE(OmpUtilityDirective);
   CharBlock source;
   std::variant<OmpErrorDirective, OmpNothingDirective> u;
 };
@@ -5163,9 +5170,8 @@ struct OpenMPUtilityConstruct {
 // assumes-construct ->
 //   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
 //          no-openmp-routines-clause | no-parallelism-clause
-struct OpenMPDeclarativeAssumes {
-  WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclarativeAssumes, OmpDirectiveSpecification);
+struct OmpAssumesDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpAssumesDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -5175,8 +5181,8 @@ struct OpenMPDeclarativeAssumes {
 //   ASSUME assumption-clause...
 //     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct : public OmpBlockConstruct {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
+struct OmpAssumeDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS
@@ -5195,8 +5201,8 @@ struct OmpEndSectionsDirective : public OmpEndDirective {
 // [!$omp section
 //    structured-block]
 // ...
-struct OpenMPSectionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPSectionConstruct);
+struct OmpSectionDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpSectionDirective);
   std::tuple<std::optional<OmpDirectiveSpecification>, Block> t;
   CharBlock source;
 };
@@ -5211,7 +5217,7 @@ struct OpenMPSectionsConstruct {
     return std::get<std::optional<OmpEndSectionsDirective>>(t);
   }
   // Each of the OpenMPConstructs in the list below contains an
-  // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // OmpSectionDirective. This is guaranteed by the parser.
   // The end sections directive is optional here because it is difficult to
   // generate helpful error messages for a missing end directive within the
   // parser. Semantics will generate an error if this is absent.
@@ -5270,20 +5276,22 @@ struct OmpDeclareSimdDirective {
 //
 // groupprivate-directive ->
 //    GROUPPRIVATE (variable-list-item...)          // since 6.0
-struct OpenMPGroupprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPGroupprivate, OmpDirectiveSpecification);
+struct OmpGroupprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpGroupprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
-struct OpenMPRequiresConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPRequiresConstruct, OmpDirectiveSpecification);
+struct OmpRequiresDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpRequiresDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
-struct OpenMPThreadprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPThreadprivate, OmpDirectiveSpecification);
+struct OmpThreadprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpThreadprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -5322,11 +5330,11 @@ struct OmpAllocateDirective : public OmpBlockConstruct {
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OmpAllocateDirective, OpenMPDeclarativeAssumes,
+  std::variant<OmpAllocateDirective, OmpAssumesDirective,
       OmpDeclareMapperDirective, OmpDeclareReductionDirective,
       OmpDeclareSimdDirective, OmpDeclareTargetDirective,
-      OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+      OmpDeclareVariantDirective, OmpGroupprivateDirective,
+      OmpThreadprivateDirective, OmpRequiresDirective, OmpUtilityDirective,
       OmpMetadirectiveDirective>
       u;
 };
@@ -5470,9 +5478,9 @@ struct OpenMPExecDirective {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
+      OmpSectionDirective, OpenMPLoopConstruct, OmpBlockConstruct,
       OpenMPAtomicConstruct, OmpAllocateDirective, OpenMPDispatchConstruct,
-      OpenMPUtilityConstruct, OpenMPAllocatorsConstruct, OpenMPAssumeConstruct,
+      OmpUtilityDirective, OpenMPAllocatorsConstruct, OmpAssumeDirective,
       OpenMPCriticalConstruct, OmpDelimitedMetadirectiveDirective>
       u;
 };

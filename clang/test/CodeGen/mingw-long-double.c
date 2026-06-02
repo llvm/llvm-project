@@ -16,13 +16,13 @@ struct {
 // MSC64: @agggregate_LD = dso_local global { i8, [7 x i8], double } zeroinitializer, align 8
 
 long double dataLD = 1.0L;
-// GNU32: @dataLD = dso_local global x86_fp80 0xK3FFF8000000000000000, align 4
-// GNU64: @dataLD = dso_local global x86_fp80 0xK3FFF8000000000000000, align 16
+// GNU32: @dataLD = dso_local global x86_fp80 1.000000e+00, align 4
+// GNU64: @dataLD = dso_local global x86_fp80 1.000000e+00, align 16
 // MSC64: @dataLD = dso_local global double 1.000000e+00, align 8
 
 long double _Complex dataLDC = {1.0L, 1.0L};
-// GNU32: @dataLDC = dso_local global { x86_fp80, x86_fp80 } { x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000 }, align 4
-// GNU64: @dataLDC = dso_local global { x86_fp80, x86_fp80 } { x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000 }, align 16
+// GNU32: @dataLDC = dso_local global { x86_fp80, x86_fp80 } { x86_fp80 1.000000e+00, x86_fp80 1.000000e+00 }, align 4
+// GNU64: @dataLDC = dso_local global { x86_fp80, x86_fp80 } { x86_fp80 1.000000e+00, x86_fp80 1.000000e+00 }, align 16
 // MSC64: @dataLDC = dso_local global { double, double } { double 1.000000e+00, double 1.000000e+00 }, align 8
 
 long double TestLD(long double x) {

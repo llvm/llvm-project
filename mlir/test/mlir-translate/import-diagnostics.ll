@@ -49,5 +49,7 @@ define void @dropped_instruction(i64 %arg1) {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "import-failure.ll", directory: "/")
 !3 = !DILocalVariable(scope: !4, name: "arg1", file: !2, line: 1, arg: 1, align: 64);
-!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!4 = distinct !DISubprogram(name: "intrinsic", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !5 = !DILocation(line: 1, column: 2, scope: !4)
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}

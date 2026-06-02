@@ -5,6 +5,9 @@
 // Crashes on Android.
 // UNSUPPORTED: android
 
+// Occasionally hangs on macOS using LSAN.
+// UNSUPPORTED: darwin && lsan
+
 #include <cstdint>
 #include <pthread.h>
 #include <stdlib.h>

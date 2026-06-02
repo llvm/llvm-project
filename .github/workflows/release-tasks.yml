@@ -20,8 +20,8 @@ jobs:
       - name: Validate Tag
         id: validate-tag
         run: |
-          echo "${{ github.ref_name }}" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
-          release_version=$(echo "${{ github.ref_name }}" | sed 's/llvmorg-//g')
+          echo "$GITHUB_REF_NAME" | grep -e '^llvmorg-[0-9]\+\.[0-9]\+\.[0-9]\+\(-rc[0-9]\+\)\?$'
+          release_version=$(echo "$GITHUB_REF_NAME" | sed 's/llvmorg-//g')
           echo "release-version=$release_version" >> "$GITHUB_OUTPUT"
 
   release-create:
@@ -57,8 +57,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           USER_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_VERSION: ${{ needs.validate-tag.outputs.release-version }}
         run: |
-          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} --user ${{ github.actor }} --user-token "$USER_TOKEN" create
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" create
   release-documentation:
     name: Build and Upload Release Documentation
     needs:
@@ -89,9 +90,6 @@ jobs:
   release-lit:
     name: Release Lit
     runs-on: ubuntu-24.04
-    environment:
-      name: release
-      deployment: false
     permissions:
       id-token: write # Requred for pypi publishing
     needs:
@@ -109,20 +107,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3-build python3-psutil python3-github
 
-      - id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
-        with:
-          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          permission-members: read
-
       - name: Check Permissions
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          USER_TOKEN: ${{ steps.app-token.outputs.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
         run: |
-          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
       - name: Test lit
         run: |
@@ -170,7 +160,8 @@ jobs:
       upload: true
     # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   release-sources:
     name: Package Release Sources
@@ -185,7 +176,8 @@ jobs:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
     # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   uncomment-download-links:
     name: Uncomment download links
@@ -213,5 +205,6 @@ jobs:
       - name: Uncomment Download Links
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.validate-tag.outputs.release-version }}
         run: |
-          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} uncomment_download_links
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" uncomment_download_links

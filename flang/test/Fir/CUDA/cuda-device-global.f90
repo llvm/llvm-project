@@ -1,5 +1,6 @@
 
 // RUN: fir-opt --split-input-file --cuf-device-global %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cuf-device-global="cuda-unified=true" %s | FileCheck %s --check-prefix=UNIFIED
 
 
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
@@ -84,3 +85,42 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 // CHECK-DAG: fir.global @_QMmEa
 // CHECK-DAG: fir.global @_QMmEb
 // CHECK-DAG: fir.global @_QMmEc
+
+// -----
+
+// Under -gpu=mem:unified (cuda-unified=true), plain host module-scope
+// variables referenced from device code are mirrored as no-body external
+// declarations in the GPU module. PTX lowers them as `.extern .global ...`.
+// CUFAddConstructor + the runtime then map the device-side extern to the
+// host pointer via __cudaRegisterHostVar.
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
+  fir.global @_QMmtestsEm(dense<[1, 2, 3, 4, 5]> : tensor<5xi32>) : !fir.array<5xi32>
+  func.func @_QMmtestsPg1() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+    %0 = fir.address_of(@_QMmtestsEm) : !fir.ref<!fir.array<5xi32>>
+    return
+  }
+}
+
+// Host-side definition is preserved.
+// UNIFIED: fir.global @_QMmtestsEm(dense<[1, 2, 3, 4, 5]> : tensor<5xi32>) : !fir.array<5xi32>
+// GPU-module clone is an external declaration (no init body, no `dense<...>`).
+// UNIFIED: gpu.module @cuda_device_mod
+// UNIFIED: fir.global @_QMmtestsEm : !fir.array<5xi32>
+// UNIFIED-NOT: fir.global @_QMmtestsEm{{.*}}dense
+
+// -----
+
+// Globals with an explicit CUF data attribute (device, managed, constant)
+// keep their existing definition-clone path even with cuda-unified=true.
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
+  fir.global @_QMmtestsEdev(dense<[1, 2, 3]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>
+  func.func @_QMmtestsPg1() attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+    %0 = fir.address_of(@_QMmtestsEdev) : !fir.ref<!fir.array<3xi32>>
+    return
+  }
+}
+
+// UNIFIED: gpu.module @cuda_device_mod
+// UNIFIED: fir.global @_QMmtestsEdev(dense<[1, 2, 3]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>

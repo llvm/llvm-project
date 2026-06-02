@@ -152,7 +152,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
     if (!prev_frame_sp) {
       Log *log = GetLog(LLDBLog::Unwind);
-      LLDB_LOG(log, "Abort Recognizer: Hit unwinding bound ({1} frames)!",
+      LLDB_LOG(log, "Abort Recognizer: Hit unwinding bound ({} frames)!",
                frames_to_fetch);
       break;
     }

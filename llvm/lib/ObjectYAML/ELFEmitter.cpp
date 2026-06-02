@@ -1453,7 +1453,7 @@ void ELFState<ELFT>::writeSectionContent(
     return;
   }
 
-  const std::vector<ELFYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
+  const std::vector<BBAddrMapYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
   if (Section.PGOAnalyses) {
     if (Section.Entries->size() != Section.PGOAnalyses->size())
       WithColor::warning() << "PGOAnalyses must be the same length as Entries "
@@ -1504,7 +1504,7 @@ void ELFState<ELFT>::writeSectionContent(
     uint64_t TotalNumBlocks = 0;
     bool EmitCallsiteEndOffsets =
         FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
-    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
+    for (const BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
       // Write number of BBEntries (number of basic blocks in this basic block
@@ -1516,7 +1516,7 @@ void ELFState<ELFT>::writeSectionContent(
       // Write all BBEntries in this BBRange.
       if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
+      for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
@@ -1542,7 +1542,7 @@ void ELFState<ELFT>::writeSectionContent(
     }
     if (!PGOAnalyses)
       continue;
-    const ELFYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
+    const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
 
     if (PGOEntry.FuncEntryCount)
       SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);

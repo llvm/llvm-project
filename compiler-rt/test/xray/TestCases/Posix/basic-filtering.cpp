@@ -5,7 +5,7 @@
 // RUN: rm -f basic-filtering-*
 // RUN: env XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic verbosity=1 \
 // RUN:     xray_logfile_base=basic-filtering- \
-// RUN:     xray_naive_log_func_duration_threshold_us=1000 \
+// RUN:     xray_naive_log_func_duration_threshold_us=100000 \
 // RUN:     xray_naive_log_max_stack_depth=2" %run %t 2>&1 | \
 // RUN:     FileCheck %s
 // RUN: ls basic-filtering-* | head -1 | tr -d '\n' > %t.log
@@ -17,7 +17,7 @@
 // Now check support for the XRAY_BASIC_OPTIONS environment variable.
 // RUN: env XRAY_OPTIONS="patch_premain=true xray_mode=xray-basic verbosity=1 \
 // RUN:     xray_logfile_base=basic-filtering-" \
-// RUN: env XRAY_BASIC_OPTIONS="func_duration_threshold_us=1000 max_stack_depth=2" \
+// RUN: env XRAY_BASIC_OPTIONS="func_duration_threshold_us=100000 max_stack_depth=2" \
 // RUN:     %run %t 2>&1 | FileCheck %s
 // RUN: ls basic-filtering-* | head -1 | tr -d '\n' > %t.log
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
@@ -43,7 +43,7 @@
 [[clang::xray_always_instrument]] void __attribute__((noinline))
 always_shows() {
   struct timespec sleep;
-  sleep.tv_nsec = 2000000;
+  sleep.tv_nsec = 200000000;
   sleep.tv_sec = 0;
   struct timespec rem;
   while (nanosleep(&sleep, &rem) == -1)

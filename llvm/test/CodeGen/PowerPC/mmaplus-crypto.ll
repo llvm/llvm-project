@@ -6,7 +6,7 @@
 ; RUN:   -mcpu=future -ppc-asm-full-reg-names \
 ; RUN:   -ppc-vsr-nums-as-vr < %s | FileCheck %s --check-prefix=CHECK-BE
 
-declare <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1>, <1024 x i1>, i32)
+declare <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1>, <1024 x i1>, i32)
 
 define dso_local void @test_dmsha2hash(ptr %vop, ptr %vinp, ptr %resp) {
 ; CHECK-LABEL: test_dmsha2hash:
@@ -57,12 +57,12 @@ define dso_local void @test_dmsha2hash(ptr %vop, ptr %vinp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vop, align 64
   %1 = load <1024 x i1>, ptr %vinp, align 64
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> %0, <1024 x i1> %1, i32 0)
+  %3 = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> %0, <1024 x i1> %1, i32 0)
   store <1024 x i1> %3, ptr %resp, align 64
   ret void
 }
 
-declare <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1>, i32)
+declare <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1>, i32)
 
 define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) {
 ; CHECK-LABEL: test_dmsha3hash:
@@ -124,12 +124,12 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <2048 x i1>, ptr %vopp, align 64
-  %2 = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> %0, i32 5)
+  %2 = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> %0, i32 5)
   store <2048 x i1> %2, ptr %resp, align 64
   ret void
 }
 
-declare <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1>, <16 x i8>, i32, i32, i32)
+declare <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1>, <16 x i8>, i32, i32, i32)
 
 define dso_local void @test_dmxxshapad(ptr %vopp, ptr %vcp, ptr %resp) {
 ; CHECK-LABEL: test_dmxxshapad:
@@ -170,7 +170,7 @@ define dso_local void @test_dmxxshapad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 2, i32 1, i32 3)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 2, i32 1, i32 3)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -224,7 +224,7 @@ define dso_local void @test_dmsha512hash(ptr %vop, ptr %vinp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vop, align 64
   %1 = load <1024 x i1>, ptr %vinp, align 64
-  %3 = tail call <1024 x i1> @llvm.ppc.mma.dmsha2hash(<1024 x i1> %0, <1024 x i1> %1, i32 1)
+  %3 = tail call <1024 x i1> @llvm.ppc.dmsha2hash(<1024 x i1> %0, <1024 x i1> %1, i32 1)
   store <1024 x i1> %3, ptr %resp, align 64
   ret void
 }
@@ -289,7 +289,7 @@ define dso_local void @test_dmsha3dw(ptr %vopp, ptr %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <2048 x i1>, ptr %vopp, align 64
-  %2 = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> %0, i32 0)
+  %2 = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> %0, i32 0)
   store <2048 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -354,7 +354,7 @@ define dso_local void @test_dmcryshash(ptr %vopp, ptr %resp) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = load <2048 x i1>, ptr %vopp, align 64
-  %2 = tail call <2048 x i1> @llvm.ppc.mma.dmsha3hash(<2048 x i1> %0, i32 12)
+  %2 = tail call <2048 x i1> @llvm.ppc.dmsha3hash(<2048 x i1> %0, i32 12)
   store <2048 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -398,7 +398,7 @@ define dso_local void @test_dmxxsha3512pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 0)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 0)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -442,7 +442,7 @@ define dso_local void @test_dmxxsha3384pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 1)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 1)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -486,7 +486,7 @@ define dso_local void @test_dmxxsha3256pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 2)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 2)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -530,7 +530,7 @@ define dso_local void @test_dmxxsha3224pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 3)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 0, i32 1, i32 3)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -574,7 +574,7 @@ define dso_local void @test_dmxxshake256pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 1, i32 1, i32 0)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 1, i32 1, i32 0)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -618,7 +618,7 @@ define dso_local void @test_dmxxshake128pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 1, i32 1, i32 1)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 1, i32 1, i32 1)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -662,7 +662,7 @@ define dso_local void @test_dmxxsha384512pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 2, i32 0, i32 0)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 2, i32 0, i32 0)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
@@ -706,7 +706,7 @@ define dso_local void @test_dmxxsha224256pad(ptr %vopp, ptr %vcp, ptr %resp) {
 entry:
   %0 = load <1024 x i1>, ptr %vopp, align 64
   %1 = load <16 x i8>, ptr %vcp, align 64
-  %2 = tail call <1024 x i1> @llvm.ppc.mma.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 3, i32 0, i32 0)
+  %2 = tail call <1024 x i1> @llvm.ppc.dmxxshapad(<1024 x i1> %0, <16 x i8> %1, i32 3, i32 0, i32 0)
   store <1024 x i1> %2, ptr %resp, align 64
   ret void
 }
