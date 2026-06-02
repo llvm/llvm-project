@@ -400,6 +400,13 @@ struct VPlanTransforms {
   static void hoistPredicatedLoads(VPlan &Plan, PredicatedScalarEvolution &PSE,
                                    const Loop *L);
 
+  /// Rewrite predicated VPReplicateRecipe loads from a loop-invariant address
+  /// into a single-lane masked load + broadcast pattern. Only applied when
+  /// the target reports isLegalMaskedLoad for the element type. Gated by
+  /// -enable-masked-invariant-load.
+  static void widenPredicatedInvariantLoads(VPlan &Plan,
+                                            const TargetTransformInfo &TTI);
+
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
   /// stored values. This eliminates branching overhead when all paths

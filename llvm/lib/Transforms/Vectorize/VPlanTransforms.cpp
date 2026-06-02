@@ -4767,6 +4767,84 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
   }
 }
 
+static cl::opt<bool> EnableMaskedInvariantLoad(
+    "enable-masked-invariant-load", cl::init(false), cl::ReallyHidden,
+    cl::desc("Rewrite predicated loads from loop-invariant addresses as a "
+             "single-lane masked load + broadcast"));
+
+void VPlanTransforms::widenPredicatedInvariantLoads(
+    VPlan &Plan, const TargetTransformInfo &TTI) {
+  if (!EnableMaskedInvariantLoad)
+    return;
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+
+  // Collect masked, vector-producing replicate loads whose pointer is defined
+  // outside the loop region and which the target can lower as a masked load.
+  SmallVector<VPReplicateRecipe *> Worklist;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (!RepR || !RepR->isPredicated() || RepR->isSingleScalar())
+        continue;
+      if (RepR->getOpcode() != Instruction::Load)
+        continue;
+      VPValue *Addr = RepR->getOperand(0);
+      if (!Addr->isDefinedOutsideLoopRegions())
+        continue;
+      auto *LI = cast<LoadInst>(RepR->getUnderlyingInstr());
+      if (!TTI.isLegalMaskedLoad(LI->getType(), LI->getAlign(),
+                                 LI->getPointerAddressSpace()))
+        continue;
+      Worklist.push_back(RepR);
+    }
+  }
+
+  for (VPReplicateRecipe *RepR : Worklist) {
+    auto *LI = cast<LoadInst>(RepR->getUnderlyingInstr());
+    LLVMContext &Ctx = LI->getContext();
+    DebugLoc DL = LI->getDebugLoc();
+    VPValue *Addr = RepR->getOperand(0);
+    VPValue *Mask = RepR->getMask();
+
+    VPBuilder Builder(RepR);
+
+    // any = AnyOf(mask). Unroll appends per-part masks, so this becomes a
+    // single OR-reduction across all UF parts.
+    VPValue *AnyActive =
+        Builder.createNaryOp(VPInstruction::AnyOf, {Mask}, DL);
+
+    // vmsk = insertelement <VF x i1> zeroinitializer, any, 0
+    Type *I1Ty = Type::getInt1Ty(Ctx);
+    VPValue *FalseI1 = Plan.getOrAddLiveIn(ConstantInt::getFalse(I1Ty));
+    VPValue *ZeroVMask =
+        Builder.createNaryOp(VPInstruction::Broadcast, {FalseI1}, DL);
+    VPValue *Lane0Idx =
+        Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(Ctx), 0));
+    VPValue *VMask = Builder.createNaryOp(
+        Instruction::InsertElement, {ZeroVMask, AnyActive, Lane0Idx}, DL);
+
+    // Consecutive=true selects the masked-load (not masked-gather) lowering in
+    // VPWidenLoadRecipe::execute. The access is stride-0, not stride-1; the
+    // BroadcastLane below splats lane 0 across all VF lanes.
+    auto *MaskedLoad = new VPWidenLoadRecipe(*LI, Addr, VMask,
+                                             /*Consecutive*/ true, *RepR, DL);
+    Builder.insert(MaskedLoad);
+
+    auto *Bcast = new VPInstruction(
+        VPInstruction::BroadcastLane,
+        {Lane0Idx, MaskedLoad->getVPSingleValue()}, /*Flags*/ {},
+        /*MD*/ {}, DL);
+    Builder.insert(Bcast);
+
+    RepR->replaceAllUsesWith(Bcast);
+    RepR->eraseFromParent();
+  }
+}
+
 static bool
 canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
                              PredicatedScalarEvolution &PSE, const Loop &L,
