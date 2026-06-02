@@ -1,7 +1,7 @@
 # EmbeddedJIT 运行时库裁剪设计文档
 
-**版本**: 3.1
-**日期**: 2026-05-28
+**版本**: 3.2
+**日期**: 2026-06-02
 **关联**: SPEC4.md, PASS7_EJitRuntime_OrcJITLink.md, EJIT_BARE_METAL_STUBS.md
 **目标**: 提供 X86_64 / AArch64 裸核环境下 EJIT 运行时的最小单一产物
 
@@ -25,17 +25,18 @@
 ### 2.1 总览
 
 ```
-起点: 53 个 .a (117 MB)  →  44 个 .a (CMake 瘦身)  →  1 个 ejit.o (36-39 MB)
+起点: 53 个 .a (117 MB)  →  44 个 .a (CMake 瘦身)  →  1 个 ejit.o (30-37 MB)
 ```
 
 | 阶段 | 产物 (x86_64) | 产物 (aarch64) | 方法 |
 |---|---|---|---|
 | 原始 | 53 个 `.a`, 117 MB | 53 个 `.a`, ~150 MB | 通配符全量链接 |
 | Phase 1 | 44 个 `.a` | 44 个 `.a` | EJitPassBuilder + IPO/Scalar LINK_COMPONENTS 裁剪 |
-| Phase 2 | 1 个 `.a`, ~98 MB | 1 个 `.a`, ~108 MB | lipo extract（linker map + nm -u 依赖追踪） |
-| Phase 3 | 1 个 `.a`, ~58 MB | 1 个 `.a`, ~59 MB | lipo gc-merge（ld -r --gc-sections） |
-| Phase 4 | 1 个 `ejit.o`, **36 MB** | 1 个 `ejit.o`, **39 MB** | ld -r -T merge.ld（段合并 + .group DISCARD） |
-| +源码裁剪 | — | 1 个 `ejit.o`, **39 MB** | `EJIT_BARE_METAL` guards 排除 CodeView/GlobalISel/DWARF 等 |
+| Phase 2 | 1 个 `.a`, ~99 MB | 1 个 `.a`, ~80 MB | lipo extract（linker map + nm -u 依赖追踪） |
+| Phase 3 | 1 个 `.a`, ~59 MB | 1 个 `.a`, ~46 MB | lipo gc-merge（ld -r --gc-sections） |
+| Phase 4 | 1 个 `ejit.o`, **37 MB** | 1 个 `ejit.o`, **30 MB** | ld -r -T merge.ld（段合并 + .group DISCARD） |
+| +源码裁剪 | — | 省 ~3 MB（vs 无裁剪） | `EJIT_BARE_METAL` guards 排除 CodeView/GlobalISel/DWARF 等 |
+| +--exclude | — | 省 ~9 MB（658 vs 978 .o） | lipo extract `--exclude` 排除未用 pass/format .o |
 | 最终链接 | 二进制, **21 MB** | 二进制, 预估 **~12 MB** | `-Os` + `--gc-sections` + strip |
 
 ### 2.2 编译选项
@@ -108,24 +109,37 @@ libejit_lipo_{arch}.a   libejit_lipo_{arch}_gc.a  ejit.o (or ejit_aarch64.o)
 
 |x86_64| aarch64 |
 |---|---|
-| extract: 98 MB (1062 .o) | extract: 108 MB (978 .o) |
-| gc-merge: 58 MB | gc-merge: 59 MB |
-| ejit.o: **36 MB** | ejit_aarch64.o: **39 MB** |
+| extract: 99 MB (~1065 .o) | extract: 80 MB (~658 .o) |
+| gc-merge: 59 MB | gc-merge: 46 MB |
+| ejit.o: **37 MB** | ejit_aarch64.o: **30 MB** |
 
 ### 4.2 使用
 
 ```bash
-# x86_64 (本机构建)
-python3 ejit_test/lipo/lipo.py extract  --arch=x86 --build-dir=build_release_x86_os
-python3 ejit_test/lipo/lipo.py gc-merge --input=ejit_test/lipo/libejit_lipo_x86.a --build-dir=build_release_x86_os
-python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_x86_gc.a --build-dir=build_release_x86_os
+# x86_64 (本机构建，详见 ejit_test/lipo/README.md)
+ninja -C build_release_x86 LLVMEJIT
+python3 ejit_test/lipo/lipo.py extract \
+  --arch=x86 --build-dir=build_release_x86 \
+  --output=ejit_test/lipo/tmp/extracted.a
+python3 ejit_test/lipo/lipo.py gc-merge \
+  --input=ejit_test/lipo/tmp/extracted.a \
+  --build-dir=build_release_x86 \
+  --output=ejit_test/lipo/tmp/gc_merged.a
+python3 ejit_test/lipo/lipo.py merge \
+  --input=ejit_test/lipo/tmp/gc_merged.a \
+  --build-dir=build_release_x86 \
+  --output=ejit_test/lipo/ejit.o
 
 # aarch64 (交叉编译，需指定 --cxx 和 --ld)
+# 详见 ejit_test/lipo/run_aarch64_pipeline.sh
 python3 ejit_test/lipo/lipo.py extract  --arch=aarch64 --build-dir=build_release_aarch64 \
-    --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld
-python3 ejit_test/lipo/lipo.py gc-merge --input=ejit_test/lipo/libejit_lipo_aarch64.a \
+    --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld \
+    --exclude=InstrProfCorrelator --exclude=WinEHPrepare ... (完整列表见脚本)
+python3 ejit_test/lipo/lipo.py gc-merge \
+    --input=ejit_test/lipo/libejit_lipo_aarch64.a \
     --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld
-python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_aarch64_gc.a \
+python3 ejit_test/lipo/lipo.py merge \
+    --input=ejit_test/lipo/libejit_lipo_aarch64_gc.a \
     --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld \
     --output=ejit_test/lipo/ejit_aarch64.o
 
@@ -181,7 +195,7 @@ python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_aarc
 
 ## 4.8 符号膨胀根因分析
 
-ejit.o 最终产物 36-39 MB，实际包含 ~140K (aarch64) / ~78K (x86) 个符号。
+ejit.o 最终产物 30-37 MB，实际包含 ~140K (aarch64) / ~78K (x86) 个符号。
 为什么一个 JIT 库需要这么多符号？以下是根本原因。
 
 ### 4.8.1 C++ 模板实例化爆炸
@@ -240,7 +254,7 @@ initializeGlobalISel(Registry);                       // → 拉入整个 Global
 这就是为什么 `InitializeNativeTarget()` → `InitializeAllTargets()` 的修复
 让 aarch64 ejit.o 从 18 MB 膨胀到 42 MB——它解锁了整套 AArch64 后端的加载。
 
-### 4.8.5 各膨胀来源占比 (aarch64 ejit.o, 39 MB)
+### 4.8.5 各膨胀来源占比 (aarch64 ejit.o, ~30 MB)
 
 | 膨胀来源 | 符号数 | 贡献 | 可裁性 |
 |---|---|---|---|
@@ -255,7 +269,7 @@ initializeGlobalISel(Registry);                       // → 拉入整个 Global
 ejit.o 作为中间产物，符号膨胀在最终链接阶段会被大幅削减：
 
 ```
-ejit.o (39 MB / ~140K symbols)
+ejit.o (30 MB / ~100K symbols)
   → 最终链接 --gc-sections: 裁剪未引用段 (→ ~25 MB)
   → --strip-all: 去除 LOCAL + WEAK 符号 (→ ~12 MB)
 ```
@@ -302,37 +316,35 @@ InitializeAllAsmPrinters()   → LLVMInitializeAArch64AsmPrinter()  → AsmPrint
 这 468 个 `.o` 是 JIT 编译的**核心功能**——没有它们 TargetMachine 无法创建，JIT 完全不能工作。
 修复不是"引入膨胀"，而是"补上了之前缺失的核心功能"。
 膨胀主要来自 LLVM 的 monorepo 架构（详见 4.8.1-4.8.5），我们通过 3.3 节的源码裁剪将不需要的
-部分（CodeView/GlobalISel（部分）/DWARF debug/ObjCARC/CFGuard）去掉了，最终收敛到 978 .o（39 MB）。
+部分（CodeView/GlobalISel（部分）/DWARF debug/ObjCARC/CFGuard）去掉了，收敛到 978 .o（39 MB），再经 `--exclude` pass 裁剪到 658 .o（30 MB）。
 
 ---
 
 ## 5. 体积数据
 
-### 5.1 X86_64 (`-Os`, build_release_x86_os)
+### 5.1 X86_64 (`-Os`, build_release_x86)
 
 | 产物 | 大小 |
 |---|---|
-| extract `.a` | 98 MB (1062 .o) |
-| gc-merge `.a` | 58 MB |
-| **ejit.o** | **36 MB** |
-| `.text` | 14.5 MB |
-| `.rodata` | 4.8 MB |
+| extract `.a` | 99 MB (~1065 .o) |
+| gc-merge `.a` | 59 MB |
+| **ejit.o** | **37 MB** |
+| `.text` | ~14.5 MB |
+| `.rodata` | ~4.8 MB |
 | 最终二进制 | **21 MB** |
-| 最终 `.text` | **15.2 MB** |
 
 ### 5.2 AArch64 (`-Os`, build_release_aarch64, 交叉编译)
 
-| 产物 | 源码裁剪前 | 源码裁剪后 |
-|---|---|---|
-| extract `.a` | 115 MB (1053 .o) | **108 MB (978 .o)** |
-| gc-merge `.a` | 65 MB | **59 MB** |
-| **ejit.o** | **42 MB** | **39 MB** |
-| `.text` | 14.4 MB | **13.1 MB** |
-| `.rodata` | 4.6 MB | **4.1 MB** |
-| `.data` + `.bss` | 779 KB | **694 KB** |
-| 实际段总大小 | 19.8 MB | **17.9 MB** |
+| 产物 | 源码裁剪前 (1053 .o) | +源码裁剪 (978 .o) | +--exclude (658 .o) |
+|---|---|---|---|
+| extract `.a` | 115 MB | 108 MB | **80 MB** |
+| gc-merge `.a` | 65 MB | 59 MB | **46 MB** |
+| **ejit.o** | **42 MB** | **39 MB** | **30 MB** |
+| `.text` | 14.4 MB | 13.1 MB | **10.1 MB** |
+| `.rodata` | 4.6 MB | 4.1 MB | **4.0 MB** |
+| 实际段总大小 | 19.8 MB | 17.9 MB | **14.7 MB** |
 
-> **注意**: aarch64 ejit.o 文件比 x86 大 3 MB（39 vs 36 MB），但实际代码段更小（13.1 vs 14.5 MB）。文件膨胀来自 ARM `$x`/`$d` 映射符号(~60K 条)撑大的 `.symtab` 和 `.strtab`，最终 `--strip-all` 后会消除。
+> **注意**: aarch64 ejit.o 文件比 x86 小（30 vs 37 MB，`--exclude` 后），实际代码段也更小（10.1 vs 14.5 MB）。但 ARM `$x`/`$d` 映射符号(~60K 条)仍撑大 `.symtab` 和 `.strtab`，最终 `--strip-all` 后会消除。
 
 ### 5.3 源码裁剪明细 (AArch64)
 
@@ -347,7 +359,7 @@ InitializeAllAsmPrinters()   → LLVMInitializeAArch64AsmPrinter()  → AsmPrint
 ### 5.4 最终二进制瘦身路径
 
 ```
-ejit.o (36-39 MB)
+ejit.o (30-37 MB)
   → 最终链接 --gc-sections: 裁剪未引用段
   → --strip-all: 去除符号表
   → 21 MB (x86) / 预估 12 MB (aarch64) 二进制
@@ -360,8 +372,8 @@ ejit.o (36-39 MB)
 | 指标 | 原始 | 当前 (x86) | 当前 (aarch64) | 缩减 |
 |---|---|---|---|---|
 | `.a`/`.o` 文件数 | 53 | **1** | **1** | -98% |
-| 部署产物大小 | 117 MB (53 .a) | **36 MB** (1 .o) | **39 MB** (1 .o) | -67~69% |
-| `.text` | — | **14.5 MB** | **13.1 MB** | — |
+| 部署产物大小 | 117 MB (53 .a) | **37 MB** (1 .o) | **30 MB** (1 .o) | -68~74% |
+| `.text` | — | **14.5 MB** | **10.1 MB** | — |
 | 最终二进制 | ~30 MB | **21 MB** | 预估 **~12 MB** | -30~60% |
 | EJIT 自身大小 | 100 KB | 100 KB | 100 KB | — |
 
@@ -369,7 +381,7 @@ ejit.o (36-39 MB)
 
 ## 7. 已解决 / 遗留的裁剪方向
 
-### 7.1 已解决 (v3.1)
+### 7.1 已解决 (v3.2)
 
 | 项目 | 方法 | 节省 (aarch64) |
 |---|---|---|
@@ -406,19 +418,17 @@ ejit.o (36-39 MB)
 
 ```bash
 # === x86_64 本机构建 ===
-cmake -S llvm -B build_release_x86_os -G Ninja \
+# 注意: x86 不启用 EJIT_BARE_METAL（lld 需要 Wasm/COFF 后端）
+cmake -S llvm -B build_release_x86 -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections" \
   -DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections" \
-  -DCMAKE_CXX_FLAGS_RELEASE="-Os -DNDEBUG" \
-  -DCMAKE_C_FLAGS_RELEASE="-Os -DNDEBUG" \
   -DLLVM_TARGETS_TO_BUILD="X86" \
   -DBUILD_SHARED_LIBS=OFF -DLLVM_OPTIMIZED_TABLEGEN=ON \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
-  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF \
-  -DEJIT_BARE_METAL=ON
+  -DLLVM_ENABLE_ZLIB=OFF -DLLVM_ENABLE_ZSTD=OFF
 
-ninja -C build_release_x86_os clang LLVMEJIT lld
+ninja -C build_release_x86 clang LLVMEJIT lld
 
 # === aarch64 交叉编译 ===
 cmake -S llvm -B build_release_aarch64 -G Ninja \
@@ -436,9 +446,10 @@ cmake -S llvm -B build_release_aarch64 -G Ninja \
 
 ninja -C build_release_aarch64 LLVMEJIT
 
-# 生成 ejit.o (aarch64 需指定交叉编译器)
+# 生成 ejit.o (aarch64 需指定交叉编译器，详见 ejit_test/lipo/run_aarch64_pipeline.sh)
 python3 ejit_test/lipo/lipo.py extract  --arch=aarch64 --build-dir=build_release_aarch64 \
-    --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld
+    --cxx=aarch64-linux-gnu-g++ --ld=build_release_x86/bin/ld.lld \
+    --exclude=InstrProfCorrelator --exclude=WinEHPrepare ... (完整列表见脚本)
 python3 ejit_test/lipo/lipo.py gc-merge --input=ejit_test/lipo/libejit_lipo_aarch64.a \
     --build-dir=build_release_aarch64 --ld=build_release_x86/bin/ld.lld
 python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_aarch64_gc.a \
@@ -451,6 +462,6 @@ python3 ejit_test/lipo/lipo.py merge    --input=ejit_test/lipo/libejit_lipo_aarc
 
 ---
 
-*文档版本: 3.1*
+*文档版本: 3.2*
 *创建日期: 2026-05-24*
-*更新日期: 2026-05-28*
+*更新日期: 2026-06-02*
