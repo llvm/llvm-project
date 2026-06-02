@@ -222,7 +222,8 @@ Error L0AsyncQueueTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr,
 }
 
 Error L0AsyncQueueTy::dataFenceImpl() {
-  return CmdList->appendBarrier(nullptr, 0, nullptr);
+  return CmdList->appendBarrier(/*SignalEvent*/ nullptr, /*NumWaitEvents*/ 0,
+                                /*WaitEvents*/ nullptr);
 }
 
 Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
