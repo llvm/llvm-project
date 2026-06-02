@@ -2,7 +2,6 @@
 # definition of `X` in another CU. The parallel linker routes both
 # through the type pool, so allocateTypeDie's def-wins resolution plus
 # getFinalDie emit only the canonical definition under the module.
-# Regression test for the dedup of module forward declarations.
 
 RUN: rm -rf %t && mkdir -p %t
 RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \

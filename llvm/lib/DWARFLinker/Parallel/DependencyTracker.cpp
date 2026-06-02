@@ -226,7 +226,6 @@ void DependencyTracker::collectRootsToKeep(
           dwarf::isType(CurChild->getTag()) &&
           dwarf::toUnsigned(Entry.CU->find(CurChild, dwarf::DW_AT_declaration),
                             0)) {
-        ChildInfo.setIsModuleForwardDeclCandidate();
         addActionToRootEntriesWorkList(
             LiveRootWorklistActionTy::MarkTypeEntryRec, ChildEntry,
             ReferencedBy);

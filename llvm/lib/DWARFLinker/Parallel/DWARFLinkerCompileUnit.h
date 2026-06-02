@@ -260,12 +260,6 @@ public:
     /// Track liveness for the DIE.
     SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
 
-    /// DIE is a forward-declared type child of a DW_TAG_module. Kept in
-    /// PlainDwarf placement so the module retains its name listing. The
-    /// cloner drops it when TypePool has a non-declaration DIE for the
-    /// same synthetic name (i.e. a real definition exists elsewhere).
-    SINGLE_FLAG_METHODS_SET(IsModuleForwardDeclCandidate, 0x1000)
-
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();
       while (!Flags.compare_exchange_weak(
