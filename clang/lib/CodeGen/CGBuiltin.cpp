@@ -903,58 +903,6 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
-namespace {
-
-/// StructFieldAccess is a simple visitor class to grab the first MemberExpr
-/// from an Expr. It records any ArraySubscriptExpr we meet along the way.
-class StructFieldAccess
-    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
-  bool AddrOfSeen = false;
-
-public:
-  const Expr *ArrayIndex = nullptr;
-  QualType ArrayElementTy;
-
-  const Expr *VisitMemberExpr(const MemberExpr *E) {
-    if (AddrOfSeen && E->getType()->isArrayType())
-      // Avoid forms like '&ptr->array'.
-      return nullptr;
-    return E;
-  }
-
-  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
-    if (ArrayIndex)
-      // We don't support multiple subscripts.
-      return nullptr;
-
-    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
-    ArrayIndex = E->getIdx();
-    ArrayElementTy = E->getBase()->getType();
-    return Visit(E->getBase());
-  }
-  const Expr *VisitCastExpr(const CastExpr *E) {
-    if (E->getCastKind() == CK_LValueToRValue)
-      return E;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitParenExpr(const ParenExpr *E) {
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
-    AddrOfSeen = true;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitUnaryDeref(const clang::UnaryOperator *E) {
-    AddrOfSeen = false;
-    return Visit(E->getSubExpr());
-  }
-  const Expr *VisitBinaryOperator(const clang::BinaryOperator *Op) {
-    return Op->isCommaOp() ? Visit(Op->getRHS()) : nullptr;
-  }
-};
-
-} // end anonymous namespace
-
 /// Find a struct's flexible array member. It may be embedded inside multiple
 /// sub-structs, but must still be the last field.
 static const FieldDecl *FindFlexibleArrayMemberField(CodeGenFunction &CGF,
@@ -1044,12 +992,12 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // structure. Therefore, because of the above issue, we choose to match what
   // GCC does for consistency's sake.
 
-  StructFieldAccess Visitor;
-  E = Visitor.Visit(E);
+  const Expr *Idx = nullptr;
+  QualType ArrayElementTy;
+  E = findStructFieldAccess(E, &Idx, &ArrayElementTy);
   if (!E)
     return nullptr;
 
-  const Expr *Idx = Visitor.ArrayIndex;
   if (Idx) {
     if (Idx->HasSideEffects(getContext()))
       // We can't have side-effects.
@@ -1069,14 +1017,14 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // __counted_by on either a flexible array member or a pointer into a struct
   // with a flexible array member.
   if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return emitCountedByMemberSize(ME, Idx, EmittedE, Visitor.ArrayElementTy,
-                                   Type, ResType);
+    return emitCountedByMemberSize(ME, Idx, EmittedE, ArrayElementTy, Type,
+                                   ResType);
 
   // __counted_by on a pointer in a struct.
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
       ICE && ICE->getCastKind() == CK_LValueToRValue)
-    return emitCountedByPointerSize(ICE, Idx, EmittedE, Visitor.ArrayElementTy,
-                                    Type, ResType);
+    return emitCountedByPointerSize(ICE, Idx, EmittedE, ArrayElementTy, Type,
+                                    ResType);
 
   return nullptr;
 }
