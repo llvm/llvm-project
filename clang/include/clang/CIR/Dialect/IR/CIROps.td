@@ -709,7 +709,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
-                       UnitAttr:$nontemporal,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
@@ -718,7 +718,7 @@ def CIR_LoadOp : CIR_Op<"load", [
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
-    (`nontemporal` $nontemporal^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -810,14 +810,14 @@ def CIR_StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
-                       UnitAttr:$nontemporal,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
-    (`nontemporal` $nontemporal^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -828,6 +828,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     // Non-volatile, non-atomic store with default alignment.
     OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
       build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*is_nontemporal=*/mlir::UnitAttr(),
             /*alignment=*/mlir::IntegerAttr(),
             /*sync_scope=*/cir::SyncScopeKindAttr(),
             /*mem_order=*/cir::MemOrderAttr());

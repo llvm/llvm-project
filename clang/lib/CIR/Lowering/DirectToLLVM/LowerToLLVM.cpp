@@ -1873,7 +1873,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
 
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
-      op.getIsVolatile(), /*isNonTemporal=*/op.getNontemporal(),
+      op.getIsVolatile(), /*isNonTemporal=*/op.getIsNontemporal(),
       /*isInvariant=*/false, /*isInvariantGroup=*/false, ordering,
       llvmSyncScope.value_or(std::string()));
 
@@ -1929,7 +1929,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
       op.getIsVolatile(),
-      /*isNonTemporal=*/op.getNontemporal(), /*isInvariantGroup=*/false,
+      /*isNonTemporal=*/op.getIsNontemporal(), /*isInvariantGroup=*/false,
       memorder, llvmSyncScope.value_or(std::string()));
   rewriter.replaceOp(op, storeOp);
   assert(!cir::MissingFeatures::opLoadStoreTbaa());

@@ -731,7 +731,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, LValue lvalue,
 
   emitStoreOfScalar(value, lvalue.getAddress(), lvalue.isVolatile(),
                     lvalue.getType(), lvalue.getBaseInfo(), isInit,
-                    /*isNontemporal=*/false);
+                    lvalue.isNontemporal());
 }
 
 mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
@@ -779,7 +779,8 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
                                              SourceLocation loc) {
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
   return emitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
-                          lvalue.getType(), loc, lvalue.getBaseInfo());
+                          lvalue.getType(), loc, lvalue.getBaseInfo(),
+                          lvalue.isNontemporal());
 }
 
 /// Given an expression that represents a value lvalue, this
