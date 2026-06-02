@@ -171,8 +171,8 @@ GlobalObject::~GlobalObject() {
 bool GlobalValue::isInterposable() const {
   if (isInterposableLinkage(getLinkage()))
     return true;
-  return getParent() && getParent()->getSemanticInterposition() &&
-         !isDSOLocal();
+  return !isDSOLocal() && getParent() &&
+         getParent()->getSemanticInterposition();
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
@@ -452,11 +452,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
+    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_unique_id)
       return true;
   return false;
 }

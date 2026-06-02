@@ -457,8 +457,8 @@ v_not_b16 v5.l, 1.0
 // NOVI: :[[@LINE-6]]:1: error: instruction not supported on this GPU (tonga): v_not_b16
 
 v_not_b16 v5.l, lit(1.0)
-// GFX11: v_not_b16_e32 v5.l, lit(0x3c00)         ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
-// GFX12XX: v_not_b16_e32 v5.l, lit(0x3c00)         ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x3c,0x00,0x00]
+// GFX11: v_not_b16_e32 v5.l, lit(0x3f800000)     ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x00,0x80,0x3f]
+// GFX12XX: v_not_b16_e32 v5.l, lit(0x3f800000)     ; encoding: [0xff,0xd2,0x0a,0x7e,0x00,0x00,0x80,0x3f]
 // NOCI: :[[@LINE-3]]:1: error: instruction not supported on this GPU (bonaire): v_not_b16
 // NOGFX9: :[[@LINE-4]]:1: error: instruction not supported on this GPU (gfx900): v_not_b16
 // NOSI: :[[@LINE-5]]:1: error: instruction not supported on this GPU (tahiti): v_not_b16
