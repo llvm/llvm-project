@@ -97,8 +97,8 @@ void convertToDenseElementsAttrImpl(
 
   auto arrayAttr = mlir::cast<mlir::ArrayAttr>(attr.getElts());
   for (auto eltAttr : arrayAttr) {
-    if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
-      if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
+    if constexpr (std::is_same_v<StorageTy, mlir::APInt>) {
+      if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(eltAttr)) {
         values[currentIndex++] =
             llvm::APInt(1, static_cast<uint64_t>(boolAttr.getValue()));
         continue;
