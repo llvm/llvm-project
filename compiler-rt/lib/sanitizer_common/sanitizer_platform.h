@@ -315,10 +315,14 @@
 #  define SANITIZER_ALPHA 0
 #endif
 
-#if SANITIZER_AMDGPU || defined(__AMDGPU__)
+#if defined(__AMDGPU__)
 #  define SANITIZER_AMDGPU 1
 #else
 #  define SANITIZER_AMDGPU 0
+#endif
+
+#ifndef SANITIZER_AMDHSA
+#  define SANITIZER_AMDHSA 0
 #endif
 
 #if defined(__NVPTX__)

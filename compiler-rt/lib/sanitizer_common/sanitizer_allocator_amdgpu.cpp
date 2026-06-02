@@ -9,7 +9,7 @@
 // Part of the Sanitizer Allocator.
 //
 //===----------------------------------------------------------------------===//
-#if SANITIZER_AMDGPU
+#if SANITIZER_AMDHSA
 #  include <dlfcn.h>  // For dlsym
 
 #  include "sanitizer_allocator.h"
@@ -300,4 +300,4 @@ void VmemGpuReserveTracker::MarkFreed(uptr ptr, uptr size) {
 }
 
 }  // namespace __sanitizer
-#endif  // SANITIZER_AMDGPU
+#endif  // SANITIZER_AMDHSA

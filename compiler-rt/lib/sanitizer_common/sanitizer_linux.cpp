@@ -2902,7 +2902,7 @@ void OnDlOpen(const char* filename, int flag) {
 #  endif
 }
 
-#  if SANITIZER_AMDGPU
+#  if SANITIZER_AMDHSA
 void PatchHsaRuntimeDlopenFlag(const char* filename, int& flag) {
   if (filename &&
       (internal_strstr(filename, "libamdhip64.so") ||
