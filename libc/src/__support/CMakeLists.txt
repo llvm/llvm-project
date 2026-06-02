@@ -103,6 +103,7 @@ add_header_library(
     macros/config.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
 )
 
 add_header_library(
@@ -144,6 +145,14 @@ add_header_library(
 )
 
 add_header_library(
+  alloc_checker
+  HDRS
+    alloc-checker.h
+  DEPENDS
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ctype_utils
   HDRS
     ctype_utils.h
@@ -156,6 +165,7 @@ list(APPEND wctype_utils_deps
 if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
   list(APPEND wctype_utils_deps
       libc.src.__support.wctype.wctype_classification_utils
+      libc.src.__support.wctype.wctype_conversion_utils
   )
 endif()
 
@@ -444,6 +454,7 @@ add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
 add_subdirectory(GPU)
 add_subdirectory(RPC)
+add_subdirectory(net)
 
 # Thread support is used by other "File". So, we add the "threads"
 # before "File".

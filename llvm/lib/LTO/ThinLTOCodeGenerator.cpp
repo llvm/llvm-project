@@ -81,6 +81,7 @@ extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
 extern cl::opt<std::string> RemarksFormat;
 extern cl::opt<bool> LTORunCSIRInstr;
 extern cl::opt<std::string> LTOCSIRProfile;
+extern cl::opt<std::string> SampleProfileFile;
 }
 
 // Default to using all available threads in the system, but using only one
@@ -246,6 +247,11 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
     PGOOpt = PGOOptions(LTOCSIRProfile, "", "",
                         /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default);
+  } else if (!SampleProfileFile.empty()) {
+    PGOOpt =
+        PGOOptions(SampleProfileFile, "", "",
+                   /*MemoryProfile=*/"", PGOOptions::SampleUse,
+                   PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default);
   }
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -304,8 +310,10 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   Triple TT(File.getTargetTriple());
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  TargetLibraryInfoImpl TLII(TT);
+  TargetLibraryInfo TLI(TLII);
   for (const auto &Sym : File.symbols())
-    if (Sym.isUsed() || Sym.isLibcall(Libcalls))
+    if (Sym.isUsed() || Sym.isLibcall(TLI, Libcalls))
       PreservedGUID.insert(
           GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
 }
@@ -1222,7 +1230,12 @@ void ThinLTOCodeGenerator::run() {
     }
   }
 
-  pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
+  Expected<bool> PrunedOrErr =
+      pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
+  if (!PrunedOrErr) {
+    errs() << "Error: " << toString(PrunedOrErr.takeError()) << "\n";
+    report_fatal_error("ThinLTO: failure to prune cache");
+  }
 
   // If statistics were requested, print them out now.
   if (llvm::AreStatisticsEnabled())

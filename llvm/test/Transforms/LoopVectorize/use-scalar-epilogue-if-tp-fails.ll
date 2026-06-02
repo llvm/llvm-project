@@ -149,7 +149,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    br label [[PRED_STORE_CONTINUE11]]
 ; FORCED-TF:       pred.store.continue9:
 ; FORCED-TF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; FORCED-TF-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IV]], splat (i32 4)
+; FORCED-TF-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i32> [[VEC_IV]], splat (i32 4)
 ; FORCED-TF-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; FORCED-TF-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED-TF:       middle.block:
@@ -215,7 +215,7 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE11]]
 ; CHECK:       pred.store.continue9:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IV]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i32> [[VEC_IV]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:

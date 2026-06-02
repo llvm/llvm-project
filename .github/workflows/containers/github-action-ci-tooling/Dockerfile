@@ -2,7 +2,7 @@ ARG LLVM_VERSION=22.1.0
 # FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
 ARG LLVM_VERSION_MAJOR=22
 
-FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
+FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS llvm-downloader
 ARG LLVM_VERSION
 ARG LLVM_VERSION_MAJOR
 
@@ -20,7 +20,7 @@ RUN apt-get update && \
     rm llvm.tar.xz
 
 
-FROM docker.io/library/ubuntu:24.04 AS base
+FROM docker.io/library/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS base
 ENV LLVM_SYSROOT=/opt/llvm
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 
@@ -79,7 +79,7 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 USER gha
 WORKDIR /home/gha
@@ -95,7 +95,7 @@ COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/cl
 
 # Install dependencies for 'pr-code-lint.yml' job
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
-RUN pip install -r requirements_linting.txt --break-system-packages && \
+RUN pip install --require-hashes -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
 USER gha
 WORKDIR /home/gha

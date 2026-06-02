@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -336,7 +337,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
@@ -630,6 +631,7 @@ public:
   enum LoopDisposition {
     LoopVariant,   ///< The SCEV is loop-variant (unknown).
     LoopInvariant, ///< The SCEV is loop-invariant.
+    LoopUniform,   ///< The SCEV is loop-uniform.
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
@@ -1451,6 +1453,29 @@ public:
   /// loop.
   LLVM_ABI LoopDisposition getLoopDisposition(const SCEV *S, const Loop *L);
 
+  /// Returns true if the given SCEV is loop-uniform with respect to the
+  /// specified loop L.
+  ///
+  /// A SCEV is considered loop-uniform if its value is invariant across all
+  /// iterations of L, meaning it does not depend on any induction variables
+  /// or values that vary within L.
+  ///
+  /// This notion is particularly useful in nested loops, where a value may vary
+  /// in an inner loop but remain invariant in an outer loop.
+  ///
+  /// Example:
+  /// \code
+  ///   for (i)
+  ///     for (j)
+  ///       dep(j);
+  ///       dep(i, j);
+  /// \endcode
+  /// isLoopUniform(SCEV(dep(j)), loop_i) returns true, as `j` is independent of
+  /// `i`.
+  /// isLoopUniform(SCEV(dep(i, j)), loop_i) returns false, as the expression
+  /// depends on `i`, which varies in loop_i.
+  LLVM_ABI bool isLoopUniform(const SCEV *S, const Loop *L);
+
   /// Return true if the value of the given SCEV is unchanging in the
   /// specified loop.
   LLVM_ABI bool isLoopInvariant(const SCEV *S, const Loop *L);
@@ -1636,6 +1661,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
@@ -2106,9 +2132,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
@@ -2549,23 +2576,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {

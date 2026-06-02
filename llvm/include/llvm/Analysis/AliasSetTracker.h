@@ -270,13 +270,13 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
   return OS;
 }
 
-class AliasSetsPrinterPass : public PassInfoMixin<AliasSetsPrinterPass> {
+class AliasSetsPrinterPass
+    : public RequiredPassInfoMixin<AliasSetsPrinterPass> {
   raw_ostream &OS;
 
 public:
   LLVM_ABI explicit AliasSetsPrinterPass(raw_ostream &OS);
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

@@ -399,3 +399,31 @@ module {
 // CHECK-LABEL: llvm.func @_QMkernelsPuse_managed()
 // CHECK: %{{.*}} = llvm.mlir.addressof @_QMmodEmval : !llvm.ptr
 // CHECK: llvm.mlir.global external @_QMmodEmval() {addr_space = 0 : i32} : i32
+
+// -----
+
+// Test that a rebox whose result is passed to gpu.launch_func gets a managed
+// descriptor so the GPU kernel can access it.
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>, gpu.container_module} {
+  gpu.module @cuda_device_mod {
+    gpu.func @_QMtestmePmykernel(%arg0: !fir.box<!fir.array<?x?xi32>>, %arg1: i32) kernel {
+      gpu.return
+    }
+  }
+  func.func @_QQmain() {
+    %c1 = arith.constant 1 : index
+    %c32 = arith.constant 32 : index
+    %c0_i32 = arith.constant 0 : i32
+    %c32_i32 = arith.constant 32 : i32
+    %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.box<!fir.array<?x?xi32>>
+    gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel blocks in (%c1, %c1, %c1) threads in (%c32, %c1, %c1) dynamic_shared_memory_size %c0_i32 args(%2 : !fir.box<!fir.array<?x?xi32>>, %c32_i32 : i32)
+    return
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.call @_FortranACUFAllocDescriptor(
+// CHECK: gpu.launch_func @cuda_device_mod::@_QMtestmePmykernel

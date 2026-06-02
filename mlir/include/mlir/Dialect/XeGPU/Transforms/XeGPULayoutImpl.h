@@ -14,6 +14,8 @@
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace mlir {
 
@@ -39,11 +41,17 @@ LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
 
 LogicalResult resolveLayoutConflicts(Operation *target);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
+/// Callable returning the propagated layout for a given Value, used by the
+/// layout-propagation helpers below.
+using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
+
+/// Propagate layouts from a region branch op's region entry block arguments
+/// back to its init operands. The block argument's layout is obtained via
+/// `getLayoutOfValue`; the matching layout is then recorded on each init
+/// operand that flows into that block argument (e.g. scf.for's iter_args
+/// inits), and on tensor descriptor block argument types.
+LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
+                                         GetLayoutFnTy getLayoutOfValue);
 
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
@@ -127,6 +135,18 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
                                     ArrayRef<int64_t> resShape,
                                     ArrayRef<int64_t> srcShape);
 
+/// Infers the source layout attribute for an insert operation.
+/// using same logic as inferInsertStridedSliceSourceLayout
+DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
+                                             ArrayRef<int64_t> resShape,
+                                             ArrayRef<int64_t> srcShape);
+
+/// Infers the source layout attribute for an extract operation. Adds
+/// leading dimensions to the source layout to match the source shape size.
+DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
+                                              ArrayRef<int64_t> resShape,
+                                              ArrayRef<int64_t> srcShape);
+
 /// Infers the layout attribute for mask and offset operand for Chunked load
 /// and store, given the anchor layout attribute for the value being load/store.
 DistributeLayoutAttr
@@ -136,7 +156,8 @@ inferMaskOffsetLayoutForScatterIO(DistributeLayoutAttr payloadLayout,
 /// Infers the source layout attribute for an operand using result layout
 /// attribute
 DistributeLayoutAttr
-inferSourceLayoutFromResult(OpOperand &operand, DistributeLayoutAttr resLayout);
+inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
+                                          DistributeLayoutAttr resLayout);
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
@@ -232,6 +253,12 @@ setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
 /// the owning operation of the consumer operand is one of the special layout
 /// users and determine the expected layout accordingly.
 DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+
+/// Returns true if `op` is safe and cheap to clone: it has no side effects,
+/// no regions, and all of its operands are themselves trivially
+/// rematerializable (e.g. `vector.step`, splat `arith.constant`, or
+/// `vector.create_mask` whose operands are constants).
+bool isTriviallyRematerializable(Operation *op);
 
 } // namespace xegpu
 

@@ -513,8 +513,7 @@ InstructionCost OutlinableRegion::getBenefit(TargetTransformInfo &TTI) {
 /// not.
 static Value *findOutputMapping(const DenseMap<Value *, Value *> OutputMappings,
                                 Value *Input) {
-  DenseMap<Value *, Value *>::const_iterator OutputMapping =
-      OutputMappings.find(Input);
+  auto OutputMapping = OutputMappings.find(Input);
   if (OutputMapping != OutputMappings.end())
     return OutputMapping->second;
   return Input;
@@ -929,8 +928,7 @@ findExtractedInputToOverallInputMapping(OutlinableRegion &Region,
     assert(InputOpt && "Global value number not found?");
     Value *Input = *InputOpt;
 
-    DenseMap<unsigned, unsigned>::iterator AggArgIt =
-        Group.CanonicalNumberToAggArg.find(CanonicalNumber);
+    auto AggArgIt = Group.CanonicalNumberToAggArg.find(CanonicalNumber);
 
     if (!Group.InputTypesSet) {
       Group.ArgumentTypes.push_back(Input->getType());
@@ -1731,8 +1729,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
     IncomingVal = findOutputMapping(OutputMappings, IncomingVal);
     Value *Val = Region.findCorrespondingValueIn(*FirstRegion, IncomingVal);
     assert(Val && "Value is nullptr?");
-    DenseMap<Value *, Value *>::iterator RemappedIt =
-        FirstRegion->RemappedArguments.find(Val);
+    auto RemappedIt = FirstRegion->RemappedArguments.find(Val);
     if (RemappedIt != FirstRegion->RemappedArguments.end())
       Val = RemappedIt->second;
     NewPN->setIncomingValue(Idx, Val);
@@ -1925,8 +1922,7 @@ std::optional<unsigned> findDuplicateOutputBlock(
   for (DenseMap<Value *, BasicBlock *> &CompBBs : OutputStoreBBs) {
     Mismatch = false;
     for (std::pair<Value *, BasicBlock *> &VToB : CompBBs) {
-      DenseMap<Value *, BasicBlock *>::iterator OutputBBIt =
-          OutputBBs.find(VToB.first);
+      auto OutputBBIt = OutputBBs.find(VToB.first);
       if (OutputBBIt == OutputBBs.end()) {
         Mismatch = true;
         break;
@@ -2051,8 +2047,7 @@ static void alignOutputBlockWithAggFunc(
   for (std::pair<Value *, BasicBlock *> &VtoBB : OutputBBs) {
     RetValueForBB = VtoBB.first;
     NewBB = VtoBB.second;
-    DenseMap<Value *, BasicBlock *>::iterator VBBIt =
-        EndBBs.find(RetValueForBB);
+    auto VBBIt = EndBBs.find(RetValueForBB);
     LLVM_DEBUG(dbgs() << "Create output block for region in"
                       << Region.ExtractedFunction << " to "
                       << *NewBB);
@@ -2130,8 +2125,7 @@ void createSwitchStatement(
 
       unsigned Idx = 0;
       for (DenseMap<Value *, BasicBlock *> &OutputStoreBB : OutputStoreBBs) {
-        DenseMap<Value *, BasicBlock *>::iterator OSBBIt =
-            OutputStoreBB.find(OutputBlock.first);
+        auto OSBBIt = OutputStoreBB.find(OutputBlock.first);
 
         if (OSBBIt == OutputStoreBB.end())
           continue;
@@ -2160,8 +2154,7 @@ void createSwitchStatement(
                       << *OG.OutlinedFunction << "\n");
     DenseMap<Value *, BasicBlock *> OutputBlocks = OutputStoreBBs[0];
     for (std::pair<Value *, BasicBlock *> &VBPair : OutputBlocks) {
-      DenseMap<Value *, BasicBlock *>::iterator EndBBIt =
-          EndBBs.find(VBPair.first);
+      auto EndBBIt = EndBBs.find(VBPair.first);
       assert(EndBBIt != EndBBs.end() && "Could not find end block");
       BasicBlock *EndBB = EndBBIt->second;
       BasicBlock *OutputBB = VBPair.second;
@@ -2215,8 +2208,7 @@ void IROutliner::fillOverallFunction(
   if (!analyzeAndPruneOutputBlocks(NewBBs, *CurrentOS)) {
     OutputStoreBBs.push_back(DenseMap<Value *, BasicBlock *>());
     for (std::pair<Value *, BasicBlock *> &VToBB : NewBBs) {
-      DenseMap<Value *, BasicBlock *>::iterator VBBIt =
-          CurrentGroup.EndBBs.find(VToBB.first);
+      auto VBBIt = CurrentGroup.EndBBs.find(VToBB.first);
       BasicBlock *EndBB = VBBIt->second;
       UncondBrInst::Create(EndBB, VToBB.second);
       OutputStoreBBs.back().insert(VToBB);

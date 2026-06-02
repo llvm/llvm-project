@@ -141,6 +141,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  scope_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    scope_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.scope
+)
+
+add_libc_test(
   span_test
   SUITE
     libc-cpp-utils-tests

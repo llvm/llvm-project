@@ -216,7 +216,7 @@ public:
   /// This is just a convenience method to make client code smaller for a
   /// common code. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
-  bool isZero() const { return Val.isZero(); }
+  bool isZero() const { return isNullValue(); }
 
   /// This is just a convenience method to make client code smaller for a
   /// common case. It also correctly performs the comparison without the
@@ -440,23 +440,23 @@ public:
   /// for the specified value in the specified type. This should only be used
   /// for simple constant values like 2.0/1.0 etc, that are known-valid both as
   /// host double and as the target format.
-  LLVM_ABI static Constant *get(Type *Ty, double V);
+  LLVM_ABI static ConstantFP *get(Type *Ty, double V);
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantFP for the given value.
-  LLVM_ABI static Constant *get(Type *Ty, const APFloat &V);
+  LLVM_ABI static ConstantFP *get(Type *Ty, const APFloat &V);
 
-  LLVM_ABI static Constant *get(Type *Ty, StringRef Str);
+  LLVM_ABI static ConstantFP *get(Type *Ty, StringRef Str);
   LLVM_ABI static ConstantFP *get(LLVMContext &Context, const APFloat &V);
-  LLVM_ABI static Constant *getNaN(Type *Ty, bool Negative = false,
-                                   uint64_t Payload = 0);
-  LLVM_ABI static Constant *getQNaN(Type *Ty, bool Negative = false,
-                                    APInt *Payload = nullptr);
-  LLVM_ABI static Constant *getSNaN(Type *Ty, bool Negative = false,
-                                    APInt *Payload = nullptr);
-  LLVM_ABI static Constant *getZero(Type *Ty, bool Negative = false);
-  static Constant *getNegativeZero(Type *Ty) { return getZero(Ty, true); }
-  LLVM_ABI static Constant *getInfinity(Type *Ty, bool Negative = false);
+  LLVM_ABI static ConstantFP *getNaN(Type *Ty, bool Negative = false,
+                                     uint64_t Payload = 0);
+  LLVM_ABI static ConstantFP *getQNaN(Type *Ty, bool Negative = false,
+                                      APInt *Payload = nullptr);
+  LLVM_ABI static ConstantFP *getSNaN(Type *Ty, bool Negative = false,
+                                      APInt *Payload = nullptr);
+  LLVM_ABI static ConstantFP *getZero(Type *Ty, bool Negative = false);
+  static ConstantFP *getNegativeZero(Type *Ty) { return getZero(Ty, true); }
+  LLVM_ABI static ConstantFP *getInfinity(Type *Ty, bool Negative = false);
 
   /// Return true if Ty is big enough to represent V.
   LLVM_ABI static bool isValueValidForType(Type *Ty, const APFloat &V);
@@ -465,6 +465,12 @@ public:
 
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Val.isZero(); }
+
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Val.isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Val.isNegZero(); }
 
   /// Return true if the sign bit is set.
   bool isNegative() const { return Val.isNegative(); }
@@ -503,7 +509,9 @@ class ConstantAggregateZero final : public ConstantData {
   friend class Constant;
 
   explicit ConstantAggregateZero(Type *Ty)
-      : ConstantData(Ty, ConstantAggregateZeroVal) {}
+      : ConstantData(Ty, ConstantAggregateZeroVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -703,7 +711,9 @@ class ConstantPointerNull final : public ConstantData {
   friend class Constant;
 
   explicit ConstantPointerNull(Type *T)
-      : ConstantData(T, Value::ConstantPointerNullVal) {}
+      : ConstantData(T, Value::ConstantPointerNullVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1020,7 +1030,9 @@ class ConstantTokenNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTokenNone(LLVMContext &Context)
-      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {}
+      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1041,7 +1053,9 @@ class ConstantTargetNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTargetNone(TargetExtType *T)
-      : ConstantData(T, Value::ConstantTargetNoneVal) {}
+      : ConstantData(T, Value::ConstantTargetNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1068,7 +1082,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1100,7 +1116,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1111,7 +1127,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 
@@ -1245,7 +1261,7 @@ public:
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {
-    return !getAddrDiscriminator()->isNullValue();
+    return !isa<ConstantPointerNull>(getAddrDiscriminator());
   }
 
   Constant *getDeactivationSymbol() const {

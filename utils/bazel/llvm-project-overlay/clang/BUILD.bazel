@@ -778,6 +778,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
         "//llvm:config",
     ],
 )
@@ -2334,6 +2335,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
         "//llvm:config",
     ],
 )
@@ -2648,7 +2650,10 @@ cc_library(
         "include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h",
         "include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h",
     ]),
-    textual_hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.def"]),
+    textual_hdrs = glob([
+        "include/clang/ScalableStaticAnalysisFramework/Core/**/*.def",
+        "include/clang/ScalableStaticAnalysisFramework/*.def",
+    ]),
     deps = [
         ":ast",
         ":support",

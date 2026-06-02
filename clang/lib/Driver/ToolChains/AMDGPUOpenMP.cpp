@@ -65,15 +65,23 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    // Filter unsupported sanitizers passed from the HostTC.
-    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
-      DAL->append(A);
+    // Sanitizer coverage is currently not supported for AMDGPU.
+    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
+      diagnoseUnsupportedOption(A, *DAL, Args);
+      continue;
+    }
+
+    if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
+        !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      continue;
+
+    DAL->append(A);
   }
 
   if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
   }
 
   return DAL;
@@ -105,18 +113,6 @@ void AMDGPUOpenMPToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
   HostTC.AddIAMCUIncludeArgs(Args, CC1Args);
 }
 
-SanitizerMask AMDGPUOpenMPToolChain::getSupportedSanitizers() const {
-  // The AMDGPUOpenMPToolChain only supports sanitizers in the sense that it
-  // allows sanitizer arguments on the command line if they are supported by the
-  // host toolchain. The AMDGPUOpenMPToolChain will later filter unsupported
-  // sanitizers from the command line arguments.
-  //
-  // This behavior is necessary because the host and device toolchains
-  // invocations often share the command line, so the device toolchain must
-  // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
-}
-
 VersionTuple
 AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
                                           const ArgList &Args) const {
@@ -130,12 +126,14 @@ AMDGPUOpenMPToolChain::getDeviceLibs(
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     return {};
 
-  StringRef GpuArch = getProcessorFromTargetID(
-      getTriple(), Args.getLastArgValue(options::OPT_march_EQ));
+  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(Args);
+  if (!TargetID.OptionalTargetID)
+    return {};
 
   SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   for (auto BCLib :
-       getCommonDeviceLibNames(Args, GpuArch.str(), DeviceOffloadingKind))
+       getCommonDeviceLibNames(Args, *TargetID.OptionalTargetID,
+                               *TargetID.OptionalGPUArch, DeviceOffloadingKind))
     BCLibs.emplace_back(BCLib);
 
   return BCLibs;

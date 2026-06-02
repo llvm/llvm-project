@@ -49,9 +49,9 @@ define void @T() {
 ; CHECK-NEXT:    [[LOG1:%.*]] = call double @log(double 0.000000e+00)
 ; CHECK-NEXT:    [[LOG2:%.*]] = call double @log(double -1.000000e+00)
 ; CHECK-NEXT:    [[EXP2:%.*]] = call double @exp(double 1.000000e+03)
-; CHECK-NEXT:    [[COS2:%.*]] = call double @cos(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[COS2:%.*]] = call double @cos(double +inf)
 ; CHECK-NEXT:    [[COS3:%.*]] = call double @cos(double 0.000000e+00) [[ATTR2:#.*]]
-; CHECK-NEXT:    [[FMOD2:%.*]] = call double @fmod(double 0x7FF0000000000000, double 1.000000e+00)
+; CHECK-NEXT:    [[FMOD2:%.*]] = call double @fmod(double +inf, double 1.000000e+00)
 ; CHECK-NEXT:    ret void
 ;
 entry:
