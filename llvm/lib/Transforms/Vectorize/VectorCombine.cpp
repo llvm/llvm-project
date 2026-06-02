@@ -6055,14 +6055,42 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
-/// Check if a vector instruction's lanes originate from contiguous memory
-/// accesses. Fold the original loads and shuffles into a single vector load
-/// if it is profitable. For example:
-///     shufflevector(load <4 x float> ptr), poison, <2, 3>
-///       -> load <2 x float> (ptradd ptr, 8)
-/// Cost model calculations take into account the cost of the original
-/// unique load(s) and the target instruction versus the cost of the new
-/// aligned vector load.
+/// Try to fold lanes assembled from contiguous vector-load elements into one
+/// load of the result type.
+///
+///   1. Trace lanes:
+///      result lane 0   result lane 1   ...   result lane N
+///           |               |                       |
+///           +------- look through shuffles ---------+
+///                           |
+///                 source load + source lane
+///
+///   2. Check layout:
+///                 same base pointer and contiguous offsets?
+///
+///   3. Model old cost:
+///                 current op + unique loads + original GEPs
+///
+///   4. Model new cost:
+///                 ptradd(base, start byte offset) + one vector load
+///
+///   5. Replace:
+///                 if NewCost is cheaper
+///
+/// For example:
+///
+///   %p = getelementptr float, ptr %base, i64 4
+///   %v = load <4 x float>, ptr %p
+///          base+16   base+20   base+24   base+28
+///          lane 0    lane 1    lane 2    lane 3
+///                              |         |
+///                              +---------+  contiguous
+///                                  |
+///   %r = shufflevector %v, poison, <2, 3>
+///                                  |
+///                                  v
+///   %q = getelementptr i8, ptr %base, i64 24
+///   %r = load <2 x float>, ptr %q
 bool VectorCombine::foldContiguousLoads(Instruction &I) {
   auto *VT = dyn_cast<FixedVectorType>(I.getType());
   if (!VT || I.use_empty())
@@ -6076,13 +6104,15 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
   uint64_t ElementSizeBits = DL->getTypeStoreSizeInBits(EltTy);
   assert((ElementSizeBits <= MaxInt64) && "element size far too large?");
-  int64_t ElementSize = static_cast<int64_t>(ElementSizeBits);
+  int64_t ElementSizeBitsI64 = static_cast<int64_t>(ElementSizeBits);
   unsigned NumElts = VT->getNumElements();
   Value *CommonBase = nullptr;
-  int64_t ExpectedBaseBitOffset = 0, FirstLoadOffset = 0;
+  int64_t StartBitOffset = 0, FirstLoadByteOffset = 0;
   LoadInst *FirstLI = nullptr;
   SmallPtrSet<LoadInst *, 4> Loads;
   for (unsigned Lane = 0; Lane < NumElts; ++Lane) {
+    // Step 1: Trace this result lane through shuffle users to find the source
+    // instruction and the lane selected from it.
     InstLane IL = lookThroughShuffles(&I, Lane);
     if (!IL.first)
       return false;
@@ -6105,37 +6135,43 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
                              MemoryLocation::get(LI), AA))
       return false;
 
-    int64_t ConstantOffset = 0;
+    // Step 2: Convert the load pointer and selected source lane into an
+    // absolute bit offset: byte offset of the load pointer plus lane offset
+    // within the load.
+    int64_t LoadByteOffset = 0;
     Value *Base = GetPointerBaseWithConstantOffset(LI->getPointerOperand(),
-                                                   ConstantOffset, *DL);
-    int64_t AbsoluteBitOffset =
-        (ConstantOffset * 8) + (IL.second * ElementSize);
+                                                   LoadByteOffset, *DL);
+    int64_t SourceLaneBitOffset =
+        (LoadByteOffset * 8) + (IL.second * ElementSizeBitsI64);
     if (Lane == 0) {
-      if (AbsoluteBitOffset % 8 != 0)
+      if (SourceLaneBitOffset % 8 != 0)
         return false;
 
       CommonBase = Base;
-      ExpectedBaseBitOffset = AbsoluteBitOffset;
+      StartBitOffset = SourceLaneBitOffset;
       FirstLI = LI;
-      FirstLoadOffset = ConstantOffset;
+      FirstLoadByteOffset = LoadByteOffset;
     } else {
+      // Step 2: All later result lanes must use the same underlying base
+      // pointer and appear at the element-stride offset expected from the first
+      // result lane.
       if (Base != CommonBase)
         return false;
 
-      uint64_t ResultLane = Lane;
-      assert(ResultLane <= MaxInt64 / static_cast<uint64_t>(ElementSize) &&
-             "result lane offset far too large?");
+      assert(Lane <= MaxInt64 / static_cast<uint64_t>(ElementSizeBitsI64) &&
+             "lane offset far too large?");
 
       int64_t ExpectedBitOffset =
-          ExpectedBaseBitOffset +
-          static_cast<int64_t>(ResultLane) * ElementSize;
-      if (AbsoluteBitOffset != ExpectedBitOffset)
+          StartBitOffset + static_cast<int64_t>(Lane) * ElementSizeBitsI64;
+      if (SourceLaneBitOffset != ExpectedBitOffset)
         return false;
     }
 
     Loads.insert(LI);
   }
 
+  // Step 3: Model the current form: the shuffle-like instruction, each unique
+  // source load, and any GEP used to compute those load addresses.
   InstructionCost OldCost = TTI.getInstructionCost(&I, CostKind);
   for (LoadInst *LI : Loads) {
     OldCost += TTI.getInstructionCost(LI, CostKind);
@@ -6147,12 +6183,15 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
     }
   }
 
-  int64_t StartByteOffset = ExpectedBaseBitOffset / 8;
+  int64_t StartByteOffset = StartBitOffset / 8;
   Type *IndexTy = DL->getIndexType(CommonBase->getType());
   auto *StartByteOffsetValue = ConstantInt::get(IndexTy, StartByteOffset,
                                                 /*isSigned=*/true);
-  int64_t OffsetFromFirstLoad = StartByteOffset - FirstLoadOffset;
-  Align NewAlign = commonAlignment(FirstLI->getAlign(), OffsetFromFirstLoad);
+  int64_t ByteOffsetFromFirstLoad = StartByteOffset - FirstLoadByteOffset;
+  Align NewAlign =
+      commonAlignment(FirstLI->getAlign(), ByteOffsetFromFirstLoad);
+  // Step 4: Model the replacement: one vector load from the adjusted alignment
+  // and the byte-offset GEP that CreatePtrAdd will emit.
   InstructionCost NewCost =
       TTI.getMemoryOpCost(Instruction::Load, VT, NewAlign,
                           FirstLI->getPointerAddressSpace(), CostKind);
@@ -6167,9 +6206,9 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (OldCost <= NewCost)
     return false;
 
-  Value *NewBasePtr = Builder.CreatePtrAdd(
-      CommonBase, ConstantInt::get(IndexTy, StartByteOffset,
-                                   /*isSigned=*/true));
+  // Step 5: Emit the same byte-offset GEP modeled above, then load the
+  // contiguous result vector from it.
+  Value *NewBasePtr = Builder.CreatePtrAdd(CommonBase, StartByteOffsetValue);
   LoadInst *NewLoad = Builder.CreateAlignedLoad(VT, NewBasePtr, NewAlign);
   if (Loads.size() == 1)
     copyMetadataForLoad(*NewLoad, *FirstLI);
