@@ -50735,9 +50735,8 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   // 128/256-bit vectors (v2i64/v4i64) require either AVX512-IFMA + VLX, or
   // AVX-IFMA.
   bool Supported512 = (VT == MVT::v8i64) && Subtarget.hasIFMA();
-  bool SupportedSmall =
-      (VT == MVT::v2i64 || VT == MVT::v4i64) &&
-      ((Subtarget.hasIFMA() && Subtarget.hasVLX()) || Subtarget.hasAVXIFMA());
+  bool SupportedSmall = (VT == MVT::v2i64 || VT == MVT::v4i64) &&
+                        (Subtarget.hasIFMA() || Subtarget.hasAVXIFMA());
 
   if (!Supported512 && !SupportedSmall)
     return SDValue();
@@ -59757,11 +59756,6 @@ static SDValue matchVPMADD52(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   using namespace SDPatternMatch;
   if (!VT.isVector() || VT.getScalarSizeInBits() != 64 ||
       (!Subtarget.hasAVXIFMA() && !Subtarget.hasIFMA()))
-    return SDValue();
-
-  // Need AVX-512VL vector length extensions if operating on XMM/YMM registers
-  if (!Subtarget.hasAVXIFMA() && !Subtarget.hasVLX() &&
-      VT.getSizeInBits() < 512)
     return SDValue();
 
   const auto TotalSize = VT.getSizeInBits();
