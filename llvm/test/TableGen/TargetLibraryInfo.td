@@ -2,14 +2,23 @@
 
 include "llvm/IR/RuntimeLibcallsImpl.td"
 
-def TLI_cosf : TargetLibCall_D< "cosf", Flt, [Flt]>;
-def TLI_sinf : TargetLibCall_D< "sinf", Flt, [Flt]>;
+def COS_F32 : RuntimeLibcall<Flt, [Flt]>;
+def SIN_F32 : RuntimeLibcall<Flt, [Flt]>;
+def FMAX_F32 : RuntimeLibcall<Floating, [Same, Same]>;
+def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def CABS_F64 : RuntimeLibcall<NoneType, []>;
 
-def TLI_fmaxf : TargetLibCall_D< "fmaxf", Floating, [Same, Same]>;
+def cosf : RuntimeLibcallImpl<COS_F32>;
+def sinf : RuntimeLibcallImpl<SIN_F32>;
+def fmaxf : RuntimeLibcallImpl<FMAX_F32>;
+def printf : RuntimeLibcallImpl<PRINTF>;
+def cabs : RuntimeLibcallImpl<CABS_F64>;
 
-def TLI_printf : TargetLibCall_D< "printf", Int, [Ptr, Ellip]>;
-
-def TLI_cabs : TargetLibCall_D< "cabs", ? /* Checked manually. */>;
+def TLI_cosf : TargetLibCall<cosf>;
+def TLI_sinf : TargetLibCall<sinf>;
+def TLI_fmaxf : TargetLibCall<fmaxf>;
+def TLI_printf : TargetLibCall<printf>;
+def TLI_cabs : TargetLibCall<cabs>;
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_ENUM
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_ENUM

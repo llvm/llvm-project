@@ -123,19 +123,8 @@ class SystemRuntimeLibrary<RuntimeLibcallPredicate Pred, dag funcList> {
   LibcallImpls MemberList = LibcallImpls<funcList>;
 }
 
-// Definitions of library function for TargetLibraryInfo.
-class TargetLibCall;
-
-class TargetLibCall_D<string FuncName, FuncArgType RetType,
-                      list<FuncArgType> ArgTypes = []>
-  : TargetLibCall {
-  string LibCallFuncName = FuncName;
-  FuncArgType ReturnType = RetType;
-  list<FuncArgType> ArgumentTypes = ArgTypes;
-}
-
-class TargetLibCall_R<RuntimeLibcallImpl LibcallImpl>
-  : TargetLibCall {
+/// Definition of library function for TargetLibraryInfo.
+class TargetLibCall<RuntimeLibcallImpl LibcallImpl> {
   RuntimeLibcallImpl RTLibcallImpl = LibcallImpl;
 }
 
