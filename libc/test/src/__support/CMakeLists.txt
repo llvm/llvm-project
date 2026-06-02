@@ -41,16 +41,15 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
   )
 
   add_libc_test(
-    freestore_test
+    triefreestore_test
     SUITE
       libc-support-tests
     SRCS
-      freestore_test.cpp
+      triefreestore_test.cpp
     DEPENDS
       libc.src.__support.CPP.optional
       libc.src.__support.block
       libc.src.__support.freelist
-      libc.src.__support.freestore
       libc.src.__support.freetrie
   )
 endif()

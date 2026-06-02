@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "freetrie.h"
+#include "src/__support/freetrie.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
