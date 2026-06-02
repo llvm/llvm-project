@@ -1130,15 +1130,17 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
         Matrix->assign(LI, PhysReg);
 
       Register OrigReg = VRM.getOriginal(CopyDstReg);
-      if (OrigReg != CopyDstReg && LIS.hasInterval(OrigReg)) {
+      if (OrigReg != CopyDstReg) {
         // Extend the original LI to cover the same range so that the
         // sub-interval invariant holds: the original must be live wherever
         // any of its children are live.  Without this, reMaterializeFor()
         // can query OrigLI at an early-clobber slot that falls inside
         // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
-        LiveInterval &LI = LIS.getInterval(OrigReg);
-        if (VNInfo *VNI = LI.getVNInfoAt(FoldIdx.getRegSlot()))
-          LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+        assert(LIS.hasInterval(OrigReg) && "OrigReg should have live interval");
+        LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+        if (VNInfo *OrigVNI = OrigLI.getVNInfoAt(FoldIdx.getRegSlot()))
+          OrigLI.addSegment(
+              LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), OrigVNI));
       }
     }
   }
