@@ -155,6 +155,21 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
 
+  Triple TT((*ModuleOrErr)->getTargetTriple());
+  if (TT.isAArch64() && TT.isOSBinFormatELF()) {
+    // These declarations resolve to process addresses, not co-located JIT
+    // storage. Clearing dso_local forces AArch64 PIC codegen to use GOT/PLT
+    // style indirection instead of near-page ADRP relocations.
+    for (Function &F : (*ModuleOrErr)->functions()) {
+      if (F.isDeclaration() && !F.isIntrinsic())
+        F.setDSOLocal(false);
+    }
+    for (GlobalVariable &GV : (*ModuleOrErr)->globals()) {
+      if (GV.isDeclaration())
+        GV.setDSOLocal(false);
+    }
+  }
+
   // Collect global variable addresses from the registry for symbols
   // that appear as external declarations in the bitcode module.
   orc::SymbolMap globalSymbols;
