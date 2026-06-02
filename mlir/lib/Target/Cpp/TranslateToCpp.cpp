@@ -909,14 +909,15 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::CallOp callOp) {
   return printCallOperation(emitter, operation, callee);
 }
 
+template <typename OpTy>
 static LogicalResult
-printOpaqueCallCommon(CppEmitter &emitter, Operation &op, StringRef callee,
+printOpaqueCallCommon(CppEmitter &emitter, OpTy op, StringRef callee,
                       std::optional<ArrayAttr> templateArgs,
                       std::optional<ArrayAttr> args, bool isMemberCall,
                       Value receiver = nullptr) {
   raw_ostream &os = emitter.ostream();
 
-  if (failed(emitter.emitAssignPrefix(op)))
+  if (failed(emitter.emitAssignPrefix(*op.getOperation())))
     return failure();
 
   if (isMemberCall) {
@@ -951,8 +952,7 @@ printOpaqueCallCommon(CppEmitter &emitter, Operation &op, StringRef callee,
     if (auto t = dyn_cast<IntegerAttr>(attr)) {
       if (t.getType().isIndex()) {
         int64_t idx = t.getInt();
-        // Shift index by 1 for member calls to skip the receiver operand.
-        Value operand = op.getOperand(isMemberCall ? idx + 1 : idx);
+        Value operand = op.getArgOperands()[idx];
         return emitter.emitOperand(operand, /*isInBrackets=*/false);
       }
     }
@@ -968,13 +968,10 @@ printOpaqueCallCommon(CppEmitter &emitter, Operation &op, StringRef callee,
   if (args) {
     emittedArgs = interleaveCommaWithError(*args, os, emitArgs);
   } else {
-    auto operands = op.getOperands();
-    if (isMemberCall)
-      operands = operands.drop_front(1);
-
-    emittedArgs = interleaveCommaWithError(operands, os, [&](Value operand) {
-      return emitter.emitOperand(operand, /*isInBrackets=*/true);
-    });
+    emittedArgs =
+        interleaveCommaWithError(op.getArgOperands(), os, [&](Value operand) {
+          return emitter.emitOperand(operand, /*isInBrackets=*/true);
+        });
   }
   if (failed(emittedArgs))
     return failure();
@@ -984,19 +981,18 @@ printOpaqueCallCommon(CppEmitter &emitter, Operation &op, StringRef callee,
 
 static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::CallOpaqueOp callOpaqueOp) {
-  return printOpaqueCallCommon(
-      emitter, *callOpaqueOp.getOperation(), callOpaqueOp.getCallee(),
-      callOpaqueOp.getTemplateArgs(), callOpaqueOp.getArgs(),
-      /*isMemberCall=*/false);
+  return printOpaqueCallCommon(emitter, callOpaqueOp, callOpaqueOp.getCallee(),
+                               callOpaqueOp.getTemplateArgs(),
+                               callOpaqueOp.getArgs(),
+                               /*isMemberCall=*/false);
 }
 
 static LogicalResult
 printOperation(CppEmitter &emitter,
                emitc::MemberCallOpaqueOp memberCallOpaqueOp) {
   return printOpaqueCallCommon(
-      emitter, *memberCallOpaqueOp.getOperation(),
-      memberCallOpaqueOp.getCallee(), memberCallOpaqueOp.getTemplateArgs(),
-      memberCallOpaqueOp.getArgs(),
+      emitter, memberCallOpaqueOp, memberCallOpaqueOp.getCallee(),
+      memberCallOpaqueOp.getTemplateArgs(), memberCallOpaqueOp.getArgs(),
       /*isMemberCall=*/true, memberCallOpaqueOp.getReceiver());
 }
 

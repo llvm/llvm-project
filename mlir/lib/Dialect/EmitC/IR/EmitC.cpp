@@ -388,7 +388,7 @@ LogicalResult emitc::CallOpaqueOp::verify() {
 LogicalResult emitc::MemberCallOpaqueOp::verify() {
   return verifyOpaqueCallCommon(getOperation(), getCallee(), getArgs(),
                                 getTemplateArgs(), getResultTypes(),
-                                getArgsOperands().size());
+                                getArgOperands().size());
 }
 
 //===----------------------------------------------------------------------===//
