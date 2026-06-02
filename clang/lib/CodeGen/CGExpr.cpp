@@ -1013,17 +1013,23 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
   return Builder.CreateUDiv(SizeInBytes, SizeOfElement);
 }
 
-static bool ShouldIgnoreLastMember(CodeGenFunction &CGF, const Expr *Base) {
-  if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
-    auto *D = ME->getMemberDecl();
-    auto Loc = D->getSourceRange().getBegin();
-    auto &Ctx = CGF.getContext();
-    auto &SM = CGF.getContext().getSourceManager();
-    auto FN = SM.getFilename(SM.getFileLoc(Loc));
-    return Ctx.getNoSanitizeList().containsIgnoreFamFile(
-        SanitizerKind::ArrayBounds, FN);
-  }
-  return false;
+static bool shouldIgnoreLastMember(ASTContext &Ctx, const Expr *E) {
+  const Decl *D = nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  else if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    D = DRE->getDecl();
+  else if (const auto *IRE = dyn_cast<ObjCIvarRefExpr>(E))
+    D = IRE->getDecl();
+  else
+    return false;
+
+  auto Loc = D->getSourceRange().getBegin();
+  auto &SM = Ctx.getSourceManager();
+  auto FN = SM.getFilename(SM.getFileLoc(Loc));
+  return Ctx.getNoSanitizeList().containsIgnoreFamFile(
+      SanitizerKind::ArrayBounds, FN);
 }
 
 /// If Base is known to point to the start of an array, return the length of
@@ -1045,7 +1051,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
         !CE->getSubExpr()->isFlexibleArrayMemberLike(
             CGF.getContext(),
-            ShouldIgnoreLastMember(CGF, CE->getSubExpr())
+            shouldIgnoreLastMember(CGF.getContext(), CE->getSubExpr())
                 ? LangOptions::StrictFlexArraysLevelKind::Default
                 : StrictFlexArraysLevel)) {
       CodeGenFunction::SanitizerScope SanScope(&CGF);
