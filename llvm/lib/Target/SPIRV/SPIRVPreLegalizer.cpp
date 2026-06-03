@@ -594,7 +594,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
 
         // For untyped pointers, store the element type for later use.
-        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers)) {
+        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+            !ST->isShader()) {
           SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
               ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
           GR->setUntypedPtrElementType(Reg, ElemSpvType);

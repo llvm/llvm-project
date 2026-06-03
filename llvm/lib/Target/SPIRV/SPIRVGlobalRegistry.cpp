@@ -1114,7 +1114,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-      !isSpecialOpaqueElementType(ElemType))
+      !ST.isShader() && !isSpecialOpaqueElementType(ElemType))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   if (!Reg.isValid())
@@ -2103,7 +2103,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (!ForceTyped &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-      !isSpecialOpaqueElementType(BaseType))
+      !ST.isShader() && !isSpecialOpaqueElementType(BaseType))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
