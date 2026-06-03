@@ -3236,6 +3236,9 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
+  // Dynamic private arrays cannot safely be allocated in GPU scratch when the
+  // descriptor is captured through the distribute callback.
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;

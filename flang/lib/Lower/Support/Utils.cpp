@@ -791,6 +791,12 @@ void privatizeSymbol(
             moduleOp.lookupSymbol<OpType>(uniquePrivatizerName))
       return existingPrivatizer;
 
+    if (forceHeapAllocation)
+      mlir::emitWarning(symLoc)
+          << "OpenMP private dynamic array '" << sym->name().ToString()
+          << "' on a GPU target may exceed stack memory; using device heap "
+             "allocation instead, which can severely degrade performance";
+
     mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     firOpBuilder.setInsertionPointToStart(moduleOp.getBody());
     OpType result;
