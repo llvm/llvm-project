@@ -24,18 +24,16 @@ namespace llvm::omp::target::plugin {
 
 class L0QueueTy;
 
-
 class L0EventTy {
   ze_event_handle_t ZeEvent;
   L0QueueTy *Queue = nullptr;
 
 public:
-  L0EventTy(ze_event_handle_t ZeEvent)
-      : ZeEvent(ZeEvent) {}
+  L0EventTy(ze_event_handle_t ZeEvent) : ZeEvent(ZeEvent) {}
   ze_event_handle_t getZeEvent() const { return ZeEvent; }
   L0QueueTy *getQueue() const { return Queue; }
 
-  Error reset () {
+  Error reset() {
     Queue = nullptr;
     CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
     return Plugin::success();
@@ -85,8 +83,10 @@ class EventPoolTy {
   /// L0 event objects cache.
   llvm::SmallVector<L0EventTy *> EventObjects;
 
-  // Internal method to get an event from the pool. The caller must hold the lock.
+  // Internal method to get an event from the pool. The caller must hold the
+  // lock.
   Expected<ze_event_handle_t> getEventLocked();
+
 public:
   /// Initialize context, flags, and mutex.
   Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
