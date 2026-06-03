@@ -2072,9 +2072,7 @@ llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
 
   llvm::GlobalVariable *GV =
       OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
-
-  if (CGM.getCodeGenOpts().RelocationModel == llvm::Reloc::Static)
-    GV->setDSOLocal(true);
+  CGM.setDSOLocal(GV);
 
   return GV;
 }
