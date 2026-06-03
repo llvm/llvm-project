@@ -72,7 +72,7 @@ struct CIRRecordLowering final {
                        mlir::Type storageType);
 
   void lower(bool NonVirtualBaseType);
-  void lowerUnion();
+  void lowerUnion(bool nonVirtualBaseType);
 
   /// Determines if we need a packed llvm struct.
   void determinePacked(bool nvBaseType);
@@ -280,7 +280,7 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
 
 void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   if (recordDecl->isUnion()) {
-    lowerUnion();
+    lowerUnion(nonVirtualBaseType);
     computeVolatileBitfields();
     return;
   }
@@ -692,21 +692,28 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(ty->isIncomplete() && "recomputing record layout?");
   lowering.lower(/*nonVirtualBaseType=*/false);
 
-  // If we're in C++, compute the base subobject type. For C++ records the base
-  // subobject type is always set (matching classic CodeGen). For unions and
-  // final classes the base subobject and complete object types are identical
-  // (no tail padding can be reused), so baseTy points at the same record as
-  // ty. We must still populate baseTy in those cases because callers such as
-  // getStorageType(const CXXRecordDecl *) used to lay out potentially-
-  // overlapping ([[no_unique_address]]) fields read it unconditionally; a
-  // null baseTy would otherwise propagate as a null mlir::Type into the
-  // members vector and trip the !empty() assertion in fillOutputFields.
+  // If we're in C++, compute the base subobject type. For C++ records baseTy
+  // defaults to the complete object type and is replaced by a distinct,
+  // smaller record only when the record has tail padding an enclosing
+  // [[no_unique_address]] field can reuse. We must populate baseTy even when
+  // it equals ty because callers such as getStorageType(const CXXRecordDecl *)
+  // read it unconditionally when laying out potentially-overlapping
+  // ([[no_unique_address]]) fields; a null baseTy would otherwise propagate as
+  // a null mlir::Type into the members vector and trip the !empty() assertion
+  // in fillOutputFields.
   cir::RecordType baseTy;
   if (llvm::isa<CXXRecordDecl>(rd)) {
     baseTy = *ty;
-    if (!rd->isUnion() && !rd->hasAttr<FinalAttr>() &&
-        lowering.astRecordLayout.getNonVirtualSize() !=
-            lowering.astRecordLayout.getSize()) {
+    // A record needs a distinct base-subobject type when its tail padding can
+    // be reused by an enclosing [[no_unique_address]] field.  For a
+    // struct/class that happens when the non-virtual size differs from the
+    // complete size; for a union it happens when the data size differs from
+    // the complete size (a union has reusable tail padding when one of its
+    // members is a [[no_unique_address]] field with tail padding of its own).
+    CharUnits baseSize = rd->isUnion()
+                             ? lowering.astRecordLayout.getDataSize()
+                             : lowering.astRecordLayout.getNonVirtualSize();
+    if (baseSize != lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*NonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
@@ -716,8 +723,10 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
-      // on both of them with the same index.
-      assert(lowering.packed == baseLowering.packed &&
+      // on both of them with the same index.  Unions are exempt: every union
+      // field maps to index 0, and a union's data-size base layout may need to
+      // be packed even when its complete layout is not (and vice versa).
+      assert((rd->isUnion() || lowering.packed == baseLowering.packed) &&
              "Non-virtual and complete types must agree on packedness");
     }
   }
@@ -809,8 +818,13 @@ void CIRGenRecordLayout::dump() const { print(llvm::errs()); }
 
 void CIRGenBitFieldInfo::dump() const { print(llvm::errs()); }
 
-void CIRRecordLowering::lowerUnion() {
-  CharUnits layoutSize = astRecordLayout.getSize();
+void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
+  // The base-subobject layout of a union is sized to its data size rather than
+  // its full size.  A union can have reusable tail padding when one of its
+  // members is a [[no_unique_address]] field that itself has tail padding, so
+  // an enclosing [[no_unique_address]] union field must use this smaller type.
+  CharUnits layoutSize = nonVirtualBaseType ? astRecordLayout.getDataSize()
+                                            : astRecordLayout.getSize();
   mlir::Type storageType = nullptr;
   bool seenNamedMember = false;
 
@@ -860,7 +874,11 @@ void CIRRecordLowering::lowerUnion() {
 
     // NOTE(cir): Track all union member's types, not just the largest one. It
     // allows for proper type-checking and retain more info for analisys.
-    fieldTypes.push_back(fieldType);
+    // The base-subobject type instead uses a single (possibly clipped) storage
+    // type, mirroring classic CodeGen, so that it exposes the union's reusable
+    // tail padding.
+    if (!nonVirtualBaseType)
+      fieldTypes.push_back(fieldType);
   }
 
   if (!storageType) {
@@ -870,8 +888,20 @@ void CIRRecordLowering::lowerUnion() {
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);
-  else
+
+  if (nonVirtualBaseType) {
+    // The base-subobject record is built as a struct from fieldTypes, so add
+    // the storage type and any trailing padding as ordinary fields rather than
+    // routing padding through the union's single tail-padding slot.
+    fieldTypes.push_back(storageType);
+    CharUnits padding = layoutSize - getSize(storageType);
+    if (!padding.isZero()) {
+      fieldTypes.push_back(getByteArrayType(padding));
+      padded = true;
+    }
+  } else {
     appendPaddingBytes(layoutSize - getSize(storageType));
+  }
 
   // Set packed if we need it.
   if (!layoutSize.isMultipleOf(getAlignment(storageType)))
