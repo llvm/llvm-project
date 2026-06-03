@@ -73,6 +73,23 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return builtin(__rs1, __rs2);                                              \
   }
 
+#define __packed_sh1add(name, ty)                                              \
+  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
+  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+    return (__rs1 << 1) + __rs2;                                               \
+  }
+
+/* TODO: switch to sadd_sat(__builtin_elementwise_shl_sat(a, 1), b) once a
+ * generic elementwise shl_sat builtin exists. sadd_sat(a, a) is equivalent
+ * for signed types and the backend's saturating_shl1 PatFrags matches both
+ * shapes. */
+#define __packed_sh1sadd(name, ty)                                             \
+  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
+  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+    return __builtin_elementwise_add_sat(                                      \
+        __builtin_elementwise_add_sat(__rs1, __rs1), __rs2);                   \
+  }
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)
@@ -184,6 +201,19 @@ __packed_binary_builtin(pssubu_u8x8, uint8x8_t, __builtin_elementwise_sub_sat)
 __packed_binary_builtin(pssubu_u16x4, uint16x4_t, __builtin_elementwise_sub_sat)
 __packed_binary_builtin(pssubu_u32x2, uint32x2_t, __builtin_elementwise_sub_sat)
 
+/* Packed Shift-Add (32-bit) */
+__packed_sh1add(psh1add_i16x2, int16x2_t)
+__packed_sh1add(psh1add_u16x2, uint16x2_t)
+__packed_sh1sadd(pssh1sadd_i16x2, int16x2_t)
+
+/* Packed Shift-Add (64-bit) */
+__packed_sh1add(psh1add_i16x4, int16x4_t)
+__packed_sh1add(psh1add_u16x4, uint16x4_t)
+__packed_sh1add(psh1add_i32x2, int32x2_t)
+__packed_sh1add(psh1add_u32x2, uint32x2_t)
+__packed_sh1sadd(pssh1sadd_i16x4, int16x4_t)
+__packed_sh1sadd(pssh1sadd_i32x2, int32x2_t)
+
 /* Packed Minimum and Maximum (32-bit) */
 __packed_binary_builtin(pmin_i8x4, int8x4_t, __builtin_elementwise_min)
 __packed_binary_builtin(pmin_i16x2, int16x2_t, __builtin_elementwise_min)
@@ -264,6 +294,8 @@ __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 #undef __packed_binary_op
 #undef __packed_unary_op
 #undef __packed_binary_builtin
+#undef __packed_sh1add
+#undef __packed_sh1sadd
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

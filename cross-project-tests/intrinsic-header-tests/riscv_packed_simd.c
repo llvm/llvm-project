@@ -761,6 +761,66 @@ uint32x2_t test_pssubu_u32x2(uint32x2_t a, uint32x2_t b) {
   return __riscv_pssubu_u32x2(a, b);
 }
 
+// CHECK-LABEL: test_psh1add_i16x2:
+// CHECK:       psh1add.h
+int16x2_t test_psh1add_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_psh1add_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psh1add_u16x2:
+// CHECK:       psh1add.h
+uint16x2_t test_psh1add_u16x2(uint16x2_t a, uint16x2_t b) {
+  return __riscv_psh1add_u16x2(a, b);
+}
+
+// CHECK-LABEL: test_pssh1sadd_i16x2:
+// CHECK:       pssh1sadd.h
+int16x2_t test_pssh1sadd_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pssh1sadd_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_psh1add_i16x4:
+// RV32:        psh1add.dh
+// RV64:        psh1add.h
+int16x4_t test_psh1add_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_psh1add_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_psh1add_u16x4:
+// RV32:        psh1add.dh
+// RV64:        psh1add.h
+uint16x4_t test_psh1add_u16x4(uint16x4_t a, uint16x4_t b) {
+  return __riscv_psh1add_u16x4(a, b);
+}
+
+// CHECK-LABEL: test_psh1add_i32x2:
+// RV32:        psh1add.dw
+// RV64:        psh1add.w
+int32x2_t test_psh1add_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_psh1add_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_psh1add_u32x2:
+// RV32:        psh1add.dw
+// RV64:        psh1add.w
+uint32x2_t test_psh1add_u32x2(uint32x2_t a, uint32x2_t b) {
+  return __riscv_psh1add_u32x2(a, b);
+}
+
+// CHECK-LABEL: test_pssh1sadd_i16x4:
+// RV32:        pssh1sadd.dh
+// RV64:        pssh1sadd.h
+int16x4_t test_pssh1sadd_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pssh1sadd_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pssh1sadd_i32x2:
+// RV32:        pssh1sadd.dw
+// RV64:        pssh1sadd.w
+int32x2_t test_pssh1sadd_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pssh1sadd_i32x2(a, b);
+}
+
 // CHECK-LABEL: test_pmin_i8x4:
 // CHECK:       pmin.b
 int8x4_t test_pmin_i8x4(int8x4_t a, int8x4_t b) {
