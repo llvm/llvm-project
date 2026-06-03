@@ -61,10 +61,17 @@ health and smooth operation of the area.
 Elections and Composition
 -------------------------
 
+To be a *voting contributor* an individual must be a member of the LLVM GitHub
+Organization, and either have a public email address on their GitHub profile or
+have made a commit to the LLVM project using a non-private email address. The
+email address on the GitHub public profile or retrieved via commit metadata
+will be used for all election-related communication.
+
 Each *area team* will have an odd number of members with a minimum of three (3)
-members and a maximum of nine (9) elected by the voting contributors.
+members and a maximum of nine (9) elected by the *voting contributors*.
 Candidates for *area teams* must be a voting contributor and self-nominated. An
-individual cannot serve on two *area teams*.
+individual cannot serve on two *area teams*. Members of an *area team* are
+elected for 1 year terms.
 
 An *area team* with less than nine members may increase its size up to nine
 members with a majority vote. The *area team* may then appoint members to fill
@@ -79,7 +86,33 @@ join the *area team* in future terms. In this capacity, the *area team* should
 keep a focus on growth and development of contributors in the community, and
 the community values promoting diversity and inclusivity.
 
-Members of an *area team* are elected for 1 year terms.
+Elections for area teams occur in January of each year. A two week long
+nomination period begins the second Monday in January. During the nomination
+period any *voting contributor* can nominate themselves or another *voting
+contributor* to run for any one area team. No individual can run for more than
+one area team in a single election. An individual nominated for more than one
+area team will be responsible for choosing which team they want to run for.
+Nominations will be recorded publicly for community visibility. Unsuccessful
+results in an election do not impact nomination eligibility in subsequent
+elections.
+
+Voting begins the fourth Monday in January and continues for 2 weeks. Election
+results will be announced no later than two days after voting closes. The term
+of the newly elected area team begins the first Monday in March. Each area team
+will meet during the first week in March to elect from themselves the team
+secretary and chair to re-constitute the project council.
+
+Vacancies
+---------
+
+A member of an *area team* can resign at any time. As life can sometimes happen
+unexpectedly, a member of an *area team* may be unable to fulfill their duties or
+resign. In that case, a majority of the remaining *area team* may vote to declare
+the member removed in absentia after a 90-day absence.
+
+If someone resigns or is otherwise removed from an *area team*, the remaining
+members of the *area team* may appoint a replacement to serve the remainder of
+the term through any process they choose.
 
 Active Area Teams
 -----------------
@@ -90,6 +123,7 @@ There are currently four *area teams*:
 * **Clang** - Covering ``clang`` source area.
 * **MLIR** - Covering ``mlir`` source area.
 * **Infrastructure** - Covering project-wide automation and other infrastructure.
+
 
 Project Council
 ===============
