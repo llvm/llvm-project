@@ -2160,11 +2160,27 @@ Register LegalizerHelper::coerceToScalar(Register Val) {
   return MIRBuilder.buildBitcast(NewTy, NewVal).getReg(0);
 }
 
+// Extract just the fast-math flags from Flags
+static uint32_t extractFMF(uint32_t Flags) {
+  return Flags &
+         (MachineInstr::MIFlag::FmNoNans | MachineInstr::MIFlag::FmNoInfs |
+          MachineInstr::MIFlag::FmNsz | MachineInstr::MIFlag::FmArcp |
+          MachineInstr::MIFlag::FmContract | MachineInstr::MIFlag::FmAfn |
+          MachineInstr::MIFlag::FmReassoc);
+}
+
 void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
-                                     unsigned OpIdx, unsigned ExtOpcode,
-                                     unsigned Flags) {
+                                     unsigned OpIdx, unsigned ExtOpcode) {
   MachineOperand &MO = MI.getOperand(OpIdx);
-  auto ExtB = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MO}, Flags);
+  auto ExtB = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MO});
+  MO.setReg(ExtB.getReg(0));
+}
+
+void LegalizerHelper::widenScalarSrcUsingFPExt(MachineInstr &MI, LLT WideTy,
+                                               unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  auto ExtB = MIRBuilder.buildInstr(TargetOpcode::G_FPEXT, {WideTy}, {MO},
+                                    extractFMF(MI.getFlags()));
   MO.setReg(ExtB.getReg(0));
 }
 
@@ -2176,12 +2192,21 @@ void LegalizerHelper::narrowScalarSrc(MachineInstr &MI, LLT NarrowTy,
 }
 
 void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
-                                     unsigned OpIdx, unsigned TruncOpcode,
-                                     unsigned Flags) {
+                                     unsigned OpIdx, unsigned TruncOpcode) {
   MachineOperand &MO = MI.getOperand(OpIdx);
   Register DstExt = MRI.createGenericVirtualRegister(WideTy);
   MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
-  MIRBuilder.buildInstr(TruncOpcode, {MO}, {DstExt}, Flags);
+  MIRBuilder.buildInstr(TruncOpcode, {MO}, {DstExt});
+  MO.setReg(DstExt);
+}
+
+void LegalizerHelper::widenScalarDstUsingFPTrunc(MachineInstr &MI, LLT WideTy,
+                                                 unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  Register DstExt = MRI.createGenericVirtualRegister(WideTy);
+  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+  MIRBuilder.buildInstr(TargetOpcode::G_FPTRUNC, {MO}, {DstExt},
+                        extractFMF(MI.getFlags()));
   MO.setReg(DstExt);
 }
 
@@ -3112,7 +3137,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       return UnableToLegalize;
 
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
+    widenScalarSrcUsingFPExt(MI, WideTy, 1);
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_FPTOSI:
@@ -3125,7 +3150,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3133,7 +3158,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     else
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
 
@@ -3143,7 +3168,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0)
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     else
       widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ZEXT);
 
@@ -3186,7 +3211,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       }
       MIRBuilder.buildTrunc(OldDst, NewDst);
     } else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3281,8 +3306,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else {
-      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT, MI.getFlags());
-      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_FPEXT, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 2);
+      widenScalarSrcUsingFPExt(MI, WideTy, 3);
     }
     Observer.changedInstr(MI);
     return Legalized;
@@ -3435,18 +3460,18 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I)
-      widenScalarSrc(MI, WideTy, I, TargetOpcode::G_FPEXT, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, I);
 
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   case TargetOpcode::G_FMODF: {
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT, MI.getFlags());
+    widenScalarSrcUsingFPExt(MI, WideTy, 2);
 
-    widenScalarDst(MI, WideTy, 1, TargetOpcode::G_FPTRUNC, MI.getFlags());
+    widenScalarDstUsingFPTrunc(MI, WideTy, 1);
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -3458,8 +3483,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
         return UnableToLegalize;
 
       Observer.changingInstr(MI);
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
       Observer.changedInstr(MI);
       return Legalized;
     }
@@ -3479,8 +3504,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changingInstr(MI);
 
     if (TypeIdx == 0) {
-      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT, MI.getFlags());
-      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 2);
+      widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     } else {
       widenScalarDst(MI, WideTy, 1);
     }
@@ -3495,7 +3520,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx == 0)
       widenScalarDst(MI, WideTy);
     else
-      widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
+      widenScalarSrcUsingFPExt(MI, WideTy, 1);
 
     Observer.changedInstr(MI);
     return Legalized;
@@ -3572,8 +3597,8 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Register VecReg = MI.getOperand(1).getReg();
     LLT VecTy = MRI.getType(VecReg);
     LLT WideVecTy = VecTy.changeElementType(WideTy);
-    widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_FPEXT, MI.getFlags());
-    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC, MI.getFlags());
+    widenScalarSrcUsingFPExt(MI, WideVecTy, 1);
+    widenScalarDstUsingFPTrunc(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
   }
