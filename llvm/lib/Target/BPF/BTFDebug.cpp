@@ -119,7 +119,7 @@ static bool sourceArgMatchesIRType(const DIType *SourceTy, Type *IRTy) {
 /// registers to stack frame objects during the entry-block walk (using
 /// MachineMemOperands to identify the target frame index), then match them
 /// against VariableDbgInfo entries after the scan.
-static SmallDenseMap<uint32_t, Register>
+static SmallVector<std::pair<uint32_t, Register>, 8>
 collectNocallEntryArgRegs(const MachineFunction &MF) {
   SmallDenseMap<uint32_t, Register> EntryRegMap;
   const DISubprogram *SP = MF.getFunction().getSubprogram();
@@ -203,7 +203,10 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
       EntryRegMap[Arg] = It->second;
   }
 
-  return EntryRegMap;
+  SmallVector<std::pair<uint32_t, Register>, 8> AliveArgs(EntryRegMap.begin(),
+                                                          EntryRegMap.end());
+  llvm::sort(AliveArgs, llvm::less_first());
+  return AliveArgs;
 }
 
 /// Check whether the optimized IR signature matches the surviving source
@@ -212,19 +215,18 @@ collectNocallEntryArgRegs(const MachineFunction &MF) {
 /// BPF register order (R1..R5) for register args.
 static bool canUseNocallOptimizedSignature(
     const MachineFunction &MF, DITypeArray Elements,
-    ArrayRef<uint32_t> SortedAlive,
-    const SmallDenseMap<uint32_t, Register> &EntryRegMap,
+    ArrayRef<std::pair<uint32_t, Register>> AliveArgs,
     const TargetRegisterInfo &TRI) {
-  if (MF.getFunction().arg_size() != SortedAlive.size()) {
+  if (MF.getFunction().arg_size() != AliveArgs.size()) {
     LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": IR arg count ("
                       << MF.getFunction().arg_size() << ") != alive arg count ("
-                      << SortedAlive.size() << ")\n");
+                      << AliveArgs.size() << ")\n");
     return false;
   }
 
   auto ArgIt = MF.getFunction().arg_begin();
-  for (unsigned I = 0, N = SortedAlive.size(); I < N; ++I, ++ArgIt) {
-    uint32_t ArgNo = SortedAlive[I];
+  for (unsigned I = 0, N = AliveArgs.size(); I < N; ++I, ++ArgIt) {
+    auto [ArgNo, Reg] = AliveArgs[I];
     if (!sourceArgMatchesIRType(Elements[ArgNo], ArgIt->getType())) {
       LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName()
                         << ": type mismatch for source arg " << ArgNo
@@ -235,10 +237,7 @@ static bool canUseNocallOptimizedSignature(
     if (I >= std::size(CC_BPF64_ArgRegs))
       continue;
 
-    auto It = EntryRegMap.find(ArgNo);
-    assert(It != EntryRegMap.end() &&
-           "register arg must have entry-block DBG_VALUE");
-    int DwarfReg = TRI.getDwarfRegNum(It->second, false);
+    int DwarfReg = TRI.getDwarfRegNum(Reg, false);
     if (DwarfReg != static_cast<int>(I + 1)) {
       LLVM_DEBUG(dbgs() << "BTF skip " << MF.getName() << ": arg " << ArgNo
                         << " in DWARF reg " << DwarfReg << ", expected "
@@ -1590,30 +1589,28 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
     const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
     DITypeArray Elements = SP->getType()->getTypeArray();
 
-    SmallDenseMap<uint32_t, Register> EntryRegMap =
+    SmallVector<std::pair<uint32_t, Register>, 8> AliveArgs =
         collectNocallEntryArgRegs(*MF);
 
-    SmallVector<uint32_t, 8> SortedAlive;
-    for (const auto &[ArgNo, Reg] : EntryRegMap)
-      SortedAlive.push_back(ArgNo);
-    llvm::sort(SortedAlive);
-
-    UseFilteredParams = canUseNocallOptimizedSignature(
-        *MF, Elements, SortedAlive, EntryRegMap, *TRI);
+    UseFilteredParams =
+        canUseNocallOptimizedSignature(*MF, Elements, AliveArgs, *TRI);
 
     if (UseFilteredParams) {
+      SmallVector<uint32_t, 8> AliveParamIndices;
       SmallDenseMap<uint32_t, uint32_t> ArgIndexMap;
-      for (uint32_t I = 0; I < SortedAlive.size(); ++I)
-        ArgIndexMap[SortedAlive[I]] = I;
+      for (auto [I, ArgReg] : llvm::enumerate(AliveArgs)) {
+        AliveParamIndices.push_back(ArgReg.first);
+        ArgIndexMap[ArgReg.first] = I;
+      }
 
       if (!VoidReturn)
         visitTypeEntry(Elements[0]);
-      for (uint32_t ArgNo : SortedAlive)
+      for (uint32_t ArgNo : AliveParamIndices)
         visitTypeEntry(Elements[ArgNo]);
 
       auto TypeEntry = std::make_unique<BTFTypeFuncProto>(
-          SP->getType(), SortedAlive.size(), FuncArgNames, true, SortedAlive,
-          VoidReturn);
+          SP->getType(), AliveParamIndices.size(), FuncArgNames, true,
+          AliveParamIndices, VoidReturn);
       ProtoTypeId = addType(std::move(TypeEntry));
       FuncTypeId = processDISubprogram(SP, ProtoTypeId, Scope, &ArgIndexMap);
     }
