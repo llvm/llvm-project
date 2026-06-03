@@ -2207,6 +2207,34 @@ public:
 };
 } // namespace
 
+// Helper function to look through the statement and return the special marked
+// `omp tile` guard `if`, or nullptr if this is not that shape.
+static const IfStmt *getOMPTileBodyGuardIf(const Stmt *S) {
+  while (S) {
+    if (const auto *AS = dyn_cast<AttributedStmt>(S)) {
+      bool IsMarker = llvm::any_of(AS->getAttrs(), [](const Attr *A) {
+        return isa<OMPInvariantPredicateBoundAttr>(A);
+      });
+      if (!IsMarker) {
+        S = AS->getSubStmt();
+        continue;
+      }
+      const auto *If = dyn_cast<IfStmt>(AS->getSubStmt());
+      if (!If || If->getElse())
+        return nullptr;
+      return If;
+    }
+    if (const auto *CS = dyn_cast<CompoundStmt>(S)) {
+      if (CS->size() != 1)
+        return nullptr;
+      S = CS->body_back();
+      continue;
+    }
+    return nullptr;
+  }
+  return nullptr;
+}
+
 static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
                      int MaxLevel, int Level = 0) {
   assert(Level < MaxLevel && "Too deep lookup during loop body codegen.");
@@ -2220,6 +2248,23 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     CodeGenFunction::LexicalScope Scope(CGF, S->getSourceRange());
     for (const Stmt *CurStmt : CS->body())
       emitBody(CGF, CurStmt, NextLoop, MaxLevel, Level);
+    return;
+  }
+
+  // If this is the marked `omp tile` guard, emit its predicate as a runtime
+  // body guard and recurse into `Then` so consumed loops are still walked.
+  if (const IfStmt *Guard = getOMPTileBodyGuardIf(S)) {
+    assert(!Guard->getInit() && !Guard->getConditionVariable() &&
+           "omp tile body-guard must be a plain `if (P) Then`");
+    llvm::BasicBlock *ThenBlock = CGF.createBasicBlock("omp_tile.pred.then");
+    llvm::BasicBlock *EndBlock = CGF.createBasicBlock("omp_tile.pred.end");
+    CGF.EmitBranchOnBoolExpr(
+        Guard->getCond(), ThenBlock, EndBlock, /*TrueCount=*/0,
+        Stmt::getLikelihood(Guard->getThen(), Guard->getElse()));
+    CGF.EmitBlock(ThenBlock);
+    emitBody(CGF, Guard->getThen(), NextLoop, MaxLevel, Level);
+    CGF.EmitBranch(EndBlock);
+    CGF.EmitBlock(EndBlock);
     return;
   }
   if (SimplifiedS == NextLoop) {

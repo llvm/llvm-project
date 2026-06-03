@@ -1261,9 +1261,35 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
     ConvergenceTokenStack.pop_back();
 }
 
+// Helper function to find and return the omp-tile body-guard marker on the
+// for-body's last item.
+static std::pair<const AttributedStmt *, const IfStmt *>
+findOMPTileBodyGuard(const Stmt *Body) {
+  const auto *CS = dyn_cast_or_null<CompoundStmt>(Body);
+  if (!CS || CS->body().empty())
+    return {nullptr, nullptr};
+  const auto *AS = dyn_cast<AttributedStmt>(CS->body_back());
+  if (!AS)
+    return {nullptr, nullptr};
+  bool IsMarker = false;
+  for (const Attr *A : AS->getAttrs()) {
+    if (!isa<OMPInvariantPredicateBoundAttr>(A))
+      continue;
+    IsMarker = true;
+    break;
+  }
+  if (!IsMarker)
+    return {nullptr, nullptr};
+  const auto *If = dyn_cast<IfStmt>(AS->getSubStmt());
+  if (!If || If->getElse())
+    return {nullptr, nullptr};
+  return {AS, If};
+}
+
 void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
   JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
+  const auto [MarkerAS, MarkerIf] = findOMPTileBodyGuard(S.getBody());
 
   std::optional<LexicalScope> ForScope;
   if (getLangOpts().C99 || getLangOpts().CPlusPlus)
@@ -1331,6 +1357,14 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // compares unequal to 0.  The condition must be a scalar type.
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
 
+    // If the for-body has a marker, evaluate the predicate and AND it into the
+    // loop condition.
+    if (MarkerIf) {
+      llvm::Value *PredVal = EvaluateExprAsBool(MarkerIf->getCond());
+      BoolCondVal = Builder.CreateAnd(BoolCondVal, PredVal,
+                                      "omp_tile.invariant_pred_bound");
+    }
+
     MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
     llvm::MDNode *Weights =
@@ -1367,7 +1401,19 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
-    EmitStmt(S.getBody());
+    if (MarkerAS) {
+      // If the for-body has a marker, walk the body and emit the then-block of
+      // the marker's predicate.
+      const auto *CS = cast<CompoundStmt>(S.getBody());
+      for (const Stmt *Sub : CS->body()) {
+        if (Sub == MarkerAS)
+          EmitStmt(MarkerIf->getThen());
+        else
+          EmitStmt(Sub);
+      }
+    } else {
+      EmitStmt(S.getBody());
+    }
   }
 
   // The last block in the loop's body (which unconditionally branches to the
