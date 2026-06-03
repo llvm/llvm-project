@@ -1290,25 +1290,27 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    [[MUL279:%.*]] = mul i32 [[TMP144]], [[TMP145]]
 // CHECK1-NEXT:    [[ADD280:%.*]] = add i32 [[TMP143]], [[MUL279]]
 // CHECK1-NEXT:    store i32 [[ADD280]], ptr [[K]], align 4
-// CHECK1-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTTILE_0_IV_K]], align 4
-// CHECK1-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
-// CHECK1-NEXT:    [[ADD281:%.*]] = add i32 [[TMP147]], 1
-// CHECK1-NEXT:    [[CMP282:%.*]] = icmp ult i32 [[TMP146]], [[ADD281]]
-// CHECK1-NEXT:    br i1 [[CMP282]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_K37]], align 4
+// CHECK1-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_K38]], align 4
+// CHECK1-NEXT:    [[ADD281:%.*]] = add i32 [[TMP146]], [[TMP147]]
+// CHECK1-NEXT:    [[TMP148:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
+// CHECK1-NEXT:    [[ADD282:%.*]] = add i32 [[TMP148]], 1
+// CHECK1-NEXT:    [[CMP283:%.*]] = icmp ult i32 [[ADD281]], [[ADD282]]
+// CHECK1-NEXT:    br i1 [[CMP283]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP148:%.*]] = load i32, ptr [[I35]], align 4
-// CHECK1-NEXT:    [[TMP149:%.*]] = load i32, ptr [[J36]], align 4
-// CHECK1-NEXT:    [[TMP150:%.*]] = load i32, ptr [[K]], align 4
-// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP148]], i32 noundef [[TMP149]], i32 noundef [[TMP150]])
+// CHECK1-NEXT:    [[TMP149:%.*]] = load i32, ptr [[I35]], align 4
+// CHECK1-NEXT:    [[TMP150:%.*]] = load i32, ptr [[J36]], align 4
+// CHECK1-NEXT:    [[TMP151:%.*]] = load i32, ptr [[K]], align 4
+// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP149]], i32 noundef [[TMP150]], i32 noundef [[TMP151]])
 // CHECK1-NEXT:    br label [[IF_END]]
 // CHECK1:       if.end:
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
-// CHECK1-NEXT:    [[TMP151:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[ADD283:%.*]] = add nsw i64 [[TMP151]], 1
-// CHECK1-NEXT:    store i64 [[ADD283]], ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP152:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[ADD284:%.*]] = add nsw i64 [[TMP152]], 1
+// CHECK1-NEXT:    store i64 [[ADD284]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -1821,25 +1823,27 @@ extern "C" void foo10() {
 // CHECK1-NEXT:    [[MUL279:%.*]] = mul i32 [[TMP144]], [[TMP145]]
 // CHECK1-NEXT:    [[ADD280:%.*]] = add i32 [[TMP143]], [[MUL279]]
 // CHECK1-NEXT:    store i32 [[ADD280]], ptr [[K]], align 4
-// CHECK1-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTTILE_0_IV_K]], align 4
-// CHECK1-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
-// CHECK1-NEXT:    [[ADD281:%.*]] = add i32 [[TMP147]], 1
-// CHECK1-NEXT:    [[CMP282:%.*]] = icmp ult i32 [[TMP146]], [[ADD281]]
-// CHECK1-NEXT:    br i1 [[CMP282]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK1-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_K37]], align 4
+// CHECK1-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_K38]], align 4
+// CHECK1-NEXT:    [[ADD281:%.*]] = add i32 [[TMP146]], [[TMP147]]
+// CHECK1-NEXT:    [[TMP148:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
+// CHECK1-NEXT:    [[ADD282:%.*]] = add i32 [[TMP148]], 1
+// CHECK1-NEXT:    [[CMP283:%.*]] = icmp ult i32 [[ADD281]], [[ADD282]]
+// CHECK1-NEXT:    br i1 [[CMP283]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK1:       if.then:
-// CHECK1-NEXT:    [[TMP148:%.*]] = load i32, ptr [[I35]], align 4
-// CHECK1-NEXT:    [[TMP149:%.*]] = load i32, ptr [[J36]], align 4
-// CHECK1-NEXT:    [[TMP150:%.*]] = load i32, ptr [[K]], align 4
-// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP148]], i32 noundef [[TMP149]], i32 noundef [[TMP150]])
+// CHECK1-NEXT:    [[TMP149:%.*]] = load i32, ptr [[I35]], align 4
+// CHECK1-NEXT:    [[TMP150:%.*]] = load i32, ptr [[J36]], align 4
+// CHECK1-NEXT:    [[TMP151:%.*]] = load i32, ptr [[K]], align 4
+// CHECK1-NEXT:    call void (...) @body(i32 noundef [[TMP149]], i32 noundef [[TMP150]], i32 noundef [[TMP151]])
 // CHECK1-NEXT:    br label [[IF_END]]
 // CHECK1:       if.end:
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK1:       omp.inner.for.inc:
-// CHECK1-NEXT:    [[TMP151:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK1-NEXT:    [[ADD283:%.*]] = add nsw i64 [[TMP151]], 1
-// CHECK1-NEXT:    store i64 [[ADD283]], ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[TMP152:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK1-NEXT:    [[ADD284:%.*]] = add nsw i64 [[TMP152]], 1
+// CHECK1-NEXT:    store i64 [[ADD284]], ptr [[DOTOMP_IV]], align 8
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -4047,25 +4051,27 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    [[MUL279:%.*]] = mul i32 [[TMP144]], [[TMP145]]
 // CHECK2-NEXT:    [[ADD280:%.*]] = add i32 [[TMP143]], [[MUL279]]
 // CHECK2-NEXT:    store i32 [[ADD280]], ptr [[K]], align 4
-// CHECK2-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTTILE_0_IV_K]], align 4
-// CHECK2-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
-// CHECK2-NEXT:    [[ADD281:%.*]] = add i32 [[TMP147]], 1
-// CHECK2-NEXT:    [[CMP282:%.*]] = icmp ult i32 [[TMP146]], [[ADD281]]
-// CHECK2-NEXT:    br i1 [[CMP282]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_K37]], align 4
+// CHECK2-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_K38]], align 4
+// CHECK2-NEXT:    [[ADD281:%.*]] = add i32 [[TMP146]], [[TMP147]]
+// CHECK2-NEXT:    [[TMP148:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
+// CHECK2-NEXT:    [[ADD282:%.*]] = add i32 [[TMP148]], 1
+// CHECK2-NEXT:    [[CMP283:%.*]] = icmp ult i32 [[ADD281]], [[ADD282]]
+// CHECK2-NEXT:    br i1 [[CMP283]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP148:%.*]] = load i32, ptr [[I35]], align 4
-// CHECK2-NEXT:    [[TMP149:%.*]] = load i32, ptr [[J36]], align 4
-// CHECK2-NEXT:    [[TMP150:%.*]] = load i32, ptr [[K]], align 4
-// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP148]], i32 noundef [[TMP149]], i32 noundef [[TMP150]])
+// CHECK2-NEXT:    [[TMP149:%.*]] = load i32, ptr [[I35]], align 4
+// CHECK2-NEXT:    [[TMP150:%.*]] = load i32, ptr [[J36]], align 4
+// CHECK2-NEXT:    [[TMP151:%.*]] = load i32, ptr [[K]], align 4
+// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP149]], i32 noundef [[TMP150]], i32 noundef [[TMP151]])
 // CHECK2-NEXT:    br label [[IF_END]]
 // CHECK2:       if.end:
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
-// CHECK2-NEXT:    [[TMP151:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[ADD283:%.*]] = add nsw i64 [[TMP151]], 1
-// CHECK2-NEXT:    store i64 [[ADD283]], ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP152:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[ADD284:%.*]] = add nsw i64 [[TMP152]], 1
+// CHECK2-NEXT:    store i64 [[ADD284]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
@@ -4578,25 +4584,27 @@ extern "C" void foo10() {
 // CHECK2-NEXT:    [[MUL279:%.*]] = mul i32 [[TMP144]], [[TMP145]]
 // CHECK2-NEXT:    [[ADD280:%.*]] = add i32 [[TMP143]], [[MUL279]]
 // CHECK2-NEXT:    store i32 [[ADD280]], ptr [[K]], align 4
-// CHECK2-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTTILE_0_IV_K]], align 4
-// CHECK2-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
-// CHECK2-NEXT:    [[ADD281:%.*]] = add i32 [[TMP147]], 1
-// CHECK2-NEXT:    [[CMP282:%.*]] = icmp ult i32 [[TMP146]], [[ADD281]]
-// CHECK2-NEXT:    br i1 [[CMP282]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+// CHECK2-NEXT:    [[TMP146:%.*]] = load i32, ptr [[DOTFLOOR_0_IV_K37]], align 4
+// CHECK2-NEXT:    [[TMP147:%.*]] = load i32, ptr [[DOTTILE_CNT_0_IV_K38]], align 4
+// CHECK2-NEXT:    [[ADD281:%.*]] = add i32 [[TMP146]], [[TMP147]]
+// CHECK2-NEXT:    [[TMP148:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_11]], align 4
+// CHECK2-NEXT:    [[ADD282:%.*]] = add i32 [[TMP148]], 1
+// CHECK2-NEXT:    [[CMP283:%.*]] = icmp ult i32 [[ADD281]], [[ADD282]]
+// CHECK2-NEXT:    br i1 [[CMP283]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK2:       if.then:
-// CHECK2-NEXT:    [[TMP148:%.*]] = load i32, ptr [[I35]], align 4
-// CHECK2-NEXT:    [[TMP149:%.*]] = load i32, ptr [[J36]], align 4
-// CHECK2-NEXT:    [[TMP150:%.*]] = load i32, ptr [[K]], align 4
-// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP148]], i32 noundef [[TMP149]], i32 noundef [[TMP150]])
+// CHECK2-NEXT:    [[TMP149:%.*]] = load i32, ptr [[I35]], align 4
+// CHECK2-NEXT:    [[TMP150:%.*]] = load i32, ptr [[J36]], align 4
+// CHECK2-NEXT:    [[TMP151:%.*]] = load i32, ptr [[K]], align 4
+// CHECK2-NEXT:    call void (...) @body(i32 noundef [[TMP149]], i32 noundef [[TMP150]], i32 noundef [[TMP151]])
 // CHECK2-NEXT:    br label [[IF_END]]
 // CHECK2:       if.end:
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
 // CHECK2:       omp.inner.for.inc:
-// CHECK2-NEXT:    [[TMP151:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
-// CHECK2-NEXT:    [[ADD283:%.*]] = add nsw i64 [[TMP151]], 1
-// CHECK2-NEXT:    store i64 [[ADD283]], ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[TMP152:%.*]] = load i64, ptr [[DOTOMP_IV]], align 8
+// CHECK2-NEXT:    [[ADD284:%.*]] = add nsw i64 [[TMP152]], 1
+// CHECK2-NEXT:    store i64 [[ADD284]], ptr [[DOTOMP_IV]], align 8
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_COND]]
 // CHECK2:       omp.inner.for.end:
 // CHECK2-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]

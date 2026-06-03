@@ -85,6 +85,8 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    br i1 [[OMP_FLOOR0_CMP]], label [[OMP_FLOOR0_BODY:%.*]], label [[OMP_FLOOR0_EXIT:%.*]]
 // CHECK:       omp_floor0.body:
 // CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[OMP_FLOOR0_IV]], [[TMP8]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], [[TMP3]]
+// CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i32 [[TMP4]], i32 4
 // CHECK-NEXT:    br label [[OMP_TILE0_PREHEADER:%.*]]
 // CHECK:       omp_tile0.preheader:
 // CHECK-NEXT:    br label [[OMP_TILE0_HEADER:%.*]]
@@ -92,57 +94,54 @@ void unroll_partial_heuristic_constant_for(float *a, float *b, float *c, float *
 // CHECK-NEXT:    [[OMP_TILE0_IV:%.*]] = phi i32 [ 0, [[OMP_TILE0_PREHEADER]] ], [ [[OMP_TILE0_NEXT:%.*]], [[OMP_TILE0_INC:%.*]] ]
 // CHECK-NEXT:    br label [[OMP_TILE0_COND:%.*]]
 // CHECK:       omp_tile0.cond:
-// CHECK-NEXT:    [[OMP_TILE0_CMP:%.*]] = icmp ult i32 [[OMP_TILE0_IV]], 4
+// CHECK-NEXT:    [[OMP_TILE0_CMP:%.*]] = icmp ult i32 [[OMP_TILE0_IV]], [[TMP14]]
 // CHECK-NEXT:    br i1 [[OMP_TILE0_CMP]], label [[OMP_TILE0_BODY:%.*]], label [[OMP_TILE0_EXIT:%.*]]
 // CHECK:       omp_tile0.body:
-// CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i32 4, [[TMP12]]
-// CHECK-NEXT:    [[TMP14:%.*]] = add nuw i32 [[TMP13]], [[OMP_TILE0_IV]]
-// CHECK-NEXT:    [[OMP_TILE0_INBOUNDS:%.*]] = icmp ult i32 [[TMP14]], [[DOTCOUNT]]
-// CHECK-NEXT:    br i1 [[OMP_TILE0_INBOUNDS]], label [[OMP_LOOP_BODY:%.*]], label [[OMP_TILE_BODY_MERGE:%.*]]
+// CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i32 4, [[TMP12]]
+// CHECK-NEXT:    [[TMP16:%.*]] = add nuw i32 [[TMP15]], [[OMP_TILE0_IV]]
+// CHECK-NEXT:    br label [[OMP_LOOP_BODY:%.*]]
 // CHECK:       omp_loop.body:
-// CHECK-NEXT:    call void @__captured_stmt.1(ptr [[I]], i32 [[TMP14]], ptr [[AGG_CAPTURED1]])
-// CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[B_ADDR]], align 8
-// CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP16]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i64 [[IDXPROM]]
-// CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP17]] to double
+// CHECK-NEXT:    call void @__captured_stmt.1(ptr [[I]], i32 [[TMP16]], ptr [[AGG_CAPTURED1]])
+// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP18]] to i64
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[TMP19]] to double
 // CHECK-NEXT:    [[CALL:%.*]] = call double @sind(double noundef [[CONV]])
-// CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM2:%.*]] = sext i32 [[TMP19]] to i64
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i64 [[IDXPROM2]]
-// CHECK-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
-// CHECK-NEXT:    [[CONV4:%.*]] = fpext float [[TMP20]] to double
+// CHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[C_ADDR]], align 8
+// CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM2:%.*]] = sext i32 [[TMP21]] to i64
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i64 [[IDXPROM2]]
+// CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
+// CHECK-NEXT:    [[CONV4:%.*]] = fpext float [[TMP22]] to double
 // CHECK-NEXT:    [[MUL:%.*]] = fmul double [[CALL]], [[CONV4]]
-// CHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP22]] to i64
-// CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[IDXPROM5]]
-// CHECK-NEXT:    [[TMP23:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
-// CHECK-NEXT:    [[CONV7:%.*]] = fpext float [[TMP23]] to double
+// CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[TMP24]] to i64
+// CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i64 [[IDXPROM5]]
+// CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
+// CHECK-NEXT:    [[CONV7:%.*]] = fpext float [[TMP25]] to double
 // CHECK-NEXT:    [[MUL8:%.*]] = fmul double [[MUL]], [[CONV7]]
-// CHECK-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[E_ADDR]], align 8
-// CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM9:%.*]] = sext i32 [[TMP25]] to i64
-// CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[TMP24]], i64 [[IDXPROM9]]
-// CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[ARRAYIDX10]], align 4
-// CHECK-NEXT:    [[CONV11:%.*]] = fpext float [[TMP26]] to double
+// CHECK-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[E_ADDR]], align 8
+// CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM9:%.*]] = sext i32 [[TMP27]] to i64
+// CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 [[IDXPROM9]]
+// CHECK-NEXT:    [[TMP28:%.*]] = load float, ptr [[ARRAYIDX10]], align 4
+// CHECK-NEXT:    [[CONV11:%.*]] = fpext float [[TMP28]] to double
 // CHECK-NEXT:    [[MUL12:%.*]] = fmul double [[MUL8]], [[CONV11]]
-// CHECK-NEXT:    [[TMP27:%.*]] = load float, ptr [[OFFSET_ADDR]], align 4
-// CHECK-NEXT:    [[CONV13:%.*]] = fpext float [[TMP27]] to double
+// CHECK-NEXT:    [[TMP29:%.*]] = load float, ptr [[OFFSET_ADDR]], align 4
+// CHECK-NEXT:    [[CONV13:%.*]] = fpext float [[TMP29]] to double
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[MUL12]], [[CONV13]]
-// CHECK-NEXT:    [[TMP28:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[I]], align 4
-// CHECK-NEXT:    [[IDXPROM14:%.*]] = sext i32 [[TMP29]] to i64
-// CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds float, ptr [[TMP28]], i64 [[IDXPROM14]]
-// CHECK-NEXT:    [[TMP30:%.*]] = load float, ptr [[ARRAYIDX15]], align 4
-// CHECK-NEXT:    [[CONV16:%.*]] = fpext float [[TMP30]] to double
+// CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-NEXT:    [[TMP31:%.*]] = load i32, ptr [[I]], align 4
+// CHECK-NEXT:    [[IDXPROM14:%.*]] = sext i32 [[TMP31]] to i64
+// CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds float, ptr [[TMP30]], i64 [[IDXPROM14]]
+// CHECK-NEXT:    [[TMP32:%.*]] = load float, ptr [[ARRAYIDX15]], align 4
+// CHECK-NEXT:    [[CONV16:%.*]] = fpext float [[TMP32]] to double
 // CHECK-NEXT:    [[ADD17:%.*]] = fadd double [[CONV16]], [[ADD]]
 // CHECK-NEXT:    [[CONV18:%.*]] = fptrunc double [[ADD17]] to float
 // CHECK-NEXT:    store float [[CONV18]], ptr [[ARRAYIDX15]], align 4
-// CHECK-NEXT:    br label [[OMP_TILE_BODY_MERGE]]
-// CHECK:       omp_tile.body.merge:
 // CHECK-NEXT:    br label [[OMP_TILE0_INC]]
 // CHECK:       omp_tile0.inc:
 // CHECK-NEXT:    [[OMP_TILE0_NEXT]] = add nuw i32 [[OMP_TILE0_IV]], 1
