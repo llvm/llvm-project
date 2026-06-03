@@ -8667,9 +8667,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
       assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected scalar type");
       EVT SveVT = VT == MVT::i64 ? MVT::nxv2i64 : MVT::nxv4i32;
       SDValue Z0 =
-          DAG.getInsertVectorElt(DL, DAG.getUNDEF(SveVT), Op.getOperand(0), 0);
+          DAG.getInsertVectorElt(DL, DAG.getPOISON(SveVT), Op.getOperand(0), 0);
       SDValue Z1 =
-          DAG.getInsertVectorElt(DL, DAG.getUNDEF(SveVT), Op.getOperand(1), 0);
+          DAG.getInsertVectorElt(DL, DAG.getPOISON(SveVT), Op.getOperand(1), 0);
       SDValue R =
           DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SveVT,
                       DAG.getTargetConstant(IntrID, DL, MVT::i32), Z0, Z1);
