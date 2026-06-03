@@ -734,9 +734,7 @@ namespace llvm {
 template<> struct DenseMapInfo<ObjectUnderConstruction> {
   using Base = DenseMapInfo<APValue::LValueBase>;
   static ObjectUnderConstruction getEmptyKey() {
-    return {Base::getEmptyKey(), {}}; }
-  static ObjectUnderConstruction getTombstoneKey() {
-    return {Base::getTombstoneKey(), {}};
+    return {Base::getEmptyKey(), {}};
   }
   static unsigned getHashValue(const ObjectUnderConstruction &Object) {
     return hash_value(Object);
@@ -10243,7 +10241,7 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
@@ -15026,6 +15024,7 @@ namespace {
                                          ArrayRef<Expr *> Args,
                                          const Expr *ArrayFiller,
                                          QualType AllocType = QualType());
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 } // end anonymous namespace
 
@@ -15411,6 +15410,13 @@ bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
                                          E->getArrayFiller());
+}
+
+bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 //===----------------------------------------------------------------------===//
@@ -17880,13 +17886,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(I, Val[P++]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::expandBits(Val, Msk), E);
   }
 
   case clang::X86::BI__builtin_ia32_pext_si:
@@ -17895,13 +17895,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(P++, Val[I]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::compressBits(Val, Msk), E);
   }
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256:

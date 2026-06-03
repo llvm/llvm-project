@@ -1188,7 +1188,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -1734,15 +1734,6 @@ def FeatureVendorXqci
                       FeatureVendorXqcilsm, FeatureVendorXqcisim,
                       FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
-// Rivos Extension(s)
-
-def FeatureVendorXRivosVizip
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
-def HasVendorXRivosVizip
-    : Predicate<"Subtarget->hasVendorXRivosVizip()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
-                         "'XRivosVizip' (Rivos Vector Register Zips)">;
-
 // Andes Extension(s)
 
 def FeatureVendorXAndesPerf
@@ -2131,4 +2122,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-
