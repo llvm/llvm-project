@@ -24,8 +24,8 @@
 #include <cctype>
 #include <cstddef>
 #include <cstring>
-#include <functional>
 #include <string_view>
+#include <type_traits>
 
 #include "kmp.h"
 
@@ -97,7 +97,9 @@ public:
 
   /// Count the number of characters in the string while the predicate returns
   /// true.
-  size_t count_while(std::function<bool(char)> predicate) const {
+  template <typename Fn> size_t count_while(const Fn &predicate) const {
+    static_assert(std::is_invocable_r_v<bool, Fn, char>,
+                  "predicate must be callable as bool(char)");
     size_t len = find_if_not(predicate);
     return len == npos ? length() : len;
   }
@@ -107,7 +109,9 @@ public:
   void drop_front(size_t n) { sv.remove_prefix(std::min(n, length())); }
 
   /// Drop characters from the string while the predicate returns true.
-  void drop_while(std::function<bool(char)> predicate) {
+  template <typename Fn> void drop_while(const Fn &predicate) {
+    static_assert(std::is_invocable_r_v<bool, Fn, char>,
+                  "predicate must be callable as bool(char)");
     drop_front(count_while(predicate));
   }
 
@@ -117,7 +121,9 @@ public:
   /// Return the index of the first character in the string for which the
   /// predicate returns true.
   /// Returns npos if no match is found.
-  size_t find_if(std::function<bool(char)> predicate) const {
+  template <typename Fn> size_t find_if(const Fn &predicate) const {
+    static_assert(std::is_invocable_r_v<bool, Fn, char>,
+                  "predicate must be callable as bool(char)");
     size_t i = 0;
     size_t len = length();
     while (i < len && !predicate(sv[i]))
@@ -128,7 +134,9 @@ public:
   /// Return the index of the first character in the string for which the
   /// predicate returns false.
   /// Returns npos if no match is found.
-  size_t find_if_not(std::function<bool(char)> predicate) const {
+  template <typename Fn> size_t find_if_not(const Fn &predicate) const {
+    static_assert(std::is_invocable_r_v<bool, Fn, char>,
+                  "predicate must be callable as bool(char)");
     return find_if([predicate](char c) { return !predicate(c); });
   }
 
@@ -145,7 +153,9 @@ public:
 
   /// Construct a new string with the longest prefix of the original string that
   /// satisfies the predicate. Doesn't modify the original string.
-  kmp_str_ref take_while(std::function<bool(char)> predicate) const {
+  template <typename Fn> kmp_str_ref take_while(const Fn &predicate) const {
+    static_assert(std::is_invocable_r_v<bool, Fn, char>,
+                  "predicate must be callable as bool(char)");
     return kmp_str_ref(sv.substr(0, count_while(predicate)));
   }
 
