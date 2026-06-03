@@ -532,16 +532,30 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     return false;
   }
 
-  llvm::SmallDenseMap<uint16_t, uint16_t, 8> mp = {
-      {AMDGPU::G_SMAX, AMDGPU::G_AMDGPU_SMAX3},
-      {AMDGPU::G_SMIN, AMDGPU::G_AMDGPU_SMIN3},
-      {AMDGPU::G_UMAX, AMDGPU::G_AMDGPU_UMAX3},
-      {AMDGPU::G_UMIN, AMDGPU::G_AMDGPU_UMIN3},
-      {AMDGPU::G_FMAXNUM, AMDGPU::G_AMDGPU_FMAX3},
-      {AMDGPU::G_FMAXNUM_IEEE, AMDGPU::G_AMDGPU_FMAX3},
-      {AMDGPU::G_FMINNUM, AMDGPU::G_AMDGPU_FMIN3},
-      {AMDGPU::G_FMINNUM_IEEE, AMDGPU::G_AMDGPU_FMIN3}};
-  MatchInfo = {mp.at(opc), R0, R1, R2};
+  auto getAMDGPUOp = [](unsigned Opc) -> unsigned {
+      switch (Opc) {
+      case AMDGPU::G_SMAX:
+        return AMDGPU::G_AMDGPU_SMAX3;
+      case AMDGPU::G_SMIN:
+        return AMDGPU::G_AMDGPU_SMIN3;
+      case AMDGPU::G_UMAX:
+        return AMDGPU::G_AMDGPU_UMAX3;
+      case AMDGPU::G_UMIN:
+        return AMDGPU::G_AMDGPU_UMIN3;
+      case AMDGPU::G_FMAXNUM:
+      case AMDGPU::G_FMAXNUM_IEEE:
+        return AMDGPU::G_AMDGPU_FMAX3;
+      case AMDGPU::G_FMINNUM:
+      case AMDGPU::G_FMINNUM_IEEE:
+        return AMDGPU::G_AMDGPU_FMIN3;
+      default:
+        return 0;
+      }
+  };
+  unsigned amdgpuOpc = getAMDGPUOp(opc);
+  if (!amdgpuOpc)
+    return false;
+  MatchInfo = {getAMDGPUOp(opc), R0, R1, R2};
   return true;
 }
 
