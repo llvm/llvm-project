@@ -229,7 +229,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
-      DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
+      DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)),
+      ContextProvider(Opts.ContextProvider) {
   if (Opts.AsyncThreadsCount != 0)
     IndexTasks.emplace();
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
@@ -1198,9 +1199,18 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
   // named modules. Mixing PCH and modules may cause different issues (incorrect
   // diagnostics, crashes) due to instability of such scenario support in the
   // clang.
-  Inputs.Opts.SkipPreambleBuild =
-      SkipPreambleBuild ||
-      (ModulesManager && ModulesManager->hasRequiredModules(File));
+  auto HasRequiredModules = [this, File]() {
+    if (!ModulesManager)
+      return false;
+    // Required modules check uses compile commands extraced from the
+    // compilation database.
+    // We use context provider here to make command mangler to use compile
+    // command adjustments from the config.
+    WithContext Ctx(ContextProvider ? ContextProvider(File)
+                                    : Context::current().clone());
+    return ModulesManager->hasRequiredModules(File);
+  };
+  Inputs.Opts.SkipPreambleBuild = SkipPreambleBuild || HasRequiredModules();
 }
 
 } // namespace clangd
