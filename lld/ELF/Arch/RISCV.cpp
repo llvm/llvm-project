@@ -1082,47 +1082,39 @@ RISCVCfiLpUnlabeledPLT::RISCVCfiLpUnlabeledPLT(Ctx &ctx) : RISCV(ctx) {
 }
 
 void RISCVCfiLpUnlabeledPLT::writePltHeader(uint8_t *buf) const {
-  // lpad 0
-  // 1: auipc t2, %pcrel_hi(.got.plt)
-  // sub t1, t1, t3
-  // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
-  // addi t1, t1, -pltHeaderSize-16; t1 = &.plt[i] - &.plt[0]
-  // addi t0, t2, %pcrel_lo(1b)
-  // srli t1, t1, (rv64?1:2); t1 = &.got.plt[i] - &.got.plt[0]
-  // l[wd] t0, Wordsize(t0); t0 = link_map
-  // jr t3
-  // nop
-  // nop
-  // nop
+  // 1:  auipc  t3, %pcrel_hi(.got.plt)
+  //     sub    t1, t1, t2
+  //     l[w|d] t2, %pcrel_lo(1b)(t3)
+  //     addi   t1, t1, -(hdr size + 16)
+  //     addi   t0, t3, %pcrel_lo(1b)
+  //     srli   t1, t1, log2(16/PTRSIZE)
+  //     l[w|d] t0, PTRSIZE(t0)
+  //     jr     t2
   const uint32_t offset =
       ctx.in.gotPlt->getVA() - (ctx.in.plt->getVA() + 4 /* offset for lpad */);
   const uint32_t load = ctx.arg.is64 ? LD : LW;
-  write32le(buf + 0, utype(AUIPC, 0, 0)); // lpad 0
-  write32le(buf + 4, utype(AUIPC, X_T2, hi20(offset)));
-  write32le(buf + 8, rtype(SUB, X_T1, X_T1, X_T3));
-  write32le(buf + 12, itype(load, X_T3, X_T2, lo12(offset)));
-  write32le(buf + 16, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 16));
-  write32le(buf + 20, itype(ADDI, X_T0, X_T2, lo12(offset)));
-  write32le(buf + 24, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
-  write32le(buf + 28, itype(load, X_T0, X_T0, ctx.arg.wordsize));
-  write32le(buf + 32, itype(JALR, 0, X_T3, 0));
-  write32le(buf + 36, itype(ADDI, 0, 0, 0)); // nop
-  write32le(buf + 40, itype(ADDI, 0, 0, 0)); // nop
-  write32le(buf + 44, itype(ADDI, 0, 0, 0)); // nop
+  write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
+  write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T2));
+  write32le(buf + 8, itype(load, X_T2, X_T3, lo12(offset)));
+  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 16));
+  write32le(buf + 16, itype(ADDI, X_T0, X_T3, lo12(offset)));
+  write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
+  write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.is64 ? 8 : 4));
+  write32le(buf + 28, itype(JALR, 0, X_T2, 0));
 }
 
 void RISCVCfiLpUnlabeledPLT::writePlt(uint8_t *buf, const Symbol &sym,
                                       uint64_t pltEntryAddr) const {
-  // lpad 0
-  // 1: auipc t3, %pcrel_hi(f@.got.plt)
-  // l[wd] t3, %pcrel_lo(1b)(t3)
-  // jalr t1, t3
+  //     lpad 0
+  // 1:  auipc   t2, %pcrel_hi(function@.got.plt)
+  //     l[w|d]  t2, %pcrel_lo(1b)(t2)
+  //     jalr    t1, t2
   const uint32_t offset =
       sym.getGotPltVA(ctx) - (pltEntryAddr + 4 /* offset for lpad */);
   write32le(buf + 0, utype(AUIPC, 0, 0)); // lpad 0
-  write32le(buf + 4, utype(AUIPC, X_T3, hi20(offset)));
-  write32le(buf + 8, itype(ctx.arg.is64 ? LD : LW, X_T3, X_T3, lo12(offset)));
-  write32le(buf + 12, itype(JALR, X_T1, X_T3, 0));
+  write32le(buf + 4, utype(AUIPC, X_T2, hi20(offset)));
+  write32le(buf + 8, itype(ctx.arg.is64 ? LD : LW, X_T2, X_T2, lo12(offset)));
+  write32le(buf + 12, itype(JALR, X_T1, X_T2, 0));
 }
 
 namespace {

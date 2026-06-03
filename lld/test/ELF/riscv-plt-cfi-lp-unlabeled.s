@@ -23,28 +23,24 @@
 
 # DIS:      Disassembly of section .plt:
 # DIS:      <.plt>:
-# DIS-NEXT:     lpad 0x0
-# DIS-NEXT:     auipc t2, 0x2
-# DIS-NEXT:     sub t1, t1, t3
-# DIS32-NEXT:   lw t3, 0xa4(t2)
-# DIS64-NEXT:   ld t3, 0x10c(t2)
+# DIS-NEXT:     auipc t3, 0x2
+# DIS-NEXT:     sub t1, t1, t2
+# DIS32-NEXT:   lw t2, 0xa4(t3)
+# DIS64-NEXT:   ld t2, 0x10c(t3)
 # DIS-NEXT:     addi t1, t1, -0x40
-# DIS32-NEXT:   addi t0, t2, 0xa4
-# DIS64-NEXT:   addi t0, t2, 0x10c
+# DIS32-NEXT:   addi t0, t3, 0xa4
+# DIS64-NEXT:   addi t0, t3, 0x10c
 # DIS32-NEXT:   srli t1, t1, 0x2
 # DIS64-NEXT:   srli t1, t1, 0x1
 # DIS32-NEXT:   lw t0, 0x4(t0)
 # DIS64-NEXT:   ld t0, 0x8(t0)
-# DIS-NEXT:     jr t3
-# DIS-NEXT:     nop
-# DIS-NEXT:     nop
-# DIS-NEXT:     nop
+# DIS-NEXT:     jr t2
 
 # DIS:          lpad 0x0
-# DIS-NEXT:     auipc t3, 0x2
-# DIS32-NEXT:   lw t3, 0x7c(t3)
-# DIS64-NEXT:   ld t3, 0xec(t3)
-# DIS-NEXT:     jalr t1, t3
+# DIS-NEXT:     auipc t2, 0x2
+# DIS32-NEXT:   lw t2, 0x7c(t2)
+# DIS64-NEXT:   ld t2, 0xec(t2)
+# DIS-NEXT:     jalr t1, t2
 
 #--- rv32-start.s
 
