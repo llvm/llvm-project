@@ -147,9 +147,18 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 BasicBlock::iterator
 SCEVExpander::findInsertPointAfter(Instruction *I,
                                    Instruction *MustDominate) const {
-  BasicBlock::iterator IP = ++I->getIterator();
-  if (auto *II = dyn_cast<InvokeInst>(I))
+  BasicBlock::iterator IP;
+  if (auto *II = dyn_cast<InvokeInst>(I)) {
     IP = II->getNormalDest()->begin();
+  } else if (isa<CallBrInst>(I)) {
+    // callbr is a terminator, so there is no valid same-block point after it.
+    // Use the point we need the result to dominate.
+    assert(SE.DT.dominates(I, MustDominate) &&
+           "callbr result must dominate the insertion point");
+    IP = MustDominate->getIterator();
+  } else {
+    IP = ++I->getIterator();
+  }
 
   while (isa<PHINode>(IP))
     ++IP;
