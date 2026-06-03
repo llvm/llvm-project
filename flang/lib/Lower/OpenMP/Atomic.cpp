@@ -652,7 +652,7 @@ void Fortran::lower::omp::lowerAtomic(
     // writeActionCond is a bitmask combining the following flags:
     //  1) the action type (Read/Write/Update)
     //  2) condition (IfTrue/IfFalse)
-    int writeActionCond = 0;
+    [[maybe_unused]] int writeActionCond = 0;
     const evaluate::Assignment *writeAssign = nullptr;
     if (analysis.op0.what & analysis.Write) {
       writeAssign = get(analysis.op0.assign);

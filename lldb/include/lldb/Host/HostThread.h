@@ -58,10 +58,6 @@ template <> struct DenseMapInfo<lldb_private::HostThread> {
     return lldb_private::HostThread(
         DenseMapInfo<lldb::thread_t>::getEmptyKey());
   }
-  static inline lldb_private::HostThread getTombstoneKey() {
-    return lldb_private::HostThread(
-        DenseMapInfo<lldb::thread_t>::getTombstoneKey());
-  }
   static unsigned getHashValue(const lldb_private::HostThread &val);
   static bool isEqual(const lldb_private::HostThread &lhs,
                       const lldb_private::HostThread &rhs);

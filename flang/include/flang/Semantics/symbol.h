@@ -1261,12 +1261,6 @@ template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
     return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
   }
 
-  static inline Fortran::semantics::SymbolRef getTombstoneKey() {
-    auto ptr =
-        DenseMapInfo<const Fortran::semantics::Symbol *>::getTombstoneKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());

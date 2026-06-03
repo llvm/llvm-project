@@ -72,16 +72,11 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 
 void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
     const OmpClauseSet &clauses, parser::CharBlock name) const {
-  auto toLower = [](std::string_view sv) {
-    return parser::ToLowerCaseLetters(sv);
-  };
-  auto getLowerName = [&](llvm::omp::Clause c) {
-    return toLower(llvm::omp::getOpenMPClauseName(c, version_));
-  };
+  auto toLower = parser::ToLowerCaseLetters;
 
   size_t idx{0}, size{clauses.count()};
   clauses.IterateOverMembers([&](llvm::omp::Clause c) {
-    os << getLowerName(c);
+    os << toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
     switch (c) {
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';

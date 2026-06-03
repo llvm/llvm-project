@@ -569,10 +569,6 @@ private:
       return ConstantClassInfo::getEmptyKey();
     }
 
-    static inline ConstantClass *getTombstoneKey() {
-      return ConstantClassInfo::getTombstoneKey();
-    }
-
     static unsigned getHashValue(const ConstantClass *CP) {
       SmallVector<Constant *, 32> Storage;
       return getHashValue(LookupKey(CP->getType(), ValType(CP, Storage)));
@@ -591,7 +587,7 @@ private:
     }
 
     static bool isEqual(const LookupKey &LHS, const ConstantClass *RHS) {
-      if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      if (RHS == getEmptyKey())
         return false;
       if (LHS.first != RHS->getType())
         return false;
