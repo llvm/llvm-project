@@ -133,6 +133,17 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // times, reusing the same AST.
   Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
 
+  // Clang emits direct PC-relative accesses for external data (e.g. C++
+  // type-info used by exception handling). As clang-repl directly mmap()s
+  // shared objects into memory, the target symbol may be more than 2GB away
+  // from the generated code, resulting in an out-of-range Delta32/PC32
+  // relocation. Force GOT-based access instead so the relocation remains
+  // within range.
+  //
+  // Unlike -fPIC, this does not define __PIC__ and remains compatible with
+  // precompiled headers.
+  Clang->getCodeGenOpts().DirectAccessExternalData = false;
+
   Clang->getFrontendOpts().DisableFree = false;
   Clang->getCodeGenOpts().DisableFree = false;
   return std::move(Clang);
