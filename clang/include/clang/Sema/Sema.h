@@ -12198,12 +12198,21 @@ public:
   /// If an error occurred, it returns ExprError(); otherwise, it
   /// returns the converted template argument. \p ParamType is the
   /// type of the non-type template parameter after it has been instantiated.
+  ///
+  /// If \p SkipConstantEvaluation is true, the argument is converted to the
+  /// parameter type, but is not required to be constant-evaluable, similarly
+  /// to a value-dependent argument. This is used when only the converted form
+  /// of the argument is needed, e.g. when re-checking the replacement of a
+  /// SubstNonTypeTemplateParmExpr in an unevaluated context, where constant
+  /// evaluation may fail for otherwise valid arguments because the entities
+  /// they refer to are not odr-used.
   ExprResult CheckTemplateArgument(NamedDecl *Param,
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &SugaredConverted,
                                    TemplateArgument &CanonicalConverted,
                                    bool StrictCheck,
-                                   CheckTemplateArgumentKind CTAK);
+                                   CheckTemplateArgumentKind CTAK,
+                                   bool SkipConstantEvaluation = false);
 
   /// Check a template argument against its corresponding
   /// template template parameter.
