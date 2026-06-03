@@ -286,9 +286,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
         // Obtain the original image sample intrinsic's signature
         // and replace its return type with the half-vector for D16 folding
         SmallVector<Type *, 8> OverloadTys;
-        Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys);
-        OverloadTys[0] = HalfVecTy;
+        if (!Intrinsic::isSignatureValid(II.getCalledFunction(), OverloadTys))
+          return std::nullopt;
 
+        OverloadTys[0] = HalfVecTy;
         Module *M = II.getModule();
         Function *HalfDecl = Intrinsic::getOrInsertDeclaration(
             M, ImageDimIntr->Intr, OverloadTys);
@@ -986,7 +987,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createMovDpp8(B, Src, *Sel);
   }
 
-  if (ST.hasPermLaneX16()) {
+  if (ST.hasPermlane16Insts()) {
     if (isFullRowPattern(Ids)) {
       uint64_t Sel = computePermlane16Masks(Ids);
       return createPermlane16(B, Src, Lo_32(Sel), Hi_32(Sel));

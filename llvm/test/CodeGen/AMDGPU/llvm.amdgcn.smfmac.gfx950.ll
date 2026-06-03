@@ -120,7 +120,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_f16(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_f16(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -142,7 +142,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_f16(<8 x half> %arg0, <16 x half> %
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_f16__flags0(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_f16__flags0(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_f16__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -164,7 +164,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_f16__flags0(<8 x half> %arg0, <16 x
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_f16__flags1(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_f16__flags1(<8 x half> %arg0, <16 x half> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_f16__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -186,7 +186,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_f16__flags1(<8 x half> %arg0, <16 x
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_f16__sgpr(<8 x half> inreg %arg0, <16 x half> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_f16__sgpr(<8 x half> inreg %arg0, <16 x half> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_16x16x64_f16__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -393,7 +393,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_f16(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_f16(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x32_f16:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -448,7 +448,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16(<8 x half> %arg0, <16 x half> 
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_f16__flags0(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_f16__flags0(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x32_f16__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -503,7 +503,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__flags0(<8 x half> %arg0, <16 
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_f16__flags1(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_f16__flags1(<8 x half> %arg0, <16 x half> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x32_f16__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -558,7 +558,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__flags1(<8 x half> %arg0, <16 
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, <16 x half> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, <16 x half> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x32_f16__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -680,14 +680,14 @@ define <16 x float> @test_smfmac_f32_32x32x32_f16__sgpr(<8 x half> inreg %arg0, 
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -797,7 +797,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -819,7 +819,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_bf16(<8 x bfloat> %arg0, <16 x bflo
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags0(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags0(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_bf16__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -841,7 +841,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags0(<8 x bfloat> %arg0, <1
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags1(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags1(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_bf16__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -863,7 +863,7 @@ define <4 x float> @test_smfmac_f32_16x16x64_bf16__flags1(<8 x bfloat> %arg0, <1
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x64_bf16__sgpr(<8 x bfloat> inreg %arg0, <16 x bfloat> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x64_bf16__sgpr(<8 x bfloat> inreg %arg0, <16 x bfloat> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x64_bf16__sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -976,7 +976,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_bf16(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_32x32x32_bf16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1010,7 +1010,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16(<8 x bfloat> %arg0, <16 x bfl
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags0(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags0(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_32x32x32_bf16__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1044,7 +1044,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags0(<8 x bfloat> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags1(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags1(<8 x bfloat> %arg0, <16 x bfloat> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_32x32x32_bf16__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1078,7 +1078,7 @@ define <16 x float> @test_smfmac_f32_32x32x32_bf16__flags1(<8 x bfloat> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg0, <16 x bfloat> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x32_bf16__sgpr(<8 x bfloat> inreg %arg0, <16 x bfloat> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_32x32x32_bf16__sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1275,7 +1275,7 @@ bb:
   ret void
 }
 
-define <4 x i32> @test_smfmac_i32_16x16x128_i8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+define <4 x i32> @test_smfmac_i32_16x16x128_i8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_i32_16x16x128_i8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1297,7 +1297,7 @@ define <4 x i32> @test_smfmac_i32_16x16x128_i8(<4 x i32> %arg0, <8 x i32> %arg1,
   ret <4 x i32> %result
 }
 
-define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_i32_16x16x128_i8__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1319,7 +1319,7 @@ define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags0(<4 x i32> %arg0, <8 x i32
   ret <4 x i32> %result
 }
 
-define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) {
+define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x i32> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_i32_16x16x128_i8__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1341,7 +1341,7 @@ define <4 x i32> @test_smfmac_i32_16x16x128_i8__flags1(<4 x i32> %arg0, <8 x i32
   ret <4 x i32> %result
 }
 
-define <4 x i32> @test_smfmac_i32_16x16x128_i8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x i32> inreg %arg2, i32 inreg %arg3) {
+define <4 x i32> @test_smfmac_i32_16x16x128_i8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x i32> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_i32_16x16x128_i8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1548,7 +1548,7 @@ bb:
   ret void
 }
 
-define <16 x i32> @test_smfmac_i32_32x32x64_i8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) {
+define <16 x i32> @test_smfmac_i32_32x32x64_i8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_i32_32x32x64_i8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1603,7 +1603,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8(<4 x i32> %arg0, <8 x i32> %arg1,
   ret <16 x i32> %result
 }
 
-define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) {
+define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_i32_32x32x64_i8__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1658,7 +1658,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags0(<4 x i32> %arg0, <8 x i32
   ret <16 x i32> %result
 }
 
-define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) {
+define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x i32> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_i32_32x32x64_i8__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1713,7 +1713,7 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__flags1(<4 x i32> %arg0, <8 x i32
   ret <16 x i32> %result
 }
 
-define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x i32> inreg %arg2, i32 inreg %arg3) {
+define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x i32> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_i32_32x32x64_i8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1835,14 +1835,14 @@ define <16 x i32> @test_smfmac_i32_32x32x64_i8__sgpr(<4 x i32> inreg %arg0, <8 x
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -2004,7 +2004,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_bf8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2026,7 +2026,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8(<4 x i32> %arg0, <8 x i32>
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_bf8__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2048,7 +2048,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags0(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_bf8__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2070,7 +2070,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__flags1(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_16x16x128_bf8_bf8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2253,7 +2253,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_fp8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2275,7 +2275,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8(<4 x i32> %arg0, <8 x i32>
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_fp8__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2297,7 +2297,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags0(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_bf8_fp8__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2319,7 +2319,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__flags1(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_bf8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_16x16x128_bf8_fp8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2502,7 +2502,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_bf8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2524,7 +2524,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8(<4 x i32> %arg0, <8 x i32>
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_bf8__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2546,7 +2546,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags0(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_bf8__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2568,7 +2568,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__flags1(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_16x16x128_fp8_bf8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2751,7 +2751,7 @@ bb:
   ret void
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_fp8:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2773,7 +2773,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8(<4 x i32> %arg0, <8 x i32>
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_fp8__flags0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2795,7 +2795,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags0(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %arg3) #1 {
 ; GCN-LABEL: test_smfmac_f32_16x16x128_fp8_fp8__flags1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2817,7 +2817,7 @@ define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__flags1(<4 x i32> %arg0, <
   ret <4 x float> %result
 }
 
-define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) {
+define <4 x float> @test_smfmac_f32_16x16x128_fp8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <4 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_16x16x128_fp8_fp8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3024,7 +3024,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_bf8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3079,7 +3079,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8(<4 x i32> %arg0, <8 x i32>
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_bf8__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3134,7 +3134,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags0(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_bf8__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3189,7 +3189,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__flags1(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_bf8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3311,14 +3311,14 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -3504,7 +3504,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_fp8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3559,7 +3559,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8(<4 x i32> %arg0, <8 x i32>
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_fp8__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3614,7 +3614,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags0(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_fp8__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3669,7 +3669,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__flags1(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_bf8_fp8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -3791,14 +3791,14 @@ define <16 x float> @test_smfmac_f32_32x32x64_bf8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -3984,7 +3984,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_bf8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4039,7 +4039,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8(<4 x i32> %arg0, <8 x i32>
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_bf8__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4094,7 +4094,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags0(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_bf8__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4149,7 +4149,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__flags1(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_bf8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4271,14 +4271,14 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_bf8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -4464,7 +4464,7 @@ bb:
   ret void
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_fp8:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4519,7 +4519,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8(<4 x i32> %arg0, <8 x i32>
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags0(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_fp8__flags0:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4574,7 +4574,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags0(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags1(<4 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_fp8__flags1:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4629,7 +4629,7 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__flags1(<4 x i32> %arg0, <
   ret <16 x float> %result
 }
 
-define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) {
+define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg0, <8 x i32> inreg %arg1, <16 x float> inreg %arg2, i32 inreg %arg3) #1 {
 ; SDAG-LABEL: test_smfmac_f32_32x32x64_fp8_fp8__sgpr:
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -4751,14 +4751,14 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s37, 1
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s38, 2
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s39, 3
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s48, 4
-; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s49, 5
 ; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s50, 6
+; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[26:27], s[2:3]
+; GISEL-VGPR-NEXT:    v_mov_b64_e32 v[24:25], s[0:1]
 ; GISEL-VGPR-NEXT:    s_mov_b32 s36, s24
 ; GISEL-VGPR-NEXT:    s_mov_b32 s37, s25
-; GISEL-VGPR-NEXT:    v_writelane_b32 v29, s51, 7
 ; GISEL-VGPR-NEXT:    s_mov_b32 s38, s26
 ; GISEL-VGPR-NEXT:    s_mov_b32 s39, s27
 ; GISEL-VGPR-NEXT:    s_mov_b32 s40, s28
@@ -4805,4 +4805,5 @@ define <16 x float> @test_smfmac_f32_32x32x64_fp8_fp8__sgpr(<4 x i32> inreg %arg
   ret <16 x float> %result
 }
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0,0" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0,0" nounwind }
+attributes #1 = { nounwind }

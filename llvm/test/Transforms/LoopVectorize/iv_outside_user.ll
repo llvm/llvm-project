@@ -1194,6 +1194,8 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; VEC-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[EXIT]]:
 ; VEC-NEXT:    [[IV_1_EXT_LCSSA:%.*]] = phi i32 [ [[IV_1_EXT]], %[[LOOP]] ]
+; VEC-NEXT:    [[IV_2_LCSSA:%.*]] = phi i32 [ [[IV_2]], %[[LOOP]] ]
+; VEC-NEXT:    [[ADD:%.*]] = add i32 [[IV_1_EXT_LCSSA]], [[IV_2_LCSSA]]
 ; VEC-NEXT:    ret i32 [[IV_1_EXT_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: define i32 @iv_ext_used_outside(
@@ -1228,6 +1230,8 @@ define i32 @iv_ext_used_outside( ptr %dst) {
 ; INTERLEAVE-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[EXIT]]:
 ; INTERLEAVE-NEXT:    [[IV_1_EXT_LCSSA:%.*]] = phi i32 [ [[IV_1_EXT]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV_2_LCSSA:%.*]] = phi i32 [ [[IV_2]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[ADD:%.*]] = add i32 [[IV_1_EXT_LCSSA]], [[IV_2_LCSSA]]
 ; INTERLEAVE-NEXT:    ret i32 [[IV_1_EXT_LCSSA]]
 ;
 entry:
@@ -1245,6 +1249,8 @@ loop:
 
 exit:
   %iv.1.ext.lcssa = phi i32 [ %iv.1.ext, %loop ]
+  %iv.2.lcssa = phi i32 [ %iv.2, %loop ]
+  %add = add i32 %iv.1.ext.lcssa, %iv.2.lcssa
   ret i32 %iv.1.ext.lcssa
 }
 

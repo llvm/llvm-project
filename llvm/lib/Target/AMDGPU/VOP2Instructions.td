@@ -166,30 +166,41 @@ multiclass
   defm NAME : VOP2Inst_e32<opName, P, node, revOp>,
               VOPD_Component<VOPDOp, VOPDName>;
 }
+
+multiclass VOP2Inst_e64_base<string opName,
+                             VOPProfile P,
+                             SDPatternOperator node = null_frag,
+                             string revOp = opName> {
+    def _e64 : VOP3InstBase <opName, P, node, 1>,
+               Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+}
+
+multiclass VOP2Inst_e64_dpp<string opName, VOPProfile P> {
+  if P.HasExtVOP3DPP then
+    def _e64_dpp : VOP3_DPP_Pseudo <opName, P> {
+      let SubtargetPredicate = isGFX11Plus;
+    }
+  else if P.HasExt64BitDPP then
+    def _e64_dpp : VOP3_DPP_Pseudo <opName, P> {
+      let OtherPredicates = [HasDPALU_DPP];
+    }
+}
+
 multiclass VOP2Inst_e64<string opName,
                         VOPProfile P,
                         SDPatternOperator node = null_frag,
-                        string revOp = opName> {
-    def _e64 : VOP3InstBase <opName, P, node, 1>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
-
-    if P.HasExtVOP3DPP then
-      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-        let SubtargetPredicate = isGFX11Plus;
-      }
-    else if P.HasExt64BitDPP then
-      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
-        let OtherPredicates = [HasDPALU_DPP];
-      }
-}
+                        string revOp = opName> :
+    VOP2Inst_e64_base<opName, P, node, revOp>,
+    VOP2Inst_e64_dpp<opName, P>;
 
 multiclass VOP2Inst_e64_VOPD<string opName,
                              VOPProfile P, bits<6> VOPDOp,
                              string VOPDName,
                              SDPatternOperator node = null_frag,
-                             string revOp = opName> {
-  defm NAME: VOP2Inst_e64<opName, P, node, revOp>,
-             VOPD_Component<VOPDOp, VOPDName>;
+                             string revOp = opName> :
+    VOP2Inst_e64_dpp<opName, P> {
+  defm NAME : VOP2Inst_e64_base<opName, P, node, revOp>,
+              VOPD_Component<VOPDOp, VOPDName>;
 }
 
 multiclass VOP2Inst_sdwa<string opName,

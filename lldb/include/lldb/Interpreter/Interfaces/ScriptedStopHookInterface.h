@@ -18,8 +18,7 @@ class ScriptedStopHookInterface : public ScriptedInterface {
 public:
   virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
-                     lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) = 0;
+                     lldb::TargetSP target_sp) = 0;
 
   /// "handle_stop" will return a bool with the meaning "should_stop"...
   /// If nothing is returned, we'll assume we are going to stop.

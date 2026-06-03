@@ -12483,7 +12483,6 @@ define void @flat_atomic_fmax_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:  .LBB113_4: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s0
@@ -12774,7 +12773,6 @@ define void @flat_atomic_fmin_f64_saddr_nortn(ptr inreg %ptr, double %data) {
 ; GFX1250-SDAG-NEXT:  .LBB115_4: ; %atomicrmw.private
 ; GFX1250-SDAG-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX1250-SDAG-NEXT:    scratch_load_b64 v[2:3], off, s0

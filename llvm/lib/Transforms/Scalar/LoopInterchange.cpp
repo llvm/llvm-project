@@ -60,13 +60,11 @@ static cl::opt<int> LoopInterchangeCostThreshold(
     "loop-interchange-threshold", cl::init(0), cl::Hidden,
     cl::desc("Interchange if you gain more than this number"));
 
-// Maximum number of load-stores that can be handled in the dependency matrix.
-static cl::opt<unsigned int> MaxMemInstrCount(
-    "loop-interchange-max-meminstr-count", cl::init(64), cl::Hidden,
-    cl::desc(
-        "Maximum number of load-store instructions that should be handled "
-        "in the dependency matrix. Higher value may lead to more interchanges "
-        "at the cost of compile-time"));
+static cl::opt<unsigned int> MaxMemInstrRatio(
+    "loop-interchange-max-mem-instr-ratio", cl::init(4), cl::Hidden,
+    cl::desc("Maximum number of load/store instructions squared in relation to "
+             "the total number of instructions. Higher value may lead to more "
+             "interchanges at the cost of compile-time"));
 
 namespace {
 
@@ -108,8 +106,7 @@ static cl::list<RuleTy> Profitabilities(
     cl::Hidden,
     cl::desc("List of profitability heuristics to be used. They are applied in "
              "the given order"),
-    cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
-                           RuleTy::PerInstrOrderCost,
+    cl::list_init<RuleTy>({RuleTy::PerInstrOrderCost,
                            RuleTy::ForVectorization}),
     cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
                           "Prioritize loop cache cost"),
@@ -176,11 +173,15 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
+  unsigned NumInsts = 0;
 
   // For each block.
   for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
+      if (!isa<Instruction>(I))
+        return false;
+      NumInsts++;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
@@ -193,17 +194,22 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
     }
   }
 
-  LLVM_DEBUG(dbgs() << "Found " << MemInstr.size()
+  // To populate the dependence matrix, we perform dependence test for each pair
+  // of memory instructions, which has O(NumMemInstr^2) complexity. This implies
+  // that even if the number of memory instructions is small, the analysis can
+  // still be expensive if the most of the instructions in the loop are memory
+  // instructions. On the other hand, if the number of memory instructions is
+  // not small, but the loop is large (i.e., it contains many non-memory
+  // instructions), the analysis can still be affordable.
+  unsigned NumMemInstr = MemInstr.size();
+  LLVM_DEBUG(dbgs() << "Found " << NumMemInstr
                     << " Loads and Stores to analyze\n");
-  if (MemInstr.size() > MaxMemInstrCount) {
-    LLVM_DEBUG(dbgs() << "The transform doesn't support more than "
-                      << MaxMemInstrCount << " load/stores in a loop\n");
+  if (MaxMemInstrRatio * NumInsts < NumMemInstr * NumMemInstr) {
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoop",
                                       L->getStartLoc(), L->getHeader())
-             << "Number of loads/stores exceeded, the supported maximum "
-                "can be increased with option "
-                "-loop-interchange-maxmeminstr-count.";
+             << "Number of loads/stores exceeded, the supported maximum can be "
+                "increased with option -loop-interchange-max-mem-instr-ratio.";
     });
     return false;
   }
@@ -1468,8 +1474,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   for (auto *BB : OuterLoop->blocks())
     for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // readnone functions do not prevent interchanging.
-        if (CI->onlyWritesMemory() || isa<PseudoProbeInst>(CI))
+        // Functions which don't access memory do not prevent interchanging.
+        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "
@@ -1631,17 +1637,17 @@ std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
 }
 
 int LoopInterchangeProfitability::getInstrOrderCost() {
-  unsigned GoodOrder, BadOrder;
-  BadOrder = GoodOrder = 0;
+  SmallPtrSet<const SCEV *, 4> GoodBasePtrs, BadBasePtrs;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (!isa<LoadInst, StoreInst>(&Ins))
         continue;
-      const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *Access = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *BasePtr = SE->getPointerBase(Access);
       std::optional<const SCEV *> OuterCoeff =
-          getAddRecCoefficient(*SE, Ptr, OuterLoop);
+          getAddRecCoefficient(*SE, Access, OuterLoop);
       std::optional<const SCEV *> InnerCoeff =
-          getAddRecCoefficient(*SE, Ptr, InnerLoop);
+          getAddRecCoefficient(*SE, Access, InnerLoop);
 
       if (!OuterCoeff.has_value() || !*OuterCoeff || !InnerCoeff.has_value() ||
           !*InnerCoeff)
@@ -1670,12 +1676,18 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       //       A[j][i] = A[j-1][i-1]+k;
       //
       // then it is a bad order.
+      //
+      // To avoid counting the same base pointers multiple times, we deduplicate
+      // them by using a set of base pointers.
       if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep))
-        GoodOrder++;
+        GoodBasePtrs.insert(BasePtr);
       else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep, InnerStep))
-        BadOrder++;
+        BadBasePtrs.insert(BasePtr);
     }
   }
+
+  int GoodOrder = GoodBasePtrs.size();
+  int BadOrder = BadBasePtrs.size();
   return GoodOrder - BadOrder;
 }
 
@@ -2188,8 +2200,19 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     assert(P.getNumIncomingValues() == 1 &&
            "Only loops with a single exit are supported!");
 
-    // Incoming values are guaranteed be instructions currently.
-    auto IncI = cast<Instruction>(P.getIncomingValueForBlock(InnerLatch));
+    Value *IncomingValue = P.getIncomingValueForBlock(InnerLatch);
+    auto *IncI = dyn_cast<Instruction>(IncomingValue);
+    if (!IncI) {
+      // If the incoming value is not an instruction, it must be loop invariant.
+      // In that case, we can just replace the PHI with the incoming value and
+      // remove the PHI.
+      assert(InnerLoop->isLoopInvariant(IncomingValue) &&
+             "Expected non-instruction incoming value to be loop invariant");
+      P.replaceAllUsesWith(IncomingValue);
+      P.eraseFromParent();
+      continue;
+    }
+
     // In case of multi-level nested loops, follow LCSSA to find the incoming
     // value defined from the innermost loop.
     auto IncIInnerMost = cast<Instruction>(followLCSSA(IncI));
@@ -2489,10 +2512,6 @@ PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
   Function &F = *LN.getParent();
   SmallVector<Loop *, 8> LoopList(LN.getLoops());
 
-  if (MaxMemInstrCount < 1) {
-    LLVM_DEBUG(dbgs() << "MaxMemInstrCount should be at least 1");
-    return PreservedAnalyses::all();
-  }
   OptimizationRemarkEmitter ORE(&F);
 
   // Ensure minimum depth of the loop nest to do the interchange.

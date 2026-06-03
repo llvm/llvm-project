@@ -40,7 +40,6 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
   Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
-                            options::OPT_ffree_line_length_EQ,
                             options::OPT_fopenacc,
                             options::OPT_finput_charset_EQ,
                             options::OPT_fimplicit_none,
@@ -263,6 +262,10 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  addSeparateSectionFlags(Triple, Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
 }
@@ -690,6 +693,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
+
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (IsHostOffloadingAction)
+    CmdArgs.push_back("-offload-device");
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
@@ -1270,7 +1278,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   renderGlobalISelOptions(D, Args, CmdArgs, Triple);
-  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+  renderCommonIntegerOverflowOptions(Args, CmdArgs, false);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

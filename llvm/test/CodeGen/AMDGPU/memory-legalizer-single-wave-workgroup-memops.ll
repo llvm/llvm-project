@@ -2751,6 +2751,6 @@ define amdgpu_kernel void @flat_wg_st_seq_cst_multi(ptr addrspace(0) %p, i32 %x)
   ret void
 }
 
-attributes #0 = { "amdgpu-flat-work-group-size"="32,32" }
-attributes #1 = { "amdgpu-flat-work-group-size"="64,64" }
-attributes #2 = { "amdgpu-flat-work-group-size"="64,256" }
+attributes #0 = { "amdgpu-flat-work-group-size"="32,32" nounwind }
+attributes #1 = { "amdgpu-flat-work-group-size"="64,64" nounwind }
+attributes #2 = { "amdgpu-flat-work-group-size"="64,256" nounwind }

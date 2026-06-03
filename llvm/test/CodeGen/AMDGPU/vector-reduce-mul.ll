@@ -3744,13 +3744,23 @@ define i64 @test_vector_reduce_mul_v16i64(<16 x i64> %v) {
 ; GFX9-GISEL-LABEL: test_vector_reduce_mul_v16i64:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    scratch_load_dword v31, off, s32
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a3, v43 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a4, v44 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a5, v45 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a6, v46 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a7, v47 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a8, v56 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
+; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
+; GFX9-GISEL-NEXT:    scratch_load_dword v31, off, s32
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[36:37], s[0:1], v0, v17, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[48:49], s[0:1], v2, v19, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[52:53], s[0:1], v4, v21, 0
@@ -3758,14 +3768,6 @@ define i64 @test_vector_reduce_mul_v16i64(<16 x i64> %v) {
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[42:43], s[0:1], v8, v25, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[46:47], s[0:1], v10, v27, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[58:59], s[0:1], v12, v29, 0
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a4, v44 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a5, v45 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a8, v56 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[34:35], s[0:1], v0, v16, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[38:39], s[0:1], v2, v18, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[50:51], s[0:1], v4, v20, 0
@@ -3801,8 +3803,6 @@ define i64 @test_vector_reduce_mul_v16i64(<16 x i64> %v) {
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[6:7], s[0:1], v12, v8, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v12, v18, 0
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[8:9], s[0:1], v10, v18, v[6:7]
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
-; GFX9-GISEL-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
 ; GFX9-GISEL-NEXT:    v_mad_u64_u32 v[60:61], s[0:1], v14, v30, 0
 ; GFX9-GISEL-NEXT:    v_add_u32_e32 v10, v3, v8
 ; GFX9-GISEL-NEXT:    v_add_u32_e32 v27, v33, v4

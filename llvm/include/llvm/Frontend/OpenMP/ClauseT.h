@@ -533,10 +533,16 @@ struct DependT {
   using Iterator = type::IteratorT<T, I, E>;
   using LocatorList = ObjectListT<I, E>;
   using DependenceType = tomp::type::DependenceType;
+  // For the (pre-5.2) doacross spelling of the depend clause on the
+  // ordered directive: depend(source) / depend(sink: vec). Empty Vector
+  // means omp_cur_iteration, matching DoacrossT::Vector. When Vector has a
+  // value, LocatorList must be empty and the dependence type must be Source or
+  // Sink.
+  using Vector = ListT<type::LoopIterationT<I, E>>;
 
   using TupleTrait = std::true_type;
   // Empty LocatorList means "omp_all_memory".
-  std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
+  std::tuple<DependenceType, OPT(Iterator), OPT(Vector), LocatorList> t;
 };
 
 // [tr14:212-213]

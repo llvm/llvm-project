@@ -1755,20 +1755,20 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; GISEL-NEXT:    v_writelane_b32 v34, s37, 1
 ; GISEL-NEXT:    v_writelane_b32 v34, s38, 2
 ; GISEL-NEXT:    v_writelane_b32 v34, s39, 3
+; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
+; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
+; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
+; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
 ; GISEL-NEXT:    s_mov_b32 s15, s3
 ; GISEL-NEXT:    v_mov_b64_e32 v[24:25], s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[12:13]
-; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
-; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
 ; GISEL-NEXT:    s_mov_b32 s36, s28
 ; GISEL-NEXT:    s_mov_b32 s37, s29
-; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], v[14:15]
 ; GISEL-NEXT:    v_readfirstlane_b32 s38, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s39, v1
@@ -2072,20 +2072,20 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4_0_0_sgpr_vgpr_sgpr__vgp
 ; GISEL-NEXT:    v_writelane_b32 v34, s37, 1
 ; GISEL-NEXT:    v_writelane_b32 v34, s38, 2
 ; GISEL-NEXT:    v_writelane_b32 v34, s39, 3
+; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
+; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
+; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
+; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    s_mov_b32 s12, s0
 ; GISEL-NEXT:    s_mov_b32 s13, s1
 ; GISEL-NEXT:    s_mov_b32 s14, s2
 ; GISEL-NEXT:    s_mov_b32 s15, s3
 ; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[18:19]
-; GISEL-NEXT:    v_writelane_b32 v34, s48, 4
 ; GISEL-NEXT:    v_mov_b64_e32 v[30:31], s[16:17]
 ; GISEL-NEXT:    v_mov_b64_e32 v[28:29], s[14:15]
 ; GISEL-NEXT:    v_mov_b64_e32 v[26:27], s[12:13]
-; GISEL-NEXT:    v_writelane_b32 v34, s49, 5
-; GISEL-NEXT:    v_writelane_b32 v34, s50, 6
 ; GISEL-NEXT:    s_mov_b32 s36, s20
 ; GISEL-NEXT:    s_mov_b32 s37, s21
-; GISEL-NEXT:    v_writelane_b32 v34, s51, 7
 ; GISEL-NEXT:    v_mov_b64_e32 v[18:19], v[0:1]
 ; GISEL-NEXT:    v_mov_b64_e32 v[20:21], v[2:3]
 ; GISEL-NEXT:    v_mov_b64_e32 v[22:23], v[4:5]
@@ -3544,6 +3544,6 @@ declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v6i32.v8i32(<6 
 declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v4i32(<8 x i32>, <4 x i32>, <16 x float>, i32 immarg, i32 immarg, i32 immarg, i32, i32 immarg, i32) #2
 declare <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v6i32(<8 x i32>, <6 x i32>, <16 x float>, i32 immarg, i32 immarg, i32 immarg, i32, i32 immarg, i32) #2
 
-attributes #0 = { "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0,0" }
-attributes #1 = { "amdgpu-flat-work-group-size"="128,128" }
+attributes #0 = { "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0,0" nounwind }
+attributes #1 = { "amdgpu-flat-work-group-size"="128,128" nounwind }
 attributes #2 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
