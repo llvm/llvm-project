@@ -187,3 +187,71 @@ TEST(AcceleratorGDBRemotePacketsTest,
   EXPECT_EQ("exit",
             deserialized->actions->breakpoints[0].by_name->function_name);
 }
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorSectionInfo) {
+  AcceleratorSectionInfo section;
+  section.names = {"PT_LOAD[0]", ".text"};
+  section.load_address = 0x400000;
+
+  Expected<AcceleratorSectionInfo> deserialized = roundtripJSON(section);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(section.names, deserialized->names);
+  EXPECT_EQ(section.load_address, deserialized->load_address);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderLibraryInfo) {
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/usr/lib/libgpu.so";
+  lib.uuid_str = "AABBCCDD";
+  lib.load = true;
+  lib.load_address = 0x7f000000;
+  lib.native_memory_address = 0x1000;
+  lib.native_memory_size = 0x2000;
+  lib.file_offset = 4096;
+  lib.file_size = 8192;
+
+  AcceleratorSectionInfo section;
+  section.names = {".text"};
+  section.load_address = 0x7f001000;
+  lib.loaded_sections.push_back(std::move(section));
+
+  Expected<AcceleratorDynamicLoaderLibraryInfo> deserialized =
+      roundtripJSON(lib);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(lib.pathname, deserialized->pathname);
+  EXPECT_EQ(lib.uuid_str, deserialized->uuid_str);
+  EXPECT_EQ(lib.load, deserialized->load);
+  EXPECT_EQ(lib.load_address, deserialized->load_address);
+  EXPECT_EQ(lib.native_memory_address, deserialized->native_memory_address);
+  EXPECT_EQ(lib.native_memory_size, deserialized->native_memory_size);
+  EXPECT_EQ(lib.file_offset, deserialized->file_offset);
+  EXPECT_EQ(lib.file_size, deserialized->file_size);
+  ASSERT_EQ(1u, deserialized->loaded_sections.size());
+  EXPECT_EQ(0x7f001000u, deserialized->loaded_sections[0].load_address);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderArgs) {
+  AcceleratorDynamicLoaderArgs args;
+  args.plugin_name = "mock";
+  args.full = true;
+
+  Expected<AcceleratorDynamicLoaderArgs> deserialized = roundtripJSON(args);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(args.plugin_name, deserialized->plugin_name);
+  EXPECT_EQ(args.full, deserialized->full);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderResponse) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/path/to/lib.so";
+  lib.load = true;
+  response.library_infos.push_back(std::move(lib));
+
+  Expected<AcceleratorDynamicLoaderResponse> deserialized =
+      roundtripJSON(response);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_EQ(1u, deserialized->library_infos.size());
+  EXPECT_EQ("/path/to/lib.so", deserialized->library_infos[0].pathname);
+  EXPECT_TRUE(deserialized->library_infos[0].load);
+}

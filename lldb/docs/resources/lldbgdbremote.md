@@ -2792,3 +2792,37 @@ STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginGetDynamicLoaderLibraryInfo
+
+Requests shared library information from an accelerator plugin. The client
+sends this packet when it needs to load or update the accelerator's shared
+library list. This packet requires the `accelerator-plugins+` feature from
+`qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key           | Type   | Description |
+|---------------|--------|-------------|
+| `plugin_name` | string | Name of the accelerator plugin to query. |
+| `full`        | bool   | If true, return all libraries. If false, return only updates since the last query. |
+
+The response JSON has the following fields:
+
+| Key             | Type  | Description |
+|-----------------|-------|-------------|
+| `library_infos` | array | Array of library info objects, each with `pathname`, `load` (bool), and optional `load_address`, `loaded_sections`, `uuid`, `native_memory_address`, `native_memory_size`, `file_offset`, `file_size`. |
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginGetDynamicLoaderLibraryInfo:{"plugin_name":"mock","full":true}
+STUB REPLIES:  {"library_infos":[{"pathname":"/usr/lib/libmock_accel.so","load":true,"load_address":2130706432,"loaded_sections":[]}]}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.

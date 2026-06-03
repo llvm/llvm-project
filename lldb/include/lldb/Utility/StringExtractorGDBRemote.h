@@ -175,6 +175,7 @@ public:
     eServerPacketType_jMultiBreakpoint,
     eServerPacketType_jAcceleratorPluginInitialize,
     eServerPacketType_jAcceleratorPluginBreakpointHit,
+    eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

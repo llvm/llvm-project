@@ -136,6 +136,71 @@ bool fromJSON(const llvm::json::Value &value,
               AcceleratorBreakpointHitResponse &data, llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorBreakpointHitResponse &data);
 
+/// A section load address entry for dynamic loader library info.
+struct AcceleratorSectionInfo {
+  /// Hierarchical section names. If there are multiple names, each successive
+  /// name is looked up as a child section of the previous one. Example:
+  /// ["PT_LOAD[0]", ".text"].
+  std::vector<std::string> names;
+  /// The load address of this section.
+  uint64_t load_address = 0;
+};
+
+bool fromJSON(const llvm::json::Value &value, AcceleratorSectionInfo &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorSectionInfo &data);
+
+/// Information about a shared library for the accelerator dynamic loader.
+struct AcceleratorDynamicLoaderLibraryInfo {
+  /// Path to the shared library object file on disk.
+  std::string pathname;
+  /// UUID of the shared library, if known.
+  std::optional<std::string> uuid_str;
+  /// True if loading, false if unloading.
+  bool load = true;
+  /// Base load address for the entire object file. If set, all sections are
+  /// slid to match. If not set, use \a loaded_sections or file addresses.
+  std::optional<uint64_t> load_address;
+  /// Per-section load addresses for object files with sections loaded at
+  /// different addresses.
+  std::vector<AcceleratorSectionInfo> loaded_sections;
+  /// Address in the native process where the object file image can be read.
+  std::optional<uint64_t> native_memory_address;
+  /// Size of the in-memory image starting at \a native_memory_address.
+  std::optional<uint64_t> native_memory_size;
+  /// Byte offset within the file specified by \a pathname.
+  std::optional<uint64_t> file_offset;
+  /// Size in bytes of the object file within the containing file.
+  std::optional<uint64_t> file_size;
+};
+
+bool fromJSON(const llvm::json::Value &value,
+              AcceleratorDynamicLoaderLibraryInfo &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorDynamicLoaderLibraryInfo &data);
+
+/// Arguments for the jAcceleratorPluginGetDynamicLoaderLibraryInfo packet.
+struct AcceleratorDynamicLoaderArgs {
+  /// Name of the accelerator plugin to query.
+  std::string plugin_name;
+  /// If true, return all libraries. If false, return only updates since the
+  /// last query.
+  bool full = true;
+};
+
+bool fromJSON(const llvm::json::Value &value,
+              AcceleratorDynamicLoaderArgs &data, llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorDynamicLoaderArgs &data);
+
+/// Response from the jAcceleratorPluginGetDynamicLoaderLibraryInfo packet.
+struct AcceleratorDynamicLoaderResponse {
+  std::vector<AcceleratorDynamicLoaderLibraryInfo> library_infos;
+};
+
+bool fromJSON(const llvm::json::Value &value,
+              AcceleratorDynamicLoaderResponse &data, llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorDynamicLoaderResponse &data);
+
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_ACCELERATORGDBREMOTEPACKETS_H

@@ -36,6 +36,11 @@ public:
   virtual llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
 
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetDynamicLoaderLibraryInfos(const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
+  }
+
 protected:
   GDBServer &m_gdb_server;
   MainLoop &m_main_loop;

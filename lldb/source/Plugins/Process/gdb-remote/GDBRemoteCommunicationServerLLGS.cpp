@@ -231,6 +231,11 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
           eServerPacketType_jAcceleratorPluginBreakpointHit,
       &GDBRemoteCommunicationServerLLGS::
           Handle_jAcceleratorPluginBreakpointHit);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::
+          eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
+      &GDBRemoteCommunicationServerLLGS::
+          Handle_jAcceleratorPluginGetDynamicLoaderLibraryInfo);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -4576,6 +4581,35 @@ GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginBreakpointHit(
       StreamGDBRemote response;
       response.PutAsJSON(*bp_response, /*hex_ascii=*/false);
       return SendPacketNoLock(response.GetString());
+    }
+  }
+  return SendErrorResponse(
+      Status::FromErrorString("unknown accelerator plugin name"));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::
+    Handle_jAcceleratorPluginGetDynamicLoaderLibraryInfo(
+        StringExtractorGDBRemote &packet) {
+  packet.ConsumeFront("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  llvm::Expected<AcceleratorDynamicLoaderArgs> args =
+      llvm::json::parse<AcceleratorDynamicLoaderArgs>(
+          packet.Peek(), "AcceleratorDynamicLoaderArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
+
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
+    if (plugin_up->GetPluginName() == args->plugin_name) {
+      std::optional<AcceleratorDynamicLoaderResponse> response =
+          plugin_up->GetDynamicLoaderLibraryInfos(*args);
+      if (response) {
+        StreamGDBRemote stream;
+        stream.PutAsJSON(*response, /*hex_ascii=*/false);
+        return SendPacketNoLock(stream.GetString());
+      }
+      return SendErrorResponse(
+          Status::FromErrorString("no dynamic loader info available"));
     }
   }
   return SendErrorResponse(
