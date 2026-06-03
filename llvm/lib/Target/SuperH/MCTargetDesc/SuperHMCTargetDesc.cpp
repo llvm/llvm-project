@@ -92,6 +92,9 @@ LLVMInitializeSuperHTargetMC() {
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createSuperHMCInstPrinter);
 
+    // Register the MCCodeEmitter.
+    TargetRegistry::RegisterMCCodeEmitter(*T, createSuperHMCCodeEmitter);
+
     // Register the AsmBackend
     TargetRegistry::RegisterMCAsmBackend(*T, createSuperHAsmBackend);
   }

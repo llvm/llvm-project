@@ -75,8 +75,6 @@ class ImmAsmOperand<int width> : AsmOperandClass {
 
 def imm8 : Operand<i8>, ImmLeaf<i32, [{return isInt<8>(Imm);}]> {
     let ParserMatchClass = ImmAsmOperand<8>;
-    let EncoderMethod = "getImm";
-    let DecoderMethod = "decodeImmOperand<8>";
     let MCOperandPredicate = [{
         int64_t Imm;
         if (MCOp.evaluateAsConstantImm(Imm))

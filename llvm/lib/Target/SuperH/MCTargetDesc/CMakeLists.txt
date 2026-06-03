@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMSuperHDesc
+  SuperHMCCodeEmitter.cpp
   SuperHMCTargetDesc.cpp
   SuperHMCAsmInfo.cpp
   SuperHInstPrinter.cpp
