@@ -220,3 +220,15 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
   info.synchronous = true;
   return info;
 }
+
+std::optional<AcceleratorDynamicLoaderResponse>
+LLDBServerMockAcceleratorPlugin::GetDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/path/to/lib.so";
+  lib.load = true;
+  lib.load_address = 0x7f000000;
+  response.library_infos.push_back(std::move(lib));
+  return response;
+}
