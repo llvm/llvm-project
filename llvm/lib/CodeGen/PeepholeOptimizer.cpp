@@ -91,6 +91,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -454,8 +455,7 @@ private:
 
   bool optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter);
   bool optimizeCoalescableCopy(MachineInstr &MI);
-  bool optimizeUncoalescableCopy(MachineInstr &MI,
-                                 SmallPtrSetImpl<MachineInstr *> &LocalMIs);
+  bool optimizeUncoalescableCopy(MachineInstr &MI);
   bool optimizeRecurrence(MachineInstr &PHI);
   bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
                       RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
@@ -496,11 +496,11 @@ private:
                       SmallSet<Register, 16> &FoldAsLoadDefCandidates);
 
   /// Try to fold the load defined by \p FoldReg into \p MI using
-  /// TII->optimizeLoadInstr. On success, updates \p LocalMIs, erases the old
-  /// instructions, and returns the replacement; returns nullptr otherwise.
+  /// TII->optimizeLoadInstr. On success, erases the old instructions and
+  /// returns the replacement; returns nullptr otherwise. LocalMIs is kept up to
+  /// date by the delegate.
   MachineInstr *foldLoadInto(MachineFunction &MF, MachineInstr &MI,
-                             Register FoldReg,
-                             SmallPtrSet<MachineInstr *, 16> &LocalMIs);
+                             Register FoldReg);
 
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
@@ -527,8 +527,14 @@ private:
   // holds any physreg which requires def tracking.
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
-  // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override {}
+  // Points at the LocalMIs set of the block run() is currently scanning, so the
+  // delegate callbacks keep it in sync.
+  SmallPtrSetImpl<MachineInstr *> *CurLocalMIs = nullptr;
+
+  void MF_HandleInsertion(MachineInstr &MI) override {
+    if (CurLocalMIs)
+      CurLocalMIs->insert(&MI);
+  }
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())
@@ -555,7 +561,11 @@ private:
       CopySrcMIs.erase(It);
   }
 
-  void MF_HandleRemoval(MachineInstr &MI) override { deleteChangedCopy(MI); }
+  void MF_HandleRemoval(MachineInstr &MI) override {
+    if (CurLocalMIs)
+      CurLocalMIs->erase(&MI);
+    deleteChangedCopy(MI);
+  }
 
   void MF_HandleChangeDesc(MachineInstr &MI, const MCInstrDesc &TID) override {
     deleteChangedCopy(MI);
@@ -975,7 +985,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(
             make_range(std::next(LoadMI->getIterator()),
                        FlagProducer->getIterator()),
             [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
-      foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
+      foldLoadInto(MF, *FlagProducer, SrcReg);
   }
 
   return true;
@@ -1348,9 +1358,7 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
 /// \pre isUncoalescableCopy(*MI) is true.
 /// \return True, when \p MI has been optimized. In that case, \p MI has
 /// been removed from its parent.
-/// All COPY instructions created, are inserted in \p LocalMIs.
-bool PeepholeOptimizer::optimizeUncoalescableCopy(
-    MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
+bool PeepholeOptimizer::optimizeUncoalescableCopy(MachineInstr &MI) {
   assert(isUncoalescableCopy(MI) && "Invalid argument");
   UncoalescableRewriter CpyRewriter(MI);
 
@@ -1381,11 +1389,9 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
   }
 
   // The change is possible for all defs, do it.
-  for (const RegSubRegPair &Def : RewritePairs) {
+  for (const RegSubRegPair &Def : RewritePairs)
     // Rewrite the "copy" in a way the register coalescer understands.
-    MachineInstr &NewCopy = rewriteSource(MI, Def, RewriteMap);
-    LocalMIs.insert(&NewCopy);
-  }
+    rewriteSource(MI, Def, RewriteMap);
 
   // MI is now dead.
   LLVM_DEBUG(dbgs() << "Deleting uncoalescable copy: " << MI);
@@ -1417,10 +1423,9 @@ bool PeepholeOptimizer::isLoadFoldable(
   return false;
 }
 
-MachineInstr *
-PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
-                                Register FoldReg,
-                                SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
+MachineInstr *PeepholeOptimizer::foldLoadInto(MachineFunction &MF,
+                                              MachineInstr &MI,
+                                              Register FoldReg) {
   Register Reg = FoldReg;
   MachineInstr *DefMI = nullptr;
   MachineInstr *CopyMI = nullptr;
@@ -1428,11 +1433,6 @@ PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
   if (!FoldMI)
     return nullptr;
   LLVM_DEBUG(dbgs() << "Replacing: " << MI << "     With: " << *FoldMI);
-  LocalMIs.erase(&MI);
-  LocalMIs.erase(DefMI);
-  LocalMIs.insert(FoldMI);
-  if (CopyMI)
-    LocalMIs.insert(CopyMI);
   if (MI.shouldUpdateAdditionalCallInfo())
     MF.moveAdditionalCallInfo(&MI, FoldMI);
   MI.eraseFromParent();
@@ -1761,9 +1761,11 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
     // "given a pointer to an MI in the current BB, is it located before or
     // after the current instruction".
     // To perform this, the following set keeps track of the MIs already seen
-    // during the scan, if a MI is not in the set, it is assumed to be located
-    // after. Newly created MIs have to be inserted in the set as well.
+    // during the scan; if a MI is not in the set, it is assumed to be located
+    // after.
     SmallPtrSet<MachineInstr *, 16> LocalMIs;
+    SaveAndRestore<SmallPtrSetImpl<MachineInstr *> *> RestoreCurLocalMIs(
+        CurLocalMIs, &LocalMIs);
     SmallSet<Register, 4> ImmDefRegs;
     DenseMap<Register, MachineInstr *> ImmDefMIs;
     SmallSet<Register, 16> FoldAsLoadDefCandidates;
@@ -1843,16 +1845,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       }
 
       if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }
 
-      if ((isUncoalescableCopy(*MI) &&
-           optimizeUncoalescableCopy(*MI, LocalMIs)) ||
+      if ((isUncoalescableCopy(*MI) && optimizeUncoalescableCopy(*MI)) ||
           (MI->isSelect() && optimizeSelect(*MI, LocalMIs))) {
         // MI is deleted.
-        LocalMIs.erase(MI);
         Changed = true;
         continue;
       }
@@ -1870,7 +1869,6 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
 
       if (MI->isCopy() && (foldRedundantCopy(*MI) ||
                            foldRedundantNAPhysCopy(*MI, NAPhysToVirtMIs))) {
-        LocalMIs.erase(MI);
         LLVM_DEBUG(dbgs() << "Deleting redundant copy: " << *MI << "\n");
         MI->eraseFromParent();
         Changed = true;
@@ -1889,10 +1887,8 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         if (SeenMoveImm) {
           bool Deleted;
           Changed |= foldImmediate(*MI, ImmDefRegs, ImmDefMIs, Deleted);
-          if (Deleted) {
-            LocalMIs.erase(MI);
+          if (Deleted)
             continue;
-          }
         }
       }
 
@@ -1918,7 +1914,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             // optimizeCmpInstr can enable folding by converting SUB to CMP.
             Register FoldedReg = FoldAsLoadDefReg;
             if (MachineInstr *FoldMI =
-                    foldLoadInto(MF, *MI, FoldAsLoadDefReg, LocalMIs)) {
+                    foldLoadInto(MF, *MI, FoldAsLoadDefReg)) {
               FoldAsLoadDefCandidates.erase(FoldedReg);
               // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
