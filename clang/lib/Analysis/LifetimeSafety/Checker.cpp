@@ -263,16 +263,11 @@ public:
             SemaHelper->reportUseAfterInvalidation(
                 InvalidatedPVD, UF->getUseExpr(), Warning.InvalidatedByExpr);
 
-        } else {
+        } else
           // Scope-based expiry (use-after-scope).
-
-          llvm::SmallVector<OriginID> OriginFlowChain =
-              LoanPropagation.buildOriginFlowChain(FactMgr, UF, LID);
-          const llvm::SmallVector<const Expr *> ExprChain =
-              getExprChain(OriginFlowChain);
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc, ExprChain);
-        }
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
+              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {

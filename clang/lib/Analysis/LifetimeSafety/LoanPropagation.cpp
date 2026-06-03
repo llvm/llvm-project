@@ -239,6 +239,16 @@ public:
     return {};
   }
 
+  llvm::SmallVector<OriginID>
+  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const {
+    for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin())
+      if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
+        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan);
+
+    return {};
+  }
+
 private:
   /// Returns true if the origin is persistent (referenced in multiple blocks).
   bool isPersistent(OriginID OID) const {
@@ -297,15 +307,8 @@ LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
 }
 
 llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(const FactManager &FactMgr,
-                                              const UseFact *UF,
+LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
                                               const LoanID TargetLoan) const {
-  for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
-       Cur = Cur->peelOuterOrigin())
-    if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-      return buildOriginFlowChain(FactMgr, UF, Cur->getOuterOriginID(),
-                                  TargetLoan);
-
-  return {};
+  return PImpl->buildOriginFlowChain(UF, TargetLoan);
 }
 } // namespace clang::lifetimes::internal

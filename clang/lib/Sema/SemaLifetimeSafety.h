@@ -493,10 +493,7 @@ private:
     // Source ranges can be used to filter out many implicit expressions,
     // because operations between class objects often involve numerous implicit
     // conversions, yet they share the same source range.
-    if (CurrExpr->getSourceRange() == LastExpr->getSourceRange())
-      return false;
-
-    return true;
+    return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
   }
 
   void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {

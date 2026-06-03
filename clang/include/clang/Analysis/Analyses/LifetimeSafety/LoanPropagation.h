@@ -49,8 +49,7 @@ public:
                        const LoanID TargetLoan) const;
 
   llvm::SmallVector<OriginID>
-  buildOriginFlowChain(const FactManager &FactMgr, const UseFact *UF,
-                       const LoanID TargetLoan) const;
+  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const;
 
 private:
   class Impl;
