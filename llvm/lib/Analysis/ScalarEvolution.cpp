@@ -2960,9 +2960,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       }
 
       // Fold all collected cofactors with the anchor multiply's cofactor:
-      //   MulOpSCEV * (Cofactor_1 + ... + Cofactor_n + AnchorCofactor)
+      //   MulOpSCEV * (AnchorCofactor + Cofactor_1 + ... + Cofactor_n)
       if (!Cofactors.empty()) {
-        Cofactors.push_back(StripFactor(Mul, MulOp));
+        Cofactors.insert(Cofactors.begin(), StripFactor(Mul, MulOp));
 
         SCEVUse InnerSum = getAddExpr(Cofactors, SCEV::FlagAnyWrap, Depth + 1);
         SCEVUse OuterMul =
