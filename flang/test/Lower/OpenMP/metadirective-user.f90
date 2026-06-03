@@ -331,14 +331,16 @@ subroutine test_dynamic_user_score_order(low, high)
   !$omp & when(device={kind(host)}: taskwait)
 end subroutine
 
-! A scored dynamic condition can be ranked without making the runtime user
-! condition part of static applicability under extension(match_none).
+! Under extension(match_none), the runtime condition selects the variant when it
+! is false. Its score is still available for ranking that false path.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_user_score_match_none(
 ! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
 ! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
 ! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
 ! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]] : (!fir.logical<4>) -> i1
-! CHECK:         fir.if %[[COND]] {
+! CHECK:         %[[TRUE:.*]] = arith.constant true
+! CHECK:         %[[NOT_COND:.*]] = arith.xori %[[COND]], %[[TRUE]] : i1
+! CHECK:         fir.if %[[NOT_COND]] {
 ! CHECK:           omp.barrier
 ! CHECK:         } else {
 ! CHECK:           omp.taskwait

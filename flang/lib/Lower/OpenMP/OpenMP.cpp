@@ -4693,14 +4693,16 @@ struct MetadirectiveCandidate {
   MetadirectiveCandidate(
       const parser::OmpDirectiveSpecification *spec,
       llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-      std::optional<DynamicUserCondition> dynamicCond = std::nullopt)
-      : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond) {
-  }
+      std::optional<DynamicUserCondition> dynamicCond = std::nullopt,
+      bool conditionShouldBeTrue = true)
+      : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
+        conditionShouldBeTrue(conditionShouldBeTrue) {}
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
   std::optional<DynamicUserCondition> dynamicCond;
+  bool conditionShouldBeTrue = true;
 };
 } // namespace
 
@@ -4860,7 +4862,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
           rankingVMI = llvm::omp::VariantMatchInfo();
         else if (isExplicit)
           addConditionTraitForRanking(rankingVMI);
-        candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond);
+        candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond,
+                                /*conditionShouldBeTrue=*/!hasMatchNone);
         continue;
       }
 
@@ -4968,7 +4971,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   //   else if (b) taskwait
   //   else nothing
   //
-  // If the false path selects the same unguarded directive, lower it directly.
+  // If the else path selects the same unguarded directive, lower it directly.
   // Stop when selection reaches an unguarded candidate or the fallback.
   while (!remainingCandidates.empty()) {
     std::optional<unsigned> selected =
@@ -4984,24 +4987,24 @@ static void genMetadirective(lower::AbstractConverter &converter,
       return;
     }
 
-    llvm::SmallVector<unsigned, 4> falsePathCandidates(remainingCandidates);
-    auto *remainingIt = llvm::find(falsePathCandidates, *selected);
-    assert(remainingIt != falsePathCandidates.end() &&
+    llvm::SmallVector<unsigned, 4> elsePathCandidates(remainingCandidates);
+    auto *remainingIt = llvm::find(elsePathCandidates, *selected);
+    assert(remainingIt != elsePathCandidates.end() &&
            "selected candidate missing from remaining candidates");
-    falsePathCandidates.erase(remainingIt);
+    elsePathCandidates.erase(remainingIt);
 
     // match_any may create a guarded condition-true candidate and an unguarded
-    // static candidate for the same directive. If the false path picks the
+    // static candidate for the same directive. If the else path picks the
     // unguarded one then fold it:
     //
     //   if (flag) barrier    into just    barrier
     //   else barrier
-    if (std::optional<unsigned> selectedIfFalse =
-            selectBestCandidate(falsePathCandidates, candidates, ompCtx)) {
-      const MetadirectiveCandidate &candidateIfFalse =
-          candidates[*selectedIfFalse];
-      if (!candidateIfFalse.dynamicCond &&
-          candidateIfFalse.spec == candidate.spec) {
+    if (std::optional<unsigned> selectedInElse =
+            selectBestCandidate(elsePathCandidates, candidates, ompCtx)) {
+      const MetadirectiveCandidate &candidateInElse =
+          candidates[*selectedInElse];
+      if (!candidateInElse.dynamicCond &&
+          candidateInElse.spec == candidate.spec) {
         genVariant(candidate.spec);
         return;
       }
@@ -5017,6 +5020,11 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
     if (condVal.getType() != builder.getI1Type())
       condVal = builder.createConvert(condLoc, builder.getI1Type(), condVal);
+    if (!candidate.conditionShouldBeTrue) {
+      mlir::Value trueVal =
+          builder.createIntegerConstant(condLoc, builder.getI1Type(), 1);
+      condVal = mlir::arith::XOrIOp::create(builder, condLoc, condVal, trueVal);
+    }
 
     stmtCtx.finalizeAndReset();
     auto ifOp = fir::IfOp::create(builder, condLoc, condVal,
@@ -5025,7 +5033,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
     genVariant(candidate.spec);
 
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    remainingCandidates = std::move(falsePathCandidates);
+    remainingCandidates = std::move(elsePathCandidates);
   }
   genVariant(fallback);
 }
