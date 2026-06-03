@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/TableGen/SearchableTable.td"
 
 //===----------------------------------------------------------------------===//
 // SuperH Subtarget features
@@ -69,21 +70,24 @@ def FeatureSH4A     : SubtargetFeature<"sh4a", "SHArchVersion", "SH4A",
 
 include "SuperHSchedule.td"
 
-class Proc<string Name, list<SubtargetFeature> Features>
+class ProcModel<string Name, list<SubtargetFeature> Features>
     : ProcessorModel<Name, GenericSuperHModel, Features>;
 
-def : Proc<"generic", [FeatureSH4]>;
-def : Proc<"sh1", [FeatureSH1]>;
-def : Proc<"sh2", [FeatureSH2]>;
-def : Proc<"sh3", [FeatureSH3]>;
-def : Proc<"sh4", [FeatureSH4]>;
-def : Proc<"sh4a", [FeatureSH4A]>;
+def : ProcModel<"generic", [FeatureSH4]>;
+def : ProcModel<"sh1", [FeatureSH1]>;
+def : ProcModel<"sh2", [FeatureSH2]>;
+def : ProcModel<"sh2e", [FeatureSH2E]>;
+def : ProcModel<"sh2a", [FeatureSH2A]>;
+def : ProcModel<"sh3", [FeatureSH3]>;
+def : ProcModel<"sh3e", [FeatureSH3E]>;
+def : ProcModel<"sh4", [FeatureSH4]>;
+def : ProcModel<"sh4a", [FeatureSH4A]>;
 
 // NOTE:  SEGA got some special variants of the SuperH family
 //        produced with some extra features enabled, defining them here.
-def : Proc<"dreamcast", [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
-def : Proc<"naomi",     [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
-def : Proc<"saturn",    [FeatureSH2]>;
+def : ProcModel<"dreamcast", [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
+def : ProcModel<"naomi",     [FeatureSH4, FeatureFSCA, FeatureFSRRA]>;
+def : ProcModel<"saturn",    [FeatureSH2]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description
@@ -96,6 +100,9 @@ include "SuperHRegisterInfo.td"
 //===----------------------------------------------------------------------===//
 
 include "SuperHInstrInfo.td"
+
+defm : RemapAllTargetPseudoPointerOperands<sh_ptr_rc>;
+
 def SuperHInstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
@@ -117,12 +124,15 @@ def SuperHAsmWriter : AsmWriter {
 //===---------------------------------------------------------------------===//
 
 def SuperHAsmParser : AsmParser {
-  let ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterName = 1;
   let ShouldEmitMatchRegisterAltName = 0;
 }
 
 def SuperHAsmParserVariant : AsmParserVariant {
-  int Variant = 0;
+  let Variant = 0;
+  let Name = "Hitachi";
+  let TokenizingCharacters = "[]*!#";
+  let CommentDelimiter = ";";
 }
 
 //===----------------------------------------------------------------------===//
@@ -132,5 +142,6 @@ def SuperHAsmParserVariant : AsmParserVariant {
 def SuperH : Target {
   let InstructionSet = SuperHInstrInfo;
   let AssemblyParsers = [SuperHAsmParser];
+  let AssemblyParserVariants = [SuperHAsmParserVariant];
   let AssemblyWriters = [SuperHAsmWriter];
 }

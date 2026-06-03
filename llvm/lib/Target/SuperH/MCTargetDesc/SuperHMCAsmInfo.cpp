@@ -22,4 +22,5 @@ SuperHMCAsmInfo::SuperHMCAsmInfo(const Triple &TheTriple,
                                  const MCTargetOptions &Options)
     : MCAsmInfoELF(Options) {
   this->IsLittleEndian = TheTriple.isLittleEndian();
+  this->CommentString = ";";
 }
