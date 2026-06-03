@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -38,6 +39,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -115,6 +117,16 @@ cl::opt<double> NumCountersPerValueSite(
 cl::opt<bool> AtomicCounterUpdateAll(
     "instrprof-atomic-counter-update-all",
     cl::desc("Make all profile counter updates atomic (for testing only)"),
+    cl::init(false));
+
+cl::opt<bool> AtomicCounterPromote(
+    "atomic-counter-promote",
+    cl::desc("Atomize profile counter updates and promote where possible"),
+    cl::init(false));
+
+cl::opt<bool> SanityCheck(
+    "atomic-counter-promote-check",
+    cl::desc("Check that all profile counter updates were made atomic"),
     cl::init(false));
 
 cl::opt<bool> AtomicCounterUpdatePromoted(
@@ -224,6 +236,20 @@ static SampledInstrumentationConfig getSampledInstrumentationConfig() {
 }
 
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
+
+static void makeAtomic(Instruction *Load, Instruction *Store) {
+  // assert the load and store are accessing the same memory?
+  auto *Addition = dyn_cast<BinaryOperator>(Store->getOperand(0));
+  assert(Addition && Addition->getOpcode() == Instruction::BinaryOps::Add);
+  auto *Addend = Addition->getOperand(1);
+
+  IRBuilder<> Builder(Load);
+  Builder.CreateAtomicRMW(AtomicRMWInst::Add, Store->getOperand(1), Addend,
+                          MaybeAlign(), AtomicOrdering::Monotonic);
+  Store->eraseFromParent();
+  Addition->eraseFromParent();
+  Load->eraseFromParent();
+}
 
 static uint64_t getIntModuleFlagOrZero(const Module &M, StringRef Flag) {
   auto *MD = dyn_cast_or_null<ConstantAsMetadata>(M.getModuleFlag(Flag));
@@ -470,6 +496,12 @@ public:
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
                                 MaybeAlign(),
                                 AtomicOrdering::SequentiallyConsistent);
+      // Generate the relaxed atomic RMW if we've asked for it and no more
+      // promotion is possible.
+      else if (AtomicCounterPromote &&
+               (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock)))
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
+                                MaybeAlign(), AtomicOrdering::Monotonic);
       else {
         LoadInst *OldVal = Builder.CreateLoad(Ty, Addr, "pgocount.promoted");
         auto *NewVal = Builder.CreateAdd(OldVal, LiveInValue);
@@ -524,6 +556,20 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
+    // In this function we examine loop L and other parameters to decide what
+    // candidates are promotable. Once we've promoted what we can, we convert
+    // all remaining candidates to use atomics. This requires that promoted
+    // candidates are set to nullptr in the LoopToCandidates[&L] array.
+    llvm::scope_exit Cleanup([&]() {
+      if (!AtomicCounterPromote)
+        return;
+      for (auto &Cand : LoopToCandidates[&L]) {
+        if (Cand.first != nullptr && Cand.second != nullptr)
+          makeAtomic(Cand.first, Cand.second);
+        Cand = {nullptr, nullptr};
+      }
+    });
+
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
@@ -545,7 +591,6 @@ public:
 
     unsigned Promoted = 0;
     for (auto &Cand : LoopToCandidates[&L]) {
-
       SmallVector<PHINode *, 4> NewPHIs;
       SSAUpdater SSA(&NewPHIs);
       Value *InitVal = ConstantInt::get(Cand.first->getType(), 0);
@@ -567,6 +612,7 @@ public:
                                         L.getLoopPreheader(), ExitBlocks,
                                         InsertPts, LoopToCandidates, LI);
       Promoter.run(SmallVector<Instruction *, 2>({Cand.first, Cand.second}));
+      Cand = {nullptr, nullptr};
       Promoted++;
       if (Promoted >= MaxProm)
         break;
@@ -870,8 +916,25 @@ bool InstrLowerer::isSamplingEnabled() const {
 bool InstrLowerer::isCounterPromotionEnabled() const {
   if (DoCounterPromotion.getNumOccurrences() > 0)
     return DoCounterPromotion;
-
+  if (AtomicCounterPromote)
+    return true;
   return Options.DoCounterPromotion;
+}
+
+static void doAtomicPromotionCheck(Function *F) {
+  for (const llvm::Instruction &I : llvm::instructions(F)) {
+    const Value *Addr = nullptr;
+    if (const LoadInst *LI = dyn_cast<LoadInst>(&I))
+      Addr = LI->getOperand(0);
+    else if (const StoreInst *LI = dyn_cast<StoreInst>(&I))
+      Addr = LI->getOperand(1);
+
+    if (Addr && Addr->stripInBoundsOffsets()->getName().starts_with(
+                    getInstrProfCountersVarPrefix())) {
+      LLVM_DEBUG(dbgs() << "Missed candidate: "; I.dump());
+      assert(false && "Candidate load/store not converted to atomic");
+    }
+  }
 }
 
 void InstrLowerer::promoteCounterLoadStores(Function *F) {
@@ -894,8 +957,11 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
     auto *CounterStore = LoadStore.second;
     BasicBlock *BB = CounterLoad->getParent();
     Loop *ParentLoop = LI.getLoopFor(BB);
-    if (!ParentLoop)
+    if (!ParentLoop) {
+      if (AtomicCounterPromote)
+        makeAtomic(CounterLoad, CounterStore);
       continue;
+    }
     LoopPromotionCandidates[ParentLoop].emplace_back(CounterLoad, CounterStore);
   }
 
@@ -907,6 +973,9 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
     PGOCounterPromoter Promoter(LoopPromotionCandidates, *Loop, LI, BFI.get());
     Promoter.run(&TotalCountersPromoted);
   }
+
+  if (AtomicCounterPromote && SanityCheck)
+    doAtomicPromotionCheck(F);
 }
 
 static bool needsRuntimeHookUnconditionally(const Triple &TT) {
@@ -1224,6 +1293,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
+
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
