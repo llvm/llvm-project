@@ -8681,6 +8681,21 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
+// If X is known never to be ordered less than zero, fabs(X) can differ
+// from X only by changing -0.0 to +0.0. Floating-point comparisons do not
+// distinguish the sign of zero, so fabs(X) is redundant.
+static Instruction *foldRedundantFAbsInFCmp(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *X;
+  if (!match(I.getOperand(0), m_FAbs(m_Value(X))))
+    return nullptr;
+
+  if (!cannotBeOrderedLessThanZero(
+          X, IC.getSimplifyQuery().getWithInstruction(&I)))
+    return nullptr;
+
+  return IC.replaceOperand(I, 0, X);
+}
+
 /// Optimize sqrt(X) compared with zero.
 static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -9221,6 +9236,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
 
+  if (Instruction *R = foldRedundantFAbsInFCmp(I, *this))
+    return R;
   if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
     return R;
 
