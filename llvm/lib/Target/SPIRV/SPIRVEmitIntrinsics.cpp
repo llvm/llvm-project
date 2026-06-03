@@ -3539,6 +3539,20 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         Phi.mutateType(B.getInt32Ty());
       }
 
+  // A SelectInst, like a PHINode, takes its result type from its operands.
+  // preprocessCompositeConstants() rewrites composite constant arms to i32
+  // value-ids, so once both arms are lowered, mutate the select to match. Its
+  // original type is tracked in AggrConstTypes (used to assign the SPIR-V type)
+  // and its extractvalue users are lowered to spv_extractv below.
+  for (Instruction &I : instructions(Func))
+    if (auto *Sel = dyn_cast<SelectInst>(&I))
+      if (Sel->getType()->isAggregateType() &&
+          !Sel->getTrueValue()->getType()->isAggregateType() &&
+          !Sel->getFalseValue()->getType()->isAggregateType()) {
+        AggrConstTypes[Sel] = Sel->getType();
+        Sel->mutateType(B.getInt32Ty());
+      }
+
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
       llvm::make_pointer_range(instructions(Func)));
