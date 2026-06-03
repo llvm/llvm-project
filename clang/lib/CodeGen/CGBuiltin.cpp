@@ -4022,8 +4022,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_trap: {
     EmitTrapCall(Intrinsic::trap);
-    Builder.CreateUnreachable();
-    EmitBlock(createBasicBlock());
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_verbose_trap: {
