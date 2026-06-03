@@ -2354,6 +2354,7 @@ defm : MTBUF_LoadIntrinsicPat<SItbuffer_load, v4f32, "TBUFFER_LOAD_FORMAT_XYZW">
 
 let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, f16,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
+  defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, i16,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, i32,   "TBUFFER_LOAD_FORMAT_D16_X_gfx80">;
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, v2i32, "TBUFFER_LOAD_FORMAT_D16_XY_gfx80">;
   defm : MTBUF_LoadIntrinsicPat_Common<SItbuffer_load_d16, v3i32, "TBUFFER_LOAD_FORMAT_D16_XYZ_gfx80">;
@@ -2362,10 +2363,14 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, f16,   "TBUFFER_LOAD_FORMAT_D16_X">;
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, i16,   "TBUFFER_LOAD_FORMAT_D16_X">;
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, i32,   "TBUFFER_LOAD_FORMAT_D16_X">;
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v2f16, "TBUFFER_LOAD_FORMAT_D16_XY">;
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v2i16, "TBUFFER_LOAD_FORMAT_D16_XY">;
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4f16, "TBUFFER_LOAD_FORMAT_D16_XYZ", v3f16>;
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4i16, "TBUFFER_LOAD_FORMAT_D16_XYZ", v3i16>;
   defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4f16, "TBUFFER_LOAD_FORMAT_D16_XYZW">;
+  defm : MTBUF_LoadIntrinsicPat<SItbuffer_load_d16, v4i16, "TBUFFER_LOAD_FORMAT_D16_XYZW">;
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
@@ -2428,6 +2433,7 @@ defm : MTBUF_StoreIntrinsicPat<SItbuffer_store, v4f32, "TBUFFER_STORE_FORMAT_XYZ
 
 let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, f16,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
+  defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, i16,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X_gfx80">;
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, v2i32, "TBUFFER_STORE_FORMAT_D16_XY_gfx80">;
   defm : MTBUF_StoreIntrinsicPat_Common<SItbuffer_store_d16, v3i32, "TBUFFER_STORE_FORMAT_D16_XYZ_gfx80">;
@@ -2436,10 +2442,14 @@ let OtherPredicates = [HasUnpackedD16VMem,HasMTBUFInsts] in {
 
 let OtherPredicates = [HasPackedD16VMem,HasMTBUFInsts] in {
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, f16,   "TBUFFER_STORE_FORMAT_D16_X">;
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i16,   "TBUFFER_STORE_FORMAT_D16_X">;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, i32,   "TBUFFER_STORE_FORMAT_D16_X">;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2f16, "TBUFFER_STORE_FORMAT_D16_XY">;
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v2i16, "TBUFFER_STORE_FORMAT_D16_XY">;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3f16>;
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4i16, "TBUFFER_STORE_FORMAT_D16_XYZ", v3i16>;
   defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4f16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
+  defm : MTBUF_StoreIntrinsicPat<SItbuffer_store_d16, v4i16, "TBUFFER_STORE_FORMAT_D16_XYZW">;
 } // End HasPackedD16VMem,HasMTBUFInsts.
 
 //===----------------------------------------------------------------------===//
