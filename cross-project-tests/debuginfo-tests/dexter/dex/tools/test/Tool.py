@@ -17,6 +17,9 @@ from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
 from dex.debugger.DebuggerControllers.ConditionalController import ConditionalController
+from dex.debugger.DebuggerControllers.ScriptDebuggerController import (
+    ScriptDebuggerController,
+)
 from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
 from dex.test_script.Script import get_dexter_script
@@ -112,6 +115,11 @@ class Tool(TestToolBase):
             action="store_true",
             help="if true, skip running the debugger and produce no output; used for testing purposes",
         )
+        parser.add_argument(
+            "--skip-evaluate",
+            action="store_true",
+            help="if true, skip evaluating the ouput from the debugger and just print the seen steps; used for testing purposes",
+        )
         super(Tool, self).add_tool_arguments(parser, defaults)
 
     def _init_debugger_controller(self):
@@ -127,9 +135,6 @@ class Tool(TestToolBase):
                 self.context.options.test_files[0],
                 self.context.options.source_root_dir,
             )
-            assert (
-                self.context.options.skip_run
-            ), "Debugging not yet supported with --use-script"
         else:
             step_collection.commands, new_source_files = get_command_infos(
                 self.context.options.test_files, self.context.options.source_root_dir
@@ -141,11 +146,18 @@ class Tool(TestToolBase):
         if self.context.options.skip_run:
             return step_collection
 
-        cond_controller_cmds = ["DexLimitSteps", "DexStepFunction", "DexContinue"]
-        if any(c in step_collection.commands for c in cond_controller_cmds):
-            debugger_controller = ConditionalController(self.context, step_collection)
+        if self.context.options.use_script:
+            debugger_controller = ScriptDebuggerController(
+                self.context, step_collection
+            )
         else:
-            debugger_controller = DefaultController(self.context, step_collection)
+            cond_controller_cmds = ["DexLimitSteps", "DexStepFunction", "DexContinue"]
+            if any(c in step_collection.commands for c in cond_controller_cmds):
+                debugger_controller = ConditionalController(
+                    self.context, step_collection
+                )
+            else:
+                debugger_controller = DefaultController(self.context, step_collection)
 
         return debugger_controller
 
@@ -255,6 +267,14 @@ class Tool(TestToolBase):
                 if steps.script is not None:
                     print(steps.script.dump())
                 return
+            if self.context.options.skip_evaluate:
+                self.context.logger.warning("Skipping evaluation...")
+                for step in steps.steps:
+                    print("\n".join(step.detailed_print()))
+                return
+            assert (
+                not self.context.options.use_script
+            ), "Evaluation not yet supported with --use-script"
             self._record_steps(test_name, steps)
             heuristic_score = Heuristic(self.context, steps)
             self._record_score(test_name, heuristic_score)

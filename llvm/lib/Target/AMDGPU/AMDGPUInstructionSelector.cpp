@@ -1298,6 +1298,25 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
       return false;
     }
     return selectImpl(I, *CoverageInfo);
+  case Intrinsic::amdgcn_permlane16:
+  case Intrinsic::amdgcn_permlanex16:
+    if (!STI.hasPermlane16Insts()) {
+      diagnoseUnsupportedIntrinsic(I);
+      return false;
+    }
+    return selectImpl(I, *CoverageInfo);
+  case Intrinsic::amdgcn_mov_dpp8:
+    if (!STI.hasDPP8()) {
+      diagnoseUnsupportedIntrinsic(I);
+      return false;
+    }
+    return selectImpl(I, *CoverageInfo);
+  case Intrinsic::amdgcn_tanh:
+    if (!STI.hasTanhInsts()) {
+      diagnoseUnsupportedIntrinsic(I);
+      return false;
+    }
+    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }

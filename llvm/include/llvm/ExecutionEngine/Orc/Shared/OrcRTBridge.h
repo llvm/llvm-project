@@ -86,7 +86,8 @@ using SPSSimpleExecutorDylibManagerOpenSignature =
 
 using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
     shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
-    shared::SPSExecutorAddr, shared::SPSRemoteSymbolLookupSet);
+    shared::SPSExecutorAddr, shared::SPSExecutorAddr,
+    shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
