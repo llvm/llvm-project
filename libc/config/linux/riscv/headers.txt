@@ -21,6 +21,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.malloc
     libc.include.math
     libc.include.netinet_in
+    libc.include.netinet_tcp
+    libc.include.netinet_udp
     libc.include.poll
     libc.include.pthread
     libc.include.sched
@@ -40,18 +42,21 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_epoll
     libc.include.sys_ioctl
     libc.include.sys_mman
+    libc.include.sys_param
     libc.include.sys_personality
     libc.include.sys_prctl
     libc.include.sys_queue
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
+    libc.include.sys_sendfile
     libc.include.sys_socket
     libc.include.sys_stat
     libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_uio
     libc.include.sys_utsname
     libc.include.sys_wait
     libc.include.syscall
