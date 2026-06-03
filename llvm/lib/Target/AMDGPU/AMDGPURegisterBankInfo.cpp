@@ -1174,7 +1174,7 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register AllocSize = MI.getOperand(1).getReg();
   Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
-  // When using flat-scratch, the stack offset unscaled.
+  // When using flat-scratch, the stack offset is unscaled.
   const bool HasFlatScratch = ST.hasFlatScratchEnabled();
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
 
