@@ -385,7 +385,9 @@ std::optional<int64_t> GetIntValueFromExpr(
     return value;
   }
   if (semaCtx) {
-    if (auto expr{evaluate::ExpressionAnalyzer{*semaCtx}.Analyze(parserExpr)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (auto expr{ea.Analyze(parserExpr)}) {
       return evaluate::ToInt64(expr);
     }
   }
@@ -437,6 +439,7 @@ std::optional<bool> IsContiguous(
           },
           [&](const parser::Designator &x) {
             evaluate::ExpressionAnalyzer ea{semaCtx};
+            auto restorer{ea.GetContextualMessages().DiscardMessages()};
             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
               return ContiguousHelper{semaCtx}.Visit(*maybeExpr);
             }
