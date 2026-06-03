@@ -23,7 +23,7 @@ namespace math {
 namespace sincos_eval_internal {
 
 using fputil::DoubleDouble;
-using Float128 = fputil::DyadicFloat<128>;
+using DFloat128 = fputil::DyadicFloat<128>;
 
 LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
                                DoubleDouble &cos_u) {
@@ -98,12 +98,12 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
                               0x1.0p-51, 0x1.0p-105);
 }
 
-LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
-                             Float128 &cos_u) {
-  Float128 u_sq = fputil::quick_mul(u, u);
+LIBC_INLINE void sincos_eval(const DFloat128 &u, DFloat128 &sin_u,
+                             DFloat128 &cos_u) {
+  DFloat128 u_sq = fputil::quick_mul(u, u);
 
   // sin(u) ~ x - x^3/3! + x^5/5! - x^7/7! + x^9/9! - x^11/11! + x^13/13!
-  constexpr Float128 SIN_COEFFS[] = {
+  constexpr DFloat128 SIN_COEFFS[] = {
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1
       {Sign::NEG, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // -1/3!
       {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/5!
@@ -114,7 +114,7 @@ LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
   };
 
   // cos(u) ~ 1 - x^2/2 + x^4/4! - x^6/6! + x^8/8! - x^10/10! + x^12/12!
-  constexpr Float128 COS_COEFFS[] = {
+  constexpr DFloat128 COS_COEFFS[] = {
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128}, // 1/2
       {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/4!

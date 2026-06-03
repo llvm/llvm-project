@@ -51,10 +51,24 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
     Flags.setByVal();
   if (Attrs.hasAttribute(Attribute::ByRef))
     Flags.setByRef();
-  if (Attrs.hasAttribute(Attribute::Preallocated))
-    Flags.setPreallocated();
-  if (Attrs.hasAttribute(Attribute::InAlloca))
+  if (Attrs.hasAttribute(Attribute::InAlloca)) {
     Flags.setInAlloca();
+    // Set the byval flag for CCAssignFn callbacks that don't know about
+    // inalloca.  This way we can know how many bytes we should've allocated
+    // and how many bytes a callee cleanup function will pop.  If we port
+    // inalloca to more targets, we'll have to add custom inalloca handling
+    // in the various CC lowering callbacks.
+    Flags.setByVal();
+  }
+  if (Attrs.hasAttribute(Attribute::Preallocated)) {
+    Flags.setPreallocated();
+    // Set the byval flag for CCAssignFn callbacks that don't know about
+    // preallocated.  This way we can know how many bytes we should've
+    // allocated and how many bytes a callee cleanup function will pop.  If
+    // we port preallocated to more targets, we'll have to add custom
+    // preallocated handling in the various CC lowering callbacks.
+    Flags.setByVal();
+  }
   if (Attrs.hasAttribute(Attribute::Returned))
     Flags.setReturned();
   if (Attrs.hasAttribute(Attribute::SwiftSelf))

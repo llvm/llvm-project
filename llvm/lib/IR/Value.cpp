@@ -542,8 +542,11 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
     U.set(New);
   }
 
-  if (BasicBlock *BB = dyn_cast<BasicBlock>(this))
+  if (BasicBlock *BB = dyn_cast<BasicBlock>(this)) {
     BB->replaceSuccessorsPhiUsesWith(cast<BasicBlock>(New));
+    if (BB->hasAddressTaken())
+      BlockAddress::lookup(BB)->handleOperandChange(this, New);
+  }
 }
 
 void Value::replaceAllUsesWith(Value *New) {
@@ -840,6 +843,12 @@ bool Value::canBeFreed() const {
     // as they definitely exist prior to the call.
     const Function *F = A->getParent();
     if (F->doesNotFreeMemory())
+      return false;
+
+    // nofree on the argument ensures that it cannot be freed through that
+    // pointer. noalias additionally ensures that it can't be freed through
+    // another pointer to the same allocation. Readonly implies nofree.
+    if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
   }
 
@@ -1222,7 +1231,10 @@ void ValueHandleBase::RemoveFromUseList() {
   LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
   DenseMap<Value*, ValueHandleBase*> &Handles = pImpl->ValueHandles;
   if (Handles.isPointerIntoBucketsArray(PrevPtr)) {
-    Handles.erase(getValPtr());
+    // TODO: Remove the only user of DenseMap's callback erase.
+    Handles.erase(getValPtr(), [](auto &Bucket) {
+      Bucket.second->setPrevPtr(&Bucket.second);
+    });
     getValPtr()->HasValueHandle = false;
   }
 }

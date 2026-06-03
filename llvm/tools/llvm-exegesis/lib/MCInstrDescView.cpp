@@ -11,6 +11,7 @@
 #include <tuple>
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/InterleavedRange.h"
 
 namespace llvm {

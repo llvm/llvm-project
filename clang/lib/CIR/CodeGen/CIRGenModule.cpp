@@ -978,6 +978,23 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
 }
 
+static void setLinkageForFunction(CIRGenModule &cgm, cir::FuncOp &func,
+                                  const NamedDecl *nd) {
+  // Mirrors CodeGenModule::setLinkageForGV for function declarations.
+  LinkageInfo lv = nd->getLinkageAndVisibility();
+  if (isExternallyVisible(lv.getLinkage()) &&
+      (nd->hasAttr<WeakAttr>() || nd->isWeakImported())) {
+    auto linkage = cir::GlobalLinkageKind::ExternalWeakLinkage;
+    func.setLinkage(linkage);
+    func.setLinkageAttr(
+        cir::GlobalLinkageKindAttr::get(&cgm.getMLIRContext(), linkage));
+    // Declarations must keep 'private' MLIR visibility; only update for defs.
+    if (!func.isDeclaration())
+      mlir::SymbolTable::setSymbolVisibility(
+          func, cgm.getMLIRVisibilityFromCIRLinkage(linkage));
+  }
+}
+
 static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
   llvm::SmallVector<int64_t> inds;
   for (mlir::Attribute i : indexes) {
@@ -2919,7 +2936,8 @@ cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   llvm_unreachable("Invalid TLS model!");
 }
 
-void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
+                              bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
   cir::TLS_Model tlm = getDefaultCIRTLSModel();
@@ -2934,6 +2952,12 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
   if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  // If this function was called to set the TLS mode for a temporary whose
+  // lifetime is extended by the variable declared by `d`, don't emit the
+  // wrapper, init, and guard info.
+  if (isExtendingDecl)
     return;
 
   setGlobalTlsReferences(d, global);
@@ -2994,6 +3018,9 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
+  setLinkageForFunction(*this, func, funcDecl);
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {
@@ -3889,6 +3916,8 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   }
   cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
   gv.setInitialValueAttr(initialValue);
+  gv.setLinkage(linkage);
+  gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
 
   if (emitter)
     emitter->finalize(gv);
@@ -3903,8 +3932,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     errorNYI(mte->getSourceRange(),
              "Global temporary with comdat/weak linkage");
   if (varDecl->getTLSKind())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with thread local storage");
+    setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
 
   assert(!cir::MissingFeatures::addressSpace());
