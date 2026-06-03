@@ -789,7 +789,7 @@ Error DWARFLinkerImpl::LinkContext::scanFrameData() {
   }
 
   StringRef FrameBytes = Scan->FrameData;
-  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian(), 0);
+  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian());
   uint64_t InputOffset = 0;
   const unsigned SrcAddrSize = Scan->AddressSize;
   // Width of the CIE_pointer field at the start of every FDE (and of the

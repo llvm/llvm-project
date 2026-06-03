@@ -625,18 +625,12 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
   llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
-
-  for (auto &GV : Mod.global_values()) {
-    auto GUID = GV.getGUIDIfAssigned();
-    if (!GUID)
-      continue;
-
-    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(*GUID))
+  for (auto &GV : Mod.global_values())
+    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
       if (!Index.isGlobalValueLive(GVS)) {
         DeadGVs.push_back(&GV);
         convertToDeclaration(GV);
       }
-  }
 
   // Now that all dead bodies have been dropped, delete the actual objects
   // themselves when possible.

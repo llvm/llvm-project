@@ -138,7 +138,6 @@ template <> struct DenseMapInfo<clang::dataflow::Atom> {
   using Underlying = std::underlying_type_t<Atom>;
 
   static inline Atom getEmptyKey() { return Atom(Underlying(-1)); }
-  static inline Atom getTombstoneKey() { return Atom(Underlying(-2)); }
   static unsigned getHashValue(const Atom &Val) {
     return DenseMapInfo<Underlying>::getHashValue(Underlying(Val));
   }

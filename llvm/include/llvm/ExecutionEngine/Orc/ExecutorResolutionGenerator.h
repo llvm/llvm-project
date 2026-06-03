@@ -1,4 +1,4 @@
-//===----- ExecutorResolver.h - Resolve symbols in executor -----*- C++ -*-===//
+//===- ExecutorResolutionGenerator.h - Resolve syms in executor -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

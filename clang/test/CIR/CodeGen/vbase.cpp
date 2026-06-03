@@ -25,9 +25,9 @@ void g() {
   df.f();
 }
 
-// CIR: !rec_Base = !cir.record<class "Base" {!cir.vptr}>
-// CIR: !rec_Derived = !cir.record<class "Derived" {!rec_Base}>
-// CIR: !rec_DerivedFinal = !cir.record<class "DerivedFinal" {!rec_Base}>
+// CIR: !rec_Base = !cir.struct<class "Base" {!cir.vptr}>
+// CIR: !rec_Derived = !cir.struct<class "Derived" {!rec_Base}>
+// CIR: !rec_DerivedFinal = !cir.struct<class "DerivedFinal" {!rec_Base}>
 
 // LLVM: %class.Derived = type { %class.Base }
 // LLVM: %class.Base = type { ptr }

@@ -35,6 +35,11 @@ using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
+// Copy metadata onto a load widened to read a superset of Source's bytes. Only
+// value-independent metadata is copied; metadata describing the loaded value
+// (!range, !noundef, !nofpclass, !tbaa, ...) is dropped.
+void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source);
+
 // If GV is a named-barrier return its type. Otherwise return nullptr.
 TargetExtType *isNamedBarrier(const GlobalVariable &GV);
 

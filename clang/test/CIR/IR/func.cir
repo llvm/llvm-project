@@ -164,7 +164,7 @@ cir.func @global_dtor_with_priority() global_dtor(201) {
 
 }
 
-!rec_Foo = !cir.record<struct "Foo" {!s32i}>
+!rec_Foo = !cir.struct<"Foo" {!s32i}>
 
 cir.func @Foo_default() special_member<#cir.cxx_ctor<!rec_Foo, default>> {
   cir.return

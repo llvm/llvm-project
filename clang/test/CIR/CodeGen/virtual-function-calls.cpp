@@ -13,8 +13,8 @@ struct A {
 // This should initialize the vtable pointer.
 A::A() {}
 
-// CIR: !rec_A = !cir.record<struct "A" {!cir.vptr}>
-// CIR: !rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR: !rec_A = !cir.struct<"A" {!cir.vptr}>
+// CIR: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
 
 // CIR: cir.global "private" external @_ZTV1A : !rec_anon_struct
 

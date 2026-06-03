@@ -85,10 +85,6 @@ template <> struct DenseMapInfo<clang::clangd::SymbolID> {
     static clang::clangd::SymbolID EmptyKey("EMPTYKEY");
     return EmptyKey;
   }
-  static inline clang::clangd::SymbolID getTombstoneKey() {
-    static clang::clangd::SymbolID TombstoneKey("TOMBSTONEKEY");
-    return TombstoneKey;
-  }
   static unsigned getHashValue(const clang::clangd::SymbolID &Sym) {
     return hash_value(Sym);
   }

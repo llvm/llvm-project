@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+// Contract test for CIRToLLVMLLVMIntrinsicCallOpLowering: the op def
+// declares Optional<CIR_AnyType>:$result, so the lowering must accept
+// 0-result (void) calls in addition to the single-result case.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // 0-result, 0-operand.
+  // CHECK-LABEL: llvm.func @void_no_operands
+  // CHECK:         llvm.call_intrinsic "llvm.donothing"() : () -> ()
+  // CHECK:         llvm.return
+  cir.func @void_no_operands() {
+    cir.call_llvm_intrinsic "donothing" : () -> ()
+    cir.return
+  }
+
+  // 0-result with one operand.
+  // CHECK-LABEL: llvm.func @void_with_operand
+  // CHECK:         llvm.call_intrinsic "llvm.amdgcn.s.sleep"(%{{.*}}) : (i32) -> ()
+  // CHECK:         llvm.return
+  cir.func @void_with_operand(%arg0: !s32i) {
+    cir.call_llvm_intrinsic "amdgcn.s.sleep" %arg0 : (!s32i) -> ()
+    cir.return
+  }
+}

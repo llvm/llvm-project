@@ -161,10 +161,6 @@ template <> struct DenseMapInfo<dsymutil::BinaryHolder::ArchiveEntry::KeyTy> {
     return dsymutil::BinaryHolder::ArchiveEntry::KeyTy();
   }
 
-  static inline dsymutil::BinaryHolder::ArchiveEntry::KeyTy getTombstoneKey() {
-    return dsymutil::BinaryHolder::ArchiveEntry::KeyTy("/", {});
-  }
-
   static unsigned
   getHashValue(const dsymutil::BinaryHolder::ArchiveEntry::KeyTy &K) {
     return hash_combine(DenseMapInfo<StringRef>::getHashValue(K.Filename),

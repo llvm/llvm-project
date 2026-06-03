@@ -2,7 +2,7 @@
 // RUN: FileCheck --input-file=%t.cir %s
 
 !s32i = !cir.int<s, 32>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_SomeClass = !cir.struct<"SomeClass" {!s32i}>
 
 // Test that a cleanup scope with break that branches through cleanup is
 // properly flattened with a destination slot and switch dispatch.

@@ -1473,9 +1473,11 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  if (DynamicVGPRBlockSize != 0)
-    // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  if (DynamicVGPRBlockSize != 0) {
+    // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
+    return MaxDynamicVGPRBlocks *
+           getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  }
   return getAddressableNumArchVGPRs(STI);
 }
 

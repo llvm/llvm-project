@@ -1534,14 +1534,6 @@ template<> struct DenseMapInfo<coverage::CounterExpression> {
                              Counter::getCounter(~0U));
   }
 
-  static inline coverage::CounterExpression getTombstoneKey() {
-    using namespace coverage;
-
-    return CounterExpression(CounterExpression::ExprKind::Add,
-                             Counter::getCounter(~0U),
-                             Counter::getCounter(~0U));
-  }
-
   static unsigned getHashValue(const coverage::CounterExpression &V) {
     return static_cast<unsigned>(
         hash_combine(V.Kind, V.LHS.getKind(), V.LHS.getCounterID(),

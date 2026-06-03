@@ -2138,15 +2138,14 @@ def LLVM_NoneTokenOp
     : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
   let description = [{
-    Unlike LLVM IR, MLIR does not have first-class token values. They must be
-    explicitly created as SSA values using `llvm.mlir.none`. This operation has
-    no operands or attributes, and returns a none token value of a wrapped LLVM IR
-    pointer type.
+    MLIR does not have a way to spell the LLVM IR `none` token literal. This
+    operation produces a builtin `!token` SSA value that lowers to
+    `llvm::ConstantTokenNone` in LLVM IR.
 
     Examples:
 
     ```mlir
-    %0 = llvm.mlir.none : !llvm.token
+    %0 = llvm.mlir.none : !token
     ```
   }];
 
@@ -2154,7 +2153,7 @@ def LLVM_NoneTokenOp
     $res = llvm::ConstantTokenNone::get(builder.getContext());
   }];
 
-  let results = (outs LLVM_TokenType:$res);
+  let results = (outs Token:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
 }

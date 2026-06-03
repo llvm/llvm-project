@@ -80,7 +80,7 @@ subroutine test_intent_in(x)
 ! CHECK: hlfir.copy_in
 ! CHECK: fir.call @_QPbar_intent_in
 ! CHECK: hlfir.copy_out
-! CHECK-SAME: ) -> ()
+! CHECK-SAME: %{{.*}}, %{{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1) -> ()
   call bar_intent_in(x)
 end subroutine
 

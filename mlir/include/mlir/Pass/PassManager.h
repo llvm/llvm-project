@@ -488,9 +488,9 @@ private:
 
   /// Hash keys used to detect when reinitialization is necessary.
   llvm::hash_code initializationKey =
-      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+      DenseMapInfo<llvm::hash_code>::getEmptyKey();
   llvm::hash_code pipelineInitializationKey =
-      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
+      DenseMapInfo<llvm::hash_code>::getEmptyKey();
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;

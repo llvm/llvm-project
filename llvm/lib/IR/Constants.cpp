@@ -2056,7 +2056,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2089,7 +2089,7 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
   // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   getContext().pImpl->BlockAddresses[NewBB] = this;
-  setOperand(0, NewBB);
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.

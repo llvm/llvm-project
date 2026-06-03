@@ -265,11 +265,6 @@ template <> struct DenseMapInfo<at::VarRecord> {
                          DenseMapInfo<DILocation *>::getEmptyKey());
   }
 
-  static inline at::VarRecord getTombstoneKey() {
-    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
-                         DenseMapInfo<DILocation *>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const at::VarRecord &Var) {
     return hash_combine(Var.Var, Var.DL);
   }

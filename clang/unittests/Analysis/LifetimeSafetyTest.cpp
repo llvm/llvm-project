@@ -215,7 +215,6 @@ public:
     for (LoanID LID : EndLoanIDs) {
       const llvm::SmallVector<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
-              Runner.getAnalysis().getFactManager(),
               getProgramPoint(Annotation), *StartOriginID, LID);
       if (!OriginFlowChain.empty())
         return OriginFlowChain;

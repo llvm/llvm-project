@@ -258,6 +258,16 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   computeRegisterProperties(STI.getRegisterInfo());
 }
 
+Register XtensaTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A2;
+}
+
+Register XtensaTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return Xtensa::A3;
+}
+
 bool XtensaTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // The Xtensa target isn't yet aware of offsets.

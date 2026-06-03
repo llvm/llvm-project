@@ -86,7 +86,6 @@ std::set<CtorTester *> CtorTester::Constructed;
 
 struct CtorTesterMapInfo {
   static inline CtorTester getEmptyKey() { return CtorTester(-1); }
-  static inline CtorTester getTombstoneKey() { return CtorTester(-2); }
   static unsigned getHashValue(const CtorTester &Val) {
     return Val.getValue() * 37u;
   }
@@ -733,7 +732,6 @@ TEST(DenseMapCustomTest, LookupOrConstness) {
 // In the latter case, "a" == 0, "b" == 1 and so on.
 struct TestDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -790,7 +788,6 @@ TEST(DenseMapCustomTest, SmallDenseMapInitializerList) {
 
 struct ContiguousDenseMapInfo {
   static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val; }
   static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
     return LHS == RHS;
@@ -916,7 +913,6 @@ namespace llvm {
 template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
   static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
-  static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return LHS.value == RHS.value;
@@ -926,7 +922,6 @@ struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
 template <> struct DenseMapInfo<AlwaysEqType> {
   using T = AlwaysEqType;
   static inline T getEmptyKey() { return {}; }
-  static inline T getTombstoneKey() { return {}; }
   static unsigned getHashValue(const T &Val) { return 0; }
   static bool isEqual(const T &LHS, const T &RHS) {
     return false;

@@ -93,7 +93,7 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext <vscale x 16 x i32> [[VEC_IND]] to <vscale x 16 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[SRC]], i32 [[TMP5]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i32(ptr align 1 [[TMP6]], i32 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP6]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], <vscale x 16 x i64> [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x ptr> align 1 [[TMP7]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP2]], [[INDEX]]

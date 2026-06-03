@@ -1571,10 +1571,6 @@ template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
     return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
   }
 
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1699,10 +1695,6 @@ template<> struct DenseMapInfo<::MyBitEnum> {
 
   static inline ::MyBitEnum getEmptyKey() {
     return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {

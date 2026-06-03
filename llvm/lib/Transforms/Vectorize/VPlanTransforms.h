@@ -145,6 +145,16 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
+  /// Finalize SCEV predicates by adding induction predicates from \p Plan to
+  /// \p PSE and checking constraints. Returns false if predicated IVs have
+  /// outside-loop uses via ExitingIVValue, if SCEV predicate complexity exceeds
+  /// \p SCEVCheckThreshold, or if predicates are needed but \p OptForSize is
+  /// true.
+  static bool
+  finalizeSCEVPredicates(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         bool OptForSize, unsigned SCEVCheckThreshold,
+                         OptimizationRemarkEmitter *ORE, Loop *TheLoop);
+
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.
@@ -336,10 +346,10 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                          VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB,
-                                          UncountableExitStyle Style);
+  static bool handleUncountableEarlyExits(
+      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
+      VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+      DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

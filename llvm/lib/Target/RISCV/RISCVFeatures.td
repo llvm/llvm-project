@@ -1734,15 +1734,6 @@ def FeatureVendorXqci
                       FeatureVendorXqcilsm, FeatureVendorXqcisim,
                       FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
-// Rivos Extension(s)
-
-def FeatureVendorXRivosVizip
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
-def HasVendorXRivosVizip
-    : Predicate<"Subtarget->hasVendorXRivosVizip()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
-                         "'XRivosVizip' (Rivos Vector Register Zips)">;
-
 // Andes Extension(s)
 
 def FeatureVendorXAndesPerf

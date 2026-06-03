@@ -35,11 +35,6 @@ template <> struct DenseMapInfo<SymbolsMapKey> {
     return SymbolsMapKey(MachO::EncodeKind::GlobalSymbol, StringRef{});
   }
 
-  static inline SymbolsMapKey getTombstoneKey() {
-    return SymbolsMapKey(MachO::EncodeKind::ObjectiveCInstanceVariable,
-                         StringRef{});
-  }
-
   static unsigned getHashValue(const SymbolsMapKey &Key) {
     return hash_combine(hash_value(Key.Kind), hash_value(Key.Name));
   }

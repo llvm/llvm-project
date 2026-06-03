@@ -371,10 +371,6 @@ template <> struct DenseMapInfo<APSInt, void> {
     return APSInt(DenseMapInfo<APInt, void>::getEmptyKey());
   }
 
-  static inline APSInt getTombstoneKey() {
-    return APSInt(DenseMapInfo<APInt, void>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const APSInt &Key) {
     return DenseMapInfo<APInt, void>::getHashValue(Key);
   }

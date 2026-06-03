@@ -2144,6 +2144,21 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "SemanticInterposition metadata requires constant integer argument");
   }
 
+  if (ID->getString() == "amdgpu.buffer.oob.mode" ||
+      ID->getString() == "amdgpu.tbuffer.oob.mode") {
+    Check(MFB == Module::Max,
+          "'" + ID->getString() +
+              "' module flag must use 'max' merge behaviour");
+    ConstantInt *Value =
+        mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
+    Check(Value, "'" + ID->getString() +
+                     "' module flag must have a constant integer value");
+    if (Value) {
+      Check(Value->getZExtValue() <= 2,
+            "'" + ID->getString() + "' module flag must be 0, 1, or 2");
+    }
+  }
+
   if (ID->getString() == "CG Profile") {
     for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
       visitModuleFlagCGProfileEntry(MDO);
@@ -4020,7 +4035,8 @@ void Verifier::visitCallBase(CallBase &Call) {
 
     if (Call.paramHasAttr(i, Attribute::ImmArg)) {
       Value *ArgVal = Call.getArgOperand(i);
-      Check(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
+      Check((isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal)) &&
+                !isa<VectorType>(ArgVal->getType()),
             "immarg operand has non-immediate parameter", ArgVal, Call);
 
       // If the imm-arg is an integer and also has a range attached,
@@ -4230,18 +4246,6 @@ void Verifier::verifyTailCCMustTailAttrs(const AttrBuilder &Attrs,
         Twine("byref attribute not allowed in ") + Context);
 }
 
-/// Two types are "congruent" if they are identical, or if they are both pointer
-/// types with different pointee types and the same address space.
-static bool isTypeCongruent(Type *L, Type *R) {
-  if (L == R)
-    return true;
-  PointerType *PL = dyn_cast<PointerType>(L);
-  PointerType *PR = dyn_cast<PointerType>(R);
-  if (!PL || !PR)
-    return false;
-  return PL->getAddressSpace() == PR->getAddressSpace();
-}
-
 static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
@@ -4271,32 +4275,21 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   FunctionType *CalleeTy = CI.getFunctionType();
   Check(CallerTy->isVarArg() == CalleeTy->isVarArg(),
         "cannot guarantee tail call due to mismatched varargs", &CI);
-  Check(isTypeCongruent(CallerTy->getReturnType(), CalleeTy->getReturnType()),
+  Check(CallerTy->getReturnType() == CalleeTy->getReturnType(),
         "cannot guarantee tail call due to mismatched return types", &CI);
 
   // - The calling conventions of the caller and callee must match.
   Check(F->getCallingConv() == CI.getCallingConv(),
         "cannot guarantee tail call due to mismatched calling conv", &CI);
 
-  // - The call must immediately precede a :ref:`ret <i_ret>` instruction,
-  //   or a pointer bitcast followed by a ret instruction.
-  // - The ret instruction must return the (possibly bitcasted) value
-  //   produced by the call or void.
-  Value *RetVal = &CI;
+  // - The call must immediately precede a :ref:`ret <i_ret>` instruction.
+  // - The ret instruction must return the value produced by the call or void.
   Instruction *Next = CI.getNextNode();
-
-  // Handle the optional bitcast.
-  if (BitCastInst *BI = dyn_cast_or_null<BitCastInst>(Next)) {
-    Check(BI->getOperand(0) == RetVal,
-          "bitcast following musttail call must use the call", BI);
-    RetVal = BI;
-    Next = BI->getNextNode();
-  }
 
   // Check the return.
   ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(Next);
-  Check(Ret, "musttail call must precede a ret with an optional bitcast", &CI);
-  Check(!Ret->getReturnValue() || Ret->getReturnValue() == RetVal ||
+  Check(Ret, "musttail call must precede a ret", &CI);
+  Check(!Ret->getReturnValue() || Ret->getReturnValue() == &CI ||
             isa<UndefValue>(Ret->getReturnValue()),
         "musttail call result must be returned", Ret);
 
@@ -4325,16 +4318,14 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     return;
   }
 
-  // - The caller and callee prototypes must match.  Pointer types of
-  //   parameters or return types may differ in pointee type, but not
-  //   address space.
+  // - The caller and callee prototypes must match.
   if (!CI.getIntrinsicID()) {
     Check(CallerTy->getNumParams() == CalleeTy->getNumParams(),
           "cannot guarantee tail call due to mismatched parameter counts", &CI);
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      Check(
-          isTypeCongruent(CallerTy->getParamType(I), CalleeTy->getParamType(I)),
-          "cannot guarantee tail call due to mismatched parameter types", &CI);
+      Check(CallerTy->getParamType(I) == CalleeTy->getParamType(I),
+            "cannot guarantee tail call due to mismatched parameter types",
+            &CI);
     }
   }
 
@@ -7221,6 +7212,26 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         AMDGPU::isFlatGlobalAddrSpace(
             Call.getArgOperand(0)->getType()->getPointerAddressSpace()),
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
+    break;
+  }
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
+    // The data byte size immarg is operand 2 for every load-to-LDS intrinsic.
+    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(Size == 1 || Size == 2 || Size == 4 || Size == 12 || Size == 16,
+          "invalid data size for load-to-LDS intrinsic; must be 1, 2, 4, 12, "
+          "or 16",
+          &Call);
     break;
   }
   case Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4:

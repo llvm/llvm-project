@@ -2599,7 +2599,7 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 template <ArithOp Op>
 static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
-  if (Ptr.isDummy())
+  if (!Ptr.isDereferencable())
     return false;
 
   using OneT = Char<false>;

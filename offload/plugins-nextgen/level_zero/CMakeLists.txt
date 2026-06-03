@@ -17,6 +17,7 @@ set(LEVEL_ZERO_SRC_FILES
   src/L0Plugin.cpp
   src/L0Program.cpp
   src/L0Options.cpp
+  src/L0Queue.cpp
 )
 
 target_sources(omptarget.rtl.level_zero PRIVATE

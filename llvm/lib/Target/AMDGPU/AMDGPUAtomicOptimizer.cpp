@@ -402,7 +402,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   }
 
   // Reduce within each pair of rows (i.e. 32 lanes).
-  assert(ST.hasPermLaneX16());
+  assert(ST.hasPermlane16Insts());
   Value *Permlanex16Call =
       B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
                         {PoisonValue::get(AtomicTy), V, B.getInt32(0),
@@ -463,7 +463,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
-    assert(ST.hasPermLaneX16());
+    assert(ST.hasPermlane16Insts());
     Value *PermX =
         B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
                           {PoisonValue::get(AtomicTy), V, B.getInt32(-1),
@@ -738,7 +738,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       // that they can correctly contribute to the final result.
       NewV =
           B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-      if (!NeedResult && ST.hasPermLaneX16()) {
+      if (!NeedResult && ST.hasPermlane16Insts()) {
         // On GFX10 the permlanex16 instruction helps us build a reduction
         // without too many readlanes and writelanes, which are generally bad
         // for performance.

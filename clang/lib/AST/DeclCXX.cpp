@@ -990,8 +990,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       //   T is a class type [...] with [...] no unnamed bit-fields of non-zero
       //   length
       if (data().Empty && !Field->isZeroLengthBitField() &&
-          Context.getLangOpts().getClangABICompat() >
-              LangOptions::ClangABI::Ver6)
+          !Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver6))
         data().Empty = false;
       return;
     }

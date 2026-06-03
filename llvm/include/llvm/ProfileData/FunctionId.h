@@ -182,10 +182,6 @@ template <> struct DenseMapInfo<sampleprof::FunctionId, void> {
     return sampleprof::FunctionId(~0ULL);
   }
 
-  static inline sampleprof::FunctionId getTombstoneKey() {
-    return sampleprof::FunctionId(~1ULL);
-  }
-
   static unsigned getHashValue(const sampleprof::FunctionId &Val) {
     return Val.getHashCode();
   }

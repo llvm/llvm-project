@@ -9,6 +9,8 @@
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "TypeDetail.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/QuantStorageTypeInterface.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -552,3 +554,139 @@ LogicalResult CalibratedQuantizedType::verifyInvariants(
 double CalibratedQuantizedType::getMin() const { return getImpl()->min; }
 
 double CalibratedQuantizedType::getMax() const { return getImpl()->max; }
+
+QuantileType QuantileType::get(mlir::MLIRContext *ctx, mlir::Type storageType,
+                               mlir::Type quantileType,
+                               ArrayRef<double> quantiles,
+                               std::optional<int64_t> storageMin,
+                               std::optional<int64_t> storageMax) {
+  return Base::get(ctx, storageType, quantileType, quantiles, storageMin,
+                   storageMax);
+}
+
+QuantileType QuantileType::getChecked(
+    function_ref<InFlightDiagnostic()> emitError, mlir::MLIRContext *ctx,
+    mlir::Type storageType, mlir::Type quantileType, ArrayRef<double> quantiles,
+    std::optional<int64_t> storageMin, std::optional<int64_t> storageMax) {
+  return Base::getChecked(emitError, ctx, storageType, quantileType, quantiles,
+                          storageMin, storageMax);
+}
+
+LogicalResult QuantileType::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError, Type storageType,
+    Type quantileType, ArrayRef<double> quantiles,
+    std::optional<int64_t> storageMin, std::optional<int64_t> storageMax) {
+  if (!storageType.isIntOrFloat())
+    return emitError() << "storage type must be an integer or float type";
+  if (!llvm::isa<mlir::FloatType>(quantileType))
+    return emitError() << "quantile type must be a float type";
+  if (quantiles.empty())
+    return emitError() << "quantile values must not be empty";
+  if (storageMin.has_value() != storageMax.has_value())
+    return emitError()
+           << "storage min and max must both be specified or both omitted";
+  if (storageMin && storageMax && *storageMin >= *storageMax)
+    return emitError() << "storage min must be less than storage max";
+
+  unsigned width = storageType.getIntOrFloatBitWidth();
+  bool isSigned = !llvm::isa<mlir::IntegerType>(storageType) ||
+                  llvm::cast<mlir::IntegerType>(storageType).isSigned();
+  auto effectiveMin =
+      storageMin.value_or(isSigned ? -(1LL << (width - 1)) : 0LL);
+  auto effectiveMax = storageMax.value_or(isSigned ? (1LL << (width - 1)) - 1
+                                                   : (1LL << width) - 1);
+  auto expectedSize = effectiveMax - effectiveMin + 1;
+  if (static_cast<decltype(expectedSize)>(quantiles.size()) != expectedSize)
+    return emitError() << "quantile LUT size (" << quantiles.size()
+                       << ") must equal the number of representable storage "
+                          "values ("
+                       << expectedSize << ")";
+
+  for (double v : quantiles)
+    if (std::isnan(v) || std::isinf(v))
+      return emitError()
+             << "quantile values must be finite (no NaN or infinity)";
+
+  return success();
+}
+
+bool QuantileType::classof(mlir::Type type) {
+  return type.getTypeID() == mlir::TypeID::get<QuantileType>();
+}
+
+mlir::Type QuantileType::getStorageType() const {
+  return static_cast<ImplType *>(impl)->getStorageType();
+}
+
+mlir::Type QuantileType::getQuantileType() const {
+  return static_cast<ImplType *>(impl)->getQuantileType();
+}
+
+ArrayRef<double> QuantileType::getQuantiles() const {
+  return static_cast<ImplType *>(impl)->getQuantiles();
+}
+
+std::optional<int64_t> QuantileType::getStorageMin() const {
+  return static_cast<ImplType *>(impl)->getStorageMin();
+}
+
+std::optional<int64_t> QuantileType::getStorageMax() const {
+  return static_cast<ImplType *>(impl)->getStorageMax();
+}
+
+bool QuantileType::shouldDefaultToSigned() const {
+  if (auto intType = mlir::dyn_cast<mlir::IntegerType>(getStorageType()))
+    return intType.isSigned();
+  // Float types default to signed.
+  return true;
+}
+
+unsigned QuantileType::getStorageWidth() const {
+  return getStorageType().getIntOrFloatBitWidth();
+}
+
+int64_t QuantileType::getDefaultMaximum(bool isSigned) const {
+  if (auto explicitMax = getStorageMax())
+    return *explicitMax;
+  if (isSigned)
+    return (1LL << (getStorageWidth() - 1)) - 1;
+  return (1LL << getStorageWidth()) - 1;
+}
+
+int64_t QuantileType::getDefaultMinimum(bool isSigned) const {
+  if (auto explicitMin = getStorageMin())
+    return *explicitMin;
+  if (isSigned)
+    return -(1LL << (getStorageWidth() - 1));
+  return 0;
+}
+
+std::string QuantileType::getStorageTypeName(bool isSigned) const {
+  std::string result = "!quant.quantile<";
+  llvm::raw_string_ostream os(result);
+  os << getStorageType() << ":" << getQuantileType() << ", {";
+  ArrayRef<double> quantiles = this->getQuantiles();
+  llvm::interleave(
+      llvm::seq<size_t>(0, quantiles.size()), os,
+      [&](size_t index) { os << quantiles[index]; }, ",");
+  os << "}";
+  if (auto minVal = getStorageMin())
+    if (auto maxVal = getStorageMax())
+      os << ", <" << *minVal << ":" << *maxVal << ">";
+  os << ">";
+  os.flush();
+  return result;
+}
+
+bool QuantileType::isPacked() const { return getStorageWidth() <= 4; }
+
+unsigned QuantileType::getLogicalBitWidth() const { return getStorageWidth(); }
+
+unsigned QuantileType::getElementsPerByte() const {
+  unsigned width = getStorageWidth();
+  return width > 0 ? 8 / width : 0;
+}
+
+std::optional<unsigned> QuantileType::getPreferredAlignmentBytes() const {
+  return std::nullopt;
+}

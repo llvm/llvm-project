@@ -42,8 +42,6 @@ class MemoryBuffer;
 
 namespace clang {
 
-class FileSystemStatCache;
-
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
 ///
@@ -121,9 +119,6 @@ class FileManager : public RefCountedBase<FileManager> {
   unsigned NumDirCacheMisses = 0;
   unsigned NumFileCacheMisses = 0;
 
-  // Caching.
-  std::unique_ptr<FileSystemStatCache> StatCache;
-
   std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
                                bool isFile, std::unique_ptr<llvm::vfs::File> *F,
                                bool IsText = true);
@@ -158,18 +153,6 @@ public:
   FileManager(const FileSystemOptions &FileSystemOpts,
               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
   ~FileManager();
-
-  /// Installs the provided FileSystemStatCache object within
-  /// the FileManager.
-  ///
-  /// Ownership of this object is transferred to the FileManager.
-  ///
-  /// \param statCache the new stat cache to install. Ownership of this
-  /// object is transferred to the FileManager.
-  void setStatCache(std::unique_ptr<FileSystemStatCache> statCache);
-
-  /// Removes the FileSystemStatCache object from the manager.
-  void clearStatCache();
 
   /// Returns the number of unique real file entries cached by the file manager.
   size_t getNumUniqueRealFiles() const { return UniqueRealFiles.size(); }
@@ -305,15 +288,6 @@ private:
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 
 public:
-  /// Get the 'stat' information for the given \p Path.
-  ///
-  /// If the path is relative, it will be resolved against the WorkingDir of the
-  /// FileManager's FileSystemOptions.
-  ///
-  /// \returns a \c std::error_code describing an error, if there was one
-  std::error_code getNoncachedStatValue(StringRef Path,
-                                        llvm::vfs::Status &Result);
-
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
   /// working directory.

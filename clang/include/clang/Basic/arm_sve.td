@@ -1001,6 +1001,17 @@ def SVCVTLT_Z_F32_F16  : SInst<"svcvtlt_f32[_f16]", "dPh", "f", MergeZeroExp, "a
 def SVCVTLT_Z_F64_F32  : SInst<"svcvtlt_f64[_f32]", "dPh", "d", MergeZeroExp, "aarch64_sve_fcvtlt_f64f32",  [IsOverloadNone, VerifyRuntimeMode]>;
 
 }
+
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+def SVCVTN_S : SInst<"svcvtn_{0}[_{1}_x2]", "y2.d", "hfd", MergeNone, "aarch64_sve_fcvtzsn_x2", [IsReductionQV, VerifyRuntimeMode]>;
+def SVCVTN_U : SInst<"svcvtn_{0}[_{1}_x2]", "e2.d", "hfd", MergeNone, "aarch64_sve_fcvtzun_x2", [IsReductionQV, VerifyRuntimeMode]>;
+
+foreach suffix = ["b", "t"] in {
+def SVCVT # !toupper(suffix) # _S: SInst<"svcvt" # suffix # "_{d}[_{1}]", "dy", "hfd", MergeNone, "aarch64_sve_scvtf" # suffix, [IsOverloadDefaultAndOp0, VerifyRuntimeMode]>;
+def SVCVT # !toupper(suffix) # _U: SInst<"svcvt" # suffix # "_{d}[_{1}]", "de", "hfd", MergeNone, "aarch64_sve_ucvtf" # suffix, [IsOverloadDefaultAndOp0, VerifyRuntimeMode]>;
+}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 

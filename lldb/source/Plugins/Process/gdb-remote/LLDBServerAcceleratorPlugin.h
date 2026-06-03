@@ -33,6 +33,9 @@ public:
 
   virtual std::optional<AcceleratorActions> GetInitializeActions() = 0;
 
+  virtual llvm::Expected<AcceleratorBreakpointHitResponse>
+  BreakpointWasHit(AcceleratorBreakpointHitArgs &args) = 0;
+
 protected:
   GDBServer &m_gdb_server;
   MainLoop &m_main_loop;

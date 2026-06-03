@@ -205,11 +205,10 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTONEMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <2 x i32>, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCOMPOUNDLITERAL]] to ptr
 // AMDGCN-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
 // AMDGCN-NEXT:    store <2 x i32> [[U_COERCE]], ptr addrspace(5) [[COERCE_DIVE]], align 8
-// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
-// AMDGCN-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
+// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
+// AMDGCN-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
 // AMDGCN-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
 // AMDGCN-NEXT:    store <2 x i32> [[TMP0]], ptr addrspace(5) [[X]], align 8
 // AMDGCN-NEXT:    ret void
@@ -220,10 +219,9 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <2 x i32>, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCOMPOUNDLITERAL]] to ptr
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(5) align 8 [[TMP0]], i64 800, i1 false)
-// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
-// AMDGCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
+// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
+// AMDGCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
 // AMDGCN-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGESTRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
 // AMDGCN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x <2 x i32>], ptr addrspace(5) [[X]], i64 0, i64 0
 // AMDGCN-NEXT:    store <2 x i32> [[TMP1]], ptr addrspace(5) [[ARRAYIDX]], align 8
@@ -332,13 +330,12 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_STRUCTTWOMEMBER:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <2 x i32>, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCOMPOUNDLITERAL]] to ptr
 // AMDGCN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTTWOMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
 // AMDGCN-NEXT:    store <2 x i32> [[U_COERCE0]], ptr addrspace(5) [[TMP0]], align 8
 // AMDGCN-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTTWOMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 1
 // AMDGCN-NEXT:    store <2 x i32> [[U_COERCE1]], ptr addrspace(5) [[TMP1]], align 8
-// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
-// AMDGCN-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
+// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
+// AMDGCN-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
 // AMDGCN-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_STRUCTTWOMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 1
 // AMDGCN-NEXT:    store <2 x i32> [[TMP2]], ptr addrspace(5) [[Y]], align 8
 // AMDGCN-NEXT:    ret void
@@ -349,10 +346,9 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[U:%.*]] = alloca [[STRUCT_LARGESTRUCTTWOMEMBER]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL:%.*]] = alloca <2 x i32>, align 8, addrspace(5)
-// AMDGCN-NEXT:    [[DOTCOMPOUNDLITERAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTCOMPOUNDLITERAL]] to ptr
 // AMDGCN-NEXT:    call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 8 [[U]], ptr addrspace(5) align 8 [[TMP0]], i64 480, i1 false)
-// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
-// AMDGCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[DOTCOMPOUNDLITERAL_ASCAST]], align 8
+// AMDGCN-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
+// AMDGCN-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(5) [[DOTCOMPOUNDLITERAL]], align 8
 // AMDGCN-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGESTRUCTTWOMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 1
 // AMDGCN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [20 x <2 x i32>], ptr addrspace(5) [[Y]], i64 0, i64 0
 // AMDGCN-NEXT:    store <2 x i32> [[TMP1]], ptr addrspace(5) [[ARRAYIDX]], align 8

@@ -306,10 +306,6 @@ struct DenseMapInfo<mlir::Attribute> {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
   }
-  static mlir::Attribute getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Attribute val) {
     return mlir::hash_value(val);
   }
@@ -324,10 +320,6 @@ struct DenseMapInfo<
     : public DenseMapInfo<mlir::Attribute> {
   static T getEmptyKey() {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
     return T::getFromOpaquePointer(pointer);
   }
 };
@@ -350,10 +342,6 @@ struct DenseMapInfo<mlir::NamedAttribute> {
   static mlir::NamedAttribute getEmptyKey() {
     auto emptyAttr = llvm::DenseMapInfo<mlir::Attribute>::getEmptyKey();
     return mlir::NamedAttribute(emptyAttr, emptyAttr);
-  }
-  static mlir::NamedAttribute getTombstoneKey() {
-    auto tombAttr = llvm::DenseMapInfo<mlir::Attribute>::getTombstoneKey();
-    return mlir::NamedAttribute(tombAttr, tombAttr);
   }
   static unsigned getHashValue(mlir::NamedAttribute val) {
     return mlir::hash_value(val);

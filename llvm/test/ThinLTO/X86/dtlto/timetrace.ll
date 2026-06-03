@@ -24,6 +24,10 @@ RUN: %python filter_order_and_pprint.py %t.json | FileCheck %s
 CHECK-NOT:  "name"
 CHECK:      "name": "Add DTLTO files to the link"
 CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Add input for DTLTO"
+CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Add input for DTLTO"
+CHECK-SAME:   "pid": [[#PID:]],
 CHECK-NEXT: "name": "Emit DTLTO JSON"
 CHECK-NEXT: "name": "Emit individual index for DTLTO"
 CHECK-SAME:   t1.1.[[#PID]].native.o.thinlto.bc"
@@ -33,6 +37,8 @@ CHECK-NEXT: "name": "Execute DTLTO distributor", "{{.*}}"
 CHECK-NEXT: "name": "Remove DTLTO temporary files"
 CHECK-NEXT: "name": "Total Add DTLTO files to the link"
 CHECK-SAME:   "count": 1,
+CHECK-NEXT: "name": "Total Add input for DTLTO"
+CHECK-SAME:   "count": 2,
 CHECK-NEXT: "name": "Total Emit DTLTO JSON"
 CHECK-SAME:   "count": 1,
 CHECK-NEXT: "name": "Total Emit individual index for DTLTO"

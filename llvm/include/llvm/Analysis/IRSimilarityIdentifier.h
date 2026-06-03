@@ -315,9 +315,6 @@ LLVM_ABI bool isClose(const IRInstructionData &A, const IRInstructionData &B);
 
 struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
   static inline IRInstructionData *getEmptyKey() { return nullptr; }
-  static inline IRInstructionData *getTombstoneKey() {
-    return reinterpret_cast<IRInstructionData *>(-1);
-  }
 
   static unsigned getHashValue(const IRInstructionData *E) {
     using llvm::hash_value;
@@ -327,8 +324,7 @@ struct IRInstructionDataTraits : DenseMapInfo<IRInstructionData *> {
 
   static bool isEqual(const IRInstructionData *LHS,
                       const IRInstructionData *RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
+    if (RHS == getEmptyKey() || LHS == getEmptyKey())
       return LHS == RHS;
 
     assert(LHS && RHS && "nullptr should have been caught by getEmptyKey?");
@@ -511,8 +507,6 @@ struct IRInstructionMapper {
     // changed.
     static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
                   static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
 
     IDL = new (IDLAllocator->Allocate())
         IRInstructionDataList();

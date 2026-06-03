@@ -13,7 +13,7 @@ struct S {
   }
 };
 
-// CIR: !rec_S = !cir.record<struct "S" {!s32i}>
+// CIR: !rec_S = !cir.struct<"S" {!s32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 

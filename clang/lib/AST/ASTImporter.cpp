@@ -9215,14 +9215,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
   auto ToType = importChecked(Err, E->getType());
   auto ToNameLoc = importChecked(Err, E->getNameLoc());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
+  auto ToParamType = importChecked(Err, E->getParameterType());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
       ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
-      E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
-      E->getFinal());
+      ToParamType, E->getIndex(), E->getPackIndex(), E->getFinal());
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {

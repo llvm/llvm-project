@@ -65,6 +65,51 @@ declare i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr, i32)
 declare i32 @llvm.nvvm.atomic.load.add.f32.p0(ptr, float)
 declare i32 @llvm.nvvm.atomic.load.add.f64.p0(ptr, double)
 
+declare i32 @llvm.nvvm.atomic.add.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.add.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.add.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.add.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.exch.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.exch.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.exch.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.exch.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.max.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.max.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.max.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.max.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.min.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.min.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.min.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.min.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.inc.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.inc.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.inc.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.inc.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.dec.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.dec.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.dec.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.dec.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.and.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.and.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.and.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.and.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.or.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.or.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.or.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.or.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.xor.gen.i.cta.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.xor.gen.i.cta.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.xor.gen.i.sys.i32.p0(ptr, i32)
+declare i64 @llvm.nvvm.atomic.xor.gen.i.sys.i64.p0(ptr, i64)
+declare i32 @llvm.nvvm.atomic.cas.gen.i.cta.i32.p0(ptr, i32, i32)
+declare i64 @llvm.nvvm.atomic.cas.gen.i.cta.i64.p0(ptr, i64, i64)
+declare i32 @llvm.nvvm.atomic.cas.gen.i.sys.i32.p0(ptr, i32, i32)
+declare i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr, i64, i64)
+declare float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr, float)
+declare double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr, double)
+declare float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr, float)
+declare double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr, double)
+
 declare ptr addrspace(3) @llvm.nvvm.mapa.shared.cluster(ptr addrspace(3), i32)
 
 declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(3), ptr addrspace(3), ptr addrspace(1), i32, i16, i64, i1, i1)
@@ -290,6 +335,109 @@ define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
   %r3 = call float @llvm.nvvm.atomic.load.add.f32.p0(ptr %p0, float %b)
   %r4 = call double @llvm.nvvm.atomic.load.add.f64.p0(ptr %p0, double %c)
   ret i32 %r2
+}
+
+; The scoped int_nvvm_atomic_*_gen_*_{cta,sys} intrinsics upgrade to atomicrmw /
+; cmpxchg: "_cta" -> syncscope("block"), "_sys" -> system scope. Signed min/max
+; (the old intrinsics carried no signedness and lowered signed).
+;
+; This covers the full cross product of removed intrinsics: every op, both scopes
+; (cta/sys), and both element widths (i32/i64, plus f32/f64 for the float add).
+; CHECK-LABEL: @atomics_scoped
+define void @atomics_scoped(ptr %p, i32 %a, i64 %b, float %c, double %d) {
+; CHECK: atomicrmw add ptr %p, i32 %a syncscope("block") monotonic
+  %add.i.cta.i32 = call i32 @llvm.nvvm.atomic.add.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw add ptr %p, i64 %b syncscope("block") monotonic
+  %add.i.cta.i64 = call i64 @llvm.nvvm.atomic.add.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw add ptr %p, i32 %a monotonic
+  %add.i.sys.i32 = call i32 @llvm.nvvm.atomic.add.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw add ptr %p, i64 %b monotonic
+  %add.i.sys.i64 = call i64 @llvm.nvvm.atomic.add.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xchg ptr %p, i32 %a syncscope("block") monotonic
+  %exch.i.cta.i32 = call i32 @llvm.nvvm.atomic.exch.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xchg ptr %p, i64 %b syncscope("block") monotonic
+  %exch.i.cta.i64 = call i64 @llvm.nvvm.atomic.exch.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xchg ptr %p, i32 %a monotonic
+  %exch.i.sys.i32 = call i32 @llvm.nvvm.atomic.exch.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xchg ptr %p, i64 %b monotonic
+  %exch.i.sys.i64 = call i64 @llvm.nvvm.atomic.exch.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw max ptr %p, i32 %a syncscope("block") monotonic
+  %max.i.cta.i32 = call i32 @llvm.nvvm.atomic.max.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw max ptr %p, i64 %b syncscope("block") monotonic
+  %max.i.cta.i64 = call i64 @llvm.nvvm.atomic.max.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw max ptr %p, i32 %a monotonic
+  %max.i.sys.i32 = call i32 @llvm.nvvm.atomic.max.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw max ptr %p, i64 %b monotonic
+  %max.i.sys.i64 = call i64 @llvm.nvvm.atomic.max.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw min ptr %p, i32 %a syncscope("block") monotonic
+  %min.i.cta.i32 = call i32 @llvm.nvvm.atomic.min.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw min ptr %p, i64 %b syncscope("block") monotonic
+  %min.i.cta.i64 = call i64 @llvm.nvvm.atomic.min.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw min ptr %p, i32 %a monotonic
+  %min.i.sys.i32 = call i32 @llvm.nvvm.atomic.min.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw min ptr %p, i64 %b monotonic
+  %min.i.sys.i64 = call i64 @llvm.nvvm.atomic.min.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw uinc_wrap ptr %p, i32 %a syncscope("block") monotonic
+  %inc.i.cta.i32 = call i32 @llvm.nvvm.atomic.inc.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw uinc_wrap ptr %p, i64 %b syncscope("block") monotonic
+  %inc.i.cta.i64 = call i64 @llvm.nvvm.atomic.inc.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw uinc_wrap ptr %p, i32 %a monotonic
+  %inc.i.sys.i32 = call i32 @llvm.nvvm.atomic.inc.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw uinc_wrap ptr %p, i64 %b monotonic
+  %inc.i.sys.i64 = call i64 @llvm.nvvm.atomic.inc.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw udec_wrap ptr %p, i32 %a syncscope("block") monotonic
+  %dec.i.cta.i32 = call i32 @llvm.nvvm.atomic.dec.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw udec_wrap ptr %p, i64 %b syncscope("block") monotonic
+  %dec.i.cta.i64 = call i64 @llvm.nvvm.atomic.dec.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw udec_wrap ptr %p, i32 %a monotonic
+  %dec.i.sys.i32 = call i32 @llvm.nvvm.atomic.dec.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw udec_wrap ptr %p, i64 %b monotonic
+  %dec.i.sys.i64 = call i64 @llvm.nvvm.atomic.dec.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw and ptr %p, i32 %a syncscope("block") monotonic
+  %and.i.cta.i32 = call i32 @llvm.nvvm.atomic.and.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw and ptr %p, i64 %b syncscope("block") monotonic
+  %and.i.cta.i64 = call i64 @llvm.nvvm.atomic.and.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw and ptr %p, i32 %a monotonic
+  %and.i.sys.i32 = call i32 @llvm.nvvm.atomic.and.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw and ptr %p, i64 %b monotonic
+  %and.i.sys.i64 = call i64 @llvm.nvvm.atomic.and.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw or ptr %p, i32 %a syncscope("block") monotonic
+  %or.i.cta.i32 = call i32 @llvm.nvvm.atomic.or.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw or ptr %p, i64 %b syncscope("block") monotonic
+  %or.i.cta.i64 = call i64 @llvm.nvvm.atomic.or.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw or ptr %p, i32 %a monotonic
+  %or.i.sys.i32 = call i32 @llvm.nvvm.atomic.or.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw or ptr %p, i64 %b monotonic
+  %or.i.sys.i64 = call i64 @llvm.nvvm.atomic.or.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xor ptr %p, i32 %a syncscope("block") monotonic
+  %xor.i.cta.i32 = call i32 @llvm.nvvm.atomic.xor.gen.i.cta.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xor ptr %p, i64 %b syncscope("block") monotonic
+  %xor.i.cta.i64 = call i64 @llvm.nvvm.atomic.xor.gen.i.cta.i64.p0(ptr %p, i64 %b)
+; CHECK: atomicrmw xor ptr %p, i32 %a monotonic
+  %xor.i.sys.i32 = call i32 @llvm.nvvm.atomic.xor.gen.i.sys.i32.p0(ptr %p, i32 %a)
+; CHECK: atomicrmw xor ptr %p, i64 %b monotonic
+  %xor.i.sys.i64 = call i64 @llvm.nvvm.atomic.xor.gen.i.sys.i64.p0(ptr %p, i64 %b)
+; CHECK: [[CAS_cta_i32:%.*]] = cmpxchg ptr %p, i32 %a, i32 %a syncscope("block") monotonic monotonic
+; CHECK: extractvalue { i32, i1 } [[CAS_cta_i32]], 0
+  %cas.i.cta.i32 = call i32 @llvm.nvvm.atomic.cas.gen.i.cta.i32.p0(ptr %p, i32 %a, i32 %a)
+; CHECK: [[CAS_cta_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b syncscope("block") monotonic monotonic
+; CHECK: extractvalue { i64, i1 } [[CAS_cta_i64]], 0
+  %cas.i.cta.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.cta.i64.p0(ptr %p, i64 %b, i64 %b)
+; CHECK: [[CAS_sys_i32:%.*]] = cmpxchg ptr %p, i32 %a, i32 %a monotonic monotonic
+; CHECK: extractvalue { i32, i1 } [[CAS_sys_i32]], 0
+  %cas.i.sys.i32 = call i32 @llvm.nvvm.atomic.cas.gen.i.sys.i32.p0(ptr %p, i32 %a, i32 %a)
+; CHECK: [[CAS_sys_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b monotonic monotonic
+; CHECK: extractvalue { i64, i1 } [[CAS_sys_i64]], 0
+  %cas.i.sys.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr %p, i64 %b, i64 %b)
+; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic
+  %add.f.cta.f32 = call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %p, float %c)
+; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic
+  %add.f.cta.f64 = call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %p, double %d)
+; CHECK: atomicrmw fadd ptr %p, float %c monotonic
+  %add.f.sys.f32 = call float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr %p, float %c)
+; CHECK: atomicrmw fadd ptr %p, double %d monotonic
+  %add.f.sys.f64 = call double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr %p, double %d)
+  ret void
 }
 
 ; CHECK-LABEL: @nvvm_shared_cluster_intrinsics

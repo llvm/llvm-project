@@ -10,7 +10,7 @@ void baz() {
   Struk s;
 }
 
-// CHECK: !rec_Struk = !cir.record<struct "Struk" {!s32i}>
+// CHECK: !rec_Struk = !cir.struct<"Struk" {!s32i}>
 
 // Note: In the absence of the '-mconstructor-aliases' option, we emit two
 //       constructors here. The handling of constructor aliases is currently

@@ -205,7 +205,7 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         mlir::Type type, ArrayAttr members) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type";
+    return emitError() << "expected !cir.struct or !cir.union type";
 
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
@@ -765,7 +765,7 @@ LogicalResult cir::VTableAttr::verify(
     mlir::ArrayAttr data) {
   auto sTy = mlir::dyn_cast_if_present<cir::RecordType>(type);
   if (!sTy)
-    return emitError() << "expected !cir.record type result";
+    return emitError() << "expected !cir.struct or !cir.union type result";
   if (sTy.getMembers().empty() || data.empty())
     return emitError() << "expected record type with one or more subtype";
 

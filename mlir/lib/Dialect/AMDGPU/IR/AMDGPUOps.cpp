@@ -279,22 +279,22 @@ void RawBufferStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 void RawBufferAtomicFaddOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFaddOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFaddOp>>(context);
 }
 
 void RawBufferAtomicFmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicFmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicFmaxOp>>(context);
 }
 
 void RawBufferAtomicSmaxOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicSmaxOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicSmaxOp>>(context);
 }
 
 void RawBufferAtomicUminOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveStaticallyOobBufferWrites<RawBufferAtomicUminOp>>(context);
+  results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicUminOp>>(context);
 }
 
 void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(

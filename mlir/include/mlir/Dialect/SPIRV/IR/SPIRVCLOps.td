@@ -1037,6 +1037,27 @@ def SPIRV_CLTanhOp : SPIRV_CLUnaryArithmeticOp<"tanh", 63, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLTruncOp : SPIRV_CLUnaryArithmeticOp<"trunc", 66, SPIRV_Float> {
+  let summary = "Round to integral value using the round to zero rounding mode.";
+
+  let description = [{
+    Result Type and x must be floating-point or vector(2,3,4,8,16) of
+    floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.trunc %0 : f32
+    %3 = spirv.CL.trunc %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLUMaxOp : SPIRV_CLBinaryArithmeticOp<"u_max", 157, SPIRV_Integer> {
   let summary = "Return maximum of two unsigned integer operands";
 

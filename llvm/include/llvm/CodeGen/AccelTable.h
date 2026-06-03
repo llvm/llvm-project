@@ -274,9 +274,6 @@ template <> struct DenseMapInfo<OffsetAndUnitID> {
   static inline OffsetAndUnitID getEmptyKey() {
     return OffsetAndUnitID(-1, -1, false);
   }
-  static inline OffsetAndUnitID getTombstoneKey() {
-    return OffsetAndUnitID(-2, -2, false);
-  }
   static unsigned getHashValue(const OffsetAndUnitID &Val) {
     return (unsigned)llvm::hash_combine(Val.offset(), Val.unitID(), Val.IsTU);
   }

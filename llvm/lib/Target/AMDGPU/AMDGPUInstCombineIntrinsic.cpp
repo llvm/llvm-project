@@ -987,7 +987,7 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
       return createMovDpp8(B, Src, *Sel);
   }
 
-  if (ST.hasPermLaneX16()) {
+  if (ST.hasPermlane16Insts()) {
     if (isFullRowPattern(Ids)) {
       uint64_t Sel = computePermlane16Masks(Ids);
       return createPermlane16(B, Src, Lo_32(Sel), Hi_32(Sel));

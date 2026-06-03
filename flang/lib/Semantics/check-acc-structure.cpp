@@ -36,6 +36,7 @@ using ReductionOpsSet =
 
 static ReductionOpsSet reductionIntegerSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply,
     Fortran::parser::ReductionOperator::Operator::Max,
     Fortran::parser::ReductionOperator::Operator::Min,
@@ -45,12 +46,14 @@ static ReductionOpsSet reductionIntegerSet{
 
 static ReductionOpsSet reductionRealSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply,
     Fortran::parser::ReductionOperator::Operator::Max,
     Fortran::parser::ReductionOperator::Operator::Min};
 
 static ReductionOpsSet reductionComplexSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply};
 
 static ReductionOpsSet reductionLogicalSet{
@@ -480,8 +483,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  if (!optName) {
+  const auto &names{std::get<std::list<parser::Name>>(x.t)};
+  if (names.empty()) {
     const auto &verbatim{std::get<parser::Verbatim>(x.t)};
     const auto &scope{context_.FindScope(verbatim.source)};
     const Scope &containingScope{GetProgramUnitContaining(scope)};
@@ -1083,6 +1086,11 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
   const parser::AccObjectListWithReduction &list{reduction.v};
   const auto &op{std::get<parser::ReductionOperator>(list.t)};
   const auto &objects{std::get<parser::AccObjectList>(list.t)};
+
+  if (op.v == parser::ReductionOperator::Operator::Minus) {
+    context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
+        "The minus '-' reduction operator is non-standard and is treated as '+'"_warn_en_US);
+  }
 
   for (const auto &object : objects.v) {
     common::visit(

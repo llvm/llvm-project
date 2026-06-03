@@ -85,13 +85,6 @@ public:
       return V;
     }
 
-    static LocalVarDef tombstoneValue() {
-      LocalVarDef V;
-      std::memset(&V, 0xff, sizeof(LocalVarDef));
-      V.InMemory = 0;
-      return V;
-    }
-
     unsigned hashValue() const {
       uint64_t H = 0;
       std::memcpy(&H, this, sizeof(uint64_t));
@@ -557,10 +550,6 @@ template <> struct DenseMapInfo<CodeViewDebug::LocalVarDef> {
 
   static inline CodeViewDebug::LocalVarDef getEmptyKey() {
     return CodeViewDebug::LocalVarDef::emptyValue();
-  }
-
-  static inline CodeViewDebug::LocalVarDef getTombstoneKey() {
-    return CodeViewDebug::LocalVarDef::tombstoneValue();
   }
 
   static unsigned getHashValue(const CodeViewDebug::LocalVarDef &DR) {

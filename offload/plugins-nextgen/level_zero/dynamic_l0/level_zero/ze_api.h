@@ -236,6 +236,7 @@ typedef uint32_t ze_command_queue_flags_t;
 typedef enum _ze_command_queue_flag_t {
   ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = ZE_BIT(0),
   ZE_COMMAND_QUEUE_FLAG_IN_ORDER = ZE_BIT(1),
+  ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT = ZE_BIT(2),
   ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_command_queue_flag_t;
 

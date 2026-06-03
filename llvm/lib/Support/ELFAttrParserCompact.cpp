@@ -194,7 +194,7 @@ Error ELFCompactAttrParser::parseSubsection(uint32_t length) {
 Error ELFCompactAttrParser::parse(ArrayRef<uint8_t> section,
                                   llvm::endianness endian) {
   unsigned sectionNumber = 0;
-  de = DataExtractor(section, endian == llvm::endianness::little, 0);
+  de = DataExtractor(section, endian == llvm::endianness::little);
 
   // For early returns, we have more specific errors, consume the Error in
   // cursor.

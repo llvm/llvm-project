@@ -3,8 +3,8 @@
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-!rec_NonTrivial = !cir.record<struct "NonTrivial" padded {!u8i}>
+!rec_SomeClass = !cir.struct<"SomeClass" {!s32i}>
+!rec_NonTrivial = !cir.struct<"NonTrivial" padded {!u8i}>
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
 

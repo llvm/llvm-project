@@ -71,6 +71,7 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
 
 void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
+  declareVariantPairs_.clear();
 }
 
 void OmpStructureChecker::Enter(const parser::MainProgram &x) {
@@ -614,9 +615,7 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
       [&](const auto &details) {
         if constexpr (std::is_convertible_v<decltype(details),
                           const WithOmpDeclarative &>) {
-          if (auto *reqs{details.ompRequires()}) {
-            return reqs->test(req);
-          }
+          return details.ompRequires().test(req);
         }
         return false;
       },
@@ -1711,59 +1710,6 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDeclareSimdDirective &) {
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
-
-  const parser::OmpArgumentList &args{x.v.Arguments()};
-  if (args.v.size() != 1) {
-    context_.Say(args.source,
-        "DECLARE_VARIANT directive should have a single argument"_err_en_US);
-    return;
-  }
-
-  auto InvalidArgument{[&](parser::CharBlock source) {
-    context_.Say(source,
-        "The argument to the DECLARE_VARIANT directive should be [base-name:]variant-name"_err_en_US);
-  }};
-
-  auto CheckSymbol{[&](const Symbol *sym, parser::CharBlock source) {
-    if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
-        auto &msg{context_.Say(source,
-            "The name '%s' should refer to a procedure"_err_en_US,
-            sym->name())};
-        if (sym->test(Symbol::Flag::Implicit)) {
-          msg.Attach(source, "The name '%s' has been implicitly declared"_en_US,
-              sym->name());
-        }
-      }
-    } else {
-      InvalidArgument(source);
-    }
-  }};
-
-  const parser::OmpArgument &arg{args.v.front()};
-  common::visit( //
-      common::visitors{
-          [&](const parser::OmpBaseVariantNames &y) {
-            CheckSymbol(GetObjectSymbol(std::get<0>(y.t), /*ultimate=*/true),
-                arg.source);
-            CheckSymbol(GetObjectSymbol(std::get<1>(y.t), /*ultimate=*/true),
-                arg.source);
-          },
-          [&](const parser::OmpLocator &y) {
-            CheckSymbol(GetArgumentSymbol(arg, /*ultimate=*/true), arg.source);
-          },
-          [&](auto &&y) { InvalidArgument(arg.source); },
-      },
-      arg.u);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
   dirContext_.pop_back();
 }
 
@@ -3933,8 +3879,8 @@ void OmpStructureChecker::CheckReductionObjects(
     }
     // Type parameter inquiries are not allowed.
     for (const parser::OmpObject &object : objects.v) {
-      if (auto *dataRef{GetDataRefFromObj(object)}) {
-        if (IsDataRefTypeParamInquiry(dataRef)) {
+      if (auto *symbol{GetObjectSymbol(object)}) {
+        if (IsTypeParamInquiry(*symbol)) {
           auto source{GetObjectSource(object)};
           context_.Say(source ? *source : GetContext().clauseSource,
               "Type parameter inquiry is not permitted in %s clause"_err_en_US,
@@ -4240,26 +4186,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
 }
 
-bool OmpStructureChecker::IsDataRefTypeParamInquiry(
-    const parser::DataRef *dataRef) {
-  bool dataRefIsTypeParamInquiry{false};
-  if (const auto *structComp{
-          parser::Unwrap<parser::StructureComponent>(dataRef)}) {
-    if (const auto *compSymbol{structComp->Component().symbol}) {
-      if (const auto *compSymbolMiscDetails{
-              std::get_if<MiscDetails>(&compSymbol->details())}) {
-        const auto detailsKind = compSymbolMiscDetails->kind();
-        dataRefIsTypeParamInquiry =
-            (detailsKind == MiscDetails::Kind::KindParamInquiry ||
-                detailsKind == MiscDetails::Kind::LenParamInquiry);
-      } else if (compSymbol->has<TypeParamDetails>()) {
-        dataRefIsTypeParamInquiry = true;
-      }
-    }
-  }
-  return dataRefIsTypeParamInquiry;
-}
-
 void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList,
     llvm::StringRef clause) {
@@ -4274,14 +4200,13 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            if (const auto *dataRef{
-                    std::get_if<parser::DataRef>(&designator.u)}) {
-              if (IsDataRefTypeParamInquiry(dataRef)) {
-                context_.Say(source,
-                    "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
-                    ContextDirectiveAsFortran());
-              } else if (parser::Unwrap<parser::StructureComponent>(
-                             ompObject) ||
+            if (auto *symbol{GetLastName(designator).symbol};
+                symbol && IsTypeParamInquiry(*symbol)) {
+              context_.Say(source,
+                  "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
+                  ContextDirectiveAsFortran());
+            } else if (std::holds_alternative<parser::DataRef>(designator.u)) {
+              if (parser::Unwrap<parser::StructureComponent>(ompObject) ||
                   parser::Unwrap<parser::ArrayElement>(ompObject)) {
                 if (llvm::omp::nonPartialVarSet.test(GetContext().directive)) {
                   context_.Say(source,
@@ -5032,32 +4957,29 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 }
 
 void OmpStructureChecker::CheckStructureComponent(
-    const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
+    const parser::OmpObject &object, llvm::omp::Clause clauseId) {
   unsigned version{context_.langOptions().OpenMPVersion};
-
-  auto CheckComponent{[&](const parser::Designator &designator) {
-    if (const parser::DataRef *dataRef{
-            std::get_if<parser::DataRef>(&designator.u)}) {
-      if (!IsDataRefTypeParamInquiry(dataRef)) {
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    if (auto *symbol{GetLastName(*desg).symbol}) {
+      if (!IsTypeParamInquiry(*symbol) &&
+          std::holds_alternative<parser::DataRef>(desg->u)) {
         evaluate::ExpressionAnalyzer ea{context_};
         auto restore{ea.AllowWholeAssumedSizeArray(true)};
-        const auto expr{ea.Analyze(designator)};
-        if (expr.has_value() && evaluate::HasStructureComponent(expr.value())) {
-          context_.Say(designator.source,
+        MaybeExpr expr{ea.Analyze(*desg)};
+        if (expr && evaluate::HasStructureComponent(*expr)) {
+          context_.Say(desg->source,
               "A variable that is part of another variable cannot appear on the %s clause"_err_en_US,
               parser::omp::GetUpperName(clauseId, version));
         }
       }
     }
-  }};
+  }
+}
 
-  for (const auto &object : objects.v) {
-    common::visit(common::visitors{
-                      CheckComponent,
-                      [&](const parser::Name &name) {},
-                      [&](const parser::OmpObject::Invalid &invalid) {},
-                  },
-        object.u);
+void OmpStructureChecker::CheckStructureComponent(
+    const parser::OmpObjectList &objects, llvm::omp::Clause clauseId) {
+  for (const parser::OmpObject &object : objects.v) {
+    CheckStructureComponent(object, clauseId);
   }
 }
 

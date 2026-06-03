@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -198,6 +199,7 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
+
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,

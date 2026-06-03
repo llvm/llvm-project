@@ -42,10 +42,6 @@ struct CAPIDenseMap<T*> {
       uintptr_t Val = static_cast<uintptr_t>(-1);
       return reinterpret_cast<T*>(Val);
     }
-    static inline T* getTombstoneKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-2);
-      return reinterpret_cast<T*>(Val);
-    }
     static unsigned getHashValue(const T *PtrVal) {
       return hash_value(PtrVal);
     }

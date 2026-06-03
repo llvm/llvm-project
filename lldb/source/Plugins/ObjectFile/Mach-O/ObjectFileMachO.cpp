@@ -2225,10 +2225,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   llvm::DenseSet<addr_t> symbols_added;
 
   // We are using a llvm::DenseSet for "symbols_added" so we must be sure we
-  // do not add the tombstone or empty keys to the set.
+  // do not add the empty key to the set.
   auto add_symbol_addr = [&symbols_added](lldb::addr_t file_addr) {
-    // Don't add the tombstone or empty keys.
-    if (file_addr == UINT64_MAX || file_addr == UINT64_MAX - 1)
+    // Don't add the empty key.
+    if (file_addr == UINT64_MAX)
       return;
     symbols_added.insert(file_addr);
   };

@@ -175,7 +175,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
       return finish(0, eConnectionStatusEndOfFile, 0);
     }
     // An unknown error occurred.  Fail out.
-    return finish(0, eConnectionStatusError, ::GetLastError());
+    return finish(0, eConnectionStatusError, read_error);
   }
 
   if (!read_result || m_read_pending) {

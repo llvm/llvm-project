@@ -2165,6 +2165,23 @@ def add_shift : GICombineRule<
   (apply (G_SHL $new_shl, $y, $n),
          (G_SUB $dst, $x, $new_shl))>;
 
+// FIXME: Tablegen should be able to handle commutativity of G_AND and G_OR. 
+//        Remove once commutativity is handled automatically.
+def combine_or_of_and_frags : GICombinePatFrag<
+  (outs root: $dst), (ins $x, $y),
+  [
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $x, $and)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $x, $and))
+  ]>;
+
+// fold or (and x, y), x --> x
+def combine_or_of_and: GICombineRule<
+  (defs root:$dst),
+  (match (combine_or_of_and_frags $dst, $x, $y)),
+  (apply (GIReplaceReg $dst, $x))>;
+
 def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
    (match (G_FREEZE $root, $src),
@@ -2471,7 +2488,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const,
     avgfloor_u_match, avgfloor_s_match,
-    avgceil_u_match, avgceil_s_match]>;
+    avgceil_u_match, avgceil_s_match, combine_or_of_and]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

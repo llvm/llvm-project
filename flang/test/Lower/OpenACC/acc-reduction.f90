@@ -1342,6 +1342,24 @@ end subroutine
 ! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "b"}
 ! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
 
+! The non-standard '-' reduction operator is treated as '+', so it reuses the
+! add recipe.
+subroutine acc_reduction_minus_int(a, b)
+  integer :: a(100)
+  integer :: i, b
+
+  !$acc loop reduction(-:b)
+  do i = 1, 100
+    b = b - a(i)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_minus_int(
+! CHECK-SAME:  %{{.*}}: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.ref<i32> {fir.bindc_name = "b"})
+! CHECK:       %[[DECLB:.*]]:2 = hlfir.declare %[[B]]
+! CHECK:       %[[RED_B:.*]] = acc.reduction varPtr(%[[DECLB]]#0 : !fir.ref<i32>) recipe(@reduction_add_ref_i32) -> !fir.ref<i32> {name = "b"}
+! CHECK:       acc.loop {{.*}} reduction(%[[RED_B]] : !fir.ref<i32>)
+
 subroutine acc_reduction_add_int_array_1d(a, b)
   integer :: a(100)
   integer :: i, b(100)

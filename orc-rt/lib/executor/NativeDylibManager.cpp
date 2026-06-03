@@ -59,8 +59,32 @@ void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
 }
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
-                                void *Handle, std::vector<std::string> Names) {
-  OnLookupComplete(hostOSLibraryLookup(Handle, Names));
+                                void *Handle, SymbolLookupSet Symbols) {
+  std::vector<std::string> Names;
+  Names.reserve(Symbols.size());
+  for (auto &S : Symbols)
+    Names.push_back(std::move(S.first));
+
+  auto Addrs = hostOSLibraryLookup(Handle, Names);
+
+  bool HasMissing = false;
+  std::ostringstream ErrMsg;
+  for (size_t I = 0, E = Symbols.size(); I != E; ++I) {
+    if (Addrs[I] == nullptr && Symbols[I].second == RequiredSymbol) {
+      if (!HasMissing) {
+        ErrMsg << "Required symbols {";
+        HasMissing = true;
+      }
+      ErrMsg << " \"" << Names[I] << "\"";
+    }
+  }
+  if (HasMissing) {
+    ErrMsg << " } not found";
+    OnLookupComplete(make_error<StringError>(ErrMsg.str()));
+    return;
+  }
+
+  OnLookupComplete(std::move(Addrs));
 }
 
 void NativeDylibManager::onDetach(Service::OnCompleteFn OnComplete,

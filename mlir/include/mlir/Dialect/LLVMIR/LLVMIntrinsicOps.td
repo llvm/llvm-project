@@ -698,7 +698,7 @@ def LLVM_ThreadlocalAddressOp : LLVM_OneResultIntrOp<"threadlocal.address", [],
 // Coroutine intrinsics.
 //
 
-def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
+def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins I32:$align,
                        LLVM_AnyPointer:$promise,
                        LLVM_AnyPointer:$coroaddr,
@@ -707,8 +707,9 @@ def LLVM_CoroIdOp : LLVM_IntrOp<"coro.id", [], [], [], 1> {
     " attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroBeginOp : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$token,
+def LLVM_CoroBeginOp
+    : LLVM_IntrOp<"coro.begin", [], [], [], 1> {
+  let arguments = (ins Token:$token,
                        LLVM_AnyPointer:$mem);
   let assemblyFormat = "$token `,` $mem attr-dict `:` functional-type(operands, results)";
 }
@@ -721,26 +722,30 @@ def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
+def LLVM_CoroSaveOp
+    : LLVM_IntrOp<"coro.save", [], [], [TokenProducerTrait], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle);
   let assemblyFormat = "$handle attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroSuspendOp : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$save,
+def LLVM_CoroSuspendOp
+    : LLVM_IntrOp<"coro.suspend", [], [], [], 1> {
+  let arguments = (ins Token:$save,
                        I1:$final);
   let assemblyFormat = "$save `,` $final attr-dict `:` type($res)";
 }
 
-def LLVM_CoroEndOp : LLVM_IntrOp<"coro.end", [], [], [], 1> {
+def LLVM_CoroEndOp
+    : LLVM_IntrOp<"coro.end", [], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$handle,
                        I1:$unwind,
-                       LLVM_TokenType:$retvals);
+                       Token:$retvals);
   let assemblyFormat = "$handle `,` $unwind `,` $retvals attr-dict `:` functional-type(operands, results)";
 }
 
-def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
-  let arguments = (ins LLVM_TokenType:$id,
+def LLVM_CoroFreeOp
+    : LLVM_IntrOp<"coro.free", [], [], [], 1> {
+  let arguments = (ins Token:$id,
                        LLVM_AnyPointer:$handle);
   let assemblyFormat = "$id `,` $handle attr-dict `:` functional-type(operands, results)";
 }

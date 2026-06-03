@@ -18,7 +18,13 @@ EOF
 
 // RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/submodules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,CLASSIC
+
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/submodules \
+// RUN:   -y %p/dummy-debug-map.map -o - \
+// RUN:     | llvm-dwarfdump -v --debug-info - \
+// RUN:     | FileCheck %s --check-prefix=CHECK
 
 // ---------------------------------------------------------------------
 #ifdef CHILD_H
@@ -39,13 +45,13 @@ struct PruneMeNot;
 #else
 // ---------------------------------------------------------------------
 
-// CHECK:            DW_TAG_compile_unit
-// CHECK:              DW_TAG_module
-// CHECK-NEXT:           DW_AT_name{{.*}}"Parent"
-// CHECK: 0x0[[EMPTY:.*]]: DW_TAG_module
-// CHECK-NEXT:             DW_AT_name{{.*}}"Empty"
+// CLASSIC:            DW_TAG_compile_unit
+// CLASSIC:              DW_TAG_module
+// CLASSIC-NEXT:           DW_AT_name{{.*}}"Parent"
+// CLASSIC: 0x0[[EMPTY:.*]]: DW_TAG_module
+// CLASSIC-NEXT:             DW_AT_name{{.*}}"Empty"
 
-// CHECK:     DW_AT_import  {{.*}}0x{{0*}}[[EMPTY]]
+// CLASSIC:     DW_AT_import  {{.*}}0x{{0*}}[[EMPTY]]
 @import Parent.Child;
 @import Parent.Empty;
 int main(int argc, char **argv) { return 0; }

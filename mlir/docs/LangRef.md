@@ -740,6 +740,34 @@ The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
 primitive integer and floating-point types, function types, and more.
 
+### Token Type
+
+A *token* is an SSA value of the builtin parameterless, opaque `token` type.
+It carries no runtime data. Given a use of a token SSA value, its definition
+is guaranteed to be the semantic producer of the token. Generic transformations
+must preserve this invariant: they may not introduce a forwarding step between
+a use and its producer, nor retarget a use to a producer with different
+semantics. New uses of a token can be introduced safely. As a consequence:
+
+1. A token must not appear as a forwarded value. E.g., it cannot be used as a
+   successor operand of a `BranchOpInterface` op.
+2. A token cannot constant-fold. No constant of token type exists.
+3. The presence of tokens has no effect on standard transformations such as
+   CSE, DCE or hoisting.
+4. Use of a token is side-effect free: a token user follows the usual
+   `isTriviallyDead()` rules.
+
+These properties mirror what LLVM IR already documents for its own
+[`token` type](https://llvm.org/docs/LangRef.html#token-type).
+
+Operations must opt in to producing or consuming tokens with
+`TokenProducerTrait` and `TokenConsumerTrait`.
+
+Note: Because tokens are SSA values, they cannot cross `IsolatedFromAbove`
+region boundaries.
+
+See [Tokens](Tokens.md) for details on ODS integration and examples.
+
 ## Properties
 
 Properties are extra data members stored directly on an Operation class. They

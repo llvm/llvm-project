@@ -1776,7 +1776,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // SVE supports truncating stores of 64 and 128-bit vectors
     setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
@@ -8164,6 +8163,33 @@ SDValue AArch64TargetLowering::LowerFMA(SDValue Op, SelectionDAG &DAG) const {
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 
+// clmul.Tb(a, b) = xor(pmullb(a_lo, b_lo),
+//                       lsl(xor(clmul(a_hi, b_lo),
+//                               clmul(a_lo, b_hi)),
+//                           sizeof(Tb/2)))
+// Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. CLMUL then
+// computes {a_hi * b_lo, b_hi * a_lo}, and EORBT xors those pairs.
+static SDValue DoCrossByteCLMUL(SDValue OpA, SDValue OpB, SDLoc DL,
+                                SelectionDAG &DAG, EVT VT) {
+  SDValue LoBytes = DAG.getNode(AArch64ISD::TRN1, DL, VT, OpB, OpA);
+  SDValue HiBytes = DAG.getNode(AArch64ISD::TRN2, DL, VT, OpA, OpB);
+  SDValue CLMUL = DAG.getNode(ISD::CLMUL, DL, VT, HiBytes, LoBytes);
+
+  SDValue EORBT =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_eorbt, DL, MVT::i64);
+  EORBT =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, EORBT, CLMUL, CLMUL, CLMUL);
+
+  SDValue PMULLB =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
+  PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, PMULLB, OpA, OpB);
+
+  SDValue EORTB =
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, EORTB, PMULLB, PMULLB,
+                     EORBT);
+}
+
 SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
@@ -8173,29 +8199,33 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   uint64_t ScalarSize = VT.getScalarSizeInBits();
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
 
-  auto MakePMULLB = [&](SDValue OpA, SDValue OpB, EVT NewVT) {
-    SDValue PMULLB =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair, DL, MVT::i64);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, NewVT, PMULLB, OpA, OpB);
-  };
-
   if (VT == MVT::nxv2i64) {
+    SDValue OpA =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0));
+    SDValue OpB =
+        DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1));
+
     // Lower to (.d pmullb(.s, .s)) for clmul.nxv2i64(zext(nxv2i32),
     // zext(nxv2i32))
     if ((Subtarget->hasSVE2() || Subtarget->hasSME()) &&
         DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
         DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask)) {
-      SDValue OpA =
-          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(0));
-      SDValue OpB =
-          DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv4i32, Op.getOperand(1));
-      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
-                         MakePMULLB(OpA, OpB, MVT::nxv4i32));
+      SDValue PMULLB = DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair,
+                                             DL, MVT::i64);
+      PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4i32, PMULLB,
+                           OpA, OpB);
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, PMULLB);
     }
     // Lower to (.q pmullb(.d, .d)) for clmul.nxv2i64(nxv2i64, nxv2i64)
     if (Subtarget->hasSVEAES() &&
         (Subtarget->isSVEAvailable() || Subtarget->hasSSVE_AES()))
       return Op;
+
+    if (Subtarget->hasSVE2() || Subtarget->hasSME()) {
+      SDValue CrossCLMUL = DoCrossByteCLMUL(OpA, OpB, DL, DAG, MVT::nxv4i32);
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, CrossCLMUL);
+    }
+
     return SDValue();
   }
 
@@ -8205,36 +8235,19 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
     SDValue OpB =
         DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv16i8, Op.getOperand(1));
 
-    // Lower to pmullb for clmul.nxv8i16(zext(nxv8i8), zext(nxv8i8))
+    // Lower to (.h pmullb(.b, .b)) for clmul.nxv8i16(zext(nxv8i8),
+    // zext(nxv8i8))
     if (DAG.MaskedValueIsZero(Op.getOperand(0), HiWordMask) &&
-        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask))
-      return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
-                         MakePMULLB(OpA, OpB, MVT::nxv16i8));
+        DAG.MaskedValueIsZero(Op.getOperand(1), HiWordMask)) {
+      SDValue PMULLB = DAG.getTargetConstant(Intrinsic::aarch64_sve_pmullb_pair,
+                                             DL, MVT::i64);
+      PMULLB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, PMULLB,
+                           OpA, OpB);
+      return DAG.getNode(AArch64ISD::NVCAST, DL, VT, PMULLB);
+    }
 
-    // clmul.i16(a, b) = xor(pmullb(a_lo, b_lo),
-    //                       lsl(xor(pmul(a_hi, b_lo),
-    //                               pmul(a_lo, b_hi)),
-    //                           8))
-    // Bitcast to i8 for byte-wise PMUL and PMULLB.
-
-    // Form adjacent byte pairs {a_hi, b_hi} and {b_lo, a_lo}. PMUL then
-    // computes {a_hi * b_lo, b_hi * a_lo}, and EORBT xors those pairs.
-    SDValue LoBytes = DAG.getNode(AArch64ISD::TRN1, DL, MVT::nxv16i8, OpB, OpA);
-    SDValue HiBytes = DAG.getNode(AArch64ISD::TRN2, DL, MVT::nxv16i8, OpA, OpB);
-    SDValue PMUL = DAG.getNode(ISD::CLMUL, DL, MVT::nxv16i8, HiBytes, LoBytes);
-
-    SDValue EORBT =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_eorbt, DL, MVT::i64);
-    EORBT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORBT, PMUL,
-                        PMUL, PMUL);
-
-    SDValue PMULLB = MakePMULLB(OpA, OpB, MVT::nxv16i8);
-
-    SDValue EORTB =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_eortb, DL, MVT::i64);
-    EORTB = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i8, EORTB,
-                        PMULLB, PMULLB, EORBT);
-    return DAG.getNode(AArch64ISD::NVCAST, DL, MVT::nxv8i16, EORTB);
+    SDValue CrossCLMUL = DoCrossByteCLMUL(OpA, OpB, DL, DAG, MVT::nxv16i8);
+    return DAG.getNode(AArch64ISD::NVCAST, DL, VT, CrossCLMUL);
   }
 
   EVT VecVT = EVT::getVectorVT(*DAG.getContext(), VT, 64 / VT.getSizeInBits());

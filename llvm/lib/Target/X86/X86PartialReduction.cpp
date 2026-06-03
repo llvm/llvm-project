@@ -271,7 +271,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
 
   unsigned IntrinsicNumElts;
   Intrinsic::ID IID;
-  if (ST->hasBWI() && NumElts >= 64) {
+  if (ST->useBWIRegs() && NumElts >= 64) {
     IID = Intrinsic::x86_avx512_psad_bw_512;
     IntrinsicNumElts = 64;
   } else if (ST->hasAVX2() && NumElts >= 32) {

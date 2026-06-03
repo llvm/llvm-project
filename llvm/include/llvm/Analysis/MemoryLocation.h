@@ -330,9 +330,6 @@ public:
 // Specialize DenseMapInfo.
 template <> struct DenseMapInfo<LocationSize> {
   static inline LocationSize getEmptyKey() { return LocationSize::mapEmpty(); }
-  static inline LocationSize getTombstoneKey() {
-    return LocationSize::mapTombstone();
-  }
   static unsigned getHashValue(const LocationSize &Val) {
     return DenseMapInfo<uint64_t>::getHashValue(Val.toRaw());
   }
@@ -345,10 +342,6 @@ template <> struct DenseMapInfo<MemoryLocation> {
   static inline MemoryLocation getEmptyKey() {
     return MemoryLocation(DenseMapInfo<const Value *>::getEmptyKey(),
                           DenseMapInfo<LocationSize>::getEmptyKey());
-  }
-  static inline MemoryLocation getTombstoneKey() {
-    return MemoryLocation(DenseMapInfo<const Value *>::getTombstoneKey(),
-                          DenseMapInfo<LocationSize>::getTombstoneKey());
   }
   static unsigned getHashValue(const MemoryLocation &Val) {
     return DenseMapInfo<const Value *>::getHashValue(Val.Ptr) ^

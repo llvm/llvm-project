@@ -59,7 +59,8 @@ public:
   virtual void OnLoadDll(const ModuleSpec &module_spec,
                          lldb::addr_t module_addr);
   virtual void OnUnloadDll(lldb::addr_t module_addr);
-  virtual void OnDebugString(const std::string &string);
+  virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                             uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
 
 protected:

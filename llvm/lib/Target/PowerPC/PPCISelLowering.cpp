@@ -596,8 +596,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   // Custom handling for PowerPC ucmp instruction
-  setOperationAction(ISD::UCMP, MVT::i32, Custom);
-  setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
+  if (isPPC64) {
+    // UCMP involves using carries, which only works in 64-bit
+    setOperationAction(ISD::UCMP, MVT::i32, Promote);
+    setOperationAction(ISD::UCMP, MVT::i64, Custom);
+  } else {
+    setOperationAction(ISD::UCMP, MVT::i32, Custom);
+    setOperationAction(ISD::UCMP, MVT::i64, Expand);
+  }
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -12752,15 +12758,6 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDValue B = DAG.getFreeze(Op.getOperand(1));
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
-
-  // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
-  // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
-  // comparison.
-  if (Subtarget.isPPC64() && OpVT == MVT::i32) {
-    A = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, A);
-    B = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, B);
-    OpVT = MVT::i64;
-  }
 
   // First compute diff = A - B.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);

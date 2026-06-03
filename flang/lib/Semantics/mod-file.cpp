@@ -364,37 +364,51 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
-static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
-  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
-  using OmpMemoryOrderType = common::OmpMemoryOrderType;
-
-  const auto [reqs, order]{common::visit(
-      [&](auto &&details)
-          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
-        if constexpr (std::is_convertible_v<decltype(details),
-                          const WithOmpDeclarative &>) {
-          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
         } else {
-          return {nullptr, nullptr};
+          return nullptr;
         }
       },
-      symbol.details())};
+      symbol.details());
+}
 
-  if (order) {
-    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
-    os << "!$omp requires "
-       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
-       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+static void PutOpenMPRequirements(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs);
+      os << "\n";
+    }
   }
-  if (reqs) {
-    os << "!$omp requires";
-    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-        os << ' '
-           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+}
+
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(os, dtgt, symbol.name());
+        os << "\n";
       }
-    });
-    os << "\n";
+    }
   }
 }
 
@@ -435,7 +449,9 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
-  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -1499,8 +1515,19 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
-  auto requiredHash{context_.moduleDependences().GetRequiredHash(
-      name.ToString(), isIntrinsic.value_or(false))};
+
+  // When offloading modules files are created for the host, but when compiling
+  // device-side code the builtin modules are exchanged with device-specific
+  // versions. They contain matching declarations, but have different checksums.
+  bool ignoreChecksumMismatch{
+      context_.langOptions().OffloadDevice && isIntrinsic.value_or(false)};
+
+  std::optional<size_t> requiredHash;
+  if (!ignoreChecksumMismatch) {
+    requiredHash = context_.moduleDependences().GetRequiredHash(
+        name.ToString(), isIntrinsic.value_or(false));
+  }
+
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
     if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
@@ -1584,7 +1611,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
-    if (!requiredHash) {
+    if (!requiredHash && !ignoreChecksumMismatch) {
       requiredHash =
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }

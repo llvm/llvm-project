@@ -26,12 +26,12 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 declare void @ext(ptr)
 
-; CHECK: declare !guid !{{[0-9]+}} hidden i32 @hidden_def_weak_def()
+; CHECK: declare hidden i32 @hidden_def_weak_def()
 ;; Currently the visibility is not propagated onto an unimported function,
 ;; because we don't have summaries for declarations.
 ; CHECK: declare extern_weak dso_local void @not_imported()
-; CHECK: define available_externally hidden void @hidden_def_ref() {{.*}} !thinlto_src_module !{{[0-9]+}} !thinlto_src_file !{{[0-9]+}}
-; CHECK: define available_externally hidden void @hidden_def_weak_ref() {{.*}} !thinlto_src_module !{{[0-9]+}} !thinlto_src_file !{{[0-9]+}}
+; CHECK: define available_externally hidden void @hidden_def_ref() !thinlto_src_module !0 !thinlto_src_file !1
+; CHECK: define available_externally hidden void @hidden_def_weak_ref() !thinlto_src_module !0 !thinlto_src_file !1
 
 ; CHECK2: define hidden i32 @hidden_def_weak_def()
 ; CHECK2: define hidden void @hidden_def_ref()

@@ -17,6 +17,12 @@ set (FILES
   XMLTest.cpp
 )
 
+if (LLDB_ENABLE_PYTHON)
+  list(APPEND FILES
+    PythonRuntimeLoaderTest.cpp
+  )
+endif()
+
 if (UNIX)
   list(APPEND FILES
     posix/HostTest.cpp
@@ -32,6 +38,7 @@ endif()
 
 add_lldb_unittest(HostTests
   ${FILES}
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS
     lldbHost
     lldbCore

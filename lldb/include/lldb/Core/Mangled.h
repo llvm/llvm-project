@@ -53,6 +53,28 @@ public:
   /// Initialize with both mangled and demangled names empty.
   Mangled() = default;
 
+  Mangled(const Mangled &other)
+      : m_mangled(other.m_mangled), m_demangled(other.m_demangled),
+        m_demangled_info(
+            other.m_demangled_info
+                ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
+                : nullptr) {}
+
+  Mangled &operator=(const Mangled &other) {
+    if (this != &other) {
+      m_mangled = other.m_mangled;
+      m_demangled = other.m_demangled;
+      m_demangled_info =
+          other.m_demangled_info
+              ? std::make_unique<DemangledNameInfo>(*other.m_demangled_info)
+              : nullptr;
+    }
+    return *this;
+  }
+
+  Mangled(Mangled &&) = default;
+  Mangled &operator=(Mangled &&) = default;
+
   /// Construct with name.
   ///
   /// Constructor with an optional string and auto-detect if \a name is
@@ -279,7 +301,7 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
   /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
-  const std::optional<DemangledNameInfo> &GetDemangledInfo() const;
+  const DemangledNameInfo *GetDemangledInfo() const;
 
   /// Compute the base name (without namespace/class qualifiers) from the
   /// demangled name.
@@ -308,7 +330,7 @@ private:
 
   /// If available, holds information about where in \c m_demangled certain
   /// parts of the name (e.g., basename, arguments, etc.) begin and end.
-  mutable std::optional<DemangledNameInfo> m_demangled_info = std::nullopt;
+  mutable std::unique_ptr<DemangledNameInfo> m_demangled_info;
 };
 
 Stream &operator<<(Stream &s, const Mangled &obj);

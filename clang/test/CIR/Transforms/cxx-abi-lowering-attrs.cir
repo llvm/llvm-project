@@ -3,9 +3,9 @@
 
 !u8i = !cir.int<u, 8>
 !s32i = !cir.int<s, 32>
-!rec_Other = !cir.record<struct "Other" padded {!u8i}>
-!rec_Struct = !cir.record<struct "Struct" {!cir.data_member<!s32i in !rec_Other>}>
-// CHECK: !rec_Struct = !cir.record<struct "Struct" {!s64i}>
+!rec_Other = !cir.struct<"Other" padded {!u8i}>
+!rec_Struct = !cir.struct<"Struct" {!cir.data_member<!s32i in !rec_Other>}>
+// CHECK: !rec_Struct = !cir.struct<"Struct" {!s64i}>
 
 !dmp = !cir.data_member<!s32i in !rec_Other>
 !dmp_ptr = !cir.ptr<!cir.data_member<!s32i in !rec_Other>>

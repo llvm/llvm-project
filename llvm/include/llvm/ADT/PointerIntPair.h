@@ -223,12 +223,6 @@ struct DenseMapInfo<PointerIntPair<PointerTy, IntBits, IntType>, void> {
     return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
   }
 
-  static Ty getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    Val <<= PointerLikeTypeTraits<PointerTy>::NumLowBitsAvailable;
-    return Ty::getFromOpaqueValue(reinterpret_cast<void *>(Val));
-  }
-
   static unsigned getHashValue(Ty V) {
     uintptr_t IV = reinterpret_cast<uintptr_t>(V.getOpaqueValue());
     return unsigned(IV) ^ unsigned(IV >> 9);

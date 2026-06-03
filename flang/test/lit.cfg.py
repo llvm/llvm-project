@@ -187,14 +187,6 @@ else:
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 if config.flang_test_enable_openmp or openmp_mod_path:
     config.available_features.add("openmp_runtime")
-
-    # Search path for omp_lib.h with LLVM_ENABLE_RUNTIMES=openmp
-    # FIXME: In a bootstrapping build, openmp should write this file into a
-    #        shared directory
-    flang_extra_search_args += [
-        "-I",
-        f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src",
-    ]
 else:
     lit_config.warning(
         f"OpenMP modules found not in driver default paths: OpenMP tests disabled; Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable"

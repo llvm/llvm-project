@@ -2247,6 +2247,11 @@ private:
     switch (rOpr.v) {
     case Fortran::parser::ReductionOperator::Operator::Plus:
       return fir::ReduceOperationEnum::Add;
+    case Fortran::parser::ReductionOperator::Operator::Minus:
+      // '-' is not a valid reduction operator for DO CONCURRENT REDUCE or
+      // !$CUF KERNEL DO REDUCE; both are rejected during semantic checking
+      // before lowering is reached, so it is never lowered here.
+      llvm_unreachable("minus is not a valid reduction operator");
     case Fortran::parser::ReductionOperator::Operator::Multiply:
       return fir::ReduceOperationEnum::Multiply;
     case Fortran::parser::ReductionOperator::Operator::And:
@@ -6526,7 +6531,8 @@ private:
       return;
     for (const auto &scope : intrinsicModuleScope->children()) {
       llvm::StringRef modName = toStringRef(scope.symbol()->name());
-      if (modName != "__fortran_ieee_exceptions")
+      if (modName != "__fortran_ieee_exceptions" &&
+          modName != "iso_fortran_env")
         continue;
       for (auto &var : Fortran::lower::pft::getScopeVariableList(scope)) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();

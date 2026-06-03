@@ -162,15 +162,7 @@ public:
 
   bool
   checkCFBranchLabelSchemeSupported(const CFBranchLabelSchemeKind Scheme,
-                                    DiagnosticsEngine &Diags) const override {
-    switch (Scheme) {
-    case CFBranchLabelSchemeKind::Default:
-    case CFBranchLabelSchemeKind::Unlabeled:
-    case CFBranchLabelSchemeKind::FuncSig:
-      return true;
-    }
-    return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
-  }
+                                    DiagnosticsEngine &Diags) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:

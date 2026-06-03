@@ -1561,7 +1561,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl i32 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i32 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i32(ptr align 8 [[TMP10]], i32 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
+; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP10]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <vscale x 2 x double> [[BROADCAST_SPLAT2]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <vscale x 2 x double> [[BROADCAST_SPLAT6]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x double> @llvm.fmuladd.nxv2f64(<vscale x 2 x double> [[TMP3]], <vscale x 2 x double> [[BROADCAST_SPLAT8]], <vscale x 2 x double> [[TMP13]])
@@ -1616,7 +1616,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-UF2-NEXT:    [[TMP18:%.*]] = mul i64 [[TMP17]], 32
 ; CHECK-UF2-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP16]], i64 [[TMP18]]
-; CHECK-UF2-NEXT:    [[TMP20:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i32(ptr align 8 [[TMP19]], i32 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
+; CHECK-UF2-NEXT:    [[TMP20:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP19]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP5]])
 ; CHECK-UF2-NEXT:    [[TMP21:%.*]] = fsub <vscale x 2 x double> [[BROADCAST_SPLAT2]], [[TMP20]]
 ; CHECK-UF2-NEXT:    [[TMP22:%.*]] = fmul <vscale x 2 x double> [[BROADCAST_SPLAT4]], [[TMP21]]
 ; CHECK-UF2-NEXT:    [[TMP23:%.*]] = call <vscale x 2 x double> @llvm.fmuladd.nxv2f64(<vscale x 2 x double> [[TMP10]], <vscale x 2 x double> [[BROADCAST_SPLAT6]], <vscale x 2 x double> [[TMP22]])

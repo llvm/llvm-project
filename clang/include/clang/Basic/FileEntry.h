@@ -184,16 +184,12 @@ private:
 
   friend struct llvm::DenseMapInfo<FileEntryRef>;
   struct dense_map_empty_tag {};
-  struct dense_map_tombstone_tag {};
 
-  // Private constructors for use by DenseMapInfo.
+  // Private constructor for use by DenseMapInfo.
   FileEntryRef(dense_map_empty_tag)
       : ME(llvm::DenseMapInfo<const MapEntry *>::getEmptyKey()) {}
-  FileEntryRef(dense_map_tombstone_tag)
-      : ME(llvm::DenseMapInfo<const MapEntry *>::getTombstoneKey()) {}
   bool isSpecialDenseMapKey() const {
-    return isSameRef(FileEntryRef(dense_map_empty_tag())) ||
-           isSameRef(FileEntryRef(dense_map_tombstone_tag()));
+    return isSameRef(FileEntryRef(dense_map_empty_tag()));
   }
 
   const MapEntry *ME;
@@ -243,16 +239,12 @@ template <> struct DenseMapInfo<clang::FileEntryRef> {
     return clang::FileEntryRef(clang::FileEntryRef::dense_map_empty_tag());
   }
 
-  static inline clang::FileEntryRef getTombstoneKey() {
-    return clang::FileEntryRef(clang::FileEntryRef::dense_map_tombstone_tag());
-  }
-
   static unsigned getHashValue(clang::FileEntryRef Val) {
     return hash_value(Val);
   }
 
   static bool isEqual(clang::FileEntryRef LHS, clang::FileEntryRef RHS) {
-    // Catch the easy cases: both empty, both tombstone, or the same ref.
+    // Catch the easy cases: both empty or the same ref.
     if (LHS.isSameRef(RHS))
       return true;
 

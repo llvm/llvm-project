@@ -79,7 +79,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      H, Lookup);
+      SAs.Instance, H, Lookup);
 }
 
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
@@ -98,7 +98,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      H, Lookup);
+      SAs.Instance, H, Lookup);
 }
 
 Expected<tpctypes::DylibHandle>

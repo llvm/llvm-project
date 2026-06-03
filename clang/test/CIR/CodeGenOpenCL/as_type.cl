@@ -5,8 +5,9 @@
 // RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
 // RUN: %clang_cc1 %s -emit-llvm -triple spir-unknown-unknown -o %t.ll
-// RUN: FileCheck %s --input-file=%t.ll --check-prefix=OGCG
+// RUN: FileCheck %s --input-file=%t.ll --check-prefix=LLVM
 
+typedef __attribute__(( ext_vector_type(3) )) char char3;
 typedef __attribute__(( ext_vector_type(4) )) char char4;
 
 char4 f4(int x) {
@@ -27,10 +28,6 @@ char4 f4(int x) {
 // LLVM:  %[[RET:.*]] = bitcast i32 %{{.*}} to <4 x i8>
 // LLVM:  ret <4 x i8> %[[RET]]
 
-// OGCG: define {{.*}} <4 x i8> @f4
-// OGCG:  %[[RET:.*]] = bitcast i32 %{{.*}} to <4 x i8>
-// OGCG:  ret <4 x i8> %[[RET]]
-
 int f6(char4 x) {
   return __builtin_astype(x, int);
 }
@@ -48,10 +45,6 @@ int f6(char4 x) {
 // LLVM: define {{.*}} i32 @f6
 // LLVM:  %[[RET:.*]] = bitcast <4 x i8> %{{.*}} to i32
 // LLVM:  ret i32 %[[RET]]
-
-// OGCG: define {{.*}} i32 @f6
-// OGCG:  %[[RET:.*]] = bitcast <4 x i8> %{{.*}} to i32
-// OGCG:  ret i32 %[[RET]]
 
 int* int_to_ptr(int x) {
   return __builtin_astype(x, int*);
@@ -71,6 +64,21 @@ int* int_to_ptr(int x) {
 // LLVM:   %[[INT_TO_PTR:.*]] = inttoptr i32 %{{.*}} to ptr
 // LLVM:   ret ptr %[[INT_TO_PTR]]
 
-// OGCG: define {{.*}} ptr @int_to_ptr
-// OGCG:   %[[INT_TO_PTR:.*]] = inttoptr i32 %{{.*}} to ptr
-// OGCG:   ret ptr %[[INT_TO_PTR]]
+char3 vec4_to_vec_3(char4 x) {
+  return __builtin_astype(x, char3);
+}
+
+// CIR: cir.func {{.*}} @vec4_to_vec_3
+// CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>, ["x", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.vector<3 x !s8i>, !cir.ptr<!cir.vector<3 x !s8i>>, ["__retval"]
+// CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>
+// CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!cir.vector<4 x !s8i>>, !cir.vector<4 x !s8i>
+// CIR:   %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<4 x !s8i>
+// CIR:   %[[RESULT:.*]] = cir.vec.shuffle(%[[TMP_X]], %[[POISON]] : !cir.vector<4 x !s8i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<2> : !s32i] : !cir.vector<3 x !s8i>
+// CIR:   cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.vector<3 x !s8i>, !cir.ptr<!cir.vector<3 x !s8i>>
+// CIR:   %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.vector<3 x !s8i>>, !cir.vector<3 x !s8i>
+// CIR:   cir.return %[[TMP_RET]] : !cir.vector<3 x !s8i>
+
+// LLVM: define {{.*}} <3 x i8> @vec4_to_vec_3
+// LLVM:  %[[RESULT:.*]] = shufflevector <4 x i8> %{{.*}}, <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
+// LLVM:  ret <3 x i8> %[[RESULT]]

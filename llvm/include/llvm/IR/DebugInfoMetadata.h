@@ -3925,8 +3925,6 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
 
   static inline FragInfo getEmptyKey() { return {MaxVal, MaxVal}; }
 
-  static inline FragInfo getTombstoneKey() { return {MaxVal - 1, MaxVal - 1}; }
-
   static unsigned getHashValue(const FragInfo &Frag) {
     return (Frag.SizeInBits & 0xffff) << 16 | (Frag.OffsetInBits & 0xffff);
   }
@@ -4798,11 +4796,6 @@ template <> struct DenseMapInfo<DebugVariable> {
   /// Empty key: no key should be generated that has no DILocalVariable.
   static inline DebugVariable getEmptyKey() {
     return DebugVariable(nullptr, std::nullopt, nullptr);
-  }
-
-  /// Difference in tombstone is that the Optional is meaningful.
-  static inline DebugVariable getTombstoneKey() {
-    return DebugVariable(nullptr, {{0, 0}}, nullptr);
   }
 
   static unsigned getHashValue(const DebugVariable &D) {

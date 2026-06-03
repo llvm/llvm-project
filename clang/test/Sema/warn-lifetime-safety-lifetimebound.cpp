@@ -44,6 +44,24 @@ View return_alias_through_unannotated_passthrough(
   return not_lb(alias);
 }
 
+View global_view;
+
+View assign_param_to_global(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  global_view = obj; // Wrong kind of escape.
+  return View(); // Unrelated view.
+}
+
+struct EnclosingState {
+  View member;
+
+  View assign_param_to_field(
+      const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+    member = obj; // Wrong kind of escape.
+    return View(); // Unrelated view.
+  }
+};
+
 View not_lb_view(View v);
 
 View lb_view(View v [[clang::lifetimebound]]);

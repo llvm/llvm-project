@@ -33,9 +33,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
+
 #define DEBUG_TYPE "vplan"
 
 using namespace llvm;
+using namespace LoopVectorizationUtils;
 using namespace VPlanPatternMatch;
 
 namespace {
@@ -975,9 +978,74 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   return true;
 }
 
+bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
+                                             PredicatedScalarEvolution &PSE,
+                                             bool OptForSize,
+                                             unsigned SCEVCheckThreshold,
+                                             OptimizationRemarkEmitter *ORE,
+                                             Loop *TheLoop) {
+  // Collect which wide IVs have predicates and add them to PSE.
+  auto [HeaderVPBB, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  SmallPtrSet<VPWidenInductionRecipe *, 4> PredicatedIVs;
+  for (auto &R : HeaderVPBB->phis()) {
+    auto *WideIV = dyn_cast<VPWidenInductionRecipe>(&R);
+    if (!WideIV || WideIV->getNoWrapPredicates().empty())
+      continue;
+    PredicatedIVs.insert(WideIV);
+    for (const auto *P : WideIV->getNoWrapPredicates())
+      PSE.addPredicate(*P);
+  }
+
+  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
+  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
+  // predicates directly, regardless of whether PSE was already non-trivial
+  // from other sources (e.g., LAI predicates).
+  // TODO: Overly conservative; the pre-computed exit values are not correct
+  // outside the loop, but the exit values could be extracted from the vector
+  // loop.
+  if (!PredicatedIVs.empty())
+    for (auto *EB : Plan.getExitBlocks())
+      for (VPRecipeBase &R : EB->phis())
+        for (VPValue *Op : R.operands()) {
+          VPValue *Inner;
+          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
+            continue;
+          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
+          if (!WideIV || !PredicatedIVs.contains(WideIV))
+            continue;
+          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
+                               "outside-loop use via ExitingIVValue\n");
+          return false;
+        }
+
+  unsigned TotalComplexity = PSE.getPredicate().getComplexity();
+  if (TotalComplexity && OptForSize) {
+    LLVM_DEBUG(
+        dbgs() << "LV: Not vectorizing: SCEV predicates needed for induction "
+                  "but optimizing for size\n");
+    reportVectorizationFailure(
+        "Runtime SCEV check is required with -Os/-Oz",
+        "runtime SCEV checks needed but optimizing for size",
+        "CantVersionLoopWithOptForSize", ORE, TheLoop);
+    return false;
+  }
+
+  if (TotalComplexity > SCEVCheckThreshold) {
+    LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Too many SCEV checks needed ("
+                      << TotalComplexity << " > " << SCEVCheckThreshold
+                      << ")\n");
+    reportVectorizationFailure(
+        "Too many SCEV checks needed",
+        "Too many SCEV assumptions need to be made and checked at runtime",
+        "TooManySCEVRunTimeChecks", ORE, TheLoop);
+    return false;
+  }
+
+  return true;
+}
+
 void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
                                                    ElementCount MinVF) {
-  VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPRecipeBase *> ToDelete;
 
@@ -1072,7 +1140,7 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         VecOp = FMulRecipe;
       } else if (Kind == RecurKind::AddChainWithSubs &&
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
-        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+        Type *PhiTy = PhiR->getScalarType();
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
         VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
         auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
@@ -1167,7 +1235,7 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
       }
 
       // Check dereferenceability using the SCEV-based version.
-      Type *LoadTy = VPI->getResultType();
+      Type *LoadTy = VPI->getScalarType();
       const SCEV *SizeSCEV =
           SE.getStoreSizeOfExpr(DL.getIndexType(PtrSCEV->getType()), LoadTy);
       auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
@@ -1197,11 +1265,15 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   //       here from handleUncountableEarlyExits, but we need to improve
   //       detection of recipes which may write to memory.
   if (Style != UncountableExitStyle::NoUncountableExit) {
-    if (!areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
+    // Dereferenceability is checked separately for uncountable exit loops with
+    // stores, as only the loads contributing to the exit condition need to
+    // be checked.
+    if (Style == UncountableExitStyle::ReadOnly &&
+        !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
       return false;
     // TODO: Check target preference for style.
-    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
-    return true;
+    return handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
+                                       TheLoop, PSE, DT, AC, Style);
   }
 
   // Disconnect countable early exits from the loop, leaving it with a single
@@ -1334,12 +1406,11 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
-  VPTypeAnalysis TypeInfo(Plan);
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
     VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
+        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1869,7 +1940,7 @@ static bool handleFirstArgMinOrMax(
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
   // TODO: Emit remarks for failed transformations.
-  if (Ty != VPTypeAnalysis(Plan).inferScalarType(WideIV))
+  if (Ty != WideIV->getScalarType())
     return false;
 
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(

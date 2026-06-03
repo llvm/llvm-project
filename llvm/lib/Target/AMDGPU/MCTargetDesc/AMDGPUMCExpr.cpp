@@ -65,6 +65,9 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case AGVK_Max:
     OS << "max(";
     break;
+  case AGVK_Min:
+    OS << "min(";
+    break;
   case AGVK_ExtraSGPRs:
     OS << "extrasgprs(";
     break;
@@ -103,6 +106,8 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
     return std::max(Arg1, Arg2);
   case AMDGPUMCExpr::AGVK_Or:
     return Arg1 | Arg2;
+  case AMDGPUMCExpr::AGVK_Min:
+    return std::min(Arg1, Arg2);
   }
 }
 
@@ -494,7 +499,17 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KnownBits KB = KBM[AGVK->getSubExpr(0)];
     for (const MCExpr *Arg : AGVK->getArgs()) {
       knownBitsMapHelper(Arg, KBM, Depth + 1);
-      KB = KnownBits::umax(KB, KBM[Arg]);
+      KB = KnownBits::smax(KB, KBM[Arg]);
+    }
+    KBM[Expr] = std::move(KB);
+    return;
+  }
+  case AMDGPUMCExpr::VariantKind::AGVK_Min: {
+    knownBitsMapHelper(AGVK->getSubExpr(0), KBM, Depth + 1);
+    KnownBits KB = KBM[AGVK->getSubExpr(0)];
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      knownBitsMapHelper(Arg, KBM, Depth + 1);
+      KB = KnownBits::smin(KB, KBM[Arg]);
     }
     KBM[Expr] = std::move(KB);
     return;

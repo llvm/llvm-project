@@ -123,8 +123,6 @@ Error LevelZeroPluginTy::deinitImpl() {
   ODBG(OLDT_Deinit) << "Deinit Level0 plugin!";
   if (auto Err = ContextTLSTable.deinit())
     return Err;
-  if (auto Err = DeviceTLSTable.deinit())
-    return Err;
   for (auto &Context : ContextList)
     if (auto Err = Context.deinit())
       return Err;

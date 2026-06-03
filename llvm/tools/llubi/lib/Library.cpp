@@ -132,7 +132,7 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (!Obj) {
     Executor.reportImmediateUB()
         << "freeing a pointer with nullary provenance.";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (const uint64_t Address = Ptr.address().getZExtValue();
@@ -142,20 +142,20 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
            "the start of an allocation. Pointer address: 0x"
         << Twine::utohexstr(Address) << ", allocation base: 0x"
         << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (Obj->getState() == MemoryObjectState::Freed) {
     Executor.reportImmediateUB()
         << "double-freeing a memory object allocated at 0x"
         << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   if (!Obj->isHeapAllocated()) {
     Executor.reportImmediateUB() << "freeing a non-heap allocation at 0x"
                                  << Twine::utohexstr(Obj->getAddress()) << ".";
-    return AnyValue::poison();
+    return AnyValue();
   }
 
   // Currently we don't check for cases where a memory allocated with C

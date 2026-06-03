@@ -2176,6 +2176,15 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
     return Arg.getAsExpr();
   }
 
+  QualType ParamType = NTTP->isExpandedParameterPack()
+                           ? NTTP->getExpansionType(*SemaRef.ArgPackSubstIndex)
+                       : NTTP->isParameterPack() && SemaRef.ArgPackSubstIndex
+                           ? NTTP->getType().getNonPackExpansionType()
+                           : NTTP->getType();
+  ParamType = SemaRef.SubstType(ParamType, TemplateArgs, E->getLocation(),
+                                NTTP->getDeclName());
+  assert(!ParamType.isNull() && "Shouldn't substitute to an invalid type");
+
   auto [AssociatedDecl, Final] =
       TemplateArgs.getAssociatedDecl(NTTP->getDepth());
   UnsignedOrNone PackIndex = std::nullopt;
@@ -2187,24 +2196,19 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
       // We have an argument pack, but we can't select a particular argument
       // out of it yet. Therefore, we'll build an expression to hold on to that
       // argument pack.
-      QualType TargetType = SemaRef.SubstType(NTTP->getType(), TemplateArgs,
-                                              E->getLocation(),
-                                              NTTP->getDeclName());
-      if (TargetType.isNull())
-        return ExprError();
-
-      QualType ExprType = TargetType.getNonLValueExprType(SemaRef.Context);
-      if (TargetType->isRecordType())
+      QualType ExprType = ParamType.getNonLValueExprType(SemaRef.Context);
+      if (ParamType->isRecordType())
         ExprType.addConst();
       return new (SemaRef.Context) SubstNonTypeTemplateParmPackExpr(
-          ExprType, TargetType->isReferenceType() ? VK_LValue : VK_PRValue,
+          ExprType, ParamType->isReferenceType() ? VK_LValue : VK_PRValue,
           E->getLocation(), Arg, AssociatedDecl, NTTP->getPosition(), Final);
     }
     PackIndex = SemaRef.getPackIndex(Arg);
     Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
   }
   return SemaRef.BuildSubstNonTypeTemplateParmExpr(
-      AssociatedDecl, NTTP, E->getLocation(), Arg, PackIndex, Final);
+      AssociatedDecl, NTTP->getPosition(), ParamType, E->getLocation(), Arg,
+      PackIndex, Final);
 }
 
 const AnnotateAttr *

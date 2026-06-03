@@ -1108,10 +1108,6 @@ struct DenseMapInfo<mlir::StringAttr> : public DenseMapInfo<mlir::Attribute> {
     const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
     return mlir::StringAttr::getFromOpaquePointer(pointer);
   }
-  static mlir::StringAttr getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return mlir::StringAttr::getFromOpaquePointer(pointer);
-  }
 };
 template <>
 struct PointerLikeTypeTraits<mlir::StringAttr>

@@ -812,29 +812,6 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
 // Bufferization-specific IRMapping support with debugging.
 //===----------------------------------------------------------------------===//
 
-BaseMemRefType bufferization::getMemRefType(TensorType tensorType,
-                                            const BufferizationOptions &options,
-                                            MemRefLayoutAttrInterface layout,
-                                            Attribute memorySpace) {
-  // Case 1: Unranked memref type.
-  if (auto unrankedTensorType =
-          llvm::dyn_cast<UnrankedTensorType>(tensorType)) {
-    assert(!layout && "UnrankedTensorType cannot have a layout map");
-    return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
-                                   memorySpace);
-  }
-
-  // Case 2: Ranked memref type with specified layout.
-  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
-  if (layout) {
-    return MemRefType::get(rankedTensorType.getShape(),
-                           rankedTensorType.getElementType(), layout,
-                           memorySpace);
-  }
-
-  return options.unknownTypeConverterFn(tensorType, memorySpace, options);
-}
-
 BaseMemRefType
 bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
                                                    Attribute memorySpace) {
@@ -980,8 +957,8 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
 
   // No further analysis is possible for a block argument.
   if (llvm::isa<BlockArgument>(value)) {
-    return cast<BufferLikeType>(
-        bufferization::getMemRefType(tensorType, options));
+    return cast<BufferLikeType>(options.unknownTypeConverterFn(
+        tensorType, /*memorySpace=*/nullptr, options));
   }
 
   // Value is an OpResult.
@@ -1006,7 +983,7 @@ FailureOr<BufferLikeType> bufferization::detail::defaultGetBufferType(
     return op->emitError("could not infer memory space");
 
   return cast<BufferLikeType>(
-      getMemRefType(tensorType, options, /*layout=*/{}, *memSpace));
+      options.unknownTypeConverterFn(tensorType, *memSpace, options));
 }
 
 bool bufferization::detail::defaultIsRepetitiveRegion(

@@ -750,7 +750,6 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::remark::detail::Remark> {
   static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
-  static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
 
   /// Helper to provide a static dummy context for sentinel keys.
   static mlir::MLIRContext *getStaticDummyContext() {
@@ -766,14 +765,6 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
         mlir::remark::RemarkOpts::name(kEmptyKey));
   }
 
-  /// Create a dead remark
-  static inline mlir::remark::detail::Remark getTombstoneKey() {
-    return mlir::remark::detail::Remark(
-        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(getStaticDummyContext()),
-        mlir::remark::RemarkOpts::name(kTombstoneKey));
-  }
-
   /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
     return llvm::hash_combine(
@@ -785,11 +776,8 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
 
   static bool isEqual(const mlir::remark::detail::Remark &lhs,
                       const mlir::remark::detail::Remark &rhs) {
-    // Check for empty/tombstone keys first
-    if (lhs.getRemarkName() == kEmptyKey ||
-        lhs.getRemarkName() == kTombstoneKey ||
-        rhs.getRemarkName() == kEmptyKey ||
-        rhs.getRemarkName() == kTombstoneKey) {
+    // Check for empty keys first.
+    if (lhs.getRemarkName() == kEmptyKey || rhs.getRemarkName() == kEmptyKey) {
       return lhs.getRemarkName() == rhs.getRemarkName();
     }
 

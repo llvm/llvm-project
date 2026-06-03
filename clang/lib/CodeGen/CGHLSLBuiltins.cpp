@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/MatrixUtils.h"
 #include "llvm/IR/MatrixBuilder.h"
 
 using namespace clang;
@@ -1206,8 +1207,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // The matrix multiply intrinsic only operates on column-major order
     // matrices. Therefore matrix memory layout transforms must be inserted
     // before and after matrix multiply intrinsics.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    // Use whichever operand is a matrix to discover its declared layout.
+    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
+    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
 
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
@@ -1216,7 +1218,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
       assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajor)
+      if (IsRowMajorMat1)
         Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
@@ -1226,7 +1228,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajor)
+      if (IsRowMajorMat0)
         Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
@@ -1239,13 +1241,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Cols1 = MatTy1->getNumColumns();
     assert(Cols0 == Rows1 &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajor) {
+    if (IsRowMajorMat0)
       Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
+    if (IsRowMajorMat1)
       Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-    }
+
     Value *Result =
         MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-    if (IsRowMajor)
+
+    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
+    if (IsResultRowMajor)
       Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
     return Result;
   }
@@ -1259,8 +1264,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // For row-major, a row-major RxC matrix is equivalent to a column-major
     // CxR matrix, so transposing with swapped dimensions produces the correct
     // row-major CxR result directly.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
     if (IsRowMajor)
       return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);

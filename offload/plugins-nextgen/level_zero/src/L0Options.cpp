@@ -185,6 +185,8 @@ void L0OptionsTy::processEnvironmentVars() {
       CommandMode = CommandModeTy::Async;
     else if (match(CommandModeVar, "async_ordered"))
       CommandMode = CommandModeTy::AsyncOrdered;
+    else if (match(CommandModeVar, "inorder"))
+      CommandMode = CommandModeTy::InOrder;
     else
       MESSAGE("Warning: Ignoring invalid value for "
               "LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=%s\n",

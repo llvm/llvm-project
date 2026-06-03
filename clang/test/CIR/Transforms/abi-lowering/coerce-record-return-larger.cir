@@ -1,0 +1,63 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Vec3   = !cir.struct<"Vec3"   {!s32i, !s32i, !s32i}>
+!rec_TwoI64 = !cir.struct<"TwoI64" {!s64i, !s64i}>
+
+#coerce_vec3_return_to_twoi64 = {
+  return = { kind = "direct", coerced_type = !rec_TwoI64 },
+  args   = [ ]
+}
+
+#caller_ret_i32 = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @returns_vec3() -> !rec_Vec3
+      attributes { test_classify = #coerce_vec3_return_to_twoi64 } {
+    %0 = cir.const #cir.zero : !rec_Vec3
+    cir.return %0 : !rec_Vec3
+  }
+
+  // The coerced return type (16-byte !rec_TwoI64) is larger than the source
+  // (12-byte !rec_Vec3), so the coercion slot is sized to the larger type
+  // and the store goes through a source-typed view of it; loading !rec_TwoI64
+  // out of a !rec_Vec3-sized slot would read past the allocation.
+  // CHECK:      cir.func{{.*}} @returns_vec3() -> !rec_TwoI64
+  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_TwoI64, !cir.ptr<!rec_TwoI64>, ["coerce"]
+  // CHECK:        %[[VAL:.*]] = cir.const #cir.zero : !rec_Vec3
+  // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec3>
+  // CHECK:        cir.store %[[VAL]], %[[CAST]] : !rec_Vec3, !cir.ptr<!rec_Vec3>
+  // CHECK:        %[[COERCED:.*]] = cir.load %[[SLOT]] : !cir.ptr<!rec_TwoI64>, !rec_TwoI64
+  // CHECK:        cir.return %[[COERCED]] : !rec_TwoI64
+
+  cir.func @caller() -> !s32i
+      attributes { test_classify = #caller_ret_i32 } {
+    %0 = cir.call @returns_vec3() : () -> !rec_Vec3
+    %1 = cir.alloca !rec_Vec3, !cir.ptr<!rec_Vec3>, ["r"] {alignment = 4 : i64}
+    cir.store %0, %1 : !rec_Vec3, !cir.ptr<!rec_Vec3>
+    %2 = cir.get_member %1[0] {name = "first"} : !cir.ptr<!rec_Vec3> -> !cir.ptr<!s32i>
+    %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %3 : !s32i
+  }
+
+  // The larger !rec_TwoI64 call result is coerced back to !rec_Vec3; here the
+  // source is the larger type so the slot is source-sized and the load reads
+  // the smaller destination back out.
+  // CHECK:      cir.func{{.*}} @caller() -> !s32i
+  // CHECK:        %[[RET:.*]] = cir.call @returns_vec3() : () -> !rec_TwoI64
+  // CHECK:        cir.store %[[RET]], %{{.*}} : !rec_TwoI64, !cir.ptr<!rec_TwoI64>
+  // CHECK:        %[[RCAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec3>
+  // CHECK:        %[[REC:.*]] = cir.load %[[RCAST]] : !cir.ptr<!rec_Vec3>, !rec_Vec3
+  // CHECK:        %[[MEMBER:.*]] = cir.get_member %{{.*}}[0] {name = "first"} : !cir.ptr<!rec_Vec3> -> !cir.ptr<!s32i>
+
+}

@@ -45,11 +45,13 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
     Base = S;
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(Base, *CharType, Descriptor::GlobalMD,
-                                        StringLength + 1,
-                                        /*IsConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(Base, S->getType().getTypePtr(), *CharType,
+                         Descriptor::GlobalMD, StringLength + 1,
+                         /*IsConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false,
+                         /*IsVolatile=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -426,8 +428,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
           return nullptr;
         }
-        return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
-                                  IsMutable);
+        return allocateDescriptor(D, CAT, *T, MDSize, NumElems, IsConst,
+                                  IsTemporary, IsMutable, IsVolatile);
       }
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
@@ -472,8 +474,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, 2, IsConst, IsTemporary,
-                              IsMutable);
+    return allocateDescriptor(D, CT, *ElemTy, MDSize, 2, IsConst, IsTemporary,
+                              IsMutable, IsVolatile);
   }
 
   // Same with vector types.
@@ -482,8 +484,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
-                              IsTemporary, IsMutable);
+    return allocateDescriptor(D, VT, *ElemTy, MDSize, VT->getNumElements(),
+                              IsConst, IsTemporary, IsMutable, IsVolatile);
   }
 
   // Same with constant matrix types.
@@ -492,8 +494,9 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
-                              IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, MT, *ElemTy, MDSize,
+                              MT->getNumElementsFlattened(), IsConst,
+                              IsTemporary, IsMutable, IsVolatile);
   }
 
   return nullptr;

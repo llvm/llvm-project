@@ -600,9 +600,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
   TC.addProfileRTLibs(Args, CmdArgs);

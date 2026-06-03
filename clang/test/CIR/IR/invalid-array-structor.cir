@@ -3,11 +3,11 @@
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func dso_local @bad_static_array_ctor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
-    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    // expected-error@+1 {{'cir.array.ctor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.struct or !cir.union type}}
     cir.array.ctor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
     ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
     }
@@ -19,7 +19,7 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
@@ -38,14 +38,14 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @construct_int(!cir.ptr<!u8i>)
 
   // Static form: addr must be a pointer to an array type.
   cir.func @bad_static_array_not_record_ctor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
-    // expected-error@+1 {{'cir.array.ctor' op the block argument type must be a pointer to a !cir.record type}}
+    // expected-error@+1 {{'cir.array.ctor' op the block argument type must be a pointer to a !cir.struct or !cir.union type}}
     cir.array.ctor %p : !cir.ptr<!cir.array<!u8i x 4>> {
     ^bb0(%e: !cir.ptr<!u8i>):
       cir.call @construct_int(%e) : (!cir.ptr<!u8i>) -> ()
@@ -58,8 +58,8 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
-!rec_T = !cir.record<struct "T" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_T = !cir.struct<"T" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
@@ -78,8 +78,8 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
-!rec_T = !cir.record<struct "T" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_T = !cir.struct<"T" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)
@@ -99,11 +99,11 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func dso_local @bad_static_array_dtor_with_num_elements(%p: !cir.ptr<!cir.array<!rec_S x 10>>, %n: !u64i) {
-    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.record type}}
+    // expected-error@+1 {{'cir.array.dtor' op when 'num_elements' is present, 'addr' must be a pointer to a !cir.struct or !cir.union type}}
     cir.array.dtor %p, %n : !cir.ptr<!cir.array<!rec_S x 10>>, !u64i {
     ^bb0(%e: !cir.ptr<!cir.array<!rec_S x 10>>):
     }
@@ -114,7 +114,7 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
@@ -131,14 +131,14 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @destroy_int(!cir.ptr<!u8i>)
 
   // Static form: addr must be a pointer to an array type.
   cir.func @bad_static_array_not_record_dtor(%p: !cir.ptr<!cir.array<!u8i x 4>>) {
-    // expected-error@+1 {{'cir.array.dtor' op the block argument type must be a pointer to a !cir.record type}}
+    // expected-error@+1 {{'cir.array.dtor' op the block argument type must be a pointer to a !cir.struct or !cir.union type}}
     cir.array.dtor %p : !cir.ptr<!cir.array<!u8i x 4>> {
     ^bb0(%e: !cir.ptr<!u8i>):
       cir.call @destroy_int(%e) : (!cir.ptr<!u8i>) -> ()
@@ -150,8 +150,8 @@ module {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
-!rec_T = !cir.record<struct "T" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_T = !cir.struct<"T" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
@@ -169,8 +169,8 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
-!rec_T = !cir.record<struct "T" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_T = !cir.struct<"T" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
@@ -189,8 +189,8 @@ module {
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
-!rec_T = !cir.record<struct "T" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_T = !cir.struct<"T" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)

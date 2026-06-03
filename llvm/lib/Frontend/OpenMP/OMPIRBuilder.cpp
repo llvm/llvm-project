@@ -2392,9 +2392,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   Value *TaskDupFn = *TaskDupFnOrErr;
 
   OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
-                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                       FakeStep, FakeSharedsTy, Final, Mergeable, Priority,
+                       TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
+                       GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
+                       FakeSharedsTy, Final, Mergeable, Priority,
                        NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&

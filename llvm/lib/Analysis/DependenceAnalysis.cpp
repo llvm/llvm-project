@@ -1588,12 +1588,14 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
+  OverflowSafeSignedAPInt TC = CM.sdiv(G);
+  OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
+  OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
+  if (!TC || !TX || !TY)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << *TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << *TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << *TY << "\n");
 
   APInt TB = BM.sdiv(G);
   APInt TA = AM.sdiv(G);

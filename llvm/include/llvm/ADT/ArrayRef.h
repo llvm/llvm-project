@@ -569,23 +569,14 @@ template <typename T> struct DenseMapInfo<ArrayRef<T>, void> {
                        size_t(0));
   }
 
-  static inline ArrayRef<T> getTombstoneKey() {
-    return ArrayRef<T>(reinterpret_cast<const T *>(~static_cast<uintptr_t>(1)),
-                       size_t(0));
-  }
-
   static unsigned getHashValue(ArrayRef<T> Val) {
     assert(Val.data() != getEmptyKey().data() && "Cannot hash the empty key!");
-    assert(Val.data() != getTombstoneKey().data() &&
-           "Cannot hash the tombstone key!");
     return (unsigned)(hash_value(Val));
   }
 
   static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
     if (RHS.data() == getEmptyKey().data())
       return LHS.data() == getEmptyKey().data();
-    if (RHS.data() == getTombstoneKey().data())
-      return LHS.data() == getTombstoneKey().data();
     return LHS == RHS;
   }
 };

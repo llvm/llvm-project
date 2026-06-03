@@ -116,6 +116,36 @@ exit:
   ret void
 }
 
+define void @scev_expand_udiv(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'scev_expand_udiv'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%div> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop.preheader>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%div>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %div = udiv i64 %n, 3
+  %cmp = icmp ne i64 %div, 0
+  br i1 %cmp, label %loop.preheader, label %exit
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %cmp.loop = icmp ult i64 %iv.next, %div
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}

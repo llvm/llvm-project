@@ -255,10 +255,6 @@ namespace llvm {
 template <> struct DenseMapInfo<clang::NestedNameSpecifier> {
   static clang::NestedNameSpecifier getEmptyKey() { return std::nullopt; }
 
-  static clang::NestedNameSpecifier getTombstoneKey() {
-    return clang::NestedNameSpecifier::getInvalid();
-  }
-
   static unsigned getHashValue(const clang::NestedNameSpecifier &V) {
     return hash_combine(V.getAsVoidPointer());
   }
@@ -271,11 +267,6 @@ template <> struct DenseMapInfo<clang::NestedNameSpecifierLoc> {
   static clang::NestedNameSpecifierLoc getEmptyKey() {
     return clang::NestedNameSpecifierLoc(FirstInfo::getEmptyKey(),
                                          SecondInfo::getEmptyKey());
-  }
-
-  static clang::NestedNameSpecifierLoc getTombstoneKey() {
-    return clang::NestedNameSpecifierLoc(FirstInfo::getTombstoneKey(),
-                                         SecondInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const clang::NestedNameSpecifierLoc &PairVal) {

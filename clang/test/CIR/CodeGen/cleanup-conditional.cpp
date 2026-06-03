@@ -874,3 +874,161 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // OGCG:       [[DTOR]]:
 // OGCG:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
 // OGCG:         br label %[[DONE]]
+
+struct LE {
+  LE(int);
+  ~LE();
+};
+
+void test_lifetime_ext_cond_ref(bool c) {
+  const LE &r = c ? LE(1) : LE(2);
+}
+// CIR-LABEL: @_Z26test_lifetime_ext_cond_refb
+// CIR:   %[[TMP:.*]] = cir.alloca !rec_LE, !cir.ptr<!rec_LE>, ["ref.tmp0"]
+// CIR:   %[[R:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["r", init, const]
+// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["tmp.exprcleanup"]
+// CIR:   cir.if %{{.*}} {
+// CIR:     cir.call @_ZN2LEC1Ei(%[[TMP]], %{{.*}})
+// CIR:   } else {
+// CIR:     cir.call @_ZN2LEC1Ei(%[[TMP]], %{{.*}})
+// CIR:   }
+// CIR:   cir.store {{.*}} %[[TMP]], %[[SPILL]]
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!rec_LE>>, !cir.ptr<!rec_LE>
+// CIR:     cir.store {{.*}} %[[RELOAD]], %[[R]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN2LED1Ev(%[[TMP]]) nothrow
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.return
+
+// LLVM-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
+// LLVM:   %[[TMP:.*]] = alloca %struct.LE
+// LLVM:   %[[R:.*]] = alloca ptr
+// LLVM:   %[[SPILL:.*]] = alloca ptr
+// LLVM:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM: [[TRUE]]:
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
+// LLVM: [[FALSE]]:
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
+// LLVM:   store ptr %[[TMP]], ptr %[[SPILL]]
+// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:   ret void
+
+// OGCG-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
+// OGCG:   %[[R:.*]] = alloca ptr
+// OGCG:   %[[TMP:.*]] = alloca %struct.LE
+// OGCG:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// OGCG: [[TRUE]]:
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
+// OGCG: [[FALSE]]:
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
+// OGCG:   store ptr %[[TMP]], ptr %[[R]]
+// OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:   ret void
+
+void test_combined_cleanups(bool c) {
+  const LE &r = LE((S().get(), c ? B().get() : 0));
+}
+// CIR-LABEL: @_Z22test_combined_cleanupsb
+// CIR:   %[[TMP_LE:.*]] = cir.alloca !rec_LE, !cir.ptr<!rec_LE>, ["ref.tmp0"]
+// CIR:   %[[R:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["r", init, const]
+// CIR:   %[[TMP_S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp1"]
+// CIR:   %[[TMP_B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp2"]
+// CIR:   %[[ACT_B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["tmp.exprcleanup"]
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.call @_ZN1SC1Ev(%[[TMP_S]])
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_ZN1S3getEv(%[[TMP_S]])
+// CIR:       cir.store {{.*}}, %[[ACT_B]]
+// CIR:       %{{.*}} = cir.ternary({{.*}}, true {
+// CIR:         cir.call @_ZN1BC1Ev(%[[TMP_B]])
+// CIR:         cir.store {{.*}}, %[[ACT_B]]
+// CIR:         cir.call @_ZN1B3getEv(%[[TMP_B]])
+// CIR:       }, false {
+// CIR:       })
+// CIR:       cir.call @_ZN2LEC1Ei(%[[TMP_LE]], %{{.*}})
+// CIR:       cir.store {{.*}} %[[TMP_LE]], %[[SPILL]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
+// CIR:     cir.if %[[FLAG]] {
+// CIR:       cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]]
+// CIR:     cir.store {{.*}} %[[RELOAD]], %[[R]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN2LED1Ev(%[[TMP_LE]]) nothrow
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.return
+
+// LLVM-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
+// LLVM:   %[[TMP_LE:.*]] = alloca %struct.LE
+// LLVM:   %[[R:.*]] = alloca ptr
+// LLVM:   %[[TMP_S:.*]] = alloca %struct.S
+// LLVM:   %[[TMP_B:.*]] = alloca %struct.B
+// LLVM:   %[[ACT_B:.*]] = alloca i8
+// LLVM:   %[[SPILL:.*]] = alloca ptr
+// LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVM:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
+// LLVM:   store i8 0, ptr %[[ACT_B]]
+// LLVM:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
+// LLVM: [[T]]:
+// LLVM:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVM:   store i8 1, ptr %[[ACT_B]]
+// LLVM:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
+// LLVM: [[F]]:
+// LLVM:   phi i32 [ 0, %[[F]] ], [ %{{.*}}, %[[T]] ]
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
+// LLVM:   store ptr %[[TMP_LE]], ptr %[[SPILL]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[ACT_B]]
+// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[FLAG]], label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
+// LLVM: [[B_DTOR]]:
+// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVM: [[B_DONE]]:
+// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
+// LLVM:   ret void
+
+// OGCG-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
+// OGCG:   %[[R:.*]] = alloca ptr
+// OGCG:   %[[TMP_LE:.*]] = alloca %struct.LE
+// OGCG:   %[[TMP_S:.*]] = alloca %struct.S
+// OGCG:   %[[TMP_B:.*]] = alloca %struct.B
+// OGCG:   %[[ACT_B:.*]] = alloca i1
+// OGCG:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
+// OGCG:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
+// OGCG:   store i1 false, ptr %[[ACT_B]]
+// OGCG:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
+// OGCG: [[T]]:
+// OGCG:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
+// OGCG:   store i1 true, ptr %[[ACT_B]]
+// OGCG:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
+// OGCG: [[F]]:
+// OGCG:   phi i32
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
+// OGCG:   br i1 %{{.*}}, label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
+// OGCG: [[B_DTOR]]:
+// OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
+// OGCG: [[B_DONE]]:
+// OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// OGCG:   store ptr %[[TMP_LE]], ptr %[[R]]
+// OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
+// OGCG:   ret void

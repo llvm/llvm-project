@@ -1,7 +1,7 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)

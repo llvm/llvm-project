@@ -138,10 +138,6 @@ struct UnsafeQualTypeDenseMapInfo {
     return QualType::getFromOpaquePtr((void *)1);
   }
 
-  static QualType getTombstoneKey() {
-    return QualType::getFromOpaquePtr((void *)2);
-  }
-
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
            "hash invalid for types with fast quals");
@@ -2216,10 +2212,6 @@ namespace llvm {
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
   static clang::serialization::DeclarationNameKey getEmptyKey() {
     return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
-  static clang::serialization::DeclarationNameKey getTombstoneKey() {
-    return clang::serialization::DeclarationNameKey(-1, 2);
   }
 
   static unsigned

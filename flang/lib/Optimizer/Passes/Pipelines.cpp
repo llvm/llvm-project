@@ -291,6 +291,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, hlfir::createSeparateAllocatableAssign);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());

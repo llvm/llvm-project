@@ -6,7 +6,7 @@
 ;; Test pure ThinLTO
 
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt -passes=assign-guid -thinlto-bc -o %t1.o %s
+; RUN: opt -thinlto-bc -o %t1.o %s
 
 ;; Check that we have properly recorded the alias in the vtable summary.
 ; RUN: llvm-dis -o - %t1.o | FileCheck %s --check-prefix SUMMARY
@@ -30,7 +30,7 @@
 ;; Test hybrid Thin/Regular LTO
 
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt -passes=assign-guid -thinlto-bc -thinlto-split-lto-unit -o %t3.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t3.o %s
 
 ; RUN: llvm-lto2 run %t3.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
@@ -45,7 +45,7 @@
 ; RUN: llvm-dis %t4.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR1
 
 ;; Test Regular LTO
-; RUN: opt -passes=assign-guid -o %t5.o %s
+; RUN: opt -o %t5.o %s
 ; RUN: llvm-lto2 run %t5.o -save-temps -pass-remarks=. \
 ; RUN:   -whole-program-visibility \
 ; RUN:   -o %t6 \

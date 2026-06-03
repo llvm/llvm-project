@@ -293,9 +293,6 @@ template <> struct DenseMapInfo<codeview::TypeIndex> {
   static inline codeview::TypeIndex getEmptyKey() {
     return codeview::TypeIndex{DenseMapInfo<uint32_t>::getEmptyKey()};
   }
-  static inline codeview::TypeIndex getTombstoneKey() {
-    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const codeview::TypeIndex &TI) {
     return DenseMapInfo<uint32_t>::getHashValue(TI.getIndex());
   }

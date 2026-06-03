@@ -156,6 +156,7 @@ private:
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool foldDeinterleaveIntrinsics(Instruction &I);
+  bool foldBitcastOfVPLoad(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -3290,10 +3291,21 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI) &&
-        II0->getArgOperand(I) != II1->getArgOperand(I))
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    Value *Arg0 = II0->getArgOperand(I);
+    Value *Arg1 = II1->getArgOperand(I);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+      // Scalar operands must be identical.
+      if (Arg0 != Arg1)
+        return false;
+    } else if (Arg0->getType() != Arg1->getType()) {
+      // The corresponding vector operands are shuffled together, so they must
+      // share the same type. For intrinsics overloaded on their operand type
+      // (e.g. llvm.fptosi.sat), two calls can produce the same result type
+      // from different operand types; shuffling those would be invalid.
       return false;
+    }
+  }
 
   InstructionCost OldCost =
       CostII0 + CostII1 +
@@ -4002,6 +4014,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstWorklist.push(VecOpEE);
 
   bool IsPartialReduction = false;
+  bool HasLaneDuplication = false;
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -4121,6 +4134,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       // Update mask values.
       ShuffleMaskHalf *= 2;
       ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      HasLaneDuplication |= (ExpectedParityMask & 1) != 0;
       ExpectedParityMask >>= 1;
 
       OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
@@ -4150,6 +4164,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Full reduction pattern should end with a shuffle op.
   // Partial reduction ends when the source vector is reached.
   if (ShouldBeCallOrBinInst && !IsPartialReduction)
+    return false;
+
+  // If the parity masks duplicated any lane, the fold only preserves semantics
+  // for idempotent ops.
+  if (HasLaneDuplication && CommonBinOp &&
+      !Instruction::isIdempotent(*CommonBinOp))
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");
@@ -5826,6 +5846,64 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
+  const DataLayout &DL = I.getDataLayout();
+  auto *Cast = dyn_cast<CastInst>(&I);
+  if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
+    return false;
+
+  // Fold away bit casts of the loaded value by loading the desired type,
+  // if the mask is all-ones.
+  Value *EVL;
+  auto *II = dyn_cast<VPIntrinsic>(I.getOperand(0));
+  if (!II || !match(II, m_OneUse(m_Intrinsic<Intrinsic::vp_load>(
+                            m_Value(), m_AllOnes(), m_Value(EVL)))))
+    return false;
+
+  VectorType *OrigVecTy = cast<VectorType>(II->getType());
+  Align OrigAlign =
+      DL.getValueOrABITypeAlignment(II->getPointerAlignment(), OrigVecTy);
+  ElementCount OrigVecCnt = OrigVecTy->getElementCount();
+  VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
+  ElementCount NewVecCnt = NewVecTy->getElementCount();
+
+  // Right now we only support cases where the NewVec is longer, because for
+  // cases where it's shorter, we have to be sure that EVL can be exactly
+  // divided, otherwise it might yield incorrect results or even page faults
+  // (if we round-up during the division).
+  if (!(OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
+        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)))
+    return false;
+
+  InstructionCost OldCost =
+      TTI.getMemIntrinsicInstrCost({Intrinsic::vp_load, OrigVecTy,
+                                    II->getMemoryPointerParam(), false,
+                                    OrigAlign},
+                                   CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, Cast->getType(), OrigVecTy,
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost NewCost = TTI.getMemIntrinsicInstrCost(
+      {Intrinsic::vp_load, NewVecTy, II->getMemoryPointerParam(), false,
+       OrigAlign},
+      CostKind);
+  LLVM_DEBUG(dbgs() << "foldBitcastOfVPLoad: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+  if (NewCost > OldCost || !NewCost.isValid())
+    return false;
+
+  unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+  Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+  Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+  CallInst *NewVP =
+      Builder.CreateIntrinsic(NewVecTy, Intrinsic::vp_load,
+                              {II->getMemoryPointerParam(), NewMask, NewEVL});
+  // Preserve the original alignment.
+  NewVP->addParamAttrs(
+      0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
+  replaceValue(*Cast, *NewVP);
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6104,6 +6182,8 @@ bool VectorCombine::run() {
       if (scalarizeVPIntrinsic(I))
         return true;
       if (foldInterleaveIntrinsics(I))
+        return true;
+      if (foldBitcastOfVPLoad(I))
         return true;
     }
 

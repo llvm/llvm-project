@@ -147,12 +147,8 @@ struct ThunkKey {
   static ThunkKey getEmptyKey() {
     return {llvm::DenseMapInfo<Symbol *>::getEmptyKey(), 0};
   }
-  static ThunkKey getTombstoneKey() {
-    return {llvm::DenseMapInfo<Symbol *>::getTombstoneKey(), 0};
-  }
   bool isSentinel() const {
-    return sym == llvm::DenseMapInfo<Symbol *>::getEmptyKey() ||
-           sym == llvm::DenseMapInfo<Symbol *>::getTombstoneKey();
+    return sym == llvm::DenseMapInfo<Symbol *>::getEmptyKey();
   }
   bool operator==(const ThunkKey &other) const {
     if (addend != other.addend)
@@ -171,7 +167,6 @@ struct ThunkKey {
 
 struct ThunkMapKeyInfo {
   static ThunkKey getEmptyKey() { return ThunkKey::getEmptyKey(); }
-  static ThunkKey getTombstoneKey() { return ThunkKey::getTombstoneKey(); }
   static unsigned getHashValue(const ThunkKey &k) {
     if (k.isSentinel())
       return llvm::hash_value(k.sym);

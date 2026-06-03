@@ -1125,8 +1125,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
 
   dw_offset_t offset = tu.GetLineTableOffset();
   if (offset == DW_INVALID_OFFSET ||
-      offset == llvm::DenseMapInfo<dw_offset_t>::getEmptyKey() ||
-      offset == llvm::DenseMapInfo<dw_offset_t>::getTombstoneKey())
+      offset == llvm::DenseMapInfo<dw_offset_t>::getEmptyKey())
     return nullptr;
 
   // Many type units can share a line table, so parse the support file list

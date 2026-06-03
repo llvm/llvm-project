@@ -51,6 +51,8 @@ static cl::opt<bool> ForceIsInSpecializedModule(
     cl::desc("Treat the given module as-if it were containing the "
              "post-thinlink module containing the root"));
 
+const char *AssignGUIDPass::GUIDMetadataName = "guid";
+
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
   class BBInfo;
@@ -418,6 +420,33 @@ bool ProfileAnnotator::getOutgoingBranchWeights(
   return MaxCount > 0;
 }
 
+PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  for (auto &F : M.functions()) {
+    if (F.isDeclaration())
+      continue;
+    if (F.getMetadata(GUIDMetadataName))
+      continue;
+    const GlobalValue::GUID GUID = F.getGUID();
+    F.setMetadata(GUIDMetadataName,
+                  MDNode::get(M.getContext(),
+                              {ConstantAsMetadata::get(ConstantInt::get(
+                                  Type::getInt64Ty(M.getContext()), GUID))}));
+  }
+  return PreservedAnalyses::none();
+}
+
+GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
+  if (F.isDeclaration()) {
+    assert(GlobalValue::isExternalLinkage(F.getLinkage()));
+    return F.getGUID();
+  }
+  auto *MD = F.getMetadata(GUIDMetadataName);
+  assert(MD && "guid not found for defined function");
+  return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
+                               ->getValue()
+                               ->stripPointerCasts())
+      ->getZExtValue();
+}
 AnalysisKey CtxProfAnalysis::Key;
 
 CtxProfAnalysis::CtxProfAnalysis(std::optional<StringRef> Profile)
@@ -486,7 +515,7 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   for (const auto &F : M) {
     if (F.isDeclaration())
       continue;
-    auto GUID = F.getGUID();
+    auto GUID = AssignGUIDPass::getGUID(F);
     assert(GUID && "guid not found for defined function");
     const auto &Entry = F.begin();
     uint32_t MaxCounters = 0; // we expect at least a counter.
@@ -518,6 +547,13 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
   Result.Profiles = std::move(*MaybeProfiles);
   Result.initIndex();
   return Result;
+}
+
+GlobalValue::GUID
+PGOContextualProfile::getDefinedFunctionGUID(const Function &F) const {
+  if (auto It = FuncInfo.find(AssignGUIDPass::getGUID(F)); It != FuncInfo.end())
+    return It->first;
+  return 0;
 }
 
 CtxProfAnalysisPrinterPass::CtxProfAnalysisPrinterPass(raw_ostream &OS)
@@ -635,7 +671,7 @@ bool PGOContextualProfile::isInSpecializedModule() const {
 
 void PGOContextualProfile::update(Visitor V, const Function &F) {
   assert(isFunctionKnown(F));
-  GlobalValue::GUID G = F.getGUID();
+  GlobalValue::GUID G = getDefinedFunctionGUID(F);
   for (auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
        Node = Node->Next)
     V(*reinterpret_cast<PGOCtxProfContext *>(Node));
@@ -646,7 +682,7 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
     return preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
                          const PGOCtxProfContext>(Profiles.Contexts, V);
   assert(isFunctionKnown(*F));
-  GlobalValue::GUID G = F->getGUID();
+  GlobalValue::GUID G = getDefinedFunctionGUID(*F);
   for (const auto *Node = FuncInfo.find(G)->second.Index.Next; Node;
        Node = Node->Next)
     V(*reinterpret_cast<const PGOCtxProfContext *>(Node));

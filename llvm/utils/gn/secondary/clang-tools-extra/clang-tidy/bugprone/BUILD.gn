@@ -61,6 +61,7 @@ static_library("bugprone") {
     "MisplacedOperatorInStrlenInAllocCheck.cpp",
     "MisplacedPointerArithmeticInAllocCheck.cpp",
     "MisplacedWideningCastCheck.cpp",
+    "MissingEndComparisonCheck.cpp",
     "MoveForwardingReferenceCheck.cpp",
     "MultiLevelImplicitPointerConversionCheck.cpp",
     "MultipleNewInOneExpressionCheck.cpp",

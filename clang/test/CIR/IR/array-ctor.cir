@@ -3,7 +3,7 @@
 
 !u8i = !cir.int<u, 8>
 !u64i = !cir.int<u, 64>
-!rec_S = !cir.record<struct "S" padded {!u8i}>
+!rec_S = !cir.struct<"S" padded {!u8i}>
 
 module {
   cir.func private @_ZN1SC1Ev(!cir.ptr<!rec_S>)

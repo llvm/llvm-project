@@ -342,6 +342,9 @@ unsigned getArchVGPRAllocGranule();
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
 
+/// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
+static constexpr unsigned MaxDynamicVGPRBlocks = 8;
+
 /// \returns Addressable number of architectural VGPRs for a given subtarget \p
 /// STI.
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI);

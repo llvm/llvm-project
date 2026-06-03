@@ -123,6 +123,20 @@ bool MemoryCache::RemoveInvalidRange(lldb::addr_t base_addr,
   return false;
 }
 
+const uint8_t *MemoryCache::FindL1CacheEntry(lldb::addr_t addr,
+                                             size_t len) const {
+  if (m_L1_cache.empty())
+    return nullptr;
+  AddrRange read_range(addr, len);
+  BlockMap::const_iterator pos = m_L1_cache.upper_bound(addr);
+  if (pos != m_L1_cache.begin())
+    --pos;
+  AddrRange chunk_range(pos->first, pos->second->GetByteSize());
+  if (!chunk_range.Contains(read_range))
+    return nullptr;
+  return pos->second->GetBytes() + (addr - chunk_range.GetRangeBase());
+}
+
 lldb::DataBufferSP MemoryCache::GetL2CacheLine(lldb::addr_t line_base_addr,
                                                Status &error) {
   // This function assumes that the address given is aligned correctly.
@@ -173,18 +187,9 @@ size_t MemoryCache::Read(addr_t addr, void *dst, size_t dst_len,
   // L1 cache contains chunks of memory that are not required to be the size of
   // an L2 cache line. We avoid trying to do partial reads from the L1 cache to
   // simplify the implementation.
-  if (!m_L1_cache.empty()) {
-    AddrRange read_range(addr, dst_len);
-    BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
-    if (pos != m_L1_cache.begin()) {
-      --pos;
-    }
-    AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-    if (chunk_range.Contains(read_range)) {
-      memcpy(dst, pos->second->GetBytes() + (addr - chunk_range.GetRangeBase()),
-             dst_len);
-      return dst_len;
-    }
+  if (const uint8_t *l1_data = FindL1CacheEntry(addr, dst_len)) {
+    memcpy(dst, l1_data, dst_len);
+    return dst_len;
   }
 
   // If the size of the read is greater than the size of an L2 cache line, we'll

@@ -29,8 +29,8 @@ struct Outer {
 // [[no_unique_address]] field, allowing 'extra' to overlap with
 // Middle's tail padding.
 
-// CIR: !rec_Middle2Ebase = !cir.record<struct "Middle.base" packed {!rec_Base, !s8i}>
-// CIR: !rec_Outer = !cir.record<struct "Outer" padded {!rec_Middle2Ebase, !s8i,
+// CIR: !rec_Middle2Ebase = !cir.struct<"Middle.base" packed {!rec_Base, !s8i}>
+// CIR: !rec_Outer = !cir.struct<"Outer" padded {!rec_Middle2Ebase, !s8i,
 
 // CIR-LABEL: cir.func {{.*}} @_ZN5OuterC2ERK6Middlec(
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
@@ -98,10 +98,10 @@ struct OuterFinal {
 
 OuterFinal of;
 
-// CIR-NUA-DAG: !rec_FinalForNUA = !cir.record<struct "FinalForNUA" {!s32i, !s8i}>
-// CIR-NUA-DAG: !rec_UnionForNUA = !cir.record<union "UnionForNUA" {!s32i, !s64i}>
-// CIR-NUA-DAG: !rec_OuterFinal = !cir.record<struct "OuterFinal" {!rec_FinalForNUA, !s8i}>
-// CIR-NUA-DAG: !rec_OuterUnion = !cir.record<struct "OuterUnion" {!rec_UnionForNUA, !s32i}>
+// CIR-NUA-DAG: !rec_FinalForNUA = !cir.struct<"FinalForNUA" {!s32i, !s8i}>
+// CIR-NUA-DAG: !rec_UnionForNUA = !cir.union<"UnionForNUA" {!s32i, !s64i}>
+// CIR-NUA-DAG: !rec_OuterFinal = !cir.struct<"OuterFinal" {!rec_FinalForNUA, !s8i}>
+// CIR-NUA-DAG: !rec_OuterUnion = !cir.struct<"OuterUnion" {!rec_UnionForNUA, !s32i}>
 // CIR-NUA-DAG: cir.global external @ou = #cir.zero : !rec_OuterUnion
 // CIR-NUA-DAG: cir.global external @of = #cir.zero : !rec_OuterFinal
 

@@ -36,32 +36,16 @@ public:
   /// definitions, in the SDK.
   struct SDKPlatformInfo {
   public:
-    SDKPlatformInfo(llvm::Triple::VendorType Vendor, llvm::Triple::OSType OS,
-                    llvm::Triple::EnvironmentType Environment,
-                    llvm::Triple::ObjectFormatType ObjectFormat,
-                    StringRef PlatformPrefix)
-        : Vendor(Vendor), OS(OS), Environment(Environment),
-          ObjectFormat(ObjectFormat), PlatformPrefix(PlatformPrefix) {}
+    using TripleStorageType = SmallVector<llvm::Triple, 5>;
 
-    llvm::Triple::VendorType getVendor() const { return Vendor; }
-    llvm::Triple::OSType getOS() const { return OS; }
-    llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
-    llvm::Triple::ObjectFormatType getObjectFormat() const {
-      return ObjectFormat;
-    }
+    SDKPlatformInfo(TripleStorageType Triples, StringRef PlatformPrefix)
+        : Triples(std::move(Triples)), PlatformPrefix(PlatformPrefix) {}
+
+    const TripleStorageType &getTriples() const { return Triples; }
     StringRef getPlatformPrefix() const { return PlatformPrefix; }
 
-    bool operator==(const llvm::Triple &RHS) const {
-      return (Vendor == RHS.getVendor()) && (OS == RHS.getOS()) &&
-             (Environment == RHS.getEnvironment()) &&
-             (ObjectFormat == RHS.getObjectFormat());
-    }
-
   private:
-    llvm::Triple::VendorType Vendor;
-    llvm::Triple::OSType OS;
-    llvm::Triple::EnvironmentType Environment;
-    llvm::Triple::ObjectFormatType ObjectFormat;
+    TripleStorageType Triples;
     std::string PlatformPrefix;
   };
 
@@ -190,11 +174,21 @@ public:
           VersionMappings =
               llvm::DenseMap<OSEnvPair::StorageType,
                              std::optional<RelatedTargetVersionMapping>>())
-      : FilePath(FilePath), OS(OS), Environment(Environment), Version(Version),
-        DisplayName(DisplayName),
+      : FilePath(std::move(FilePath)), OS(OS), Environment(Environment),
+        Version(Version), DisplayName(DisplayName),
         MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
         VersionMappings(std::move(VersionMappings)) {}
+
+  /// Construct SDK Info inferred from the parameters rather than read from
+  /// SDKSettings.json.
+  ///
+  /// This will infer \c PlatformInfos from an SDK for the OS/Environment that
+  /// predates the introduction of SDKSettings.json, and will not infer version
+  /// mappings.
+  DarwinSDKInfo(llvm::Triple::OSType OS,
+                llvm::Triple::EnvironmentType Environment, VersionTuple Version,
+                StringRef DisplayName, VersionTuple MaximumDeploymentTarget);
 
   StringRef getFilePath() const { return FilePath; }
 
@@ -206,19 +200,18 @@ public:
 
   const StringRef getDisplayName() const { return DisplayName; }
 
-  const SDKPlatformInfo &getCanonicalPlatformInfo() const {
-    return PlatformInfos[0];
+  const llvm::Triple &getCanonicalPlatformTriple() const {
+    return PlatformInfos[0].getTriples()[0];
   }
 
-  bool supportsTriple(llvm::Triple Triple) const {
-    return llvm::find(PlatformInfos, Triple) != PlatformInfos.end();
+  bool supportsTriple(const llvm::Triple &Triple) const {
+    return getPlatformInfo(Triple) != nullptr;
   }
 
-  const StringRef getPlatformPrefix(llvm::Triple Triple) const {
-    auto PlatformInfoIt = llvm::find(PlatformInfos, Triple);
-    if (PlatformInfoIt == PlatformInfos.end())
-      return StringRef();
-    return PlatformInfoIt->getPlatformPrefix();
+  StringRef getPlatformPrefix(const llvm::Triple &Triple) const {
+    if (const SDKPlatformInfo *PlatformInfo = getPlatformInfo(Triple))
+      return PlatformInfo->getPlatformPrefix();
+    return StringRef();
   }
 
   // Returns the optional, target-specific version mapping that maps from one
@@ -244,6 +237,15 @@ public:
                              const llvm::json::Object *Obj);
 
 private:
+  const SDKPlatformInfo *getPlatformInfo(const llvm::Triple &Triple) const {
+    for (const SDKPlatformInfo &PlatformInfo : PlatformInfos) {
+      const auto &Triples = PlatformInfo.getTriples();
+      if (llvm::find(Triples, Triple) != Triples.end())
+        return &PlatformInfo;
+    }
+    return nullptr;
+  }
+
   std::string FilePath;
   llvm::Triple::OSType OS;
   llvm::Triple::EnvironmentType Environment;

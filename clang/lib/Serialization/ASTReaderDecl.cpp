@@ -996,8 +996,6 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       if (InsertPos)
         CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
       else {
-        assert(Reader.getContext().getLangOpts().Modules &&
-               "already deserialized this template specialization");
         Existing = ExistingInfo->getFunction();
       }
     }

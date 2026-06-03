@@ -12,7 +12,7 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.record<struct "A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
@@ -23,7 +23,7 @@ typedef struct {
   int c;
 } D;
 
-// CIR-DAG:  !rec_D = !cir.record<struct "D" {!u16i, !s32i}>
+// CIR-DAG:  !rec_D = !cir.struct<"D" {!u16i, !s32i}>
 // LLVM-DAG: %struct.D = type { i16, i32 }
 // OGCG-DAG: %struct.D = type { i16, i32 }
 
@@ -36,7 +36,7 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
-// CIR-DAG:  !rec_S = !cir.record<struct "S" {!u64i, !u16i, !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {!u64i, !u16i, !u32i}>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
@@ -45,7 +45,7 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.record<struct "T" {!u8i, !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {!u8i, !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
@@ -67,7 +67,7 @@ typedef struct {
     int l: 14;
 } U;
 
-// CIR-DAG:  !rec_U = !cir.record<struct "U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
+// CIR-DAG:  !rec_U = !cir.struct<"U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
 // LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
@@ -77,7 +77,7 @@ typedef struct{
     int c: 30;
 } Clip;
 
-// CIR-DAG: !rec_Clip = !cir.record<struct "Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
+// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
 // LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 // OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 

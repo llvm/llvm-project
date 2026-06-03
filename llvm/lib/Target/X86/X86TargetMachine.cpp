@@ -560,7 +560,7 @@ void X86PassConfig::addPreSched2() {
 void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(new X86ExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(createBreakFalseDepsLegacyPass());
   }
 
   addPass(createX86IndirectBranchTrackingLegacyPass());

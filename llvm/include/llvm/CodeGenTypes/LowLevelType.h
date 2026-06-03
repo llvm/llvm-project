@@ -722,11 +722,6 @@ template <> struct DenseMapInfo<LLT> {
     Invalid.Info = LLT::Kind::POINTER;
     return Invalid;
   }
-  static inline LLT getTombstoneKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::VECTOR_ANY;
-    return Invalid;
-  }
   static inline unsigned getHashValue(const LLT &Ty) {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);

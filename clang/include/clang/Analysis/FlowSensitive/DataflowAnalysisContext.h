@@ -248,7 +248,6 @@ private:
     }
 
     using DenseMapInfo::getHashValue;
-    using DenseMapInfo::getTombstoneKey;
     using DenseMapInfo::isEqual;
   };
 

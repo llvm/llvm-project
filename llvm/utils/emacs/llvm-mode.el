@@ -74,7 +74,7 @@
    `(,(regexp-opt
        '(;; Toplevel entities
          "declare" "define" "module" "target" "source_filename" "global" "constant" "const" "alias" "ifunc" "comdat"
-         "attributes" "uselistorder" "uselistorder_bb"
+         "attributes" "uselistorder"
          ;; Linkage types
          "private" "internal" "weak" "weak_odr" "linkonce" "linkonce_odr" "available_externally" "appending" "common" "extern_weak" "external"
          "uninitialized" "implementation" "..."
@@ -120,7 +120,7 @@
    ;; Fast-math flags
    `(,(regexp-opt '("nnan" "ninf" "nsz" "arcp" "contract" "afn" "reassoc" "fast") 'symbols) . font-lock-keyword-face)
    ;; Use-list order directives
-   `(,(regexp-opt '("uselistorder" "uselistorder_bb") 'symbols) . font-lock-keyword-face))
+   `(,(regexp-opt '("uselistorder") 'symbols) . font-lock-keyword-face))
   "Syntax highlighting for LLVM.")
 
 (defun llvm-current-defun-name ()

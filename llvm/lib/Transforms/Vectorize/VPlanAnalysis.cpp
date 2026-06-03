@@ -13,20 +13,12 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Instruction.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
-
-Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
-  Type *Ty = V->getScalarType();
-  assert(Ty && "Scalar type must be set by recipe construction");
-  return Ty;
-}
 
 void llvm::collectEphemeralRecipesForVPlan(
     VPlan &Plan, DenseSet<VPRecipeBase *> &EphRecipes) {
@@ -195,8 +187,6 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
-  VPTypeAnalysis TypeInfo(Plan);
-
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
@@ -265,7 +255,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {
           unsigned ClassID =
-              TTI.getRegisterClassForType(false, TypeInfo.inferScalarType(VPV));
+              TTI.getRegisterClassForType(false, VPV->getScalarType());
           // FIXME: The target might use more than one register for the type
           // even in the scalar case.
           RegUsage[ClassID] += 1;
@@ -281,7 +271,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
                               << " to " << VF << " for " << *R << "\n";);
           }
 
-          Type *ScalarTy = TypeInfo.inferScalarType(VPV);
+          Type *ScalarTy = VPV->getScalarType();
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
           RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
         }
@@ -320,9 +310,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       bool IsScalar = vputils::onlyScalarValuesUsed(In);
 
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
-      unsigned ClassID = TTI.getRegisterClassForType(
-          VF.isVector(), TypeInfo.inferScalarType(In));
-      Invariant[ClassID] += GetRegUsage(TypeInfo.inferScalarType(In), VF);
+      unsigned ClassID =
+          TTI.getRegisterClassForType(VF.isVector(), In->getScalarType());
+      Invariant[ClassID] += GetRegUsage(In->getScalarType(), VF);
     }
 
     LLVM_DEBUG({

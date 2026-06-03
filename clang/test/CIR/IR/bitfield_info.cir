@@ -4,7 +4,7 @@
 !u32i = !cir.int<u, 32>
 
 
-!rec_S = !cir.record<struct "S" {!u32i}>
+!rec_S = !cir.struct<"S" {!u32i}>
 #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u32i, size = 17, offset = 15, is_signed = true>
 
 // CHECK: #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u32i, size = 17, offset = 15, is_signed = true>

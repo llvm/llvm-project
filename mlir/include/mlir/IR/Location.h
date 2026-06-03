@@ -232,10 +232,6 @@ struct DenseMapInfo<mlir::Location> {
     auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Location::getFromOpaquePointer(pointer);
   }
-  static mlir::Location getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Location::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::Location val) {
     return mlir::hash_value(val);
   }

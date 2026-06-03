@@ -86,7 +86,6 @@ with worker.run(
                 f"-S{w.in_llvmsrc('llvm')}",
                 f"-B{llvmbuilddir}",
                 f"-C{w.cachefile}",
-                f"-DLLVM_ENABLE_RUNTIMES=compiler-rt",
             ]
         )
 

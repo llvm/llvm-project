@@ -233,3 +233,24 @@ entry:
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %r
 }
+
+; Intrinsics overloaded on their operand type (e.g. llvm.fptosi.sat) can share
+; a result type while having different operand types. The corresponding
+; operands cannot be shuffled together, so the fold must not fire.
+define <4 x i32> @test_mismatched_operand_types(<2 x float> %0, <2 x double> %1) {
+; CHECK-LABEL: @test_mismatched_operand_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[TMP0:%.*]])
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> [[TMP1:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[B]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+entry:
+  %a = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %0)
+  %b = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %1)
+  %r = shufflevector <2 x i32> %a, <2 x i32> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %r
+}
+
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float>)
+declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double>)

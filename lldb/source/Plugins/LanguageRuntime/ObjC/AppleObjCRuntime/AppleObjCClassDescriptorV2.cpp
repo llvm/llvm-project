@@ -338,7 +338,8 @@ bool ClassDescriptorV2::method_t::Read(DataExtractor &extractor,
   return true;
 }
 
-bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::ivar_list_t>
+ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = sizeof(uint32_t)    // uint32_t entsize;
                 + sizeof(uint32_t); // uint32_t count;
 
@@ -346,51 +347,50 @@ bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
   lldb::offset_t cursor = 0;
-
-  m_entsize = extractor.GetU32_unchecked(&cursor);
-  m_count = extractor.GetU32_unchecked(&cursor);
-  m_first_ptr = addr + cursor;
-
-  return true;
+  uint32_t entsize = extractor.GetU32_unchecked(&cursor);
+  uint32_t count = extractor.GetU32_unchecked(&cursor);
+  lldb::addr_t first_ptr = addr + cursor;
+  return ivar_list_t{entsize, count, first_ptr};
 }
 
-bool ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
+llvm::Expected<ClassDescriptorV2::ivar_t>
+ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   size_t size = GetSize(process);
 
   DataBufferHeap buffer(size, '\0');
   Status error;
 
   process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail()) {
-    return false;
-  }
+  if (error.Fail())
+    return error.takeError();
 
   DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
                           process->GetAddressByteSize());
 
+  ivar_t result{};
   lldb::offset_t cursor = 0;
 
-  m_offset_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_name_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_type_ptr = extractor.GetAddress_unchecked(&cursor);
-  m_alignment = extractor.GetU32_unchecked(&cursor);
-  m_size = extractor.GetU32_unchecked(&cursor);
+  result.m_offset_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_name_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_type_ptr = extractor.GetAddress_unchecked(&cursor);
+  result.m_alignment = extractor.GetU32_unchecked(&cursor);
+  result.m_size = extractor.GetU32_unchecked(&cursor);
 
-  process->ReadCStringFromMemory(m_name_ptr, m_name, error);
-  if (error.Fail()) {
-    return false;
-  }
+  process->ReadCStringFromMemory(result.m_name_ptr, result.m_name, error);
+  if (error.Fail())
+    return error.takeError();
 
-  process->ReadCStringFromMemory(m_type_ptr, m_type, error);
-  return !error.Fail();
+  process->ReadCStringFromMemory(result.m_type_ptr, result.m_type, error);
+  if (error.Fail())
+    return error.takeError();
+  return result;
 }
 
 llvm::Expected<ClassDescriptorV2::relative_list_entry_t>
@@ -602,20 +602,25 @@ bool ClassDescriptorV2::Describe(
 
   if (ivar_func) {
     if (class_ro->m_ivars_ptr != 0) {
-      ivar_list_t ivar_list;
-      if (!ivar_list.Read(process, class_ro->m_ivars_ptr))
+      auto ivar_list = ivar_list_t::Read(process, class_ro->m_ivars_ptr);
+      if (!ivar_list) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ivar_list.takeError(), "{0}");
+        return false;
+      }
+
+      if (ivar_list->m_entsize != ivar_t::GetSize(process))
         return false;
 
-      if (ivar_list.m_entsize != ivar_t::GetSize(process))
-        return false;
+      for (uint32_t i = 0, e = ivar_list->m_count; i < e; ++i) {
+        auto ivar = ivar_t::Read(process, ivar_list->m_first_ptr +
+                                              (i * ivar_list->m_entsize));
+        if (!ivar) {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ivar.takeError(), "{0}");
+          continue;
+        }
 
-      ivar_t ivar;
-
-      for (uint32_t i = 0, e = ivar_list.m_count; i < e; ++i) {
-        ivar.Read(process, ivar_list.m_first_ptr + (i * ivar_list.m_entsize));
-
-        if (ivar_func(ivar.m_name.c_str(), ivar.m_type.c_str(),
-                      ivar.m_offset_ptr, ivar.m_size))
+        if (ivar_func(ivar->m_name.c_str(), ivar->m_type.c_str(),
+                      ivar->m_offset_ptr, ivar->m_size))
           break;
       }
     }

@@ -1198,9 +1198,89 @@ public:
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
+
+      // forceDeactivate() can pop cleanup scopes that were pushed with
+      // deferred deactivation, which moves the insertion point out of the
+      // cleanup body region. Any caller value defined inside such a body
+      // would no longer dominate uses past the scope. The downstream
+      // popCleanupBlocks() handles the spill for any cleanups it pops
+      // itself, but it cannot help with cleanups that forceDeactivate has
+      // already popped. Spill those values here, while the insertion point
+      // is still inside the body, so we can reload them after all popping
+      // is done. We only spill values whose defining op lives inside a
+      // cir.cleanup.scope, since values defined outside any cleanup scope
+      // (e.g. allocas in the entry block) already dominate the post-scope
+      // insertion point.
+      const bool hasPendingDeactivations =
+          cgf.deferredDeactivationCleanupStack.size() >
+          deactivateCleanups.oldDeactivateCleanupStackSize;
+
+      llvm::SmallVector<Address> tempAllocas;
+      bool didSpillAny = false;
+      if (hasPendingDeactivations) {
+        tempAllocas.reserve(valuesToReload.size());
+        for (mlir::Value *valPtr : valuesToReload) {
+          mlir::Value val = *valPtr;
+          if (!val || !val.getDefiningOp() ||
+              !val.getDefiningOp()->getParentOfType<cir::CleanupScopeOp>()) {
+            tempAllocas.push_back(Address::invalid());
+            continue;
+          }
+          Address temp = cgf.createDefaultAlignTempAlloca(
+              val.getType(), val.getLoc(), "tmp.exprcleanup");
+          tempAllocas.push_back(temp);
+          cgf.builder.createStore(val.getLoc(), val, temp);
+          didSpillAny = true;
+        }
+      }
+
       deactivateCleanups.forceDeactivate();
-      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize,
-                           valuesToReload);
+      // If we already spilled some of the caller's values, don't ask
+      // popCleanupBlocks to spill them again. Values we did not pre-spill
+      // are not inside any cir.cleanup.scope, so they cannot be invalidated
+      // by either forceDeactivate's or popCleanupBlocks's pops (both only
+      // pop cir.cleanup.scope ops); they already dominate the post-scope
+      // insertion point on their own.
+      if (didSpillAny) {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize);
+
+        // Reload the spilled values now that all cleanup popping (and
+        // promotion of any lifetime-extended cleanups onto the EH stack) is
+        // done.
+        for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+          if (!addr.isValid())
+            continue;
+          *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
+        }
+      } else {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize, valuesToReload);
+      }
+
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
+    /// Force the emission of EH cleanups now, but defer promoting any
+    /// lifetime-extended cleanup entries onto the EH scope stack. The caller
+    /// must subsequently call forceLifetimeExtendedCleanups() to finalize the
+    /// scope.
+    void forceCleanupExceptLifetimeExtended() {
+      assert(performCleanup && "Already forced cleanup");
+      cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
+      cgf.popCleanupBlocks(cleanupStackDepth);
+    }
+
+    /// Promote any pending lifetime-extended cleanup entries onto the EH scope
+    /// stack at the current insertion point and finalize this scope. This must
+    /// be paired with a prior call to forceCleanupExceptLifetimeExtended().
+    void forceLifetimeExtendedCleanups() {
+      assert(performCleanup && "Already forced cleanup");
+      assert(deactivateCleanups.deactivated &&
+             "forceCleanupExceptLifetimeExtended() must be called first");
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }

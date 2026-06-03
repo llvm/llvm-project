@@ -99,6 +99,20 @@ namespace {
 /// at one time.
 static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
 
+static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
+                                   MCRegister Reg, LLT Ty) {
+  assert(Reg.isPhysical() && "reg must be a physical register");
+  assert(Ty.isValid() && "expected a valid type");
+
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+  if (TRI.isTypeLegalForClass(*RC, Ty))
+    return true;
+
+  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass *RC) {
+    return RC->contains(Reg) && TRI.isTypeLegalForClass(*RC, Ty);
+  });
+}
+
 struct MachineVerifier {
   MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
                   raw_ostream *OS, bool AbortOnError = true)
@@ -2420,18 +2434,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     TypeSize SrcSize = TypeSize::getZero();
     TypeSize DstSize = TypeSize::getZero();
     if (SrcReg.isPhysical() && DstTy.isValid()) {
-      const TargetRegisterClass *SrcRC =
-          TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
-      if (!SrcRC)
+      if (!hasPhysRegClassForType(*TRI, SrcReg, DstTy))
         SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     } else {
       SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
-      const TargetRegisterClass *DstRC =
-          TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
-      if (!DstRC)
+      if (!hasPhysRegClassForType(*TRI, DstReg, SrcTy))
         DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     } else {
       DstSize = TRI->getRegSizeInBits(DstReg, *MRI);

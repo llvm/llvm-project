@@ -285,11 +285,9 @@ namespace unsized_array {
   void f(int (&a)[], int (&b)[], int (&c)[4]) {
     constexpr int t1 = a - a;
     constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}} \
-                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}} \
-                              // interpreter-note {{arithmetic involving unrelated objects '&a' and '&b' has unspecified value}}
+                              // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}}
     constexpr int t3 = a - &c[2];  // expected-error {{constexpr variable 't3' must be initialized by a constant expression}} \
-                                   // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
-                                   // interpreter-note {{arithmetic involving unrelated objects '&a' and '&c[2]' has unspecified value}}
+                                   // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}}
   }
 }
 

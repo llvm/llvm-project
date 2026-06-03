@@ -288,16 +288,15 @@ public:
 
   // Write sharded indices and (optionally) imports to disk
   LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
-                           StringRef ModulePath,
+                           unsigned Task, StringRef ModulePath,
                            const std::string &NewModulePath) const;
 
   // Write sharded indices to SummaryPath, (optionally) imports to disk, and
-  // (optionally) record imports in ImportsFiles.
-  LLVM_ABI Error emitFiles(
-      const FunctionImporter::ImportMapTy &ImportList, StringRef ModulePath,
-      const std::string &NewModulePath, StringRef SummaryPath,
-      std::optional<std::reference_wrapper<ImportsFilesContainer>> ImportsFiles)
-      const;
+  // (optionally) record imports in ImportsFilesList.
+  LLVM_ABI Error emitFiles(const FunctionImporter::ImportMapTy &ImportList,
+                           unsigned Task, StringRef ModulePath,
+                           const std::string &NewModulePath,
+                           StringRef SummaryPath) const;
 };
 
 /// This callable defines the behavior of a ThinLTO backend after the thin-link
@@ -350,35 +349,6 @@ private:
 LLVM_ABI ThinBackend createInProcessThinBackend(
     ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite = nullptr,
     bool ShouldEmitIndexFiles = false, bool ShouldEmitImportsFiles = false);
-
-/// This ThinBackend generates the index shards and then runs the individual
-/// backend jobs via an external process. It takes the same parameters as the
-/// InProcessThinBackend; however, these parameters only control the behavior
-/// when generating the index files for the modules. Additionally:
-/// LinkerOutputFile is a string that should identify this LTO invocation in
-/// the context of a wider build. It's used for naming to aid the user in
-/// identifying activity related to a specific LTO invocation.
-/// Distributor specifies the path to a process to invoke to manage the backend
-/// job execution.
-/// DistributorArgs specifies a list of arguments to be applied to the
-/// distributor.
-/// RemoteCompiler specifies the path to a Clang executable to be invoked for
-/// the backend jobs.
-/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
-/// applied to the backend compilations.
-/// RemoteCompilerArgs specifies a list of arguments to be applied to the
-/// backend compilations.
-/// SaveTemps is a debugging tool that prevents temporary files created by this
-/// backend from being cleaned up.
-/// AddBuffer is used to add a pre-existing native object buffer to the link.
-LLVM_ABI ThinBackend createOutOfProcessThinBackend(
-    ThreadPoolStrategy Parallelism, IndexWriteCallback OnWrite,
-    bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
-    StringRef LinkerOutputFile, StringRef Distributor,
-    ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
-    ArrayRef<StringRef> RemoteCompilerPrependArgs,
-    ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps,
-    AddBufferFn AddBuffer);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -467,7 +437,7 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  LLVM_ABI Error run(AddStreamFn AddStream, FileCache Cache = {});
+  LLVM_ABI virtual Error run(AddStreamFn AddStream, FileCache Cache = {});
 
   /// Static method that returns a list of libcall symbols that can be generated
   /// by LTO but might not be visible from bitcode symbol table.
@@ -483,13 +453,9 @@ public:
   getLibFuncSymbols(const Triple &TT, llvm::StringSaver &Saver);
 
 protected:
-  // Called at the start of run().
-  virtual Error serializeInputsForDistribution() { return Error::success(); }
-
   // Called before returning from run().
   virtual void cleanup();
 
-private:
   Config Conf;
 
   struct RegularLTOState {
@@ -547,6 +513,7 @@ private:
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
+private:
   // The global resolution for a particular (mangled) symbol name. This is in
   // particular necessary to track whether each symbol can be internalized.
   // Because any input file may introduce a new cross-partition reference, we
@@ -554,8 +521,6 @@ private:
   // been added and the client has called run(). During run() we apply
   // internalization decisions either directly to the module (for regular LTO)
   // or to the combined index (for ThinLTO).
-  // FIXME: Make this GlobalResolution a class, it has been becoming more than
-  // just a data bag.
   struct GlobalResolution {
     /// The unmangled name of the global.
     std::string IRName;
@@ -591,24 +556,6 @@ private:
     /// Any partitioning of the combined LTO object is done internally by the
     /// LTO backend.
     unsigned Partition = Unknown;
-
-  private:
-    GlobalValue::GUID GUID = 0;
-
-  public:
-    void setGUID(GlobalValue::GUID G) {
-      assert(G);
-      assert(!GUID || GUID == G);
-      GUID = G;
-    }
-
-    GlobalValue::GUID getGUID() const {
-      return GUID ? GUID
-                  : GlobalValue::getGUIDAssumingExternalLinkage(
-                        GlobalValue::getGlobalIdentifier(
-                            IRName, GlobalValue::LinkageTypes::ExternalLinkage,
-                            ""));
-    }
 
     /// Special partition numbers.
     enum : unsigned {
@@ -668,9 +615,11 @@ private:
 
   mutable bool CalledGetMaxTasks = false;
 
+protected:
   // LTO mode when using Unified LTO.
   LTOKind LTOMode;
 
+private:
   // Use Optional to distinguish false from not yet initialized.
   std::optional<bool> EnableSplitLTOUnit;
 

@@ -214,10 +214,6 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   } else
     llvm_unreachable("Invalid allocation type");
 
-  if (isUnknownSizeArray())
-    return APValue(Base, CharUnits::Zero(), Path,
-                   /*IsOnePastEnd=*/isOnePastEnd(), /*IsNullPtr=*/false);
-
   CharUnits Offset = CharUnits::Zero();
 
   auto getFieldOffset = [&](const FieldDecl *FD) -> CharUnits {

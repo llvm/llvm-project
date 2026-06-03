@@ -220,12 +220,6 @@ template <> struct DenseMapInfo<clang::CallGraphNode::CallRecord> {
         DenseMapInfo<clang::Expr *>::getEmptyKey());
   }
 
-  static inline clang::CallGraphNode::CallRecord getTombstoneKey() {
-    return clang::CallGraphNode::CallRecord(
-        DenseMapInfo<clang::CallGraphNode *>::getTombstoneKey(),
-        DenseMapInfo<clang::Expr *>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const clang::CallGraphNode::CallRecord &Val) {
     // NOTE: we are comparing based on the callee only.
     // Different call records with the same callee will compare equal!

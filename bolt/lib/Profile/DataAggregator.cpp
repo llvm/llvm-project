@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -114,6 +115,16 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
+static cl::opt<unsigned>
+    PerfDataJobs("perfdata-jobs",
+                 cl::desc("number of perf data files to process in parallel, "
+                          "0 = all HW threads (default 4)"),
+                 cl::init(4), cl::cat(AggregatorCategory),
+                 cl::sub(cl::SubCommand::getAll()));
+
+static cl::alias PerfDataJobsAlias("pj", cl::desc("Alias for --perfdata-jobs"),
+                                   cl::aliasopt(PerfDataJobs));
+
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
@@ -168,6 +179,27 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
+
+void DataAggregator::addInputFile(StringRef Filename) {
+  InputFilenames.emplace_back(Filename);
+}
+
+void DataAggregator::mergeFrom(const DataAggregator &Other) {
+  Traces.insert(Traces.end(), Other.Traces.begin(), Other.Traces.end());
+
+  for (const auto &[PC, Count] : Other.BasicSamples)
+    BasicSamples[PC] += Count;
+
+  MemSamples.insert(MemSamples.end(), Other.MemSamples.begin(),
+                    Other.MemSamples.end());
+  Returns.insert(Other.Returns.begin(), Other.Returns.end());
+  EventNames.insert(Other.EventNames.begin(), Other.EventNames.end());
+
+  NumTraces += Other.NumTraces;
+  NumInvalidTraces += Other.NumInvalidTraces;
+  NumLongRangeTraces += Other.NumLongRangeTraces;
+  NumTotalSamples += Other.NumTotalSamples;
+}
 
 void DataAggregator::markFunctionsWithProfile() {
   std::unordered_set<uint64_t> Samples;
@@ -227,10 +259,6 @@ void DataAggregator::findPerfExecutable() {
 
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
-
-  // Turn on heatmap building if requested by --heatmap flag.
-  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
-    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
@@ -707,6 +735,8 @@ void DataAggregator::imputeFallThroughs() {
 }
 
 void DataAggregator::parseInput() {
+  start();
+
   if (opts::ReadPreAggregated)
     parsePreAggregated();
   else
@@ -714,9 +744,14 @@ void DataAggregator::parseInput() {
 }
 
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
+  // Turn on heatmap building if requested by --heatmap flag.
+  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
+    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
   this->BC = &BC;
 
   if (opts::GeneratePerfTextProfile) {
+    start();
     if (Error E = generatePerfTextData()) {
       deleteTempFiles();
       exit(1);
@@ -724,7 +759,21 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     exit(0);
   }
 
-  parseInput();
+  SmallVector<DataAggregator *, 1> Aggregators(1, this);
+  for (StringRef InputFilename : InputFilenames) {
+    auto *DA = Aggregators.emplace_back(new DataAggregator(InputFilename));
+    DA->BC = &BC;
+  }
+
+  ThreadPoolStrategy SavedStrategy = parallel::strategy;
+  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
+  parallelForEach(Aggregators, [](DataAggregator *DA) { DA->parseInput(); });
+  parallel::strategy = SavedStrategy;
+
+  for (DataAggregator *DA : llvm::drop_begin(Aggregators)) {
+    mergeFrom(*DA);
+    delete DA;
+  }
 
   markFunctionsWithProfile();
 
@@ -741,6 +790,13 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(0);
   }
 
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_PreAgg) {
+    if (std::error_code EC = writePreAggregatedFile(opts::OutputFilename))
+      report_error("cannot create output data file", EC);
+    exit(0);
+  }
+
   return Error::success();
 }
 
@@ -752,7 +808,7 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
 
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
-      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+      if (std::error_code EC = writeFdataFile(opts::OutputFilename))
         report_error("cannot create output data file", EC);
 
     // BAT YAML is handled by DataAggregator since normal YAML output requires
@@ -2276,7 +2332,25 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
 }
 
 std::error_code
-DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
+DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  for (const auto &[Trace, Info] : Traces)
+    OS << Trace << " " << Info.TakenCount << '\n';
+  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+  for (const auto &[PC, Count] : BasicSamples)
+    OS << formatv("S {0:x-} {1}\n", PC, Count);
+
+  outs() << "PERF2BOLT: wrote " << Traces.size() + BasicSamples.size()
+         << " pre-aggregated objects to " << OutputFilename << "\n";
+
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeFdataFile(StringRef OutputFilename) const {
   std::error_code EC;
   raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC)

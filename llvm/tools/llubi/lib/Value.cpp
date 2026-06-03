@@ -27,6 +27,8 @@ void Pointer::print(raw_ostream &OS) const {
   Address.toStringUnsigned(AddrStr, 16);
   OS << "ptr 0x" << AddrStr << " [";
   if (MemoryObject *Obj = getMemoryObject()) {
+    if (Obj->isIRGlobalValue())
+      OS << "@";
     OS << Obj->getName();
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());

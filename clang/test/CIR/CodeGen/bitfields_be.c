@@ -11,7 +11,7 @@ typedef struct {
     int c : 17;
 } S;
 
-// CIR:  !rec_S = !cir.record<struct "S" {!u32i}>
+// CIR:  !rec_S = !cir.struct<"S" {!u32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 void def() {

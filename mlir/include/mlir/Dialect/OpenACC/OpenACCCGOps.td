@@ -157,40 +157,39 @@ def OpenACC_KernelEnvironmentOp
 
   let arguments = (ins
     Variadic<AnyType>:$dataClauseOperands,
-    Variadic<IntOrIndex>:$asyncOperands,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+    Optional<IntOrIndex>:$asyncOperand,
+    UnitAttr:$asyncOnly,
+    Optional<IntOrIndex>:$waitDevnum,
     Variadic<IntOrIndex>:$waitOperands,
-    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
-    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
+    UnitAttr:$waitOnly);
 
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = [{
     oilist(
         `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
-          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
-          $waitOnly)
+      | `async` `` custom<OperandWithKeywordOnly>($asyncOperand,
+            type($asyncOperand), $asyncOnly)
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `` custom<OperandsWithKeywordOnly>($waitOperands,
+            type($waitOperands), $waitOnly)
     )
     $region attr-dict
   }];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    /// Create a `KernelEnvironmentOp` populated with data mapping, async, and
-    /// wait clauses extracted from the given ACC compute construct. Emplaces
-    /// a block in the region and sets the rewriter's insertion point to the
-    /// start of that block so callers can create operations inside it
-    /// (e.g., `acc.compute_region`).
+    /// Create a `KernelEnvironmentOp` populated with data mapping and the
+    /// async/wait clauses for `deviceType` extracted from the given ACC compute
+    /// construct. Emplaces a block in the region and sets the rewriter's
+    /// insertion point to the start of that block so callers can create
+    /// operations inside it (e.g., `acc.compute_region`).
     template <typename ComputeConstructT>
     static KernelEnvironmentOp createAndPopulate(
-        ComputeConstructT computeConstruct, ::mlir::OpBuilder &builder);
+        ComputeConstructT computeConstruct, ::mlir::acc::DeviceType deviceType,
+        ::mlir::OpBuilder &builder);
   }];
 }
 

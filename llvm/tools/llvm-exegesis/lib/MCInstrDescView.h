@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 
 namespace llvm {
+class MCSubtargetInfo;
 namespace exegesis {
 
 // A variable represents the value associated to an Operand or a set of Operands
@@ -109,7 +110,8 @@ struct Instruction {
   // Create an instruction for a particular Opcode.
   static std::unique_ptr<Instruction>
   create(const MCInstrInfo &InstrInfo, const RegisterAliasingTrackerCache &RATC,
-         const BitVectorCache &BVC, unsigned Opcode);
+         const BitVectorCache &BVC, unsigned Opcode,
+         const MCSubtargetInfo *STI = nullptr);
 
   // Prevent copy or move, instructions are allocated once and cached.
   Instruction(const Instruction &) = delete;
@@ -185,7 +187,8 @@ private:
 // Instructions with lazy construction.
 struct InstructionsCache {
   InstructionsCache(const MCInstrInfo &InstrInfo,
-                    const RegisterAliasingTrackerCache &RATC);
+                    const RegisterAliasingTrackerCache &RATC,
+                    const MCSubtargetInfo *STI = nullptr);
 
   // Returns the Instruction object corresponding to this Opcode.
   const Instruction &getInstr(unsigned Opcode) const;
@@ -193,6 +196,7 @@ struct InstructionsCache {
 private:
   const MCInstrInfo &InstrInfo;
   const RegisterAliasingTrackerCache &RATC;
+  const MCSubtargetInfo *STI;
   mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
       Instructions;
   const BitVectorCache BVC;

@@ -7261,8 +7261,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];
     Value *PassthruArg = Args[2];
-    // If the mask is all zeros or undef, the "passthru" argument is the result.
-    if (maskIsAllZeroOrUndef(MaskArg))
+    // If the mask is all zeros or poison, the "passthru" argument is the
+    // result.
+    if (match(MaskArg, m_ZeroOrPoison()))
       return PassthruArg;
     return nullptr;
   }
