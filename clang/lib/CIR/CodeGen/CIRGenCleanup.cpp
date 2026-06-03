@@ -420,7 +420,12 @@ void EHScopeStack::popCleanup() {
       cir::YieldOp::create(cgf->getBuilder(),
                            cgf->getBuilder().getUnknownLoc());
     }
-    cgf->getBuilder().setInsertionPointAfter(cleanupScope);
+    // If the insertion point was inside the cleanup scope we just closed, move
+    // it to immediate after the scope.
+    mlir::Block *insertBlock = cgf->getBuilder().getInsertionBlock();
+    if (insertBlock &&
+        cleanupScope.getBodyRegion().findAncestorBlockInRegion(*insertBlock))
+      cgf->getBuilder().setInsertionPointAfter(cleanupScope);
   }
 
   // Destroy the cleanup.
