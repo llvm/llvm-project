@@ -1161,8 +1161,11 @@ public:
     }
   }
 
-  template <class _T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
+  // The unusual signature avoids constraint recursion via ADL through
+  // std::expected, see https://github.com/llvm/llvm-project/issues/160431.
+  template <class _T2, class _Tp2>
+    requires _IsSame<_Tp2, _Tp>::value
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected<_Tp2, _Err>& __x, const _T2& __v)
 #  if _LIBCPP_STD_VER >= 26
     requires(!__is_std_expected<_T2>::value) && requires {
       { *__x == __v } -> __core_convertible_to<bool>;

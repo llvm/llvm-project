@@ -45,6 +45,17 @@ constexpr bool test() {
     assert(e1 != i3);
   }
 
+#if TEST_STD_VER >= 26
+  // Regression test for https://github.com/llvm/llvm-project/issues/160431:
+  // the constraint of this overload would recurse when ADL on the comparison
+  // found the same hidden friend through a type whose associated namespaces
+  // reach std::expected.
+  {
+    std::pair<int, std::expected<int, int>> p1, p2;
+    assert(p1 == p2);
+  }
+#endif
+
   return true;
 }
 
