@@ -17,6 +17,8 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_primary_require_fail.cppm -fmodule-file=PartMod:part=%t/part_iface.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_iface_violation.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_enforce.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_inherit.cppm -fmodule-file=%t/mod_enforced.pcm -Wno-eager-load-cxx-named-modules -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/part_impl_no_inherit.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_no_local_enforce.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_gmf_only_no_leak.cpp -fmodule-file=GmfOnlyMod=%t/mod_gmf_only_enforce.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-module-interface %t/mod_different_desig.cppm -o %t/mod_different_desig.pcm -verify
@@ -151,6 +153,37 @@ module PartImpl:impl [[profiles::enforce(test::type_cast)]];
 
 void impl_func() {
   int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// ===================================================================
+// Partition implementation inherits the primary interface's enforced
+// profiles when that interface's BMI is resident (best-effort). Only the
+// eager -fmodule-file=<path> form makes TestMod resident here; the lazy
+// -fmodule-file=<name>=<path> form loads on import only and would not
+// trigger inheritance (the partition impl does not import the primary).
+// TestMod enforces test::type_cast, so the cast is diagnosed without a
+// local enforce.
+// ===================================================================
+//--- part_impl_inherit.cppm
+module TestMod:inherit;
+
+void part_inherit_func() {
+  int *p = reinterpret_cast<int*>(0); // expected-error {{'reinterpret_cast' is unsafe under profile 'test::type_cast'}}
+}
+
+// ===================================================================
+// Normal build: the primary interface is not implicitly imported and is
+// usually built after its partitions, so its BMI is absent here and the
+// partition implementation unit does NOT inherit the enforcement. This is
+// the best-effort limitation; repeat [[profiles::enforce]] for guaranteed
+// enforcement.
+// ===================================================================
+//--- part_impl_no_inherit.cppm
+// expected-no-diagnostics
+module TestMod:inherit;
+
+void part_no_inherit_func() {
+  int *p = reinterpret_cast<int*>(0);
 }
 
 // ===================================================================

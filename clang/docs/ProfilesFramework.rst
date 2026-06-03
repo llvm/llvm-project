@@ -429,10 +429,26 @@ Module Enforcement
 ------------------
 
 ``[[profiles::enforce(...)]]`` on a module interface declaration records the
-enforced profile designators on ``Module::EnforcedProfileDesignators``.  Module
-implementation units automatically inherit the interface's enforcements.
+enforced profile designators on ``Module::EnforcedProfileDesignators``.  A
+(non-partition) module implementation unit ``module M;`` automatically inherits
+the interface's enforcements, because it implicitly imports the primary
+interface unit of ``M``.
 ``[[profiles::require(...)]]`` on an import-declaration validates that the
 imported module's ``EnforcedProfileDesignators`` contains a matching designator.
+
+A module partition implementation unit ``module M:P;`` is also a module
+implementation unit of ``M``, so the primary interface's enforcements apply to
+it as well.  However, it does **not** implicitly import the primary interface,
+and the primary interface is normally compiled *after* its partitions, so its
+BMI is usually not available when the partition implementation unit is compiled.
+Inheritance here is therefore **best-effort**: the enforcements are inherited
+only when the primary interface's BMI is already resident in the compilation
+(for example, supplied via an eager ``-fmodule-file=<path>``); the BMI is never
+force-loaded and its absence is never diagnosed.  When it is not available the
+partition implementation unit is simply not subject to the inherited profile --
+a missed diagnostic, never a change to the meaning of a well-formed program.
+For guaranteed enforcement, **repeat** ``[[profiles::enforce(...)]]`` in the
+partition implementation unit rather than relying on inheritance.
 
 Importing a module that enforces a profile does **not** enforce that profile in
 the importing translation unit.  Enforcement is always explicit and local.

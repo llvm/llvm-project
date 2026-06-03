@@ -486,6 +486,20 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   if (Interface) {
     for (const auto &EP : Interface->EnforcedProfileDesignators)
       addProfileEnforcement(EP.ProfileName, EP.Designator, ModuleLoc);
+  } else if (getLangOpts().Profiles &&
+             MDK == ModuleDeclKind::PartitionImplementation) {
+    // A partition implementation unit is a module implementation unit of M, so
+    // the primary interface's enforced profiles apply to it. Unlike a
+    // non-partition implementation unit it does not implicitly import that
+    // interface, and by build order M's BMI is usually not built yet here, so
+    // this is best-effort: inherit only when the interface is already resident;
+    // never force a load and never diagnose its absence. For guaranteed
+    // enforcement a partition implementation unit should repeat
+    // [[profiles::enforce]] (see ProfilesFramework.rst).
+    if (Module *Primary = PP.getHeaderSearchInfo().getModuleMap().findModule(
+            Mod->getPrimaryModuleInterfaceName()))
+      for (const auto &EP : Primary->EnforcedProfileDesignators)
+        addProfileEnforcement(EP.ProfileName, EP.Designator, ModuleLoc);
   }
 
   // We already potentially made an implicit import (in the case of a module
