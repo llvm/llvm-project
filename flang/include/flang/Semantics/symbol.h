@@ -52,22 +52,15 @@ using MutableSymbolVector = std::vector<MutableSymbolRef>;
 // Mixin for details with OpenMP declarative constructs.
 class WithOmpDeclarative {
 public:
-  // The set of requirements for any program unit include requirements
-  // from any module used in the program unit.
-  using RequiresClauses =
+  using OmpClauseSet =
       common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
-  bool has_ompRequires() const { return ompRequires_.has_value(); }
-  const RequiresClauses *ompRequires() const {
-    return ompRequires_ ? &*ompRequires_ : nullptr;
-  }
-  void set_ompRequires(RequiresClauses clauses) { ompRequires_ = clauses; }
+  const OmpClauseSet &ompRequires() const { return ompRequires_; }
+  void set_ompRequires(OmpClauseSet clauses) { ompRequires_ = clauses; }
 
-  bool has_ompAtomicDefaultMemOrder() const {
-    return ompAtomicDefaultMemOrder_.has_value();
-  }
-  const common::OmpMemoryOrderType *ompAtomicDefaultMemOrder() const {
-    return ompAtomicDefaultMemOrder_ ? &*ompAtomicDefaultMemOrder_ : nullptr;
+  const std::optional<common::OmpMemoryOrderType> &
+  ompAtomicDefaultMemOrder() const {
+    return ompAtomicDefaultMemOrder_;
   }
   void set_ompAtomicDefaultMemOrder(common::OmpMemoryOrderType flags) {
     ompAtomicDefaultMemOrder_ = flags;
@@ -76,8 +69,17 @@ public:
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
+  void set_version(unsigned version) { version_ = version; }
+
 private:
-  std::optional<RequiresClauses> ompRequires_;
+  unsigned version_;
+  // The set of clauses from a REQUIRES directive. Only applicable
+  // to program unit symbols (i.e. scopes of the REQUIRES directive).
+  // The set of requirements for any program unit include requirements
+  // from any module used in the program unit.
+  OmpClauseSet ompRequires_;
+  // The argument to ATOMIC_DEFAULT_MEM_ORDER. Only needed when the ADMO
+  // clause is present in the ompRequires_ set.
   std::optional<common::OmpMemoryOrderType> ompAtomicDefaultMemOrder_;
 };
 
@@ -1236,12 +1238,6 @@ namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
   static inline Fortran::semantics::SymbolRef getEmptyKey() {
     auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
-  static inline Fortran::semantics::SymbolRef getTombstoneKey() {
-    auto ptr =
-        DenseMapInfo<const Fortran::semantics::Symbol *>::getTombstoneKey();
     return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
   }
 

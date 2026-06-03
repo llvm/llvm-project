@@ -656,11 +656,6 @@ template <> struct DenseMapInfo<object::SectionRef> {
   static object::SectionRef getEmptyKey() {
     return object::SectionRef({}, nullptr);
   }
-  static object::SectionRef getTombstoneKey() {
-    object::DataRefImpl TS;
-    TS.p = (uintptr_t)-1;
-    return object::SectionRef(TS, nullptr);
-  }
   static unsigned getHashValue(const object::SectionRef &Sec) {
     object::DataRefImpl Raw = Sec.getRawDataRefImpl();
     return hash_combine(Raw.p, Raw.d.a, Raw.d.b);

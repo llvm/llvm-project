@@ -1506,6 +1506,8 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+      # wchar.h entrypoints
+      libc.src.wchar.swprintf
     )
   endif()
 endif()

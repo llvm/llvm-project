@@ -2605,8 +2605,8 @@ static bool isZeroAttribute(Attribute value) {
 
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -2826,8 +2826,8 @@ ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult AliasOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -4462,7 +4462,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();
   // clang-format on
