@@ -19319,8 +19319,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         }
       }
 
-      // Check for lossy scalar/vector conversions.
-      if (VT.isVector() && VT.getSizeInBits() != 32)
+      // Reject types that do not fit a single 32-bit register: any scalar wider
+      // than 32 bits, or a vector that is not exactly 32 bits.
+      if (VT.SimpleTy != MVT::Other &&
+          (VT.getSizeInBits() > 32 ||
+           (VT.isVector() && VT.getSizeInBits() != 32)))
         return std::pair(0U, nullptr);
       if (RC && Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
