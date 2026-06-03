@@ -12,8 +12,8 @@
 # CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't2<t1>' resolving forward declaration...
 # CHECK: (t2<t1>)  {}
 # CHECK: (lldb) p v2
-# CHECK: DWARFASTParserClang::ParseTypeFromDWARF{{.*}}DW_TAG_structure_type (DW_TAG_structure_type) name = 't1'
 # CHECK: DW_TAG_structure_type (DW_TAG_structure_type) 't1' resolving forward declaration...
+# CHECK: (t1)  (x = 0)
 
 #--- lldb.cmd
 log enable dwarf comp

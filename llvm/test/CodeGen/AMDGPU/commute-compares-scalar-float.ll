@@ -221,7 +221,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_olt_to_ogt(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_olt_to_ogt:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_gt_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_gt_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -231,7 +231,7 @@ define amdgpu_vs void @fcmp_f16_olt_to_ogt(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_olt_to_ogt:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_gt_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_gt_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -248,7 +248,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_ogt_to_olt(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_ogt_to_olt:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_lt_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_lt_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -258,7 +258,7 @@ define amdgpu_vs void @fcmp_f16_ogt_to_olt(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_ogt_to_olt:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_lt_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_lt_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -275,7 +275,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_ole_to_oge(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_ole_to_oge:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_ge_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_ge_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -285,7 +285,7 @@ define amdgpu_vs void @fcmp_f16_ole_to_oge(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_ole_to_oge:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_ge_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_ge_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -302,7 +302,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_oge_to_ole(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_oge_to_ole:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_le_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_le_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -312,7 +312,7 @@ define amdgpu_vs void @fcmp_f16_oge_to_ole(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_oge_to_ole:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_le_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_le_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -329,7 +329,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_ult_to_ugt(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_ult_to_ugt:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_nle_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_nle_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -339,7 +339,7 @@ define amdgpu_vs void @fcmp_f16_ult_to_ugt(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_ult_to_ugt:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_nle_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_nle_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -356,7 +356,7 @@ entry:
 define amdgpu_vs void @fcmp_f16_ugt_to_ult(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_f16_ugt_to_ult:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_nge_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_nge_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -366,7 +366,7 @@ define amdgpu_vs void @fcmp_f16_ugt_to_ult(ptr addrspace(1) inreg %out, half inr
 ;
 ; GISEL-LABEL: fcmp_f16_ugt_to_ult:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_nge_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_nge_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -383,7 +383,7 @@ entry:
 define amdgpu_vs void @fcmp_ule_to_uge(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_ule_to_uge:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_nlt_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_nlt_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -393,7 +393,7 @@ define amdgpu_vs void @fcmp_ule_to_uge(ptr addrspace(1) inreg %out, half inreg %
 ;
 ; GISEL-LABEL: fcmp_ule_to_uge:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_nlt_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_nlt_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -410,7 +410,7 @@ entry:
 define amdgpu_vs void @fcmp_uge_to_ule(ptr addrspace(1) inreg %out, half inreg %a) {
 ; SDAG-LABEL: fcmp_uge_to_ule:
 ; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    s_cmp_ngt_f16 s2, 2.0
+; SDAG-NEXT:    s_cmp_ngt_f16 s2, 0x4000
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; SDAG-NEXT:    s_cselect_b32 s2, -1, 0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -420,7 +420,7 @@ define amdgpu_vs void @fcmp_uge_to_ule(ptr addrspace(1) inreg %out, half inreg %
 ;
 ; GISEL-LABEL: fcmp_uge_to_ule:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    s_cmp_ngt_f16 s2, 2.0
+; GISEL-NEXT:    s_cmp_ngt_f16 s2, 0x4000
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_cselect_b32 s2, -1, 0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

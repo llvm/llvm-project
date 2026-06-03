@@ -1,0 +1,12 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.func @lifetime_markers() {
+  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+  // CHECK: call void @llvm.lifetime.start.p0(ptr %[[X:.*]])
+  cir.lifetime.start %0 : !cir.ptr<!s32i>
+  // CHECK: call void @llvm.lifetime.end.p0(ptr %[[X]])
+  cir.lifetime.end %0 : !cir.ptr<!s32i>
+  cir.return
+}

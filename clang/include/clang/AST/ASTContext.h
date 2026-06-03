@@ -73,9 +73,6 @@ template <> struct DenseMapInfo<ScalableVecTyKey> {
   static inline ScalableVecTyKey getEmptyKey() {
     return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
   }
-  static inline ScalableVecTyKey getTombstoneKey() {
-    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -4008,14 +4005,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (size_t I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
 
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();

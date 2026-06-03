@@ -638,34 +638,19 @@ public:
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
   bool Pre(const parser::OmpRequiresDirective &x) {
-    using RequiresClauses = WithOmpDeclarative::RequiresClauses;
+    using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
-    auto getArgument{[&](auto &&maybeClause) {
-      if (maybeClause) {
-        // Scalar<Logical<Constant<common::Indirection<Expr>>>>
-        auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
-        evaluate::ExpressionAnalyzer ea{context_};
-        if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
-          if (auto v{omp::GetLogicalValue(*maybeExpr)}) {
-            return *v;
-          }
-        }
-      }
-      // If the argument is missing, it is assumed to be true.
-      return true;
-    }};
-
     // Gather information from the clauses.
-    RequiresClauses reqs;
-    const common::OmpMemoryOrderType *memOrder{nullptr};
+    OmpClauseSet reqs;
+    std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
       reqs |= common::visit(
           common::visitors{
-              [&](const OmpClause::AtomicDefaultMemOrder &atomic) {
-                memOrder = &atomic.v.v;
-                return RequiresClauses{};
+              [&](const OmpClause::AtomicDefaultMemOrder &admo) {
+                memOrder = admo.v.v;
+                return OmpClauseSet{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -676,18 +661,18 @@ public:
                     std::is_same_v<TypeS, OmpClause::SelfMaps> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
-                  if (getArgument(s.v)) {
-                    return RequiresClauses{clause.Id()};
+                  if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
+                    return OmpClauseSet{clause.Id()};
                   }
                 }
-                return RequiresClauses{};
+                return OmpClauseSet{};
               },
           },
           clause.u);
     }
 
     // Merge clauses into parents' symbols details.
-    AddOmpRequiresToScope(currScope(), &reqs, memOrder);
+    AddOmpRequiresToScope(currScope(), reqs, memOrder);
     return true;
   }
   void Post(const parser::OmpRequiresDirective &) { PopContext(); }
@@ -761,17 +746,6 @@ public:
   bool Pre(const parser::OmpClause::Lastprivate &x) {
     ResolveOmpObjectList(
         *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpLastPrivate);
-    return false;
-  }
-  bool Pre(const parser::OmpClause::Detach &x) {
-    // OpenMP 5.0: Variables in detach clause have predetermined shared
-    // data-sharing attribute
-    if (const auto *name{parser::Unwrap<parser::Name>(x.v.v)}) {
-      if (auto *symbol{name->symbol})
-        SetSymbolDSA(*symbol,
-            Symbol::Flags{
-                Symbol::Flag::OmpShared, Symbol::Flag::OmpPreDetermined});
-    }
     return false;
   }
   bool Pre(const parser::OmpClause::Copyin &x) {
@@ -1066,9 +1040,8 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &,
-      const WithOmpDeclarative::RequiresClauses *,
-      const common::OmpMemoryOrderType *);
+  void AddOmpRequiresToScope(Scope &, const WithOmpDeclarative::OmpClauseSet &,
+      const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
 
@@ -3224,30 +3197,25 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const WithOmpDeclarative::RequiresClauses *reqs,
-    const common::OmpMemoryOrderType *memOrder) {
+    const WithOmpDeclarative::OmpClauseSet &reqs,
+    const std::optional<common::OmpMemoryOrderType> &memOrder) {
+  unsigned version{context_.langOptions().OpenMPVersion};
   const Scope &programUnit{omp::GetProgramUnit(scope)};
-  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
-  RequiresClauses combinedReqs{reqs ? *reqs : RequiresClauses{}};
 
   if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {
     common::visit(
         [&](auto &details) {
           if constexpr (std::is_convertible_v<decltype(&details),
                             WithOmpDeclarative *>) {
-            if (combinedReqs.any()) {
-              if (const RequiresClauses *otherReqs{details.ompRequires()}) {
-                combinedReqs |= *otherReqs;
-              }
-              details.set_ompRequires(combinedReqs);
+            if (reqs.any()) {
+              details.set_ompRequires(reqs | details.ompRequires());
+              details.set_version(version);
             }
             if (memOrder) {
-              if (details.has_ompAtomicDefaultMemOrder() &&
-                  *details.ompAtomicDefaultMemOrder() != *memOrder) {
-                unsigned version{context_.langOptions().OpenMPVersion};
+              if (auto &admo{details.ompAtomicDefaultMemOrder()};
+                  admo && *admo != *memOrder) {
                 context_.Say(programUnit.sourceRange(),
-                    "Conflicting '%s' REQUIRES clauses found in compilation "
-                    "unit"_err_en_US,
+                    "Conflicting '%s' REQUIRES clauses found in compilation unit"_err_en_US,
                     parser::omp::GetUpperName(
                         llvm::omp::Clause::OMPC_atomic_default_mem_order,
                         version));

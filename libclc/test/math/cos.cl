@@ -145,11 +145,11 @@
 // AMDGCN-NEXT:    [[TMP127:%.*]] = shl i32 [[TMP115]], 30
 // AMDGCN-NEXT:    [[TMP128:%.*]] = and i32 [[TMP127]], -2147483648
 // AMDGCN-NEXT:    [[TMP129:%.*]] = fneg contract float [[TMP120]]
-// AMDGCN-NEXT:    [[TMP130:%.*]] = select contract i1 [[TMP126]], float [[TMP124]], float [[TMP129]]
-// AMDGCN-NEXT:    [[TMP131:%.*]] = bitcast float [[TMP130]] to i32
-// AMDGCN-NEXT:    [[TMP132:%.*]] = xor i32 [[TMP128]], [[TMP131]]
-// AMDGCN-NEXT:    [[TMP133:%.*]] = bitcast i32 [[TMP132]] to float
-// AMDGCN-NEXT:    ret float [[TMP133]]
+// AMDGCN-NEXT:    [[DOTV_I_I:%.*]] = select i1 [[TMP126]], float [[TMP124]], float [[TMP129]]
+// AMDGCN-NEXT:    [[TMP130:%.*]] = bitcast float [[DOTV_I_I]] to i32
+// AMDGCN-NEXT:    [[TMP131:%.*]] = xor i32 [[TMP128]], [[TMP130]]
+// AMDGCN-NEXT:    [[TMP132:%.*]] = bitcast i32 [[TMP131]] to float
+// AMDGCN-NEXT:    ret float [[TMP132]]
 //
 float test_float(float x) {
   return cos(x);

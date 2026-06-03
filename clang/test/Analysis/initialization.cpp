@@ -87,9 +87,9 @@ void glob_ptr_index2() {
   int const *ptr = glob_arr5[1];
   clang_analyzer_eval(ptr[0] == 3); // expected-warning{{TRUE}}
   clang_analyzer_eval(ptr[1] == 4); // expected-warning{{TRUE}}
-  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{UNDEFINED}}
-  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(ptr[2] == 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[3] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ptr[4] == 0); // expected-warning{{TRUE}}
 }
 
 void glob_invalid_index5() {
@@ -255,4 +255,87 @@ const E glob[] = {{}};
 void initlistWithinInitlist() {
   // no-crash
   clang_analyzer_dump(glob[0]); // expected-warning-re {{reg_${{[0-9]+}}<enum E Element{glob,0 S64b,enum E}>}}
+}
+
+const int glob_arr_cross[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_cross_subarray_boundary() {
+  const int *p = &glob_arr_cross[0][0];
+  clang_analyzer_eval(p[4] == 5);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[7] == 8);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 12); // expected-warning{{TRUE}}
+}
+
+const int glob_arr_sparse[4][3] = {{1, 2}, {0, 0, 7}};
+void glob_array_sparse_cross_boundary() {
+  const int *p = &glob_arr_sparse[0][0];
+  clang_analyzer_eval(p[0] == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[1] == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[2] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[3] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[5] == 7); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[6] == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 0); // expected-warning{{TRUE}}
+}
+
+const int glob_arr_3d[2][3][4] = {
+    {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}},
+    {{13, 14, 15, 16}, {17, 18, 19, 20}, {21, 22, 23, 24}}};
+void glob_array_3d_cross_boundary() {
+  const int *p = &glob_arr_3d[0][0][0];
+  clang_analyzer_eval(p[0] == 1);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[5] == 6);   // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 12); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[12] == 13); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[23] == 24); // expected-warning{{TRUE}}
+}
+
+// Limitation: type-punned access through incompatible pointer type.
+const int glob_arr_pun[2][3] = {{1, 2, 3}, {4, 5, 6}};
+void glob_array_type_pun_unresolved() {
+  const unsigned *p = (const unsigned *)&glob_arr_pun[0][0];
+  clang_analyzer_dump(p[0]); // expected-warning-re{{reg_${{[0-9]+}}<unsigned int Element{glob_arr_pun,0 S64b,unsigned int}>}}
+}
+
+const int glob_arr_recast[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_recast_resolves_against_declared_type() {
+  const int (*q)[6] = (const int (*)[6])&glob_arr_recast[0][0];
+  clang_analyzer_eval(q[0][4] == 5); // expected-warning{{TRUE}}
+  clang_analyzer_eval(q[1][0] == 4); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_cross_boundary() {
+  int arr[4][3];
+  arr[0][0] = 10;
+  arr[1][1] = 42;
+  arr[2][2] = 99;
+  arr[3][2] = 77;
+
+  int *p = &arr[0][0];
+  clang_analyzer_eval(p[0] == 10); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[4] == 42); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[8] == 99); // expected-warning{{TRUE}}
+  clang_analyzer_eval(p[11] == 77); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_before_start() {
+  int arr[4][3];
+  arr[0][0] = 10;
+  int *p = &arr[0][0];
+  int x = p[-1]; // expected-warning{{Assigned value is uninitialized}}
+  (void)x;
+}
+
+// Negative inner index from a non-zero outer base lands within the allocation.
+const int glob_arr_neg[4][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12}};
+void glob_array_negative_inner_index() {
+  const int *p = &glob_arr_neg[2][0];
+  clang_analyzer_eval(p[-1] == 6); // expected-warning{{TRUE}}
+}
+
+void glob_array_write_then_read_past_end() {
+  int arr[4][3];
+  arr[3][2] = 77;
+  int *p = &arr[0][0];
+  int x = p[12]; // expected-warning{{Assigned value is uninitialized}}
+  (void)x;
 }
