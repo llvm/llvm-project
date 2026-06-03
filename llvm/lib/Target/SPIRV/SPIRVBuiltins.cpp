@@ -2975,27 +2975,35 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // 2. Process all arguments which requered preparation.
   // 2.1 Events - use Call arguments, or use dummy nulls in case of absence of
   // events
-  Register NumEventsReg;
-  Register WaitEventsReg;
-  Register RetEventReg;
-  if (HasEvents) {
-    NumEventsReg = Call->Arguments[NumEventsIdx];
-    WaitEventsReg = Call->Arguments[WaitEventsIdx];
-    RetEventReg = Call->Arguments[RetEventIdx];
-  } else {
-    NumEventsReg = buildConstantIntReg32(0, MIRBuilder, GR);
-    // Per SPIR-V spec, OpEnqueueKernel's Wait Events / Ret Event operands
-    // must be pointers to OpTypeDeviceEvent. Build the LLVM TargetExtType
-    // for spirv.DeviceEvent so getOrCreateSPIRVPointerType can register
-    // both the SPIR-V type and the LLVM-side mapping; deriving the pointer
-    // from an opaque LLVM PointerType would lose the pointee and deduce
-    // to <Generic i8*>.
+
+  auto BuildDeviceEventNullPtr = [&]() {
     LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
     Type *DeviceEventTy = TargetExtType::get(Ctx, "spirv.DeviceEvent");
     SPIRVTypeInst DeviceEventPtrTy = GR->getOrCreateSPIRVPointerType(
         DeviceEventTy, MIRBuilder, SPIRV::StorageClass::Generic);
-    Register NullPtr =
-        GR->getOrCreateConstNullPtr(MIRBuilder, DeviceEventPtrTy);
+    return GR->getOrCreateConstNullPtr(MIRBuilder, DeviceEventPtrTy);
+  };
+
+  Register NumEventsReg;
+  Register WaitEventsReg;
+  Register RetEventReg;
+  if (HasEvents) {
+    auto IsNullEvent = [&](Register R) {
+      MachineInstr *Def = getDefInstrMaybeConstant(R, MRI);
+      return Def->getOpcode() == TargetOpcode::G_CONSTANT &&
+             Def->getOperand(1).getCImm()->isZero();
+    };
+
+    NumEventsReg = Call->Arguments[NumEventsIdx];
+    WaitEventsReg = Call->Arguments[WaitEventsIdx];
+    RetEventReg = Call->Arguments[RetEventIdx];
+    if (IsNullEvent(WaitEventsReg))
+      WaitEventsReg = BuildDeviceEventNullPtr();
+    if (IsNullEvent(RetEventReg))
+      RetEventReg = BuildDeviceEventNullPtr();
+  } else {
+    NumEventsReg = buildConstantIntReg32(0, MIRBuilder, GR);
+    Register NullPtr = BuildDeviceEventNullPtr();
     WaitEventsReg = NullPtr;
     RetEventReg = NullPtr;
   }
@@ -3209,14 +3217,15 @@ static bool generateConvertInst(const StringRef DemangledCall,
   unsigned Opcode = SPIRV::OpNop;
   if (GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeInt)) {
     // Int -> ...
+    bool IsSourceSigned =
+        DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
     if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt)) {
       // Int -> Int
       if (Builtin->IsSaturated)
         Opcode = Builtin->IsDestinationSigned ? SPIRV::OpSatConvertUToS
                                               : SPIRV::OpSatConvertSToU;
       else
-        Opcode = Builtin->IsDestinationSigned ? SPIRV::OpUConvert
-                                              : SPIRV::OpSConvert;
+        Opcode = IsSourceSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
       // Int -> Float
@@ -3231,8 +3240,6 @@ static bool generateConvertInst(const StringRef DemangledCall,
             GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
         Opcode = SPIRV::OpConvertBF16ToFINTEL;
       } else {
-        bool IsSourceSigned =
-            DemangledCall[DemangledCall.find_first_of('(') + 1] != 'u';
         Opcode = IsSourceSigned ? SPIRV::OpConvertSToF : SPIRV::OpConvertUToF;
       }
     }

@@ -205,9 +205,6 @@ template <> struct DenseMapInfo<omp::TraitProperty> {
   static inline omp::TraitProperty getEmptyKey() {
     return omp::TraitProperty(-1);
   }
-  static inline omp::TraitProperty getTombstoneKey() {
-    return omp::TraitProperty(-2);
-  }
   static unsigned getHashValue(omp::TraitProperty val) {
     return std::hash<unsigned>{}(unsigned(val));
   }

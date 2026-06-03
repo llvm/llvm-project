@@ -4832,9 +4832,9 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   PosFlag<SetFalse>>;
 defm function_sections : BoolFOption<"function-sections",
   CodeGenOpts<"FunctionSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each function in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm basic_block_address_map : BoolFOption<"basic-block-address-map",
   CodeGenOpts<"BBAddrMap">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Emit the basic block address map section.">,
@@ -4847,9 +4847,9 @@ def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_
   MarshallingInfoString<CodeGenOpts<"BBSections">, [{"none"}]>;
 defm data_sections : BoolFOption<"data-sections",
   CodeGenOpts<"DataSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each data in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm experimental_call_graph_section
     : BoolFOption<"experimental-call-graph-section",
                   CodeGenOpts<"CallGraphSection">, DefaultFalse,
