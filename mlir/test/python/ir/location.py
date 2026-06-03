@@ -292,3 +292,26 @@ def testLocationCapsule():
 
 
 run(testLocationCapsule)
+
+
+# CHECK-LABEL: TEST: testLocationFromDiagnostic
+def testLocationFromDiagnostic():
+    with Context() as ctx:
+        def callback(d):
+            assert isinstance(d.location, FileLineColLoc)
+            assert isinstance(d.location, Location)
+
+            # CHECK: filename: diagnostic_test.txt
+            print("filename:", d.location.filename)
+            # CHECK: line: 42
+            print("line:", d.location.start_line)
+            # CHECK: col: 7
+            print("col:", d.location.start_col)
+            return True
+
+        ctx.attach_diagnostic_handler(callback)
+        loc = FileLineColLoc.get("diagnostic_test.txt", 42, 7)
+        loc.emit_error("test error message")
+
+
+run(testLocationFromDiagnostic)
