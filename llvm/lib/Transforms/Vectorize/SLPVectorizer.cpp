@@ -7705,7 +7705,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SmallVector<unsigned> SortedIndicesForOffset0;
   const SCEV *Stride0 = calculateRtStride(PointerOps0, BaseTy, *DL, *SE,
                                           SortedIndicesForOffset0, Coeffs0);
-  if (!Stride0)
+  if (!Stride0 || isa<SCEVConstant>(Stride0))
     return false;
   unsigned NumCoeffs0 = Coeffs0.size();
   if (NumCoeffs0 * NumOffsets != Sz)
