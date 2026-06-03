@@ -211,7 +211,9 @@ int main(int argc, char **argv) {
 
   // Load the bitcode...
   SMDiagnostic Err;
-  std::unique_ptr<Module> Owner = parseIRFile(InputFile, Err, Context);
+  AsmParserContext ParserContext;
+  std::unique_ptr<Module> Owner =
+      parseIRFile(InputFile, Err, Context, /*Callbacks=*/{}, &ParserContext);
   Module *Mod = Owner.get();
   if (!Mod) {
     Err.print(argv[0], errs());
@@ -233,7 +235,7 @@ int main(int argc, char **argv) {
   InputArgv.insert(InputArgv.begin(), InputFile);
 
   // Initialize the execution context and set parameters.
-  ubi::Context Ctx(*Mod);
+  ubi::Context Ctx(*Mod, &ParserContext);
   Ctx.setMemoryLimit(MaxMem);
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
@@ -265,8 +267,10 @@ int main(int argc, char **argv) {
   auto *MainFuncTy = FunctionType::get(IntTy, {IntTy, PtrTy}, false);
   SmallVector<ubi::AnyValue> Args;
   if (EntryFn->getFunctionType() == MainFuncTy) {
-    Args.push_back(
-        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size())));
+    const ubi::AnyValue *Argc =
+        Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size()));
+    assert(Argc && "failed to initialize argc");
+    Args.push_back(*Argc);
 
     uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
     uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);

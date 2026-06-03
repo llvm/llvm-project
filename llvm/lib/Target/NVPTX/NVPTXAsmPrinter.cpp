@@ -1735,8 +1735,11 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   const DataLayout &DL = getDataLayout();
 
   auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
-    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
-      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
+    unsigned NumBytes = divideCeil(Val.getBitWidth(), 8);
+    for (unsigned I : llvm::seq(NumBytes)) {
+      unsigned NumBits = std::min(8u, Val.getBitWidth() - I * 8);
+      Buffer->addByte(Val.extractBitsAsZExtValue(NumBits, I * 8));
+    }
   };
 
   // Integer or floating point vector splats.

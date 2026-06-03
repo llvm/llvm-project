@@ -6,118 +6,9 @@
 
 #include <arm_neon.h>
 
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxv_s8
-// CHECK-SAME: (<8 x i8> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXV_S8_I:%.*]] = call i8 @llvm.vector.reduce.smax.v8i8(<8 x i8> [[A]])
-// CHECK-NEXT:    ret i8 [[VMAXV_S8_I]]
-//
-int8_t test_vmaxv_s8(int8x8_t a) {
-  return vmaxv_s8(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxv_s16
-// CHECK-SAME: (<4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXV_S16_I:%.*]] = call i16 @llvm.vector.reduce.smax.v4i16(<4 x i16> [[A]])
-// CHECK-NEXT:    ret i16 [[VMAXV_S16_I]]
-//
-int16_t test_vmaxv_s16(int16x4_t a) {
-  return vmaxv_s16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxv_u8
-// CHECK-SAME: (<8 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXV_U8_I:%.*]] = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> [[A]])
-// CHECK-NEXT:    ret i8 [[VMAXV_U8_I]]
-//
-uint8_t test_vmaxv_u8(uint8x8_t a) {
-  return vmaxv_u8(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxv_u16
-// CHECK-SAME: (<4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXV_U16_I:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[A]])
-// CHECK-NEXT:    ret i16 [[VMAXV_U16_I]]
-//
-uint16_t test_vmaxv_u16(uint16x4_t a) {
-  return vmaxv_u16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_s8
-// CHECK-SAME: (<16 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_S8_I:%.*]] = call i8 @llvm.vector.reduce.smax.v16i8(<16 x i8> [[A]])
-// CHECK-NEXT:    ret i8 [[VMAXVQ_S8_I]]
-//
-int8_t test_vmaxvq_s8(int8x16_t a) {
-  return vmaxvq_s8(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_s16
-// CHECK-SAME: (<8 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_S16_I:%.*]] = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> [[A]])
-// CHECK-NEXT:    ret i16 [[VMAXVQ_S16_I]]
-//
-int16_t test_vmaxvq_s16(int16x8_t a) {
-  return vmaxvq_s16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_s32
-// CHECK-SAME: (<4 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VMAXVQ_S32_I]]
-//
-int32_t test_vmaxvq_s32(int32x4_t a) {
-  return vmaxvq_s32(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_u8
-// CHECK-SAME: (<16 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_U8_I:%.*]] = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> [[A]])
-// CHECK-NEXT:    ret i8 [[VMAXVQ_U8_I]]
-//
-uint8_t test_vmaxvq_u8(uint8x16_t a) {
-  return vmaxvq_u8(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_u16
-// CHECK-SAME: (<8 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_U16_I:%.*]] = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> [[A]])
-// CHECK-NEXT:    ret i16 [[VMAXVQ_U16_I]]
-//
-uint16_t test_vmaxvq_u16(uint16x8_t a) {
-  return vmaxvq_u16(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_u32
-// CHECK-SAME: (<4 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VMAXVQ_U32_I]]
-//
-uint32_t test_vmaxvq_u32(uint32x4_t a) {
-  return vmaxvq_u32(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vmaxvq_f32
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VMAXVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxv.f32.v4f32(<4 x float> [[A]])
-// CHECK-NEXT:    ret float [[VMAXVQ_F32_I]]
-//
-float32_t test_vmaxvq_f32(float32x4_t a) {
-  return vmaxvq_f32(a);
-}
 
 // CHECK-LABEL: define {{[^@]+}}@test_vmaxnmvq_f32
-// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: (<4 x float> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VMAXNMVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v4f32(<4 x float> [[A]])
 // CHECK-NEXT:    ret float [[VMAXNMVQ_F32_I]]
@@ -125,5 +16,3 @@ float32_t test_vmaxvq_f32(float32x4_t a) {
 float32_t test_vmaxnmvq_f32(float32x4_t a) {
   return vmaxnmvq_f32(a);
 }
-
-

@@ -16,6 +16,14 @@ define void @test() {
 ; AVX1-LABEL: 'test'
 ; AVX2-LABEL: 'test'
 ; AVX512-LABEL: 'test'
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out0>, ir<%v0>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out1>, ir<%v1>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out2>, ir<%v2>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out3>, ir<%v3>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out4>, ir<%v4>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out5>, ir<%v5>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out6>, ir<%v6>
+; AVX512:  Cost of 6 for VF 4: WIDEN store ir<%out7>, ir<%v7>
 ; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out0>, ir<%v0>
 ; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out1>, ir<%v1>
 ; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out2>, ir<%v2>
