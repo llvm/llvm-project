@@ -514,6 +514,7 @@ public:
     MachineOperand *Head = getRegUseDefListHead(RegNo);
     if (!Head)
       return false;
+    // Prev links are circular, and defs always precede uses.
     MachineOperand *Tail = Head->Contents.Reg.Prev;
     if (!Tail->isUse())
       return false;
