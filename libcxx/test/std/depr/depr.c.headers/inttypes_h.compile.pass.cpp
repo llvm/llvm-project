@@ -8,6 +8,9 @@
 
 // test <inttypes.h>
 
+// Missing wcstoimax, wcstoumax
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <inttypes.h>
 
 #include "test_macros.h"

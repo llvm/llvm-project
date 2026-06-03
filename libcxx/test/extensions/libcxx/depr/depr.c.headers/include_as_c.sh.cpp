@@ -9,6 +9,9 @@
 // We're building as C, so this test doesn't work when building with modules.
 // ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
+// Incompatible redeclaration of wcschr and wmemchr builtins
+// XFAIL: LLVM-LIBC-FIXME
+
 // GCC complains about unrecognized arguments because we're compiling the
 // file as C, but we're passing C++ flags on the command-line.
 // UNSUPPORTED: gcc

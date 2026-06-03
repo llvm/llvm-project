@@ -20,6 +20,9 @@
 // wstring to_wstring(double val);
 // wstring to_wstring(long double val);
 
+// Missing swprintf (currently a stub that infinite loops)
+// UNSUPPORTED: LLVM-LIBC-FIXME
+
 #include <string>
 #include <cassert>
 #include <limits>
