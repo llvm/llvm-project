@@ -26,6 +26,8 @@ namespace metal {
 
 AnalysisKey PointeeTypeAnalysis::Key;
 
+static bool isIntegerDevicePointer(Value *Ptr);
+
 // ── Infer pointee type from usage ────────────────────────────────────────
 //
 // Recurses through load/store/GEP usage, then falls back to GEP source type
@@ -90,7 +92,7 @@ void PointeeTypeMap::collapseDevicePointersToFloat(Module &M) {
     // Check if this is a device pointer (addrspace 1)
     auto *PtrTy = Ptr->getType();
     if (auto *PT = dyn_cast<PointerType>(PtrTy)) {
-      if (PT->getAddressSpace() == AS::Device)
+      if (PT->getAddressSpace() == AS::Device && !isIntegerDevicePointer(Ptr))
         Ty = F32;
     }
   }
@@ -131,6 +133,11 @@ static bool functionUsesMMA(const Function &F) {
           if (Callee->getName().starts_with(mma_intrinsics::kPrefix))
             return true;
   return false;
+}
+
+static bool isIntegerDevicePointer(Value *Ptr) {
+  Type *Ty = PointeeTypeMap::inferFromUsage(Ptr);
+  return Ty && Ty->isIntegerTy() && !Ty->isIntegerTy(1);
 }
 
 PointeeTypeMap buildPointeeTypeMap(Module &M) {
@@ -216,19 +223,21 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
 
       for (auto &Arg : F.args())
         if (Arg.getType()->isPointerTy() &&
-            Arg.getType()->getPointerAddressSpace() == AS::Device)
+            Arg.getType()->getPointerAddressSpace() == AS::Device &&
+            !isIntegerDevicePointer(&Arg))
           PTM.set(&Arg, F32);
 
       for (auto &BB : F)
         for (auto &I : BB)
           if (I.getType()->isPointerTy() &&
-              I.getType()->getPointerAddressSpace() == AS::Device)
+              I.getType()->getPointerAddressSpace() == AS::Device &&
+              !isIntegerDevicePointer(&I))
             PTM.set(&I, F32);
 
       for (auto &Arg : F.args())
         if (Arg.getType()->isPointerTy() &&
             Arg.getType()->getPointerAddressSpace() == AS::Device &&
-            !PTM.has(&Arg))
+            !PTM.has(&Arg) && !isIntegerDevicePointer(&Arg))
           PTM.set(&Arg, F32);
     }
 
@@ -265,7 +274,8 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
       if (!F.isDeclaration() && FunctionHasMMA.lookup(&F))
         for (auto &Arg : F.args())
           if (Arg.getType()->isPointerTy() &&
-              Arg.getType()->getPointerAddressSpace() == AS::Device)
+              Arg.getType()->getPointerAddressSpace() == AS::Device &&
+              !isIntegerDevicePointer(&Arg))
             PTM.set(&Arg, F32);
 
     // MMA call site pointer operands → typed pointer

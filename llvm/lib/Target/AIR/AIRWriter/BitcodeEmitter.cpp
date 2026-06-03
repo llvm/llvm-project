@@ -181,6 +181,9 @@ static void fixGEPTypeMismatches(Module &M, PointeeTypeMap &PTM) {
           unsigned AS = GEP->getPointerAddressSpace();
           if (AS != metal::AS::Device && AS != metal::AS::Threadgroup)
             continue;
+          if (Type *Pointee = PTM.get(GEP->getPointerOperand()))
+            if (Pointee->isIntegerTy() && Pointee == GEP->getSourceElementType())
+              continue;
           ToFix.push_back(GEP);
         }
 
