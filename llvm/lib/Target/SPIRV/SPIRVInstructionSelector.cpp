@@ -2051,7 +2051,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
-  if (!PointeeType.isTypeIntOrFloat())
+  if (!PointeeType.isTypeIntOrFloat() && !PointeeType.isTypePtr())
     return diagnoseUnsupported(I,
                                "Lowering to SPIR-V of atomic store is only "
                                "allowed for integer or floating point types");
@@ -2073,12 +2073,49 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
-  auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
-                         .addUse(Ptr)
-                         .addUse(ScopeReg)
-                         .addUse(MemSemReg)
-                         .addUse(StoreVal);
-  AtomicStore.constrainAllUses(TII, TRI, RBI);
+
+  if (PointeeType.isTypePtr()) {
+    auto PtrSize = GR.getPointerSize();
+    SPIRVTypeInst SpirvType = GR.getOrCreateSPIRVIntegerType(PtrSize, I, TII);
+
+    Register NewVRegVal =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(NewVRegVal, MRI->getRegClassOrNull(StoreVal));
+    GR.assignSPIRVTypeToVReg(SpirvType, NewVRegVal, MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
+        .addDef(NewVRegVal)
+        .addUse(GR.getSPIRVTypeID(SpirvType)) // Result type
+        .addUse(StoreVal)                     // Pointer operand
+        .constrainAllUses(TII, TRI, RBI);
+
+    Register NewVRegPtr =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(NewVRegPtr, MRI->getRegClassOrNull(Ptr));
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        SpirvType, MIRBuilder,
+        addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
+    GR.assignSPIRVTypeToVReg(PtrType, NewVRegPtr, MIRBuilder.getMF());
+
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(NewVRegPtr)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
+        .addUse(NewVRegPtr)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .addUse(NewVRegVal)
+        .constrainAllUses(TII, TRI, RBI);
+  } else {
+    auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
+                           .addUse(Ptr)
+                           .addUse(ScopeReg)
+                           .addUse(MemSemReg)
+                           .addUse(StoreVal);
+    AtomicStore.constrainAllUses(TII, TRI, RBI);
+  }
   return true;
 }
 
