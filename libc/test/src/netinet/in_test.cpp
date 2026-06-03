@@ -71,8 +71,10 @@ TEST(LlvmLibcNetinetInTest, IN6AddrInitMacros) {
 TEST(LlvmLibcNetinetInTest, SockaddrIn6Layout) {
   EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_family), static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_port), static_cast<size_t>(2));
-  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_flowinfo), static_cast<size_t>(4));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_flowinfo),
+            static_cast<size_t>(4));
   EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_addr), static_cast<size_t>(8));
-  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_scope_id), static_cast<size_t>(24));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_scope_id),
+            static_cast<size_t>(24));
   EXPECT_EQ(sizeof(struct sockaddr_in6), static_cast<size_t>(28));
 }
