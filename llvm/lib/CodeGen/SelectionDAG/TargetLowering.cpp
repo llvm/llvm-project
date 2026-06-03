@@ -7582,7 +7582,7 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
                                              NegatibleCost &Cost,
                                              unsigned Depth) const {
   // fneg is removable even if it has multiple uses.
-  if (Op.getOpcode() == ISD::FNEG || Op.getOpcode() == ISD::VP_FNEG) {
+  if (Op.getOpcode() == ISD::FNEG) {
     Cost = NegatibleCost::Cheaper;
     return Op.getOperand(0);
   }
