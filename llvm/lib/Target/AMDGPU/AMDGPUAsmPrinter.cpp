@@ -434,12 +434,12 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
-  unsigned Generation = STM.getGeneration();
 
-  // SGPR budget of the code generator's subtarget, so the printed occupancy
-  // matches what codegen assumed. In particular STM carries the implicit
-  // amdhsa trap-handler feature, which the asm printer's MCSubtargetInfo does
-  // not, so the reservation has to be threaded through explicitly here.
+  // All subtarget-dependent decisions are taken here from the per-function
+  // subtarget STM and baked into the operands; the MCExpr itself stays purely
+  // arithmetic because it is evaluated late, when NumSGPRs/NumVGPRs are still
+  // symbolic. STM carries the implicit amdhsa trap-handler feature, so the trap
+  // reservation has to be threaded through explicitly.
   unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
   unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
@@ -448,13 +448,19 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
     return MCConstantExpr::create(Value, Ctx);
   };
 
-  return AMDGPUMCExpr::create(
-      AMDGPUMCExpr::AGVK_Occupancy,
-      {CreateExpr(MaxWaves), CreateExpr(Granule),
-       CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
-       CreateExpr(InitOcc), NumSGPRs, NumVGPRs, CreateExpr(SGPRTotal),
-       CreateExpr(SGPRGranule), CreateExpr(SGPRTrapReserve)},
-      Ctx);
+  // On targets where SGPRs do not limit occupancy, pass a zero SGPR count so
+  // the SGPR term is skipped during evaluation, instead of testing the target
+  // generation inside the MCExpr.
+  const MCExpr *SGPRArg =
+      IsaInfo::isSGPROccupancyLimited(STM) ? NumSGPRs : CreateExpr(0);
+
+  return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
+                              {CreateExpr(MaxWaves), CreateExpr(Granule),
+                               CreateExpr(TargetTotalNumVGPRs),
+                               CreateExpr(InitOcc), SGPRArg, NumVGPRs,
+                               CreateExpr(SGPRTotal), CreateExpr(SGPRGranule),
+                               CreateExpr(SGPRTrapReserve)},
+                              Ctx);
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {

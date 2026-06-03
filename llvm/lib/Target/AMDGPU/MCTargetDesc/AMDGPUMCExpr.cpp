@@ -30,6 +30,9 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
     : Kind(Kind), Ctx(Ctx) {
   assert(Args.size() >= 1 && "Needs a minimum of one expression.");
   assert(Kind != AGVK_None && "Cannot construct AMDGPUMCExpr of kind none.");
+  assert((getNumExpectedArgs(Kind) == 0 ||
+          Args.size() == getNumExpectedArgs(Kind)) &&
+         "Wrong number of operands for AMDGPUMCExpr kind.");
 
   // Allocating the variadic arguments through the same allocation mechanism
   // that the object itself is allocated with so they end up in the same memory.
@@ -48,6 +51,29 @@ const AMDGPUMCExpr *AMDGPUMCExpr::create(VariantKind Kind,
                                          ArrayRef<const MCExpr *> Args,
                                          MCContext &Ctx) {
   return new (Ctx) AMDGPUMCExpr(Kind, Args, Ctx);
+}
+
+unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
+  switch (Kind) {
+  case AGVK_None:
+  case AGVK_Or:
+  case AGVK_Max:
+  case AGVK_Min:
+    // Variadic: any number of operands (the parser already requires >= 1).
+    return 0;
+  case AGVK_Lit:
+  case AGVK_Lit64:
+  case AGVK_InstPrefSize:
+    return 1;
+  case AGVK_TotalNumVGPRs:
+  case AGVK_AlignTo:
+    return 2;
+  case AGVK_ExtraSGPRs:
+    return 3;
+  case AGVK_Occupancy:
+    return 9;
+  }
+  llvm_unreachable("Unknown AMDGPUMCExpr kind.");
 }
 
 const MCExpr *AMDGPUMCExpr::getSubExpr(size_t Index) const {
@@ -166,38 +192,30 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
-  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
-      NumSGPRs, NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
+  uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, NumSGPRs,
+      NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
 
-  // createOccupancy() always emits exactly these ten operands; bail out rather
-  // than read out of bounds if a hand-written expression has a different arity.
-  if (Args.size() != 10)
+  bool Success =
+      evaluateMCExprs(Args.slice(0, 4), Asm,
+                      {MaxWaves, Granule, TargetTotalNumVGPRs, InitOccupancy});
+
+  assert(Success && "Arguments 1 to 4 for Occupancy should be known constants");
+
+  if (!Success || !evaluateMCExprs(Args.slice(4, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
-  bool Success = evaluateMCExprs(
-      Args.slice(0, 5), Asm,
-      {MaxWaves, Granule, TargetTotalNumVGPRs, Generation, InitOccupancy});
-
-  assert(Success && "Arguments 1 to 5 for Occupancy should be known constants");
-
-  if (!Success || !evaluateMCExprs(Args.slice(5, 2), Asm, {NumSGPRs, NumVGPRs}))
-    return false;
-
-  // Arguments 8 to 10 carry the SGPR budget of the code-generator's subtarget
-  // (total SGPRs, allocation granule, and the trap-handler reservation). They
-  // let the SGPR-limited occupancy be computed exactly as the code generator
-  // does (in particular trap-handler aware), instead of from the asm printer's
-  // MCSubtargetInfo which does not carry the implicit amdhsa features.
-  if (!evaluateMCExprs(Args.slice(7, 3), Asm,
+  // The trailing operands carry the SGPR budget of the code generator's
+  // subtarget (total SGPRs, allocation granule, and the trap-handler
+  // reservation), so the SGPR-limited occupancy is computed exactly as the code
+  // generator does (trap-handler aware). createOccupancy() passes a zero SGPR
+  // count on targets where SGPRs do not limit occupancy, so the SGPR term below
+  // is skipped without this expression having to know the target generation.
+  if (!evaluateMCExprs(Args.slice(6, 3), Asm,
                        {SGPRTotal, SGPRGranule, SGPRTrapReserve}))
     return false;
 
   unsigned Occupancy = InitOccupancy;
-  // Mirror the GFX10+ rule of the getOccupancyWithNumSGPRs(MCSubtargetInfo)
-  // overload: on GFX10+ the SGPR file is large enough that SGPRs never limit
-  // occupancy. The MC layer only has the decoded Generation here, so it tests
-  // that rather than an MCSubtargetInfo.
-  if (NumSGPRs && Generation < AMDGPUSubtarget::GFX10)
+  if (NumSGPRs)
     Occupancy = std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
                                         NumSGPRs, MaxWaves, SGPRTotal,
                                         SGPRGranule, SGPRTrapReserve));
