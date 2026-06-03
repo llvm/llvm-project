@@ -34,6 +34,7 @@ llc_cmd = None
 opt_cmd = None
 llvm_reduce_cmd = None
 reduce_pipeline_cmd = None
+llvm_symbolizer_cmd = None
 
 
 def verbose_print(*args, **kwargs):
@@ -107,6 +108,7 @@ class Reduce(object):
 
     def prepare_source_reduction(self):
         shutil.copy(self.file_to_reduce, self.reduced_source_file)
+        self.file_to_reduce = self.reduced_source_file
 
     def get_crash_cmd(self, cmd=None, args=None, filename=None):
         if not cmd:
@@ -133,8 +135,9 @@ class Reduce(object):
         # Remove clang and filename from the command
         # Assume the last occurrence of the filename is the clang input file
         del cmd[0]
+        target_base = os.path.basename(filename)
         for i in range(len(cmd) - 1, -1, -1):
-            if cmd[i] == filename:
+            if os.path.basename(cmd[i]) == target_base:
                 del cmd[i]
                 break
 
@@ -180,7 +183,7 @@ class Reduce(object):
         # `-main-file-name <basename>` since that takes the basename as a value.
         target_base = os.path.basename(filename)
         for i in range(len(cc1_cmd) - 1, -1, -1):
-            if cc1_cmd[i] == filename or os.path.basename(cc1_cmd[i]) == target_base:
+            if os.path.basename(cc1_cmd[i]) == target_base:
                 if i > 0 and cc1_cmd[i - 1] == "-main-file-name":
                     continue
                 del cc1_cmd[i]
@@ -225,7 +228,7 @@ class Reduce(object):
         # of identifying functions with some leeway for common functions
         if not result:
             self.needs_stack_trace = True
-            stacktrace_re = r"[0-9]+\s+0[xX][0-9a-fA-F]+\s*([^(]+)\("
+            stacktrace_re = r"[0-9]+\s+0[xX][0-9a-fA-F]+\s*([^\r\n(]+)\("
             filters = [
                 "PrintStackTrace",
                 "RunSignalHandlers",
@@ -235,13 +238,21 @@ class Reduce(object):
                 "__restore_rt",
                 "gsignal",
                 "abort",
+                "SignalHandlerTerminate",
             ]
 
-            def skip_function(func_name):
-                return any(name in func_name for name in filters)
-
             matches = re.findall(stacktrace_re, crash_output)
-            result = [x for x in matches if x and not skip_function(x)][:5]
+
+            # Find the last frame that matches any of the filters
+            last_filter_idx = -1
+            for idx, func_name in enumerate(matches):
+                if any(name in func_name for name in filters):
+                    last_filter_idx = idx
+
+            # Slice the matches to ignore all frames up to and including the last filtered frame
+            app_matches = matches[last_filter_idx + 1 :]
+
+            result = [x.strip() for x in app_matches if x.strip()][:5]
             for msg in result:
                 print("Found stack trace function:", msg)
 
@@ -270,22 +281,28 @@ class Reduce(object):
         print("\nCreating the interestingness test...")
 
         # Disable symbolization if it's not required to avoid slow symbolization.
-        disable_symbolization = ""
+        symbolizer_env = ""
         if not self.needs_stack_trace:
-            disable_symbolization = "export LLVM_DISABLE_SYMBOLIZATION=1"
+            symbolizer_env = "export LLVM_DISABLE_SYMBOLIZATION=1"
+        elif llvm_symbolizer_cmd:
+            symbolizer_env = "export LLVM_SYMBOLIZER_PATH=%s" % shlex.quote(
+                llvm_symbolizer_cmd
+            )
 
         output = """#!/bin/bash
 %s
-if %s >& t.log ; then
+if %s >& "$(dirname "$0")/t.log" ; then
   exit 1
 fi
 """ % (
-            disable_symbolization,
+            symbolizer_env,
             quote_cmd(self.get_crash_cmd()),
         )
 
         for msg in self.expected_output:
-            output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
+            output += 'grep -F %s "$(dirname "$0")/t.log" || exit 1\n' % shlex.quote(
+                msg
+            )
 
         write_to_script(output, self.testfile)
         self.check_interestingness()
@@ -358,8 +375,11 @@ fi
             extra.append("-disable-llvm-passes")
         cmd = [self.clang] + args + extra + [self.file_to_reduce]
         verbose_print("Emitting LLVM IR:", quote_cmd(cmd))
-        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        p.communicate()
+        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        _, err = p.communicate()
+        if p.returncode != 0:
+            verbose_print("emit_llvm_ir failed with exit code", p.returncode)
+            verbose_print("stderr:", err.decode("utf-8", errors="replace"))
         return p.returncode == 0
 
     def get_opt_llc_args(self):
@@ -368,13 +388,49 @@ fi
         for a in self.clang_args:
             if re.match(r"^-O[0-3sz]$", a):
                 opt_level = a
-        return [opt_level]
+
+        forwarded_args = [opt_level]
+        i = 0
+        while i < len(self.clang_args):
+            if self.clang_args[i] == "-mllvm":
+                if i + 1 < len(self.clang_args):
+                    forwarded_args.append(self.clang_args[i + 1])
+                    i += 2
+                else:
+                    i += 1
+            elif self.clang_args[i].startswith("-mllvm="):
+                forwarded_args.append(self.clang_args[i][len("-mllvm=") :])
+                i += 1
+            else:
+                i += 1
+        return forwarded_args
 
     def check_tool_crash(self, tool_cmd):
         """Run tool_cmd and check whether the expected crash output appears."""
         p = subprocess.Popen(tool_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out, _ = p.communicate()
-        return all(msg in out.decode("utf-8") for msg in self.expected_output)
+        out_str = out.decode("utf-8", errors="replace")
+        matched = all(msg in out_str for msg in self.expected_output)
+        if not matched:
+            verbose_print("Failed to match expected output in tool crash.")
+            verbose_print("Expected:", self.expected_output)
+            verbose_print("Actual output:\n", out_str)
+        return matched
+
+    def reduce_tool_args(self, tool_cmd, tool_args, ir_file, extra_args=[]):
+        """Minimize the tool arguments by trying to remove them one by one."""
+        print("\nReducing %s arguments..." % os.path.basename(tool_cmd))
+        reduced_args = list(tool_args)
+        i = 0
+        while i < len(reduced_args):
+            candidate_args = reduced_args[:i] + reduced_args[i + 1 :]
+            cmd = [tool_cmd] + candidate_args + extra_args + [ir_file]
+            if self.check_tool_crash(cmd):
+                verbose_print("Removed argument: %s" % reduced_args[i])
+                reduced_args = candidate_args
+            else:
+                i += 1
+        return reduced_args
 
     def try_llvm_ir_crash(self, ir_file):
         """Try to reproduce the crash with llc or opt on emitted LLVM IR.
@@ -382,33 +438,60 @@ fi
         Writes the IR to `ir_file` if successful.
         Returns (tool_path, tool_args) on success, or None.
         """
-        if llc_cmd:
-            print("\nTrying to reproduce crash with llc on optimized LLVM IR...")
-            if self.emit_llvm_ir(ir_file, disable_passes=False):
-                llc_args = self.get_opt_llc_args()
-                if self.check_tool_crash([llc_cmd] + llc_args + [ir_file]):
-                    print("Crash reproduces with llc -- treating as backend crash")
-                    return (llc_cmd, llc_args)
-                print("Crash does not reproduce with llc")
-            else:
-                print("clang -emit-llvm did not complete")
+        orig_expected_output = self.expected_output
+        self.expected_output = [
+            x for x in orig_expected_output if "clang" not in x.lower()
+        ]
+        if not self.expected_output:
+            verbose_print("No LLVM frames in expected output, skipping IR crash try")
+            self.expected_output = orig_expected_output
+            return None
 
-        if opt_cmd:
-            print("\nTrying to reproduce crash with opt on unoptimized LLVM IR...")
-            if self.emit_llvm_ir(ir_file, disable_passes=True):
-                opt_args = self.get_opt_llc_args()
-                if self.check_tool_crash([opt_cmd] + opt_args + [ir_file]):
-                    print("Crash reproduces with opt -- treating as middle-end crash")
-                    reduced = self.run_reduce_pipeline(ir_file, opt_args)
-                    if reduced is not None and self.check_tool_crash(
-                        [opt_cmd] + reduced + [ir_file]
+        ir_dir = os.path.dirname(ir_file)
+        tmp_ir = tempfile.NamedTemporaryFile(suffix=".ll", dir=ir_dir, delete=False)
+        tmp_ir_name = tmp_ir.name
+        tmp_ir.close()
+
+        try:
+            if llc_cmd:
+                print("\nTrying to reproduce crash with llc on optimized LLVM IR...")
+                if self.emit_llvm_ir(tmp_ir_name, disable_passes=False):
+                    llc_args = self.get_opt_llc_args()
+                    if self.check_tool_crash([llc_cmd] + llc_args + [tmp_ir_name]):
+                        print("Crash reproduces with llc -- treating as backend crash")
+                        llc_args = self.reduce_tool_args(llc_cmd, llc_args, tmp_ir_name)
+                        shutil.copy(tmp_ir_name, ir_file)
+                        return (llc_cmd, llc_args)
+                    print("Crash does not reproduce with llc")
+                else:
+                    print("clang -emit-llvm did not complete")
+
+            if opt_cmd:
+                print("\nTrying to reproduce crash with opt on unoptimized LLVM IR...")
+                if self.emit_llvm_ir(tmp_ir_name, disable_passes=True):
+                    opt_args = self.get_opt_llc_args()
+                    if self.check_tool_crash(
+                        [opt_cmd] + opt_args + ["-disable-output", tmp_ir_name]
                     ):
-                        opt_args = reduced
-                    return (opt_cmd, opt_args)
-                print("Crash does not reproduce with opt")
-            else:
-                print("clang -emit-llvm -disable-llvm-passes did not complete")
+                        print("Crash reproduces with opt -- treating as middle-end crash")
+                        reduced = self.run_reduce_pipeline(tmp_ir_name, opt_args)
+                        if reduced is not None and self.check_tool_crash(
+                            [opt_cmd] + reduced + ["-disable-output", tmp_ir_name]
+                        ):
+                            opt_args = reduced
+                        opt_args = self.reduce_tool_args(
+                            opt_cmd, opt_args, tmp_ir_name, extra_args=["-disable-output"]
+                        )
+                        shutil.copy(tmp_ir_name, ir_file)
+                        return (opt_cmd, opt_args)
+                    print("Crash does not reproduce with opt")
+                else:
+                    print("clang -emit-llvm -disable-llvm-passes did not complete")
+        finally:
+            if os.path.exists(tmp_ir_name):
+                os.remove(tmp_ir_name)
 
+        self.expected_output = orig_expected_output
         return None
 
     def run_reduce_pipeline(self, ir_file, opt_args):
@@ -469,24 +552,30 @@ fi
         """
         print("\nCreating llvm-reduce interestingness test...")
 
-        disable_symbolization = ""
+        symbolizer_env = ""
         if not self.needs_stack_trace:
-            disable_symbolization = "export LLVM_DISABLE_SYMBOLIZATION=1"
+            symbolizer_env = "export LLVM_DISABLE_SYMBOLIZATION=1"
+        elif llvm_symbolizer_cmd:
+            symbolizer_env = "export LLVM_SYMBOLIZER_PATH=%s" % shlex.quote(
+                llvm_symbolizer_cmd
+            )
 
         invocation = quote_cmd([tool_cmd] + tool_args) + ' "$1"'
 
         output = """#!/bin/bash
 %s
-if %s >& t.log ; then
+if %s >& "$(dirname "$0")/t.log" ; then
   exit 1
 fi
 """ % (
-            disable_symbolization,
+            symbolizer_env,
             invocation,
         )
 
         for msg in self.expected_output:
-            output += "grep -F %s t.log || exit 1\n" % shlex.quote(msg)
+            output += 'grep -F %s "$(dirname "$0")/t.log" || exit 1\n' % shlex.quote(
+                msg
+            )
 
         write_to_script(output, self.testfile)
 
@@ -499,6 +588,10 @@ fi
             sys.exit("The interestingness test does not pass for the original IR file.")
 
         print("\nRunning llvm-reduce...")
+        extra_flags = []
+        if self.needs_stack_trace:
+            extra_flags.append("--preserve-debug-environment")
+
         full_cmd = (
             [
                 llvm_reduce_cmd,
@@ -507,6 +600,7 @@ fi
                 ir_file,
             ]
             + self.llvm_reduce_flags
+            + extra_flags
             + [ir_file]
         )
         verbose_print(quote_cmd(full_cmd))
@@ -778,6 +872,16 @@ def main():
     if not creduce_cmd:
         creduce_cmd = check_cmd("creduce", None, args.creduce)
     clang_cmd = check_cmd("clang", llvm_bin, args.clang)
+    if not llvm_bin and clang_cmd:
+        llvm_bin = os.path.dirname(clang_cmd)
+
+    global llvm_symbolizer_cmd
+    llvm_symbolizer_cmd = check_cmd(
+        "llvm-symbolizer", llvm_bin, return_none_if_not_found=True
+    )
+    if llvm_symbolizer_cmd:
+        os.environ["LLVM_SYMBOLIZER_PATH"] = llvm_symbolizer_cmd
+
     llc_cmd = check_cmd("llc", llvm_bin, args.llc, return_none_if_not_found=True)
     opt_cmd = check_cmd("opt", llvm_bin, args.opt, return_none_if_not_found=True)
     llvm_reduce_cmd = check_cmd(
