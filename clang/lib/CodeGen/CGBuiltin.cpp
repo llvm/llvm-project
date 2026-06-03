@@ -4840,8 +4840,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateMaskedLoad(RetTy, Ptr, Align.getAsAlign(), Mask,
                                         PassThru, "masked_load");
     else
-      Result = Builder.CreateMaskedExpandLoad(
-          RetTy, Ptr, Align.getAsAlign(), Mask, PassThru, "masked_expand_load");
+      Result = Builder.CreateMaskedExpandLoad(RetTy, Ptr, MaybeAlign(), Mask,
+                                              PassThru, "masked_expand_load");
 
     return RValue::get(Result);
   };
@@ -4879,7 +4879,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (BuiltinID == Builtin::BI__builtin_masked_store)
       Builder.CreateMaskedStore(Val, Ptr, Align.getAsAlign(), Mask);
     else
-      Builder.CreateMaskedCompressStore(Val, Ptr, Align.getAsAlign(), Mask);
+      Builder.CreateMaskedCompressStore(Val, Ptr, MaybeAlign(), Mask);
 
     return RValue::get(nullptr);
   }
