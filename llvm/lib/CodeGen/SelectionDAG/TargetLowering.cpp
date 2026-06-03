@@ -8989,7 +8989,7 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
 
   // Repeatedly compute which bits would shift to the right by an odd amount,
   // shift all such bits in parallel using a mask, and double the shift amount.
-  for (unsigned I = 1; I < BW; I <<= 1) {
+  for (unsigned I = 1; I < BW; I *= 2) {
     // This expands the "parallel prefix" operation to clmul(Mk, ~0).
     SDValue Mp =
         DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
@@ -9000,7 +9000,8 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
     SDValue T = DAG.getNode(ISD::AND, DL, VT, X, Mv);
     SDValue TS = DAG.getNode(ISD::SRL, DL, VT, T, ShiftI);
     X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T), TS);
-    Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
+    if (I * 2 < BW)
+      Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
   }
 
   return X;
@@ -9028,11 +9029,13 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
         DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
     SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, Mc);
     MvArray[S] = Mv;
-    SDValue McXorMv = DAG.getNode(ISD::XOR, DL, VT, Mc, Mv);
-    SDValue MvShifted = DAG.getNode(ISD::SRL, DL, VT, Mv,
-                                    DAG.getShiftAmountConstant(ShiftS, VT, DL));
-    Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted);
-    Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
+    if (S + 1 < LogBW) {
+      SDValue McXorMv = DAG.getNode(ISD::XOR, DL, VT, Mc, Mv);
+      SDValue MvShifted = DAG.getNode(
+          ISD::SRL, DL, VT, Mv, DAG.getShiftAmountConstant(ShiftS, VT, DL));
+      Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted);
+      Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
+    }
   }
 
   // Second pass: move bits by 32, 16, 8, 4, 2, 1, using masks, in parallel.
