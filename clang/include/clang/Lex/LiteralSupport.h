@@ -17,7 +17,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Lex/TextEncodingConfig.h"
+#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
@@ -235,7 +235,7 @@ class StringLiteralParser {
   const LangOptions &Features;
   const TargetInfo &Target;
   DiagnosticsEngine *Diags;
-  TextEncodingConfig *TEC;
+  TextEncoding *TE;
 
   unsigned MaxTokenLength;
   unsigned SizeBound;
@@ -256,7 +256,7 @@ public:
   StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
                       const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
-      : SM(sm), Features(features), Target(target), Diags(diags), TEC(nullptr),
+      : SM(sm), Features(features), Target(target), Diags(diags), TE(nullptr),
         MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
         ResultPtr(ResultBuf.data()),
         EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),

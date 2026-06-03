@@ -1,4 +1,4 @@
-//===--- TextEncodingConfig.cpp -------------------------------------------===//
+//===--- TextEncoding.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Lex/TextEncodingConfig.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Basic/DiagnosticDriver.h"
 
-using namespace llvm;
-
 llvm::TextEncodingConverter *
-TextEncodingConfig::getConverter(ConversionAction Action) const {
+TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
   case CA_ToExecEncoding:
     return ToExecEncodingConverter;
@@ -22,8 +20,8 @@ TextEncodingConfig::getConverter(ConversionAction Action) const {
 }
 
 std::error_code
-TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
-                                             const clang::LangOptions &Opts) {
+TextEncoding::setConvertersFromOptions(TextEncoding &TEC,
+                                       const clang::LangOptions &Opts) {
   using namespace llvm;
 
   const char *UTF8 = "UTF-8";
