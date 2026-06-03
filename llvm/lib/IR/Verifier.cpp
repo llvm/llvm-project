@@ -4035,7 +4035,8 @@ void Verifier::visitCallBase(CallBase &Call) {
 
     if (Call.paramHasAttr(i, Attribute::ImmArg)) {
       Value *ArgVal = Call.getArgOperand(i);
-      Check(isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal),
+      Check((isa<ConstantInt>(ArgVal) || isa<ConstantFP>(ArgVal)) &&
+                !isa<VectorType>(ArgVal->getType()),
             "immarg operand has non-immediate parameter", ArgVal, Call);
 
       // If the imm-arg is an integer and also has a range attached,
