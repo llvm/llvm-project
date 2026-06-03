@@ -16341,7 +16341,7 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
 //
 // mulhs returns the hi from X * C = hi * 2^32 + lo.
 //
-// Since C<0 as an unsigned constant would be C + 2^32 = u(C).
+// Since C<0, u(C) as an unsigned constant is 2^32 + C = u(C).
 // mulhsu computes
 //  X * u(C0) = X * (C + 2^32)
 //            = X * 2^32 + C * X // C * X is the same as mulhs
