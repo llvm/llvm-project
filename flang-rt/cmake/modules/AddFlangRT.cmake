@@ -298,10 +298,12 @@ function (add_flangrt_library name)
     if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
     elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
+          $<$<COMPILE_LANGUAGE:Fortran>:-nogpulib -flto>
         )
     elseif (APPLE)
       # Clang on Darwin enables non-POSIX extensions by default.

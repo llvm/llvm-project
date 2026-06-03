@@ -259,11 +259,6 @@ struct DenseMapInfo<PointerSumType<TagT, MemberTs...>> {
     return SumType::template create<SomeTag>(SomePointerInfo::getEmptyKey());
   }
 
-  static inline SumType getTombstoneKey() {
-    return SumType::template create<SomeTag>(
-        SomePointerInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const SumType &Arg) {
     uintptr_t OpaqueValue = Arg.getOpaqueValue();
     return DenseMapInfo<uintptr_t>::getHashValue(OpaqueValue);
