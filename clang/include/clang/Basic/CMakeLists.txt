@@ -150,6 +150,10 @@ clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
   SOURCE BuiltinTemplates.td
   TARGET ClangBuiltinTemplates)
 
+clang_tablegen(Traits.inc -gen-clang-traits
+  SOURCE Traits.td
+  TARGET ClangTraits)
+
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema
   SOURCE arm_neon.td

@@ -827,7 +827,7 @@ public:
                    tok::kw_decltype, tok::kw_noexcept, tok::kw_static_assert,
                    tok::kw__Atomic,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
                    tok::kw_requires);
   }
 

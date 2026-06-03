@@ -710,7 +710,7 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
   }
@@ -1563,7 +1563,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     return ExprError();
   }
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
     // HACK: libstdc++ uses some of the transform-type-traits as alias
     // templates, so we need to work around this.
     if (!NextToken().is(tok::l_paren)) {

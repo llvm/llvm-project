@@ -1573,7 +1573,7 @@ static bool IsBuiltinTrait(Token &Tok) {
   switch (Tok.getKind()) {
   default:
     return false;
-#include "clang/Basic/TokenKinds.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
