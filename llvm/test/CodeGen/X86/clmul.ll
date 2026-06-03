@@ -3953,9 +3953,9 @@ define i8 @clmulr_i8_allones(i8 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmulr_i8_allones:
 ; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
 ; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
-; SSE-PCLMUL-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
 ; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
@@ -3965,9 +3965,9 @@ define i8 @clmulr_i8_allones(i8 %x) nounwind {
 ;
 ; AVX-LABEL: clmulr_i8_allones:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; AVX-NEXT:    vmovq %rcx, %xmm0
 ; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
@@ -4224,9 +4224,9 @@ define i8 @clmulh_i8_allones(i8 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmulh_i8_allones:
 ; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
 ; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
-; SSE-PCLMUL-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
 ; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
@@ -4236,9 +4236,9 @@ define i8 @clmulh_i8_allones(i8 %x) nounwind {
 ;
 ; AVX-LABEL: clmulh_i8_allones:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    movl $65535, %ecx # imm = 0xFFFF
-; AVX-NEXT:    vmovq %rcx, %xmm0
 ; AVX-NEXT:    vmovd %eax, %xmm1
 ; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
