@@ -5655,20 +5655,17 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return !includesUndef(Kind);
 
   case ISD::BITCAST: {
-    if (!DemandedElts)
-      return true;
-
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     EVT DstVT = Op.getValueType();
 
-    if (!SrcVT.isFixedLengthVector() || !DstVT.isFixedLengthVector())
+    if (!SrcVT.isVector() || !DstVT.isVector())
       return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
 
     unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
     unsigned DstEltBits = DstVT.getScalarSizeInBits();
-    unsigned NumSrcElts = SrcVT.getVectorNumElements();
-    unsigned NumDstElts = DstVT.getVectorNumElements();
+    ElementCount NumSrcElts = SrcVT.getVectorElementCount();
+    ElementCount NumDstElts = DstVT.getVectorElementCount();
 
     if (SrcEltBits == DstEltBits)
       return isGuaranteedNotToBeUndefOrPoison(Src, DemandedElts, Kind,
@@ -5679,8 +5676,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
         return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
 
       assert(NumSrcElts == NumDstElts * (DstEltBits / SrcEltBits) &&
-             "Unexpected fixed-width vector bitcast");
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+             "Unexpected vector bitcast");
+      APInt DemandedSrcElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumSrcElts.getKnownMinValue());
       return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                               Depth + 1);
     }
@@ -5689,8 +5687,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
       return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
 
     assert(NumDstElts == NumSrcElts * (SrcEltBits / DstEltBits) &&
-           "Unexpected fixed-width vector bitcast");
-    APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+           "Unexpected vector bitcast");
+    APInt DemandedSrcElts =
+        APIntOps::ScaleBitMask(DemandedElts, NumSrcElts.getKnownMinValue());
     return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                             Depth + 1);
   }
