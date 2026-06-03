@@ -69,104 +69,56 @@ define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
 ; NOSVE2BITPERM-LABEL: pext_i16:
 ; NOSVE2BITPERM:       // %bb.0:
 ; NOSVE2BITPERM-NEXT:    mvn w8, w1
-; NOSVE2BITPERM-NEXT:    and w14, w0, w1
+; NOSVE2BITPERM-NEXT:    and w11, w0, w1
 ; NOSVE2BITPERM-NEXT:    lsl w9, w8, #1
-; NOSVE2BITPERM-NEXT:    neg w11, w8, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w10, w9, w8, lsl #2
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w8, w10, w8, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w11
+; NOSVE2BITPERM-NEXT:    eor w8, w9, w8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #8
 ; NOSVE2BITPERM-NEXT:    bic w9, w9, w8
 ; NOSVE2BITPERM-NEXT:    and w8, w8, w1
 ; NOSVE2BITPERM-NEXT:    eor w10, w9, w9, lsl #1
-; NOSVE2BITPERM-NEXT:    neg w11, w9, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w13, w1, w8
-; NOSVE2BITPERM-NEXT:    and w15, w8, #0xfffe
-; NOSVE2BITPERM-NEXT:    and w8, w14, w8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #2
-; NOSVE2BITPERM-NEXT:    orr w13, w13, w15, lsr #1
-; NOSVE2BITPERM-NEXT:    eor w14, w14, w8
+; NOSVE2BITPERM-NEXT:    and w13, w11, w8
+; NOSVE2BITPERM-NEXT:    eor w14, w1, w8
 ; NOSVE2BITPERM-NEXT:    and w8, w8, #0xfffe
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #3
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w13
+; NOSVE2BITPERM-NEXT:    and w13, w13, #0xfffe
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #2
 ; NOSVE2BITPERM-NEXT:    orr w8, w14, w8, lsr #1
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w9, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11
+; NOSVE2BITPERM-NEXT:    orr w11, w11, w13, lsr #1
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #8
 ; NOSVE2BITPERM-NEXT:    bic w9, w9, w10
-; NOSVE2BITPERM-NEXT:    and w10, w10, w13
-; NOSVE2BITPERM-NEXT:    eor w11, w9, w9, lsl #1
-; NOSVE2BITPERM-NEXT:    neg w12, w9, lsl #15
-; NOSVE2BITPERM-NEXT:    and w14, w8, w10
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w10
-; NOSVE2BITPERM-NEXT:    and w10, w10, #0xfffc
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w14
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #2
-; NOSVE2BITPERM-NEXT:    and w14, w14, #0xfffc
-; NOSVE2BITPERM-NEXT:    orr w10, w13, w10, lsr #2
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w14, lsr #2
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w9, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w11, w11, w12
-; NOSVE2BITPERM-NEXT:    bic w9, w9, w11
-; NOSVE2BITPERM-NEXT:    and w11, w11, w10
+; NOSVE2BITPERM-NEXT:    and w10, w10, w8
 ; NOSVE2BITPERM-NEXT:    eor w12, w9, w9, lsl #1
-; NOSVE2BITPERM-NEXT:    and w13, w8, w11
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w13
-; NOSVE2BITPERM-NEXT:    and w13, w13, #0xfff0
+; NOSVE2BITPERM-NEXT:    and w13, w11, w10
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w10
+; NOSVE2BITPERM-NEXT:    and w10, w10, #0xfffc
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w13
+; NOSVE2BITPERM-NEXT:    and w13, w13, #0xfffc
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w10, lsr #2
+; NOSVE2BITPERM-NEXT:    orr w10, w11, w13, lsr #2
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #8
+; NOSVE2BITPERM-NEXT:    bic w9, w9, w12
+; NOSVE2BITPERM-NEXT:    and w11, w12, w8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #1
+; NOSVE2BITPERM-NEXT:    and w12, w10, w11
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w11
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w12
+; NOSVE2BITPERM-NEXT:    and w12, w12, #0xfff0
 ; NOSVE2BITPERM-NEXT:    and w11, w11, #0xfff0
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #2
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w13, lsr #4
-; NOSVE2BITPERM-NEXT:    orr w10, w10, w11, lsr #4
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #3
-; NOSVE2BITPERM-NEXT:    and w10, w8, w10
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w9, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w11, w12, w9, lsl #14
-; NOSVE2BITPERM-NEXT:    neg w9, w9, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w9, w11, w9
-; NOSVE2BITPERM-NEXT:    and w9, w10, w9
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w9
-; NOSVE2BITPERM-NEXT:    and w9, w9, #0xff00
-; NOSVE2BITPERM-NEXT:    orr w0, w8, w9, lsr #8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w10, w10, w12, lsr #4
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w11, lsr #4
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #4
+; NOSVE2BITPERM-NEXT:    and w8, w10, w8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #8
+; NOSVE2BITPERM-NEXT:    and w8, w8, w9
+; NOSVE2BITPERM-NEXT:    eor w9, w10, w8
+; NOSVE2BITPERM-NEXT:    and w8, w8, #0xff00
+; NOSVE2BITPERM-NEXT:    orr w0, w9, w8, lsr #8
 ; NOSVE2BITPERM-NEXT:    ret
   %res = call i16 @llvm.pext.i16(i16 %val, i16 %mask)
   ret i16 %res
@@ -184,189 +136,64 @@ define i32 @pext_i32(i32 %val, i32 %mask) nounwind {
 ; NOSVE2BITPERM-LABEL: pext_i32:
 ; NOSVE2BITPERM:       // %bb.0:
 ; NOSVE2BITPERM-NEXT:    mvn w8, w1
-; NOSVE2BITPERM-NEXT:    and w14, w0, w1
+; NOSVE2BITPERM-NEXT:    and w13, w0, w1
 ; NOSVE2BITPERM-NEXT:    lsl w9, w8, #1
-; NOSVE2BITPERM-NEXT:    eor w10, w9, w8, lsl #2
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #17
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #18
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #19
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #20
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #21
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #22
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #23
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #24
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #25
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #26
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #27
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #28
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #29
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w8, lsl #30
-; NOSVE2BITPERM-NEXT:    eor w8, w10, w8, lsl #31
-; NOSVE2BITPERM-NEXT:    bic w10, w9, w8
+; NOSVE2BITPERM-NEXT:    eor w8, w9, w8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #8
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w8, lsl #16
+; NOSVE2BITPERM-NEXT:    bic w9, w9, w8
 ; NOSVE2BITPERM-NEXT:    and w8, w8, w1
-; NOSVE2BITPERM-NEXT:    eor w9, w10, w10, lsl #1
-; NOSVE2BITPERM-NEXT:    and w15, w14, w8
-; NOSVE2BITPERM-NEXT:    eor w16, w1, w8
-; NOSVE2BITPERM-NEXT:    orr w8, w16, w8, lsr #1
-; NOSVE2BITPERM-NEXT:    eor w14, w14, w15
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #2
-; NOSVE2BITPERM-NEXT:    orr w14, w14, w15, lsr #1
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #17
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #18
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #19
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #20
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #21
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #22
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #23
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #24
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #25
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #26
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #27
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #28
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #29
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w10, lsl #30
-; NOSVE2BITPERM-NEXT:    bic w11, w10, w9
-; NOSVE2BITPERM-NEXT:    and w9, w9, w8
-; NOSVE2BITPERM-NEXT:    eor w10, w11, w11, lsl #1
-; NOSVE2BITPERM-NEXT:    and w15, w14, w9
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w9
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w9, lsr #2
-; NOSVE2BITPERM-NEXT:    eor w9, w14, w15
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #2
-; NOSVE2BITPERM-NEXT:    orr w9, w9, w15, lsr #2
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #17
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #18
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #19
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #20
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #21
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #22
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #23
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #24
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #25
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #26
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #27
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #28
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #29
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #30
-; NOSVE2BITPERM-NEXT:    bic w11, w11, w10
+; NOSVE2BITPERM-NEXT:    eor w10, w9, w9, lsl #1
+; NOSVE2BITPERM-NEXT:    and w14, w13, w8
+; NOSVE2BITPERM-NEXT:    eor w15, w1, w8
+; NOSVE2BITPERM-NEXT:    orr w8, w15, w8, lsr #1
+; NOSVE2BITPERM-NEXT:    eor w13, w13, w14
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w13, w13, w14, lsr #1
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #8
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w10, lsl #16
+; NOSVE2BITPERM-NEXT:    bic w9, w9, w10
 ; NOSVE2BITPERM-NEXT:    and w10, w10, w8
-; NOSVE2BITPERM-NEXT:    eor w12, w11, w11, lsl #1
-; NOSVE2BITPERM-NEXT:    and w14, w9, w10
+; NOSVE2BITPERM-NEXT:    eor w11, w9, w9, lsl #1
+; NOSVE2BITPERM-NEXT:    and w14, w13, w10
 ; NOSVE2BITPERM-NEXT:    eor w8, w8, w10
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w10, lsr #4
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w14
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #2
-; NOSVE2BITPERM-NEXT:    orr w9, w9, w14, lsr #4
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #17
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #18
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #19
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #20
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #21
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #22
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #23
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #24
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #25
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #26
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #27
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #28
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #29
-; NOSVE2BITPERM-NEXT:    eor w12, w12, w11, lsl #30
-; NOSVE2BITPERM-NEXT:    bic w11, w11, w12
-; NOSVE2BITPERM-NEXT:    and w12, w12, w8
-; NOSVE2BITPERM-NEXT:    eor w13, w11, w11, lsl #1
-; NOSVE2BITPERM-NEXT:    eor w8, w8, w12
-; NOSVE2BITPERM-NEXT:    orr w8, w8, w12, lsr #8
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #2
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #3
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #4
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #5
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #6
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #7
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #8
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #9
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #10
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #11
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #12
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #13
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #14
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #15
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #16
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #17
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #18
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #19
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #20
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #21
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #22
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #23
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #24
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #25
-; NOSVE2BITPERM-NEXT:    eor w13, w13, w11, lsl #26
-; NOSVE2BITPERM-NEXT:    eor w10, w13, w11, lsl #27
-; NOSVE2BITPERM-NEXT:    and w13, w9, w12
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w13
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #28
-; NOSVE2BITPERM-NEXT:    orr w9, w9, w13, lsr #8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #29
-; NOSVE2BITPERM-NEXT:    and w8, w9, w8
-; NOSVE2BITPERM-NEXT:    eor w10, w10, w11, lsl #30
-; NOSVE2BITPERM-NEXT:    and w8, w8, w10
-; NOSVE2BITPERM-NEXT:    eor w9, w9, w8
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w10, lsr #2
+; NOSVE2BITPERM-NEXT:    eor w10, w13, w14
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w11, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w10, w10, w14, lsr #2
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w11, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w11, lsl #8
+; NOSVE2BITPERM-NEXT:    eor w11, w11, w11, lsl #16
+; NOSVE2BITPERM-NEXT:    bic w9, w9, w11
+; NOSVE2BITPERM-NEXT:    and w11, w11, w8
+; NOSVE2BITPERM-NEXT:    eor w12, w9, w9, lsl #1
+; NOSVE2BITPERM-NEXT:    and w13, w10, w11
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w11
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w13
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w11, lsr #4
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w10, w10, w13, lsr #4
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #4
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #8
+; NOSVE2BITPERM-NEXT:    eor w12, w12, w12, lsl #16
+; NOSVE2BITPERM-NEXT:    bic w9, w9, w12
+; NOSVE2BITPERM-NEXT:    and w11, w12, w8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #1
+; NOSVE2BITPERM-NEXT:    and w12, w10, w11
+; NOSVE2BITPERM-NEXT:    eor w8, w8, w11
+; NOSVE2BITPERM-NEXT:    eor w10, w10, w12
+; NOSVE2BITPERM-NEXT:    orr w8, w8, w11, lsr #8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #2
+; NOSVE2BITPERM-NEXT:    orr w10, w10, w12, lsr #8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #4
+; NOSVE2BITPERM-NEXT:    and w8, w10, w8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #8
+; NOSVE2BITPERM-NEXT:    eor w9, w9, w9, lsl #16
+; NOSVE2BITPERM-NEXT:    and w8, w8, w9
+; NOSVE2BITPERM-NEXT:    eor w9, w10, w8
 ; NOSVE2BITPERM-NEXT:    orr w0, w9, w8, lsr #16
 ; NOSVE2BITPERM-NEXT:    ret
   %res = call i32 @llvm.pext.i32(i32 %val, i32 %mask)
@@ -385,419 +212,82 @@ define i64 @pext_i64(i64 %val, i64 %mask) nounwind {
 ; NOSVE2BITPERM-LABEL: pext_i64:
 ; NOSVE2BITPERM:       // %bb.0:
 ; NOSVE2BITPERM-NEXT:    mvn x8, x1
-; NOSVE2BITPERM-NEXT:    and x15, x0, x1
+; NOSVE2BITPERM-NEXT:    and x14, x0, x1
 ; NOSVE2BITPERM-NEXT:    lsl x9, x8, #1
-; NOSVE2BITPERM-NEXT:    eor x10, x9, x8, lsl #2
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #58
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #59
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #60
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #61
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x8, lsl #62
-; NOSVE2BITPERM-NEXT:    eor x8, x10, x8, lsl #63
-; NOSVE2BITPERM-NEXT:    bic x10, x9, x8
+; NOSVE2BITPERM-NEXT:    eor x8, x9, x8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x8, lsl #2
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x8, lsl #4
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x8, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x8, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x8, lsl #32
+; NOSVE2BITPERM-NEXT:    bic x9, x9, x8
 ; NOSVE2BITPERM-NEXT:    and x8, x8, x1
-; NOSVE2BITPERM-NEXT:    eor x9, x10, x10, lsl #1
-; NOSVE2BITPERM-NEXT:    and x16, x15, x8
-; NOSVE2BITPERM-NEXT:    eor x17, x1, x8
-; NOSVE2BITPERM-NEXT:    orr x8, x17, x8, lsr #1
-; NOSVE2BITPERM-NEXT:    eor x15, x15, x16
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #2
-; NOSVE2BITPERM-NEXT:    orr x15, x15, x16, lsr #1
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #58
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #59
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #60
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #61
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x10, lsl #62
-; NOSVE2BITPERM-NEXT:    bic x11, x10, x9
-; NOSVE2BITPERM-NEXT:    and x9, x9, x8
-; NOSVE2BITPERM-NEXT:    eor x10, x11, x11, lsl #1
-; NOSVE2BITPERM-NEXT:    and x16, x15, x9
-; NOSVE2BITPERM-NEXT:    eor x8, x8, x9
-; NOSVE2BITPERM-NEXT:    orr x8, x8, x9, lsr #2
-; NOSVE2BITPERM-NEXT:    eor x9, x15, x16
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #2
-; NOSVE2BITPERM-NEXT:    orr x9, x9, x16, lsr #2
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #58
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #59
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #60
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #61
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x11, lsl #62
-; NOSVE2BITPERM-NEXT:    bic x12, x11, x10
+; NOSVE2BITPERM-NEXT:    eor x10, x9, x9, lsl #1
+; NOSVE2BITPERM-NEXT:    and x15, x14, x8
+; NOSVE2BITPERM-NEXT:    eor x16, x1, x8
+; NOSVE2BITPERM-NEXT:    orr x8, x16, x8, lsr #1
+; NOSVE2BITPERM-NEXT:    eor x14, x14, x15
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x10, lsl #2
+; NOSVE2BITPERM-NEXT:    orr x14, x14, x15, lsr #1
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x10, lsl #4
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x10, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x10, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x10, lsl #32
+; NOSVE2BITPERM-NEXT:    bic x9, x9, x10
 ; NOSVE2BITPERM-NEXT:    and x10, x10, x8
-; NOSVE2BITPERM-NEXT:    eor x11, x12, x12, lsl #1
-; NOSVE2BITPERM-NEXT:    and x15, x9, x10
+; NOSVE2BITPERM-NEXT:    eor x11, x9, x9, lsl #1
+; NOSVE2BITPERM-NEXT:    and x15, x14, x10
 ; NOSVE2BITPERM-NEXT:    eor x8, x8, x10
-; NOSVE2BITPERM-NEXT:    orr x8, x8, x10, lsr #4
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x15
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #2
-; NOSVE2BITPERM-NEXT:    orr x9, x9, x15, lsr #4
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #58
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #59
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #60
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #61
-; NOSVE2BITPERM-NEXT:    eor x11, x11, x12, lsl #62
-; NOSVE2BITPERM-NEXT:    bic x12, x12, x11
+; NOSVE2BITPERM-NEXT:    orr x8, x8, x10, lsr #2
+; NOSVE2BITPERM-NEXT:    eor x10, x14, x15
+; NOSVE2BITPERM-NEXT:    eor x11, x11, x11, lsl #2
+; NOSVE2BITPERM-NEXT:    orr x10, x10, x15, lsr #2
+; NOSVE2BITPERM-NEXT:    eor x11, x11, x11, lsl #4
+; NOSVE2BITPERM-NEXT:    eor x11, x11, x11, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x11, x11, x11, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x11, x11, x11, lsl #32
+; NOSVE2BITPERM-NEXT:    bic x9, x9, x11
 ; NOSVE2BITPERM-NEXT:    and x11, x11, x8
-; NOSVE2BITPERM-NEXT:    eor x13, x12, x12, lsl #1
+; NOSVE2BITPERM-NEXT:    eor x12, x9, x9, lsl #1
+; NOSVE2BITPERM-NEXT:    and x14, x10, x11
 ; NOSVE2BITPERM-NEXT:    eor x8, x8, x11
+; NOSVE2BITPERM-NEXT:    orr x8, x8, x11, lsr #4
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x14
+; NOSVE2BITPERM-NEXT:    eor x12, x12, x12, lsl #2
+; NOSVE2BITPERM-NEXT:    orr x10, x10, x14, lsr #4
+; NOSVE2BITPERM-NEXT:    eor x12, x12, x12, lsl #4
+; NOSVE2BITPERM-NEXT:    eor x12, x12, x12, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x12, x12, x12, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x12, x12, x12, lsl #32
+; NOSVE2BITPERM-NEXT:    bic x9, x9, x12
+; NOSVE2BITPERM-NEXT:    and x11, x12, x8
+; NOSVE2BITPERM-NEXT:    eor x13, x9, x9, lsl #1
+; NOSVE2BITPERM-NEXT:    and x12, x10, x11
+; NOSVE2BITPERM-NEXT:    eor x8, x8, x11
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x12
 ; NOSVE2BITPERM-NEXT:    orr x8, x8, x11, lsr #8
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #2
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #58
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #59
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #60
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #61
-; NOSVE2BITPERM-NEXT:    eor x13, x13, x12, lsl #62
-; NOSVE2BITPERM-NEXT:    bic x12, x12, x13
-; NOSVE2BITPERM-NEXT:    eor x14, x12, x12, lsl #1
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #2
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #3
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #4
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #5
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #6
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #7
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #8
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #9
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #10
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #11
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #12
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #13
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #14
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #15
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #16
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #17
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #18
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #19
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #20
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #21
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #22
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #23
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #24
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #25
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #26
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #27
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #28
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #29
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #30
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #31
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #32
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #33
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #34
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #35
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #36
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #37
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #38
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #39
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #40
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #41
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #42
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #43
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #44
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #45
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #46
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #47
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #48
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #49
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #50
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #51
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #52
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #53
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #54
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #55
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #56
-; NOSVE2BITPERM-NEXT:    eor x14, x14, x12, lsl #57
-; NOSVE2BITPERM-NEXT:    eor x10, x14, x12, lsl #58
-; NOSVE2BITPERM-NEXT:    and x14, x9, x11
+; NOSVE2BITPERM-NEXT:    eor x13, x13, x13, lsl #2
+; NOSVE2BITPERM-NEXT:    orr x10, x10, x12, lsr #8
+; NOSVE2BITPERM-NEXT:    eor x13, x13, x13, lsl #4
+; NOSVE2BITPERM-NEXT:    eor x13, x13, x13, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x13, x13, x13, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x13, x13, x13, lsl #32
+; NOSVE2BITPERM-NEXT:    bic x9, x9, x13
 ; NOSVE2BITPERM-NEXT:    and x11, x13, x8
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x14
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #1
+; NOSVE2BITPERM-NEXT:    and x12, x10, x11
 ; NOSVE2BITPERM-NEXT:    eor x8, x8, x11
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x12, lsl #59
-; NOSVE2BITPERM-NEXT:    orr x9, x9, x14, lsr #8
+; NOSVE2BITPERM-NEXT:    eor x10, x10, x12
 ; NOSVE2BITPERM-NEXT:    orr x8, x8, x11, lsr #16
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x12, lsl #60
-; NOSVE2BITPERM-NEXT:    and x13, x9, x11
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x13
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x12, lsl #61
-; NOSVE2BITPERM-NEXT:    orr x9, x9, x13, lsr #16
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x12, lsl #62
-; NOSVE2BITPERM-NEXT:    and x8, x9, x8
-; NOSVE2BITPERM-NEXT:    eor x10, x10, x12, lsl #63
-; NOSVE2BITPERM-NEXT:    and x8, x8, x10
-; NOSVE2BITPERM-NEXT:    eor x9, x9, x8
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #2
+; NOSVE2BITPERM-NEXT:    orr x10, x10, x12, lsr #16
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #4
+; NOSVE2BITPERM-NEXT:    and x8, x10, x8
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #8
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #16
+; NOSVE2BITPERM-NEXT:    eor x9, x9, x9, lsl #32
+; NOSVE2BITPERM-NEXT:    and x8, x8, x9
+; NOSVE2BITPERM-NEXT:    eor x9, x10, x8
 ; NOSVE2BITPERM-NEXT:    orr x0, x9, x8, lsr #32
 ; NOSVE2BITPERM-NEXT:    ret
   %res = call i64 @llvm.pext.i64(i64 %val, i64 %mask)
