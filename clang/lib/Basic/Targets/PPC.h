@@ -457,7 +457,14 @@ public:
       ABI = "elfv1";
     }
 
-    if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {
+    // FreeBSD >= 16 on ppc64le uses IEEE-128 long double (enabled in adjust());
+    // it never supported IBM double-double.  Older FreeBSD, OpenBSD and musl
+    // use a 64-bit long double.
+    bool IsPPC64LEFreeBSDIEEELongDouble =
+        Triple.isOSFreeBSD() && Triple.getArch() == llvm::Triple::ppc64le &&
+        (Triple.getOSMajorVersion() >= 16 || Triple.getOSVersion().empty());
+    if ((Triple.isOSFreeBSD() && !IsPPC64LEFreeBSDIEEELongDouble) ||
+        Triple.isOSOpenBSD() || Triple.isMusl()) {
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     }

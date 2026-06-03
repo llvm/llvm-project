@@ -232,7 +232,10 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   else {
     // TODO: This mutation should also be applied to other targets other than
     // PPC, after backend supports IEEE 128-bit style libcalls.
-    if (getTriple().isPPC64() &&
+    // FreeBSD's powerpc64le has a single IEEE-128 long double format and uses
+    // the unsuffixed libm names, so skip the IEEE-128 libcall redirection
+    // there; other PPC64 IEEE-128 targets keep it.
+    if (getTriple().isPPC64() && !getTriple().isOSFreeBSD() &&
         &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
         F128Builtins.contains(BuiltinID))
       Name = F128Builtins.lookup(BuiltinID);
@@ -3005,6 +3008,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // TODO: This mutation should also be applied to other targets other than PPC,
   // after backend supports IEEE 128-bit style libcalls.
   if (getTarget().getTriple().isPPC64() &&
+      !getTarget().getTriple().isOSFreeBSD() &&
       &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad())
     BuiltinID = mutateLongDoubleBuiltin(BuiltinID);
 

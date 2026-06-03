@@ -827,6 +827,14 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   if (HasAltivec)
     Opts.AltiVec = 1;
   TargetInfo::adjust(Diags, Opts, Aux);
+  // FreeBSD >= 16 on ppc64le defaults to IEEE-128 long double and has no IBM
+  // double-double support, so enable it here unconditionally; this also drives
+  // the __LONG_DOUBLE_IEEE128__ predefine via getTargetDefines().
+  if (getTriple().isOSFreeBSD() &&
+      getTriple().getArch() == llvm::Triple::ppc64le &&
+      (getTriple().getOSMajorVersion() >= 16 ||
+       getTriple().getOSVersion().empty()))
+    Opts.PPCIEEELongDouble = true;
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
