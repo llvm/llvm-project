@@ -415,388 +415,390 @@ static void removeRedundantBitcasts(Module &M, PointeeTypeMap &PTM) {
 
 std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
   SmallVector<char, 0> Buf;
-  BitstreamWriter W(Buf);
-
-  // BC magic
-  W.Emit('B', 8);
-  W.Emit('C', 8);
-  W.Emit(0xC0, 8);
-  W.Emit(0xDE, 8);
-
-  // IDENTIFICATION
-  W.EnterSubblock(bitc::IDENTIFICATION_BLOCK_ID, 5);
-  emitString(W, bitc::IDENTIFICATION_CODE_STRING, "AIRIR");
   {
-    SmallVector<uint64_t, 1> V = {0};
-    W.EmitRecord(bitc::IDENTIFICATION_CODE_EPOCH, V);
-  }
-  W.ExitBlock();
+    BitstreamWriter W(Buf);
 
-  // Pre-serialization IR fixups (these helpers refine the PTM in place).
-  removeRedundantBitcasts(M, PTM);
-  fixGEPTypeMismatches(M, PTM);
+    // BC magic
+    W.Emit('B', 8);
+    W.Emit('C', 8);
+    W.Emit(0xC0, 8);
+    W.Emit(0xDE, 8);
 
-  // Lower ConstantExpr operands to real instructions before enumeration.
-  lowerConstantExprs(M);
-
-  // Fix kernel argument metadata to match actual pointee types.
-  fixKernelArgMetadata(M, PTM);
-
-  ValueEnumerator E(M, PTM);
-
-  // MODULE_BLOCK (CodeSize=4)
-  W.EnterSubblock(bitc::MODULE_BLOCK_ID, 4);
-
-  {
-    SmallVector<uint64_t, 1> V = {1};
-    W.EmitRecord(bitc::MODULE_CODE_VERSION, V);
-  }
-
-  // PARAMATTR blocks BEFORE TYPE_BLOCK (AIR requires this order).
-  //
-  // E2c — general path: walk every Function, collect its parameter
-  // AttributeSets and emit one PARAMATTR_GRP per unique (paramIdx, AS) tuple
-  // plus one PARAMATTR list per function. Group ID 1 is reserved for the
-  // legacy MMA-load nocapture+readonly entry, which lives on the call site
-  // (the CallInst's first paramattr operand), not the function declaration.
-  struct GroupKey {
-    unsigned ListIdx;
-    AttributeSet AS;
-    bool operator==(const GroupKey &O) const {
-      return ListIdx == O.ListIdx && AS == O.AS;
+    // IDENTIFICATION
+    W.EnterSubblock(bitc::IDENTIFICATION_BLOCK_ID, 5);
+    emitString(W, bitc::IDENTIFICATION_CODE_STRING, "AIRIR");
+    {
+      SmallVector<uint64_t, 1> V = {0};
+      W.EmitRecord(bitc::IDENTIFICATION_CODE_EPOCH, V);
     }
-  };
-  struct GroupKeyInfo {
-    static GroupKey getEmptyKey() {
-      return {~0u, DenseMapInfo<AttributeSet>::getEmptyKey()};
-    }
-    static GroupKey getTombstoneKey() {
-      return {~0u - 1, DenseMapInfo<AttributeSet>::getTombstoneKey()};
-    }
-    static unsigned getHashValue(const GroupKey &K) {
-      return hash_combine(K.ListIdx,
-                          DenseMapInfo<AttributeSet>::getHashValue(K.AS));
-    }
-    static bool isEqual(const GroupKey &A, const GroupKey &B) {
-      return A.ListIdx == B.ListIdx && A.AS == B.AS;
-    }
-  };
+    W.ExitBlock();
 
-  DenseMap<GroupKey, unsigned, GroupKeyInfo> GroupID;
-  SmallVector<GroupKey, 8> GroupOrder;
-  auto getGroupID = [&](unsigned ListIdx, AttributeSet AS) -> unsigned {
-    GroupKey K{ListIdx, AS};
-    auto It = GroupID.find(K);
-    if (It != GroupID.end())
-      return It->second;
-    unsigned ID = GroupID.size() + 1;
-    GroupID[K] = ID;
-    GroupOrder.push_back(K);
-    return ID;
-  };
+    // Pre-serialization IR fixups (these helpers refine the PTM in place).
+    removeRedundantBitcasts(M, PTM);
+    fixGEPTypeMismatches(M, PTM);
 
-  DenseMap<const Function *, unsigned> FnAttrListID;
-  SmallVector<SmallVector<unsigned, 4>, 8> AttrLists;
+    // Lower ConstantExpr operands to real instructions before enumeration.
+    lowerConstantExprs(M);
 
-  // Synthesize attribute groups on the simdgroup-matrix intrinsic declarations
-  // to match Apple's `xcrun metal` AIR — the macOS 13/14/15 AIR driver
-  // rejects the metallib otherwise. The groups must be encoded with bitcode
-  // ATTR_KIND_* values, which do NOT match LLVM's in-memory Attribute::AttrKind
-  // enum (e.g. convergent is 6 in-memory but 43 in bitcode).
-  enum : uint64_t {
-    BK_NO_CAPTURE = 11,
-    BK_NO_UNWIND = 18,
-    BK_READ_ONLY = 21,
-    BK_CONVERGENT = 43,
-    BK_WRITEONLY = 52,
-    BK_WILLRETURN = 61,
-    BK_NOFREE = 62,
-    BK_MUSTPROGRESS = 70,
-  };
-  // A synthesized group: target index (~0u=function, N=param N) + bitcode
-  // enum attr-kinds.
-  struct SynthGroup {
-    uint64_t Index; // ~0u for function attrs, param index (1-based) otherwise
-    SmallVector<uint64_t, 6> EnumKinds;
-  };
-  // Pending synthesized groups, in emission order, with their assigned IDs.
-  SmallVector<std::pair<unsigned, SynthGroup>, 8> SynthGroups;
-  // Functions that should be marked local_unnamed_addr in their record.
-  DenseSet<const Function *> LocalUnnamedFns;
-  auto addSynthGroup = [&](SynthGroup G) -> unsigned {
-    unsigned ID = GroupID.size() + 1 + SynthGroups.size();
-    SynthGroups.push_back({ID, std::move(G)});
-    return ID;
-  };
+    // Fix kernel argument metadata to match actual pointee types.
+    fixKernelArgMetadata(M, PTM);
 
-  bool HasMMALoad = false;
-  for (auto &F : M) {
-    if (F.getName().starts_with("air.simdgroup_matrix_8x8_load")) {
-      HasMMALoad = true;
-      break;
+    ValueEnumerator E(M, PTM);
+
+    // MODULE_BLOCK (CodeSize=4)
+    W.EnterSubblock(bitc::MODULE_BLOCK_ID, 4);
+
+    {
+      SmallVector<uint64_t, 1> V = {1};
+      W.EmitRecord(bitc::MODULE_CODE_VERSION, V);
     }
-  }
-  if (HasMMALoad) {
-    // Reserve group ID 1 + list ID 1 for the MMA call-site paramattr (the
-    // FunctionWriter unconditionally threads `paramattr=1` into those calls).
-    GroupKey K{/*ListIdx=*/1, AttributeSet()};
-    GroupID[K] = 1;
-    GroupOrder.push_back(K);
-  }
 
-  for (auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-    AttributeList AL = F.getAttributes();
-    SmallVector<unsigned, 4> GroupIDs;
-    for (unsigned i = 0; i < F.arg_size(); i++) {
-      AttributeSet AS = AL.getParamAttrs(i);
-      if (!AS.hasAttributes())
+    // PARAMATTR blocks BEFORE TYPE_BLOCK (AIR requires this order).
+    //
+    // E2c — general path: walk every Function, collect its parameter
+    // AttributeSets and emit one PARAMATTR_GRP per unique (paramIdx, AS) tuple
+    // plus one PARAMATTR list per function. Group ID 1 is reserved for the
+    // legacy MMA-load nocapture+readonly entry, which lives on the call site
+    // (the CallInst's first paramattr operand), not the function declaration.
+    struct GroupKey {
+      unsigned ListIdx;
+      AttributeSet AS;
+      bool operator==(const GroupKey &O) const {
+        return ListIdx == O.ListIdx && AS == O.AS;
+      }
+    };
+    struct GroupKeyInfo {
+      static GroupKey getEmptyKey() {
+        return {~0u, DenseMapInfo<AttributeSet>::getEmptyKey()};
+      }
+      static GroupKey getTombstoneKey() {
+        return {~0u - 1, DenseMapInfo<AttributeSet>::getTombstoneKey()};
+      }
+      static unsigned getHashValue(const GroupKey &K) {
+        return hash_combine(K.ListIdx,
+                            DenseMapInfo<AttributeSet>::getHashValue(K.AS));
+      }
+      static bool isEqual(const GroupKey &A, const GroupKey &B) {
+        return A.ListIdx == B.ListIdx && A.AS == B.AS;
+      }
+    };
+
+    DenseMap<GroupKey, unsigned, GroupKeyInfo> GroupID;
+    SmallVector<GroupKey, 8> GroupOrder;
+    auto getGroupID = [&](unsigned ListIdx, AttributeSet AS) -> unsigned {
+      GroupKey K{ListIdx, AS};
+      auto It = GroupID.find(K);
+      if (It != GroupID.end())
+        return It->second;
+      unsigned ID = GroupID.size() + 1;
+      GroupID[K] = ID;
+      GroupOrder.push_back(K);
+      return ID;
+    };
+
+    DenseMap<const Function *, unsigned> FnAttrListID;
+    SmallVector<SmallVector<unsigned, 4>, 8> AttrLists;
+
+    // Synthesize attribute groups on the simdgroup-matrix intrinsic declarations
+    // to match Apple's `xcrun metal` AIR — the macOS 13/14/15 AIR driver
+    // rejects the metallib otherwise. The groups must be encoded with bitcode
+    // ATTR_KIND_* values, which do NOT match LLVM's in-memory Attribute::AttrKind
+    // enum (e.g. convergent is 6 in-memory but 43 in bitcode).
+    enum : uint64_t {
+      BK_NO_CAPTURE = 11,
+      BK_NO_UNWIND = 18,
+      BK_READ_ONLY = 21,
+      BK_CONVERGENT = 43,
+      BK_WRITEONLY = 52,
+      BK_WILLRETURN = 61,
+      BK_NOFREE = 62,
+      BK_MUSTPROGRESS = 70,
+    };
+    // A synthesized group: target index (~0u=function, N=param N) + bitcode
+    // enum attr-kinds.
+    struct SynthGroup {
+      uint64_t Index; // ~0u for function attrs, param index (1-based) otherwise
+      SmallVector<uint64_t, 6> EnumKinds;
+    };
+    // Pending synthesized groups, in emission order, with their assigned IDs.
+    SmallVector<std::pair<unsigned, SynthGroup>, 8> SynthGroups;
+    // Functions that should be marked local_unnamed_addr in their record.
+    DenseSet<const Function *> LocalUnnamedFns;
+    auto addSynthGroup = [&](SynthGroup G) -> unsigned {
+      unsigned ID = GroupID.size() + 1 + SynthGroups.size();
+      SynthGroups.push_back({ID, std::move(G)});
+      return ID;
+    };
+
+    bool HasMMALoad = false;
+    for (auto &F : M) {
+      if (F.getName().starts_with("air.simdgroup_matrix_8x8_load")) {
+        HasMMALoad = true;
+        break;
+      }
+    }
+    if (HasMMALoad) {
+      // Reserve group ID 1 + list ID 1 for the MMA call-site paramattr (the
+      // FunctionWriter unconditionally threads `paramattr=1` into those calls).
+      GroupKey K{/*ListIdx=*/1, AttributeSet()};
+      GroupID[K] = 1;
+      GroupOrder.push_back(K);
+    }
+
+    for (auto &F : M) {
+      if (F.isDeclaration())
         continue;
-      GroupIDs.push_back(getGroupID(i + 1, AS));
-    }
-    AttributeSet RetAS = AL.getRetAttrs();
-    if (RetAS.hasAttributes())
-      GroupIDs.push_back(getGroupID(0, RetAS));
-    if (GroupIDs.empty())
-      continue;
-    unsigned ListID = AttrLists.size() + 1;
-    AttrLists.push_back(std::move(GroupIDs));
-    FnAttrListID[&F] = ListID;
-  }
-
-  // Now synthesize declaration attribute groups for the simdgroup intrinsics.
-  for (auto &F : M) {
-    if (!F.isDeclaration())
-      continue;
-    StringRef Name = F.getName();
-    if (!Name.starts_with("air.simdgroup_matrix_8x8_"))
-      continue;
-    bool IsLoad = Name.contains("_load");
-    bool IsStore = Name.contains("_store");
-
-    // Function-attr group (matches Apple). Order matches Apple's textual AIR.
-    SynthGroup FnG;
-    FnG.Index = ~0u;
-    FnG.EnumKinds.push_back(BK_CONVERGENT);
-    FnG.EnumKinds.push_back(BK_MUSTPROGRESS);
-    if (IsLoad)
-      FnG.EnumKinds.push_back(BK_NOFREE);
-    FnG.EnumKinds.push_back(BK_NO_UNWIND);
-    if (IsLoad)
-      FnG.EnumKinds.push_back(BK_READ_ONLY);
-    FnG.EnumKinds.push_back(BK_WILLRETURN);
-    if (IsStore)
-      FnG.EnumKinds.push_back(BK_WRITEONLY);
-    unsigned FnGID = addSynthGroup(std::move(FnG));
-
-    SmallVector<unsigned, 4> GroupIDs;
-    GroupIDs.push_back(FnGID);
-
-    // Pointer-arg group: load ptr is arg 0, store ptr is arg 1
-    // (`nocapture readonly` / `nocapture writeonly`).
-    if (IsLoad || IsStore) {
-      SynthGroup PG;
-      PG.Index = IsStore ? 2u : 1u; // 1-based param index
-      PG.EnumKinds.push_back(BK_NO_CAPTURE);
-      PG.EnumKinds.push_back(IsStore ? BK_WRITEONLY : BK_READ_ONLY);
-      GroupIDs.push_back(addSynthGroup(std::move(PG)));
+      AttributeList AL = F.getAttributes();
+      SmallVector<unsigned, 4> GroupIDs;
+      for (unsigned i = 0; i < F.arg_size(); i++) {
+        AttributeSet AS = AL.getParamAttrs(i);
+        if (!AS.hasAttributes())
+          continue;
+        GroupIDs.push_back(getGroupID(i + 1, AS));
+      }
+      AttributeSet RetAS = AL.getRetAttrs();
+      if (RetAS.hasAttributes())
+        GroupIDs.push_back(getGroupID(0, RetAS));
+      if (GroupIDs.empty())
+        continue;
+      unsigned ListID = AttrLists.size() + 1;
+      AttrLists.push_back(std::move(GroupIDs));
+      FnAttrListID[&F] = ListID;
     }
 
-    unsigned ListID = AttrLists.size() + 1;
-    AttrLists.push_back(std::move(GroupIDs));
-    FnAttrListID[&F] = ListID;
-    LocalUnnamedFns.insert(&F);
-  }
+    // Now synthesize declaration attribute groups for the simdgroup intrinsics.
+    for (auto &F : M) {
+      if (!F.isDeclaration())
+        continue;
+      StringRef Name = F.getName();
+      if (!Name.starts_with("air.simdgroup_matrix_8x8_"))
+        continue;
+      bool IsLoad = Name.contains("_load");
+      bool IsStore = Name.contains("_store");
 
-  if (!GroupID.empty() || !SynthGroups.empty()) {
-    W.EnterSubblock(bitc::PARAMATTR_GROUP_BLOCK_ID, 4);
-    for (auto &K : GroupOrder) {
-      unsigned ID = GroupID.lookup(K);
-      SmallVector<uint64_t, 16> Grp;
-      Grp.push_back(ID);
-      Grp.push_back(K.ListIdx);
-      if (HasMMALoad && ID == 1 && K.AS.getNumAttributes() == 0) {
-        // Legacy MMA call-site group: param 1 nocapture + readonly.
-        Grp.push_back(0);
-        Grp.push_back(11);
-        Grp.push_back(0);
-        Grp.push_back(21);
-      } else {
-        for (Attribute Attr : K.AS) {
-          if (Attr.isStringAttribute()) {
-            StringRef Key = Attr.getKindAsString();
-            StringRef Val = Attr.getValueAsString();
-            // 3 = string-key-only, 4 = key + value (matches upstream
-            // writeAttributeGroupTable encoding).
-            Grp.push_back(Val.empty() ? 3 : 4);
-            for (char C : Key)
-              Grp.push_back((unsigned char)C);
-            Grp.push_back(0);
-            if (!Val.empty()) {
-              for (char C : Val)
+      // Function-attr group (matches Apple). Order matches Apple's textual AIR.
+      SynthGroup FnG;
+      FnG.Index = ~0u;
+      FnG.EnumKinds.push_back(BK_CONVERGENT);
+      FnG.EnumKinds.push_back(BK_MUSTPROGRESS);
+      if (IsLoad)
+        FnG.EnumKinds.push_back(BK_NOFREE);
+      FnG.EnumKinds.push_back(BK_NO_UNWIND);
+      if (IsLoad)
+        FnG.EnumKinds.push_back(BK_READ_ONLY);
+      FnG.EnumKinds.push_back(BK_WILLRETURN);
+      if (IsStore)
+        FnG.EnumKinds.push_back(BK_WRITEONLY);
+      unsigned FnGID = addSynthGroup(std::move(FnG));
+
+      SmallVector<unsigned, 4> GroupIDs;
+      GroupIDs.push_back(FnGID);
+
+      // Pointer-arg group: load ptr is arg 0, store ptr is arg 1
+      // (`nocapture readonly` / `nocapture writeonly`).
+      if (IsLoad || IsStore) {
+        SynthGroup PG;
+        PG.Index = IsStore ? 2u : 1u; // 1-based param index
+        PG.EnumKinds.push_back(BK_NO_CAPTURE);
+        PG.EnumKinds.push_back(IsStore ? BK_WRITEONLY : BK_READ_ONLY);
+        GroupIDs.push_back(addSynthGroup(std::move(PG)));
+      }
+
+      unsigned ListID = AttrLists.size() + 1;
+      AttrLists.push_back(std::move(GroupIDs));
+      FnAttrListID[&F] = ListID;
+      LocalUnnamedFns.insert(&F);
+    }
+
+    if (!GroupID.empty() || !SynthGroups.empty()) {
+      W.EnterSubblock(bitc::PARAMATTR_GROUP_BLOCK_ID, 4);
+      for (auto &K : GroupOrder) {
+        unsigned ID = GroupID.lookup(K);
+        SmallVector<uint64_t, 16> Grp;
+        Grp.push_back(ID);
+        Grp.push_back(K.ListIdx);
+        if (HasMMALoad && ID == 1 && K.AS.getNumAttributes() == 0) {
+          // Legacy MMA call-site group: param 1 nocapture + readonly.
+          Grp.push_back(0);
+          Grp.push_back(11);
+          Grp.push_back(0);
+          Grp.push_back(21);
+        } else {
+          for (Attribute Attr : K.AS) {
+            if (Attr.isStringAttribute()) {
+              StringRef Key = Attr.getKindAsString();
+              StringRef Val = Attr.getValueAsString();
+              // 3 = string-key-only, 4 = key + value (matches upstream
+              // writeAttributeGroupTable encoding).
+              Grp.push_back(Val.empty() ? 3 : 4);
+              for (char C : Key)
                 Grp.push_back((unsigned char)C);
               Grp.push_back(0);
+              if (!Val.empty()) {
+                for (char C : Val)
+                  Grp.push_back((unsigned char)C);
+                Grp.push_back(0);
+              }
+            } else if (Attr.isEnumAttribute()) {
+              // For the small set we currently emit (NoAlias / NoCapture /
+              // ReadOnly), the LLVM AttrKind enum value matches the bitcode
+              // attr-kind encoding for v1, same assumption the legacy
+              // hardcoded path made.
+              Grp.push_back(0);
+              Grp.push_back((uint64_t)Attr.getKindAsEnum());
+            } else if (Attr.isIntAttribute()) {
+              Grp.push_back(1);
+              Grp.push_back((uint64_t)Attr.getKindAsEnum());
+              Grp.push_back(Attr.getValueAsInt());
             }
-          } else if (Attr.isEnumAttribute()) {
-            // For the small set we currently emit (NoAlias / NoCapture /
-            // ReadOnly), the LLVM AttrKind enum value matches the bitcode
-            // attr-kind encoding for v1, same assumption the legacy
-            // hardcoded path made.
-            Grp.push_back(0);
-            Grp.push_back((uint64_t)Attr.getKindAsEnum());
-          } else if (Attr.isIntAttribute()) {
-            Grp.push_back(1);
-            Grp.push_back((uint64_t)Attr.getKindAsEnum());
-            Grp.push_back(Attr.getValueAsInt());
           }
         }
+        W.EmitRecord(bitc::PARAMATTR_GRP_CODE_ENTRY, Grp);
       }
-      W.EmitRecord(bitc::PARAMATTR_GRP_CODE_ENTRY, Grp);
+      // Synthesized declaration groups (simdgroup-matrix intrinsics). Each entry
+      // is (ID, Index, [0, kind]...) — every attr here is a plain bitcode enum
+      // (record-code 0), with the bitcode ATTR_KIND_* values set above.
+      for (auto &IDG : SynthGroups) {
+        SmallVector<uint64_t, 16> Grp;
+        Grp.push_back(IDG.first);        // group ID
+        Grp.push_back(IDG.second.Index); // ~0u = function, else param index
+        for (uint64_t Kind : IDG.second.EnumKinds) {
+          Grp.push_back(0); // 0 = well-known enum attribute (no value)
+          Grp.push_back(Kind);
+        }
+        W.EmitRecord(bitc::PARAMATTR_GRP_CODE_ENTRY, Grp);
+      }
+      W.ExitBlock();
+
+      W.EnterSubblock(bitc::PARAMATTR_BLOCK_ID, 4);
+      if (HasMMALoad) {
+        SmallVector<uint64_t, 2> List;
+        List.push_back(1);
+        W.EmitRecord(2, List);
+      }
+      for (auto &AL : AttrLists) {
+        SmallVector<uint64_t, 8> List;
+        for (unsigned ID : AL)
+          List.push_back(ID);
+        W.EmitRecord(2, List);
+      }
+      W.ExitBlock();
     }
-    // Synthesized declaration groups (simdgroup-matrix intrinsics). Each entry
-    // is (ID, Index, [0, kind]...) — every attr here is a plain bitcode enum
-    // (record-code 0), with the bitcode ATTR_KIND_* values set above.
-    for (auto &IDG : SynthGroups) {
-      SmallVector<uint64_t, 16> Grp;
-      Grp.push_back(IDG.first);        // group ID
-      Grp.push_back(IDG.second.Index); // ~0u = function, else param index
-      for (uint64_t Kind : IDG.second.EnumKinds) {
-        Grp.push_back(0); // 0 = well-known enum attribute (no value)
-        Grp.push_back(Kind);
+
+    emitTypeBlock(W, E);
+
+    // Emit target triple - AIR GPU JIT expects it for proper codegen.
+    // Use module value if set, otherwise default AIR triple.
+    {
+      std::string T = M.getTargetTriple().str();
+      if (T.empty() || T == "air")
+        // Derive the canonical AIR triple from whatever OS info is present
+        // (falls back to macOS 16 / 26-era), rather than hardcoding it.
+        T = metal::AIRVersion::fromTriple(M.getTargetTriple().str())
+                .tripleString();
+      emitString(W, bitc::MODULE_CODE_TRIPLE, T);
+    }
+    // Emit data layout - AIR GPU JIT uses this for type size/alignment.
+    {
+      auto DLStr = M.getDataLayoutStr();
+      if (!DLStr.empty()) {
+        emitString(W, bitc::MODULE_CODE_DATALAYOUT, DLStr);
+      } else {
+        emitString(W, bitc::MODULE_CODE_DATALAYOUT,
+                   "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
+                   "-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32"
+                   "-v48:64:64-v64:64:64-v96:128:128-v128:128:128"
+                   "-v192:256:256-v256:256:256-v512:512:512"
+                   "-v1024:1024:1024-n8:16:32");
       }
-      W.EmitRecord(bitc::PARAMATTR_GRP_CODE_ENTRY, Grp);
+    }
+
+    if (!M.getSourceFileName().empty())
+      emitString(W, bitc::MODULE_CODE_SOURCE_FILENAME, M.getSourceFileName());
+
+    // GLOBALVAR and FUNCTION records - emit in globalValues order
+    // (globals first, then functions, matching value ID assignment)
+    for (auto *V : E.globalValues) {
+      if (auto *G = dyn_cast<GlobalVariable>(V)) {
+        SmallVector<uint64_t, 14> Ops;
+        Ops.push_back(E.globalPtrTypeIdx(G)); // ptr-to-valueType
+        Ops.push_back(G->isConstant() ? 1 : 0);
+        Ops.push_back(
+            G->hasInitializer() ? E.moduleConstIdx(G->getInitializer()) + 1 : 0);
+        Ops.push_back(encodeLinkage(G->getLinkage()));
+        Ops.push_back(G->getAlign() ? Log2_32(G->getAlign()->value()) + 1 : 0);
+        for (int J = 0; J < 3; J++)
+          Ops.push_back(0);
+        Ops.push_back(G->hasGlobalUnnamedAddr() ? 1 : 0);
+        Ops.push_back(G->isExternallyInitialized() ? 1 : 0);
+        Ops.push_back(0);
+        Ops.push_back(0);
+        Ops.push_back(G->getAddressSpace());
+        Ops.push_back(0);
+        W.EmitRecord(bitc::MODULE_CODE_GLOBALVAR, Ops);
+      } else if (auto *Fn = dyn_cast<Function>(V)) {
+        SmallVector<uint64_t, 17> Ops;
+        Ops.push_back(E.typeIdx(Fn->getFunctionType()));
+        Ops.push_back(Fn->getCallingConv());
+        Ops.push_back(Fn->isDeclaration() ? 1 : 0);
+        Ops.push_back(encodeLinkage(Fn->getLinkage()));
+        // paramattr: attribute-list ID for this function (0 = none).
+        // Per-function list IDs start at 2 when HasMMALoad reserves list 1
+        // for the MMA call site, else at 1.
+        unsigned ListID = 0;
+        auto It = FnAttrListID.find(Fn);
+        if (It != FnAttrListID.end())
+          ListID = It->second + (HasMMALoad ? 1 : 0);
+        Ops.push_back(ListID);
+        Ops.push_back(0); // align
+        // Function record fields 6..15: section, visibility, gc, unnamed_addr,
+        // prologuedata, dllstorageclass, comdat, prefixdata, personalityfn, ...
+        // Field 9 is unnamed_addr. Bitcode encoding (getEncodedUnnamedAddr):
+        // None=0, Global=1, Local=2. Apple's simdgroup intrinsic decls are
+        // `local_unnamed_addr` (=2); the macOS-14 driver expects this to match.
+        Ops.push_back(0);                                      // 6: section
+        Ops.push_back(0);                                      // 7: visibility
+        Ops.push_back(0);                                      // 8: gc
+        Ops.push_back(LocalUnnamedFns.contains(Fn) ? 2u : 0u); // 9: unnamed_addr
+        for (int J = 10; J < 16; J++)
+          Ops.push_back(0);
+        Ops.push_back(Fn->getAddressSpace());
+        W.EmitRecord(bitc::MODULE_CODE_FUNCTION, Ops);
+      }
+    }
+
+    emitConstantsBlock(W, E, E.moduleConstants, 5);
+    emitMetadataKindBlock(W);
+
+    // Share one MetadataEnumerator between the module-level METADATA_BLOCK
+    // (where the nodes are emitted) and per-function attachment blocks
+    // (where they are referenced by ID).
+    MetadataEnumerator MDEnum;
+    MDEnum.collect(M, E);
+    emitMetadataBlock(W, M, E, MDEnum);
+    emitOperandBundleTagsBlock(W);
+    emitSinglethreadBlock(W);
+
+    for (auto *V : E.globalValues)
+      if (auto *F = dyn_cast<Function>(V))
+        if (!F->isDeclaration())
+          emitFunctionBlock(W, *F, E, MDEnum);
+
+    // VALUE_SYMTAB
+    W.EnterSubblock(bitc::VALUE_SYMTAB_BLOCK_ID, 4);
+    for (unsigned I = 0; I < E.globalValues.size(); I++) {
+      if (!E.globalValues[I]->hasName())
+        continue;
+      SmallVector<uint64_t, 32> NV;
+      NV.push_back(I);
+      for (char C : E.globalValues[I]->getName())
+        NV.push_back((uint64_t)(unsigned char)C);
+      W.EmitRecord(bitc::VST_CODE_ENTRY, NV);
     }
     W.ExitBlock();
 
-    W.EnterSubblock(bitc::PARAMATTR_BLOCK_ID, 4);
-    if (HasMMALoad) {
-      SmallVector<uint64_t, 2> List;
-      List.push_back(1);
-      W.EmitRecord(2, List);
-    }
-    for (auto &AL : AttrLists) {
-      SmallVector<uint64_t, 8> List;
-      for (unsigned ID : AL)
-        List.push_back(ID);
-      W.EmitRecord(2, List);
-    }
-    W.ExitBlock();
+    W.ExitBlock(); // MODULE_BLOCK
   }
-
-  emitTypeBlock(W, E);
-
-  // Emit target triple - AIR GPU JIT expects it for proper codegen.
-  // Use module value if set, otherwise default AIR triple.
-  {
-    std::string T = M.getTargetTriple().str();
-    if (T.empty() || T == "air")
-      // Derive the canonical AIR triple from whatever OS info is present
-      // (falls back to macOS 16 / 26-era), rather than hardcoding it.
-      T = metal::AIRVersion::fromTriple(M.getTargetTriple().str())
-              .tripleString();
-    emitString(W, bitc::MODULE_CODE_TRIPLE, T);
-  }
-  // Emit data layout - AIR GPU JIT uses this for type size/alignment.
-  {
-    auto DLStr = M.getDataLayoutStr();
-    if (!DLStr.empty()) {
-      emitString(W, bitc::MODULE_CODE_DATALAYOUT, DLStr);
-    } else {
-      emitString(W, bitc::MODULE_CODE_DATALAYOUT,
-                 "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
-                 "-f32:32:32-f64:64:64-v16:16:16-v24:32:32-v32:32:32"
-                 "-v48:64:64-v64:64:64-v96:128:128-v128:128:128"
-                 "-v192:256:256-v256:256:256-v512:512:512"
-                 "-v1024:1024:1024-n8:16:32");
-    }
-  }
-
-  if (!M.getSourceFileName().empty())
-    emitString(W, bitc::MODULE_CODE_SOURCE_FILENAME, M.getSourceFileName());
-
-  // GLOBALVAR and FUNCTION records - emit in globalValues order
-  // (globals first, then functions, matching value ID assignment)
-  for (auto *V : E.globalValues) {
-    if (auto *G = dyn_cast<GlobalVariable>(V)) {
-      SmallVector<uint64_t, 14> Ops;
-      Ops.push_back(E.globalPtrTypeIdx(G)); // ptr-to-valueType
-      Ops.push_back(G->isConstant() ? 1 : 0);
-      Ops.push_back(
-          G->hasInitializer() ? E.moduleConstIdx(G->getInitializer()) + 1 : 0);
-      Ops.push_back(encodeLinkage(G->getLinkage()));
-      Ops.push_back(G->getAlign() ? Log2_32(G->getAlign()->value()) + 1 : 0);
-      for (int J = 0; J < 3; J++)
-        Ops.push_back(0);
-      Ops.push_back(G->hasGlobalUnnamedAddr() ? 1 : 0);
-      Ops.push_back(G->isExternallyInitialized() ? 1 : 0);
-      Ops.push_back(0);
-      Ops.push_back(0);
-      Ops.push_back(G->getAddressSpace());
-      Ops.push_back(0);
-      W.EmitRecord(bitc::MODULE_CODE_GLOBALVAR, Ops);
-    } else if (auto *Fn = dyn_cast<Function>(V)) {
-      SmallVector<uint64_t, 17> Ops;
-      Ops.push_back(E.typeIdx(Fn->getFunctionType()));
-      Ops.push_back(Fn->getCallingConv());
-      Ops.push_back(Fn->isDeclaration() ? 1 : 0);
-      Ops.push_back(encodeLinkage(Fn->getLinkage()));
-      // paramattr: attribute-list ID for this function (0 = none).
-      // Per-function list IDs start at 2 when HasMMALoad reserves list 1
-      // for the MMA call site, else at 1.
-      unsigned ListID = 0;
-      auto It = FnAttrListID.find(Fn);
-      if (It != FnAttrListID.end())
-        ListID = It->second + (HasMMALoad ? 1 : 0);
-      Ops.push_back(ListID);
-      Ops.push_back(0); // align
-      // Function record fields 6..15: section, visibility, gc, unnamed_addr,
-      // prologuedata, dllstorageclass, comdat, prefixdata, personalityfn, ...
-      // Field 9 is unnamed_addr. Bitcode encoding (getEncodedUnnamedAddr):
-      // None=0, Global=1, Local=2. Apple's simdgroup intrinsic decls are
-      // `local_unnamed_addr` (=2); the macOS-14 driver expects this to match.
-      Ops.push_back(0);                                      // 6: section
-      Ops.push_back(0);                                      // 7: visibility
-      Ops.push_back(0);                                      // 8: gc
-      Ops.push_back(LocalUnnamedFns.contains(Fn) ? 2u : 0u); // 9: unnamed_addr
-      for (int J = 10; J < 16; J++)
-        Ops.push_back(0);
-      Ops.push_back(Fn->getAddressSpace());
-      W.EmitRecord(bitc::MODULE_CODE_FUNCTION, Ops);
-    }
-  }
-
-  emitConstantsBlock(W, E, E.moduleConstants, 5);
-  emitMetadataKindBlock(W);
-
-  // Share one MetadataEnumerator between the module-level METADATA_BLOCK
-  // (where the nodes are emitted) and per-function attachment blocks
-  // (where they are referenced by ID).
-  MetadataEnumerator MDEnum;
-  MDEnum.collect(M, E);
-  emitMetadataBlock(W, M, E, MDEnum);
-  emitOperandBundleTagsBlock(W);
-  emitSinglethreadBlock(W);
-
-  for (auto *V : E.globalValues)
-    if (auto *F = dyn_cast<Function>(V))
-      if (!F->isDeclaration())
-        emitFunctionBlock(W, *F, E, MDEnum);
-
-  // VALUE_SYMTAB
-  W.EnterSubblock(bitc::VALUE_SYMTAB_BLOCK_ID, 4);
-  for (unsigned I = 0; I < E.globalValues.size(); I++) {
-    if (!E.globalValues[I]->hasName())
-      continue;
-    SmallVector<uint64_t, 32> NV;
-    NV.push_back(I);
-    for (char C : E.globalValues[I]->getName())
-      NV.push_back((uint64_t)(unsigned char)C);
-    W.EmitRecord(bitc::VST_CODE_ENTRY, NV);
-  }
-  W.ExitBlock();
-
-  W.ExitBlock(); // MODULE_BLOCK
 
   return std::vector<uint8_t>(Buf.begin(), Buf.end());
 }

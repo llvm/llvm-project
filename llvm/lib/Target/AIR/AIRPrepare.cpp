@@ -612,6 +612,11 @@ static bool retypeByteGlobals(Module &M) {
 
   for (auto *GV : ByteGlobals) {
     expandConstantExprUsers(GV);
+    if (GV->use_empty()) {
+      GV->eraseFromParent();
+      Changed = true;
+      continue;
+    }
     Type *StoreTy = inferElementType(GV);
     if (!StoreTy)
       continue;
@@ -630,25 +635,27 @@ static bool retypeByteGlobals(Module &M) {
     if (ElemTy->isBFloatTy())
       ElemTy = Type::getHalfTy(Ctx);
 
-    // TODO: when the inferred type is a vector (e.g. <8 x half>) but the
-    // function also contains scalar GEPs of the element type, prefer the
-    // scalar type — AIR's typed bitcode rejects the mismatched pointer at
-    // validate time.
     if (auto *VT = dyn_cast<FixedVectorType>(ElemTy)) {
       Type *ScalarTy = VT->getElementType();
-      bool HasScalarGEP = false;
+      unsigned ScalarBytes = DL.getTypeAllocSize(ScalarTy);
+      Type *SiblingScalar = nullptr;
       std::function<void(Value *)> CheckGEPs = [&](Value *V) {
         for (auto *U : V->users()) {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-            if (GEP->getSourceElementType() == ScalarTy)
-              HasScalarGEP = true;
+            Type *ST = GEP->getSourceElementType();
+            if ((ST->isFloatingPointTy() || ST->isIntegerTy()) &&
+                DL.getTypeAllocSize(ST) == ScalarBytes) {
+              if (ST == ScalarTy)
+                SiblingScalar = ScalarTy;
+              else if (!SiblingScalar)
+                SiblingScalar = ST;
+            }
             CheckGEPs(GEP);
           }
         }
       };
       CheckGEPs(GV);
-      if (HasScalarGEP)
-        ElemTy = ScalarTy;
+      ElemTy = SiblingScalar ? SiblingScalar : ScalarTy;
     }
 
     unsigned ElemSize = DL.getTypeAllocSize(ElemTy);

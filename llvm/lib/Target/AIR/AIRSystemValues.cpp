@@ -291,15 +291,12 @@ static bool airSystemValues(Module &M) {
     Changed = true;
   }
 
-  // Language version metadata = ("AIR", MSLMajor, MSLMinor, 0). The MSL
+  // Language version metadata = ("Metal", MSLMajor, MSLMinor, 0). The MSL
   // version the target macOS supports: 13->3.0, 14->3.1, 15->3.2, 16->4.0.
-  // An OS rejects a metallib stamped with a newer MSL than it supports, so
-  // this MUST track the target macOS major. Empirically verified against
-  // Apple's `xcrun metal -mmacosx-version-min=N`.
   if (!M.getNamedMetadata(kNMDLanguageVersion)) {
     auto *LangMD = M.getOrInsertNamedMetadata(kNMDLanguageVersion);
     LangMD->addOperand(MDNode::get(
-        Ctx, {MDString::get(Ctx, "AIR"),
+        Ctx, {MDString::get(Ctx, "Metal"),
               ConstantAsMetadata::get(ConstantInt::get(I32, AIRVer.MSLMajor)),
               ConstantAsMetadata::get(ConstantInt::get(I32, AIRVer.MSLMinor)),
               ConstantAsMetadata::get(ConstantInt::get(I32, 0))}));
