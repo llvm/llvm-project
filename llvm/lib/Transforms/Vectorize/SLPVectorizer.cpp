@@ -11075,8 +11075,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
         return TreeEntry::StridedVectorize;
     }
-    if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
-                                 CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
+    if (EnableStridedStores && analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                                        CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
       if (isIdentityOrder(CurrentOrder)) {
         CurrentOrder.clear();
       } else if (isReverseOrder(CurrentOrder)) {
