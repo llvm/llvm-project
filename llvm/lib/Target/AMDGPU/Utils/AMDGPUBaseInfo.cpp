@@ -1334,18 +1334,15 @@ unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
   return 104;
 }
 
-// Per-wave SGPRs reserved for the trap handler when it is enabled, in the same
-// units as the budget computations below.
+// Per-wave SGPRs reserved for the trap handler when enabled.
 static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits().test(FeatureTrapHandler) ? TRAP_NUM_SGPRS : 0;
 }
 
-// SGPRs usable per wave when \p WavesPerEU waves share the register file,
-// before any addressable clamp: the trap-handler reservation is taken off the
-// top and the remainder is rounded down to the allocation \p Granule. This is
-// the single source of truth shared by getMinNumSGPRs(), getMaxNumSGPRs() and
-// the occupancy inverse getOccupancyWithNumSGPRs(), so the budget and its
-// inverse cannot drift apart.
+// Per-wave SGPR budget (before the addressable clamp): take off the trap
+// reserve, round down to \p Granule. Single source of truth shared by
+// getMinNumSGPRs()/getMaxNumSGPRs() and the occupancy inverse, so they cannot
+// drift apart.
 static unsigned getSGPRBudgetPerWave(unsigned TotalNumSGPRs,
                                      unsigned WavesPerEU, unsigned TrapReserve,
                                      unsigned Granule) {
@@ -1390,14 +1387,8 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
 }
 
 bool isSGPROccupancyLimited(const MCSubtargetInfo &STI) {
-  // Whether the SGPR file is a limiting resource for occupancy. This is a
-  // target capability rather than a generation per se, but it currently has a
-  // single determinant: from GFX10 on, the SGPR file is large enough that the
-  // SGPR count never reduces occupancy. The test lives here, next to the SGPR
-  // model that already keys on the ISA version
-  // (getMaxNumSGPRs/getAddressableNumSGPRs), so there is one place to update --
-  // or to back by a subtarget feature -- if a future target reintroduces an
-  // SGPR-limited regime.
+  // From GFX10 on the SGPR file is large enough that SGPRs never limit
+  // occupancy. Kept as one capability so callers don't each test the version.
   return getIsaVersion(STI.getCPU()).Major < 10;
 }
 
@@ -1534,15 +1525,9 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   unsigned TotalNumSGPRs, unsigned Granule,
                                   unsigned TrapReserve) {
-  // Closed-form inverse of getMaxNumSGPRs(): the largest number of waves W
-  // whose per-wave SGPR budget still accommodates \p SGPRs. The budget
-  // condition
+  // Closed-form inverse of getMaxNumSGPRs(): the budget condition
   //   SGPRs <= alignDown(TotalNumSGPRs / W - TrapReserve, Granule)
-  // is equivalent to TotalNumSGPRs / W - TrapReserve >= alignTo(SGPRs,
-  // Granule), i.e. W <= TotalNumSGPRs / (alignTo(SGPRs, Granule) +
-  // TrapReserve), so no search is needed. This uses the same per-wave budget as
-  // getMaxNumSGPRs(), so the two stay exact inverses (modulo the addressable
-  // clamp, which is intentionally not applied here - see the header).
+  // solves to W <= TotalNumSGPRs / (alignTo(SGPRs, Granule) + TrapReserve).
   unsigned PerWave = alignTo(SGPRs, Granule) + TrapReserve;
   return PerWave ? std::clamp(TotalNumSGPRs / PerWave, 1u, MaxWaves) : MaxWaves;
 }

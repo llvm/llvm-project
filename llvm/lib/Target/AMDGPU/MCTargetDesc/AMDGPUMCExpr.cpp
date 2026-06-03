@@ -32,7 +32,7 @@ AMDGPUMCExpr::AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args,
   assert(Kind != AGVK_None && "Cannot construct AMDGPUMCExpr of kind none.");
   assert((getNumExpectedArgs(Kind) == 0 ||
           Args.size() == getNumExpectedArgs(Kind)) &&
-         "Wrong number of operands for AMDGPUMCExpr kind.");
+         "wrong number of operands for AMDGPUMCExpr kind.");
 
   // Allocating the variadic arguments through the same allocation mechanism
   // that the object itself is allocated with so they end up in the same memory.
@@ -59,7 +59,7 @@ unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
   case AGVK_Or:
   case AGVK_Max:
   case AGVK_Min:
-    // Variadic: any number of operands (the parser already requires >= 1).
+    // Variadic (parser requires >= 1).
     return 0;
   case AGVK_Lit:
   case AGVK_Lit64:
@@ -73,7 +73,7 @@ unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
   case AGVK_Occupancy:
     return 9;
   }
-  llvm_unreachable("Unknown AMDGPUMCExpr kind.");
+  llvm_unreachable("unknown AMDGPUMCExpr kind.");
 }
 
 const MCExpr *AMDGPUMCExpr::getSubExpr(size_t Index) const {
@@ -204,12 +204,8 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   if (!Success || !evaluateMCExprs(Args.slice(4, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
-  // The trailing operands carry the SGPR budget of the code generator's
-  // subtarget (total SGPRs, allocation granule, and the trap-handler
-  // reservation), so the SGPR-limited occupancy is computed exactly as the code
-  // generator does (trap-handler aware). createOccupancy() passes a zero SGPR
-  // count on targets where SGPRs do not limit occupancy, so the SGPR term below
-  // is skipped without this expression having to know the target generation.
+  // Trailing operands carry the codegen SGPR budget (total, granule, trap
+  // reserve) so the SGPR-limited occupancy matches getMaxNumSGPRs().
   if (!evaluateMCExprs(Args.slice(6, 3), Asm,
                        {SGPRTotal, SGPRGranule, SGPRTrapReserve}))
     return false;

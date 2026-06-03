@@ -375,29 +375,20 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
                                       unsigned MaxWaves,
                                       unsigned TotalNumVGPRs);
 
-/// \returns Whether the number of allocated SGPRs can reduce occupancy on
-/// subtarget \p STI, i.e. whether the SGPR file is a limiting resource. This is
-/// a single, named capability so that callers (the occupancy query and the asm
-/// printer's occupancy MCExpr) do not each test the ISA version themselves.
+/// \returns Whether allocated SGPRs can reduce occupancy on subtarget \p STI
+/// (true pre-GFX10). One named capability so callers don't test the version.
 bool isSGPROccupancyLimited(const MCSubtargetInfo &STI);
 
-/// \returns Occupancy (waves per EU) limited by \p SGPRs usage for subtarget
-/// \p STI. This is the inverse of getMaxNumSGPRs(): it returns the largest
-/// number of waves W for which \p SGPRs still fits the per-wave SGPR budget
-/// (total SGPRs / W, minus the trap-handler reservation when enabled, rounded
-/// down to the allocation granule). Unlike getMaxNumSGPRs() the budget is not
-/// clamped to the addressable SGPR count, because the reported allocated SGPR
-/// count (which is what callers pass in) can legitimately exceed it.
+/// \returns SGPR-limited occupancy (waves per EU) for subtarget \p STI: the
+/// inverse of getMaxNumSGPRs(). Unlike getMaxNumSGPRs() the budget is not
+/// clamped to the addressable count, since the allocated count callers pass in
+/// can exceed it.
 unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs);
 
-/// \returns Occupancy (waves per EU) limited by \p SGPRs usage, computed from
-/// explicit budget parameters rather than a subtarget: the \p MaxWaves cap, the
-/// \p TotalNumSGPRs in the file, the allocation \p Granule, and the
-/// trap-handler \p TrapReserve (0 when the trap handler is disabled). This is
-/// the subtarget-free core shared by the MCSubtargetInfo overload and the
-/// occupancy MCExpr, so that the asm printer reports the same trap-aware
-/// occupancy the code generator assumes. Callers must check
-/// isSGPROccupancyLimited() first; this assumes SGPRs are a limiting resource.
+/// \returns SGPR-limited occupancy computed from explicit budget parameters
+/// (\p MaxWaves, \p TotalNumSGPRs, \p Granule, \p TrapReserve). Subtarget-free
+/// core shared by the overload above and the occupancy MCExpr. Callers must
+/// check isSGPROccupancyLimited() first.
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
                                   unsigned TotalNumSGPRs, unsigned Granule,
                                   unsigned TrapReserve);

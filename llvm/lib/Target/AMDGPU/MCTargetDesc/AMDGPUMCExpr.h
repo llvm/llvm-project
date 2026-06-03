@@ -79,10 +79,8 @@ public:
   static const AMDGPUMCExpr *
   create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
 
-  /// \returns the exact number of operands a well-formed expression of \p Kind
-  /// must have, or 0 for the variadic kinds (or/max/min) that accept any number
-  /// of operands. Used to validate hand-written expressions at parse time and
-  /// to assert printer-built ones in create().
+  /// \returns the required operand count for \p Kind, or 0 for the variadic
+  /// kinds (or/max/min). Used at parse time and by the create() assert.
   static unsigned getNumExpectedArgs(VariantKind Kind);
 
   static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,

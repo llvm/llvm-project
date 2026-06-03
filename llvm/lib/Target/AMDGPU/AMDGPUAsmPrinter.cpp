@@ -435,11 +435,9 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
 
-  // All subtarget-dependent decisions are taken here from the per-function
-  // subtarget STM and baked into the operands; the MCExpr itself stays purely
-  // arithmetic because it is evaluated late, when NumSGPRs/NumVGPRs are still
-  // symbolic. STM carries the implicit amdhsa trap-handler feature, so the trap
-  // reservation has to be threaded through explicitly.
+  // Bake the per-function SGPR budget into the operands so the late-evaluated
+  // MCExpr stays arithmetic. The trap reservation in particular is implicit on
+  // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
   unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
   unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
@@ -448,9 +446,8 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
     return MCConstantExpr::create(Value, Ctx);
   };
 
-  // On targets where SGPRs do not limit occupancy, pass a zero SGPR count so
-  // the SGPR term is skipped during evaluation, instead of testing the target
-  // generation inside the MCExpr.
+  // Zero SGPR count when SGPRs don't limit occupancy, so the MCExpr skips the
+  // SGPR term without having to test the generation itself.
   const MCExpr *SGPRArg =
       IsaInfo::isSGPROccupancyLimited(STM) ? NumSGPRs : CreateExpr(0);
 
