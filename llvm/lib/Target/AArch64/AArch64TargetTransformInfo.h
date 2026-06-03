@@ -456,6 +456,8 @@ public:
 
   unsigned getGISelRematGlobalCost() const override { return 2; }
 
+  InstructionCost getBranchMispredictPenalty() const override;
+
   unsigned getMinTripCountTailFoldingThreshold() const override {
     return ST->hasSVE() ? 5 : 0;
   }
