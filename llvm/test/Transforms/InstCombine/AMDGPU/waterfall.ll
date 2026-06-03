@@ -86,12 +86,13 @@ define amdgpu_ps <2 x float> @waterfall_image_l_to_lz_shrink(<8 x i32> addrspace
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
-; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[R]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[R]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0) #[[ATTR:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[V4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[W4:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token [[TOK]], <4 x float> [[TMP2]])
 ; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x float> [[W4]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x float> [[R1]]
 ;
+; CHECK: attributes #[[ATTR]] = { memory(argmem: read) }
   %tok   = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %vidx)
   %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok, i32 %vidx)
   %ptr   = getelementptr <8 x i32>, ptr addrspace(4) %in, i32 %s_idx
