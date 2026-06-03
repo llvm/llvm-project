@@ -170,7 +170,7 @@ If you do not find a release package for your platform, you may be able to find 
 
 ## Package Types
 
-Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
+Each platform has binary release packages. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux. Binary archive packages may be available as `.tar.xz` or `.tar.zst` files. The `.tar.zst` files contain the same package contents, but use zstd compression.
 
 Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
 
