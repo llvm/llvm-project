@@ -3076,6 +3076,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   if (Arg *TCTP = Args.getLastArgNoClaim(options::OPT__SLASH_TC,
                                          options::OPT__SLASH_TP)) {
     InputTypeArg = TCTP;
+    // /TC forces C, but -fsycl requires C++; let the per-file check below
+    // handle the error rather than silently setting all inputs to TY_C.
     InputType = TCTP->getOption().matches(options::OPT__SLASH_TC) && !IsSYCL
                     ? types::TY_C
                     : types::TY_CXX;
