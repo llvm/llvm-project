@@ -1,13 +1,16 @@
----
 TypeIdMap:
   typeid1:
     TTRes:
-      Kind:            AllOnes
+      Kind: AllOnes
 CfiFunctionDefs:
-  - local_func1
-  - local_func2
-  - local_func3
+- Name: local_func1
+  GUID: 15974708163032388986
+- Name: local_func2
+  GUID: 10016086976061028907
+- Name: local_func3
+  GUID: 161148068062889559
 CfiFunctionDecls:
-  - extern_decl
-  - extern_weak
-...
+- Name: extern_decl
+  GUID: 15001569853432741044
+- Name: extern_weak
+  GUID: 9772975595203342681

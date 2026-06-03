@@ -26,6 +26,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
@@ -6353,6 +6354,46 @@ bool llvm::UpgradeModuleFlags(Module &M) {
                     ConstantInt::get(Int8Ty, SwiftMajorVersion));
     M.addModuleFlag(Module::Error, "Swift Minor Version",
                     ConstantInt::get(Int8Ty, SwiftMinorVersion));
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool llvm::UpgradeCFIFunctionsMetadata(Module &M) {
+  NamedMDNode *CFIConsts = M.getNamedMetadata("cfi.functions");
+  if (!CFIConsts)
+    return false;
+
+  bool Changed = false;
+  for (unsigned I = 0, E = CFIConsts->getNumOperands(); I != E; ++I) {
+    MDNode *Op = CFIConsts->getOperand(I);
+    if (Op->getNumOperands() >= 3 &&
+        isa<ConstantAsMetadata>(Op->getOperand(2)) &&
+        cast<ConstantAsMetadata>(Op->getOperand(2))->getType()->isIntegerTy(64))
+      continue;
+
+    if (Op->getNumOperands() < 2)
+      continue;
+
+    MDString *NameMD = dyn_cast_or_null<MDString>(Op->getOperand(0));
+    if (!NameMD)
+      continue;
+
+    StringRef Name = NameMD->getString();
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(Name));
+
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(Op->getOperand(0));
+    Elts.push_back(Op->getOperand(1));
+    Elts.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(M.getContext()), GUID)));
+
+    for (unsigned J = 2, EJ = Op->getNumOperands(); J != EJ; ++J)
+      Elts.push_back(Op->getOperand(J));
+
+    CFIConsts->setOperand(I, MDNode::get(M.getContext(), Elts));
     Changed = true;
   }
 

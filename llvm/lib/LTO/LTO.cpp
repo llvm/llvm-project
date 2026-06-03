@@ -1580,9 +1580,9 @@ public:
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
     auto &Defs = CombinedIndex.cfiFunctionDefs();
-    CfiFunctionDefs.insert_range(Defs.guids());
+    CfiFunctionDefs.insert_range(Defs.getExportedThinLTOGUIDs());
     auto &Decls = CombinedIndex.cfiFunctionDecls();
-    CfiFunctionDecls.insert_range(Decls.guids());
+    CfiFunctionDecls.insert_range(Decls.getExportedThinLTOGUIDs());
   }
 };
 
@@ -2156,9 +2156,11 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
   auto &Defs = ThinLTO.CombinedIndex.cfiFunctionDefs();
-  ExportedGUIDs.insert(Defs.guid_begin(), Defs.guid_end());
+  ExportedGUIDs.insert(Defs.getExportedThinLTOGUIDs().begin(),
+                       Defs.getExportedThinLTOGUIDs().end());
   auto &Decls = ThinLTO.CombinedIndex.cfiFunctionDecls();
-  ExportedGUIDs.insert(Decls.guid_begin(), Decls.guid_end());
+  ExportedGUIDs.insert(Decls.getExportedThinLTOGUIDs().begin(),
+                       Decls.getExportedThinLTOGUIDs().end());
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
