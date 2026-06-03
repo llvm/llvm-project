@@ -3097,6 +3097,13 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!StoreMI.getOperand(0).isKill())
     return false;
 
+  // Bail out if the store uses the value register elsewhere (e.g., as the base
+  // address in `str w8, [x8, #0]`).
+  for (unsigned I = 1, E = StoreMI.getNumExplicitOperands(); I < E; ++I)
+    if (StoreMI.getOperand(I).isReg() &&
+        TRI->regsOverlap(StoreMI.getOperand(I).getReg(), StoreValReg))
+      return false;
+
   // Scan backward to find the UMOV that defines the store's value register.
   MachineInstr *UMOVMI = nullptr;
   MachineBasicBlock::iterator B = MBB->begin();
