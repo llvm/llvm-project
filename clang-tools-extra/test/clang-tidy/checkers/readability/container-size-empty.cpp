@@ -935,37 +935,37 @@ namespace GH198494 {
 void testStdSize(const std::string &str, std::vector<int> vect) {
   if (std::size(vect))
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (!vect.empty())
 
   if (!std::size(vect))
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (vect.empty())
 
   if (std::size(vect) == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (vect.empty())
 
   if (std::size(vect) != 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (!vect.empty())
 
   if (std::size(vect) > 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (!vect.empty())
 
   if (std::size(str))
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (!str.empty())
 
   if (std::size(str) == 0)
     ;
-  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size'
   // CHECK-FIXES: if (str.empty())
 
   // No warning when std::empty is already used.
