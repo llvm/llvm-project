@@ -2796,11 +2796,19 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   UncondBrInst *PredTerm = cast<UncondBrInst>(Pred->getTerminator());
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "select.unfold",
                                          BB->getParent(), BB);
+  // When converting a select into a branch, make sure we freeze the condition
+  // when it may be poison or undef.
+  Value *Cond = SI->getCondition();
+  if (!isGuaranteedNotToBeUndefOrPoison(Cond)) {
+    Cond = new FreezeInst(Cond, "cond.fr", SI->getIterator());
+    cast<Instruction>(Cond)->setDebugLoc(DebugLoc::getTemporary());
+  }
+
   // Move the unconditional branch to NewBB.
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
-  auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
+  auto *BI = CondBrInst::Create(Cond, NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});
   SIUse->setIncomingValue(Idx, SI->getFalseValue());
