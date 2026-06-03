@@ -18,6 +18,7 @@
 
 #include <flang/Optimizer/Analysis/AliasAnalysis.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
+#include <flang/Optimizer/Builder/Runtime/Assign.h>
 #include <flang/Optimizer/Dialect/FIROps.h>
 #include <flang/Optimizer/Dialect/FIRType.h>
 #include <flang/Optimizer/HLFIR/HLFIROps.h>
@@ -318,23 +319,6 @@ static mlir::func::FuncOp createBoxDataCopyFunc(mlir::Location loc,
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;
 
-  // Ensure _FortranAAssign is declared in the module.
-  auto boxNoneTy = fir::BoxType::get(builder.getNoneType());
-  auto refBoxNoneTy = fir::ReferenceType::get(boxNoneTy);
-  auto refI8Ty = fir::ReferenceType::get(builder.getIntegerType(8));
-  auto i32Ty = builder.getI32Type();
-  llvm::StringRef assignFuncName = "_FortranAAssign";
-  auto assignFunc = module.lookupSymbol<mlir::func::FuncOp>(assignFuncName);
-  if (!assignFunc) {
-    mlir::OpBuilder::InsertionGuard g(builder);
-    mlir::OpBuilder modBuilder(module.getBodyRegion());
-    auto assignFuncType = mlir::FunctionType::get(
-        builder.getContext(), {refBoxNoneTy, boxNoneTy, refI8Ty, i32Ty}, {});
-    assignFunc = mlir::func::FuncOp::create(modBuilder, loc, assignFuncName,
-                                            assignFuncType);
-    assignFunc.setVisibility(mlir::SymbolTable::Visibility::Private);
-  }
-
   // Create the copy function.
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::OpBuilder modBuilder(module.getBodyRegion());
@@ -348,22 +332,17 @@ static mlir::func::FuncOp createBoxDataCopyFunc(mlir::Location loc,
                       {loc, loc});
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
 
-  // Load the source box.
+  // Load the source box and use the runtime helper to generate the assign.
   Value srcBox =
       fir::LoadOp::create(builder, loc, eleTy, funcOp.getArgument(1));
 
-  // Convert types for _FortranAAssign call.
+  auto boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  auto refBoxNoneTy = fir::ReferenceType::get(boxNoneTy);
   Value dstConv =
       fir::ConvertOp::create(builder, loc, refBoxNoneTy, funcOp.getArgument(0));
   Value srcConv = fir::ConvertOp::create(builder, loc, boxNoneTy, srcBox);
 
-  // Use null source location (only used for error reporting).
-  Value nullLoc = fir::ZeroOp::create(builder, loc, refI8Ty);
-  Value zeroLine = builder.createIntegerConstant(loc, i32Ty, 0);
-
-  // Call _FortranAAssign to copy the array data.
-  fir::CallOp::create(builder, loc, assignFunc,
-                      mlir::ValueRange{dstConv, srcConv, nullLoc, zeroLine});
+  fir::runtime::genAssign(builder, loc, dstConv, srcConv);
 
   mlir::func::ReturnOp::create(builder, loc);
   return funcOp;
