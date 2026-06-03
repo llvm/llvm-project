@@ -56,8 +56,10 @@ body:             |
     S_ENDPGM 0
 ...
 
-# G_DYN_STACKALLOC result is always uniform since it is derived from the
-# wave-uniform stack pointer, even when the allocation size is divergent.
+# G_DYN_STACKALLOC result is always uniform. The returned value is computed
+# from the wave-uniform stack pointer and the wave-wide max allocation size
+# (reduced via wave_reduce_umax when divergent), both of which are uniform.
+# Hence the result is always uniform, even when the input size is divergent.
 ---
 name:            dyn_stackalloc_divergent_size
 legalized:       true

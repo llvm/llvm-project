@@ -10941,10 +10941,6 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::G_ADDRSPACE_CAST)
     return HandleAddrSpaceCast(MI);
 
-  // G_DYN_STACKALLOC is always uniform as derived from SP (wave-uniform)
-  if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
-    return ValueUniformity::AlwaysUniform;
-
   if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
     auto IID = GI->getIntrinsicID();
     if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
@@ -10991,6 +10987,11 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
       AMDGPU::isGenericAtomic(Opcode)) {
     return ValueUniformity::NeverUniform;
   }
+
+  // Result is computed from uniform SP and uniform wave-wide max size.
+  if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
+    return ValueUniformity::AlwaysUniform;
+
   return ValueUniformity::Default;
 }
 
