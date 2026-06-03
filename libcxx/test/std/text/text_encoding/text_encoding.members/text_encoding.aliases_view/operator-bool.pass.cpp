@@ -10,7 +10,7 @@
 
 // <text_encoding>
 
-// text_encoding::aliases_view
+// view_interface<text_encoding::aliases_view>::operator bool()
 
 #include <cassert>
 #include <ranges>
@@ -19,10 +19,6 @@
 #include "../../test_text_encoding.h"
 
 using id = std::text_encoding::id;
-
-constexpr void test_other_unknown() {}
-
-constexpr void test_primary_encodings() {}
 
 constexpr bool test() {
   // 1. An alias_view of a text_encoding object for "other" and "unknown" are empty

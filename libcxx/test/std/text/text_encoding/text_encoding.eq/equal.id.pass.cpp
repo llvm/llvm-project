@@ -28,40 +28,26 @@ constexpr void test_primary_encodings() {
 }
 
 constexpr bool test() {
-  // 1. operator==(const text_encoding&, id) must be noexcept and returns bool
+  // operator==(const text_encoding&, id) must be noexcept and returns bool
   {
     std::text_encoding te = std::text_encoding();
     ASSERT_SAME_TYPE(decltype(te == id::UTF8), bool);
     ASSERT_NOEXCEPT(te == id::UTF8);
   }
 
-  // 2. operator==(const text_encoding&, id) returns true if mib() is equal to the id
+  // operator==(const text_encoding&, id) returns true if mib() is equal to the id
   {
-    assert(std::text_encoding(id::UTF8) == id::UTF8);
-  }
+    test_primary_encodings();
 
-  // 2.1
-  {
+    // unknown, other cases
     assert(std::text_encoding() == id::unknown);
-  }
-
-  // 2.1.1
-  {
     assert(std::text_encoding(id::unknown) == id::unknown);
-  }
-
-  // 2.2
-  {
     assert(std::text_encoding(id::other) == id::other);
   }
 
-  // 3. operator==(const text_encoding&, id) returns false if mib() is not equal to the id
+  // operator==(const text_encoding&, id) returns false if mib() is not equal to the id
   {
     assert(!(std::text_encoding(id::UTF8) == id::UTF16));
-  }
-
-  {
-    test_primary_encodings();
   }
 
   return true;

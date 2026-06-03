@@ -10,7 +10,7 @@
 
 // <text_encoding>
 
-// text_encoding::aliases_view
+// view_interface<text_encoding::aliases_view>::empty()
 
 #include <cassert>
 #include <ranges>

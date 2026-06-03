@@ -15,7 +15,9 @@
 
 #include <cstdint>
 #include <text_encoding>
+#include <type_traits>
 
+static_assert(std::is_enum_v<std::text_encoding::id>);
 static_assert(int_least32_t(std::text_encoding::id::other) == 1);
 static_assert(int_least32_t(std::text_encoding::id::unknown) == 2);
 static_assert(int_least32_t(std::text_encoding::id::ASCII) == 3);

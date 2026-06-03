@@ -9,6 +9,7 @@
 // REQUIRES: std-at-least-c++26
 
 // <text_encoding>
+// Class text_encoding is a trivially copyable type ([basic.types.general]).
 
 #include <text_encoding>
 #include <type_traits>

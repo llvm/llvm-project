@@ -29,64 +29,31 @@ constexpr void test_ctor(std::string_view str, std::text_encoding::id expect_id)
   assert(te.name() == str);
 }
 
-constexpr void test_primary_encoding_spellings() {
-  for (auto& data : unique_encoding_data) {
-    std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(data.name);
-
-    assert(te.mib() == std::text_encoding::id(data.mib));
-    assert(te.name() == data.name);
-  }
-}
-
-constexpr void test_others() {
-  for (auto& name : other_names) {
-    std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(name);
-
-    assert(te.mib() == std::text_encoding::other);
-    assert(te.name() == name);
-  }
-}
-
-// Runtime test only as it would take unreasonably long to test in constexpr.
-void test_all_strings() {
-  for (auto& enc : all_encoding_data) {
-    test_ctor(enc.name, std::text_encoding::id(enc.mib));
-  }
-}
-
 constexpr bool test() {
-  // happy paths
-  {
-    test_primary_encoding_spellings();
+  { // The first encoding name for each mib in the data table.
+    for (auto& data : unique_encoding_data) {
+      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(data.name);
+
+      assert(te.mib() == std::text_encoding::id(data.mib));
+      assert(te.name() == data.name);
+    }
   }
 
-  {
-    test_ctor("U_T_F-8", std::text_encoding::UTF8);
+  { // Names that should all result in an "other" text encoding
+    for (auto& name : other_names) {
+      std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(name);
+
+      assert(te.mib() == std::text_encoding::other);
+      assert(te.name() == name);
+    }
   }
 
-  {
-    test_ctor("utf8", std::text_encoding::UTF8);
-  }
-
-  {
-    test_ctor("u.t.f-008", std::text_encoding::UTF8);
-  }
-
-  {
-    test_ctor("utf-80", std::text_encoding::other);
-  }
-
-  {
-    test_ctor("iso885931988", std::text_encoding::ISOLatin3);
-  }
-
-  {
-    test_ctor("iso00885931988", std::text_encoding::ISOLatin3);
-  }
-
-  {
-    test_others();
-  }
+  test_ctor("U_T_F-8", std::text_encoding::UTF8);
+  test_ctor("utf8", std::text_encoding::UTF8);
+  test_ctor("u.t.f-008", std::text_encoding::UTF8);
+  test_ctor("utf-80", std::text_encoding::other);
+  test_ctor("iso885931988", std::text_encoding::ISOLatin3);
+  test_ctor("iso00885931988", std::text_encoding::ISOLatin3);
 
   return true;
 }
@@ -103,7 +70,10 @@ int main(int, char**) {
   }
 
   {
-    test_all_strings();
+    // Runtime test only as it would take unreasonably long to test in constexpr.
+    for (auto& enc : all_encoding_data) {
+      test_ctor(enc.name, std::text_encoding::id(enc.mib));
+    }
   }
 
   return 0;

@@ -19,6 +19,7 @@
 
 int main(int, char**) {
   std::text_encoding te = std::text_encoding();
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.mib();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -27,22 +28,24 @@ int main(int, char**) {
   te.aliases();
 
 #ifndef TEST_HAS_NO_LOCALIZATION
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.environment();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.environment_is<std::text_encoding::UTF8>();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
-  te.aliases();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  te.aliases();
 
   auto alias = te.aliases();
 
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   alias.begin();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   alias.end();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+
   auto it = alias.begin();
 
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   *it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it[0];
@@ -52,10 +55,9 @@ int main(int, char**) {
   it - 1;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - it;
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
 
-  std::hash<std::text_encoding>()(std::text_encoding::id::ASCII);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::hash<std::text_encoding>()(std::text_encoding::id::ASCII);
 
   // Clang does not emit a nodiscard warning for consteval functions with [[nodiscard]]: See issue #141536
   // expected-warning@+1 {{expression result unused}}

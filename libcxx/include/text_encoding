@@ -76,6 +76,7 @@ struct text_encoding
 #    include <__iterator/iterator_traits.h>
 #    include <__ranges/enable_borrowed_range.h>
 #    include <__ranges/view_interface.h>
+#    include <climits>
 #    include <cstdint>
 #    include <string_view>
 #    include <version>
@@ -85,11 +86,13 @@ struct text_encoding;
 
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI text_encoding __get_locale_encoding(const char* __name);
+_LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT _LIBCPP_EXPORTED_FROM_ABI text_encoding
+__get_locale_encoding(const char* __name);
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 struct text_encoding {
+  static_assert(CHAR_BIT == 8, "libc++ only supports platforms where CHAR_BIT == 8");
   enum class id : int_least32_t {
     other                   = 1,
     unknown                 = 2,
@@ -594,7 +597,7 @@ public:
   }
 
 #    if _LIBCPP_HAS_LOCALIZATION
-  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT static text_encoding environment() {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT static text_encoding environment() {
 #      if defined(_LIBCPP_WIN32API)
     return __get_locale_encoding(nullptr);
 #      else
@@ -603,7 +606,7 @@ public:
   }
 
   template <id _Id>
-  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT static bool environment_is() {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT static bool environment_is() {
     // TODO: It may be worthwhile to implement an optimization for popular encodings, e.g. UTF-8,
     // to allow checking the environment text encoding without needing to use the data tables.
 
@@ -616,7 +619,7 @@ public:
 #    else
   static text_encoding environment() = delete;
 
-  template <id _Id>
+  template <id>
   static bool environment_is() = delete;
 #    endif
 
