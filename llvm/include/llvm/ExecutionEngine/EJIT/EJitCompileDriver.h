@@ -63,7 +63,9 @@ private:
   PeriodArrayRegistry &periodReg_;
   EJitRuntimeState &runtimeState_;
   EJitModuleLoader &loader_;
+#ifndef EJIT_FREESTANDING
   EJitLogger *logger_;
+#endif
 
   std::unique_ptr<EJitOrcEngine> syncEngine_;
   // Async compiler will be added in EJitAsyncCompiler phase

@@ -26,12 +26,19 @@ EJit::EJit(const Config &config) : config_(config) {
                                        config.maxCacheSize,
                                        config.maxSingleFuncSize);
 
+#ifndef EJIT_FREESTANDING
   if (config.enableLogger)
     logger_ = std::make_unique<EJitLogger>();
+#endif
 
+#ifndef EJIT_FREESTANDING
+  EJitLogger *logger = logger_.get();
+#else
+  EJitLogger *logger = nullptr;
+#endif
   compileDriver_ = std::make_unique<EJitCompileDriver>(
       config, *cache_, runtimeState_->getRegistry(),
-      *runtimeState_, *moduleLoader_, logger_.get());
+      *runtimeState_, *moduleLoader_, logger);
 
   // Consume registration data from the staging store (constructor path).
   StoredData data = EJitRegistrationStore::instance().consume();
@@ -100,12 +107,16 @@ EJit::EJit(const Config &config) : config_(config) {
       (*engine)->addUserSymbol(sym.name, sym.addr);
     compileDriver_->setSyncEngine(std::move(*engine));
   } else {
+#ifndef EJIT_FREESTANDING
     std::string errStr;
     llvm::handleAllErrors(engine.takeError(),
                           [&](const llvm::ErrorInfoBase &E) { errStr = E.message(); });
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,
                    "Failed to create OrcJIT engine: " + errStr, "", "");
+#else
+    consumeError(engine.takeError());
+#endif
   }
 }
 
@@ -114,7 +125,9 @@ EJit::~EJit() {
   compileDriver_.reset();
   cache_.reset();
   moduleLoader_.reset();
+#ifndef EJIT_FREESTANDING
   logger_.reset();
+#endif
   runtimeState_.reset();
 }
 
@@ -210,6 +223,9 @@ EJitCache::Stats EJit::getStats() const {
 }
 
 const EJitError *EJit::getLastError() const {
+#ifdef EJIT_FREESTANDING
+  return nullptr;
+#else
   if (!logger_)
     return nullptr;
   // Copy into stable storage so the caller gets a snapshot that won't be
@@ -218,4 +234,5 @@ const EJitError *EJit::getLastError() const {
   if (logger_->copyLastError(lastErr))
     return &lastErr;
   return nullptr;
+#endif
 }
