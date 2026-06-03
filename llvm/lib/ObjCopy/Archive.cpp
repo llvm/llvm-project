@@ -28,7 +28,7 @@ objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
     if (!ChildNameOrErr)
       return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
 
-    auto MemberName = [&](StringRef Prefix) -> std::string {
+    auto MemberName = [&](StringRef Prefix) {
       return (Twine(Prefix) + "(" + *ChildNameOrErr + ")").str();
     };
 
