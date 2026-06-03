@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: no-exceptions
 
+// The frozen C++03 headers use a separate __hash_table that is not affected by this fix, and
+// std::unordered_map::emplace is not available there.
+// UNSUPPORTED: c++03
+
 // <unordered_map>
 
 // Check that the unordered_map copy constructor does not leak nodes when an allocation
