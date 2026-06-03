@@ -13,7 +13,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::fuchsia {
 
 namespace {
-AST_MATCHER(Expr, isConstantInitializerOrValueDependent) {
+AST_MATCHER(Expr, isConstantOrValueDependentInitializer) {
   return Node.isValueDependent() ||
          Node.isConstantInitializer(Finder->getASTContext(), false);
 }
@@ -36,8 +36,8 @@ void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
                    hasDescendant(cxxConstructExpr(unless(allOf(
                        // ... unless it is constexpr ...
                        hasDeclaration(cxxConstructorDecl(isConstexpr())),
-                       // ... and is statically initialized or value-dependent.
-                       isConstantInitializerOrValueDependent())))))
+                       // ... and is a constant or value-dependent initializer.
+                       isConstantOrValueDependentInitializer())))))
                    .bind("decl")),
       this);
 }
