@@ -6733,8 +6733,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
     bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, DstAlign, SrcAlign,
                                isVol, MCI.isForceInlined(), &I, std::nullopt,
@@ -6771,8 +6769,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align DstAlign = MMI.getDestAlign().valueOrOne();
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
     bool isVol = MMI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memmove DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MM = DAG.getMemmove(
         Root, sdl, Op1, Op2, Op3, DstAlign, SrcAlign, isVol, &I,
