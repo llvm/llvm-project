@@ -74,16 +74,12 @@ llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
   using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
 
-  auto toLower = [](std::string_view sv) {
-    return parser::ToLowerCaseLetters(sv);
-  };
-  auto getLowerName = [&](llvm::omp::Clause c) {
-    return toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
-  };
+  auto toLower = parser::ToLowerCaseLetters;
+
   auto printClauses = [&](const OmpClauseSet &cs) {
     size_t idx{0}, size{cs.count()};
     cs.IterateOverMembers([&](llvm::omp::Clause c) {
-      os << getLowerName(c);
+      os << toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
       switch (c) {
       case llvm::omp::Clause::OMPC_atomic_default_mem_order:
         os << '(' << toLower(EnumToString(*x.ompAtomicDefaultMemOrder()))
