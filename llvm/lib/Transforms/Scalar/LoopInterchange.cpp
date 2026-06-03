@@ -1479,7 +1479,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
 
       // We cannot ignore potential memory reads, e.g., loads inside the called
       // function.
-      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory() && !I.isAtomic())
+      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
         continue;
 
       LLVM_DEBUG(
