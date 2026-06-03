@@ -16,33 +16,20 @@
 # Note: scheduleRegions() scans backwards, so copy_region = DAG.Regions[0]
 #       and mfma_region = DAG.Regions[1].
 #
-# %2100..%2111 are COPYs of level-4 MFMA results placed immediately after
+# %2100..%2101 are COPYs of level-4 MFMA results placed immediately after
 # SCHED_BARRIER. They are:
 #   - The only users of level-4 MFMA dsts -> isRewriteCandidate(level-4)=true
 #   - In the same block as the MFMAs -> same-block use path in rewrite()
 #   - FirstMIToRegion[%2100] = copy_region -> Fix A outer check TRIGGERS
 #
-# When rewrite() inserts a bridge COPY before %2100, Fix A updates:
-#   DAG.Regions[copy_region].first = bridge_COPY
-# Without Fix A, copy_region.first remains stale (pointing to old %2100).
-# The bridge COPY falls outside region[loop_1]'s scheduling domain, causing
-# incorrect register pressure calculations in subsequent scheduling passes.
-# Note: this test passes with or without Fix A — the stale boundary only
-# manifests as a pressure accounting error in later scheduling stages, not
-# as a visible difference in the single-pass machine-scheduler output.
+# 8 MFMAs (4 levels x 2 chains) rewritten to areg form.
+# vreg_1024 registers provide arch-VGPR pressure to activate RewriteMFMAForm.
 #
-# All 48 MFMAs (4 levels × 12 chains) rewritten to areg form, since
-# level-4 is a rewrite candidate via COPY-only users (%2100..%2111).
-#
-# CHECK-LABEL: name: test_region_boundary_fixb
+# CHECK-LABEL: name: test_region_boundary_fix
 # CHECK:       bb.1.loop:
-# All 48 MFMAs rewritten to areg and scheduled before SCHED_BARRIER.
 # CHECK:         :areg_128_align2 = V_MFMA_F32_16X16X32_F16_e64
-# SCHED_BARRIER preserved (region boundary marker).
 # CHECK:         SCHED_BARRIER 0
-# No vgprcd MFMAs between SCHED_BARRIER and the bridge COPYs.
 # CHECK-NOT:     V_MFMA_F32_16X16X32_F16_vgprcd_e64
-# Bridge COPYs (areg->vreg) appear in the same block after SCHED_BARRIER.
 # CHECK:         :vreg_128_align2 = COPY
 --- |
   target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
@@ -50,7 +37,7 @@
 
   declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg) #0
 
-  define amdgpu_kernel void @test_region_boundary_fixb(ptr addrspace(1) %out, <8 x half> %a0, <8 x half> %b0, i32 %n) #1 {
+  define amdgpu_kernel void @test_region_boundary_fix(ptr addrspace(1) %out, <8 x half> %a0, <8 x half> %b0, i32 %n) #1 {
   entry:
     br label %loop
   loop:
@@ -63,7 +50,7 @@
   attributes #1 = { "amdgpu-flat-work-group-size"="64,64" "amdgpu-waves-per-eu"="1,1" "target-cpu"="gfx950" }
 ...
 ---
-name:            test_region_boundary_fixb
+name:            test_region_boundary_fix
 alignment:       4
 tracksRegLiveness: true
 noPhis:          true
@@ -75,70 +62,20 @@ registers:
   - { id: 652, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 661, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 662, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 663, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 664, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 665, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 666, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 667, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 668, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 669, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 670, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 671, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 672, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 674, class: av_128_align2, preferred-register: '', flags: [  ] }
   - { id: 675, class: av_128_align2, preferred-register: '', flags: [  ] }
   - { id: 709, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 710, class: av_128_align2, preferred-register: '', flags: [  ] }
   - { id: 711, class: av_128_align2, preferred-register: '', flags: [  ] }
   - { id: 712, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 715, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 718, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 721, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 724, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 727, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 730, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 733, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 736, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 739, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 742, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 745, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 748, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 751, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 754, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 757, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 760, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 763, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 766, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 769, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 772, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 775, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 778, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 781, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 784, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 787, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 790, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 793, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 796, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 799, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 802, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 805, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 808, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 811, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 814, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 818, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 819, class: vreg_1024_align2, preferred-register: '', flags: [  ] }
   - { id: 858, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 859, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 860, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 861, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 862, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 863, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 864, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 865, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 866, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 867, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 868, class: vgpr_32, preferred-register: '', flags: [  ] }
-  - { id: 869, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 870, class: vgpr_32, preferred-register: '', flags: [  ] }
   - { id: 1639, class: vreg_1024_align2, preferred-register: '', flags: [  ] }
   - { id: 1640, class: vreg_1024_align2, preferred-register: '', flags: [  ] }
@@ -153,16 +90,6 @@ registers:
   - { id: 1697, class: sreg_32, preferred-register: '', flags: [  ] }
   - { id: 2100, class: vreg_128_align2, preferred-register: '', flags: [  ] }
   - { id: 2101, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2102, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2103, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2104, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2105, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2106, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2107, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2108, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2109, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2110, class: vreg_128_align2, preferred-register: '', flags: [  ] }
-  - { id: 2111, class: vreg_128_align2, preferred-register: '', flags: [  ] }
 liveins:
   - { reg: '$sgpr4_sgpr5', virtual-reg: '%643' }
 frameInfo:
@@ -254,366 +181,39 @@ body:             |
     %651:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %643(p4), 80, 0 :: (load (s32), addrspace 4)
     %652:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
     %1697:sreg_32 = S_MOV_B32 0
-    undef %672.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %672.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %672.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %672.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %671.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %671.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %671.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %671.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %670.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %670.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %670.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %670.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %669.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %669.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %669.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %669.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %668.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %668.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %668.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %668.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %667.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %667.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %667.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %667.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %666.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %666.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %666.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %666.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %665.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %665.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %665.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %665.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %664.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %664.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %664.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %664.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %663.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %663.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %663.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %663.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %662.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %662.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %662.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %662.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    undef %661.sub0:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %661.sub1:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %661.sub2:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
-    %661.sub3:vreg_128_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec, implicit $exec
+    %661:vreg_128_align2 = IMPLICIT_DEF
+    %662:vreg_128_align2 = IMPLICIT_DEF
     %674:av_128_align2 = COPY %1695.sub0_sub1_sub2_sub3
     %675:av_128_align2 = COPY %1696.sub0_sub1_sub2_sub3
     %710:av_128_align2 = COPY %1695.sub4_sub5_sub6_sub7
     %711:av_128_align2 = COPY %1696.sub4_sub5_sub6_sub7
-    undef %1646.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1646.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1645.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1645.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1644.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1644.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1643.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1643.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1642.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1642.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1641.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1641.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1640.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1640.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    undef %1639.sub0:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub1:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub2:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub3:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub4:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub5:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub6:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub7:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub8:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub9:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub10:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub11:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub12:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub13:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub14:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub15:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub16:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub17:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub18:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub19:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub20:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub21:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub22:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub23:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub24:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub25:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub26:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub27:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub28:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub29:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub30:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    %1639.sub31:vreg_1024_align2 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    ; 8 x vreg_1024 live-in + %819 computed in bb.1 = 9 x 32 = 288 arch VGPRs,
+    ; exceeding the gfx950 occupancy-1 limit and activating RewriteMFMAFormStage.
+    ; IMPLICIT_DEF avoids per-sub-register initialization.
+    %1639:vreg_1024_align2 = IMPLICIT_DEF
+    %1640:vreg_1024_align2 = IMPLICIT_DEF
+    %1641:vreg_1024_align2 = IMPLICIT_DEF
+    %1642:vreg_1024_align2 = IMPLICIT_DEF
+    %1643:vreg_1024_align2 = IMPLICIT_DEF
+    %1644:vreg_1024_align2 = IMPLICIT_DEF
+    %1645:vreg_1024_align2 = IMPLICIT_DEF
+    %1646:vreg_1024_align2 = IMPLICIT_DEF
 
   bb.1.loop:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
 
+    ; Level 1 (2 chains, loop-carried acc)
     %661:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %661, 0, 0, 0, implicit $mode, implicit $exec
     %662:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %662, 0, 0, 0, implicit $mode, implicit $exec
-    %663:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %663, 0, 0, 0, implicit $mode, implicit $exec
-    %664:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %664, 0, 0, 0, implicit $mode, implicit $exec
-    %665:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %665, 0, 0, 0, implicit $mode, implicit $exec
-    %666:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %666, 0, 0, 0, implicit $mode, implicit $exec
-    %667:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %667, 0, 0, 0, implicit $mode, implicit $exec
-    %668:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %668, 0, 0, 0, implicit $mode, implicit $exec
-    %669:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %669, 0, 0, 0, implicit $mode, implicit $exec
-    %670:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %670, 0, 0, 0, implicit $mode, implicit $exec
-    %671:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %671, 0, 0, 0, implicit $mode, implicit $exec
-    %672:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %672, 0, 0, 0, implicit $mode, implicit $exec
+    ; Level 2
     %709:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %661, 0, 0, 0, implicit $mode, implicit $exec
     %712:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %662, 0, 0, 0, implicit $mode, implicit $exec
-    %715:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %663, 0, 0, 0, implicit $mode, implicit $exec
-    %718:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %664, 0, 0, 0, implicit $mode, implicit $exec
-    %721:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %665, 0, 0, 0, implicit $mode, implicit $exec
-    %724:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %666, 0, 0, 0, implicit $mode, implicit $exec
-    %727:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %667, 0, 0, 0, implicit $mode, implicit $exec
-    %730:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %668, 0, 0, 0, implicit $mode, implicit $exec
-    %733:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %669, 0, 0, 0, implicit $mode, implicit $exec
-    %736:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %670, 0, 0, 0, implicit $mode, implicit $exec
-    %739:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %671, 0, 0, 0, implicit $mode, implicit $exec
-    %742:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %672, 0, 0, 0, implicit $mode, implicit $exec
+    ; Level 3
     %745:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %709, 0, 0, 0, implicit $mode, implicit $exec
     %748:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %712, 0, 0, 0, implicit $mode, implicit $exec
-    %751:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %715, 0, 0, 0, implicit $mode, implicit $exec
-    %754:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %718, 0, 0, 0, implicit $mode, implicit $exec
-    %757:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %721, 0, 0, 0, implicit $mode, implicit $exec
-    %760:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %724, 0, 0, 0, implicit $mode, implicit $exec
-    %763:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %727, 0, 0, 0, implicit $mode, implicit $exec
-    %766:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %730, 0, 0, 0, implicit $mode, implicit $exec
-    %769:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %733, 0, 0, 0, implicit $mode, implicit $exec
-    %772:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %736, 0, 0, 0, implicit $mode, implicit $exec
-    %775:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %739, 0, 0, 0, implicit $mode, implicit $exec
-    %778:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %674, %675, %742, 0, 0, 0, implicit $mode, implicit $exec
+    ; Level 4 (only users are bridge COPYs -> isRewriteCandidate = true)
     %781:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %745, 0, 0, 0, implicit $mode, implicit $exec
     %784:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %748, 0, 0, 0, implicit $mode, implicit $exec
-    %787:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %751, 0, 0, 0, implicit $mode, implicit $exec
-    %790:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %754, 0, 0, 0, implicit $mode, implicit $exec
-    %793:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %757, 0, 0, 0, implicit $mode, implicit $exec
-    %796:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %760, 0, 0, 0, implicit $mode, implicit $exec
-    %799:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %763, 0, 0, 0, implicit $mode, implicit $exec
-    %802:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %766, 0, 0, 0, implicit $mode, implicit $exec
-    %805:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %769, 0, 0, 0, implicit $mode, implicit $exec
-    %808:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %772, 0, 0, 0, implicit $mode, implicit $exec
-    %811:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %775, 0, 0, 0, implicit $mode, implicit $exec
-    %814:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %710, %711, %778, 0, 0, 0, implicit $mode, implicit $exec
     %818:sreg_32 = S_AND_B32 %1697, 31, implicit-def dead $scc
     %819:vreg_1024_align2 = COPY %1639
     %819:vreg_1024_align2 = V_INDIRECT_REG_WRITE_GPR_IDX_B32_V32 %819, %1639.sub0, %818, 3, implicit-def $m0, implicit $m0, implicit $exec
@@ -627,68 +227,19 @@ body:             |
     GLOBAL_STORE_DWORD_SADDR %652, %1639.sub0, %650, 0, 0, implicit $exec :: (store (s32), addrspace 1)
     %1697:sreg_32 = S_ADD_I32 %1697, 1, implicit-def dead $scc
     S_CMP_LG_U32 %651, %1697, implicit-def $scc
-    undef %1639.sub0:vreg_1024_align2 = COPY %819.sub0
-    %1639.sub1:vreg_1024_align2 = COPY %819.sub1
-    %1639.sub2:vreg_1024_align2 = COPY %819.sub2
-    %1639.sub3:vreg_1024_align2 = COPY %819.sub3
-    %1639.sub4:vreg_1024_align2 = COPY %819.sub4
-    %1639.sub5:vreg_1024_align2 = COPY %819.sub5
-    %1639.sub6:vreg_1024_align2 = COPY %819.sub6
-    %1639.sub7:vreg_1024_align2 = COPY %819.sub7
-    %1639.sub8:vreg_1024_align2 = COPY %819.sub8
-    %1639.sub9:vreg_1024_align2 = COPY %819.sub9
-    %1639.sub10:vreg_1024_align2 = COPY %819.sub10
-    %1639.sub11:vreg_1024_align2 = COPY %819.sub11
-    %1639.sub12:vreg_1024_align2 = COPY %819.sub12
-    %1639.sub13:vreg_1024_align2 = COPY %819.sub13
-    %1639.sub14:vreg_1024_align2 = COPY %819.sub14
-    %1639.sub15:vreg_1024_align2 = COPY %819.sub15
-    %1639.sub16:vreg_1024_align2 = COPY %819.sub16
-    %1639.sub17:vreg_1024_align2 = COPY %819.sub17
-    %1639.sub18:vreg_1024_align2 = COPY %819.sub18
-    %1639.sub19:vreg_1024_align2 = COPY %819.sub19
-    %1639.sub20:vreg_1024_align2 = COPY %819.sub20
-    %1639.sub21:vreg_1024_align2 = COPY %819.sub21
-    %1639.sub22:vreg_1024_align2 = COPY %819.sub22
-    %1639.sub23:vreg_1024_align2 = COPY %819.sub23
-    %1639.sub24:vreg_1024_align2 = COPY %819.sub24
-    %1639.sub25:vreg_1024_align2 = COPY %819.sub25
-    %1639.sub26:vreg_1024_align2 = COPY %819.sub26
-    %1639.sub27:vreg_1024_align2 = COPY %819.sub27
-    %1639.sub28:vreg_1024_align2 = COPY %819.sub28
-    %1639.sub29:vreg_1024_align2 = COPY %819.sub29
-    %1639.sub30:vreg_1024_align2 = COPY %819.sub30
-    %1639.sub31:vreg_1024_align2 = COPY %819.sub31
+    %1639:vreg_1024_align2 = COPY %819
     SCHED_BARRIER 0
+    ; Bridge COPYs: level-4 only users -> isRewriteCandidate(level-4)=true
+    ; FirstMIToRegion[%2100] = copy_region -> Fix A triggers
     %2100:vreg_128_align2 = COPY %781
     %2101:vreg_128_align2 = COPY %784
-    %2102:vreg_128_align2 = COPY %787
-    %2103:vreg_128_align2 = COPY %790
-    %2104:vreg_128_align2 = COPY %793
-    %2105:vreg_128_align2 = COPY %796
-    %2106:vreg_128_align2 = COPY %799
-    %2107:vreg_128_align2 = COPY %802
-    %2108:vreg_128_align2 = COPY %805
-    %2109:vreg_128_align2 = COPY %808
-    %2110:vreg_128_align2 = COPY %811
-    %2111:vreg_128_align2 = COPY %814
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
 
   bb.2.epilogue:
     %858:vgpr_32 = nofpexcept V_ADD_F32_e32 %2100.sub0, %2101.sub0, implicit $mode, implicit $exec
-    %859:vgpr_32 = nofpexcept V_ADD_F32_e32 %858, %2102.sub0, implicit $mode, implicit $exec
-    %860:vgpr_32 = nofpexcept V_ADD_F32_e32 %859, %2103.sub0, implicit $mode, implicit $exec
-    %861:vgpr_32 = nofpexcept V_ADD_F32_e32 %860, %2104.sub0, implicit $mode, implicit $exec
-    %862:vgpr_32 = nofpexcept V_ADD_F32_e32 %861, %2105.sub0, implicit $mode, implicit $exec
-    %863:vgpr_32 = nofpexcept V_ADD_F32_e32 %862, %2106.sub0, implicit $mode, implicit $exec
-    %864:vgpr_32 = nofpexcept V_ADD_F32_e32 %863, %2107.sub0, implicit $mode, implicit $exec
-    %865:vgpr_32 = nofpexcept V_ADD_F32_e32 %864, %2108.sub0, implicit $mode, implicit $exec
-    %866:vgpr_32 = nofpexcept V_ADD_F32_e32 %865, %2109.sub0, implicit $mode, implicit $exec
-    %867:vgpr_32 = nofpexcept V_ADD_F32_e32 %866, %2110.sub0, implicit $mode, implicit $exec
-    %868:vgpr_32 = nofpexcept V_ADD_F32_e32 %867, %2111.sub0, implicit $mode, implicit $exec
-    %869:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %868, implicit $mode, implicit $exec
+    %859:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %858, implicit $mode, implicit $exec
     %870:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-    GLOBAL_STORE_SHORT_SADDR %870, %869, %650, 0, 0, implicit $exec :: (store (s16), addrspace 1)
+    GLOBAL_STORE_SHORT_SADDR %870, %859, %650, 0, 0, implicit $exec :: (store (s16), addrspace 1)
     S_ENDPGM 0
 ...

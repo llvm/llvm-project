@@ -2623,8 +2623,6 @@ bool RewriteMFMAFormStage::rewrite(
                     .addDef(MappedReg, {}, 0)
                     .addUse(Src2Reg, {}, 0);
             DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
-
           }
         }
       }
@@ -2707,7 +2705,6 @@ bool RewriteMFMAFormStage::rewrite(
                   .addDef(MappedReg, {}, 0)
                   .addUse(DstReg, {}, 0);
           DAG.LIS->InsertMachineInstrInMaps(*VGPRCopy);
-
         }
       }
     }
