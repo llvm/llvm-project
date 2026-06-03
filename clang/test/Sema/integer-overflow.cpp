@@ -16,3 +16,14 @@ void f() {
   (int){1024 * 1024 * 1024 * 1024 * 1024}; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 }
 }
+
+namespace GH201418 {
+int rand();
+
+constexpr int a(int) {
+  {
+    (100000000001024 ^ a(0) * 0 ? 2147483647 : rand()) ? 2147483647 : 1;
+  }
+  return 0;
+}
+}
