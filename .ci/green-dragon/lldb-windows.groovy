@@ -49,9 +49,7 @@ pipeline {
                 timeout(240) {
                     catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                         writeFile file: 'build.bat', text: '''@echo off
-call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
-
-"C:\\Program Files\\Python313\\python.exe" -m pip install packaging || exit /b 1
+call "C:\\Program Files\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
 
 cmake -G Ninja ^
     -S llvm ^
