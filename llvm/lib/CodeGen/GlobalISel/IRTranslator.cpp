@@ -3526,13 +3526,13 @@ bool IRTranslator::translateShuffleVector(const User &U,
 
 bool IRTranslator::translateBitInsert(const User &U,
                                       MachineIRBuilder &MIRBuilder) {
-  Register Res    = getOrCreateVReg(U);
-  Register Base   = getOrCreateVReg(*U.getOperand(0));
-  Register Val    = getOrCreateVReg(*U.getOperand(1));
+  Register Res = getOrCreateVReg(U);
+  Register Base = getOrCreateVReg(*U.getOperand(0));
+  Register Val = getOrCreateVReg(*U.getOperand(1));
   Register Offset = getOrCreateVReg(*U.getOperand(2));
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLT BaseTy = MRI.getType(Base);
-  LLT ValTy  = MRI.getType(Val);
+  LLT ValTy = MRI.getType(Val);
 
   // Convert Offset to BaseTy
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(BaseTy, Offset).getReg(0);
@@ -3540,9 +3540,11 @@ bool IRTranslator::translateBitInsert(const User &U,
   // RotateAmount = Offset + width(Val)
   unsigned ValBitWidth = ValTy.getSizeInBits();
   Register ValWidth = MIRBuilder.buildConstant(BaseTy, ValBitWidth).getReg(0);
-  Register RotateAmount = MIRBuilder.buildAdd(BaseTy, LegalOffset, ValWidth).getReg(0);
+  Register RotateAmount =
+      MIRBuilder.buildAdd(BaseTy, LegalOffset, ValWidth).getReg(0);
 
-  Register RotatedBase = MIRBuilder.buildRotateLeft(BaseTy, Base, RotateAmount).getReg(0);
+  Register RotatedBase =
+      MIRBuilder.buildRotateLeft(BaseTy, Base, RotateAmount).getReg(0);
 
   // Truncate or extend Val to BaseTy so only the inserted bit range remains.
   Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
@@ -3563,8 +3565,8 @@ bool IRTranslator::translateBitInsert(const User &U,
 
 bool IRTranslator::translateBitExtract(const User &U,
                                        MachineIRBuilder &MIRBuilder) {
-  Register Res    = getOrCreateVReg(U);
-  Register Src    = getOrCreateVReg(*U.getOperand(0));
+  Register Res = getOrCreateVReg(U);
+  Register Src = getOrCreateVReg(*U.getOperand(0));
   Register Offset = getOrCreateVReg(*U.getOperand(1));
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLT SrcTy = MRI.getType(Src);
@@ -3579,11 +3581,14 @@ bool IRTranslator::translateBitExtract(const User &U,
 
   // RotateAmount = Offset + width
   unsigned ResultBitWidth = ResTy.getSizeInBits();
-  Register ResultWidth = MIRBuilder.buildConstant(SrcTy, ResultBitWidth).getReg(0);
-  Register RotateAmount = MIRBuilder.buildAdd(SrcTy, LegalOffset, ResultWidth).getReg(0);
+  Register ResultWidth =
+      MIRBuilder.buildConstant(SrcTy, ResultBitWidth).getReg(0);
+  Register RotateAmount =
+      MIRBuilder.buildAdd(SrcTy, LegalOffset, ResultWidth).getReg(0);
 
   // Rotate left by (Offset + ResultWidth)
-  Register Rotated = MIRBuilder.buildRotateLeft(SrcTy, Src, RotateAmount).getReg(0);
+  Register Rotated =
+      MIRBuilder.buildRotateLeft(SrcTy, Src, RotateAmount).getReg(0);
 
   // Truncating to ResTy discards the high bits for free
   if (SrcTy == ResTy)

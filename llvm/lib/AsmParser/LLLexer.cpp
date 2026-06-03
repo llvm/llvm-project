@@ -996,8 +996,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(cleanuppad,   CleanupPad);
 
   INSTKEYWORD(freeze,       Freeze);
-  INSTKEYWORD(bitinsert,    BitInsert);
-  INSTKEYWORD(bitextract,   BitExtract);
+  INSTKEYWORD(bitinsert, BitInsert);
+  INSTKEYWORD(bitextract, BitExtract);
 
 #undef INSTKEYWORD
 

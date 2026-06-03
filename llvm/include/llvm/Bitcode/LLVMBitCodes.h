@@ -703,7 +703,7 @@ enum FunctionCodes {
   FUNC_CODE_DEBUG_RECORD_LABEL = 65, // [DILocation, DILabel]
   FUNC_CODE_DEBUG_RECORD_DECLARE_VALUE =
       66, // [DILocation, DILocalVariable, DIExpression, ValueAsMetadata]
-  FUNC_CODE_INST_BITINSERT = 67, // BITINSERT: [val, val ,val]
+  FUNC_CODE_INST_BITINSERT = 67,  // BITINSERT: [val, val ,val]
   FUNC_CODE_INST_BITEXTRACT = 68, // BITEXTRACT: [val, val, val]
 };
 

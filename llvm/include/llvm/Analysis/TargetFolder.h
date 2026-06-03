@@ -184,13 +184,11 @@ public:
     return nullptr;
   }
 
-  Value *FoldBitInsert(Value *Base, Value *Val,
-                       Value *Offset) const override {
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
     return nullptr;
   }
 
-  Value *FoldBitExtract(Type *Ty, Value *Src,
-                        Value *Offset) const override {
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
     return nullptr;
   }
 

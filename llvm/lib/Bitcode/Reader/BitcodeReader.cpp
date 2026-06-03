@@ -1838,8 +1838,8 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
                                   InsertBB);
         break;
       case Instruction::BitExtract:
-        I = BitExtractInst::Create(BC->getType(), Ops[0], Ops[1],
-                                   "constexpr", InsertBB);
+        I = BitExtractInst::Create(BC->getType(), Ops[0], Ops[1], "constexpr",
+                                   InsertBB);
         break;
       case Instruction::BitInsert:
         I = BitInsertInst::Create(Ops[0], Ops[1], Ops[2], "constexpr",
@@ -5554,11 +5554,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       break;
     }
 
-    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [ty, opval, opval, opval]
+    case bitc::FUNC_CODE_INST_BITINSERT: { // BITINSERT: [ty, opval, opval,
+                                           // opval]
       unsigned OpNum = 0;
       Value *Base, *Val, *Offset;
       unsigned BaseTypeID, ValTypeID, OffsetTypeID;
-      if (getValueTypePair(Record, OpNum, NextValueNo, Base, BaseTypeID, CurBB) ||
+      if (getValueTypePair(Record, OpNum, NextValueNo, Base, BaseTypeID,
+                           CurBB) ||
           getValueTypePair(Record, OpNum, NextValueNo, Val, ValTypeID, CurBB) ||
           getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
                            CurBB))

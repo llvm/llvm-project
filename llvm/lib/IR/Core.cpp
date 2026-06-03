@@ -4498,17 +4498,17 @@ LLVMValueRef LLVMBuildFreeze(LLVMBuilderRef B, LLVMValueRef Val,
 }
 
 LLVMValueRef LLVMBuildBitInsert(LLVMBuilderRef B, LLVMValueRef Base,
-                                    LLVMValueRef Val, LLVMValueRef Offset,
-                                    const char *Name) {
+                                LLVMValueRef Val, LLVMValueRef Offset,
+                                const char *Name) {
   return wrap(unwrap(B)->CreateBitInsert(unwrap(Base), unwrap(Val),
-                                             unwrap(Offset), Name));
+                                         unwrap(Offset), Name));
 }
 
 LLVMValueRef LLVMBuildBitExtract(LLVMBuilderRef B, LLVMTypeRef Ty,
-                                    LLVMValueRef Src, LLVMValueRef Offset,
-                                    const char *Name) {
+                                 LLVMValueRef Src, LLVMValueRef Offset,
+                                 const char *Name) {
   return wrap(unwrap(B)->CreateBitExtract(unwrap(Ty), unwrap(Src),
-                                             unwrap(Offset), Name));
+                                          unwrap(Offset), Name));
 }
 
 LLVMValueRef LLVMBuildIsNull(LLVMBuilderRef B, LLVMValueRef Val,

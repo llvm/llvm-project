@@ -889,8 +889,10 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
   case Freeze:         return "freeze";
-  case BitInsert:      return "bitinsert";
-  case BitExtract:     return "bitextract";
+  case BitInsert:
+    return "bitinsert";
+  case BitExtract:
+    return "bitextract";
 
   default: return "<Invalid operator> ";
   }

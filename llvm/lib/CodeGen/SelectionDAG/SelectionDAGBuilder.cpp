@@ -4152,11 +4152,11 @@ void SelectionDAGBuilder::visitInsertElement(const User &I) {
 }
 
 void SelectionDAGBuilder::visitBitInsert(const User &I) {
-  SDValue Base   = getValue(I.getOperand(0));
-  SDValue Val    = getValue(I.getOperand(1));
+  SDValue Base = getValue(I.getOperand(0));
+  SDValue Val = getValue(I.getOperand(1));
   SDValue Offset = getValue(I.getOperand(2));
   EVT BaseVT = Base.getValueType();
-  EVT ValVT  = Val.getValueType();
+  EVT ValVT = Val.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
@@ -4164,30 +4164,34 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
 
   unsigned ValBitWidth = ValVT.getScalarSizeInBits();
   SDValue ValWidth = DAG.getConstant(ValBitWidth, dl, BaseVT);
-  SDValue RotateAmount = DAG.getNode(ISD::ADD, dl, BaseVT, LegalOffset, ValWidth);
+  SDValue RotateAmount =
+      DAG.getNode(ISD::ADD, dl, BaseVT, LegalOffset, ValWidth);
 
   // Legalize rotate amount to the target's shift amount type
   EVT ShiftAmtTy = TLI.getShiftAmountTy(BaseVT, DAG.getDataLayout());
   SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
 
-  SDValue RotatedBase = DAG.getNode(ISD::ROTL, dl, BaseVT, Base, LegalRotateAmount);
+  SDValue RotatedBase =
+      DAG.getNode(ISD::ROTL, dl, BaseVT, Base, LegalRotateAmount);
 
   unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
-  APInt ClearMask = APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
+  APInt ClearMask =
+      APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
   SDValue ClearedBase = DAG.getNode(ISD::AND, dl, BaseVT, RotatedBase,
                                     DAG.getConstant(ClearMask, dl, BaseVT));
 
-  SDValue ExtVal  = DAG.getZExtOrTrunc(Val, dl, BaseVT);
+  SDValue ExtVal = DAG.getZExtOrTrunc(Val, dl, BaseVT);
   SDValue Inserted = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ExtVal);
 
-  SDValue Result = DAG.getNode(ISD::ROTR, dl, BaseVT, Inserted, LegalRotateAmount);
+  SDValue Result =
+      DAG.getNode(ISD::ROTR, dl, BaseVT, Inserted, LegalRotateAmount);
   setValue(&I, Result);
 }
 
 void SelectionDAGBuilder::visitBitExtract(const User &I) {
-  SDValue Src    = getValue(I.getOperand(0));
+  SDValue Src = getValue(I.getOperand(0));
   SDValue Offset = getValue(I.getOperand(1));
-  EVT SrcVT    = Src.getValueType();
+  EVT SrcVT = Src.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDLoc dl = getCurSDLoc();
@@ -4205,7 +4209,8 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   // RotateAmount = Offset + width(Result), computed in SrcVT
   unsigned ResultBitWidth = ResultVT.getScalarSizeInBits();
   SDValue ResultWidth = DAG.getConstant(ResultBitWidth, dl, SrcVT);
-  SDValue RotateAmount = DAG.getNode(ISD::ADD, dl, SrcVT, LegalOffset, ResultWidth);
+  SDValue RotateAmount =
+      DAG.getNode(ISD::ADD, dl, SrcVT, LegalOffset, ResultWidth);
 
   // Legalize rotate amount to the target's shift amount type
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());

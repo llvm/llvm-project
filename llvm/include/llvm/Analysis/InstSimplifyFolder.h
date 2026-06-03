@@ -115,14 +115,12 @@ public:
     return simplifyShuffleVectorInst(V1, V2, Mask, RetTy, SQ);
   }
 
-  Value *FoldBitInsert(Value *Base, Value *Val,
-                       Value *Offset) const override {
+  Value *FoldBitInsert(Value *Base, Value *Val, Value *Offset) const override {
     // TODO
     return nullptr;
   }
 
-  Value *FoldBitExtract(Type *Ty, Value *Src,
-                        Value *Offset) const override {
+  Value *FoldBitExtract(Type *Ty, Value *Src, Value *Offset) const override {
     // TODO
     return nullptr;
   }
