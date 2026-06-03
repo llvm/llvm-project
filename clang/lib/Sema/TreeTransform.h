@@ -16727,23 +16727,13 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     // specific annotations, such as implicit casts, are discarded. Calling the
     // corresponding sema action is necessary to recover those. Otherwise,
     // equivalency of the result would be lost.
-    //
-    // In unevaluated contexts (e.g. inside decltype), CheckTemplateArgument
-    // forces constant evaluation that is inappropriate and may fail for
-    // valid expressions (e.g. function calls with by-value class parameters).
-    // Since we only need the type in such contexts, we can tolerate the
-    // failure and proceed with the transformed replacement as-is.
     TemplateArgument SugaredConverted, CanonicalConverted;
-    ExprResult Checked = SemaRef.CheckTemplateArgument(
+    Replacement = SemaRef.CheckTemplateArgument(
         Param, ParamType, Replacement.get(), SugaredConverted,
         CanonicalConverted,
         /*StrictCheck=*/false, Sema::CTAK_Specified);
-    if (Checked.isInvalid()) {
-      if (!SemaRef.isUnevaluatedContext())
-        return true;
-    } else {
-      Replacement = Checked;
-    }
+    if (Replacement.isInvalid())
+      return true;
   } else {
     // Otherwise, the same expression would have been produced.
     Replacement = E->getReplacement();
