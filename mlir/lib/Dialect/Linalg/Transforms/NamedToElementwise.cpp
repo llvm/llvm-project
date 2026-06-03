@@ -48,9 +48,6 @@ ElementwiseKind getKind(Operation *op) {
       .Case([](SquareOp) { return ElementwiseKind::square; })
       .Case([](TanhOp) { return ElementwiseKind::tanh; })
       .Case([](ErfOp) { return ElementwiseKind::erf; })
-      .Case([](SinOp) { return ElementwiseKind::sin; })
-      .Case([](CosOp) { return ElementwiseKind::cos; })
-      .Case([](TanOp) { return ElementwiseKind::tan; })
       .DefaultUnreachable("unhandled case in named to elementwise");
 }
 
@@ -95,7 +92,4 @@ void mlir::linalg::populateLinalgNamedToElementwisePatterns(
   patterns.add<NamedToElementwisePattern<SquareOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<TanhOp>>(patterns.getContext());
   patterns.add<NamedToElementwisePattern<ErfOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<SinOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<CosOp>>(patterns.getContext());
-  patterns.add<NamedToElementwisePattern<TanOp>>(patterns.getContext());
 }

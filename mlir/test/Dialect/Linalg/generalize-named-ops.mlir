@@ -806,69 +806,6 @@ func.func @generalize_erf(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) 
 
 // -----
 
-func.func @generalize_sin(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) {
-  linalg.sin ins(%arg : memref<7x14x21xf32>) outs(%out : memref<7x14x21xf32>)
-  return
-}
-
-// CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK: func @generalize_sin
-// CHECK-SAME: (%[[ARG:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
-
-// CHECK: linalg.generic
-// CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]]]
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:  ins(%[[LHS]] : memref<7x14x21xf32>) outs(%[[OUT]] : memref<7x14x21xf32>)
-
-// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32)
-// CHECK-NEXT:      %[[sin:.+]] = math.sin %[[BBARG0]] : f32
-// CHECK-NEXT:      linalg.yield %[[sin]] : f32
-
-// -----
-
-func.func @generalize_cos(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) {
-  linalg.cos ins(%arg : memref<7x14x21xf32>) outs(%out : memref<7x14x21xf32>)
-  return
-}
-
-// CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK: func @generalize_cos
-// CHECK-SAME: (%[[ARG:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
-
-// CHECK: linalg.generic
-// CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]]]
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:  ins(%[[LHS]] : memref<7x14x21xf32>) outs(%[[OUT]] : memref<7x14x21xf32>)
-
-// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32)
-// CHECK-NEXT:      %[[cos:.+]] = math.cos %[[BBARG0]] : f32
-// CHECK-NEXT:      linalg.yield %[[cos]] : f32
-
-// -----
-
-func.func @generalize_tan(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32>) {
-  linalg.tan ins(%arg : memref<7x14x21xf32>) outs(%out : memref<7x14x21xf32>)
-  return
-}
-
-// CHECK: #[[MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-
-// CHECK: func @generalize_tan
-// CHECK-SAME: (%[[ARG:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
-
-// CHECK: linalg.generic
-// CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]]]
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]}
-// CHECK-SAME:  ins(%[[LHS]] : memref<7x14x21xf32>) outs(%[[OUT]] : memref<7x14x21xf32>)
-
-// CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32)
-// CHECK-NEXT:      %[[tan:.+]] = math.tan %[[BBARG0]] : f32
-// CHECK-NEXT:      linalg.yield %[[tan]] : f32
-
-// -----
-
 func.func @generalize_max(%lhs: memref<7x14x21xf32>, %rhs: memref<7x14x21xf32>,
                           %out: memref<7x14x21xf32>) {
   linalg.max ins(%lhs, %rhs : memref<7x14x21xf32>, memref<7x14x21xf32>)
