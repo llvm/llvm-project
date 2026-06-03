@@ -4037,7 +4037,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__debugbreak:
-    EmitTrapCall(Intrinsic::debugtrap);
+    EmitTrapCall(Intrinsic::debugtrap,/*MayReturn*/true);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_unreachable: {
     EmitUnreachable(E->getExprLoc());
