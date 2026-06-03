@@ -77,7 +77,6 @@ determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
 }
 
 class StateUpdateReporter {
-  const std::string RegName;
   const NonLoc ByteOffsetVal;
   const std::optional<QualType> ElementType;
   const std::optional<int64_t> ElementSize;
@@ -85,10 +84,8 @@ class StateUpdateReporter {
   std::optional<NonLoc> AssumedUpperBound = std::nullopt;
 
 public:
-  StateUpdateReporter(std::string RN, NonLoc ByteOffsVal, const Expr *E,
-                      CheckerContext &C)
-      : RegName(RN), ByteOffsetVal(ByteOffsVal),
-        ElementType(determineElementType(E, C)),
+  StateUpdateReporter(NonLoc ByteOffsVal, const Expr *E, CheckerContext &C)
+      : ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)),
         ElementSize(determineElementSize(ElementType, C)) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
@@ -98,11 +95,11 @@ public:
 
   bool assumedNonNegative() { return AssumedNonNegative; }
 
-  const NoteTag *createNoteTag(CheckerContext &C) const;
+  bool hasAssumption() const { return AssumedNonNegative || AssumedUpperBound; }
+
+  std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName) const;
 
 private:
-  std::string getMessage(PathSensitiveBugReport &BR) const;
-
   /// Return true if information about the value of `Sym` can put constraints
   /// on some symbol which is interesting within the bug report `BR`.
   /// In particular, this returns true when `Sym` is interesting within `BR`;
@@ -488,17 +485,8 @@ static Messages getTaintMsgs(const MemSpaceRegion *Space,
                   AlsoMentionUnderflow ? "negative or " : "")};
 }
 
-const NoteTag *StateUpdateReporter::createNoteTag(CheckerContext &C) const {
-  // Don't create a note tag if we didn't assume anything:
-  if (!AssumedNonNegative && !AssumedUpperBound)
-    return nullptr;
-
-  return C.getNoteTag([*this](PathSensitiveBugReport &BR) -> std::string {
-    return getMessage(BR);
-  });
-}
-
-std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
+std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
+                                            StringRef RegName) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
     if (AssumedUpperBound &&
@@ -596,8 +584,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
   // The state updates will be reported as a single note tag, which will be
   // composed by this helper class.
-  std::string RegName = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
-  StateUpdateReporter SUR(RegName, ByteOffset, E, C);
+  StateUpdateReporter SUR(ByteOffset, E, C);
 
   // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
@@ -683,8 +670,9 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         // expression that calculates the past-the-end pointer.
         if (isIdiomaticPastTheEndPtr(E, ExceedsUpperBound, ByteOffset,
                                      *KnownSize, C)) {
-          C.addTransition(ExceedsUpperBound, SUR.createNoteTag(C));
-          return;
+          // The use of 'goto' is a temporary solution, will be eliminated in
+          // the next steps of the refactoring.
+          goto NormalTransition;
         }
 
         BadOffsetKind Problem = AlsoMentionUnderflow
@@ -726,8 +714,18 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
       State = WithinUpperBound;
   }
 
+NormalTransition:
   // Add a transition, reporting the state updates that we accumulated.
-  C.addTransition(State, SUR.createNoteTag(C));
+  const NoteTag *Tag = nullptr;
+
+  if (SUR.hasAssumption()) {
+    std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
+    Tag = C.getNoteTag([SUR, RN](PathSensitiveBugReport &BR) -> std::string {
+      return SUR.getMessage(BR, RN);
+    });
+  }
+
+  C.addTransition(State, Tag);
 }
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
