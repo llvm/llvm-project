@@ -1,0 +1,37 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+! Under -gpu=mem:unified, an unattributed host scalar is still an exact match
+! for an unattributed dummy. A device dummy remains compatible as a fallback,
+! but it must not beat the host-specific overload during generic resolution.
+module matching_host_scalar_unified
+  interface pick
+    module procedure host_scalar
+    module procedure device_scalar
+  end interface
+  interface device_fallback
+    module procedure device_scalar
+  end interface
+contains
+  subroutine host_scalar(a, x)
+    real(8), device :: a(:)
+    real(4) :: x
+  end
+
+  subroutine device_scalar(a, x)
+    real(8), device :: a(:)
+    real(4), device :: x
+  end
+end module
+
+program test
+  use matching_host_scalar_unified
+  real(8), device :: a(1)
+  real(4) :: x
+
+  call pick(a, 1.0)
+  call device_fallback(a, x)
+end
+
+! CHECK-LABEL: func.func @_QQmain()
+! CHECK: fir.call @_QMmatching_host_scalar_unifiedPhost_scalar
+! CHECK: fir.call @_QMmatching_host_scalar_unifiedPdevice_scalar
