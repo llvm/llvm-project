@@ -1,0 +1,200 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {!s64i, !s64i, !s64i, !s64i}>
+
+#indirect_return = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ ]
+}
+
+#indirect_return_ext = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "extend", coerced_type = !cir.int<s, 32>,
+               sign_extend = true } ]
+}
+
+#indirect_return_bool = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "direct" } ]
+}
+
+#indirect_return_ignore = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "ignore" } ]
+}
+
+#caller_cls = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @returns_big() -> !rec_Big
+      attributes { test_classify = #indirect_return } {
+    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // The indirect return becomes a hidden sret pointer prepended as argument 0,
+  // the wire return type becomes void, the __retval alloca is rewired to the
+  // sret pointer, and the trailing load/return collapses to a bare return.
+  // CHECK:      cir.func{{.*}} @returns_big(%[[SRET:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 8 : i64
+  // CHECK-SAME:     llvm.dead_on_unwind
+  // CHECK-SAME:     llvm.noalias
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     llvm.writable
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        %[[Z:.*]] = cir.const #cir.zero : !rec_Big
+  // CHECK:        cir.store %[[Z]], %[[SRET]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+  // CHECK-NOT:    cir.return %{{.*}} : !rec_Big
+
+  // A call whose result is bound to a single local reuses that local as the
+  // sret slot directly, so construction flows straight into it and the
+  // original store-from-result is dropped (no byte-copy, no load-back).
+  cir.func @caller() -> !s32i
+      attributes { test_classify = #caller_cls } {
+    %1 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["s"] {alignment = 8 : i64}
+    %0 = cir.call @returns_big() : () -> !rec_Big
+    cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller() -> !s32i
+  // CHECK:        %[[DEST:.*]] = cir.alloca !rec_Big, {{.*}} ["s"]
+  // CHECK:        cir.call @returns_big(%[[DEST]]) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     -> ()
+  // CHECK-NOT:    cir.load
+  // CHECK-NOT:    cir.store
+  // CHECK:        cir.return %{{.*}} : !s32i
+
+  // A call whose result has more than one use cannot reuse a destination, so a
+  // fresh sret slot is allocated and the result is loaded back out of it.
+  cir.func @caller_multi() -> !s32i
+      attributes { test_classify = #caller_cls } {
+    %a = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["a"] {alignment = 8 : i64}
+    %b = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["b"] {alignment = 8 : i64}
+    %0 = cir.call @returns_big() : () -> !rec_Big
+    cir.store %0, %a : !rec_Big, !cir.ptr<!rec_Big>
+    cir.store %0, %b : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_multi() -> !s32i
+  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_Big, {{.*}} ["sret"]
+  // CHECK:        cir.call @returns_big(%[[SLOT]]) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:     -> ()
+  // CHECK:        %[[LD:.*]] = cir.load %[[SLOT]] : !cir.ptr<!rec_Big>, !rec_Big
+  // CHECK:        cir.store %[[LD]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[LD]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+
+  // sret composes with an Extend argument: the sret slot is prepended and the
+  // s8 argument is still extended to s32 with llvm.signext on both the callee
+  // signature and the call site.
+  cir.func @returns_big_ext(%arg0: !s8i) -> !rec_Big
+      attributes { test_classify = #indirect_return_ext } {
+    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @returns_big_ext(%[[SRET2:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:   %{{.*}}: !s8i {llvm.signext}
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.store %{{.*}}, %[[SRET2]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+
+  cir.func @caller_ext(%arg0: !s8i) -> !s32i
+      attributes { test_classify = #caller_cls } {
+    %1 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["s"] {alignment = 8 : i64}
+    %0 = cir.call @returns_big_ext(%arg0) : (!s8i) -> !rec_Big
+    cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_ext(%[[ARG:.*]]: !s8i) -> !s32i
+  // CHECK:        %[[DEST2:.*]] = cir.alloca !rec_Big, {{.*}} ["s"]
+  // CHECK:        cir.call @returns_big_ext(%[[DEST2]], %[[ARG]]) : (!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-SAME:   !s8i {llvm.signext}
+  // CHECK-SAME:     -> ()
+
+  // Multiple return statements share one __retval alloca (CIR does not merge
+  // returns into a single epilogue), so every cir.return must be routed
+  // through the sret pointer and the shared alloca rewired exactly once.
+  cir.func @returns_big_cond(%cond: !cir.bool) -> !rec_Big
+      attributes { test_classify = #indirect_return_bool } {
+    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %z = cir.const #cir.zero : !rec_Big
+    cir.if %cond {
+      cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+      %r1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+      cir.return %r1 : !rec_Big
+    }
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %r2 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r2 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @returns_big_cond(%[[SRETC:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.store %{{.*}}, %[[SRETC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+  // CHECK:        cir.store %{{.*}}, %[[SRETC]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+  // CHECK-NOT:    cir.return %{{.*}} : !rec_Big
+
+  // sret composes with an Ignore argument: the ignored arg is dropped from the
+  // signature and the sretOffset shift keeps the remaining block args aligned.
+  cir.func @returns_big_ignore(%ignored: !s32i) -> !rec_Big
+      attributes { test_classify = #indirect_return_ignore } {
+    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %z = cir.const #cir.zero : !rec_Big
+    cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
+    %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %1 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @returns_big_ignore(%[[SRETI:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-NOT:    !s32i
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.store %{{.*}}, %[[SRETI]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.return
+
+  // An sret declaration gets the hidden pointer and the sret slot attributes,
+  // but llvm.noalias is omitted: noalias on the sret parameter is only valid
+  // when the function body is present.  Kept last so the CHECK-NOT below
+  // scopes to this declaration.
+  cir.func private @returns_big_decl() -> !rec_Big
+      attributes { test_classify = #indirect_return }
+
+  // CHECK:      cir.func{{.*}} @returns_big_decl(!cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-NOT:    llvm.noalias
+  // CHECK-NOT:    -> !rec_Big
+
+}
