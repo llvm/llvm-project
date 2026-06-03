@@ -470,35 +470,35 @@ public:
       using iterator_category = random_access_iterator_tag;
       using value_type        = const char*;
       using reference         = const char*;
-      using difference_type   = decltype(static_cast<unsigned short>(1) - static_cast<unsigned short>(1));
+      using difference_type   = int;
 
       constexpr __iterator() noexcept = default;
 
-      constexpr reference operator*() const noexcept { return __get_alias_from_offset_table(__current_idx_); }
+      [[nodiscard]] constexpr reference operator*() const noexcept {
+        return __get_alias_from_offset_table(__current_idx_);
+      }
 
-      constexpr reference operator[](difference_type __n) const noexcept {
+      [[nodiscard]] constexpr reference operator[](difference_type __n) const noexcept {
         auto __it = *this;
         return *(__it + __n);
       }
 
-      constexpr decltype(auto) operator->() = delete;
-
-      friend constexpr __iterator operator+(__iterator __it, difference_type __n) noexcept {
+      [[nodiscard]] friend constexpr __iterator operator+(__iterator __it, difference_type __n) noexcept {
         __it += __n;
         return __it;
       }
 
-      friend constexpr __iterator operator+(difference_type __n, __iterator __it) noexcept {
+      [[nodiscard]] friend constexpr __iterator operator+(difference_type __n, __iterator __it) noexcept {
         __it += __n;
         return __it;
       }
 
-      friend constexpr __iterator operator-(__iterator __it, difference_type __n) noexcept {
+      [[nodiscard]] friend constexpr __iterator operator-(__iterator __it, difference_type __n) noexcept {
         __it -= __n;
         return __it;
       }
 
-      constexpr difference_type operator-(const __iterator& __other) const noexcept {
+      [[nodiscard]] constexpr difference_type operator-(const __iterator& __other) const noexcept {
         return __current_idx_ - __other.__current_idx_;
       }
 
@@ -541,9 +541,9 @@ public:
       unsigned short __current_idx_;
     }; // __iterator
 
-    constexpr __iterator begin() const noexcept { return __iterator(__first_idx_); }
+    [[nodiscard]] constexpr __iterator begin() const noexcept { return __iterator(__first_idx_); }
 
-    constexpr __iterator end() const noexcept { return __iterator(__last_idx_); }
+    [[nodiscard]] constexpr __iterator end() const noexcept { return __iterator(__last_idx_); }
 
   private:
     friend struct text_encoding;
@@ -815,7 +815,7 @@ private:
 
 template <>
 struct hash<text_encoding> {
-  size_t operator()(const text_encoding& __enc) const noexcept {
+  [[nodiscard]] size_t operator()(const text_encoding& __enc) const noexcept {
     return std::hash<std::text_encoding::id>()(__enc.mib());
   }
 };

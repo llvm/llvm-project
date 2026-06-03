@@ -112,7 +112,7 @@ public:
                __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
   }
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI std::text_encoding encoding() const {
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI std::text_encoding encoding() const {
     std::string __name = name();
     return std::__get_locale_encoding(__name.c_str());
   }
