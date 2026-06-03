@@ -35,9 +35,9 @@ using namespace AMDGPU;
 RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
-    : MF(B.getMF()), ST(MF.getSubtarget<GCNSubtarget>()), B(B),
-      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
-      RBLRules(RBLRules), IsWave32(ST.isWave32()),
+    : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
+      ST(MF.getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()), MUI(MUI),
+      RBI(RBI), MORE(MF, nullptr), RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
@@ -1901,10 +1901,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const auto *Info = MF.getInfo<SIMachineFunctionInfo>();
       const unsigned NumRegs = Ty.getSizeInBits() / 32;
       const RegisterBank *DstRB =
-          Info->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB == DstRB)
         break;
       Register NewDst = MRI.createVirtualRegister({DstRB, Ty});
@@ -2131,10 +2130,9 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       break;
     }
     case VgprOrAgprAnyTy: {
-      const auto *Info = MF.getInfo<SIMachineFunctionInfo>();
       const unsigned NumRegs = Ty.getSizeInBits() / 32;
       const RegisterBank *SrcRB =
-          Info->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
       if (RB != SrcRB)
         Op.setReg(B.buildCopy({SrcRB, Ty}, Reg).getReg(0));
       break;
