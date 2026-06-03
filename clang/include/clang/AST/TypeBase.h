@@ -6741,12 +6741,13 @@ public:
   /// \returns the top-level nullability, if present.
   static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent, const Attr *attr);
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      Kind attrKind, QualType modified, QualType equivalent,
+                      const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;

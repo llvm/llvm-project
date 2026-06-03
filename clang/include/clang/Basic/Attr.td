@@ -768,10 +768,13 @@ class Attr {
   // Note: Any additional data members will leak and should be constructed
   // externally on the ASTContext.
   code AdditionalMembers = [{}];
+
+  string comparisonFn = "";
+  string profileFn = "";
+
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
-  string comparisonFn = "";
   list<Documentation> Documentation;
 }
 
@@ -897,6 +900,7 @@ def Aligned : InheritableAttr {
                                           CustomKeyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
   let comparisonFn = "areAlignedAttrsEqual";
+  let profileFn = "profileAlignedAttr";
   let Documentation = [Undocumented];
 }
 
@@ -3196,11 +3200,6 @@ def SwiftAttr : DeclOrTypeAttr {
   let Args = [StringArgument<"Attribute">];
   let Documentation = [SwiftAttrDocs];
   let PragmaAttributeSupport = 1;
-  let AdditionalMembers = [{
-    void Profile(llvm::FoldingSetNodeID &ID) const {
-      ID.AddString(getAttribute());
-    }
-  }];
 }
 
 def SwiftBridge : InheritableAttr {
