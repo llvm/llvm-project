@@ -134,7 +134,6 @@ set(mcontext_deps)
 set(ucontext_deps .sigset_t .stack_t)
 
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
-  file(COPY x86_64 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   add_header(
     mcontext_t_arch
     HDR
