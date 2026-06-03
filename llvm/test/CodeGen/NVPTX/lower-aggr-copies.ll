@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
 ; RUN: opt < %s -S -nvptx-aa -nvptx-aa-wrapper -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
+; RUN: %if ptxas-sm_90 && ptxas-isa-7.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx78 -O0 | %ptxas-verify -arch=sm_90 %}
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
 ; llvm.mem* intrinsics get lowered to loops.
