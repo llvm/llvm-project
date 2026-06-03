@@ -16,8 +16,8 @@ namespace llvm {
 class BranchRelaxationPass
     : public RequiredPassInfoMixin<BranchRelaxationPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm
