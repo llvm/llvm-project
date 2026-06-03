@@ -101,7 +101,7 @@ void func() {
     for (int j = 0; j < i; ++j)
       ;
 
-  // expected-error@* {{expected 3 for loops after '#pragma omp for', but found only 2}}
+  // expected-error@+5 {{expected 3 for loops after '#pragma omp for', but found only 2}}
   // expected-note@+1 {{as specified in 'collapse' clause}}
   #pragma omp for collapse(3)
   #pragma omp tile sizes(5)
