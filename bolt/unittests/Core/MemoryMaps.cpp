@@ -21,7 +21,7 @@ using namespace llvm::ELF;
 using namespace bolt;
 
 namespace opts {
-extern cl::opt<bool> ReadPreAggOrPerfScript;
+extern cl::opt<bool> ReadPreAggregated;
 } // namespace opts
 
 namespace {
@@ -104,7 +104,7 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MemoryMapsTester,
 TEST_P(MemoryMapsTester, ParseMultipleSegments) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string MemEvents =
       formatv(
           "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "
@@ -145,7 +145,7 @@ TEST_P(MemoryMapsTester, ParseMultipleSegments) {
 TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
   const int Pid = 1234;
   StringRef Filename = "BINARY";
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string MemEvents =
       formatv(
           "name       0 [000]     0.000000: PERF_RECORD_MMAP2 {0}/{0}: "

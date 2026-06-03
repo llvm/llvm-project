@@ -129,12 +129,12 @@ extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
 
-cl::opt<bool> ReadPreAggOrPerfScript(
+cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
 cl::alias ReadPerfScript("ps", cl::desc("read pre-parsed perf script output"),
-                         cl::NotHidden, cl::aliasopt(ReadPreAggOrPerfScript));
+                         cl::NotHidden, cl::aliasopt(ReadPreAggregated));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -255,7 +255,7 @@ void DataAggregator::start() {
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggOrPerfScript)
+  if (opts::ReadPreAggregated)
     return;
 
   findPerfExecutable();
@@ -299,7 +299,7 @@ void DataAggregator::start() {
 }
 
 void DataAggregator::abort() {
-  if (opts::ReadPreAggOrPerfScript)
+  if (opts::ReadPreAggregated)
     return;
 
   std::string Error;
@@ -397,7 +397,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
-  if (opts::ReadPreAggOrPerfScript)
+  if (opts::ReadPreAggregated)
     return true;
 
   return DataAggregator::checkInputFileMagic(FileName, PerfDataMagicStr);
@@ -531,6 +531,9 @@ std::error_code DataAggregator::parsePerfScriptFileHeader() {
     PPI->Offset = Offset;
     PPI->Length = Length;
     Offset = Offset + Length;
+
+    while (checkAndConsumeFS()) {
+    }
   }
 
   ErrorOr<uint64_t> FsRes = getFileSize(Filename);
@@ -544,7 +547,7 @@ std::error_code DataAggregator::parsePerfScriptFileHeader() {
   return std::error_code();
 }
 
-void DataAggregator::parsePerfScript() {
+Error DataAggregator::parsePerfScript() {
   outs() << "PERF2BOLT: parsing a textual perf-script events...\n";
   NamedRegionTimer T("parsePerfScript", "Parsing perf-script events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
@@ -553,21 +556,17 @@ void DataAggregator::parsePerfScript() {
     ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
         MemoryBuffer::getFileSlice(Filename, 133, 0);
     if (std::error_code EC = MB.getError()) {
-      errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
-             << EC.message() << "\n";
-      exit(1);
+      return errorCodeToError(EC);
     }
 
     ParsingBuf = (*MB)->getBuffer();
     Col = 0;
     Line = 1;
-    if (std::error_code EC = parsePerfScriptFileHeader()) {
-      errs() << "PERF2BOLT-ERROR: failed to parse text header" << EC.message()
-             << "\n";
-      exit(1);
-    }
+    if (std::error_code EC = parsePerfScriptFileHeader())
+      return errorCodeToError(EC);
   }
   parsePerfData();
+  return Error::success();
 }
 
 Error DataAggregator::generatePerfScriptData() {
@@ -658,7 +657,7 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (opts::ReadPreAggOrPerfScript) {
+  if (opts::ReadPreAggregated) {
     // No profile, ParsingBuf is set directly in unittests.
     if (Filename.empty())
       return 0;
@@ -857,10 +856,14 @@ void DataAggregator::imputeFallThroughs() {
 
 void DataAggregator::parseInput() {
   start();
-  if (opts::ReadPreAggOrPerfScript &&
+  if (opts::ReadPreAggregated &&
       checkInputFileMagic(Filename, PerfTextMagicStr)) {
-    parsePerfScript();
-  } else if (opts::ReadPreAggOrPerfScript) {
+    if (Error Err = parsePerfScript()) {
+      errs() << "PERF2BOLT-ERROR: failed to parse perfscript profile"
+             << llvm::toString(std::move(Err)) << "\n";
+      exit(1);
+    }
+  } else if (opts::ReadPreAggregated) {
     parsePreAggregated();
   } else {
     parsePerfData();

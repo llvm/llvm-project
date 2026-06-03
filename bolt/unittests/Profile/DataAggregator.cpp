@@ -18,7 +18,7 @@ using namespace llvm;
 using namespace llvm::bolt;
 
 namespace opts {
-extern cl::opt<bool> ReadPreAggOrPerfScript;
+extern cl::opt<bool> ReadPreAggregated;
 } // namespace opts
 
 namespace llvm {
@@ -28,7 +28,7 @@ namespace bolt {
 /// Used for both parseHexField tests (no BC needed) and pre-aggregated
 /// parsing tests (BC needed, X86-only).
 struct PreAggregatedTestHelper : public testing::Test {
-  void SetUp() override { opts::ReadPreAggOrPerfScript = true; }
+  void SetUp() override { opts::ReadPreAggregated = true; }
 
 protected:
   using Trace = DataAggregator::Trace;
@@ -87,7 +87,7 @@ protected:
 } // namespace llvm
 
 TEST(DataAggregatorTest, buildID) {
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
 
   DataAggregator DA("<pseudo input>");
   std::optional<StringRef> FileName;

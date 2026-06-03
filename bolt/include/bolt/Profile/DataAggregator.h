@@ -93,7 +93,7 @@ private:
 
   friend struct PerfSpeEventsTestHelper;
   friend struct PreAggregatedTestHelper;
-  friend struct PerfScriptDataTestHelper;
+  friend struct PerfScriptTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -190,9 +190,9 @@ private:
     SmallVector<char, 256> StderrPath{};
 
     /// Helper variables for parsing perfscript profile.
-    /// - Length: Total size of the content from the Offset.
-    /// - Offset: Position where content begins in the file.
+    /// Length: Total size of the content from \p Offset.
     uint64_t Length{0};
+    /// Position where content begins in the file.
     uint64_t Offset{0};
   };
 
@@ -487,7 +487,7 @@ private:
   /// Coordinate reading pre-parsed perf-script:
   /// - open file header to determine offset and length for each part,
   /// - read perf script slices.
-  void parsePerfScript();
+  Error parsePerfScript();
 
   /// Parse the header of the perf text file.
   std::error_code parsePerfScriptFileHeader();

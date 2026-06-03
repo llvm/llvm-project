@@ -1,4 +1,4 @@
-//===- bolt/unittests/Profile/PerfScriptData.cpp--------------------------===//
+//===- bolt/unittests/Profile/PerfScripts.cpp--------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <gmock/gmock.h>
 
@@ -21,7 +22,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 namespace opts {
-extern cl::opt<bool> ReadPreAggOrPerfScript;
+extern cl::opt<bool> ReadPreAggregated;
 extern cl::opt<bool> ArmSPE;
 } // namespace opts
 
@@ -30,7 +31,7 @@ namespace bolt {
 
 /// Tests textual profile parsing using dummy input and
 /// performs negative checks on PERFTEXT headers.
-struct PerfScriptDataTestHelper : public testing::Test {
+struct PerfScriptTestHelper : public testing::Test {
   void SetUp() override {
     initalizeLLVM();
     prepareElf();
@@ -114,7 +115,8 @@ protected:
     DataAggregator::MMapInfo MMap;
     DA.BinaryMMapInfo.insert(std::make_pair(Pid, MMap));
 
-    DA.parsePerfScript();
+    Error Err = DA.parsePerfScript();
+    EXPECT_THAT_ERROR(std::move(Err), Succeeded());
     EXPECT_EQ(DA.Traces.size(), Expected);
 
     sys::fs::remove(Path);
@@ -124,8 +126,8 @@ protected:
 } // namespace bolt
 } // namespace llvm
 
-TEST_F(PerfScriptDataTestHelper, CheckMissingEndOfLineChar) {
-  opts::ReadPreAggOrPerfScript = true;
+TEST_F(PerfScriptTestHelper, CheckMissingEndOfLineChar) {
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected rest of line";
   std::string Buffer =
       "PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;";
@@ -133,9 +135,9 @@ TEST_F(PerfScriptDataTestHelper, CheckMissingEndOfLineChar) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, CheckMissingPerfMagicString) {
+TEST_F(PerfScriptTestHelper, CheckMissingPerfMagicString) {
   // Checks missing/wrong "PERFTEXT" string.
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected 'PERFTEXT' magic string";
   std::string Buffer =
       "PERF;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;\n";
@@ -143,17 +145,17 @@ TEST_F(PerfScriptDataTestHelper, CheckMissingPerfMagicString) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, CheckMissingEventAndSizeContent) {
-  opts::ReadPreAggOrPerfScript = true;
+TEST_F(PerfScriptTestHelper, CheckMissingEventAndSizeContent) {
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected type=length content";
   std::string Buffer = "PERFTEXT;BUILDID?1;\n";
 
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, CheckMalformedTypes) {
+TEST_F(PerfScriptTestHelper, CheckMalformedTypes) {
   // Checks malformed type: actual: BUID, expected: BUILDID.
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "supported types: BUILDID, MAIN, MMAP, TASK, MEM";
   std::string Buffer =
       "PERFTEXT;BUID=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;\n";
@@ -161,9 +163,9 @@ TEST_F(PerfScriptDataTestHelper, CheckMalformedTypes) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, CheckExpectedHexNumber) {
+TEST_F(PerfScriptTestHelper, CheckExpectedHexNumber) {
   // Checks expected hexadecimal number error message: BUILDIDS=32y.
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected hexadecimal number";
   std::string Buffer =
       "PERFTEXT;BUILDIDS=32y;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;\n";
@@ -171,9 +173,9 @@ TEST_F(PerfScriptDataTestHelper, CheckExpectedHexNumber) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, CheckCorruptedTextProfile) {
+TEST_F(PerfScriptTestHelper, CheckCorruptedTextProfile) {
   // Checks the sum of events length is not equal to file size.
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   std::string ErrorMessage = "corrupted perfscript profile";
   std::string Buffer =
       "PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;\n";
@@ -181,8 +183,8 @@ TEST_F(PerfScriptDataTestHelper, CheckCorruptedTextProfile) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptDataTestHelper, ParseAndCheckFileHeader) {
-  opts::ReadPreAggOrPerfScript = true;
+TEST_F(PerfScriptTestHelper, ParseAndCheckFileHeader) {
+  opts::ReadPreAggregated = true;
   opts::ArmSPE = true;
   const int Pid = 1234;
   StringRef Filename = "ELF";
@@ -207,9 +209,10 @@ TEST_F(PerfScriptDataTestHelper, ParseAndCheckFileHeader) {
           .str();
 
   std::string Header =
-      formatv("PERFTEXT;BUILDIDS={0:x-};MMAP={1:x-};MAIN={2:x-};TASK={3:x-};\n",
-              BuildID.size(), MemEvents.size(), MainEvents.size(),
-              TaskEvents.size())
+      formatv(
+          "PERFTEXT;BUILDIDS={0:x-};MMAP={1:x-};MAIN={2:x-};TASK={3:x-};{4}\n",
+          BuildID.size(), MemEvents.size(), MainEvents.size(),
+          TaskEvents.size(), "   ")
           .str();
 
   std::string Buffer = formatv("{0}{1}{2}{3}{4}", Header, BuildID, MemEvents,

@@ -22,7 +22,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 namespace opts {
-extern cl::opt<bool> ReadPreAggOrPerfScript;
+extern cl::opt<bool> ReadPreAggregated;
 extern cl::opt<bool> ArmSPE;
 } // namespace opts
 
@@ -134,7 +134,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
   // ```
 
   opts::ArmSPE = true;
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   StringRef Buffer = "  1234  0xa001/0xa002/PN/-/-/10/COND/-\n"
                      "  1234  0xb001/0xb002/P/-/-/4/RET/-\n"
                      "  1234  0xc456/0xc789/P/-/-/13/-/-\n"
@@ -175,7 +175,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
   // ```
 
   opts::ArmSPE = true;
-  opts::ReadPreAggOrPerfScript = true;
+  opts::ReadPreAggregated = true;
   StringRef Buffer =
       // "<PID> <SRC>/<DEST>/PN/-/-/10/COND/- <NULL>/<PBT>/-/-/-/0//-\n"
       "  4567  0xa002/0xa003/PN/-/-/10/COND/- 0x0/0xa001/-/-/-/0//-\n"
