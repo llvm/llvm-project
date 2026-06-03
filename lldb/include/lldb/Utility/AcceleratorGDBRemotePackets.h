@@ -85,6 +85,23 @@ bool fromJSON(const llvm::json::Value &value,
               AcceleratorBreakpointHitArgs &data, llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorBreakpointHitArgs &data);
 
+/// Information needed for the client to create a reverse connection to an
+/// accelerator GDB server.
+struct AcceleratorConnectionInfo {
+  /// Path to the target executable to use when creating the target.
+  std::optional<std::string> exe_path;
+  /// Name of the platform to select when creating the target.
+  std::optional<std::string> platform_name;
+  /// Target triple to use as the architecture when creating the target.
+  std::optional<std::string> triple;
+  /// Connection URL to use with "process connect <url>".
+  std::string connect_url;
+};
+
+bool fromJSON(const llvm::json::Value &value, AcceleratorConnectionInfo &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const AcceleratorConnectionInfo &data);
+
 /// Actions to be performed in the native process on behalf of an accelerator
 /// plugin. AcceleratorActions are returned in the following contexts:
 ///
@@ -114,6 +131,9 @@ struct AcceleratorActions {
   int64_t identifier = 0;
   /// New breakpoints to set. Nothing to set if this is empty.
   std::vector<AcceleratorBreakpointInfo> breakpoints;
+  /// If set, the client should create a reverse connection to the accelerator
+  /// GDB server at the specified URL.
+  std::optional<AcceleratorConnectionInfo> connect_info;
 };
 
 bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,

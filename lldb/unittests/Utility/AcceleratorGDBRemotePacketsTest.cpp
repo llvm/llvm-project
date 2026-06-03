@@ -139,6 +139,48 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActions) {
   EXPECT_EQ("main", deserialized->breakpoints[0].by_name->function_name);
 }
 
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfo) {
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:1234";
+  conn.exe_path = "/path/to/gpu_binary";
+  conn.platform_name = "amdgpu";
+  conn.triple = "amdgcn-amd-amdhsa";
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(conn.exe_path, deserialized->exe_path);
+  EXPECT_EQ(conn.platform_name, deserialized->platform_name);
+  EXPECT_EQ(conn.triple, deserialized->triple);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorConnectionInfoMinimal) {
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:0";
+
+  Expected<AcceleratorConnectionInfo> deserialized = roundtripJSON(conn);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(conn.connect_url, deserialized->connect_url);
+  EXPECT_EQ(std::nullopt, deserialized->exe_path);
+  EXPECT_EQ(std::nullopt, deserialized->platform_name);
+  EXPECT_EQ(std::nullopt, deserialized->triple);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsWithConnectInfo) {
+  AcceleratorActions actions("mock", 1);
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:5555";
+  conn.triple = "amdgcn-amd-amdhsa";
+  actions.connect_info = std::move(conn);
+
+  Expected<AcceleratorActions> deserialized = roundtripJSON(actions);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_TRUE(deserialized->connect_info.has_value());
+  EXPECT_EQ("connect://localhost:5555",
+            deserialized->connect_info->connect_url);
+  EXPECT_EQ("amdgcn-amd-amdhsa", deserialized->connect_info->triple);
+}
+
 TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsEmpty) {
   AcceleratorActions actions("test", 0);
 

@@ -83,6 +83,12 @@ class MockAcceleratorPluginTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIn("by_name", bp)
         self.assertEqual(bp["by_name"]["function_name"], "main")
 
+        # Verify connection info is present.
+        self.assertIn("connect_info", mock_action)
+        conn = mock_action["connect_info"]
+        self.assertEqual(conn["connect_url"], "connect://localhost:0")
+        self.assertEqual(conn["triple"], "x86_64-unknown-linux-gnu")
+
     @add_test_categories(["llgs"])
     def test_jAcceleratorPluginBreakpointHit_response(self):
         self.build()

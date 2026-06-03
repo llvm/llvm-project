@@ -22,11 +22,17 @@ llvm::StringRef LLDBServerMockAcceleratorPlugin::GetPluginName() {
 std::optional<AcceleratorActions>
 LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
   AcceleratorActions actions(GetPluginName(), 1);
+  actions.session_name = "Mock Accelerator Session";
 
   AcceleratorBreakpointInfo bp;
   bp.identifier = kBreakpointIDInitialize;
   bp.by_name = AcceleratorBreakpointByName{std::nullopt, "main"};
   actions.breakpoints.push_back(std::move(bp));
+
+  AcceleratorConnectionInfo conn;
+  conn.connect_url = "connect://localhost:0";
+  conn.triple = "x86_64-unknown-linux-gnu";
+  actions.connect_info = std::move(conn);
 
   return actions;
 }

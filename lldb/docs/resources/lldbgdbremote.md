@@ -2745,14 +2745,15 @@ STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identi
 If no accelerator plugins are installed, the server does not advertise the
 `accelerator-plugins+` feature and this packet should not be sent.
 
-Each `accelerator_action` may include a `breakpoints` array requesting
-breakpoints to be set in the native process. See
-`jAcceleratorPluginBreakpointHit` for the callback when those breakpoints
-are hit.
+Each `accelerator_action` may include optional fields:
+
+| Key            | Type   | Description |
+|----------------|--------|-------------|
+| `breakpoints`  | array  | Array of `AcceleratorBreakpointInfo` objects requesting breakpoints in the native process. See `jAcceleratorPluginBreakpointHit` for the callback when those breakpoints are hit. |
+| `connect_info` | object | Connection information for the client to create a reverse connection to the accelerator GDB server. Contains `connect_url` (required), and optionally `exe_path`, `platform_name`, and `triple`. |
 
 In future patches, each `accelerator_action` will include additional fields
-such as connection info for secondary debug sessions and synchronization
-options.
+such as synchronization options.
 
 **Priority To Implement:** Required for hardware accelerator debugging
 support. Not needed for non-hardware-accelerator debugging.

@@ -86,21 +86,42 @@ AcceleratorBreakpointHitArgs::GetSymbolValue(StringRef symbol_name) const {
   return std::nullopt;
 }
 
+bool fromJSON(const Value &value, AcceleratorConnectionInfo &data, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.mapOptional("exe_path", data.exe_path) &&
+         o.mapOptional("platform_name", data.platform_name) &&
+         o.mapOptional("triple", data.triple) &&
+         o.map("connect_url", data.connect_url);
+}
+
+json::Value toJSON(const AcceleratorConnectionInfo &data) {
+  return Object{
+      {"exe_path", data.exe_path},
+      {"platform_name", data.platform_name},
+      {"triple", data.triple},
+      {"connect_url", data.connect_url},
+  };
+}
+
 bool fromJSON(const Value &value, AcceleratorActions &data, Path path) {
   ObjectMapper o(value, path);
   return o && o.map("plugin_name", data.plugin_name) &&
          o.map("session_name", data.session_name) &&
          o.map("identifier", data.identifier) &&
-         o.map("breakpoints", data.breakpoints);
+         o.map("breakpoints", data.breakpoints) &&
+         o.mapOptional("connect_info", data.connect_info);
 }
 
 json::Value toJSON(const AcceleratorActions &data) {
-  return Object{
+  Object obj{
       {"plugin_name", data.plugin_name},
       {"session_name", data.session_name},
       {"identifier", data.identifier},
       {"breakpoints", data.breakpoints},
   };
+  if (data.connect_info)
+    obj["connect_info"] = *data.connect_info;
+  return obj;
 }
 
 bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
