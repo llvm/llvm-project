@@ -77,8 +77,7 @@ determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
 }
 
 class StateUpdateReporter {
-  const MemSpaceRegion *Space;
-  const SubRegion *Reg;
+  const std::string RegName;
   const NonLoc ByteOffsetVal;
   const std::optional<QualType> ElementType;
   const std::optional<int64_t> ElementSize;
@@ -86,10 +85,10 @@ class StateUpdateReporter {
   std::optional<NonLoc> AssumedUpperBound = std::nullopt;
 
 public:
-  StateUpdateReporter(const SubRegion *R, NonLoc ByteOffsVal, const Expr *E,
+  StateUpdateReporter(std::string RN, NonLoc ByteOffsVal, const Expr *E,
                       CheckerContext &C)
-      : Space(R->getMemorySpace(C.getState())), Reg(R),
-        ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)),
+      : RegName(RN), ByteOffsetVal(ByteOffsVal),
+        ElementType(determineElementType(E, C)),
         ElementSize(determineElementSize(ElementType, C)) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
@@ -550,7 +549,7 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR) const {
           << "' elements in ";
     else
       Out << "the extent of ";
-    Out << getRegionName(Space, Reg);
+    Out << RegName;
   }
   return std::string(Out.str());
 }
@@ -597,7 +596,8 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
   // The state updates will be reported as a single note tag, which will be
   // composed by this helper class.
-  StateUpdateReporter SUR(Reg, ByteOffset, E, C);
+  std::string RegName = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
+  StateUpdateReporter SUR(RegName, ByteOffset, E, C);
 
   // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
