@@ -3611,3 +3611,2553 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
   store i8 %yx, ptr %p1
   ret void
 }
+
+
+define i8 @clmul_i8_allones(i8 %x) nounwind {
+; SCALAR-LABEL: clmul_i8_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorb %dil, %al
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorb %cl, %dl
+; SCALAR-NEXT:    xorb %al, %dl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shlb $4, %al
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shlb $5, %cl
+; SCALAR-NEXT:    xorb %al, %cl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shlb $6, %al
+; SCALAR-NEXT:    xorb %cl, %al
+; SCALAR-NEXT:    xorb %dl, %al
+; SCALAR-NEXT:    shlb $7, %dil
+; SCALAR-NEXT:    xorb %dil, %al
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i8_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $255, %eax
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i8_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $255, %eax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $al killed $al killed $rax
+; AVX-NEXT:    retq
+  %r = call i8 @llvm.clmul.i8(i8 %x, i8 -1)
+  ret i8 %r
+}
+
+define i16 @clmul_i16_allones(i16 %x) nounwind {
+; SCALAR-LABEL: clmul_i16_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $4, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $5, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $6, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $7, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $8, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $9, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $10, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $11, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $12, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %esi
+; SCALAR-NEXT:    shll $13, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $14, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    shll $15, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    # kill: def $ax killed $ax killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i16_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i16_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX-NEXT:    retq
+  %r = call i16 @llvm.clmul.i16(i16 %x, i16 -1)
+  ret i16 %r
+}
+
+define i32 @clmul_i32_allones(i32 %x) nounwind {
+; SCALAR-LABEL: clmul_i32_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $4, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $5, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $6, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $7, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $8, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $9, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $10, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $11, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $12, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $13, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $14, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %esi
+; SCALAR-NEXT:    shll $15, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $16, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $17, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $18, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $19, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $20, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $21, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $22, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $23, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $24, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $25, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $26, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $27, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $28, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $29, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $30, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    shll $31, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i32_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i32_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+  %r = call i32 @llvm.clmul.i32(i32 %x, i32 -1)
+  ret i32 %r
+}
+
+define i64 @clmul_i64_allones(i64 %x) nounwind {
+; SCALAR-LABEL: clmul_i64_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    leaq (%rdi,%rdi), %rax
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    leaq (,%rdi,4), %rcx
+; SCALAR-NEXT:    leaq (,%rdi,8), %rdx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $5, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $6, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $7, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $8, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $9, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $10, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $11, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $12, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $13, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $14, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $15, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $16, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $17, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $18, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $19, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $20, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $21, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $22, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $23, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $24, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $25, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $26, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $27, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $28, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $29, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $30, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $31, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $32, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $33, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $34, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $35, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $36, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $37, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $38, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $39, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $40, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $41, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $42, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $43, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $44, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $45, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $46, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $47, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $48, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $49, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $50, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $51, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $52, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $53, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $54, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $55, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $56, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $57, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $58, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $59, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $60, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $61, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $62, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    shlq $63, %rdi
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i64_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movq $-1, %rax
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i64_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq $-1, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovq %rdi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    retq
+  %r = call i64 @llvm.clmul.i64(i64 %x, i64 -1)
+  ret i64 %r
+}
+
+define i7 @clmul_i7_allones(i7 %x) nounwind {
+; SCALAR-LABEL: clmul_i7_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorb %dil, %al
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorb %cl, %dl
+; SCALAR-NEXT:    xorb %al, %dl
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shlb $4, %cl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shlb $5, %al
+; SCALAR-NEXT:    xorb %cl, %al
+; SCALAR-NEXT:    shlb $6, %dil
+; SCALAR-NEXT:    xorb %dil, %al
+; SCALAR-NEXT:    xorb %dl, %al
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i7_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $127, %eax
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i7_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $127, %eax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $al killed $al killed $rax
+; AVX-NEXT:    retq
+  %r = call i7 @llvm.clmul.i7(i7 %x, i7 -1)
+  ret i7 %r
+}
+
+define i10 @clmul_i10_allones(i10 %x) nounwind {
+; SCALAR-LABEL: clmul_i10_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $4, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $5, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %esi
+; SCALAR-NEXT:    shll $6, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $7, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $8, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    shll $9, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    # kill: def $ax killed $ax killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i10_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $1023, %eax # imm = 0x3FF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i10_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $1023, %eax # imm = 0x3FF
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX-NEXT:    retq
+  %r = call i10 @llvm.clmul.i10(i10 %x, i10 -1)
+  ret i10 %r
+}
+
+define i25 @clmul_i25_allones(i25 %x) nounwind {
+; SCALAR-LABEL: clmul_i25_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
+; SCALAR-NEXT:    leal (%rdi,%rdi), %eax
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    leal (,%rdi,4), %ecx
+; SCALAR-NEXT:    leal (,%rdi,8), %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $4, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $5, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $6, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $7, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $8, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $9, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $10, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $11, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $12, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $13, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $14, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $15, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $16, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $17, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $18, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $19, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $20, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $21, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $22, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $23, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    shll $24, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i25_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movl $33554431, %eax # imm = 0x1FFFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i25_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movl $33554431, %eax # imm = 0x1FFFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+  %r = call i25 @llvm.clmul.i25(i25 %x, i25 -1)
+  ret i25 %r
+}
+
+define i44 @clmul_i44_allones(i44 %x) nounwind {
+; SCALAR-LABEL: clmul_i44_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    leaq (%rdi,%rdi), %rax
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    leaq (,%rdi,4), %rcx
+; SCALAR-NEXT:    leaq (,%rdi,8), %rdx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $5, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $6, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $7, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $8, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $9, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $10, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $11, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $12, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $13, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $14, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $15, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $16, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $17, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $18, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $19, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $20, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $21, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $22, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $23, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $24, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $25, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $26, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $27, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $28, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $29, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $30, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $31, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $32, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $33, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $34, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $35, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rcx
+; SCALAR-NEXT:    shlq $36, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $37, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $38, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $39, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $40, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $41, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $42, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    shlq $43, %rdi
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmul_i44_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movabsq $17592186044415, %rax # imm = 0xFFFFFFFFFFF
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmul_i44_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movabsq $17592186044415, %rax # imm = 0xFFFFFFFFFFF
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovq %rdi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    retq
+  %r = call i44 @llvm.clmul.i44(i44 %x, i44 -1)
+  ret i44 %r
+}
+
+define i8 @clmulr_i8_allones(i8 %x) nounwind {
+; SCALAR-LABEL: clmulr_i8_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movzbl %dil, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    leal (,%rax,4), %edx
+; SCALAR-NEXT:    leal (,%rax,8), %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $5, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $6, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %esi, %ecx
+; SCALAR-NEXT:    shll $7, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $8, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $9, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $10, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $11, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $12, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $13, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    shll $14, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    shrl $7, %eax
+; SCALAR-NEXT:    # kill: def $al killed $al killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulr_i8_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
+; SSE-PCLMUL-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrl $7, %eax
+; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulr_i8_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzbl %dil, %eax
+; AVX-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrl $7, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i8 %x to i16
+  %clmul = call i16 @llvm.clmul.i16(i16 %x.ext, i16 -1)
+  %res.ext = lshr i16 %clmul, 7
+  %res = trunc i16 %res.ext to i8
+  ret i8 %res
+}
+
+define i16 @clmulr_i16_allones(i16 %x) nounwind {
+; SCALAR-LABEL: clmulr_i16_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movzwl %di, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    leal (,%rax,4), %edx
+; SCALAR-NEXT:    leal (,%rax,8), %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $5, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $6, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %esi, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $7, %edx
+; SCALAR-NEXT:    movl %eax, %esi
+; SCALAR-NEXT:    shll $8, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $9, %edx
+; SCALAR-NEXT:    xorl %esi, %edx
+; SCALAR-NEXT:    movl %eax, %esi
+; SCALAR-NEXT:    shll $10, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $11, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $12, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $13, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $14, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    shll $15, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $16, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $17, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $18, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $19, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $20, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $21, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $22, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $23, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $24, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $25, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $26, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $27, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $28, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $29, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    shll $30, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    shrl $15, %eax
+; SCALAR-NEXT:    # kill: def $ax killed $ax killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulr_i16_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movzwl %di, %eax
+; SSE-PCLMUL-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrl $15, %eax
+; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulr_i16_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl %di, %eax
+; AVX-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrl $15, %eax
+; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i16 %x to i32
+  %clmul = call i32 @llvm.clmul.i32(i32 %x.ext, i32 -1)
+  %res.ext = lshr i32 %clmul, 15
+  %res = trunc i32 %res.ext to i16
+  ret i16 %res
+}
+
+define i32 @clmulr_i32_allones(i32 %x) nounwind {
+; SCALAR-LABEL: clmulr_i32_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    leaq (%rax,%rax), %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    leaq (,%rax,4), %rdx
+; SCALAR-NEXT:    leaq (,%rax,8), %rsi
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $4, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $5, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $6, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $7, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $8, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $9, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $10, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $11, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $12, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $13, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $14, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $15, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $16, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $17, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $18, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $19, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $20, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $21, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $22, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $23, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $24, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $25, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $26, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $27, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $28, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $29, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $30, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $31, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $32, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $33, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $34, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $35, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $36, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $37, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $38, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $39, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $40, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $41, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $42, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $43, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $44, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $45, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $46, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $47, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $48, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $49, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $50, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $51, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $52, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $53, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $54, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $55, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $56, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $57, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $58, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $59, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $60, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $61, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    shlq $62, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    shrq $31, %rax
+; SCALAR-NEXT:    # kill: def $eax killed $eax killed $rax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulr_i32_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movq $-1, %rax
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrq $31, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulr_i32_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq $-1, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrq $31, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i32 %x to i64
+  %clmul = call i64 @llvm.clmul.i64(i64 %x.ext, i64 -1)
+  %res.ext = lshr i64 %clmul, 31
+  %res = trunc i64 %res.ext to i32
+  ret i32 %res
+}
+
+define i64 @clmulr_i64_allones(i64 %x) nounwind {
+; SCALAR-LABEL: clmulr_i64_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    pushq %rbx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    bswapq %rax
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shrq $4, %rcx
+; SCALAR-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
+; SCALAR-NEXT:    andq %rdx, %rcx
+; SCALAR-NEXT:    andq %rdx, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    orq %rcx, %rax
+; SCALAR-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    andq %rcx, %rsi
+; SCALAR-NEXT:    shrq $2, %rax
+; SCALAR-NEXT:    andq %rcx, %rax
+; SCALAR-NEXT:    leaq (%rax,%rsi,4), %rsi
+; SCALAR-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; SCALAR-NEXT:    movq %rsi, %r8
+; SCALAR-NEXT:    andq %rax, %r8
+; SCALAR-NEXT:    shrq %rsi
+; SCALAR-NEXT:    movq %rsi, %r9
+; SCALAR-NEXT:    andq %rax, %r9
+; SCALAR-NEXT:    leaq (%r9,%r8,2), %r8
+; SCALAR-NEXT:    leaq (%r8,%r8), %r9
+; SCALAR-NEXT:    xorq %r8, %r9
+; SCALAR-NEXT:    leaq (,%r8,4), %r10
+; SCALAR-NEXT:    leaq (,%r8,8), %r11
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $4, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $5, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $6, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $7, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $8, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $9, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $10, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $11, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $12, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $13, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $14, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $15, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $16, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $17, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $18, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $19, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $20, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $21, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $22, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $23, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $24, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $25, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $26, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $27, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $28, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $29, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $30, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $31, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $32, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $33, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $34, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $35, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $36, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $37, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $38, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $39, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $40, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $41, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $42, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $43, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $44, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $45, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $46, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $47, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $48, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $49, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $50, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $51, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $52, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $53, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $54, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $55, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $56, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $57, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $58, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $59, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $60, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $61, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    shlq $62, %r8
+; SCALAR-NEXT:    xorq %r11, %r8
+; SCALAR-NEXT:    shlq $63, %rsi
+; SCALAR-NEXT:    xorq %r8, %rsi
+; SCALAR-NEXT:    xorq %r10, %rsi
+; SCALAR-NEXT:    bswapq %rsi
+; SCALAR-NEXT:    movq %rsi, %r8
+; SCALAR-NEXT:    shrq $4, %r8
+; SCALAR-NEXT:    andq %rdx, %r8
+; SCALAR-NEXT:    andq %rdx, %rsi
+; SCALAR-NEXT:    shlq $4, %rsi
+; SCALAR-NEXT:    orq %r8, %rsi
+; SCALAR-NEXT:    movq %rsi, %rdx
+; SCALAR-NEXT:    andq %rcx, %rdx
+; SCALAR-NEXT:    shrq $2, %rsi
+; SCALAR-NEXT:    andq %rcx, %rsi
+; SCALAR-NEXT:    leaq (%rsi,%rdx,4), %rcx
+; SCALAR-NEXT:    andq %rcx, %rax
+; SCALAR-NEXT:    shrq %rcx
+; SCALAR-NEXT:    movabsq $6148914691236517204, %rdx # imm = 0x5555555555555554
+; SCALAR-NEXT:    andq %rcx, %rdx
+; SCALAR-NEXT:    leaq (%rdx,%rax,2), %rcx
+; SCALAR-NEXT:    shrq %rcx
+; SCALAR-NEXT:    leaq (%rdi,%rdi), %rax
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    leaq (,%rdi,4), %rdx
+; SCALAR-NEXT:    leaq (,%rdi,8), %rsi
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $5, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $6, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $7, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $8, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $9, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $10, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $11, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $12, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $13, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $14, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $15, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $16, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $17, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $18, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $19, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $20, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $21, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $22, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $23, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $24, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $25, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $26, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $27, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $28, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $29, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $30, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $31, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $32, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $33, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $34, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $35, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $36, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $37, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $38, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $39, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $40, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $41, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $42, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $43, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $44, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $45, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $46, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $47, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $48, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $49, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $50, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $51, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $52, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $53, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $54, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $55, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $56, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $57, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $58, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $59, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $60, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $61, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $62, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    shlq $63, %rdi
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    shrdq $63, %rcx, %rax
+; SCALAR-NEXT:    popq %rbx
+; SCALAR-NEXT:    retq
+;
+; SSE2-PCLMUL-LABEL: clmulr_i64_allones:
+; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    movq $-1, %rax
+; SSE2-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE2-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE2-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-PCLMUL-NEXT:    movq %xmm0, %rax
+; SSE2-PCLMUL-NEXT:    xorq %rcx, %rax
+; SSE2-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE2-PCLMUL-NEXT:    retq
+;
+; SSE42-PCLMUL-LABEL: clmulr_i64_allones:
+; SSE42-PCLMUL:       # %bb.0:
+; SSE42-PCLMUL-NEXT:    movq $-1, %rax
+; SSE42-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE42-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE42-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE42-PCLMUL-NEXT:    pextrq $1, %xmm1, %rax
+; SSE42-PCLMUL-NEXT:    xorq %rcx, %rax
+; SSE42-PCLMUL-NEXT:    shldq $1, %rcx, %rax
+; SSE42-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulr_i64_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq $-1, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovq %rdi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rcx
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    xorq %rcx, %rax
+; AVX-NEXT:    shldq $1, %rcx, %rax
+; AVX-NEXT:    retq
+  %x.ext = zext i64 %x to i128
+  %clmul = call i128 @llvm.clmul.i128(i128 %x.ext, i128 -1)
+  %res.ext = lshr i128 %clmul, 63
+  %res = trunc i128 %res.ext to i64
+  ret i64 %res
+}
+
+define i8 @clmulh_i8_allones(i8 %x) nounwind {
+; SCALAR-LABEL: clmulh_i8_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movzbl %dil, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    leal (,%rax,4), %edx
+; SCALAR-NEXT:    leal (,%rax,8), %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $5, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $6, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %esi, %ecx
+; SCALAR-NEXT:    shll $7, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $8, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $9, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $10, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $11, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $12, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %esi
+; SCALAR-NEXT:    shll $13, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $14, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    shll $15, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    shrl $8, %eax
+; SCALAR-NEXT:    # kill: def $al killed $al killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulh_i8_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
+; SSE-PCLMUL-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrl $8, %eax
+; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulh_i8_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzbl %dil, %eax
+; AVX-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrl $8, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i8 %x to i16
+  %clmul = call i16 @llvm.clmul.i16(i16 %x.ext, i16 -1)
+  %res.ext = lshr i16 %clmul, 8
+  %res = trunc i16 %res.ext to i8
+  ret i8 %res
+}
+
+define i16 @clmulh_i16_allones(i16 %x) nounwind {
+; SCALAR-LABEL: clmulh_i16_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movzwl %di, %eax
+; SCALAR-NEXT:    leal (%rax,%rax), %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    leal (,%rax,4), %edx
+; SCALAR-NEXT:    leal (,%rax,8), %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $4, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $5, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $6, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %esi, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $7, %edx
+; SCALAR-NEXT:    movl %eax, %esi
+; SCALAR-NEXT:    shll $8, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $9, %edx
+; SCALAR-NEXT:    xorl %esi, %edx
+; SCALAR-NEXT:    movl %eax, %esi
+; SCALAR-NEXT:    shll $10, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    xorl %ecx, %esi
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $11, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $12, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    shll $13, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %eax, %edx
+; SCALAR-NEXT:    shll $14, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    shll $15, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $16, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $17, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $18, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $19, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $20, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $21, %edx
+; SCALAR-NEXT:    xorl %ecx, %edx
+; SCALAR-NEXT:    movl %edi, %ecx
+; SCALAR-NEXT:    shll $22, %ecx
+; SCALAR-NEXT:    xorl %edx, %ecx
+; SCALAR-NEXT:    xorl %eax, %ecx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $23, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $24, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $25, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $26, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $27, %eax
+; SCALAR-NEXT:    xorl %edx, %eax
+; SCALAR-NEXT:    movl %edi, %edx
+; SCALAR-NEXT:    shll $28, %edx
+; SCALAR-NEXT:    xorl %eax, %edx
+; SCALAR-NEXT:    movl %edi, %esi
+; SCALAR-NEXT:    shll $29, %esi
+; SCALAR-NEXT:    xorl %edx, %esi
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    shll $30, %eax
+; SCALAR-NEXT:    xorl %esi, %eax
+; SCALAR-NEXT:    xorl %ecx, %eax
+; SCALAR-NEXT:    shll $31, %edi
+; SCALAR-NEXT:    xorl %edi, %eax
+; SCALAR-NEXT:    shrl $16, %eax
+; SCALAR-NEXT:    # kill: def $ax killed $ax killed $eax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulh_i16_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movzwl %di, %eax
+; SSE-PCLMUL-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrl $16, %eax
+; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulh_i16_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movzwl %di, %eax
+; AVX-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; AVX-NEXT:    vmovq %rcx, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrl $16, %eax
+; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i16 %x to i32
+  %clmul = call i32 @llvm.clmul.i32(i32 %x.ext, i32 -1)
+  %res.ext = lshr i32 %clmul, 16
+  %res = trunc i32 %res.ext to i16
+  ret i16 %res
+}
+
+define i32 @clmulh_i32_allones(i32 %x) nounwind {
+; SCALAR-LABEL: clmulh_i32_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    leaq (%rax,%rax), %rcx
+; SCALAR-NEXT:    xorq %rax, %rcx
+; SCALAR-NEXT:    leaq (,%rax,4), %rdx
+; SCALAR-NEXT:    leaq (,%rax,8), %rsi
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $4, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $5, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $6, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $7, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $8, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $9, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $10, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $11, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $12, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $13, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $14, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $15, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $16, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $17, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $18, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $19, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $20, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $21, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $22, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $23, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $24, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $25, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $26, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $27, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $28, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $29, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $30, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $31, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $32, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $33, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $34, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $35, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $36, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $37, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $38, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $39, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $40, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $41, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $42, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $43, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $44, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $45, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    xorq %rdx, %rcx
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $46, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $47, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $48, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $49, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $50, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $51, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $52, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $53, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rax, %rdi
+; SCALAR-NEXT:    shlq $54, %rdi
+; SCALAR-NEXT:    xorq %rsi, %rdi
+; SCALAR-NEXT:    movq %rax, %rdx
+; SCALAR-NEXT:    shlq $55, %rdx
+; SCALAR-NEXT:    xorq %rdi, %rdx
+; SCALAR-NEXT:    xorq %rcx, %rdx
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $56, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $57, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $58, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $59, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $60, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    shlq $61, %rsi
+; SCALAR-NEXT:    xorq %rcx, %rsi
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shlq $62, %rcx
+; SCALAR-NEXT:    xorq %rsi, %rcx
+; SCALAR-NEXT:    shlq $63, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    shrq $32, %rax
+; SCALAR-NEXT:    # kill: def $eax killed $eax killed $rax
+; SCALAR-NEXT:    retq
+;
+; SSE-PCLMUL-LABEL: clmulh_i32_allones:
+; SSE-PCLMUL:       # %bb.0:
+; SSE-PCLMUL-NEXT:    movq $-1, %rax
+; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    shrq $32, %rax
+; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
+; SSE-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulh_i32_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq $-1, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    shrq $32, %rax
+; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
+; AVX-NEXT:    retq
+  %x.ext = zext i32 %x to i64
+  %clmul = call i64 @llvm.clmul.i64(i64 %x.ext, i64 -1)
+  %res.ext = lshr i64 %clmul, 32
+  %res = trunc i64 %res.ext to i32
+  ret i32 %res
+}
+
+define i64 @clmulh_i64_allones(i64 %x) nounwind {
+; SCALAR-LABEL: clmulh_i64_allones:
+; SCALAR:       # %bb.0:
+; SCALAR-NEXT:    pushq %rbx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    bswapq %rax
+; SCALAR-NEXT:    movq %rax, %rcx
+; SCALAR-NEXT:    shrq $4, %rcx
+; SCALAR-NEXT:    movabsq $1085102592571150095, %rdx # imm = 0xF0F0F0F0F0F0F0F
+; SCALAR-NEXT:    andq %rdx, %rcx
+; SCALAR-NEXT:    andq %rdx, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    orq %rcx, %rax
+; SCALAR-NEXT:    movabsq $3689348814741910323, %rcx # imm = 0x3333333333333333
+; SCALAR-NEXT:    movq %rax, %rsi
+; SCALAR-NEXT:    andq %rcx, %rsi
+; SCALAR-NEXT:    shrq $2, %rax
+; SCALAR-NEXT:    andq %rcx, %rax
+; SCALAR-NEXT:    leaq (%rax,%rsi,4), %rsi
+; SCALAR-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
+; SCALAR-NEXT:    movq %rsi, %r8
+; SCALAR-NEXT:    andq %rax, %r8
+; SCALAR-NEXT:    shrq %rsi
+; SCALAR-NEXT:    movq %rsi, %r9
+; SCALAR-NEXT:    andq %rax, %r9
+; SCALAR-NEXT:    leaq (%r9,%r8,2), %r8
+; SCALAR-NEXT:    leaq (%r8,%r8), %r9
+; SCALAR-NEXT:    xorq %r8, %r9
+; SCALAR-NEXT:    leaq (,%r8,4), %r10
+; SCALAR-NEXT:    leaq (,%r8,8), %r11
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $4, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $5, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $6, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $7, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $8, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $9, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $10, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $11, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $12, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $13, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $14, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $15, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $16, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $17, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $18, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $19, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $20, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $21, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $22, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $23, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $24, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $25, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $26, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $27, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $28, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $29, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $30, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $31, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $32, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $33, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $34, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $35, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $36, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $37, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $38, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $39, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $40, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $41, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $42, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $43, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $44, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $45, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    xorq %r10, %r9
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $46, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $47, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $48, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $49, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $50, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $51, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $52, %r10
+; SCALAR-NEXT:    xorq %r11, %r10
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $53, %r11
+; SCALAR-NEXT:    xorq %r10, %r11
+; SCALAR-NEXT:    movq %r8, %rbx
+; SCALAR-NEXT:    shlq $54, %rbx
+; SCALAR-NEXT:    xorq %r11, %rbx
+; SCALAR-NEXT:    movq %r8, %r10
+; SCALAR-NEXT:    shlq $55, %r10
+; SCALAR-NEXT:    xorq %rbx, %r10
+; SCALAR-NEXT:    xorq %r9, %r10
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $56, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $57, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $58, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $59, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    movq %r8, %r9
+; SCALAR-NEXT:    shlq $60, %r9
+; SCALAR-NEXT:    xorq %r11, %r9
+; SCALAR-NEXT:    movq %r8, %r11
+; SCALAR-NEXT:    shlq $61, %r11
+; SCALAR-NEXT:    xorq %r9, %r11
+; SCALAR-NEXT:    shlq $62, %r8
+; SCALAR-NEXT:    xorq %r11, %r8
+; SCALAR-NEXT:    shlq $63, %rsi
+; SCALAR-NEXT:    xorq %r8, %rsi
+; SCALAR-NEXT:    xorq %r10, %rsi
+; SCALAR-NEXT:    bswapq %rsi
+; SCALAR-NEXT:    movq %rsi, %r8
+; SCALAR-NEXT:    shrq $4, %r8
+; SCALAR-NEXT:    andq %rdx, %r8
+; SCALAR-NEXT:    andq %rdx, %rsi
+; SCALAR-NEXT:    shlq $4, %rsi
+; SCALAR-NEXT:    orq %r8, %rsi
+; SCALAR-NEXT:    movq %rsi, %rdx
+; SCALAR-NEXT:    andq %rcx, %rdx
+; SCALAR-NEXT:    shrq $2, %rsi
+; SCALAR-NEXT:    andq %rcx, %rsi
+; SCALAR-NEXT:    leaq (%rsi,%rdx,4), %rcx
+; SCALAR-NEXT:    andq %rcx, %rax
+; SCALAR-NEXT:    shrq %rcx
+; SCALAR-NEXT:    movabsq $6148914691236517204, %rdx # imm = 0x5555555555555554
+; SCALAR-NEXT:    andq %rcx, %rdx
+; SCALAR-NEXT:    leaq (%rdx,%rax,2), %rcx
+; SCALAR-NEXT:    shrq %rcx
+; SCALAR-NEXT:    leaq (%rdi,%rdi), %rax
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    leaq (,%rdi,4), %rdx
+; SCALAR-NEXT:    leaq (,%rdi,8), %rsi
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $4, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $5, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $6, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $7, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $8, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $9, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $10, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $11, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $12, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $13, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $14, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $15, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $16, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $17, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $18, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $19, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $20, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $21, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $22, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $23, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $24, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $25, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $26, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $27, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $28, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $29, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $30, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $31, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $32, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $33, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $34, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $35, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $36, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $37, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $38, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $39, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $40, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $41, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $42, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $43, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $44, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $45, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $46, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $47, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $48, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $49, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $50, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $51, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $52, %rdx
+; SCALAR-NEXT:    xorq %rsi, %rdx
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $53, %rsi
+; SCALAR-NEXT:    xorq %rdx, %rsi
+; SCALAR-NEXT:    movq %rdi, %r8
+; SCALAR-NEXT:    shlq $54, %r8
+; SCALAR-NEXT:    xorq %rsi, %r8
+; SCALAR-NEXT:    movq %rdi, %rdx
+; SCALAR-NEXT:    shlq $55, %rdx
+; SCALAR-NEXT:    xorq %r8, %rdx
+; SCALAR-NEXT:    xorq %rax, %rdx
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $56, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $57, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $58, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $59, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $60, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    movq %rdi, %rsi
+; SCALAR-NEXT:    shlq $61, %rsi
+; SCALAR-NEXT:    xorq %rax, %rsi
+; SCALAR-NEXT:    movq %rdi, %rax
+; SCALAR-NEXT:    shlq $62, %rax
+; SCALAR-NEXT:    xorq %rsi, %rax
+; SCALAR-NEXT:    shlq $63, %rdi
+; SCALAR-NEXT:    xorq %rdi, %rax
+; SCALAR-NEXT:    xorq %rdx, %rax
+; SCALAR-NEXT:    xorq %rcx, %rax
+; SCALAR-NEXT:    popq %rbx
+; SCALAR-NEXT:    retq
+;
+; SSE2-PCLMUL-LABEL: clmulh_i64_allones:
+; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    movq $-1, %rax
+; SSE2-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE2-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE2-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE2-PCLMUL-NEXT:    movq %xmm0, %rax
+; SSE2-PCLMUL-NEXT:    xorq %rcx, %rax
+; SSE2-PCLMUL-NEXT:    retq
+;
+; SSE42-PCLMUL-LABEL: clmulh_i64_allones:
+; SSE42-PCLMUL:       # %bb.0:
+; SSE42-PCLMUL-NEXT:    movq $-1, %rax
+; SSE42-PCLMUL-NEXT:    movq %rax, %xmm0
+; SSE42-PCLMUL-NEXT:    movq %rdi, %xmm1
+; SSE42-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
+; SSE42-PCLMUL-NEXT:    movq %xmm1, %rcx
+; SSE42-PCLMUL-NEXT:    pextrq $1, %xmm1, %rax
+; SSE42-PCLMUL-NEXT:    xorq %rcx, %rax
+; SSE42-PCLMUL-NEXT:    retq
+;
+; AVX-LABEL: clmulh_i64_allones:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq $-1, %rax
+; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovq %rdi, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rcx
+; AVX-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX-NEXT:    xorq %rcx, %rax
+; AVX-NEXT:    retq
+  %x.ext = zext i64 %x to i128
+  %clmul = call i128 @llvm.clmul.i128(i128 %x.ext, i128 -1)
+  %res.ext = lshr i128 %clmul, 64
+  %res = trunc i128 %res.ext to i64
+  ret i64 %res
+}
