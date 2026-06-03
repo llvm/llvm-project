@@ -638,20 +638,24 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   mlir::Location loc = evalInMem.getLoc();
   hlfir::DestroyOp destroy;
   hlfir::AssignOp assign;
-  // A hlfir.shape_of of the result only needs the shape, which the
-  // eval_in_mem already carries as an operand, so it can be redirected to that
-  // operand and does not prevent the in-place rewrite below. Any other user
-  // would dangle when the eval_in_mem is erased, so bail out on it.
+  // To evaluate the hlfir.eval_in_mem directly into the LHS, its result must
+  // only be used in the assignment, in a destroy, and in hlfir.shape_of (which
+  // can be replaced by a direct use of the shape operand).
   llvm::SmallVector<hlfir::ShapeOfOp> shapeOfs;
   for (mlir::Operation *user : evalInMem->getUsers()) {
-    if (auto op = mlir::dyn_cast<hlfir::AssignOp>(user))
+    if (auto op = mlir::dyn_cast<hlfir::AssignOp>(user)) {
+      if (assign)
+        return mlir::failure();
       assign = op;
-    else if (auto op = mlir::dyn_cast<hlfir::DestroyOp>(user))
+    } else if (auto op = mlir::dyn_cast<hlfir::DestroyOp>(user)) {
+      if (destroy)
+        return mlir::failure();
       destroy = op;
-    else if (auto op = mlir::dyn_cast<hlfir::ShapeOfOp>(user))
+    } else if (auto op = mlir::dyn_cast<hlfir::ShapeOfOp>(user)) {
       shapeOfs.push_back(op);
-    else
+    } else {
       return mlir::failure();
+    }
   }
   if (!assign || !destroy || destroy.mustFinalizeExpr() ||
       assign.isAllocatableAssignment())
