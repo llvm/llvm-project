@@ -1235,18 +1235,18 @@ llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType())
     return llvm::createStringError(
-        "current value object is not an scalar object");
+        "Not allowed to change the value of a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
   if (GetVariable() && !can_update_var)
     return llvm::createStringError(
-        "Not allowed to update program variables in this case.");
+        "Not allowed to update program variables in this case");
 
   // Make sure we're not trying to assign to a constant.
   if (GetIsConstant())
     return llvm::createStringError(
-        "current value is not assignable (a constant)");
+        "Not allowed to change the value of a constant");
 
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
@@ -1259,7 +1259,7 @@ llvm::Error ValueObject::SetValueFromInteger(const llvm::APInt &value,
       uint64_t u_max = (1 << (byte_size * CHAR_BIT)) - 1;
       if (*(value.getRawData()) > u_max)
         return llvm::createStringError(
-            "illegal argument: new value is too big");
+            "Illegal argument: new value is too big");
     }
   }
 
@@ -1279,21 +1279,20 @@ llvm::Error ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(val_type) && !val_type.IsPointerType() &&
       !val_type.IsScalarType())
-    return llvm::createStringError(
-        "current value object is not an scalar object");
+    return llvm::createStringError("Not allowed to update a non-scalar object");
 
   // Verify, if current object is associated with a program variable, that
   // we are allowing updating program variables in this case.
   if (GetVariable() && !can_update_var)
     return llvm::createStringError(
-        "Not allowed to update program variables in this case.");
+        "Not allowed to update program variables in this case");
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
   if (!new_val_type.IsInteger() && !new_val_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(new_val_type) && !new_val_type.IsPointerType())
     return llvm::createStringError(
-        "illegal argument: new value is not a scalar object");
+        "Illegal argument: new value is not a scalar object");
 
   if (new_val_type.IsInteger() || new_val_type.IsUnscopedEnumerationType()) {
     auto value_or_err = new_val_sp->GetValueAsAPSInt();
@@ -1316,9 +1315,9 @@ llvm::Error ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       return SetValueFromInteger(llvm::APInt(num_bits, int_val),
                                  can_update_var);
     } else
-      return llvm::createStringError("error converting new_val_sp to integer");
+      return llvm::createStringError("Error converting new_val_sp to integer");
   }
-  llvm_unreachable("Unrecognized type for RHS of assignment.");
+  llvm_unreachable("Unrecognized type for RHS of assignment");
 }
 
 // if any more "special cases" are added to

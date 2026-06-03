@@ -814,19 +814,19 @@ static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
       !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
       !lhs_type.IsScalarType())
     return llvm::createStringError(
-        "Illegal type for lhs of assignment (not scalar numeric type)\n");
+        "Illegal type for lhs of assignment (not scalar numeric type)");
 
   // Make sure rhs is a legal type for DIL assignment.
   if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
       !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
     return llvm::createStringError(
-        "Illegal type for rhs of assignment (not scalar numeric type)\n");
+        "Illegal type for rhs of assignment (not scalar numeric type)");
 
   // Only allow assigning pointers to pointers.
   if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
       (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
     return llvm::createStringError(
-        "Invalid assignment: Can only assign pointers to pointers\n");
+        "Invalid assignment: Can only assign pointers to pointers");
 
   // For "real numbers", the types must match exactly.
   if ((HasFloatingRepresentation(rhs_type) ||
@@ -834,9 +834,9 @@ static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
       lhs_type != rhs_type) {
     std::string err_msg =
         llvm::formatv("Incompatible types for assignment: Cannot assign {0} "
-                      "to {1}\n",
+                      "to {1}",
                       rhs_type.TypeDescription(), lhs_type.TypeDescription());
-    return llvm::createStringError(err_msg.c_str());
+    return llvm::createStringError(err_msg);
   }
 
   return true;
