@@ -930,7 +930,7 @@ class AnyStridedMemRefOfRank<int rank> :
        AnyStridedMemRef.summary # " of rank " # rank>;
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>, HasStridesPred],
          !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          MemRefOf<allowedTypes>.summary>;
 
