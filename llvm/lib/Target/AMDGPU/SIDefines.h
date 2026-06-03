@@ -10,7 +10,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
@@ -53,6 +55,9 @@ enum {
 }
 
 namespace SIInstrFlags {
+// Add namespace to trigger a compile error if these are used raw anywhere
+// outside predicates below.
+namespace DontUseRawFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
   // Low bits - basic encoding information.
@@ -181,6 +186,237 @@ enum : uint64_t {
   // Is a SWMMAC instruction.
   IsSWMMAC = UINT64_C(1) << 63,
 };
+} // namespace DontUseRawFlags
+
+// Inline predicates for TSFlags — the single place where raw TSFlags bit
+// tests are written. All callers (SIInstrInfo methods, MC-level code) go
+// through these functions to make bit layout changes easier.
+//
+// getTSFlags is a shim to allow extracting the TSFlags value from different
+// types of objects (MCInstrDesc, MCInstrInfo + opcode, or MCInstrInfo + MCInst)
+// without ambiguity. SIInstrInfo.h adds a MachineInstr overload in namespace
+// llvm (found via ADL when predicates are instantiated with MachineInstr).
+
+inline uint64_t getTSFlags(const MCInstrDesc &Desc) { return Desc.TSFlags; }
+inline uint64_t getTSFlags(const MCInstrInfo &MII, unsigned Opcode) {
+  return MII.get(Opcode).TSFlags;
+}
+inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &MI) {
+  return getTSFlags(MII, MI.getOpcode());
+}
+
+// Individual-format predicates.
+template <typename... T> inline bool isSALU(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SALU;
+}
+template <typename... T> inline bool isVALU(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VALU;
+}
+template <typename... T> inline bool isSOP1(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SOP1;
+}
+template <typename... T> inline bool isSOP2(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SOP2;
+}
+template <typename... T> inline bool isSOPC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SOPC;
+}
+template <typename... T> inline bool isSOPK(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SOPK;
+}
+template <typename... T> inline bool isSOPP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SOPP;
+}
+template <typename... T> inline bool isVOP1(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOP1;
+}
+template <typename... T> inline bool isVOP2(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOP2;
+}
+template <typename... T> inline bool isVOPC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOPC;
+}
+template <typename... T> inline bool isVOP3(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOP3;
+}
+template <typename... T> inline bool isVOP3P(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOP3P;
+}
+template <typename... T> inline bool isVINTRP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VINTRP;
+}
+template <typename... T> inline bool isSDWA(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SDWA;
+}
+template <typename... T> inline bool isDPP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::DPP;
+}
+template <typename... T> inline bool isTRANS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::TRANS;
+}
+template <typename... T> inline bool isMUBUF(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::MUBUF;
+}
+template <typename... T> inline bool isMTBUF(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::MTBUF;
+}
+template <typename... T> inline bool isSMRD(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SMRD;
+}
+template <typename... T> inline bool isMIMG(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::MIMG;
+}
+template <typename... T> inline bool isVIMAGE(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VIMAGE;
+}
+template <typename... T> inline bool isVSAMPLE(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VSAMPLE;
+}
+template <typename... T> inline bool isEXP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::EXP;
+}
+template <typename... T> inline bool isFLAT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FLAT;
+}
+template <typename... T> inline bool isDS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::DS;
+}
+template <typename... T> inline bool isGWS(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::GWS;
+}
+template <typename... T> inline bool isSpill(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::Spill;
+}
+template <typename... T> inline bool isLDSDIR(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::LDSDIR;
+}
+template <typename... T> inline bool isVINTERP(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VINTERP;
+}
+template <typename... T> inline bool isVOPD3(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOPD3;
+}
+template <typename... T> inline bool isWQM(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::WQM;
+}
+template <typename... T> inline bool isDisableWQM(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::DisableWQM;
+}
+template <typename... T> inline bool isGather4(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::Gather4;
+}
+template <typename... T> inline bool isScalarStore(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::SCALAR_STORE;
+}
+template <typename... T> inline bool isFixedSize(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FIXED_SIZE;
+}
+template <typename... T> inline bool isPacked(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsPacked;
+}
+template <typename... T> inline bool isFlatGlobal(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FlatGlobal;
+}
+template <typename... T> inline bool isFlatScratch(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FlatScratch;
+}
+template <typename... T> inline bool usesFPDPRounding(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FPDPRounding;
+}
+template <typename... T> inline bool isFPAtomic(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FPAtomic;
+}
+template <typename... T> inline bool isMAI(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsMAI;
+}
+template <typename... T> inline bool isDOT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsDOT;
+}
+template <typename... T> inline bool isAtomicNoRet(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsAtomicNoRet;
+}
+template <typename... T> inline bool isAtomicRet(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsAtomicRet;
+}
+template <typename... T> inline bool isWMMA(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsWMMA;
+}
+template <typename... T> inline bool isSWMMAC(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsSWMMAC;
+}
+template <typename... T> inline bool isNeverUniform(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IsNeverUniform;
+}
+template <typename... T> inline bool hasFPClamp(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::FPClamp;
+}
+template <typename... T> inline bool hasIntClamp(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::IntClamp;
+}
+template <typename... T> inline bool usesVM_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VM_CNT;
+}
+template <typename... T> inline bool usesLGKM_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::LGKM_CNT;
+}
+template <typename... T> inline bool usesEXP_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::EXP_CNT;
+}
+template <typename... T> inline bool usesASYNC_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::ASYNC_CNT;
+}
+template <typename... T> inline bool usesTENSOR_CNT(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::TENSOR_CNT;
+}
+template <typename... T> inline bool isMaybeAtomic(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::maybeAtomic;
+}
+template <typename... T> inline bool isD16Buf(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::D16Buf;
+}
+template <typename... T> inline bool hasVOP3OpSel(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::VOP3_OPSEL;
+}
+template <typename... T> inline bool hasClampLo(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::ClampLo;
+}
+template <typename... T> inline bool hasClampHi(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::ClampHi;
+}
+template <typename... T> inline bool isTiedSourceNotRead(const T &...O) {
+  return getTSFlags(O...) & DontUseRawFlags::TiedSourceNotRead;
+}
+
+// Compound predicates — named by semantic meaning.
+template <typename... T> inline bool isAtomic(const T &...O) {
+  return isAtomicNoRet(O...) || isAtomicRet(O...);
+}
+
+// Any image-family instruction: pre-gfx11 MIMG, gfx11+ VIMAGE or VSAMPLE.
+// MIMG, VIMAGE and VSAMPLE are mutually exclusive bits.
+template <typename... T> inline bool isImage(const T &...O) {
+  return isMIMG(O...) || isVIMAGE(O...) || isVSAMPLE(O...);
+}
+
+// Any MUBUF or MTBUF buffer instruction.
+template <typename... T> inline bool isBuffer(const T &...O) {
+  return isMUBUF(O...) || isMTBUF(O...);
+}
+
+// Any 3-operand VALU encoding: VOP3 or VOP3P.
+template <typename... T> inline bool isVOP3Like(const T &...O) {
+  return isVOP3(O...) || isVOP3P(O...);
+}
+
+// Vector memory instruction: buffer + image + flat.
+template <typename... T> inline bool isVMEM(const T &...O) {
+  return isBuffer(O...) || isImage(O...) || isFLAT(O...);
+}
+
+// FLAT instruction accessing a specific segment (global_* or scratch_*).
+template <typename... T> inline bool isSegmentSpecificFLAT(const T &...O) {
+  return isFlatGlobal(O...) || isFlatScratch(O...);
+}
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
 // The result is true if any of these tests are true.

@@ -262,9 +262,8 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
-  bool CanUse64BitLiterals =
-      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
+  bool CanUse64BitLiterals = STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                             !SIInstrFlags::isVOP3Like(Desc);
   if (IsFP) {
     return CanUse64BitLiterals && Lo_32(Val) ? 254 : 255;
   }
@@ -402,8 +401,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Set unused op_sel_hi bits to 1 for VOP3P and MAI instructions.
   // Note that accvgpr_read/write are MAI, have src0, but do not use op_sel.
-  if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
-       Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
+  if ((SIInstrFlags::isVOP3P(Desc) || Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
@@ -419,7 +417,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 
   // NSA encoding.
-  if (AMDGPU::isGFX10Plus(STI) && Desc.TSFlags & SIInstrFlags::MIMG) {
+  if (AMDGPU::isGFX10Plus(STI) && SIInstrFlags::isMIMG(Desc)) {
     int vaddr0 = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::vaddr0);
     int srsrc = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
@@ -757,9 +755,8 @@ APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
   // is ignored by HW. It was decided to define dst as "do not care"
   // in td files to allow disassembler accept any dst value.
   // However, dst is encoded as EXEC for compatibility with SP3.
-  [[maybe_unused]] const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  assert((Desc.TSFlags & SIInstrFlags::VOP3) &&
-         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC));
+  assert(SIInstrFlags::isVOP3(MCII, MI) &&
+         MCII.get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC));
   EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
                   AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   return postEncodeVOP3<true, true, false>(MI, EncodedValue, STI);

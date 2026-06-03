@@ -450,11 +450,10 @@ FunctionPass *llvm::createSIFoldOperandsLegacyPass() {
 bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
                                             unsigned UseOpNo,
                                             int64_t ImmVal) const {
-  const uint64_t TSFlags = MI->getDesc().TSFlags;
 
-  if (!(TSFlags & SIInstrFlags::IsPacked) || (TSFlags & SIInstrFlags::IsMAI) ||
-      (TSFlags & SIInstrFlags::IsWMMA) || (TSFlags & SIInstrFlags::IsSWMMAC) ||
-      (ST->hasDOTOpSelHazard() && (TSFlags & SIInstrFlags::IsDOT)))
+  if (!SIInstrFlags::isPacked(*MI) || SIInstrFlags::isMAI(*MI) ||
+      SIInstrFlags::isWMMA(*MI) || SIInstrFlags::isSWMMAC(*MI) ||
+      (ST->hasDOTOpSelHazard() && SIInstrFlags::isDOT(*MI)))
     return false;
 
   const MachineOperand &Old = MI->getOperand(UseOpNo);
@@ -474,7 +473,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     // VOP3 packed instructions ignore op_sel source modifiers, we cannot encode
     // two different constants.
-    if ((TSFlags & SIInstrFlags::VOP3) && !(TSFlags & SIInstrFlags::VOP3P) &&
+    if (SIInstrFlags::isVOP3(*MI) && !SIInstrFlags::isVOP3P(*MI) &&
         static_cast<uint16_t>(ImmVal) != static_cast<uint16_t>(ImmVal >> 16))
       return false;
     break;

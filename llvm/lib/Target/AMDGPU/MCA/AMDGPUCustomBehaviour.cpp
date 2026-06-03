@@ -249,12 +249,11 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
     unsigned Index = EN.index();
     unsigned Opcode = Inst->getOpcode();
     const MCInstrDesc &MCID = MCII.get(Opcode);
-    if ((MCID.TSFlags & SIInstrFlags::DS) &&
-        (MCID.TSFlags & SIInstrFlags::LGKM_CNT)) {
+    if (SIInstrFlags::isDS(MCID) && SIInstrFlags::usesLGKM_CNT(MCID)) {
       InstrWaitCntInfo[Index].LgkmCnt = true;
       if (isAlwaysGDS(Opcode) || hasModifiersSet(Inst, AMDGPU::OpName::gds))
         InstrWaitCntInfo[Index].ExpCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::FLAT) {
+    } else if (SIInstrFlags::isFLAT(MCID)) {
       // We conservatively assume that mayAccessVMEMThroughFlat(Inst)
       // and mayAccessLDSThroughFlat(Inst) would both return true for this
       // instruction. We have to do this because those functions use
@@ -262,16 +261,16 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       InstrWaitCntInfo[Index].LgkmCnt = true;
       if (!STI.hasFeature(AMDGPU::FeatureVscnt))
         InstrWaitCntInfo[Index].VmCnt = true;
-      else if (MCID.mayLoad() && !(MCID.TSFlags & SIInstrFlags::IsAtomicNoRet))
+      else if (MCID.mayLoad() && !SIInstrFlags::isAtomicNoRet(MCID))
         InstrWaitCntInfo[Index].VmCnt = true;
       else
         InstrWaitCntInfo[Index].VsCnt = true;
-    } else if (isVMEM(MCID) && !AMDGPU::getMUBUFIsBufferInv(Opcode)) {
+    } else if (SIInstrFlags::isVMEM(MCID) &&
+               !AMDGPU::getMUBUFIsBufferInv(Opcode)) {
       if (!STI.hasFeature(AMDGPU::FeatureVscnt))
         InstrWaitCntInfo[Index].VmCnt = true;
-      else if ((MCID.mayLoad() &&
-                !(MCID.TSFlags & SIInstrFlags::IsAtomicNoRet)) ||
-               ((MCID.TSFlags & SIInstrFlags::MIMG) && !MCID.mayLoad() &&
+      else if ((MCID.mayLoad() && !SIInstrFlags::isAtomicNoRet(MCID)) ||
+               (SIInstrFlags::isMIMG(MCID) && !MCID.mayLoad() &&
                 !MCID.mayStore()))
         InstrWaitCntInfo[Index].VmCnt = true;
       else if (MCID.mayStore())
@@ -281,12 +280,11 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       // GCNTarget.vmemWriteNeedsExpWaitcnt()
       // which is defined as
       // { return getGeneration() < SEA_ISLANDS; }
-      if (IV.Major < 7 &&
-          (MCID.mayStore() || (MCID.TSFlags & SIInstrFlags::IsAtomicRet)))
+      if (IV.Major < 7 && (MCID.mayStore() || SIInstrFlags::isAtomicRet(MCID)))
         InstrWaitCntInfo[Index].ExpCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::SMRD) {
+    } else if (SIInstrFlags::isSMRD(MCID)) {
       InstrWaitCntInfo[Index].LgkmCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::EXP) {
+    } else if (SIInstrFlags::isEXP(MCID)) {
       InstrWaitCntInfo[Index].ExpCnt = true;
     } else {
       switch (Opcode) {
@@ -299,13 +297,6 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       }
     }
   }
-}
-
-// taken from SIInstrInfo::isVMEM()
-bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
-  return MCID.TSFlags & SIInstrFlags::MUBUF ||
-         MCID.TSFlags & SIInstrFlags::MTBUF ||
-         MCID.TSFlags & SIInstrFlags::MIMG || MCID.TSFlags & SIInstrFlags::FLAT;
 }
 
 // taken from SIInstrInfo::hasModifiersSet()
@@ -322,17 +313,12 @@ bool AMDGPUCustomBehaviour::hasModifiersSet(
   return true;
 }
 
-// taken from SIInstrInfo::isGWS()
-bool AMDGPUCustomBehaviour::isGWS(uint32_t Opcode) const {
-  const MCInstrDesc &MCID = MCII.get(Opcode);
-  return MCID.TSFlags & SIInstrFlags::GWS;
-}
-
 // taken from SIInstrInfo::isAlwaysGDS()
 bool AMDGPUCustomBehaviour::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
-         Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
+         Opcode == AMDGPU::DS_SUB_GS_REG_RTN ||
+         SIInstrFlags::isGWS(MCII.get(Opcode));
 }
 
 } // namespace llvm::mca
