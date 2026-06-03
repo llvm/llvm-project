@@ -5668,20 +5668,15 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::CONCAT_VECTORS: {
     EVT VT = Op.getValueType();
     if (!VT.isFixedLengthVector())
-      return all_of(Op->ops(), [&](SDValue V) {
-        return isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
-      });
-
-    assert(DemandedElts.getBitWidth() == VT.getVectorNumElements() &&
-           "Unexpected demanded element mask width");
+      break;
 
     EVT SubVT = Op.getOperand(0).getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
+    for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
       APInt DemandedSubElts =
-          DemandedElts.extractBits(NumSubElts, i * NumSubElts);
+          DemandedElts.extractBits(NumSubElts, I * NumSubElts);
       if (!!DemandedSubElts &&
-          !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), DemandedSubElts,
+          !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(I), DemandedSubElts,
                                             Kind, Depth + 1))
         return false;
     }
