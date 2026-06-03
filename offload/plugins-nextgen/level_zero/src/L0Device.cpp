@@ -752,7 +752,6 @@ Error L0DeviceTy::createEventImpl(void **EventPtrStorage,
   if (!EventOrErr)
     return EventOrErr.takeError();
   *EventPtrStorage = *EventOrErr;
-  ;
   return Plugin::success();
 }
 
