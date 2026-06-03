@@ -485,7 +485,7 @@ static constexpr StringRef CustomMDString = "preserved-by-skip";
 static constexpr uint64_t CustomMDInt = 42;
 
 // Attaches CustomMD (an MDString + an integer) to every dbg.* call in F.
-static void attachCustomMetadataToDbgValues(Function &F) {
+static void attachCustomMetadataToDbgInsts(Function &F) {
   LLVMContext &Ctx = F.getContext();
   MDNode *Custom = MDNode::get(
       Ctx, {MDString::get(Ctx, CustomMDString),
@@ -498,9 +498,9 @@ static void attachCustomMetadataToDbgValues(Function &F) {
 
 // Verifies the custom metadata survived round-tripping and still holds the
 // exact MDString + integer it was created with.
-static void checkDbgValueCustomMetadata(Function &F) {
+static void checkDbgInstCustomMetadata(Function &F) {
   for (Instruction &I : instructions(F)) {
-    auto *DI = dyn_cast<IntrinsicInst>(&I);
+    auto *DI = dyn_cast<DbgInfoIntrinsic>(&I);
     if (!DI)
       continue;
 
@@ -600,7 +600,7 @@ TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
     expectIntrinsicForm(*F);
     // Attach a custom metadata node to the dbg.value call. Records carry no
     // arbitrary attachments, so this only survives if the intrinsic does.
-    attachCustomMetadataToDbgValues(*F);
+    attachCustomMetadataToDbgInsts(*F);
     writeModuleToBuffer(std::move(M), Mem);
   }
 
@@ -637,7 +637,7 @@ TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
     Function *F = M->getFunction("f");
     ASSERT_NE(F, nullptr);
     expectIntrinsicForm(*F);
-    checkDbgValueCustomMetadata(*F);
+    checkDbgInstCustomMetadata(*F);
 
     bool BrokenDebugInfo = false;
     EXPECT_FALSE(verifyModule(*M, &dbgs(), &BrokenDebugInfo));
@@ -661,7 +661,7 @@ TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
     Function *RoundTripF = RoundTripM->getFunction("f");
     ASSERT_NE(RoundTripF, nullptr);
     expectIntrinsicForm(*RoundTripF);
-    checkDbgValueCustomMetadata(*RoundTripF);
+    checkDbgInstCustomMetadata(*RoundTripF);
 
     EXPECT_FALSE(verifyModule(*RoundTripM, &dbgs(), &BrokenDebugInfo));
     EXPECT_FALSE(BrokenDebugInfo);
