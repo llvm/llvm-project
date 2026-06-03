@@ -3266,11 +3266,14 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   unsigned Opcode = RecurrenceDescriptor::getOpcode(
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
+  case ExpressionTypes::NegatedExtendedReduction:
+    assert((Opcode == Instruction::Add || Opcode == Instruction::FAdd) &&
+           "Unexpected opcode");
+    Opcode = Opcode == Instruction::Add ? Instruction::Sub : Instruction::FSub;
+    [[fallthrough]];
   case ExpressionTypes::ExtendedReduction: {
-    unsigned Opcode = RecurrenceDescriptor::getOpcode(
-        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
-    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
+    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
 
     if (RedR->isPartialReduction())
       return Ctx.TTI.getPartialReductionCost(
@@ -3360,11 +3363,17 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
 
   switch (ExpressionType) {
+  case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
-    getOperand(1)->printAsOperand(O, SlotTracker);
+    bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
+    if (Negated)
+      O << (Opcode == Instruction::Add ? "sub (0, " : "fneg(");
     getOperand(0)->printAsOperand(O, SlotTracker);
+    if (Negated)
+      O << ")";
     Red->printFlags(O);
 
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);

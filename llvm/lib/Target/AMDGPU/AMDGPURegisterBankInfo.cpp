@@ -3371,7 +3371,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
-    case Intrinsic::amdgcn_s_prefetch_data: {
+    case Intrinsic::amdgcn_s_prefetch_data:
+    case Intrinsic::amdgcn_s_prefetch_inst: {
       Register PtrReg = MI.getOperand(1).getReg();
       unsigned AS = MRI.getType(PtrReg).getAddressSpace();
       if (AMDGPU::isFlatGlobalAddrSpace(AS)) {
@@ -5660,7 +5661,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
       break;
     }
-    case Intrinsic::amdgcn_s_prefetch_data: {
+    case Intrinsic::amdgcn_s_prefetch_data:
+    case Intrinsic::amdgcn_s_prefetch_inst: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;

@@ -1645,7 +1645,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
-  addRulesForIOpcs({amdgcn_s_prefetch_data})
+  addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})

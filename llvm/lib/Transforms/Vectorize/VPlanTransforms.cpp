@@ -6193,6 +6193,15 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   if (match(VecOp, m_WidenAnyExtend(m_VPValue())))
     return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
+  // reduce.[f]add(neg(ext(op)))
+  // -> VPExpressionRecipe(op, sub/neg, red)
+  if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
+    auto *Neg = cast<VPWidenRecipe>(VecOp);
+    auto *Ext =
+        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    return new VPExpressionRecipe(Ext, Neg, Red);
+  }
+
   // reduce.[f]add([f]mul(ext(a), ext(b)))
   //  -> VPExpressionRecipe(a, b, mul, red)
   if (match(VecOp, m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue()))) ||
@@ -6446,11 +6455,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       // FIXME: createPartialReductionExpression can't handle sub(ext(mul(...)))
       if (UpdateR->getOpcode() == Instruction::Sub)
         return std::nullopt;
-    } else if (UpdateR->getOpcode() == Instruction::Add ||
-               UpdateR->getOpcode() == Instruction::FAdd) {
-      // Match: UpdateR(PrevValue, ext(...))
-      // TODO: Remove the add/fadd restriction (we should be able to handle this
-      // case for sub reductions too).
+    } else {
       return ExtendedReductionOperand{
           UpdateR,
           /*ExtendA=*/{CastSource->getScalarType(), *OuterExtKind},
@@ -6466,8 +6471,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       !is_contained({Instruction::Mul, Instruction::FMul}, MulOp->getOpcode()))
     return std::nullopt;
 
-  // The rest of the matching assumes `Op` is a (possibly extended/negated)
-  // binary operation.
+  // The rest of the matching assumes `Op` is a (possibly extended) mul
+  // operation.
 
   VPValue *LHS = MulOp->getOperand(0);
   VPValue *RHS = MulOp->getOperand(1);
