@@ -11,9 +11,11 @@ explicitly enable when optimizing AArch64 binaries.
 BOLT is to be used with binaries linked with
 relocations (``--emit-relocs`` or ``-Wl,-q``) and representative profile data.
 
-Supported Flags
----------------
-The following flags are supported for AArch64.
+Main Code-Layout Optimizations
+------------------------------
+The following code-layout optimizations are typically the first options to
+consider when optimizing AArch64 binaries with representative profile data.
+They typically provide the largest performance gains among BOLT optimizations.
 
 .. list-table::
      :header-rows: 1
@@ -32,6 +34,19 @@ The following flags are supported for AArch64.
          | ``--split-all-cold``
          | ``--split-eh``
        - Split hot and cold code
+
+
+Other Supported Optimizations
+-----------------------------
+The following optimizations are also supported for AArch64.
+
+.. list-table::
+     :header-rows: 1
+     :widths: 34 42
+     :align: left
+
+     * - Flag
+       - Optimization
      * - | ``--align-blocks``
          | ``--block-alignment=<uint>``
        - Align basic blocks

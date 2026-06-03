@@ -256,17 +256,6 @@ Profile Formats
 See `Profile Formats <profiles.md>`__ for comprehensive documentation of all
 profile formats accepted by BOLT: perf.data, fdata, YAML, and pre-aggregated.
 
-Additional Documentation
-------------------------
-
-.. toctree::
-   :hidden:
-
-   BOLTAArch64OptimizationStatus
-
-:doc:`BOLTAArch64OptimizationStatus`
-  Status of default-off BOLT optimization flags on AArch64.
-
 License
 -------
 
