@@ -169,8 +169,17 @@ if (COMPILER_RT_HAS_GWP_ASAN)
   endif()
 
   add_dependencies(scudo_standalone gwp_asan)
+  # RTGwpAsanBacktraceLibc requires execinfo.h (not available on some C
+  # libs. Use RTGwpAsanBacktraceNone which provides null stubs.
+  include(CheckIncludeFile)
+  check_include_file(execinfo.h COMPILER_RT_HAS_EXECINFO_H)
+  if(COMPILER_RT_HAS_EXECINFO_H)
+    set(_gwp_asan_backtrace_lib RTGwpAsanBacktraceLibc)
+  else()
+    set(_gwp_asan_backtrace_lib RTGwpAsanBacktraceNone)
+  endif()
   list(APPEND SCUDO_OBJECT_LIBS
-       RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler
+       RTGwpAsan ${_gwp_asan_backtrace_lib} RTGwpAsanSegvHandler
        RTGwpAsanOptionsParser)
 
   append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer

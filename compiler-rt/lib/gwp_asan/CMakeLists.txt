@@ -90,11 +90,24 @@ add_compiler_rt_object_libraries(RTGwpAsanOptionsParser
     CFLAGS ${GWP_ASAN_OPTIONS_PARSER_CFLAGS})
 
 # As above, build the pre-implemented optional backtrace support libraries.
-add_compiler_rt_object_libraries(RTGwpAsanBacktraceLibc
-    ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
-    SOURCES optional/backtrace_linux_libc.cpp
-    ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
-    CFLAGS ${GWP_ASAN_CFLAGS})
+# backtrace_linux_libc.cpp requires execinfo.h.  On targets without it
+# build RTGwpAsanBacktraceNone which provides null stubs so that
+# GWP-ASan still functions as a guard allocator without stack-trace capture.
+include(CheckIncludeFile)
+check_include_file(execinfo.h COMPILER_RT_HAS_EXECINFO_H)
+if(COMPILER_RT_HAS_EXECINFO_H)
+  add_compiler_rt_object_libraries(RTGwpAsanBacktraceLibc
+      ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
+      SOURCES optional/backtrace_linux_libc.cpp
+      ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
+      CFLAGS ${GWP_ASAN_CFLAGS})
+else()
+  add_compiler_rt_object_libraries(RTGwpAsanBacktraceNone
+      ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
+      SOURCES optional/backtrace_none.cpp
+      ADDITIONAL_HEADERS ${GWP_ASAN_BACKTRACE_HEADERS}
+      CFLAGS ${GWP_ASAN_CFLAGS})
+endif()
 add_compiler_rt_object_libraries(RTGwpAsanSegvHandler
     ARCHS ${GWP_ASAN_SUPPORTED_ARCH}
     SOURCES optional/segv_handler_posix.cpp
