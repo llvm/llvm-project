@@ -710,13 +710,30 @@ void VirtRegRewriter::rewrite() {
                 LaneBitmask LiveOutUndefLanes =
                     liveOutUndefPhiLanesForUndefSubregDef(LI, *MBBI, SubReg,
                                                           PhysReg, MI);
+                const TargetRegisterClass *RC = MRI->getRegClass(VirtReg);
+
+                // FIXME: Incorrect sub-regsiters should never make it into
+                // LiveOutUndefLanes.
+                LaneBitmask NewLiveOutUndefLanes;
+                for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E;
+                     ++Idx) {
+                  if (!TRI->isSubRegValidForRegClass(RC, Idx))
+                    continue;
+                  LaneBitmask M = TRI->getSubRegIndexLaneMask(Idx);
+                  // We only need to cover valid sub-registers. Construct a new
+                  // mask that only contains parts of the of the old one for
+                  // valid registers.
+                  if ((M & LiveOutUndefLanes) == M)
+                    NewLiveOutUndefLanes |= M;
+                }
+                LiveOutUndefLanes = NewLiveOutUndefLanes;
+
                 if (LiveOutUndefLanes.any()) {
                   SmallVector<unsigned, 16> CoveringIndexes;
 
                   // TODO: Just use one super register def if none of the lanes
                   // are needed?
-                  if (!TRI->getCoveringSubRegIndexes(MRI->getRegClass(VirtReg),
-                                                     LiveOutUndefLanes,
+                  if (!TRI->getCoveringSubRegIndexes(RC, LiveOutUndefLanes,
                                                      CoveringIndexes))
                     llvm_unreachable(
                         "cannot represent required subregister defs");
