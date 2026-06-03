@@ -6283,6 +6283,52 @@ static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
   return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
 }
 
+// Fold a NaN-guard select of fp_to_sint/fp_to_uint into the saturating
+// variant, which returns 0 for NaN. Matches both SETUO/SETO forms and
+// optionally looks through an AND mask on the conversion result.
+static SDValue PerformNanGuardFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
+                                             SDValue N3, ISD::CondCode CC,
+                                             SelectionDAG &DAG, SDLoc DL) {
+  SDValue GuardedVal;
+  if (CC == ISD::SETUO && isNullOrNullSplat(N2))
+    GuardedVal = N3;
+  else if (CC == ISD::SETO && isNullOrNullSplat(N3))
+    GuardedVal = N2;
+  else
+    return SDValue();
+
+  // RHS of the compare must be zero (canonical isnan) or the same as LHS
+  // (self-compare isnan form).
+  auto *N1Const = isConstOrConstSplatFP(N1);
+  if (N1 != N0 && !(N1Const && N1Const->isZero()))
+    return SDValue();
+
+  SDValue Conv = GuardedVal;
+  SDValue Mask;
+  if (Conv.getOpcode() == ISD::AND) {
+    Mask = Conv.getOperand(1);
+    Conv = Conv.getOperand(0);
+  }
+
+  if ((Conv.getOpcode() != ISD::FP_TO_SINT &&
+       Conv.getOpcode() != ISD::FP_TO_UINT) ||
+      Conv.getOperand(0) != N0)
+    return SDValue();
+
+  unsigned NewOpc = Conv.getOpcode() == ISD::FP_TO_SINT ? ISD::FP_TO_SINT_SAT
+                                                        : ISD::FP_TO_UINT_SAT;
+  EVT VT = N2.getValueType();
+  EVT FPVT = N0.getValueType();
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(NewOpc, FPVT, VT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(NewOpc, DL, VT, N0, DAG.getValueType(VT.getScalarType()));
+  if (Mask)
+    Sat = DAG.getNode(ISD::AND, DL, VT, Sat, Mask);
+  return Sat;
+}
+
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13178,6 +13224,10 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
       }
     }
 
+    if (SDValue S =
+            PerformNanGuardFpToSatCombine(Cond0, Cond1, N1, N2, CC, DAG, DL))
+      return S;
+
     if (TLI.isOperationLegal(ISD::SELECT_CC, VT) ||
         (!LegalOperations &&
          TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))) {
@@ -14186,6 +14236,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
     if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S =
+            PerformNanGuardFpToSatCombine(LHS, RHS, N1, N2, CC, DAG, DL))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
