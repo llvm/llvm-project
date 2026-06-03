@@ -636,6 +636,12 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::Shl:
+    return value_object(l << r);
+  case BinaryOpKind::Shr:
+    return value_object(l >> r);
+  default:
+    break;
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -833,6 +839,101 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
   return EvaluateScalarOp(BinaryOpKind::Rem, lhs, rhs, result_type, location);
 }
 
+static bool HasFloatingRepresentation(CompilerType ct) {
+  return ct.GetTypeInfo() & lldb::eTypeIsFloat;
+}
+
+static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
+                                                  CompilerType rhs_type) {
+  // Make sure lhs is a legal type for DIL assignment.
+  if (!lhs_type.IsInteger() && !lhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
+      !lhs_type.IsScalarType())
+    return llvm::createStringError(
+        "Illegal type for lhs of assignment (not scalar numeric type)");
+
+  // Make sure rhs is a legal type for DIL assignment.
+  if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
+    return llvm::createStringError(
+        "Illegal type for rhs of assignment (not scalar numeric type)");
+
+  // Only allow assigning pointers to pointers.
+  if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
+      (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
+    return llvm::createStringError(
+        "Invalid assignment: Can only assign pointers to pointers");
+
+  // For "real numbers", the types must match exactly.
+  if ((HasFloatingRepresentation(rhs_type) ||
+       HasFloatingRepresentation(lhs_type)) &&
+      lhs_type != rhs_type) {
+    std::string err_msg =
+        llvm::formatv("Incompatible types for assignment: Cannot assign {0} "
+                      "to {1}",
+                      rhs_type.TypeDescription(), lhs_type.TypeDescription());
+    return llvm::createStringError(err_msg);
+  }
+
+  return true;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
+                                lldb::ValueObjectSP rhs, uint32_t location) {
+
+  auto all_ok =
+      VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
+  if (!all_ok)
+    return all_ok.takeError();
+
+  if (llvm::Error e = lhs->SetValueFromInteger(rhs, m_allow_var_updates))
+    return e;
+
+  return lhs;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                 lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'>>', '<<'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  CompilerType orig_lhs_type = lhs->GetCompilerType();
+  CompilerType orig_rhs_type = rhs->GetCompilerType();
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs, location);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+  if (!lhs_type.IsInteger() || !rhs_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  bool success;
+  uint64_t amount = rhs->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "could not get the shift amount as an integer", location);
+  llvm::Expected<uint64_t> lhs_size =
+      lhs_type.GetBitSize(m_exe_ctx_scope.get());
+  if (!lhs_size)
+    return lhs_size.takeError();
+  if (amount >= *lhs_size)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid shift amount",
+                                                location);
+
+  return EvaluateScalarOp(kind, lhs, rhs, lhs_type, location);
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
@@ -857,14 +958,31 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::AddAssign: {
+    auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::Assign:
+    return EvaluateAssignment(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::SubAssign: {
+    auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
   case BinaryOpKind::Mul:
     return EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Div:
     return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Shl:
+  case BinaryOpKind::Shr:
+    return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -1226,7 +1344,11 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
       type->GetBitSize(m_exe_ctx_scope.get());
   if (!type_bitsize)
     return type_bitsize.takeError();
+  // Literal itself cannot be a negative value, so we do an unsigned extension.
   scalar.TruncOrExtendTo(*type_bitsize, false);
+  // If the picked compiler type is signed, make the scalar signed as well.
+  if (type->IsSigned())
+    scalar.MakeSigned();
   return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
                                                   *type, "result");
 }

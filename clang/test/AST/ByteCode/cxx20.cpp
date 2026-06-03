@@ -1367,3 +1367,8 @@ namespace IndirectFieldInitializer {
   static_assert(A().x == 3, "");
 
 }
+
+namespace InvalidOMPRequiredSimdAlign {
+  typedef decltype(sizeof(int)) T;
+  constexpr T foo(T x) { return __builtin_omp_required_simd_align * 42; } // both-error {{indirection requires pointer operand}}
+}

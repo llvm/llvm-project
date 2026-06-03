@@ -57,10 +57,10 @@ struct Kernel32 {
   bool IsConPTYAvailable() { return isAvailable; }
 
 private:
-  HMODULE hModule;
-  CreatePseudoConsole_t CreatePseudoConsole_;
-  ClosePseudoConsole_t ClosePseudoConsole_;
-  bool isAvailable;
+  HMODULE hModule = nullptr;
+  CreatePseudoConsole_t CreatePseudoConsole_ = nullptr;
+  ClosePseudoConsole_t ClosePseudoConsole_ = nullptr;
+  bool isAvailable = false;
 };
 
 static Kernel32 kernel32;
