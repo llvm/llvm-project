@@ -506,7 +506,7 @@ namespace {
     SDValue visitSTRICT_FADD(SDNode *N);
     SDValue visitFSUB(SDNode *N);
     SDValue visitFMUL(SDNode *N);
-    template <class MatchContextClass> SDValue visitFMA(SDNode *N);
+    SDValue visitFMA(SDNode *N);
     SDValue visitFMAD(SDNode *N);
     SDValue visitFMULADD(SDNode *N);
     SDValue visitFDIV(SDNode *N);
@@ -2027,7 +2027,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::STRICT_FADD:        return visitSTRICT_FADD(N);
   case ISD::FSUB:               return visitFSUB(N);
   case ISD::FMUL:               return visitFMUL(N);
-  case ISD::FMA:                return visitFMA<EmptyMatchContext>(N);
+  case ISD::FMA:                return visitFMA(N);
   case ISD::FMAD:               return visitFMAD(N);
   case ISD::FMULADD:            return visitFMULADD(N);
   case ISD::FDIV:               return visitFDIV(N);
@@ -19348,7 +19348,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   return SDValue();
 }
 
-template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
+SDValue DAGCombiner::visitFMA(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
@@ -19359,7 +19359,6 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   SDLoc DL(N);
   // FMA nodes have flags that propagate to the created nodes.
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
-  MatchContextClass matcher(DAG, TLI, N);
 
   // Constant fold FMA.
   if (SDValue C =
@@ -19379,7 +19378,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
         TLI.getNegatedExpression(N1, DAG, LegalOperations, ForCodeSize, CostN1);
     if (NegN1 && (CostN0 == TargetLowering::NegatibleCost::Cheaper ||
                   CostN1 == TargetLowering::NegatibleCost::Cheaper))
-      return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
+      return DAG.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
   if (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs()) {
@@ -19391,75 +19390,71 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
-  // FIXME: Support splat of constant.
   if (N0CFP && N0CFP->isExactlyValue(1.0))
-    return matcher.getNode(ISD::FADD, DL, VT, N1, N2);
+    return DAG.getNode(ISD::FADD, DL, VT, N1, N2);
   if (N1CFP && N1CFP->isExactlyValue(1.0))
-    return matcher.getNode(ISD::FADD, DL, VT, N0, N2);
+    return DAG.getNode(ISD::FADD, DL, VT, N0, N2);
 
   // Canonicalize (fma c, x, y) -> (fma x, c, y)
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0) &&
      !DAG.isConstantFPBuildVectorOrConstantFP(N1))
-    return matcher.getNode(ISD::FMA, DL, VT, N1, N0, N2);
+    return DAG.getNode(ISD::FMA, DL, VT, N1, N0, N2);
 
   bool CanReassociate = N->getFlags().hasAllowReassociation();
   if (CanReassociate) {
     // (fma x, c1, (fmul x, c2)) -> (fmul x, c1+c2)
-    if (matcher.match(N2, ISD::FMUL) && N0 == N2.getOperand(0) &&
+    if (N2.getOpcode() == ISD::FMUL && N0 == N2.getOperand(0) &&
         DAG.isConstantFPBuildVectorOrConstantFP(N1) &&
         DAG.isConstantFPBuildVectorOrConstantFP(N2.getOperand(1))) {
-      return matcher.getNode(
-          ISD::FMUL, DL, VT, N0,
-          matcher.getNode(ISD::FADD, DL, VT, N1, N2.getOperand(1)));
+      return DAG.getNode(ISD::FMUL, DL, VT, N0,
+                         DAG.getNode(ISD::FADD, DL, VT, N1, N2.getOperand(1)));
     }
 
     // (fma (fmul x, c1), c2, y) -> (fma x, c1*c2, y)
-    if (matcher.match(N0, ISD::FMUL) &&
+    if (N0.getOpcode() == ISD::FMUL &&
         DAG.isConstantFPBuildVectorOrConstantFP(N1) &&
         DAG.isConstantFPBuildVectorOrConstantFP(N0.getOperand(1))) {
-      return matcher.getNode(
-          ISD::FMA, DL, VT, N0.getOperand(0),
-          matcher.getNode(ISD::FMUL, DL, VT, N1, N0.getOperand(1)), N2);
+      return DAG.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
+                         DAG.getNode(ISD::FMUL, DL, VT, N1, N0.getOperand(1)),
+                         N2);
     }
   }
 
   // (fma x, -1, y) -> (fadd (fneg x), y)
-  // FIXME: Support splat of constant.
   if (N1CFP) {
     if (N1CFP->isExactlyValue(1.0))
-      return matcher.getNode(ISD::FADD, DL, VT, N0, N2);
+      return DAG.getNode(ISD::FADD, DL, VT, N0, N2);
 
     if (N1CFP->isExactlyValue(-1.0) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))) {
-      SDValue RHSNeg = matcher.getNode(ISD::FNEG, DL, VT, N0);
+      SDValue RHSNeg = DAG.getNode(ISD::FNEG, DL, VT, N0);
       AddToWorklist(RHSNeg.getNode());
-      return matcher.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
+      return DAG.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
     }
 
     // fma (fneg x), K, y -> fma x -K, y
-    if (matcher.match(N0, ISD::FNEG) &&
+    if (N0.getOpcode() == ISD::FNEG &&
         (TLI.isOperationLegal(ISD::ConstantFP, VT) ||
          (N1.hasOneUse() &&
           !TLI.isFPImmLegal(N1CFP->getValueAPF(), VT, ForCodeSize)))) {
-      return matcher.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
-                             matcher.getNode(ISD::FNEG, DL, VT, N1), N2);
+      return DAG.getNode(ISD::FMA, DL, VT, N0.getOperand(0),
+                         DAG.getNode(ISD::FNEG, DL, VT, N1), N2);
     }
   }
 
-  // FIXME: Support splat of constant.
   if (CanReassociate) {
     // (fma x, c, x) -> (fmul x, (c+1))
     if (N1CFP && N0 == N2) {
-      return matcher.getNode(ISD::FMUL, DL, VT, N0,
-                             matcher.getNode(ISD::FADD, DL, VT, N1,
-                                             DAG.getConstantFP(1.0, DL, VT)));
+      return DAG.getNode(
+          ISD::FMUL, DL, VT, N0,
+          DAG.getNode(ISD::FADD, DL, VT, N1, DAG.getConstantFP(1.0, DL, VT)));
     }
 
     // (fma x, c, (fneg x)) -> (fmul x, (c-1))
-    if (N1CFP && matcher.match(N2, ISD::FNEG) && N2.getOperand(0) == N0) {
-      return matcher.getNode(ISD::FMUL, DL, VT, N0,
-                             matcher.getNode(ISD::FADD, DL, VT, N1,
-                                             DAG.getConstantFP(-1.0, DL, VT)));
+    if (N1CFP && N2.getOpcode() == ISD::FNEG && N2.getOperand(0) == N0) {
+      return DAG.getNode(
+          ISD::FMUL, DL, VT, N0,
+          DAG.getNode(ISD::FADD, DL, VT, N1, DAG.getConstantFP(-1.0, DL, VT)));
     }
   }
 
@@ -19468,7 +19463,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   if (!TLI.isFNegFree(VT))
     if (SDValue Neg = TLI.getCheaperNegatedExpression(
             SDValue(N, 0), DAG, LegalOperations, ForCodeSize))
-      return matcher.getNode(ISD::FNEG, DL, VT, Neg);
+      return DAG.getNode(ISD::FNEG, DL, VT, Neg);
   return SDValue();
 }
 
@@ -29668,8 +29663,6 @@ SDValue DAGCombiner::visitVPOp(SDNode *N) {
       return visitVP_FADD(N);
     case ISD::VP_FSUB:
       return visitVP_FSUB(N);
-    case ISD::VP_FMA:
-      return visitFMA<VPMatchContext>(N);
     case ISD::VP_SELECT:
       return visitVP_SELECT(N);
     case ISD::VP_MUL:
