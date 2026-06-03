@@ -5,9 +5,7 @@
 define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 ; BMI2-LABEL: pdep_i8:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movzbl %sil, %eax
-; BMI2-NEXT:    movzbl %dil, %ecx
-; BMI2-NEXT:    pdepl %eax, %ecx, %eax
+; BMI2-NEXT:    pdepl %esi, %edi, %eax
 ; BMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; BMI2-NEXT:    retq
 ;
@@ -78,9 +76,7 @@ define i8 @pdep_i8(i8 %val, i8 %mask) nounwind {
 define i16 @pdep_i16(i16 %val, i16 %mask) nounwind {
 ; BMI2-LABEL: pdep_i16:
 ; BMI2:       # %bb.0:
-; BMI2-NEXT:    movzwl %si, %eax
-; BMI2-NEXT:    movzwl %di, %ecx
-; BMI2-NEXT:    pdepl %eax, %ecx, %eax
+; BMI2-NEXT:    pdepl %esi, %edi, %eax
 ; BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI2-NEXT:    retq
 ;

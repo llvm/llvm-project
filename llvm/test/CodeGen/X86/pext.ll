@@ -6,8 +6,7 @@ define i8 @pext_i8(i8 %val, i8 %mask) nounwind {
 ; BMI2-LABEL: pext_i8:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzbl %sil, %eax
-; BMI2-NEXT:    movzbl %dil, %ecx
-; BMI2-NEXT:    pextl %eax, %ecx, %eax
+; BMI2-NEXT:    pextl %eax, %edi, %eax
 ; BMI2-NEXT:    # kill: def $al killed $al killed $eax
 ; BMI2-NEXT:    retq
 ;
@@ -77,8 +76,7 @@ define i16 @pext_i16(i16 %val, i16 %mask) nounwind {
 ; BMI2-LABEL: pext_i16:
 ; BMI2:       # %bb.0:
 ; BMI2-NEXT:    movzwl %si, %eax
-; BMI2-NEXT:    movzwl %di, %ecx
-; BMI2-NEXT:    pextl %eax, %ecx, %eax
+; BMI2-NEXT:    pextl %eax, %edi, %eax
 ; BMI2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; BMI2-NEXT:    retq
 ;
