@@ -1773,6 +1773,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setLoadExtAction(Op, MVT::nxv8i16, MVT::nxv8i8, Legal);
     }
 
+    // SVE supports truncating stores of 64 and 128-bit vectors
     setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
