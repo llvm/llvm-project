@@ -37,7 +37,7 @@ define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-NOBMI-LABEL: out16_constmask:
 ; CHECK-NOBMI:       # %bb.0:
 ; CHECK-NOBMI-NEXT:    movzbl %dil, %eax
-; CHECK-NOBMI-NEXT:    andl $-256, %esi
+; CHECK-NOBMI-NEXT:    andl $65280, %esi # imm = 0xFF00
 ; CHECK-NOBMI-NEXT:    orl %esi, %eax
 ; CHECK-NOBMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NOBMI-NEXT:    retq
@@ -45,7 +45,7 @@ define i16 @out16_constmask(i16 %x, i16 %y) {
 ; CHECK-BMI-LABEL: out16_constmask:
 ; CHECK-BMI:       # %bb.0:
 ; CHECK-BMI-NEXT:    movzbl %dil, %eax
-; CHECK-BMI-NEXT:    andl $-256, %esi
+; CHECK-BMI-NEXT:    andl $65280, %esi # imm = 0xFF00
 ; CHECK-BMI-NEXT:    orl %esi, %eax
 ; CHECK-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-BMI-NEXT:    retq
