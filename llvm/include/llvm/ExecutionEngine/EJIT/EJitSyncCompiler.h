@@ -9,7 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITSYNCCOMPILER_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITSYNCCOMPILER_H
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
@@ -40,5 +40,5 @@ public:
 } // namespace ejit
 } // namespace llvm
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_FREESTANDING
 #endif

@@ -11,6 +11,7 @@ endif()
 
 #===-- Bare-metal configuration -------------------------------------------===#
 # EJIT_BARE_METAL option is defined in top-level llvm/CMakeLists.txt.
+# When enabled, it also defines -DEJIT_FREESTANDING for the EJIT library.
 if(EJIT_BARE_METAL)
   message(STATUS "EmbeddedJIT: bare-metal mode enabled")
   if(NOT EJIT_DEFAULT_TARGET_TRIPLE)
@@ -68,7 +69,7 @@ set(EJIT_SOURCES
   EJitPassBuilder.cpp
 )
 
-# Async/sync compiler — excluded in bare-metal (single-threaded, no std::thread)
+# Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)
 if(NOT EJIT_BARE_METAL)
   list(APPEND EJIT_SOURCES
     EJitSyncCompiler.cpp

@@ -3,7 +3,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <chrono>
 #endif
 
@@ -82,7 +82,7 @@ void *EJitCompileDriver::getOrCompile(
     return nullptr;
   }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
   auto start = std::chrono::steady_clock::now();
 #endif
 

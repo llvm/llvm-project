@@ -16,7 +16,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <mutex>
 #include <shared_mutex>
 #endif
@@ -28,7 +28,7 @@ namespace ejit {
 /// Cache key: uint32_t = funcIdx(16b) | dim3(4b) | dim2(4b) | dim1(4b) | dim0(4b)
 class EJitCache {
 public:
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_FREESTANDING
   using MutexType = BareMetalMutex;
 #else
   using MutexType = std::shared_mutex;

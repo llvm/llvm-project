@@ -50,12 +50,12 @@ EJitOrcEngine::Create(const Config &config,
 
   // Bare-metal / cross-compiled: use compile-time target triple.
   // Native host: auto-detect via detectHost().
-#if defined(EJIT_DEFAULT_TRIPLE) || defined(EJIT_BARE_METAL)
+#if defined(EJIT_DEFAULT_TRIPLE) || defined(EJIT_FREESTANDING)
   #ifdef EJIT_DEFAULT_TRIPLE
     Expected<orc::JITTargetMachineBuilder> JTMBOrErr(
         orc::JITTargetMachineBuilder(Triple(EJIT_DEFAULT_TRIPLE)));
   #else
-    #error EJIT_BARE_METAL requires EJIT_DEFAULT_TRIPLE to be set
+    #error EJIT_FREESTANDING requires EJIT_DEFAULT_TRIPLE to be set
   #endif
 #else
   auto JTMBOrErr = orc::JITTargetMachineBuilder::detectHost();
@@ -70,7 +70,7 @@ EJitOrcEngine::Create(const Config &config,
   Builder.setJITTargetMachineBuilder(*JTMBOrErr);
   Builder.setNumCompileThreads(0);
   // Bare-metal: no host process to search for symbols (avoids dlopen/dlsym).
-  #ifdef EJIT_BARE_METAL
+  #ifdef EJIT_FREESTANDING
   Builder.setLinkProcessSymbolsByDefault(false);
 #endif
 

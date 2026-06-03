@@ -556,7 +556,7 @@ set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
 
 option(EJIT_BARE_METAL "Build EJIT for bare-metal (no OS, no threads, trimmed passes)" OFF)
 if(EJIT_BARE_METAL)
-  add_definitions(-DEJIT_BARE_METAL)
+  add_definitions(-DEJIT_BARE_METAL -DEJIT_FREESTANDING)
 endif()
 
 set(LLVM_TARGETS_TO_BUILD "all"

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// When EJIT_BARE_METAL is defined, provides no-op replacements for OS-dependent
+// When EJIT_FREESTANDING is defined, provides no-op replacements for OS-dependent
 // primitives (mutex, shared_mutex) so the EJIT runtime compiles without pthread.
 //
 //===----------------------------------------------------------------------===//
@@ -14,7 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITBAREMETAL_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITBAREMETAL_H
 
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_FREESTANDING
 
 namespace llvm {
 namespace ejit {
@@ -34,5 +34,5 @@ struct BareMetalMutex {
 } // namespace ejit
 } // namespace llvm
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_FREESTANDING
 #endif // LLVM_EXECUTIONENGINE_EJIT_EJITBAREMETAL_H

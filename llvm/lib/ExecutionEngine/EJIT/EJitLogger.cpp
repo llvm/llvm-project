@@ -2,7 +2,7 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 
 #include <chrono>
 #include <mutex>
@@ -61,7 +61,7 @@ void EJitLogger::clear() {
   count_ = 0;
 }
 
-#else // EJIT_BARE_METAL — no-op stubs
+#else // EJIT_FREESTANDING — no-op stubs
 
 using namespace llvm::ejit;
 
@@ -72,4 +72,4 @@ bool EJitLogger::copyLastError(EJitError &) const { return false; }
 std::vector<EJitError> EJitLogger::getErrors(size_t) const { return {}; }
 void EJitLogger::clear() {}
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_FREESTANDING

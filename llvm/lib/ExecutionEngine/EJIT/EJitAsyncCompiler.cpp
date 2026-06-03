@@ -1,6 +1,6 @@
 //===-- EJitAsyncCompiler.cpp - Asynchronous JIT Compiler -----------------===//
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 
 #include "llvm/ExecutionEngine/EJIT/EJitAsyncCompiler.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
@@ -106,4 +106,4 @@ void EJitAsyncCompiler::compileOne(const CompileRequest &req) {
   }
 }
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_FREESTANDING

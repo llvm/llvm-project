@@ -12,7 +12,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitError.h"
 #include <cstdint>
 #include <vector>
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <mutex>
 #endif
 
@@ -36,7 +36,7 @@ public:
   void clear();
 
 private:
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
   mutable std::mutex mutex_;
 #endif
   EJitError errors_[kMaxErrors];

@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <mutex>
 #endif
 
@@ -64,7 +64,7 @@ enum class PeriodState { Inactive, Active };
 /// Manages activate/deactivate state of time-window period instances.
 class EJitRuntimeState {
 public:
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_FREESTANDING
   using MutexType = BareMetalMutex;
 #else
   using MutexType = std::mutex;

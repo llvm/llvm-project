@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <mutex>
 #include <shared_mutex>
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <chrono>
 #endif
 
@@ -13,7 +13,7 @@ using namespace llvm::ejit;
 
 namespace {
 
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_FREESTANDING
 uint64_t getTimestamp() { return 0; }
 #else
 uint64_t getTimestamp() {

@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 #include <mutex>
 #endif
 
@@ -60,7 +60,7 @@ struct StoredData {
 /// constructor-phase registration callbacks to ejit_init.
 class EJitRegistrationStore {
 public:
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_FREESTANDING
   using MutexType = BareMetalMutex;
 #else
   using MutexType = std::mutex;

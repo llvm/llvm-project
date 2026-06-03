@@ -1,6 +1,6 @@
 //===-- EJitSyncCompiler.cpp - Synchronous JIT Compiler -------------------===//
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_FREESTANDING
 
 #include "llvm/ExecutionEngine/EJIT/EJitSyncCompiler.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
@@ -41,4 +41,4 @@ EJitSyncCompiler::compile(EJitOrcEngine &engine,
   return result;
 }
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_FREESTANDING
