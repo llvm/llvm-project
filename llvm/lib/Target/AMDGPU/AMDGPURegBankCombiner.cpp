@@ -98,8 +98,10 @@ public:
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
 
-  bool matchMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
-  void applyMinMaxToMinMax3(MachineInstr &MI, MinMaxToMinMax3MatchInfo &MatchInfo) const;
+  bool matchMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
+  void applyMinMaxToMinMax3(MachineInstr &MI,
+                            MinMaxToMinMax3MatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -508,19 +510,18 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   }
 
   LLT t = MRI.getType(dst);
-  if (t == LLT::scalar(16)) {
-    if (!STI.hasMin3Max3_16()) {
-      return false;
-    }
-  } else if (t != LLT::scalar(32)) {
-    if (!(t.isVector() && t.getScalarSizeInBits() == 32))
-      return false;
-  }
+  bool IsSupportedTy = t == LLT::scalar(32) ||
+                       (t == LLT::scalar(16) && STI.hasMin3Max3_16()) ||
+                       (t.isVector() && t.getScalarSizeInBits() == 32);
+
+  if (!IsSupportedTy)
+    return false;
 
   Register R0, R1, R2;
   unsigned opc = MI.getOpcode();
-  auto matchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI, unsigned op,
-                       Register &r0, Register &r1, Register &r2) {
+  auto matchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI,
+                            unsigned op, Register &r0, Register &r1,
+                            Register &r2) {
     auto p1 = m_BinOp(op, m_OneNonDBGUse(m_BinOp(op, m_Reg(r0), m_Reg(r1))),
                       m_Reg(r2));
     auto p2 = m_BinOp(op, m_Reg(r0),
@@ -533,24 +534,24 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   }
 
   auto getAMDGPUOp = [](unsigned Opc) -> unsigned {
-      switch (Opc) {
-      case AMDGPU::G_SMAX:
-        return AMDGPU::G_AMDGPU_SMAX3;
-      case AMDGPU::G_SMIN:
-        return AMDGPU::G_AMDGPU_SMIN3;
-      case AMDGPU::G_UMAX:
-        return AMDGPU::G_AMDGPU_UMAX3;
-      case AMDGPU::G_UMIN:
-        return AMDGPU::G_AMDGPU_UMIN3;
-      case AMDGPU::G_FMAXNUM:
-      case AMDGPU::G_FMAXNUM_IEEE:
-        return AMDGPU::G_AMDGPU_FMAX3;
-      case AMDGPU::G_FMINNUM:
-      case AMDGPU::G_FMINNUM_IEEE:
-        return AMDGPU::G_AMDGPU_FMIN3;
-      default:
-        return 0;
-      }
+    switch (Opc) {
+    case AMDGPU::G_SMAX:
+      return AMDGPU::G_AMDGPU_SMAX3;
+    case AMDGPU::G_SMIN:
+      return AMDGPU::G_AMDGPU_SMIN3;
+    case AMDGPU::G_UMAX:
+      return AMDGPU::G_AMDGPU_UMAX3;
+    case AMDGPU::G_UMIN:
+      return AMDGPU::G_AMDGPU_UMIN3;
+    case AMDGPU::G_FMAXNUM:
+    case AMDGPU::G_FMAXNUM_IEEE:
+      return AMDGPU::G_AMDGPU_FMAX3;
+    case AMDGPU::G_FMINNUM:
+    case AMDGPU::G_FMINNUM_IEEE:
+      return AMDGPU::G_AMDGPU_FMIN3;
+    default:
+      return 0;
+    }
   };
   unsigned amdgpuOpc = getAMDGPUOp(opc);
   if (!amdgpuOpc)
