@@ -271,7 +271,7 @@ private:
 
     MachineInstr *getDefInstr(const MachineOperand *MO) const {
       if (MO->isReg() && MRI->hasOneDef(MO->getReg())) {
-        return (MRI->def_begin(MO->getReg()))->getParent();
+        return MRI->def_begin(MO->getReg())->getParent();
       }
       return nullptr;
     }
