@@ -349,19 +349,19 @@ if.end7:                                          ; preds = %if.else, %if.then4,
   ret i32 %tmp9
 }
 
-define i64 @test5_several_uses(i1 %c, i1 %branch, ptr %p) nounwind #0 {
+define i64 @test5_several_uses(i1 %c, i1 %branch, ptr %p) nounwind {
 ; CHECK-LABEL: define i64 @test5_several_uses
-; CHECK-SAME: (i1 [[C:%.*]], i1 [[BRANCH:%.*]], ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i1 [[C:%.*]], i1 [[BRANCH:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C]], ptr [[P]], ptr null
-; CHECK-NEXT:    [[G_IN_BLOCK:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], i64 48
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
+; CHECK-NEXT:    [[G_IN_BLOCK:%.*]] = getelementptr i8, ptr [[P]], i64 48
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[G_IN_BLOCK]], align 8
 ; CHECK-NEXT:    br i1 [[BRANCH]], label [[COMMON_RET:%.*]], label [[USE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i64 [ [[SUM:%.*]], [[USE]] ], [ [[V]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[COMMON_RET_OP]]
 ; CHECK:       use:
-; CHECK-NEXT:    [[G_CROSS:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], i64 16
+; CHECK-NEXT:    [[G_CROSS:%.*]] = getelementptr i8, ptr [[P]], i64 16
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[G_CROSS]], align 8
 ; CHECK-NEXT:    [[SUM]] = add i64 [[V]], [[X]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
