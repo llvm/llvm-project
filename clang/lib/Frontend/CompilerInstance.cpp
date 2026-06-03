@@ -413,6 +413,13 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
                                     const PreprocessorOptions &InitOpts) {
   // Remap files in the source manager (with buffers).
   for (const auto &RB : InitOpts.RemappedFileBuffers) {
+    // Skip entries with a null buffer — this can occur when a module
+    // compilation fails partway through, leaving an uninitialized entry
+    // in RemappedFileBuffers. Treat it as a missing file and continue.
+    if (!RB.second) {
+      Diags.Report(diag::err_fe_remap_missing_to_file) << RB.first << "(null buffer)";
+      continue;
+    }
     // Create the file entry for the file that we're mapping from.
     FileEntryRef FromFile =
         FileMgr.getVirtualFileRef(RB.first, RB.second->getBufferSize(), 0);
