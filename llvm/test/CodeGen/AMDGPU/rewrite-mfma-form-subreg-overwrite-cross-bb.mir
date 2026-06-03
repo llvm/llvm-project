@@ -1,0 +1,105 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:     -run-pass=machine-scheduler \
+# RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
+# RUN:     %s -o - | FileCheck %s
+#
+# Test: RewriteMFMAFormStage — cross-BB sub-register overwrites (diamond CFG)
+# produce mixed MAI/non-MAI reaching defs; hasDominanceConflict blocks rewrite.
+#
+# CFG (diamond):
+#
+#          bb.0  ← %acc = MFMA(...)        MAI full-reg def, all lanes
+#         /    \
+#       bb.1  bb.2  ← non-MAI subreg overwrites: bb.1: %acc.sub0 = V_MOV 1
+#         \    /                                  bb.2: %acc.sub1 = V_MOV 2
+#          bb.3  ← %res  = MFMA(..., %acc) UseSubReg=0, full-reg use
+#                  %res2 = MFMA(..., %res) chained
+#
+# %res and %res2 are rewrite candidates (MAI-only dst users).
+# 9 × vreg_1024 = 288 ArchVGPRs > gfx90a limit 256 → ExcessArchVGPR fires.
+#
+# findReachingDefs for %res src2=%acc (full-reg use → all SubRanges queried):
+#   %acc has SubRanges because the diamond creates per-lane mixed definitions.
+#   sub0: only bb.0 MFMA reaches bb.3 via non-bb.1 path → non-PHIDef at UseIdx
+#         → direct path → MAI def inserted into ResultSet.
+#   sub1: bb.0 MFMA (via bb.2) and bb.2 V_MOV both reach bb.3 → PHIDef
+#         → BFS → MAI(MFMA, bb.0) + non-MAI(V_MOV, bb.2) in ResultSet.
+#   sub2/sub3: similar → MAI(MFMA, bb.0) + non-MAI(V_MOV, bb.1 or bb.2).
+#   ResultSet = {MFMA(MAI), V_MOV×2(non-MAI)}.
+#
+# hasDominanceConflict: bb.0 dominates bb.1 and bb.2 → MFMA(bb.0) dominates
+#   V_MOV(bb.1/bb.2) → conflict detected → %res excluded.
+# Propagation: %res2 excluded (src2 = excluded %res dst).
+#              %acc MFMA excluded (MAI reaching-def of conflicted src2).
+#
+# CHECK-LABEL: name: test_subreg_overwrite_cross_bb
+# CHECK: bb.0:
+# CHECK:   %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK: bb.3:
+# CHECK:   %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK:   %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64
+# CHECK-NOT: areg_128_align2
+
+--- |
+  define void @test_subreg_overwrite_cross_bb() #0 {
+  entry:
+    unreachable
+  }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
+...
+
+---
+name:            test_subreg_overwrite_cross_bb
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr4_sgpr5, $sgpr6
+
+    %p0:vreg_1024 = IMPLICIT_DEF
+    %p1:vreg_1024 = IMPLICIT_DEF
+    %p2:vreg_1024 = IMPLICIT_DEF
+    %p3:vreg_1024 = IMPLICIT_DEF
+    %p4:vreg_1024 = IMPLICIT_DEF
+    %p5:vreg_1024 = IMPLICIT_DEF
+    %p6:vreg_1024 = IMPLICIT_DEF
+    %p7:vreg_1024 = IMPLICIT_DEF
+    %p8:vreg_1024 = IMPLICIT_DEF
+
+    %srca:vgpr_32 = IMPLICIT_DEF
+    %srcb:vgpr_32 = IMPLICIT_DEF
+
+    ; MAI full-reg def of %acc (all 4 lanes) — contributes MAI to ResultSet.
+    %acc:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    SCHED_BARRIER 0
+
+    S_CMP_EQ_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+
+  ; bb.1: non-MAI sub0 overwrite — contributes non-MAI to ResultSet.
+  bb.1:
+    successors: %bb.3(0x80000000)
+
+    %acc.sub0:vreg_128_align2 = V_MOV_B32_e32 1, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; bb.2: non-MAI sub1 overwrite — contributes non-MAI to ResultSet.
+  bb.2:
+    successors: %bb.3(0x80000000)
+
+    %acc.sub1:vreg_128_align2 = V_MOV_B32_e32 2, implicit $exec
+
+    S_BRANCH %bb.3
+
+  ; bb.3: hasDominanceConflict(%acc)=true → %res/%res2 excluded → no rewrite.
+  bb.3:
+    %res:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %acc:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    ; Chain the result into another MFMA (MAI use of %res -> CopyForUse = 0).
+    %res2:vreg_128_align2 = nofpexcept V_MFMA_F32_16X16X4F32_vgprcd_e64 %srca:vgpr_32, %srcb:vgpr_32, %res:vreg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+
+    KILL %p0, %p1, %p2, %p3, %p4, %p5, %p6, %p7, %p8
+
+    S_ENDPGM 0

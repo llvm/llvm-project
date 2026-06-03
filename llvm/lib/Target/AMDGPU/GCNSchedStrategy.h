@@ -469,8 +469,25 @@ private:
   /// \returns true if this MI is a rewrite candidate.
   bool isRewriteCandidate(MachineInstr *MI) const;
 
-  /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into \p
-  /// DefIdxs
+  /// Returns true if rewriting the MFMA whose src2 is \p Src2Reg to AGPR form
+  /// is unsafe given \p DefIdxs as the reaching defs of that src2.
+  /// Two conditions trigger a conflict:
+  ///   1. A MAI reaching def dominates a non-MAI reaching def (partial subreg
+  ///      overwrite: bridge copies cannot implement the required read-modify-write).
+  ///   2. Some use of Src2Reg is not dominated by any bridge-copy location (=
+  ///      non-MAI reaching def block), meaning the bridge copy would be absent on
+  ///      some CFG path that reaches that use.
+  bool hasDominanceConflict(ArrayRef<SlotIndex> DefIdxs,
+                            Register Src2Reg) const;
+
+  /// Transitively exclude from \p ExcludedMFMAs any rewrite candidate whose
+  /// src2 is the dst of \p Root or of any already-excluded MFMA.
+  void propagateExclusionForward(MachineInstr *Root,
+                                 SmallPtrSetImpl<MachineInstr *> &ExcludedMFMAs);
+
+  /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into
+  /// \p DefIdxs. Handles registers with subranges by querying each subrange's
+  /// LiveRange independently, so subreg defs on different lanes are all found.
   void findReachingDefs(MachineOperand &UseMO, LiveIntervals *LIS,
                         SmallVectorImpl<SlotIndex> &DefIdxs);
 
