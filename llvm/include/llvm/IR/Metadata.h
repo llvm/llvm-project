@@ -874,11 +874,6 @@ struct DenseMapInfo<AAMDNodes> {
                      nullptr, nullptr);
   }
 
-  static inline AAMDNodes getTombstoneKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(), nullptr,
-                     nullptr, nullptr, nullptr);
-  }
-
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
