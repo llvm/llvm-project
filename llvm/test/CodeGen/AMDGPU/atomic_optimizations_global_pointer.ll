@@ -27,8 +27,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=+wavefrontsize32 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1232,GFX1232-FAKE16,GFX1232_DPP,GFX1232_DPP-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 -mattr=+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1364,GFX1364-TRUE16,GFX1364_DPP,GFX1364_DPP-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=-real-true16 -mattr=+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1364,GFX1364-FAKE16,GFX1364_DPP,GFX1364_DPP-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 -mattr=+wavefrontsize32 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332-TRUE16,GFX1332_DPP,GFX1332_DPP-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=-real-true16 -mattr=+wavefrontsize32 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332-FAKE16,GFX1332_DPP,GFX1332_DPP-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332-TRUE16,GFX1332_DPP,GFX1332_DPP-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=-real-true16 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332-FAKE16,GFX1332_DPP,GFX1332_DPP-FAKE16 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 

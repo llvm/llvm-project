@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -amdgpu-atomic-optimizer-strategy=Iterative < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12W32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+wavefrontsize64 -amdgpu-atomic-optimizer-strategy=Iterative < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13W64 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+wavefrontsize32 -amdgpu-atomic-optimizer-strategy=Iterative < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13W32 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -amdgpu-atomic-optimizer-strategy=Iterative < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13W32 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.add(i32, ptr addrspace(8), i32, i32, i32 immarg)

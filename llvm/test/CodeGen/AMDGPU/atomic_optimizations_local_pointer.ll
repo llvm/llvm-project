@@ -14,7 +14,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1164,GFX1164_DPP %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1132,GFX1132_DPP %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+wavefrontsize64 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1364,GFX1364_DPP %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=+wavefrontsize32 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332_DPP %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1310 -mattr=-flat-for-global - -amdgpu-atomic-optimizer-strategy=DPP < %s | FileCheck -enable-var-scope -check-prefixes=GFX1332,GFX1332_DPP %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
