@@ -2936,7 +2936,8 @@ cir::TLS_Model CIRGenModule::getDefaultCIRTLSModel() const {
   llvm_unreachable("Invalid TLS model!");
 }
 
-void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
+void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d,
+                              bool isExtendingDecl) {
   assert(d.getTLSKind() && "setting TLS mode on non-TLS var!");
 
   cir::TLS_Model tlm = getDefaultCIRTLSModel();
@@ -2951,6 +2952,12 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   // For namespace-scope dyanmic TLS we need to set the wrapper, int, or guard
   // info.
   if (d.isStaticLocal() || tlm != cir::TLS_Model::GeneralDynamic)
+    return;
+
+  // If this function was called to set the TLS mode for a temporary whose
+  // lifetime is extended by the variable declared by `d`, don't emit the
+  // wrapper, init, and guard info.
+  if (isExtendingDecl)
     return;
 
   setGlobalTlsReferences(d, global);
@@ -3909,6 +3916,8 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   }
   cir::GlobalOp gv = createGlobalOp(loc, name, type, isConstant);
   gv.setInitialValueAttr(initialValue);
+  gv.setLinkage(linkage);
+  gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
 
   if (emitter)
     emitter->finalize(gv);
@@ -3923,8 +3932,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
     errorNYI(mte->getSourceRange(),
              "Global temporary with comdat/weak linkage");
   if (varDecl->getTLSKind())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with thread local storage");
+    setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;
 
   assert(!cir::MissingFeatures::addressSpace());
