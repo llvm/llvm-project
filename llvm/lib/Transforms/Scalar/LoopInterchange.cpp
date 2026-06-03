@@ -1474,8 +1474,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   for (auto *BB : OuterLoop->blocks())
     for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // Functions which don't access memory and doesn't diverge do not
-        // prevent interchanging.
+        // Functions which don't access memory and don't diverge do not prevent
+        // interchanging.
         if ((CI->doesNotAccessMemory() && !CI->mayHaveSideEffects()) ||
             isa<PseudoProbeInst>(CI))
           continue;
