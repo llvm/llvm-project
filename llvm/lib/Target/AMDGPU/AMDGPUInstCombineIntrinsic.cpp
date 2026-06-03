@@ -1639,24 +1639,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
-
-        // The result of V_ICMP/V_FCMP assembly instructions (which this
-        // intrinsic exposes) is one bit per thread, masked with the EXEC
-        // register (which contains the bitmask of live threads). So a
-        // comparison that always returns true is the same as a read of the
-        // EXEC register. EXEC is wave-size bits wide, so read it at that width
-        // and zext/trunc to the return type.
-        Type *ExecTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
-        StringRef ExecName = ST->isWave32() ? "exec_lo" : "exec";
-        Metadata *MDArgs[] = {MDString::get(II.getContext(), ExecName)};
-        MDNode *MD = MDNode::get(II.getContext(), MDArgs);
-        Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall =
-            IC.Builder.CreateIntrinsic(Intrinsic::read_register, ExecTy, Args);
-        NewCall->addFnAttr(Attribute::Convergent);
-        Value *Result = IC.Builder.CreateZExtOrTrunc(NewCall, II.getType());
-        Result->takeName(&II);
-        return IC.replaceInstUsesWith(II, Result);
+        break;
       }
 
       // Canonicalize constants to RHS.
