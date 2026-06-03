@@ -2846,6 +2846,7 @@ public:
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)
+  WALK_NESTED_ENUM(common, OmpDeviceType)
   WALK_NESTED_ENUM(common, OmpMemoryOrderType)
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
@@ -2873,8 +2874,6 @@ public:
   WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
-  WALK_NESTED_ENUM(
-      OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier

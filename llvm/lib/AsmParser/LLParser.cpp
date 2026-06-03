@@ -9947,11 +9947,7 @@ bool LLParser::addGlobalValueToIndex(
       if (!GV)
         return error(Loc, "Reference to undefined global \"" + Name + "\"");
 
-      // Be a little lenient here, to accomodate older files without GUIDs
-      // already computed and assigned as metadata.
-      GUID = GV->getGUIDOrFallback();
-
-      VI = Index->getOrInsertValueInfo(GV, GUID);
+      VI = Index->getOrInsertValueInfo(GV);
     } else {
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&

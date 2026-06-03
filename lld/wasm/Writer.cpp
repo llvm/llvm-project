@@ -400,12 +400,10 @@ void Writer::layoutMemory() {
 
     if (!ctx.arg.relocatable && seg->isTLS()) {
       if (ctx.sym.tlsSize) {
-        auto *tlsSize = cast<DefinedGlobal>(ctx.sym.tlsSize);
-        setGlobalPtr(tlsSize, seg->size);
+        setGlobalPtr(ctx.sym.tlsSize, seg->size);
       }
       if (ctx.sym.tlsAlign) {
-        auto *tlsAlign = cast<DefinedGlobal>(ctx.sym.tlsAlign);
-        setGlobalPtr(tlsAlign, int64_t{1} << seg->alignment);
+        setGlobalPtr(ctx.sym.tlsAlign, int64_t{1} << seg->alignment);
       }
       fixedTLSBase = memoryPtr;
     }
@@ -426,8 +424,7 @@ void Writer::layoutMemory() {
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
   if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {
-    auto *tlsBase = cast<DefinedGlobal>(ctx.sym.tlsBase);
-    setGlobalPtr(tlsBase, fixedTLSBase);
+    setGlobalPtr(ctx.sym.tlsBase, fixedTLSBase);
   }
 
   // Make space for the memory initialization flag

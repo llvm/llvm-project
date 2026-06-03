@@ -807,7 +807,10 @@ static mlir::Operation *
 createAndSetPrivatizedLoopVar(lower::AbstractConverter &converter,
                               mlir::Location loc, mlir::Value indexVal,
                               const semantics::Symbol *sym) {
-  assert(converter.isPresentShallowLookup(*sym) &&
+  // The handling of linear symbols is deferred to the OpenMP IRBuilder,
+  // which is responsible for all its aspects, including privatization.
+  assert((converter.isPresentShallowLookup(*sym) ||
+          sym->test(semantics::Symbol::Flag::OmpLinear)) &&
          "Expected symbol to be in symbol table.");
   return setLoopVar(converter, loc, indexVal, sym);
 }
@@ -4642,11 +4645,230 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // support the case of threadprivate variable declared in module.
 }
 
+namespace {
+struct TargetOMPContext final : public llvm::omp::OMPContext {
+  TargetOMPContext(mlir::ModuleOp module,
+                   llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+      // Metadirective lowering has no selected target device, so construct the
+      // context with an unknown device number. Target-device selectors are
+      // rejected before matching because OMPContext would otherwise describe
+      // the host device in this mode.
+      : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
+                   getOffloadTargetTriple(module),
+                   /*DeviceNum=*/-1),
+        targetFeatures(fir::getTargetFeatures(module)) {
+    for (llvm::omp::TraitProperty trait : constructTraits)
+      addTrait(trait);
+  }
+
+  bool matchesISATrait(llvm::StringRef rawString) const override {
+    if (!targetFeatures || targetFeatures.nullOrEmpty())
+      return false;
+    return targetFeatures.contains(("+" + rawString).str());
+  }
+
+private:
+  static bool isDeviceCompilation(mlir::ModuleOp module) {
+    return llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation())
+        .getIsTargetDevice();
+  }
+
+  static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
+    auto offloadMod =
+        llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation());
+    auto targetTriples = offloadMod.getTargetTriples();
+
+    if (!targetTriples.empty())
+      if (auto tripleAttr =
+              llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
+        return llvm::Triple(tripleAttr.getValue());
+
+    return llvm::Triple();
+  }
+
+  mlir::LLVM::TargetFeaturesAttr targetFeatures;
+};
+
+struct MetadirectiveCandidate {
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+                         llvm::omp::VariantMatchInfo vmi, bool isExplicit)
+      : spec(spec), vmi(vmi), isExplicit(isExplicit) {}
+
+  const parser::OmpDirectiveSpecification *spec = nullptr;
+  llvm::omp::VariantMatchInfo vmi;
+  bool isExplicit = false;
+};
+} // namespace
+
+static void appendConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  if (mlir::isa<mlir::omp::WsloopOp>(op))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+  if (mlir::isa<mlir::omp::ParallelOp>(op))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_parallel_parallel);
+  if (mlir::isa<mlir::omp::TeamsOp>(op))
+    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
+  if (mlir::isa<mlir::omp::TargetOp>(op))
+    constructTraits.push_back(
+        llvm::omp::TraitProperty::construct_target_target);
+}
+
+static void genMetadirective(lower::AbstractConverter &converter,
+                             lower::SymMap &symTable,
+                             semantics::SemanticsContext &semaCtx,
+                             lower::pft::Evaluation &eval,
+                             const parser::OmpClauseList &clauseList) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
+  // Collect enclosing OpenMP operations so variants chosen by an outer
+  // metadirective are part of this metadirective's context. For example, an
+  // inner metadirective inside `target` and an outer-selected `parallel` must
+  // be able to match construct={target, parallel}.
+  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
+       op = op->getParentOp())
+    appendConstructTraits(op, constructTraits);
+
+  std::reverse(constructTraits.begin(), constructTraits.end());
+  TargetOMPContext ompCtx(builder.getModule(), constructTraits);
+
+  llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
+  // A null directive specification represents either the implicit `nothing`
+  // variant or the absence of an explicit otherwise/default clause.
+  const parser::OmpDirectiveSpecification *fallback = nullptr;
+
+  // Extract the context-selector that controls whether a WHEN variant is
+  // applicable. Modifier validation requires exactly one selector per clause.
+  auto getContextSelector = [](const parser::OmpClause::When &whenClause)
+      -> const parser::modifier::OmpContextSelector & {
+    const auto &modifiers = std::get<0>(whenClause.v.t);
+    assert(modifiers && modifiers->size() == 1 &&
+           "WHEN clause should contain one context-selector");
+    return std::get<parser::modifier::OmpContextSelector>(modifiers->front().u);
+  };
+
+  // Extract the directive variant spec from a when clause.
+  // Returns {spec_ptr, isExplicit}. A null spec means "nothing".
+  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
+      -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
+    const auto &opt = std::get<1>(whenClause.v.t);
+    if (!opt)
+      return {nullptr, false};
+    if (opt->value().DirId() == llvm::omp::Directive::OMPD_nothing)
+      return {nullptr, true};
+    return {&opt->value(), true};
+  };
+
+  // Return the directive spec pointer, or nullptr for "nothing".
+  auto getFallbackVariant = [](const parser::OmpDirectiveSpecification &spec)
+      -> const parser::OmpDirectiveSpecification * {
+    if (spec.DirId() == llvm::omp::Directive::OMPD_nothing)
+      return nullptr;
+    return &spec;
+  };
+
+  for (const auto &clause : clauseList.v) {
+    if (const auto *whenClause =
+            std::get_if<parser::OmpClause::When>(&clause.u)) {
+      const auto &ctxSel = getContextSelector(*whenClause);
+      auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
+
+      llvm::omp::VariantMatchInfo vmi;
+      const parser::ScalarExpr *dynCondExpr = nullptr;
+      makeVariantMatchInfo(vmi, ctxSel, semaCtx,
+                           converter.genLocation(clause.source), dynCondExpr);
+
+      if (dynCondExpr)
+        TODO(converter.genLocation(clause.source),
+             "dynamic user condition in METADIRECTIVE");
+
+      if (!llvm::omp::isVariantApplicableInContext(vmi, ompCtx))
+        continue;
+
+      candidates.emplace_back(spec, vmi, isExplicit);
+    } else if (const auto *otherwiseClause =
+                   std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
+      if (otherwiseClause->v && otherwiseClause->v->v)
+        fallback = getFallbackVariant(otherwiseClause->v->v->value());
+    } else if (const auto *defaultClause =
+                   std::get_if<parser::OmpClause::Default>(&clause.u)) {
+      if (const auto *dirSpecPtr = std::get_if<
+              common::Indirection<parser::OmpDirectiveSpecification>>(
+              &defaultClause->v.u))
+        fallback = getFallbackVariant(dirSpecPtr->value());
+    }
+  }
+
+  // Lower a single resolved candidate.
+  auto genVariant = [&](const parser::OmpDirectiveSpecification *spec) {
+    if (!spec) {
+      genNestedEvaluations(converter, eval);
+      return;
+    }
+    List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
+    mlir::Location variantLoc = converter.genLocation(spec->source);
+    ConstructQueue queue{
+        buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                            eval, spec->source, spec->DirId(), variantClauses)};
+
+    if (llvm::any_of(queue, [](const auto &item) {
+          return llvm::omp::getDirectiveAssociation(item.id) ==
+                 llvm::omp::Association::LoopNest;
+        })) {
+      TODO(variantLoc, "loop-associated METADIRECTIVE variant");
+    }
+
+    if (llvm::any_of(queue, [](const auto &item) {
+          return llvm::omp::getDirectiveAssociation(item.id) ==
+                     llvm::omp::Association::Declaration ||
+                 llvm::omp::getDirectiveCategory(item.id) ==
+                     llvm::omp::Category::Declarative;
+        })) {
+      TODO(variantLoc, "declarative METADIRECTIVE variant");
+    }
+
+    genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                   queue.begin());
+  };
+
+  const parser::OmpDirectiveSpecification *selected = fallback;
+  if (candidates.size() == 1) {
+    selected = candidates.front().spec;
+  } else if (!candidates.empty()) {
+    // The OpenMP context scorer preserves input order for tied candidates.
+    // Put explicit variants first so they take precedence over implicit
+    // `nothing`, as required by metadirective selection.
+    llvm::SmallVector<unsigned, 4> candidateOrder;
+    candidateOrder.reserve(candidates.size());
+    for (auto [idx, candidate] : llvm::enumerate(candidates))
+      if (candidate.isExplicit)
+        candidateOrder.push_back(idx);
+    for (auto [idx, candidate] : llvm::enumerate(candidates))
+      if (!candidate.isExplicit)
+        candidateOrder.push_back(idx);
+
+    llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
+    orderedVMIs.reserve(candidates.size());
+    for (unsigned idx : candidateOrder)
+      orderedVMIs.push_back(candidates[idx].vmi);
+
+    int bestIdx = llvm::omp::getBestVariantMatchForContext(orderedVMIs, ompCtx);
+    if (bestIdx >= 0) {
+      assert(static_cast<size_t>(bestIdx) < candidateOrder.size() &&
+             "best variant index out of range");
+      selected = candidates[candidateOrder[bestIdx]].spec;
+    }
+  }
+  genVariant(selected);
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpMetadirectiveDirective &meta) {
-  TODO(converter.getCurrentLocation(), "METADIRECTIVE");
+  genMetadirective(converter, symTable, semaCtx, eval, meta.v.Clauses());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4791,8 +5013,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OmpDelimitedMetadirectiveDirective &meta) {
-  TODO(converter.getCurrentLocation(),
-       "OpenMP BEGIN/END METADIRECTIVE lowering");
+  genMetadirective(converter, symTable, semaCtx, eval,
+                   meta.BeginDir().Clauses());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -5208,14 +5430,13 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::RequiresClauses reqs;
+    semantics::WithOmpDeclarative::OmpClauseSet reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
             if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
                                             std::decay_t<decltype(details)>>) {
-              if (details.has_ompRequires())
-                reqs = *details.ompRequires();
+              reqs = details.ompRequires();
             }
           },
           symbol->details());

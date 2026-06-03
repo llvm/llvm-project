@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
@@ -1561,17 +1562,15 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 
     Type *I32Ty = Builder.getInt32Ty();
     LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
-    WidenLoad->copyMetadata(I);
+    AMDGPU::copyMetadataForWidenedLoad(*WidenLoad, I);
 
-    // If we have range metadata, we need to convert the type, and not make
+    // The widened load reads the original bytes in the low bits, so a !range
+    // lower bound still holds. Convert it to the new type and don't make
     // assumptions about the high bits.
-    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
+    if (auto *Range = I.getMetadata(LLVMContext::MD_range)) {
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->isNullValue()) {
-        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
-      } else {
+      if (!Lower->isNullValue()) {
         Metadata *LowAndHigh[] = {
           ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
           // Don't make assumptions about the high bits.

@@ -10,7 +10,7 @@
 
 // class map
 
-// size_type size() const;
+// size_type size() const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double> M;
     M m;
@@ -55,6 +55,13 @@ int main(int, char**) {
     assert(m.size() == 0);
   }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

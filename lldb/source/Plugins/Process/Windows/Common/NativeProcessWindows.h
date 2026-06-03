@@ -194,8 +194,9 @@ public:
     m_process.OnUnloadDll(module_addr);
   }
 
-  void OnDebugString(const std::string &string) override {
-    m_process.OnDebugString(string);
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override {
+    m_process.OnDebugString(debug_string_addr, is_unicode, length_lower_word);
   }
 
   void OnDebuggerError(const Status &error, uint32_t type) override {
