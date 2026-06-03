@@ -155,6 +155,8 @@ private:
   bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
+  bool foldDeinterleaveIntrinsics(Instruction &I);
+  bool foldBitcastOfVPLoad(Instruction &I);
   bool shrinkType(Instruction &I);
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
@@ -2014,7 +2016,10 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
 
   auto *LI = cast<LoadInst>(&I);
   auto *VecTy = cast<VectorType>(LI->getType());
-  if (LI->isVolatile() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
+
+  // The isSimple() check could be isUnordered(), but for now we cowardly
+  // refuse to handle even unordered atomics.
+  if (!LI->isSimple() || !DL->typeSizeEqualsStoreSize(VecTy->getScalarType()))
     return false;
 
   bool AllExtracts = true;
@@ -3998,6 +4003,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstWorklist.push(VecOpEE);
 
   bool IsPartialReduction = false;
+  bool HasLaneDuplication = false;
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -4117,6 +4123,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       // Update mask values.
       ShuffleMaskHalf *= 2;
       ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      HasLaneDuplication |= (ExpectedParityMask & 1) != 0;
       ExpectedParityMask >>= 1;
 
       OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
@@ -4146,6 +4153,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Full reduction pattern should end with a shuffle op.
   // Partial reduction ends when the source vector is reached.
   if (ShouldBeCallOrBinInst && !IsPartialReduction)
+    return false;
+
+  // If the parity masks duplicated any lane, the fold only preserves semantics
+  // for idempotent ops.
+  if (HasLaneDuplication && CommonBinOp &&
+      !Instruction::isIdempotent(*CommonBinOp))
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");
@@ -5691,6 +5704,195 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+/// Given this sequence:
+/// ```
+/// %d = llvm.vector.deinterleave2 <vscale x 16 x i32> %v
+/// %f0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 0
+/// %f1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d, 1
+///
+/// %low0 = and <vscale x 8 x i32> %f0, splat (i32 65535)
+/// %low1 = shl <vscale x 8 x i32> %f1, splat (i32 16)
+/// %merge0 = or disjoint <vscale x 8 x i32> %low0, %low1
+///
+/// %high0 = and <vscale x 8 x i32> %f1, splat (i32 -65536)
+/// %high1 = lshr <vscale x 8 x i32> %f0, splat (i32 16)
+/// %merge1 = or disjoint <vscale x 8 x i32> %high0, %high1
+/// ```
+/// It is actually just de-interleaving a 16-bit vector with double the
+/// vector length. More generally speaking, it's de-interleaving on a vector
+/// with half the element width as the original vector.
+///
+/// Therefore, we can turn it into:
+/// ```
+/// %narrow.v = bitcast <vscale x 16 x i32> %v to <vscale x 32 x i16>
+/// %d = llvm.vector.deinterleave2 <vscale x 32 x i16> %narrow.v
+/// %f0 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 0
+/// %f1 = extractvalue { <vscale x 16 x i16>, <vscale x 16 x i16> } %d, 1
+///
+/// %merge0 = bitcast <vscale x 16 x i16> %f0 to <vscale x 8 x i32>
+/// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
+/// ```
+bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  // This pattern involves bitcast that is not compatible with big endian.
+  if (DL->isBigEndian())
+    return false;
+
+  using namespace PatternMatch;
+  Value *DeinterleavedVal;
+  if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
+    return false;
+
+  VectorType *VecTy = cast<VectorType>(DeinterleavedVal->getType());
+  IntegerType *ElementTy = dyn_cast<IntegerType>(VecTy->getElementType());
+  if (!ElementTy)
+    return false;
+  unsigned ElementWidth = ElementTy->getBitWidth();
+  if (ElementWidth < 2 || !isPowerOf2_32(ElementWidth))
+    return false;
+  unsigned HalfElementWidth = ElementWidth / 2;
+
+  if (!I.hasNUses(2))
+    return false;
+  std::array<ExtractValueInst *, 2> OrigFields{};
+  for (User *Usr : I.users()) {
+    auto *E = dyn_cast<ExtractValueInst>(Usr);
+    // The deinterleave result can only be used by extractions.
+    if (!E || E->getNumIndices() != 1)
+      return false;
+    unsigned Idx = *E->idx_begin();
+    // A single field cannot be extracted more than once.
+    if (Idx >= 2 || OrigFields[Idx] || !E->hasNUses(2))
+      return false;
+    OrigFields[Idx] = E;
+  }
+
+  // Find the merge instruction (i.e. OR) first.
+  SmallVector<Instruction *, 2> MergeInsts;
+  for (auto *FieldUsr : OrigFields[0]->users()) {
+    if (!FieldUsr->hasOneUse() || !isa<Instruction>(FieldUsr->user_back()))
+      return false;
+    MergeInsts.push_back(cast<Instruction>(FieldUsr->user_back()));
+  }
+  assert(MergeInsts.size() == 2);
+
+  // Pattern match bottom-up from the merge instructions.
+  auto MatchMerge = [&](void) -> bool {
+    APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
+    APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
+    return match(MergeInsts[0],
+                 m_c_Or(m_And(m_Specific(OrigFields[0]), m_SpecificInt(LoMask)),
+                        m_Shl(m_Specific(OrigFields[1]),
+                              m_SpecificInt(HalfElementWidth)))) &&
+           match(MergeInsts[1],
+                 m_c_Or(m_And(m_Specific(OrigFields[1]), m_SpecificInt(HiMask)),
+                        m_LShr(m_Specific(OrigFields[0]),
+                               m_SpecificInt(HalfElementWidth))));
+  };
+  if (!MatchMerge()) {
+    std::swap(MergeInsts[0], MergeInsts[1]);
+    if (!MatchMerge())
+      return false;
+  }
+
+  // Profitability check.
+  InstructionCost OldCost =
+      TTI.getInstructionCost(MergeInsts[0], CostKind) +
+      TTI.getInstructionCost(cast<Instruction>(MergeInsts[0]->getOperand(0)),
+                             CostKind) +
+      TTI.getInstructionCost(cast<Instruction>(MergeInsts[0]->getOperand(1)),
+                             CostKind);
+  // There are two fields (assuming SHL has the same cost as LSHR).
+  OldCost *= 2;
+
+  auto *NewFieldTy = VecTy->getWithNewBitWidth(HalfElementWidth);
+  auto *NewVecTy =
+      VectorType::getDoubleElementsVectorType(cast<VectorType>(NewFieldTy));
+  InstructionCost NewCost =
+      TTI.getCastInstrCost(Instruction::BitCast, VecTy, NewVecTy,
+                           TTI::CastContextHint::None, CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, NewFieldTy,
+                           MergeInsts[0]->getType(), TTI::CastContextHint::None,
+                           CostKind) *
+          2;
+  if (OldCost <= NewCost || !NewCost.isValid()) {
+    LLVM_DEBUG(
+        dbgs() << "VC: New deinterleave2 sequence cost (" << NewCost << ")"
+               << " is higher than that of the old one (" << OldCost << ")\n");
+    return false;
+  }
+
+  // Do the replacement.
+  IRBuilder<> Builder(&I);
+  Value *NewVecCast = Builder.CreateBitCast(DeinterleavedVal, NewVecTy);
+  Value *NewDeinterleave = Builder.CreateIntrinsic(
+      Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
+  for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
+    Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
+    NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
+    replaceValue(*MergeInst, *NewField);
+  }
+
+  return true;
+}
+
+bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
+  const DataLayout &DL = I.getDataLayout();
+  auto *Cast = dyn_cast<CastInst>(&I);
+  if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
+    return false;
+
+  // Fold away bit casts of the loaded value by loading the desired type,
+  // if the mask is all-ones.
+  Value *EVL;
+  auto *II = dyn_cast<VPIntrinsic>(I.getOperand(0));
+  if (!II || !match(II, m_OneUse(m_Intrinsic<Intrinsic::vp_load>(
+                            m_Value(), m_AllOnes(), m_Value(EVL)))))
+    return false;
+
+  VectorType *OrigVecTy = cast<VectorType>(II->getType());
+  Align OrigAlign =
+      DL.getValueOrABITypeAlignment(II->getPointerAlignment(), OrigVecTy);
+  ElementCount OrigVecCnt = OrigVecTy->getElementCount();
+  VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
+  ElementCount NewVecCnt = NewVecTy->getElementCount();
+
+  // Right now we only support cases where the NewVec is longer, because for
+  // cases where it's shorter, we have to be sure that EVL can be exactly
+  // divided, otherwise it might yield incorrect results or even page faults
+  // (if we round-up during the division).
+  if (!(OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
+        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)))
+    return false;
+
+  InstructionCost OldCost =
+      TTI.getMemIntrinsicInstrCost({Intrinsic::vp_load, OrigVecTy,
+                                    II->getMemoryPointerParam(), false,
+                                    OrigAlign},
+                                   CostKind) +
+      TTI.getCastInstrCost(Instruction::BitCast, Cast->getType(), OrigVecTy,
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost NewCost = TTI.getMemIntrinsicInstrCost(
+      {Intrinsic::vp_load, NewVecTy, II->getMemoryPointerParam(), false,
+       OrigAlign},
+      CostKind);
+  LLVM_DEBUG(dbgs() << "foldBitcastOfVPLoad: OldCost=" << OldCost
+                    << " NewCost=" << NewCost << "\n");
+  if (NewCost > OldCost || !NewCost.isValid())
+    return false;
+
+  unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
+  Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
+  Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
+  CallInst *NewVP =
+      Builder.CreateIntrinsic(NewVecTy, Intrinsic::vp_load,
+                              {II->getMemoryPointerParam(), NewMask, NewEVL});
+  // Preserve the original alignment.
+  NewVP->addParamAttrs(
+      0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
+  replaceValue(*Cast, *NewVP);
+  return true;
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -5970,7 +6172,12 @@ bool VectorCombine::run() {
         return true;
       if (foldInterleaveIntrinsics(I))
         return true;
+      if (foldBitcastOfVPLoad(I))
+        return true;
     }
+
+    if (foldDeinterleaveIntrinsics(I))
+      return true;
 
     if (Opcode == Instruction::Store)
       if (foldSingleElementStore(I))

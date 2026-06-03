@@ -31,6 +31,16 @@ namespace llvm {
 
 class GCNTargetMachine;
 
+/// Module flag names controlling out-of-bounds buffer access semantics.
+/// Each flag is an i32 with Module::Max merge behaviour and tri-state values:
+///   0 = any (absent/default - backend currently treats as strict)
+///   1 = relaxed
+///   2 = strict
+namespace AMDGPUOOBMode {
+inline constexpr StringLiteral BufferFlag("amdgpu.buffer.oob.mode");
+inline constexpr StringLiteral TBufferFlag("amdgpu.tbuffer.oob.mode");
+} // namespace AMDGPUOOBMode
+
 class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
                            public AMDGPUSubtarget {
 public:
@@ -74,6 +84,8 @@ protected:
   bool DynamicVGPR = false;
   bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
+  const bool BufferOOBRelaxed;
+  const bool TBufferOOBRelaxed;
 
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -100,7 +112,8 @@ private:
 
 public:
   GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-               const GCNTargetMachine &TM);
+               const GCNTargetMachine &TM, bool BufferOOBRelaxed = false,
+               bool TBufferOOBRelaxed = false);
   ~GCNSubtarget() override;
 
   GCNSubtarget &initializeSubtargetDependencies(const Triple &TT, StringRef GPU,
@@ -335,6 +348,9 @@ public:
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
   bool isTgSplitEnabled() const { return EnableTgSplit; }
+
+  bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
+  bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
@@ -713,9 +729,6 @@ public:
 
   bool hasVOPD3() const { return HasGFX1250Insts; }
 
-  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
-  bool hasIntMinMax64() const { return HasGFX1250Insts; }
-
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return HasGFX1250Insts; }
 
@@ -738,6 +751,8 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
+  bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

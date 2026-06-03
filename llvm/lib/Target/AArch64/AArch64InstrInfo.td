@@ -2888,9 +2888,9 @@ def : Pat<(i64 (mul (ineg GPR64:$Rn), GPR64:$Rm)),
 } // AddedComplexity = 5
 
 let AddedComplexity = 5 in {
-def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add, sext>;
+def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add_like, sext>;
 def SMSUBLrrr : WideMulAccum<1, 0b001, "smsubl", sub, sext>;
-def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add, zext>;
+def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add_like, zext>;
 def UMSUBLrrr : WideMulAccum<1, 0b101, "umsubl", sub, zext>;
 
 def : Pat<(i64 (mul (sext_inreg GPR64:$Rn, i32), (sext_inreg GPR64:$Rm, i32))),
@@ -2927,11 +2927,11 @@ def : Pat<(i64 (ineg (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)))),
           (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), XZR)>;
 
-def : Pat<(i64 (add (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
           (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
           (UMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
+def : Pat<(i64 (add_like (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
                     GPR64:$Ra)),
           (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
@@ -2950,9 +2950,9 @@ def : Pat<(i64 (smullwithsignbits GPR64:$Rn, GPR64:$Rm)),
 def : Pat<(i64 (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm))),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (smullwithsignbits GPR64:$Rn, GPR64:$Rm))),
@@ -2970,9 +2970,9 @@ def : Pat<(i64 (mul top32Zero:$Rn, top32Zero:$Rm)),
 def : Pat<(i64 (mul top32Zero:$Rn, (zext GPR32:$Rm))),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (mul top32Zero:$Rn, top32Zero:$Rm))),

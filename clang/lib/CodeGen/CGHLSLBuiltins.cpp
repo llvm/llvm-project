@@ -115,6 +115,12 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
           CGF->Int32Ty, ElementCount::getFixed(Op0VecTy->getNumElements()));
+    else if (auto *Op0MatTy =
+                 E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+      RetElementTy = llvm::VectorType::get(
+          CGF->Int32Ty, ElementCount::getFixed(Op0MatTy->getNumRows() *
+                                               Op0MatTy->getNumColumns()));
+
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
     CallInst *CI = CGF->Builder.CreateIntrinsic(
@@ -136,6 +142,9 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
       if (const auto *VecTy =
               E->getArg(0)->getType()->getAs<clang::VectorType>())
         NumElements = VecTy->getNumElements();
+      else if (const auto *MatTy =
+                   E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+        NumElements = MatTy->getNumRows() * MatTy->getNumColumns();
 
       FixedVectorType *Uint32VecTy =
           FixedVectorType::get(CGF->Int32Ty, NumElements * 2);
@@ -574,15 +583,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     llvm::Type *RetTy = ConvertType(E->getType());
+    llvm::Function *IntrFn = nullptr;
+    llvm::CallInst *CI = nullptr;
     if (IsIndexed) {
       Value *IndexOp = EmitScalarExpr(E->getArg(1));
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-          ArrayRef<Value *>{HandleOp, IndexOp});
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          {RetTy, HandleOp->getType(), IndexOp->getType()});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
+    } else {
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
+          {RetTy, HandleOp->getType()});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp});
     }
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
-        ArrayRef<Value *>{HandleOp});
+    CI->setCallingConv(IntrFn->getCallingConv());
+    return CI;
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
