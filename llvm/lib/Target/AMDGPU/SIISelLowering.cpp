@@ -2358,7 +2358,7 @@ bool SITargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                              EVT DestVT) const {
   if (N->getOpcode() != ISD::EXTRACT_SUBVECTOR)
     return AMDGPUTargetLowering::isNarrowingProfitable(N, SrcVT, DestVT);
-                                                
+
   unsigned Index = N->getConstantOperandVal(1);
   unsigned ScalarBits = DestVT.getScalarSizeInBits();
   unsigned OffsetBits = Index * ScalarBits;
