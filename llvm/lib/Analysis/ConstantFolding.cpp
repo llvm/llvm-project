@@ -1704,29 +1704,13 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
 
   // Floating point operations cannot be folded in strictfp functions in
   // general case. They can be folded if FP environment is known to compiler.
-  case Intrinsic::minnum:
-  case Intrinsic::maxnum:
-  case Intrinsic::minimum:
-  case Intrinsic::maximum:
+#define FUNCTION(NAME, R, D) case Intrinsic::NAME:
+#include "llvm/IR/FloatingPointOps.def"
+
+  case Intrinsic::exp10:
   case Intrinsic::minimumnum:
   case Intrinsic::maximumnum:
-  case Intrinsic::log:
-  case Intrinsic::log2:
-  case Intrinsic::log10:
-  case Intrinsic::exp:
-  case Intrinsic::exp2:
-  case Intrinsic::exp10:
-  case Intrinsic::sqrt:
-  case Intrinsic::sin:
-  case Intrinsic::cos:
   case Intrinsic::sincos:
-  case Intrinsic::sinh:
-  case Intrinsic::cosh:
-  case Intrinsic::atan:
-  case Intrinsic::pow:
-  case Intrinsic::powi:
-  case Intrinsic::ldexp:
-  case Intrinsic::fma:
   case Intrinsic::fmuladd:
   case Intrinsic::frexp:
   case Intrinsic::fptoui_sat:
@@ -1940,15 +1924,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::fabs:
   case Intrinsic::copysign:
   case Intrinsic::is_fpclass:
-  // Non-constrained variants of rounding operations means default FP
-  // environment, they can be folded in any case.
-  case Intrinsic::ceil:
-  case Intrinsic::floor:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::trunc:
-  case Intrinsic::nearbyint:
-  case Intrinsic::rint:
   case Intrinsic::canonicalize:
 
   // Constrained intrinsics can be folded if FP environment is known
@@ -2461,6 +2436,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
     APFloat U = Op->getValueAPF();
 
+    // If the call is not contained in a function, assume as if it was in
+    // a StrictFP function, because this is more restrictive.
+    bool IsStrictFP = isCalledFromStrictFPFunction(Call);
+
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
         IntrinsicID == Intrinsic::wasm_trunc_unsigned) {
       bool Signed = IntrinsicID == Intrinsic::wasm_trunc_signed;
@@ -2513,34 +2492,47 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     // Use internal versions of these intrinsics.
 
-    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint ||
-        IntrinsicID == Intrinsic::roundeven) {
-      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+    if (IntrinsicID == Intrinsic::nearbyint || IntrinsicID == Intrinsic::rint) {
+      // If the result of rounding is precise with some rounding mode, it
+      // would be precise with any.
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
     if (IntrinsicID == Intrinsic::round) {
-      U.roundToIntegral(APFloat::rmNearestTiesToAway);
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmNearestTiesToAway);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
     if (IntrinsicID == Intrinsic::roundeven) {
-      U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmNearestTiesToEven);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
     if (IntrinsicID == Intrinsic::ceil) {
-      U.roundToIntegral(APFloat::rmTowardPositive);
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmTowardPositive);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
     if (IntrinsicID == Intrinsic::floor) {
-      U.roundToIntegral(APFloat::rmTowardNegative);
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmTowardNegative);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
     if (IntrinsicID == Intrinsic::trunc) {
-      U.roundToIntegral(APFloat::rmTowardZero);
+      APFloat::opStatus St = U.roundToIntegral(APFloat::rmTowardZero);
+      if (IsStrictFP && St != APFloat::opOK)
+        return nullptr;
       return ConstantFP::get(Ty, U);
     }
 
@@ -2562,46 +2554,53 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantFP::get(Ty, minimum(FractU, AlmostOne));
     }
 
-    // Rounding operations (floor, trunc, ceil, round and nearbyint) do not
-    // raise FP exceptions, unless the argument is signaling NaN.
+    // Determine rounding mode to be used in the evaluation.
+    RoundingMode RM =
+        IsStrictFP ? RoundingMode::Dynamic : RoundingMode::NearestTiesToEven;
+    if (auto CI = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
+      if (Intrinsic::hasConstrainedFPRoundingModeOperand(IntrinsicID))
+        if (auto MaybeRounding = CI->getRoundingMode())
+          RM = *MaybeRounding;
+    }
 
-    std::optional<APFloat::roundingMode> RM;
+    bool IsConstrainedRoundingOp = false;
     switch (IntrinsicID) {
     default:
       break;
     case Intrinsic::experimental_constrained_nearbyint:
-    case Intrinsic::experimental_constrained_rint: {
-      auto CI = cast<ConstrainedFPIntrinsic>(Call);
-      RM = CI->getRoundingMode();
-      if (!RM || *RM == RoundingMode::Dynamic)
+    case Intrinsic::experimental_constrained_rint:
+      if (RM == RoundingMode::Dynamic)
         return nullptr;
+      IsConstrainedRoundingOp = true;
       break;
-    }
     case Intrinsic::experimental_constrained_round:
       RM = APFloat::rmNearestTiesToAway;
+      IsConstrainedRoundingOp = true;
       break;
     case Intrinsic::experimental_constrained_ceil:
       RM = APFloat::rmTowardPositive;
+      IsConstrainedRoundingOp = true;
       break;
     case Intrinsic::experimental_constrained_floor:
       RM = APFloat::rmTowardNegative;
+      IsConstrainedRoundingOp = true;
       break;
     case Intrinsic::experimental_constrained_trunc:
       RM = APFloat::rmTowardZero;
+      IsConstrainedRoundingOp = true;
       break;
     }
-    if (RM) {
+    if (IsConstrainedRoundingOp) {
       auto CI = cast<ConstrainedFPIntrinsic>(Call);
+      std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
       if (U.isFinite()) {
-        APFloat::opStatus St = U.roundToIntegral(*RM);
+        APFloat::opStatus St = U.roundToIntegral(RM);
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
-            St == APFloat::opInexact) {
-          std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
+            (St == APFloat::opInexact)) {
           if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
-        std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
         if (EB && *EB != fp::ebIgnore)
           return nullptr;
         U = APFloat::getQNaN(U.getSemantics());
@@ -2717,6 +2716,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getNaN(Ty);
         if (U.isExactlyValue(1.0))
           return ConstantFP::getZero(Ty);
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
         if (U.isZero())
@@ -2725,6 +2726,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getNaN(Ty);
         if (U.isExactlyValue(1.0))
           return ConstantFP::getZero(Ty);
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log2, APF, Ty);
       case Intrinsic::log10:
@@ -2734,30 +2737,50 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return ConstantFP::getNaN(Ty);
         if (U.isExactlyValue(1.0))
           return ConstantFP::getZero(Ty);
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
       case Intrinsic::exp:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(exp, APF, Ty);
       case Intrinsic::exp2:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
         return ConstantFoldBinaryFP(pow, APFloat(2.0), APF, Ty);
       case Intrinsic::exp10:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         // Fold exp10(x) as pow(10, x), in case the host lacks a C99 library.
         return ConstantFoldBinaryFP(pow, APFloat(10.0), APF, Ty);
       case Intrinsic::sin:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(sin, APF, Ty);
       case Intrinsic::cos:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(cos, APF, Ty);
       case Intrinsic::sinh:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(sinh, APF, Ty);
       case Intrinsic::cosh:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(cosh, APF, Ty);
       case Intrinsic::atan:
         // Implement optional behavior from C's Annex F for +/-0.0.
         if (U.isZero())
           return ConstantFP::get(Ty, U);
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(atan, APF, Ty);
       case Intrinsic::sqrt:
+        if (RM != RoundingMode::NearestTiesToEven)
+          return nullptr;
         return ConstantFoldFP(sqrt, APF, Ty);
 
       // NVVM Intrinsics:
@@ -3307,6 +3330,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     const APFloat &Op1V = Op1->getValueAPF();
 
+    bool IsStrictFP = isCalledFromStrictFPFunction(Call);
+
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
         return nullptr;
@@ -3344,6 +3369,9 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           return ConstantFP::get(Ty, Res);
         return nullptr;
       }
+
+      if (IsStrictFP && (Op1V.isSignaling() || Op2V.isSignaling()))
+        return nullptr;
 
       switch (IntrinsicID) {
       default:
@@ -3534,6 +3562,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       default:
         break;
       case Intrinsic::pow:
+        if (IsStrictFP)
+          return nullptr;
         return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
       case Intrinsic::amdgcn_fmul_legacy:
         // The legacy behaviour is that multiplying +/- 0.0 by anything, even
@@ -3546,6 +3576,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     } else if (auto *Op2C = dyn_cast<ConstantInt>(Operands[1])) {
       switch (IntrinsicID) {
       case Intrinsic::ldexp: {
+        if (IsStrictFP)
+          return nullptr;
         return ConstantFP::get(
             Ty->getContext(),
             scalbn(Op1V, Op2C->getSExtValue(), APFloat::rmNearestTiesToEven));
@@ -3566,6 +3598,8 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
+        if (IsStrictFP)
+          return nullptr;
         int Exp = static_cast<int>(Op2C->getSExtValue());
         switch (Ty->getTypeID()) {
         case Type::HalfTyID:
@@ -3930,6 +3964,8 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
 
         if (const auto *ConstrIntr = dyn_cast<ConstrainedFPIntrinsic>(Call)) {
           RoundingMode RM = getEvaluationRoundingMode(ConstrIntr);
+          if (RM == RoundingMode::Dynamic)
+            return nullptr;
           APFloat Res = C1;
           APFloat::opStatus St;
           switch (IntrinsicID) {
@@ -3960,6 +3996,8 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
+          if (isCalledFromStrictFPFunction(Call))
+            return nullptr;
           APFloat V = C1;
           V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);
           return ConstantFP::get(Ty, V);
