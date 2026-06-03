@@ -29,14 +29,14 @@ body: |
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]], [[DEF7]], implicit $exec
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF5]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF3]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF5]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF8]], [[DEF9]], implicit $exec
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF5]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF1]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF5]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_]], [[V_ADD_U32_e32_1]], implicit $exec
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2048, 2, 0
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2, 1, 0
@@ -56,12 +56,12 @@ body: |
     %21:vgpr_32 = IMPLICIT_DEF
     %22:vgpr_32 = IMPLICIT_DEF
     %23:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %5, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %3, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %5, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %1, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     %30:vgpr_32 = V_ADD_U32_e32 %20, %21, implicit $exec
     %31:vgpr_32 = V_ADD_U32_e32 %22, %23, implicit $exec
     %32:vgpr_32 = V_ADD_U32_e32 %30, %31, implicit $exec
@@ -91,14 +91,14 @@ body: |
     ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]], [[DEF7]], implicit $exec
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF5]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF5]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF5]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF5]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_]], [[DEF8]], implicit $exec
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF1]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF3]], 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; CHECK-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF4]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_ADD_U32_e32_1]], [[DEF9]], implicit $exec
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 16, 2, 2
@@ -119,12 +119,12 @@ body: |
     %21:vgpr_32 = IMPLICIT_DEF
     %22:vgpr_32 = IMPLICIT_DEF
     %23:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %5, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %5, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %1, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %3, 0, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %5, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %4, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
     %30:vgpr_32 = V_ADD_U32_e32 %20, %21, implicit $exec
     %31:vgpr_32 = V_ADD_U32_e32 %30, %22, implicit $exec
     %32:vgpr_32 = V_ADD_U32_e32 %31, %23, implicit $exec

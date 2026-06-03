@@ -5,6 +5,8 @@
 ; %D4 should be zero-initialized for gfx1250, which only supports 4 groups of tensor descriptor
 declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, <8 x i32> %D4, i32 %cpol)
 declare void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, <8 x i32> %D4, i32 %cpol)
+declare void @llvm.amdgcn.asyncmark()
+declare void @llvm.amdgcn.wait.asyncmark(i16)
 
 define amdgpu_ps void @tensor_load_to_lds_d4(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %D2, <4 x i32> inreg %D3) {
 ; GFX1250-LABEL: tensor_load_to_lds_d4:
@@ -269,5 +271,81 @@ define amdgpu_ps void @tensor_store_from_lds_d5(<4 x i32> inreg %D0, <8 x i32> i
 ; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, <8 x i32> %D4, i32 22)
+  ret void
+}
+
+;=======================================================================
+; Tensor load/store DMAs are asynchronous and tracked via TENSOR_CNT.
+; Verify that they participate in the asyncmark / wait_asyncmark
+; mechanism.
+;========================================================================
+
+define amdgpu_ps void @tensor_load_to_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
+; GFX1250-LABEL: tensor_load_to_lds_with_asyncmark:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    ; wait_asyncmark(0)
+; GFX1250-NEXT:    s_wait_tensorcnt 0x0
+; GFX1250-NEXT:    s_endpgm
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  ret void
+}
+
+define amdgpu_ps void @tensor_store_from_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> inreg %D1) {
+; GFX1250-LABEL: tensor_store_from_lds_with_asyncmark:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    tensor_store_from_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    ; wait_asyncmark(0)
+; GFX1250-NEXT:    s_wait_tensorcnt 0x0
+; GFX1250-NEXT:    s_endpgm
+  call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  ret void
+}
+
+; Two outstanding tensor loads tracked by separate asyncmarks. The first
+; wait_asyncmark(1) drains down to one outstanding TENSOR_CNT entry, the
+; second wait_asyncmark(0) drains the remaining one.
+define amdgpu_ps void @tensor_load_to_lds_two_asyncmarks(<4 x i32> inreg %D0a, <8 x i32> inreg %D1a, <4 x i32> inreg %D0b, <8 x i32> inreg %D1b, ptr addrspace(3) %lds) {
+; GFX1250-LABEL: tensor_load_to_lds_two_asyncmarks:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    tensor_load_to_lds s[12:15], s[16:23]
+; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    ; wait_asyncmark(1)
+; GFX1250-NEXT:    s_wait_tensorcnt 0x1
+; GFX1250-NEXT:    ds_load_b32 v1, v0
+; GFX1250-NEXT:    ; wait_asyncmark(0)
+; GFX1250-NEXT:    s_wait_tensorcnt 0x0
+; GFX1250-NEXT:    ds_load_b32 v2, v0 offset:4
+; GFX1250-NEXT:    s_wait_dscnt 0x0
+; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX1250-NEXT:    ds_store_b32 v0, v1
+; GFX1250-NEXT:    s_endpgm
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0a, <8 x i32> %D1a, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+
+  call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0b, <8 x i32> %D1b, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  %lds_v0 = load i32, ptr addrspace(3) %lds
+
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
+  %lds_v1 = load i32, ptr addrspace(3) %lds_gep1
+
+  %sum = add i32 %lds_v0, %lds_v1
+  store i32 %sum, ptr addrspace(3) %lds
+
   ret void
 }

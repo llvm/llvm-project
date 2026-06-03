@@ -50,6 +50,19 @@ memory and LDS memory.
   void @llvm.amdgcn.global.store.async.from.lds.type(ptr %dst, ptr %src)
   void @llvm.amdgcn.cluster.load.async.to.lds.type(ptr %dst, ptr %src)
 
+**GFX1250 Tensor DMA Instructions**
+
+.. code-block:: llvm
+
+  void @llvm.amdgcn.tensor.load.to.lds(...)
+  void @llvm.amdgcn.tensor.store.from.lds(...)
+
+These intrinsics are asynchronous despite the absence of ``async`` in their
+names. They are tracked by the ``TENSOR_CNT`` hardware counter and participate
+in the ``asyncmark`` / ``wait.asyncmark`` framework just like the intrinsics
+above. Equivalently, the caller may issue an explicit ``s_wait_tensorcnt``
+instead of using ``asyncmark`` / ``wait.asyncmark``.
+
 Asyncmark Operations
 ---------------------
 

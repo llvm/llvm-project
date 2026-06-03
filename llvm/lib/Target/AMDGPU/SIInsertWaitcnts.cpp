@@ -678,13 +678,9 @@ public:
     return SIInstrInfo::mayWriteLDSThroughDMA(MI) && isAsync(MI);
   }
 
-  bool isAsyncTensorDMA(const MachineInstr &MI) const {
-    return SIInstrInfo::usesTENSOR_CNT(MI) && isAsync(MI);
-  }
-
   bool shouldUpdateAsyncMark(const MachineInstr &MI,
                              AMDGPU::InstCounterType T) const {
-    if (isAsyncTensorDMA(MI))
+    if (SIInstrInfo::usesTENSOR_CNT(MI))
       return T == AMDGPU::TENSOR_CNT;
     if (!isAsyncLdsDmaWrite(MI))
       return false;
@@ -3070,7 +3066,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (SIInstrInfo::usesASYNC_CNT(Inst)) {
       ScoreBrackets->updateByEvent(ASYNC_ACCESS, Inst);
     }
-  } else if (isAsyncTensorDMA(Inst)) {
+  } else if (SIInstrInfo::usesTENSOR_CNT(Inst)) {
     ScoreBrackets->updateByEvent(TENSOR_ACCESS, Inst);
   } else if (Inst.isCall()) {
     // Act as a wait on everything, but AsyncCnt and TensorCnt are never

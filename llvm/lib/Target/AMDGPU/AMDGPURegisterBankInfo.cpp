@@ -3382,9 +3382,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_tensor_load_to_lds:
-    case Intrinsic::amdgcn_tensor_store_from_lds:
-    case Intrinsic::amdgcn_tensor_load_async_to_lds:
-    case Intrinsic::amdgcn_tensor_store_async_from_lds: {
+    case Intrinsic::amdgcn_tensor_store_from_lds: {
       constrainOpWithReadfirstlane(B, MI, 1);
       constrainOpWithReadfirstlane(B, MI, 2);
       constrainOpWithReadfirstlane(B, MI, 3);
@@ -5649,9 +5647,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_pops_exiting_wave_id:
       return getDefaultMappingSOP(MI);
     case Intrinsic::amdgcn_tensor_load_to_lds:
-    case Intrinsic::amdgcn_tensor_store_from_lds:
-    case Intrinsic::amdgcn_tensor_load_async_to_lds:
-    case Intrinsic::amdgcn_tensor_store_async_from_lds: {
+    case Intrinsic::amdgcn_tensor_store_from_lds: {
       // Lie and claim everything is legal, even all operands need to be
       // SGPRs. applyMapping will have to deal with it with readfirstlane.
       for (unsigned I = 1; I < MI.getNumOperands(); ++I) {
