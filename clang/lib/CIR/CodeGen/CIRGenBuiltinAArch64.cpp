@@ -2006,7 +2006,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   }
 
-  if (builtinID == clang::AArch64::BI__getReg) {
+  if (builtinID == clang::AArch64::BI__getReg ||
+      builtinID == clang::AArch64::BI__setReg ||
+      builtinID == clang::AArch64::BI__getRegFp ||
+      builtinID == clang::AArch64::BI__setRegFp) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
@@ -2216,14 +2219,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   }
 
   if (builtinID == AArch64::BI_CountOneBits ||
-      builtinID == AArch64::BI_CountOneBits64) {
+      builtinID == AArch64::BI_CountOneBits64 ||
+      builtinID == AArch64::BI_CountTrailingZeros ||
+      builtinID == AArch64::BI_CountTrailingZeros64) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
 
-  if (builtinID == AArch64::BI__prefetch) {
+  if (builtinID == AArch64::BI__prefetch ||
+      builtinID == AArch64::BI__prefetch2) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
@@ -2596,8 +2602,28 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       return builder.getConstInt(loc, builder.getUInt64Ty(), 0);
     return builder.createShiftRight(loc, ops[0], shiftAmt);
   }
-  case NEON::BI__builtin_neon_vsrad_n_s64:
-  case NEON::BI__builtin_neon_vsrad_n_u64:
+  case NEON::BI__builtin_neon_vsrad_n_s64: {
+    std::optional<llvm::APSInt> amt =
+        expr->getArg(2)->getIntegerConstantExpr(getContext());
+    assert(amt && "Expected argument to be a constant");
+    uint64_t shiftAmt =
+        std::min(static_cast<uint64_t>(63), amt->getZExtValue());
+    mlir::Value shifted =
+        builder.createShiftRight(loc, ops[1], static_cast<unsigned>(shiftAmt));
+    return builder.createAdd(loc, ops[0], shifted);
+  }
+  case NEON::BI__builtin_neon_vsrad_n_u64: {
+    std::optional<llvm::APSInt> amt =
+        expr->getArg(2)->getIntegerConstantExpr(getContext());
+    assert(amt && "Expected argument to be a constant");
+    uint64_t shiftAmt = amt->getZExtValue();
+    // Right-shifting an unsigned value by its size yields 0, so a + 0 = a.
+    if (shiftAmt == 64)
+      return ops[0];
+    mlir::Value shifted =
+        builder.createShiftRight(loc, ops[1], static_cast<unsigned>(shiftAmt));
+    return builder.createAdd(loc, ops[0], shifted);
+  }
   case NEON::BI__builtin_neon_vqdmlalh_lane_s16:
   case NEON::BI__builtin_neon_vqdmlalh_laneq_s16:
   case NEON::BI__builtin_neon_vqdmlslh_lane_s16:
@@ -2972,11 +2998,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                         /*shift=*/0, /*rightshift=*/false);
   }
   case NEON::BI__builtin_neon_vsra_n_v:
-  case NEON::BI__builtin_neon_vsraq_n_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vsraq_n_v: {
+    ops[0] = builder.createBitcast(ops[0], ty);
+    ops[1] = emitNeonRShiftImm(*this, ops[1], ops[2], ty, usgn, loc);
+    return builder.createAdd(loc, ops[0], ops[1]);
+  }
   case NEON::BI__builtin_neon_vrsra_n_v:
   case NEON::BI__builtin_neon_vrsraq_n_v: {
     intrName = usgn ? "aarch64.neon.urshl" : "aarch64.neon.srshl";

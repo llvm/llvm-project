@@ -6,23 +6,23 @@
 
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt --passes=assign-guid --thinlto-bc -o %t1a.o %s
-; RUN: opt --passes=assign-guid --thinlto-bc -o %t2a.o %S/Inputs/devirt_vcall_vis_shared_def.ll
+; RUN: opt --thinlto-bc -o %t1a.o %s
+; RUN: opt --thinlto-bc -o %t2a.o %S/Inputs/devirt_vcall_vis_shared_def.ll
 ; RUN: ld.lld %t1a.o %t2a.o -o %t3a -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t1a.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Hybrid WPD
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt --passes=assign-guid --thinlto-bc --thinlto-split-lto-unit -o %t1b.o %s
-; RUN: opt --passes=assign-guid --thinlto-bc --thinlto-split-lto-unit -o %t2b.o %S/Inputs/devirt_vcall_vis_shared_def.ll
+; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t1b.o %s
+; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t2b.o %S/Inputs/devirt_vcall_vis_shared_def.ll
 ; RUN: ld.lld %t1b.o %t2b.o -o %t3b -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t1b.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt --passes=assign-guid -o %t1c.o %s
-; RUN: opt --passes=assign-guid -o %t2c.o %S/Inputs/devirt_vcall_vis_shared_def.ll
+; RUN: opt -o %t1c.o %s
+; RUN: opt -o %t2c.o %S/Inputs/devirt_vcall_vis_shared_def.ll
 ; RUN: ld.lld %t1c.o %t2c.o -o %t3c -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t3c.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR

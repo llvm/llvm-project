@@ -3536,6 +3536,35 @@ void SIInstrInfo::insertSelect(MachineBasicBlock &MBB,
   }
 }
 
+bool SIInstrInfo::isXcntDrain(const MachineInstr &MI) {
+
+  if (MI.isBranch() || MI.isCall() || MI.isReturn() || MI.isIndirectBranch())
+    return true;
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED:
+  case AMDGPU::S_TRAP:
+  case AMDGPU::S_GETREG_B32:
+  case AMDGPU::S_SETREG_B32:
+  case AMDGPU::S_SETREG_B32_mode:
+  case AMDGPU::S_SETREG_IMM32_B32:
+  case AMDGPU::S_SETREG_IMM32_B32_mode:
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSGHALT:
+  case AMDGPU::S_SENDMSG_RTN_B32:
+  case AMDGPU::S_SENDMSG_RTN_B64:
+  case AMDGPU::S_BARRIER_WAIT:
+  case AMDGPU::S_BARRIER_SIGNAL_M0:
+  case AMDGPU::S_BARRIER_SIGNAL_IMM:
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B16_t16_e32:
@@ -4796,6 +4825,19 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return AMDGPU::isInlinableLiteral64(Imm, ST.hasInv2PiInlineImm());
+  case AMDGPU::OPERAND_REG_IMM_INT16:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+    // We would expect inline immediates to not be concerned with an integer/fp
+    // distinction. However, in the case of 16-bit integer operations, the
+    // "floating point" values appear to not work. It seems read the low 16-bits
+    // of 32-bit immediates, which happens to always work for the integer
+    // values.
+    //
+    // See llvm bugzilla 46302.
+    //
+    // TODO: Theoretically we could use op-sel to use the high bits of the
+    // 32-bit FP values.
+    return AMDGPU::isInlinableIntLiteral(Imm);
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     return AMDGPU::isInlinableLiteralV2I16(Imm);
@@ -4809,11 +4851,6 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
     return AMDGPU::isInlinableLiteralV2BF16(Imm);
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return false;
-  case AMDGPU::OPERAND_REG_IMM_INT16:
-  case AMDGPU::OPERAND_REG_INLINE_C_INT16:
-    if (AMDGPU::isInlinableIntLiteral(Imm))
-      return true;
-    [[fallthrough]];
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
@@ -10384,18 +10421,19 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
 // This function ignores the addressing mode, so if an offset cannot be used in
 // one addressing mode, it is considered illegal.
 bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                                    uint64_t FlatVariant) const {
+                                    AMDGPU::FlatAddrSpace FlatVariant) const {
   // TODO: Should 0 be special cased?
   if (!ST.hasFlatInstOffsets())
     return false;
 
-  if (ST.hasFlatSegmentOffsetBug() && FlatVariant == SIInstrFlags::FLAT &&
+  using AMDGPU::FlatAddrSpace;
+  if (ST.hasFlatSegmentOffsetBug() && FlatVariant == FlatAddrSpace::FLAT &&
       (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
        AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch && Offset < 0 &&
+      FlatVariant == FlatAddrSpace::FlatScratch && Offset < 0 &&
       (Offset % 4) != 0) {
     return false;
   }
@@ -10408,7 +10446,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
 // See comment on SIInstrInfo::isLegalFLATOffset for what is legal and what not.
 std::pair<int64_t, int64_t>
 SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
-                             uint64_t FlatVariant) const {
+                             AMDGPU::FlatAddrSpace FlatVariant) const {
   int64_t RemainderOffset = COffsetVal;
   int64_t ImmField = 0;
 
@@ -10422,7 +10460,7 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
     ImmField = COffsetVal - RemainderOffset;
 
     if (ST.hasNegativeUnalignedScratchOffsetBug() &&
-        FlatVariant == SIInstrFlags::FlatScratch && ImmField < 0 &&
+        FlatVariant == AMDGPU::FlatAddrSpace::FlatScratch && ImmField < 0 &&
         (ImmField % 4) != 0) {
       // Make ImmField a multiple of 4
       RemainderOffset += ImmField % 4;
@@ -10438,12 +10476,13 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
   return {ImmField, RemainderOffset};
 }
 
-bool SIInstrInfo::allowNegativeFlatOffset(uint64_t FlatVariant) const {
+bool SIInstrInfo::allowNegativeFlatOffset(
+    AMDGPU::FlatAddrSpace FlatVariant) const {
   if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
+      FlatVariant == AMDGPU::FlatAddrSpace::FlatScratch)
     return false;
 
-  return FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
+  return FlatVariant != AMDGPU::FlatAddrSpace::FLAT || AMDGPU::isGFX12Plus(ST);
 }
 
 static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {

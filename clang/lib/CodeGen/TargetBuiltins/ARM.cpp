@@ -2382,7 +2382,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                                        : Intrinsic::arm_strexd);
     llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty);
 
-    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
+    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
     Value *Val = EmitScalarExpr(E->getArg(0));
     Builder.CreateStore(Val, Tmp);
 
@@ -3939,11 +3939,13 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
   if (TypeFlags.isOverloadWhileRW())
     return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
+  if (TypeFlags.isOverloadDefaultAndOp0())
+    return {DefaultType, Ops[0]->getType()};
+
   if (TypeFlags.isOverloadFirstandLast())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
-  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
-      ResultType->isVectorTy())
+  if (TypeFlags.isReductionQV())
     return {ResultType, Ops[1]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
@@ -4768,7 +4770,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                              : Intrinsic::aarch64_stxp);
     llvm::Type *STy = llvm::StructType::get(Int64Ty, Int64Ty);
 
-    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
+    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
     EmitAnyExprToMem(E->getArg(0), Tmp, Qualifiers(), /*init*/ true);
 
     Tmp = Tmp.withElementType(STy);
@@ -4810,7 +4812,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return CI;
   }
 
-  if (BuiltinID == clang::AArch64::BI__getReg) {
+  if (BuiltinID == clang::AArch64::BI__getReg ||
+      BuiltinID == clang::AArch64::BI__setReg) {
     Expr::EvalResult Result;
     if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
       llvm_unreachable("Sema will ensure that the parameter is constant");
@@ -4823,9 +4826,47 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
     llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
 
-    llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::read_register, {Int64Ty});
-    return Builder.CreateCall(F, Metadata);
+    CallInst *CI;
+    if (BuiltinID == clang::AArch64::BI__getReg) {
+      llvm::Function *F =
+          CGM.getIntrinsic(Intrinsic::read_volatile_register, {Int64Ty});
+      CI = Builder.CreateCall(F, Metadata);
+    } else {
+      llvm::Function *F =
+          CGM.getIntrinsic(Intrinsic::write_volatile_register, {Int64Ty});
+      CI = Builder.CreateCall(F, {Metadata, EmitScalarExpr(E->getArg(1))});
+    }
+    return CI;
+  }
+
+  if (BuiltinID == clang::AArch64::BI__getRegFp ||
+      BuiltinID == clang::AArch64::BI__setRegFp) {
+    Expr::EvalResult Result;
+    if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
+      llvm_unreachable("Sema will ensure that the parameter is constant");
+
+    llvm::APSInt Value = Result.Val.getInt();
+    LLVMContext &Context = CGM.getLLVMContext();
+    std::string Reg = "d" + toString(Value, 10);
+
+    llvm::Metadata *Ops[] = {llvm::MDString::get(Context, Reg)};
+    llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
+    llvm::Value *Metadata = llvm::MetadataAsValue::get(Context, RegName);
+
+    llvm::Value *Ret;
+    if (BuiltinID == clang::AArch64::BI__getRegFp) {
+      llvm::Function *F =
+          CGM.getIntrinsic(Intrinsic::read_volatile_register, {Int64Ty});
+      llvm::Value *Bits = Builder.CreateCall(F, Metadata);
+      Ret = Builder.CreateBitCast(Bits, llvm::Type::getDoubleTy(Context));
+    } else {
+      llvm::Value *Val = EmitScalarExpr(E->getArg(1));
+      llvm::Value *Bits = Builder.CreateBitCast(Val, Int64Ty);
+      llvm::Function *F =
+          CGM.getIntrinsic(Intrinsic::write_volatile_register, {Int64Ty});
+      Ret = Builder.CreateCall(F, {Metadata, Bits});
+    }
+    return Ret;
   }
 
   if (BuiltinID == clang::AArch64::BI__break) {
@@ -5235,6 +5276,19 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Result;
   }
 
+  if (BuiltinID == AArch64::BI_CountTrailingZeros ||
+      BuiltinID == AArch64::BI_CountTrailingZeros64) {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+
+    // MSVC leaves 0 undefined; use false for predictable codegen
+    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getInt1(false)});
+    if (BuiltinID == AArch64::BI_CountTrailingZeros64)
+      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+    return Result;
+  }
+
   if (BuiltinID == AArch64::BI__prefetch) {
     Value *Address = EmitScalarExpr(E->getArg(0));
     Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
@@ -5242,6 +5296,26 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
+  }
+
+  if (BuiltinID == AArch64::BI__prefetch2) {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    llvm::APSInt PrfOp = E->getArg(1)->EvaluateKnownConstInt(CGM.getContext());
+    // Decode 5-bit PRFM encoding: bits[4:3]=type, bits[2:1]=target,
+    // bit[0]=policy
+    //   type: PLD=0(load), PLI=1(instr), PST=2(store)
+    //   target: L1=0, L2=1, L3=2
+    //   policy: KEEP=0, STRM=1
+    uint64_t Op = PrfOp.getZExtValue();
+    uint64_t Type = (Op >> 3) & 0x3;
+    uint64_t Target = (Op >> 1) & 0x3;
+    uint64_t Policy = Op & 0x1;
+    Value *RW = Builder.getInt32(Type == 2 ? 1 : 0);
+    Value *Local = Builder.getInt32(Target);
+    Value *IsStream = Builder.getInt32(Policy);
+    Value *IsData = Builder.getInt32(Type == 1 ? 0 : 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_prefetch);
+    return Builder.CreateCall(F, {Address, RW, Local, IsStream, IsData});
   }
 
   if (BuiltinID == AArch64::BI__hlt) {
@@ -7043,6 +7117,34 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vdotq_laneq_f32_mf8_fpm:
     return EmitFP8NeonFDOTCall(Intrinsic::aarch64_neon_fp8_fdot4_lane,
                                ExtendLaneArg, FloatTy, Ops, E, "fdot4_lane");
+
+  case NEON::BI__builtin_neon_vdot_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_f32_f16: {
+    llvm::Type *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
+
+  case NEON::BI__builtin_neon_vdot_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdot_laneq_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_lane_f32_f16:
+  case NEON::BI__builtin_neon_vdotq_laneq_f32_f16: {
+    llvm::FixedVectorType *InputTy =
+        llvm::FixedVectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::FixedVectorType *LaneTy = llvm::FixedVectorType::get(
+        HalfTy, Ops[2]->getType()->getPrimitiveSizeInBits() / 16);
+    // Treat the lane argument as a splat and use non-lane version of the
+    // intrinsic.
+    Ops[2] = Builder.CreateBitCast(Ops[2], LaneTy);
+    Ops[2] = EmitNeonSplat(Ops[2], cast<ConstantInt>(Ops[3]),
+                           InputTy->getElementCount());
+    llvm::Type *Tys[2] = {Ty, InputTy};
+    Ops.pop_back();
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_fdot, Tys),
+                        Ops, "vdot");
+  }
 
   case NEON::BI__builtin_neon_vmlalbq_f16_mf8_fpm:
     return EmitFP8NeonCall(Intrinsic::aarch64_neon_fp8_fmlalb,

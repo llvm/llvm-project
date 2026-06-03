@@ -162,13 +162,13 @@ define void @test_volatile(ptr %p) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define {{[^@]+}}@test_atomicrmw
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_atomicrmw
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
@@ -181,14 +181,14 @@ define void @test_atomicrmw(ptr %p) {
 define void @test_ptrmask(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_ptrmask
-; FNATTRS-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR3]] {
+; FNATTRS-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR3]] {
 ; FNATTRS-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -5)
 ; FNATTRS-NEXT:    store i8 0, ptr [[MASK]], align 1
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_ptrmask
-; ATTRIBUTOR-SAME: (ptr nofree writeonly [[P:%.*]]) #[[ATTR3]] {
+; ATTRIBUTOR-SAME: (ptr nofree writeonly captures(none) [[P:%.*]]) #[[ATTR3]] {
 ; ATTRIBUTOR-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -5) #[[ATTR10:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    store i8 0, ptr [[MASK]], align 1
 ; ATTRIBUTOR-NEXT:    ret void

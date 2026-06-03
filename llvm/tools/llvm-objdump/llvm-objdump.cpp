@@ -3853,6 +3853,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   TracebackTable = InputArgs.hasArg(OBJDUMP_traceback_table);
   DisassembleSymbols =
       commaSeparatedValues(InputArgs, OBJDUMP_disassemble_symbols_EQ);
+  for (auto Sym : InputArgs.getAllArgValues(OBJDUMP_disassemble_EQ))
+    DisassembleSymbols.push_back(Sym);
   DisassembleZeroes = InputArgs.hasArg(OBJDUMP_disassemble_zeroes);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_dwarf_EQ)) {
     DwarfDumpType = StringSwitch<DIDumpType>(A->getValue())
