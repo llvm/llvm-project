@@ -2944,7 +2944,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           continue;
         }
 
-        if (AddOp == Idx || !isa<SCEVMulExpr>(Ops[AddOp]))
+        if (AddOp <= Idx || !isa<SCEVMulExpr>(Ops[AddOp]))
           continue;
 
         const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[AddOp]);
