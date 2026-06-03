@@ -658,11 +658,15 @@ getWaitDevnumValue(std::optional<mlir::ArrayAttr> deviceTypeAttr,
                    mlir::acc::DeviceType deviceType) {
   if (!hasDeviceTypeValues(deviceTypeAttr))
     return {};
-  if (auto pos = findSegment(*deviceTypeAttr, deviceType))
-    if (hasWaitDevnum->getValue()[*pos])
-      return getValuesFromSegments(deviceTypeAttr, operands, segments,
-                                   deviceType)
-          .front();
+  if (auto pos = findSegment(*deviceTypeAttr, deviceType)) {
+    if (hasWaitDevnum && *hasWaitDevnum) {
+      auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasWaitDevnum)[*pos]);
+      if (boolAttr && boolAttr.getValue())
+        return getValuesFromSegments(deviceTypeAttr, operands, segments,
+                                     deviceType)
+            .front();
+    }
+  }
   return {};
 }
 
