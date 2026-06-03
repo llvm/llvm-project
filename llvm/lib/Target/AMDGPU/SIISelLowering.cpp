@@ -7881,7 +7881,8 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
     // (ballot 1) -> EXEC/EXEC_LO
     if (Arg->isOne()) {
       Register Exec = MaskVT == MVT::i32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      SDValue ExecVal = DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, MaskVT);
+      SDValue ExecVal =
+          DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, MaskVT);
       return DAG.getZExtOrTrunc(ExecVal, SL, VT);
     }
   }
