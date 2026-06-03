@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | FileCheck %s --check-prefix PTX
-; RUN: opt < %s -S -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
+; RUN: opt < %s -S -nvptx-aa -nvptx-aa-wrapper -nvptx-lower-aggr-copies | FileCheck %s --check-prefix IR
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 -O0 | %ptxas-verify %}
 
 ; Verify that the NVPTXLowerAggrCopies pass works as expected - calls to
@@ -178,4 +178,121 @@ entry:
 ; PTX:        $L__BB[[EXIT]]:
 ; PTX-NEXT:   st.param.b64 [func_retval0
 ; PTX-NEXT:   ret
+}
+
+define void @aggr_loadstore_overlap_forward_copy(ptr %p) {
+entry:
+  %dst = getelementptr inbounds i8, ptr %p, i64 8
+  %v = load [128 x i8], ptr %p, align 1
+  store [128 x i8] %v, ptr %dst, align 1
+  ret void
+
+; A large aggregate load;store pair may have overlapping src/dst and is fully
+; defined (whole value read before any byte stored). It must be lowered to
+; overlap-safe memmove-style code (runtime src<dst direction check + backward
+; loop), not an unconditional forward copy loop.
+; IR-LABEL:   @aggr_loadstore_overlap_forward_copy
+; IR:         [[CMP:%[0-9a-zA-Z_]+]] = icmp ult ptr %p, %dst
+; IR:         br i1 [[CMP]], label %memmove_bwd_loop, label %memmove_fwd_loop
+; IR:         memmove_bwd_loop:
+; IR:         %bwd_index = sub i32 {{%[0-9a-zA-Z_]+}}, 1
+; IR:         memmove_fwd_loop:
+; IR:         {{%[0-9a-zA-Z_]+}} = add i32 %fwd_index, 1
+
+; PTX-LABEL:  .visible .func aggr_loadstore_overlap_forward_copy(
+; PTX:        setp.ge.u64 %p{{[0-9]+}}, %rd{{[0-9]+}}, %rd{{[0-9]+}}
+; PTX:        // %memmove_bwd_loop
+; PTX:        // %memmove_fwd_loop
+}
+
+define void @aggr_loadstore_generic_global(ptr %g, ptr addrspace(1) %glob) {
+  %v = load [128 x i8], ptr %g, align 1
+  store [128 x i8] %v, ptr addrspace(1) %glob, align 1
+  ret void
+
+; The generic address space aliases every space, so a generic and a global
+; pointer may overlap and the copy must be direction-safe. The two pointers
+; live in different spaces, so both are cast to generic to make the runtime
+; comparison well defined before emitting the memmove-style loop.
+; IR-LABEL:   @aggr_loadstore_generic_global
+; IR:         [[GG:%[0-9a-zA-Z_]+]] = addrspacecast ptr addrspace(1) %glob to ptr
+; IR:         [[CMP:%[0-9a-zA-Z_]+]] = icmp ult ptr %g, [[GG]]
+; IR:         br i1 [[CMP]], label %memmove_bwd_loop, label %memmove_fwd_loop
+; IR:         memmove_fwd_loop:
+
+; PTX-LABEL:  .visible .func aggr_loadstore_generic_global(
+; PTX:        cvta.global.u64
+; PTX:        // %memmove_bwd_loop
+; PTX:        // %memmove_fwd_loop
+}
+
+define void @aggr_loadstore_global_shared(ptr addrspace(1) %glob, ptr addrspace(3) %sh) {
+  %v = load [128 x i8], ptr addrspace(1) %glob, align 1
+  store [128 x i8] %v, ptr addrspace(3) %sh, align 1
+  ret void
+
+; Distinct non-generic address spaces (global vs shared) cannot overlap; this
+; fact comes from NVPTXAAResult (the RUN line adds nvptx-aa). So it lowers to a
+; plain forward copy loop with no runtime direction check, and the loads/stores
+; carry alias-scope/noalias metadata.
+; IR-LABEL:   @aggr_loadstore_global_shared
+; IR-NOT:     memmove_bwd_loop
+; IR-NOT:     addrspacecast
+; IR:         load i8, ptr addrspace(1) {{.*}}, !alias.scope
+; IR:         store i8 {{.*}}, ptr addrspace(3) {{.*}}, !noalias
+
+; PTX-LABEL:  .visible .func aggr_loadstore_global_shared(
+; PTX:        // %static-memcpy
+; PTX-NOT:    // %memmove_bwd_loop
+}
+
+define void @aggr_loadstore_shared_cluster(ptr addrspace(3) %sh, ptr addrspace(7) %clus) {
+  %v = load [128 x i8], ptr addrspace(3) %sh, align 1
+  store [128 x i8] %v, ptr addrspace(7) %clus, align 1
+  ret void
+
+; Distributed shared (addrspace 7) aliases shared (addrspace 3), so this pair
+; may overlap. The spaces differ, so both pointers are cast to generic for the
+; runtime comparison; cvta.shared / cvta.shared::cluster make that legal.
+; IR-LABEL:   @aggr_loadstore_shared_cluster
+; IR-DAG:     [[S:%[0-9a-zA-Z_]+]] = addrspacecast ptr addrspace(3) %sh to ptr
+; IR-DAG:     [[C:%[0-9a-zA-Z_]+]] = addrspacecast ptr addrspace(7) %clus to ptr
+; IR:         [[CMP:%[0-9a-zA-Z_]+]] = icmp ult ptr [[S]], [[C]]
+; IR:         br i1 [[CMP]], label %memmove_bwd_loop, label %memmove_fwd_loop
+
+; PTX-LABEL:  .visible .func aggr_loadstore_shared_cluster(
+; PTX:        cvta.shared.u64
+; PTX:        cvta.shared::cluster.u64
+; PTX:        // %memmove_bwd_loop
+; PTX:        // %memmove_fwd_loop
+}
+
+define void @aggr_loadstore_same_global(ptr addrspace(1) %a, ptr addrspace(1) %b) {
+  %v = load [128 x i8], ptr addrspace(1) %a, align 1
+  store [128 x i8] %v, ptr addrspace(1) %b, align 1
+  ret void
+
+; Same (non-generic) address space: may overlap, but the pointers are already
+; comparable, so no addrspacecast is introduced and the overlap-safe loop runs
+; directly in that space.
+; IR-LABEL:   @aggr_loadstore_same_global
+; IR-NOT:     addrspacecast
+; IR:         icmp ult ptr addrspace(1) %a, %b
+; IR:         load i8, ptr addrspace(1)
+; IR:         store i8 {{.*}}, ptr addrspace(1)
+}
+
+define void @aggr_loadstore_noalias(ptr noalias %dst, ptr noalias %src) {
+  %v = load [128 x i8], ptr %src, align 1
+  store [128 x i8] %v, ptr %dst, align 1
+  ret void
+
+; noalias pointers can't overlap and BasicAA proves it (so this holds under opt
+; too). The copy is a plain forward loop carrying alias-scope/noalias metadata,
+; with no runtime direction check and no addrspacecast.
+; IR-LABEL:   @aggr_loadstore_noalias
+; IR-NOT:     memmove_bwd_loop
+; IR-NOT:     addrspacecast
+; IR:         load i8, ptr {{.*}}, !alias.scope
+; IR:         store i8 {{.*}}, !noalias
 }

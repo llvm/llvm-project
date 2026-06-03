@@ -1401,7 +1401,6 @@ Experimental extensions
     smpmpmt              0.6
     svukte               0.3
     xqccmt               0.1
-    xrivosvizip          0.1
     xsfmclic             0.1
     xsfsclic             0.1
 
