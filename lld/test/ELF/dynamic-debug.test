@@ -69,8 +69,8 @@ DD-DAG:    0000000000000000     0 OBJECT  GLOBAL DEFAULT   UND shared_data_for_u
 DD-DAG:    0000000000000000     0 FUNC    GLOBAL DEFAULT   UND shared_func_for_unopt
 NO-GC-DAG: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
 
-NO-GC: Symbol table '.symtab' contains 20 entries:
-GC:    Symbol table '.symtab' contains 18 entries:
+NO-GC: Symbol table '.symtab' contains 21 entries:
+GC:    Symbol table '.symtab' contains 19 entries:
 DD-DAG:    {{.*}} 0 FUNC    LOCAL  DEFAULT [[#]] static_func
 DD-DAG:    {{.*}} 0 OBJECT  LOCAL  DEFAULT [[#]] static_data
 DD-DAG:    {{.*}} 0 FUNC    LOCAL  HIDDEN  [[#]] static_func.dyndbg.main
@@ -87,6 +87,7 @@ DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] foo
 DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] inlined_in_opt
 NO-GC-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] unused_func
 DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] used_by_unused_func
+DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] inlined_for_unopt_and_non_alloc
 DD-DAG:    {{.*}} 0 OBJECT  GLOBAL DEFAULT   UND shared_data_for_unopt
 DD-DAG:    {{.*}} 0 FUNC    GLOBAL DEFAULT   UND shared_func_for_unopt
 NO-GC-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
@@ -113,7 +114,7 @@ IN-NEXT: .symtab         SYMTAB   0000000000000000 {{.*}} {{.*}} 18     [[#]] [[
 IN-NEXT: .shstrtab       STRTAB   0000000000000000 {{.*}} {{.*}} 00      0      0    1
 IN-NEXT: .strtab         STRTAB   0000000000000000 {{.*}} {{.*}} 00      0      0    1
 
-IN: Symbol table '.symtab' contains 24 entries:
+IN: Symbol table '.symtab' contains 26 entries:
 IN-DAG: {{.*}} 0 SECTION LOCAL  DEFAULT [[#]] .text
 IN-DAG: {{.*}} 0 SECTION LOCAL  DEFAULT [[#]] .debug_xyz
 IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.static_func.dyndbg.main
@@ -123,6 +124,7 @@ IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_func.dyndbg.main
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_data.dyndbg.main
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND inlined_in_opt
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND comdat_func
+IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND inlined_for_unopt_and_non_alloc
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND shared_data_for_unopt
 IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.main
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND foo
@@ -130,6 +132,7 @@ IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND func
 IN-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] __dyndbg.inlined_in_opt
 IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.unused_func
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND used_by_unused_func
+IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.inlined_for_unopt_and_non_alloc
 IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.static_func.dyndbg.foo
 IN-DAG: {{.*}} 0 FUNC    GLOBAL HIDDEN  [[#]] __dyndbg.foo
 IN-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND static_func.dyndbg.foo
@@ -216,6 +219,12 @@ unused_func:
   call used_by_unused_func
   ret
 
+.global inlined_for_unopt_and_non_alloc
+.type inlined_for_unopt_and_non_alloc,@function
+.section .text.inlined_for_unopt_and_non_alloc,"ax",@progbits
+inlined_for_unopt_and_non_alloc:
+  ret
+
 .local static_data
 .type static_data,@object
 .section .data.static_data,"aw",@progbits
@@ -254,6 +263,7 @@ __dyndbg.func:
   # The following is only in the unoptimized due to inlining in the optimized.
   call inlined_in_opt
   call comdat_func
+  call inlined_for_unopt_and_non_alloc
   mov shared_data_for_unopt,%rax
 
   ret
@@ -279,6 +289,13 @@ __dyndbg.inlined_in_opt:
 .section .text.__dyndbg.unused_func,"ax",@progbits
 __dyndbg.unused_func:
   call used_by_unused_func
+  ret
+
+.global __dyndbg.inlined_for_unopt_and_non_alloc
+.hidden __dyndbg.inlined_for_unopt_and_non_alloc
+.type __dyndbg.inlined_for_unopt_and_non_alloc,@function
+.section .text.__dyndbg.inlined_for_unopt_and_non_alloc,"ax",@progbits
+__dyndbg.inlined_for_unopt_and_non_alloc:
   ret
 
 #--- foo.s
@@ -362,10 +379,9 @@ __dyndbg.foo:
 __dyndbg.used_by_unused_func:
   ret
 
-.global undef_used_by_non_alloc
-
 .section .debug_xyz,"",@progbits
 .quad undef_used_by_non_alloc
+.quad inlined_for_unopt_and_non_alloc
 
 #--- shared.s
 .global shared_func_for_unopt
@@ -375,7 +391,7 @@ shared_func_for_unopt:
 
 .data
 
-.global shared_func_for_unopt,shared_data_for_unopt
+.global shared_data_for_unopt
 .type shared_data_for_unopt,@object
 shared_data_for_unopt:
 .word 0xcafe

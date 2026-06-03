@@ -1319,7 +1319,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
             Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
         sym->isUsedInRegularObj = true;
         sym->referenced = true;
-        sym->isDynDbgRef = globalUsed[i];
+        if (globalUsed[i]) {
+          sym->isDynDbgRef = true;
+          if (sym->traced)
+            Msg(ctx) << this << ": dynamic debugging reference to " << name;
+        }
       }
     } else {
       Err(ctx) << this << ": " << dynDbgSecName
