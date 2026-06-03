@@ -3292,11 +3292,13 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     return false;
 
   for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    Value *Arg0 = II0->getArgOperand(I);
+    Value *Arg1 = II1->getArgOperand(I);
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
-      if (II0->getArgOperand(I) != II1->getArgOperand(I))
+      // Scalar operands must be identical.
+      if (Arg0 != Arg1)
         return false;
-    } else if (II0->getArgOperand(I)->getType() !=
-               II1->getArgOperand(I)->getType()) {
+    } else if (Arg0->getType() != Arg1->getType()) {
       // The corresponding vector operands are shuffled together, so they must
       // share the same type. For intrinsics overloaded on their operand type
       // (e.g. llvm.fptosi.sat), two calls can produce the same result type
