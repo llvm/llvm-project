@@ -309,7 +309,7 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP12]]>
 ; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP13]]>
 ; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = or vp<[[VP5]]>, vp<[[VP11]]>
-; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP11]]> ir<%add1>/vp<[[VP11]]>
+; CHECK-NEXT:      BLEND ir<%phi3> = ir<%add2>/vp<[[VP5]]> ir<%add1>/vp<[[VP11]]>
 ; CHECK-NEXT:      EMIT ir<%add3> = add ir<%phi3>, ir<3>, vp<[[VP15]]>
 ; CHECK-NEXT:    Successor(s): bb4
 ; CHECK-EMPTY:
@@ -665,8 +665,6 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): merge.a
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.a:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c0>
-; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<%c0> ir<%v1>/vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT ir<%d0> = icmp sgt ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): if.b
 ; CHECK-EMPTY:
@@ -675,16 +673,14 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): if.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.b.inner:
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
 ; CHECK-NEXT:    Successor(s): merge.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b.inner:
 ; CHECK-NEXT:    Successor(s): merge.b
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b:
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%d0>
-; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<%d0> ir<%v2>/vp<[[VP7]]>
-; CHECK-NEXT:      EMIT ir<%sum> = add ir<%blend.a>, ir<%blend.b>
+; CHECK-NEXT:      EMIT ir<%sum> = add ir<%v1>, ir<%v2>
 ; CHECK-NEXT:      EMIT store ir<%sum>, ir<%gep>
 ; CHECK-NEXT:    Successor(s): loop.latch
 ; CHECK-EMPTY:
@@ -785,7 +781,7 @@ define void @simplifiable_blend(i1 %c1, i1 %c2, i1 %c3, i32 %x, i32 %y, ptr %p) 
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
-; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP8]]> ir<%x>/vp<[[VP9]]>
+; CHECK-NEXT:      BLEND ir<%phi> = ir<%y>/vp<[[VP4]]> ir<%x>/ir<%c1>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
