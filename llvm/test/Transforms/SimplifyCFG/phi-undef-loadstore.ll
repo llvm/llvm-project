@@ -349,7 +349,7 @@ if.end7:                                          ; preds = %if.else, %if.then4,
   ret i32 %tmp9
 }
 
-define i64 @test5_several_uses(i1 %c, i1 %branch, ptr %p) nounwind {
+define i64 @test5_several_uses(i1 %c, i1 %branch, ptr %p) {
 ; CHECK-LABEL: define i64 @test5_several_uses
 ; CHECK-SAME: (i1 [[C:%.*]], i1 [[BRANCH:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
