@@ -2626,6 +2626,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
 
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
+
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
 

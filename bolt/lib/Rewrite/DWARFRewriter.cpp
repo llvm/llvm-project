@@ -496,12 +496,8 @@ static void emitDWOBuilder(const std::string &DWOName,
       createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
                         DWODIEBuilder, GDBIndexSection);
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
-    for (std::unique_ptr<llvm::DWARFUnit> &CU :
-         SplitCU.getContext().dwo_info_section_units()) {
-      if (!CU->isTypeUnit())
-        continue;
+    for (DWARFUnit *CU : DWODIEBuilder.getDWARF5TUVector())
       emitUnit(DWODIEBuilder, *Streamer, *CU);
-    }
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);
   } else {
     emitUnit(DWODIEBuilder, *Streamer, SplitCU);

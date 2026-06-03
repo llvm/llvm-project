@@ -134,7 +134,6 @@ set(mcontext_deps)
 set(ucontext_deps .sigset_t .stack_t)
 
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
-  file(COPY x86_64 DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   add_header(
     mcontext_t_arch
     HDR
@@ -155,6 +154,9 @@ endif()
 
 add_header(mcontext_t HDR mcontext_t.h DEPENDS ${mcontext_deps})
 add_header(ucontext_t HDR ucontext_t.h DEPENDS .mcontext_t ${ucontext_deps})
+add_header(u_char HDR u_char.h)
+add_header(u_int32_t HDR u_int32_t.h)
+add_header(uint HDR uint.h)
 add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)

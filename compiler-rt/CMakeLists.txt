@@ -322,15 +322,6 @@ option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatom
 
 option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
-set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM ON)
-if(APPLE)
-  set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM OFF)
-endif()
-option(COMPILER_RT_BUILD_PROFILE_ROCM
-  "Build the host-side ROCm/HIP device profile collection runtime"
-  ${DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM})
-mark_as_advanced(COMPILER_RT_BUILD_PROFILE_ROCM)
-
 include(config-ix)
 
 #================================

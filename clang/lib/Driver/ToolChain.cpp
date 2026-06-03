@@ -1328,6 +1328,59 @@ bool ToolChain::HasNativeLLVMSupport() const {
   return false;
 }
 
+LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
+
+bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
+                           Action::OffloadKind Kind) const {
+  return getLTOMode(Args, Kind) != LTOK_None;
+}
+
+static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
+                            llvm::opt::OptSpecifier OptEq,
+                            llvm::opt::OptSpecifier OptNeg) {
+  if (!Args.hasFlag(OptEq, OptNeg, false))
+    return LTOK_None;
+
+  const Arg *A = Args.getLastArg(OptEq);
+  StringRef LTOName = A->getValue();
+
+  return llvm::StringSwitch<LTOKind>(LTOName)
+      .Case("full", LTOK_Full)
+      .Case("thin", LTOK_Thin)
+      .Default(LTOK_Unknown);
+}
+
+LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                              Action::OffloadKind Kind) const {
+  bool IsOffload = Kind != Action::OFK_None;
+  auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
+  auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
+
+  // -fopenmp-target-jit implies -foffload-lto=full for device compilations,
+  // overriding any explicit -fno-offload-lto.
+  if (IsOffload && Args.hasFlag(options::OPT_fopenmp_target_jit,
+                                options::OPT_fno_openmp_target_jit, false)) {
+    if (Arg *A = Args.getLastArg(OptEq, OptNeg))
+      if (parseLTOMode(Args, OptEq, OptNeg) != LTOK_Full)
+        getDriver().Diag(diag::err_drv_incompatible_options)
+            << A->getSpelling() << "-fopenmp-target-jit";
+    return LTOK_Full;
+  }
+
+  if (!Args.hasArg(OptEq, OptNeg))
+    return getDefaultLTOMode();
+
+  LTOKind Mode = parseLTOMode(Args, OptEq, OptNeg);
+
+  if (Mode == LTOK_Unknown) {
+    const Arg *A = Args.getLastArg(OptEq);
+    getDriver().Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
+    return LTOK_None;
+  }
+  return Mode;
+}
+
 bool ToolChain::isCrossCompiling() const {
   llvm::Triple HostTriple(LLVM_HOST_TRIPLE);
   switch (HostTriple.getArch()) {

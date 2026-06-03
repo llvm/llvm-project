@@ -258,7 +258,7 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
-  // check-omp-metadirective.cpp
+  // check-omp-variant.cpp
   void CheckOmpDeclareVariantDirective(
       const parser::OmpDeclareVariantDirective &);
   void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);

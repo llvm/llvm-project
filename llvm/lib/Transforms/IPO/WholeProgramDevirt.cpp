@@ -878,7 +878,6 @@ void llvm::updateVCallVisibilityInModule(
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
-
   for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility

@@ -431,7 +431,7 @@ Function *HotColdSplitting::extractColdRegion(
         OutF->setSection(OrigF->getSection());
     }
 
-    markFunctionCold(*OutF, BFI != nullptr);
+    markFunctionCold(*OutF, true);
 
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {

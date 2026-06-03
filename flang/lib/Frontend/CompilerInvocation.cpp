@@ -881,12 +881,19 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
   }
 
-  // -f{no-}acc-allow-default-none-scalars
+  // -f{no-}openacc-default-none-scalars-strict
   opts.features.Enable(
-      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
-      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
-                   clang::options::OPT_fno_acc_allow_default_none_scalars,
-                   false));
+      Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+      args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
+                   clang::options::OPT_fno_openacc_default_none_scalars_strict,
+                   true));
+
+  // -f{no-}openacc-multiple-names-in-routine
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+      args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
+                   clang::options::OPT_fno_openacc_multiple_names_in_routine,
+                   true));
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -935,15 +942,6 @@ static std::string getIntrinsicDir(const char *argv) {
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
-}
-
-// Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir(const char *argv) {
-  llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(includePath);
-  includePath.append("/../include/flang/OpenMP/");
-  return std::string(includePath);
 }
 
 /// Parses all preprocessor input arguments and populates the preprocessor
@@ -1805,11 +1803,6 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
-
-  // Add the location of omp_lib.h to the search directories. Currently this is
-  // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(
-      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }

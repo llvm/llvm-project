@@ -27,4 +27,7 @@ types:
   - type_name: ssize_t
   - type_name: suseconds_t
   - type_name: time_t
+  - type_name: u_char
+  - type_name: u_int32_t
   - type_name: uid_t
+  - type_name: uint

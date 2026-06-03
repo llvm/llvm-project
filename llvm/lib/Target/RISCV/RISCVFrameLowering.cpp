@@ -1598,9 +1598,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
     // Ensure the base of the RVV stack is correctly aligned: add on the
     // alignment padding.
-    int ScalarLocalVarSize = MFI.getStackSize() -
-                             RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    int64_t ScalarLocalVarSize =
+        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
   return Offset;

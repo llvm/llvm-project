@@ -4858,14 +4858,14 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm UDOT_ZZZI_BtoH : sve2p3_two_way_dot_vvi<"udot", 0b1, int_aarch64_sve_udot_lane_x2>;
 
   // SVE2 fp convert, narrow and interleave to integer, rounding toward zero
-  defm FCVTZSN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzsn", 0b0>;
-  defm FCVTZUN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzun", 0b1>;
+  defm FCVTZSN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzsn", 0b0, int_aarch64_sve_fcvtzsn_x2>;
+  defm FCVTZUN_Z2Z : sve2_fp_to_int_downcvt<"fcvtzun", 0b1, int_aarch64_sve_fcvtzun_x2>;
 
   // SVE2 signed/unsigned integer convert to floating-point
-  defm SCVTF_ZZ   : sve2_int_to_fp_upcvt<"scvtf",   0b00>;
-  defm SCVTFLT_ZZ : sve2_int_to_fp_upcvt<"scvtflt", 0b10>;
-  defm UCVTF_ZZ   : sve2_int_to_fp_upcvt<"ucvtf",   0b01>;
-  defm UCVTFLT_ZZ : sve2_int_to_fp_upcvt<"ucvtflt", 0b11>;
+  defm SCVTF_ZZ   : sve2_int_to_fp_upcvt<"scvtf",   0b00, int_aarch64_sve_scvtfb>;
+  defm SCVTFLT_ZZ : sve2_int_to_fp_upcvt<"scvtflt", 0b10, int_aarch64_sve_scvtft>;
+  defm UCVTF_ZZ   : sve2_int_to_fp_upcvt<"ucvtf",   0b01, int_aarch64_sve_ucvtfb>;
+  defm UCVTFLT_ZZ : sve2_int_to_fp_upcvt<"ucvtflt", 0b11, int_aarch64_sve_ucvtft>;
 
   // SVE2 saturating shift right narrow by immediate and interleave
   defm SQRSHRN_Z2ZI_HtoB  : sve_multi_vec_round_shift_narrow<"sqrshrn",  0b101, int_aarch64_sve_sqrshrn_x2>;

@@ -61,3 +61,35 @@ static_assert(!std::__unsigned_integer<unsigned int*>);
 static_assert(!std::__unsigned_integer<SomeObject>);
 static_assert(!std::__unsigned_integer<SomeEnum>);
 static_assert(!std::__unsigned_integer<SomeScopedEnum>);
+
+// cv-qualified versions are distinct types ([basic.type.qualifier]) and so
+// not unsigned integer types per [basic.fundamental]/p2. The three meaningful
+// flavors in C++ are const, volatile, and const volatile.
+static_assert(!std::__unsigned_integer<const unsigned int>);
+static_assert(!std::__unsigned_integer<volatile unsigned int>);
+static_assert(!std::__unsigned_integer<const volatile unsigned int>);
+static_assert(!std::__unsigned_integer<const unsigned long long>);
+static_assert(!std::__unsigned_integer<const unsigned char>);
+static_assert(!std::__unsigned_integer<const char>);
+static_assert(!std::__unsigned_integer<const bool>);
+static_assert(!std::__unsigned_integer<const char8_t>);
+static_assert(!std::__unsigned_integer<const char16_t>);
+static_assert(!std::__unsigned_integer<const char32_t>);
+static_assert(!std::__unsigned_integer<unsigned int&>);
+static_assert(!std::__unsigned_integer<const unsigned int&>);
+
+// Extended unsigned integer types per [basic.fundamental]/p3 Note 1.
+#if TEST_HAS_EXTENSION(bit_int)
+static_assert(std::__unsigned_integer<unsigned _BitInt(8)>);
+static_assert(std::__unsigned_integer<unsigned _BitInt(16)>);
+static_assert(std::__unsigned_integer<unsigned _BitInt(64)>);
+static_assert(std::__unsigned_integer<unsigned _BitInt(13)>);
+static_assert(!std::__unsigned_integer<signed _BitInt(16)>);
+static_assert(!std::__unsigned_integer<const unsigned _BitInt(16)>);
+static_assert(!std::__unsigned_integer<volatile unsigned _BitInt(64)>);
+static_assert(!std::__unsigned_integer<const volatile unsigned _BitInt(13)>);
+#  if __BITINT_MAXWIDTH__ >= 128
+static_assert(std::__unsigned_integer<unsigned _BitInt(128)>);
+static_assert(!std::__unsigned_integer<const unsigned _BitInt(128)>);
+#  endif
+#endif

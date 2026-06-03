@@ -3800,6 +3800,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::STORE:
     Res = SplitVecOp_STORE(cast<StoreSDNode>(N), OpNo);
     break;
+  case ISD::ATOMIC_STORE:
+    Res = SplitVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
+    break;
   case ISD::VP_STORE:
     Res = SplitVecOp_VP_STORE(cast<VPStoreSDNode>(N), OpNo);
     break;
@@ -4735,6 +4738,23 @@ SDValue DAGTypeLegalizer::SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo) {
     Hi = DAG.getStore(Ch, DL, Hi, Ptr, MPI, Alignment, MMOFlags, AAInfo);
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_ATOMIC_STORE(AtomicSDNode *N) {
+  SDLoc DL(N);
+  SDValue StVal = N->getVal();
+  EVT VT = StVal.getValueType();
+
+  // Issue a single atomic store of an integer that spans the full memory
+  // width. Bitcasting the (illegal) vector value to that integer lets the
+  // type legalizer further legalize the BITCAST input as needed, while the
+  // ATOMIC_STORE itself uses only the legal integer type.
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  EVT MemIntVT =
+      EVT::getIntegerVT(*DAG.getContext(), N->getMemoryVT().getSizeInBits());
+  SDValue AsInt = DAG.getBitcast(IntVT, StVal);
+  return DAG.getAtomic(ISD::ATOMIC_STORE, DL, MemIntVT, N->getChain(), AsInt,
+                       N->getBasePtr(), N->getMemOperand());
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_CONCAT_VECTORS(SDNode *N) {

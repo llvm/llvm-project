@@ -155,7 +155,8 @@ private:
   bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
-                            SDValue &Offset, uint64_t FlatVariant) const;
+                            SDValue &Offset,
+                            AMDGPU::FlatAddrSpace FlatVariant) const;
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                         SDValue &Offset) const;
   bool SelectGlobalOffset(SDNode *N, SDValue Addr, SDValue &VAddr,

@@ -454,14 +454,14 @@ public:
   /// Update an existing integer ValueObject with a new integer value. If
   /// can_update_var is true, will allow updating objects associated with
   /// program variables; otherwise not.
-  void SetValueFromInteger(const llvm::APInt &value, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(const llvm::APInt &value,
+                                  bool can_update_var = true);
 
   /// Update an existing integer ValueObject with an integer value created
   /// frome 'new_val_sp'. If can_update_var is true, will allow updating objects
   /// associated with program variables; otherwise not.
-  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                  bool can_update_var = true);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 

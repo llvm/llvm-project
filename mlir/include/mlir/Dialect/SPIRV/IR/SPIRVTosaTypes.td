@@ -195,6 +195,15 @@ class ShapedTypeOf<string input> :
 class DimOf<string input, int dim> :
   DimOfType<ShapedTypeOf<input>.result, dim>;
 
+class LastDimOf<string input> :
+  StrFunc<Shape<input>.result # ".back()">;
+
+class LastDimIsDynamic<string input> :
+  CPred<"::mlir::ShapedType::isDynamic(" # LastDimOf<input>.result # ")">;
+
+class DimMatchesLastDim<string lhs, int lhsDim, string rhs> :
+  CPred<DimOf<lhs, lhsDim>.result # " == " # LastDimOf<rhs>.result>;
+
 class DimIsDynamic<string input, int dim> :
   CPred<"::mlir::ShapedType::isDynamic(" # DimOf<input, dim>.result # ")">;
 
@@ -484,9 +493,15 @@ class ElementTypeMatchesScale32<string tensor> :
 
 class TensorLengthMatchesPerChannel<string tensor> :
   PredOpTrait<tensor # " must have length input_shape[rank(input) - 1] when per_channel is true, otherwise length 1",
-    CPred<"::llvm::cast<::mlir::ShapedType>($" # tensor # ".getType()).getShape()[0] == "
-          "(getPerChannel() ? "
-          "::llvm::cast<::mlir::ShapedType>($input.getType()).getShape().back() : 1)">>;
+    Or<[
+      Neg<CPred<HasRank<"input">.result>>,
+      Neg<CPred<HasRank<tensor>.result>>,
+      DimIsDynamic<tensor, 0>,
+      And<[CPred<"getPerChannel()">,
+           Or<[LastDimIsDynamic<"input">,
+               DimMatchesLastDim<tensor, 0, "input">]>]>,
+      And<[Neg<CPred<"getPerChannel()">>, DimIsOne<tensor, 0>]>
+    ]>>;
 
 
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_TYPES

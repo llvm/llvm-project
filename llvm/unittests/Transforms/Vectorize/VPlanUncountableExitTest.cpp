@@ -66,8 +66,8 @@ static void combineExitConditions(VPlan &Plan) {
   VPValue *IsLatchExitTaken = LatchBranch->getOperand(0);
   LatchBranch->eraseFromParent();
   Builder.setInsertPoint(LatchVPBB);
-  Builder.createNaryOp(VPInstruction::BranchOnCond,
-                       {Builder.createOr(IsAnyExitTaken, IsLatchExitTaken)});
+  Builder.createNaryOp(VPInstruction::BranchOnTwoConds,
+                       {IsAnyExitTaken, IsLatchExitTaken});
 
   // Disconnect the early exit edge.
   EarlyExitingVPBB->getTerminator()->eraseFromParent();

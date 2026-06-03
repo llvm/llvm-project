@@ -710,6 +710,123 @@ exit:
   ret i64 %sub2
 }
 
+define i32 @reduce_sub_add_chain_without_mul(ptr %a, ptr noalias %b) {
+; NEON-LABEL: 'reduce_sub_add_chain_without_mul'
+; SVE-LABEL: 'reduce_sub_add_chain_without_mul'
+; SVE2-LABEL: 'reduce_sub_add_chain_without_mul'
+; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+;
+; SVE2p1-LABEL: 'reduce_sub_add_chain_without_mul'
+; SVE2p1:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p1:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+; SVE2p1:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p1:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+;
+; SVE2p3-LABEL: 'reduce_sub_add_chain_without_mul'
+; SVE2p3:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p3:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+; SVE2p3:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SVE2p3:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+;
+; SME2-LABEL: 'reduce_sub_add_chain_without_mul'
+; SME2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SME2:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+; SME2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+;
+; I8MM-LABEL: 'reduce_sub_add_chain_without_mul'
+; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.add (sub (0, ir<%load.a>) sext to i32)
+; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.add (ir<%load.b> sext to i32)
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr i16, ptr %a, i64 %iv
+  %load.a = load i16, ptr %gep.a, align 1
+  %ext.a = sext i16 %load.a to i32
+  %gep.b = getelementptr i16, ptr %b, i64 %iv
+  %load.b = load i16, ptr %gep.b, align 1
+  %ext.b = sext i16 %load.b to i32
+  %sub = sub i32 %accum, %ext.a
+  %add = add i32 %sub, %ext.b
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1025
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret i32 %add
+}
+
+define float @reduce_fsub_fadd_chain_without_mul(ptr %a, ptr noalias %b) {
+; NEON-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; NEON:  Cost of 2 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+; SVE-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; SVE2-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; SVE2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2:  Cost of 2 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+; SVE2p1-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; SVE2p1:  Cost of 2 for VF 4: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p1:  Cost of 1 for VF 4: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p1:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p1:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p1:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p1:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p1:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p1:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+; SVE2p3-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; SVE2p3:  Cost of 2 for VF 4: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p3:  Cost of 1 for VF 4: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p3:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p3:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p3:  Cost of 2 for VF vscale x 4: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p3:  Cost of 1 for VF vscale x 4: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SVE2p3:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SVE2p3:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+; SME2-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; SME2:  Cost of 4 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SME2:  Cost of 1 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; SME2:  Cost of 4 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; SME2:  Cost of 1 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+; I8MM-LABEL: 'reduce_fsub_fadd_chain_without_mul'
+; I8MM:  Cost of 2 for VF 8: EXPRESSION vp<[[VP8:%[0-9]+]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; I8MM:  Cost of 2 for VF 8: EXPRESSION vp<[[VP9:%[0-9]+]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP8]]> = ir<%accum> + partial.reduce.fadd (fneg(ir<%load.a>) reassoc contract fpext to float)
+; I8MM:  Cost of 2 for VF vscale x 8: EXPRESSION vp<[[VP9]]> = vp<[[VP8]]> + partial.reduce.fadd (ir<%load.b> reassoc contract fpext to float)
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %accum = phi float [ -0.0, %entry ], [ %add, %for.body ]
+  %gep.a = getelementptr half, ptr %a, i64 %iv
+  %load.a = load half, ptr %gep.a, align 1
+  %ext.a = fpext half %load.a to float
+  %gep.b = getelementptr half, ptr %b, i64 %iv
+  %load.b = load half, ptr %gep.b, align 1
+  %ext.b = fpext half %load.b to float
+  %sub = fsub reassoc contract float %accum, %ext.a
+  %add = fadd reassoc contract float %sub, %ext.b
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1025
+  br i1 %exitcond.not, label %for.exit, label %for.body
+
+for.exit:
+  ret float %add
+}
+
 !33 = distinct !{!33, !34, !35}
 !34 = !{!"llvm.loop.interleave.count", i32 1}
 !35 = !{!"llvm.loop.vectorize.width", i32 4}

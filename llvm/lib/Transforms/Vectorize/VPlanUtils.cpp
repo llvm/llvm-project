@@ -569,9 +569,8 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
   //   EMIT vp<%4> = any-of ir<%3>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
-  //   EMIT vp<%6> = or vp<%4>, vp<%5>
-  //   EMIT branch-on-cond vp<%6>
-  // Successor(s): middle.block, for.body
+  //   EMIT branch-on-two-conds vp<%4>, vp<%5>
+  // Successor(s): middle.block, middle.block, for.body
   //
   // middle.block:
   // Successor(s): ir-bb<exit>, scalar.ph
@@ -585,8 +584,8 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   // Find the uncountable loop exit condition.
   VPValue *UncountableCondition = nullptr;
   if (!match(LatchVPBB->getTerminator(),
-             m_BranchOnCond(m_c_BinaryOr(
-                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;

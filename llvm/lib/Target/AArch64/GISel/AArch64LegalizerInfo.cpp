@@ -2106,6 +2106,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
   case Intrinsic::aarch64_neon_fcvtzs:
     return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
+  case Intrinsic::aarch64_neon_cls:
+    return LowerUnaryOp(TargetOpcode::G_CTLS);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

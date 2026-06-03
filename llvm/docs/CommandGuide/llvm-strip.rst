@@ -110,6 +110,10 @@ multiple file formats.
  Remove from the output all local or undefined symbols that are not required by
  relocations. Also remove all debug sections.
 
+.. option:: --verbose, -v
+
+ Print the paths of files that are copied.
+
 .. option:: --version, -V
 
  Display the version of the :program:`llvm-strip` executable.

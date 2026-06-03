@@ -2704,60 +2704,82 @@ static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
-static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
-                                            SourceLocation Loc,
-                                            const IdentifierInfo *AttrName) {
-  QualType Ty;
-  if (auto *VD = dyn_cast<ValueDecl>(D))
-    Ty = VD->getType();
-  else if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-    Ty = TD->getUnderlyingType();
-
-  if (Ty.isNull() || Ty->isDependentType())
-    return false;
-
-  // For functions, the qualifier can apply to the return type or any parameter.
-  if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
-    if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), FPT->getReturnType()))
-      return false;
-    SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
-    return true;
+/// Walks the existing AttributedType sugar of \p T looking for a previously
+/// applied HLSLRowMajor/HLSLColumnMajor marker. If one is found, populates
+/// \p ExistingKind with its attr::Kind and returns true.
+static bool findExistingMatrixLayoutMarker(QualType T,
+                                           attr::Kind &ExistingKind) {
+  QualType Cur = T;
+  while (const auto *AT = Cur->getAs<AttributedType>()) {
+    attr::Kind K = AT->getAttrKind();
+    if (K == attr::HLSLRowMajor || K == attr::HLSLColumnMajor) {
+      ExistingKind = K;
+      return true;
+    }
+    Cur = AT->getModifiedType();
   }
-
-  if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), Ty))
-    return false;
-
-  SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
-  return true;
+  return false;
 }
 
-void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
-  // row_major and column_major are only valid on matrix types.
-  if (diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, AL.getLoc(),
-                                      AL.getAttrName()))
-    return;
+Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
+  if (T.isNull())
+    return nullptr;
 
-  // Check for conflicting or duplicate matrix layout attributes.
-  if (const auto *Existing = D->getAttr<HLSLMatrixLayoutAttr>()) {
-    if (Existing->getSemanticSpelling() != AL.getSemanticSpelling()) {
-      Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
-          << AL.getAttrName() << Existing->getAttrName();
-      Diag(Existing->getLoc(), diag::note_conflicting_attribute);
-    } else {
+  ASTContext &Ctx = getASTContext();
+  attr::Kind AttrK = AL.getKind() == ParsedAttr::AT_HLSLRowMajor
+                         ? attr::HLSLRowMajor
+                         : attr::HLSLColumnMajor;
+
+  // For non-dependent types, the operand must be a matrix (or array of
+  // matrices).
+  if (!T->isDependentType() && !isMatrixOrArrayOfMatrix(Ctx, T)) {
+    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
+        << AL.getAttrName();
+    AL.setInvalid();
+    return nullptr;
+  }
+
+  // Conflict / duplicate detection by walking existing sugar.
+  attr::Kind ExistingKind;
+  if (findExistingMatrixLayoutMarker(T, ExistingKind)) {
+    if (ExistingKind == AttrK) {
       Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact)
           << AL.getAttrName();
-      Diag(Existing->getLoc(), diag::note_previous_attribute);
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
     }
-    return;
+    IdentifierInfo *ExistingII = &Ctx.Idents.get(
+        ExistingKind == attr::HLSLRowMajor ? "row_major" : "column_major");
+    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
+        << AL.getAttrName() << ExistingII;
+    Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    AL.setInvalid();
+    return nullptr;
   }
 
-  D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
+  if (AttrK == attr::HLSLRowMajor)
+    return ::new (Ctx) HLSLRowMajorAttr(Ctx, AL);
+  return ::new (Ctx) HLSLColumnMajorAttr(Ctx, AL);
 }
 
-bool SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(
-    Decl *D, const HLSLMatrixLayoutAttr *Attr) {
-  return diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, Attr->getLoc(),
-                                         Attr->getAttrName());
+// Re-validates an HLSL `row_major` / `column_major` attribute after template
+// substitution. The parse-time check in `buildMatrixLayoutTypeAttr` is skipped
+// for dependent types; `TransformAttributedType` calls this once the type is
+// concrete. Returns `true` (and emits a diagnostic) if the substituted type is
+// not a matrix or array of matrices, signaling the caller to abort the
+// transform.
+bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                                 SourceLocation Loc) {
+  if (K != attr::HLSLRowMajor && K != attr::HLSLColumnMajor)
+    return false;
+  if (T.isNull() || T->isDependentType())
+    return false;
+  if (isMatrixOrArrayOfMatrix(getASTContext(), T))
+    return false;
+  IdentifierInfo *II = &getASTContext().Idents.get(
+      K == attr::HLSLRowMajor ? "row_major" : "column_major");
+  Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << II;
+  return true;
 }
 
 namespace {

@@ -615,9 +615,7 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
       [&](const auto &details) {
         if constexpr (std::is_convertible_v<decltype(details),
                           const WithOmpDeclarative &>) {
-          if (auto *reqs{details.ompRequires()}) {
-            return reqs->test(req);
-          }
+          return details.ompRequires().test(req);
         }
         return false;
       },

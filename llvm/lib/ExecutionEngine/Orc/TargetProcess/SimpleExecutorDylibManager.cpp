@@ -44,6 +44,18 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
   return ExecutorAddr::fromPtr(Resolvers.back().get());
 }
 
+ExecutorResolver::ResolveResult
+SimpleExecutorDylibManager::resolve(ExecutorAddr Resolver,
+                                    RemoteSymbolLookupSet Lookup) {
+  using TmpResult =
+      MSVCPExpected<std::vector<std::optional<ExecutorSymbolDef>>>;
+  std::promise<TmpResult> P;
+  auto F = P.get_future();
+  Resolver.toPtr<ExecutorResolver *>()->resolveAsync(
+      std::move(Lookup), [&](TmpResult R) { P.set_value(std::move(R)); });
+  return F.get();
+}
+
 Error SimpleExecutorDylibManager::shutdown() {
 
   DylibSet DS;
@@ -78,20 +90,11 @@ SimpleExecutorDylibManager::openWrapper(const char *ArgData, size_t ArgSize) {
 llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorDylibManager::resolveWrapper(const char *ArgData,
                                            size_t ArgSize) {
-  using ResolveResult = ExecutorResolver::ResolveResult;
   return shared::WrapperFunction<
              rt::SPSSimpleExecutorDylibManagerResolveSignature>::
       handle(ArgData, ArgSize,
-             [](ExecutorAddr Obj, RemoteSymbolLookupSet L) -> ResolveResult {
-               using TmpResult =
-                   MSVCPExpected<std::vector<std::optional<ExecutorSymbolDef>>>;
-               std::promise<TmpResult> P;
-               auto F = P.get_future();
-               Obj.toPtr<ExecutorResolver *>()->resolveAsync(
-                   std::move(L),
-                   [&](TmpResult R) { P.set_value(std::move(R)); });
-               return F.get();
-             })
+             shared::makeMethodWrapperHandler(
+                 &SimpleExecutorDylibManager::resolve))
           .release();
 }
 

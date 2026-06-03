@@ -6526,7 +6526,8 @@ private:
       return;
     for (const auto &scope : intrinsicModuleScope->children()) {
       llvm::StringRef modName = toStringRef(scope.symbol()->name());
-      if (modName != "__fortran_ieee_exceptions")
+      if (modName != "__fortran_ieee_exceptions" &&
+          modName != "iso_fortran_env")
         continue;
       for (auto &var : Fortran::lower::pft::getScopeVariableList(scope)) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();

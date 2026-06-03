@@ -2049,6 +2049,13 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "ns_returns_retained";
     break;
 
+  case attr::HLSLRowMajor:
+    OS << "row_major";
+    break;
+  case attr::HLSLColumnMajor:
+    OS << "column_major";
+    break;
+
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
   // attribute again in printFunctionProtoAfter.
   case attr::AnyX86NoCfCheck: OS << "nocf_check"; break;

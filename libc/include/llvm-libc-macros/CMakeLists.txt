@@ -345,6 +345,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  inet_address_macros
+  HDR
+    inet-address-macros.h
+)
+
+add_macro_header(
   inttypes_macros
   HDR
     inttypes-macros.h

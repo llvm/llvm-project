@@ -192,7 +192,9 @@ getMemoryOrderFromRequires(const semantics::Scope &scope) {
           using WithOmpDeclarative = semantics::WithOmpDeclarative;
           if constexpr (std::is_convertible_v<decltype(s),
                                               const WithOmpDeclarative &>) {
-            return s.ompAtomicDefaultMemOrder();
+            if (auto &admo{s.ompAtomicDefaultMemOrder()}) {
+              return &*admo;
+            }
           }
           return static_cast<const common::OmpMemoryOrderType *>(nullptr);
         },

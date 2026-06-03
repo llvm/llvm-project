@@ -370,6 +370,7 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
     C.num_sharing = static_cast<int>(b.count());
     C.level = cache.Level;
     C.size = static_cast<int>(cache.Size);
+    C.type = "Unknown";
     switch (cache.Type) {
 // Windows SDK version >= 10.0.26100.0
 #ifdef NTDDI_WIN11_GE
@@ -387,9 +388,6 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
         break;
       case CacheTrace:
         C.type = "Trace";
-        break;
-      default:
-        C.type = "Unknown";
         break;
     }
     res.push_back(C);

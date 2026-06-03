@@ -149,6 +149,8 @@ protected:
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
 
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+
   /// Return 64-bit value Op as two 32-bit integers.
   std::pair<SDValue, SDValue> split64BitValue(SDValue Op,
                                               SelectionDAG &DAG) const;

@@ -511,6 +511,10 @@ Changes in existing checks
   `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
   macros are ignored.
 
+- Improved :doc:`fuchsia-statically-constructed-objects
+  <clang-tidy/checks/fuchsia/statically-constructed-objects>` check by fixing a
+  crash when checking value-dependent static member initializers in class templates.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and

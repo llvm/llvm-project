@@ -211,6 +211,18 @@ if (LLDB_ENABLE_PYTHON)
       "Path to use as PYTHONHOME in lldb. If a relative path is specified, it will be resolved at runtime relative to liblldb directory.")
   endif()
 
+  # Expose the build-time libpython through Config.h (its R"(...)"
+  # substitution avoids the per-platform path-escaping hazards of
+  # target_compile_definitions) so the loader has a runtime fallback.
+  # Skip Windows: FindPython3 returns the .lib import library, which is
+  # a different file from the .dll the loader actually needs.
+  if(TARGET Python3::Python AND NOT WIN32)
+    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LOCATION)
+    if(_Python3_LIB_PATH)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH "${_Python3_LIB_PATH}")
+    endif()
+  endif()
+
   # Enable targeting the Python Limited C API.
   set(PYTHON_LIMITED_API_MIN_SWIG_VERSION "4.2")
   if (SWIG_VERSION VERSION_EQUAL "4.4.0" AND Python3_VERSION VERSION_GREATER_EQUAL "3.13")

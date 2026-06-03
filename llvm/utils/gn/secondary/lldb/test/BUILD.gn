@@ -2,6 +2,8 @@ import("//llvm/triples.gni")
 
 import("//llvm/utils/gn/build/buildflags.gni")
 
+import("//clang/resource_dir.gni")
+
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -95,7 +97,7 @@ write_lit_cfg("lit_api_site_cfg") {
     "LUA_EXECUTABLE=",
     "LLDB_LUA_CPATH=",
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
-    "LLDB_USE_ARM64E_DEBUGSERVER=",
+    "LLDB_USE_ARM64E_DEBUGSERVER=False",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
     "Python3_ROOT_DIR=",  # FIXME
@@ -121,7 +123,7 @@ write_lit_cfg("lit_shell_site_cfg") {
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
   extra_values = [
-    "CLANG_RESOURCE_DIR=",
+    "CLANG_RESOURCE_DIR=" + rebase_path(clang_resource_dir),
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
     "LLDB_BUILD_LLDBRPC=0",  # FIXME: add lldb-rpc-gen target, enable

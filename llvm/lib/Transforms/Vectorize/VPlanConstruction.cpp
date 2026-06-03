@@ -1265,11 +1265,15 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   //       here from handleUncountableEarlyExits, but we need to improve
   //       detection of recipes which may write to memory.
   if (Style != UncountableExitStyle::NoUncountableExit) {
-    if (!areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
+    // Dereferenceability is checked separately for uncountable exit loops with
+    // stores, as only the loads contributing to the exit condition need to
+    // be checked.
+    if (Style == UncountableExitStyle::ReadOnly &&
+        !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
       return false;
     // TODO: Check target preference for style.
-    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
-    return true;
+    return handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
+                                       TheLoop, PSE, DT, AC, Style);
   }
 
   // Disconnect countable early exits from the loop, leaving it with a single

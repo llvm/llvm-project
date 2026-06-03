@@ -3,20 +3,27 @@
 (* This is currently a subset of the final DIL Language, matching the current
    DIL implementation. *)
 
-expression = shift_expression ;
+expression = assignment_expression ;
+
+assignment_expression = shift_expression
+                      | shift_expression assignment_operator assignment_expression ;
+
+assignment_operator = "="
+                    | "+="
+                    | "-=" ;
 
 shift_expression = additive_expression {"<<" additive_expression}
                  | additive_expression {">>" additive_expression} ;
 
 additive_expression = multiplicative_expression {"+" multiplicative_expression}
-                      multiplicative_expression {"-" multiplicative_expression} ;
+                    | multiplicative_expression {"-" multiplicative_expression} ;
 
 multiplicative_expression = cast_expression {"*" cast_expression}
                           | cast_expression {"/" cast_expression}
                           | cast_expression {"%" cast_expression} ;
 
 cast_expression = unary_expression
-                | "(" type_id ")" cast_expression;
+                | "(" type_id ")" cast_expression ;
 
 unary_expression = postfix_expression
                  | unary_operator cast_expression ;
