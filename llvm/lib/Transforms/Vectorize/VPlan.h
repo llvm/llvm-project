@@ -3544,14 +3544,7 @@ public:
 /// the expression is elevated to connect the non-expression recipe with the
 /// VPExpressionRecipe itself.
 class VPExpressionRecipe : public VPSingleDefRecipe {
-  /// Recipes included in this VPExpressionRecipe. This could contain
-  /// duplicates.
-  SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
-
-  /// Temporary VPValues used for external operands of the expression, i.e.
-  /// operands not defined by recipes in the expression.
-  SmallVector<VPValue *> LiveInPlaceholders;
-
+public:
   enum class ExpressionTypes {
     /// Represents an inloop extended reduction operation, performing a
     /// reduction on an extended vector operand into a scalar value, and adding
@@ -3573,6 +3566,15 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
   };
+
+private:
+  /// Recipes included in this VPExpressionRecipe. This could contain
+  /// duplicates.
+  SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
+
+  /// Temporary VPValues used for external operands of the expression, i.e.
+  /// operands not defined by recipes in the expression.
+  SmallVector<VPValue *> LiveInPlaceholders;
 
   /// Type of the expression.
   ExpressionTypes ExpressionType;
@@ -3656,6 +3658,9 @@ public:
     }
     return new VPExpressionRecipe(ExpressionType, NewExpressiondRecipes);
   }
+
+  /// Return the expression type of the recipe.
+  ExpressionTypes getExpressionType() const { return ExpressionType; }
 
   /// Return the VPValue to use to infer the result type of the recipe.
   VPValue *getOperandOfResultType() const {

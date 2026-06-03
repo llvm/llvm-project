@@ -1176,6 +1176,16 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
       VPValue *CondOp = cast<VPInstruction>(CurrentLink)->getMask();
+      // Create the predicated select for reduction.
+      if (CondOp) {
+        VPBuilder Builder(LinkVPBB);
+        VPValue *Identity = new VPIRValue(
+            getRecurrenceIdentity(Kind, PhiR->getScalarType(), FMFs));
+        if (!MinVF.isScalar())
+          Identity = Builder.createNaryOp(VPInstruction::Broadcast, Identity);
+        VecOp = Builder.createSelect(CondOp, VecOp, Identity,
+                                     CurrentLinkI->getDebugLoc(), "", FMFs);
+      }
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),

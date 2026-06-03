@@ -405,13 +405,14 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP176:%.*]] = insertelement <16 x i8> [[TMP172]], i8 [[TMP175]], i64 15
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE62]]
 ; CHECK:       pred.load.continue30:
-; CHECK-NEXT:    [[TMP159:%.*]] = phi <16 x i8> [ [[TMP91]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP95]], [[PRED_LOAD_IF29]] ]
-; CHECK-NEXT:    [[TMP177:%.*]] = phi <16 x i8> [ [[TMP172]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP176]], [[PRED_LOAD_IF29]] ]
+; CHECK-NEXT:    [[TMP158:%.*]] = phi <16 x i8> [ [[TMP91]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP95]], [[PRED_LOAD_IF29]] ]
+; CHECK-NEXT:    [[TMP160:%.*]] = phi <16 x i8> [ [[TMP172]], [[PRED_LOAD_CONTINUE28]] ], [ [[TMP176]], [[PRED_LOAD_IF29]] ]
+; CHECK-NEXT:    [[TMP159:%.*]] = select <16 x i1> [[TMP16]], <16 x i8> [[TMP158]], <16 x i8> zeroinitializer
+; CHECK-NEXT:    [[TMP177:%.*]] = select <16 x i1> [[TMP16]], <16 x i8> [[TMP160]], <16 x i8> zeroinitializer
 ; CHECK-NEXT:    [[TMP178:%.*]] = sext <16 x i8> [[TMP177]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP97:%.*]] = sext <16 x i8> [[TMP159]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP179:%.*]] = mul nsw <16 x i32> [[TMP178]], [[TMP97]]
-; CHECK-NEXT:    [[TMP180:%.*]] = select <16 x i1> [[TMP16]], <16 x i32> [[TMP179]], <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP180]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP179]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <16 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP181:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

@@ -220,14 +220,13 @@ define i32 @reduction_mix(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i16> [[VEC_IND]], splat (i16 257)
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[TMP31]]
-; CHECK-NEXT:    [[TMP39:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP35]], <4 x i1> [[TMP0]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP35]], <4 x i1> [[TMP0]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr inbounds [4 x i8], ptr [[B:%.*]], i64 [[TMP31]]
-; CHECK-NEXT:    [[TMP50:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP38]], <4 x i1> [[TMP0]], <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP38]], <4 x i1> [[TMP0]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP41:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[VEC_IND1]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP41]])
 ; CHECK-NEXT:    [[TMP43:%.*]] = add i32 [[VEC_PHI]], [[TMP42]]
-; CHECK-NEXT:    [[TMP40:%.*]] = mul nsw <4 x i32> [[TMP50]], [[TMP39]]
-; CHECK-NEXT:    [[TMP44:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP40]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP44:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_LOAD2]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP44]])
 ; CHECK-NEXT:    [[TMP46]] = add i32 [[TMP43]], [[TMP45]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP31]], 4

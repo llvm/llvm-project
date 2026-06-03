@@ -134,11 +134,12 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[PSRC_ADDR_0_LCSSA]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = ashr <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 8)
 ; CHECK-NEXT:    [[TMP41:%.*]] = sext <4 x i32> [[TMP40]] to <4 x i64>
-; CHECK-NEXT:    [[TMP42:%.*]] = mul nsw <4 x i64> [[TMP41]], [[TMP41]]
-; CHECK-NEXT:    [[TMP43:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i64> [[TMP42]], <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP42:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i64> [[TMP41]], <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP43:%.*]] = mul nsw <4 x i64> [[TMP42]], [[TMP42]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP43]])
 ; CHECK-NEXT:    [[TMP45:%.*]] = add i64 [[SUMOFSQUARES_0_LCSSA]], [[TMP44]]
-; CHECK-NEXT:    [[TMP46:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i64> [[TMP41]], <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP49:%.*]] = sext <4 x i32> [[TMP40]] to <4 x i64>
+; CHECK-NEXT:    [[TMP46:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i64> [[TMP49]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP47:%.*]] = tail call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP46]])
 ; CHECK-NEXT:    [[TMP48:%.*]] = add i64 [[SUM_0_LCSSA]], [[TMP47]]
 ; CHECK-NEXT:    br label [[WHILE_END43]]

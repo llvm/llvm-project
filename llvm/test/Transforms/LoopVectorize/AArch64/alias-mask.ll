@@ -219,8 +219,8 @@ define i32 @partial_reduce(ptr %a, ptr %b, i64 %n) {
 ; CHECK-TF-NEXT:    [[CLAMPED_HEADER_MASK:%.*]] = and <vscale x 16 x i1> [[ACTIVE_LANE_MASK1]], [[ALIAS_MASK]]
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-TF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[CLAMPED_HEADER_MASK]], <vscale x 16 x i8> poison)
-; CHECK-TF-NEXT:    [[TMP3:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i32>
-; CHECK-TF-NEXT:    [[TMP8:%.*]] = select <vscale x 16 x i1> [[CLAMPED_HEADER_MASK]], <vscale x 16 x i32> [[TMP3]], <vscale x 16 x i32> zeroinitializer
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[CLAMPED_HEADER_MASK]], <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], <vscale x 16 x i8> zeroinitializer
+; CHECK-TF-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[TMP10]] to <vscale x 16 x i32>
 ; CHECK-TF-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP8]])
 ; CHECK-TF-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-TF-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[WIDE_MASKED_LOAD]], ptr align 1 [[TMP9]], <vscale x 16 x i1> [[CLAMPED_HEADER_MASK]])

@@ -3198,19 +3198,6 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *NewVecOp = State.get(getVecOp());
-  if (VPValue *Cond = getCondOp()) {
-    Value *NewCond = State.get(Cond, State.VF.isScalar());
-    VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
-    Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
-
-    Value *Start =
-        getRecurrenceIdentity(Kind, ElementTy, getFastMathFlagsOrNone());
-    if (State.VF.isVector())
-      Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
-
-    Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, Start);
-    NewVecOp = Select;
-  }
   Value *NewRed;
   Value *NextInChain;
   if (isOrdered()) {
