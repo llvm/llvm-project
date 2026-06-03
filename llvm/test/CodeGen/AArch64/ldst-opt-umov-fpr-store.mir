@@ -116,6 +116,45 @@ body:             |
     RET undef $lr
 ...
 ---
+# Negative: volatile store must not be folded.
+name:            umov_i16_volatile_store
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $x0
+
+    ; CHECK-LABEL: name: umov_i16_volatile_store
+    ; CHECK: liveins: $q0, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $w8 = UMOVvi16_idx0 killed renamable $q0, 0
+    ; CHECK-NEXT: STRHHui killed renamable $w8, killed renamable $x0, 0 :: (volatile store (s16))
+    ; CHECK-NEXT: RET undef $lr
+    renamable $w8 = UMOVvi16_idx0 killed renamable $q0, 0
+    STRHHui killed renamable $w8, killed renamable $x0, 0 :: (volatile store (s16))
+    RET undef $lr
+...
+---
+# Negative: A sub-register of the value register ($w8) is redefined between
+# UMOV and store, clobbering $x8 via zero-extension.
+name:            umov_i64_subreg_clobber
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $x0, $w9
+
+    ; CHECK-LABEL: name: umov_i64_subreg_clobber
+    ; CHECK: liveins: $q0, $x0, $w9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x8 = UMOVvi64_idx0 killed renamable $q0, 0
+    ; CHECK-NEXT: renamable $w8 = ORRWrr renamable $w8, killed renamable $w9
+    ; CHECK-NEXT: STRXui killed renamable $x8, killed renamable $x0, 0 :: (store (s64))
+    ; CHECK-NEXT: RET undef $lr
+    renamable $x8 = UMOVvi64_idx0 killed renamable $q0, 0
+    renamable $w8 = ORRWrr renamable $w8, killed renamable $w9
+    STRXui killed renamable $x8, killed renamable $x0, 0 :: (store (s64))
+    RET undef $lr
+...
+---
 # Negative: The GPR result is not killed at the store (has a later use).
 name:            umov_i16_not_killed
 tracksRegLiveness: true
@@ -241,21 +280,23 @@ name:            umov_i32_val_is_base
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $q0
+    liveins: $q0, $x0
 
     ; CHECK-LABEL: name: umov_i32_val_is_base
-    ; CHECK: liveins: $q0
+    ; CHECK: liveins: $q0, $x0
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x8 = COPY killed renamable $x0
     ; CHECK-NEXT: renamable $w8 = UMOVvi32_idx0 killed renamable $q0, 0
     ; CHECK-NEXT: STRWui killed renamable $w8, renamable $x8, 0 :: (store (s32))
     ; CHECK-NEXT: RET undef $lr
+    $x8 = COPY killed renamable $x0
     renamable $w8 = UMOVvi32_idx0 killed renamable $q0, 0
     STRWui killed renamable $w8, renamable $x8, 0 :: (store (s32))
     RET undef $lr
 ...
 ---
 # Negative: the store's index register overlaps with the value register
-# (str w8, [x0, w8, sxtw]).
+# (strh w8, [x0, w8, sxtw]).
 name:            umov_i16_val_is_index
 tracksRegLiveness: true
 body:             |

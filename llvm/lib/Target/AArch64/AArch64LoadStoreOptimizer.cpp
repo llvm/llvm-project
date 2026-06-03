@@ -3091,6 +3091,9 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!FPRStoreOpc)
     return false;
 
+  if (StoreMI.hasOrderedMemoryRef())
+    return false;
+
   MachineBasicBlock *MBB = StoreMI.getParent();
   MCPhysReg StoreValReg = StoreMI.getOperand(0).getReg();
 
@@ -3117,7 +3120,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
       return false;
     if (MI.readsRegister(StoreValReg, TRI))
       return false;
-    if (MI.definesRegister(StoreValReg, TRI)) {
+    if (MI.modifiesRegister(StoreValReg, TRI)) {
       SubRegIdx = getUMOVSubRegIdx(MI.getOpcode());
       if (!SubRegIdx)
         return false;
@@ -3168,7 +3171,7 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
   bool Modified = false;
-  // Four transformations to do here:
+  // Six transformations to do here:
   // 1) Find loads that directly read from stores and promote them by
   //    replacing with mov instructions. If the store is wider than the load,
   //    the load will be replaced with a bitfield extract.
