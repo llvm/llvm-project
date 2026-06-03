@@ -30,11 +30,11 @@
 
 //ALL-LABEL: @test_vmaxnmv_f32(
 float32_t test_vmaxnmv_f32(float32x2_t a) {
-    //CIR: cir.call @vmaxnmv_f32
-    // 
-    // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
-    // LLVM:  [[VMAXNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> [[A]])
-    // LLVM: ret float [[VMAXNMV_F32_I]]
+  //CIR: cir.call @vmaxnmv_f32
+
+  // LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+  // LLVM:  [[VMAXNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> [[A]])
+  // LLVM: ret float [[VMAXNMV_F32_I]]
   return vmaxnmv_f32(a);
 }
 
