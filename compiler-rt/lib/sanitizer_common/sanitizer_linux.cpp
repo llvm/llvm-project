@@ -2899,10 +2899,8 @@ void OnDlOpen(const char* filename, int flag) {
     Die();
   }
 #  endif
-}
 
-#  if SANITIZER_AMDHSA
-void PatchHsaRuntimeDlopenFlag(const char* filename, int& flag) {
+#  ifdef SANITIZER_AMDHSA
   if (filename &&
       (internal_strstr(filename, "libamdhip64.so") ||
        internal_strstr(filename, "libhsa-runtime64.so") ||
@@ -2916,8 +2914,8 @@ void PatchHsaRuntimeDlopenFlag(const char* filename, int& flag) {
           filename);
     }
   }
-}
 #  endif
+}
 
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
                               uptr *largest_gap_found,

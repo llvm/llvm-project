@@ -1096,12 +1096,6 @@ const s32 kReleaseToOSIntervalNever = -1;
 // checks (e.g. RTLD_DEEPBIND on Linux).
 void OnDlOpen(const char* filename, int flag);
 
-#if SANITIZER_AMDHSA
-void PatchHsaRuntimeDlopenFlag(const char* filename, int& flag);
-#else
-inline void PatchHsaRuntimeDlopenFlag(const char* filename, int& flag) {}
-#endif
-
 // Returns the requested amount of random data (up to 256 bytes) that can then
 // be used to seed a PRNG. Defaults to blocking like the underlying syscall.
 bool GetRandom(void *buffer, uptr length, bool blocking = true);
