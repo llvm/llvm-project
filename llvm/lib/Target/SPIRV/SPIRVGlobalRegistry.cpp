@@ -1520,8 +1520,8 @@ unsigned SPIRVGlobalRegistry::getSPIRVTypeByteSize(SPIRVTypeInst Type) const {
 
 bool SPIRVGlobalRegistry::isSpecialOpaqueElementType(
     SPIRVTypeInst ElemType) const {
-  // A pointer to a function (SPV_INTEL_function_pointers) must keep its
-  // function type, which an untyped pointer cannot express.
+  // A function pointer has to keep its function type, which an untyped pointer
+  // cannot express.
   if (ElemType && ElemType->getOpcode() == SPIRV::OpTypeFunction)
     return true;
   auto It = SPIRVToLLVMType.find(ElemType);
