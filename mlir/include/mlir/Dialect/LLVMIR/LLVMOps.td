@@ -2505,7 +2505,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
 // MetadataAsValueOp
 //===--------------------------------------------------------------------===//
 
-def LLVM_MetadataAsValueOp : LLVM_Op<"mlir.metadata_as_value", [Pure]> {
+def LLVM_MetadataAsValueOp
+    : LLVM_Op<"mlir.metadata_as_value", [Pure, ConstantLike]> {
   let summary =
       "Wraps an LLVM `metadata` constant so it can be used as an SSA value.";
   let description = [{
@@ -2518,10 +2519,10 @@ def LLVM_MetadataAsValueOp : LLVM_Op<"mlir.metadata_as_value", [Pure]> {
     The wrapped metadata is described by the `metadata` attribute, which
     must be one of the LLVM dialect's metadata-attribute classes:
 
-    * `#llvm.md_string<"...">` &mdash; `llvm::MDString`.
-    * `#llvm.md_const<...>` &mdash; `llvm::ConstantAsMetadata`.
-    * `#llvm.md_func<@symbol>` &mdash; `llvm::ValueAsMetadata` of a function.
-    * `#llvm.md_node<...>` &mdash; `llvm::MDNode` over any of the above.
+    * `#llvm.md_string<"...">` -> `llvm::MDString`.
+    * `#llvm.md_const<...>` -> `llvm::ConstantAsMetadata`.
+    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function.
+    * `#llvm.md_node<...>` -> `llvm::MDNode` over any of the above.
 
     These can be nested arbitrarily to form metadata trees. Lowering to LLVM
     IR materialises the corresponding `llvm::Metadata` via the dialect's
@@ -2561,6 +2562,8 @@ def LLVM_MetadataAsValueOp : LLVM_Op<"mlir.metadata_as_value", [Pure]> {
           "llvm.mlir.metadata_as_value: cannot lower metadata attribute");
     $res = ::llvm::MetadataAsValue::get(builder.getContext(), md);
   }];
+
+  let hasFolder = 1;
 }
 
 //===--------------------------------------------------------------------===//

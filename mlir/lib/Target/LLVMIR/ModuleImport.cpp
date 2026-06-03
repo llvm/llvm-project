@@ -30,6 +30,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Comdat.h"
@@ -149,11 +150,19 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
-/// Recursively converts an `llvm::Metadata` node to the matching LLVM dialect
-/// metadata attribute. Returns a null attribute for shapes that the dialect's
-/// metadata-attribute hierarchy does not currently model.
-static Attribute convertMetadataToAttr(MLIRContext *ctx,
-                                       const llvm::Metadata *md) {
+/// Depth-first conversion of the metadata node `md` to the matching LLVM
+/// dialect metadata attribute. Returns a null attribute for shapes that the
+/// dialect's metadata-attribute hierarchy does not currently model. `path`
+/// holds the metadata nodes on the current depth-first search path. Cyclic
+/// metadata graphs are valid in LLVM IR, but they cannot be expressed by the
+/// immutable, structurally-uniqued metadata attributes built here. The `path`
+/// set lets the traversal recognize such a back-edge and bail out. `attrMap`
+/// caches the attributes of fully converted nodes so that shared subgraphs
+/// are visited only once.
+static Attribute
+convertMetadataToAttrImpl(MLIRContext *ctx, const llvm::Metadata *md,
+                          SmallPtrSetImpl<const llvm::Metadata *> &path,
+                          DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
   if (!md)
     return {};
   if (auto *mdStr = dyn_cast<llvm::MDString>(md))
@@ -172,17 +181,39 @@ static Attribute convertMetadataToAttr(MLIRContext *ctx,
     return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    if (Attribute cached = attrMap.lookup(node))
+      return cached;
+    // If `node` is already on the current search path, this is a back-edge into
+    // a cyclic graph. While that's valid it isn't implemented yet, so bail out.
+    if (!path.insert(node).second)
+      return {};
     SmallVector<Attribute> operands;
     operands.reserve(node->getNumOperands());
     for (const llvm::MDOperand &op : node->operands()) {
-      Attribute opAttr = convertMetadataToAttr(ctx, op.get());
-      if (!opAttr)
+      Attribute opAttr = convertMetadataToAttrImpl(ctx, op.get(), path, attrMap);
+      if (!opAttr) {
+        path.erase(node);
         return {};
+      }
       operands.push_back(opAttr);
     }
-    return MDNodeAttr::get(ctx, operands);
+    path.erase(node);
+    Attribute nodeAttr = MDNodeAttr::get(ctx, operands);
+    attrMap.try_emplace(node, nodeAttr);
+    return nodeAttr;
   }
   return {};
+}
+
+/// Converts the metadata node `md` to the matching LLVM dialect metadata
+/// attribute. Returns a null attribute for shapes that the dialect's
+/// metadata-attribute hierarchy does not currently model, including cyclic
+/// metadata graphs that the immutable metadata attributes cannot express.
+static Attribute convertMetadataToAttr(MLIRContext *ctx,
+                                       const llvm::Metadata *md) {
+  SmallPtrSet<const llvm::Metadata *, 8> path;
+  DenseMap<const llvm::Metadata *, Attribute> attrMap;
+  return convertMetadataToAttrImpl(ctx, md, path, attrMap);
 }
 
 /// Get a topologically sorted list of blocks for the given basic blocks.
@@ -1940,8 +1971,20 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
-  assert(!isa<llvm::MetadataAsValue>(value) &&
-         "expected value to not be metadata");
+  // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
+  // MDString arguments used by the constrained floating-point intrinsics, or
+  // the named-register MDNode used by `llvm.read_register`) are lifted into a
+  // `llvm.mlir.metadata_as_value` SSA op carrying the corresponding metadata
+  // attribute.
+  if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
+    llvm::Metadata *md = mdAsVal->getMetadata();
+    Attribute mdAttr = convertMetadataToAttr(context, md);
+    if (!mdAttr)
+      return emitError(mlirModule.getLoc())
+             << "unsupported metadata: " << diagMD(md, llvmModule.get());
+    return MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
+        .getRes();
+  }
 
   // Return the mapped value if it has been converted before.
   auto it = valueMapping.find(value);
@@ -2016,29 +2059,10 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     value = nullptr;
   }
 
-  // Convert a single intrinsic operand into an MLIR value.
-  // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
-  // MDString arguments used by the constrained floating-point intrinsics, or
-  // the named-register MDNode used by `llvm.read_register`) are lifted into a
-  // `llvm.mlir.metadata_as_value` SSA op carrying the corresponding metadata
-  // attribute. All other operands go through the standard `convertValue` path,
-  // which rejects metadata values.
-  auto convertOperand = [&](llvm::Value *value) -> FailureOr<Value> {
-    if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
-      Attribute mdAttr = convertMetadataToAttr(context, mdAsVal->getMetadata());
-      if (!mdAttr)
-        return failure();
-      return MetadataAsValueOp::create(builder, UnknownLoc::get(context),
-                                       mdAttr)
-          .getRes();
-    }
-    return convertValue(value);
-  };
-
   for (llvm::Value *value : operands) {
     if (!value)
       continue;
-    auto mlirValue = convertOperand(value);
+    auto mlirValue = convertValue(value);
     if (failed(mlirValue))
       return failure();
     valuesOut.push_back(*mlirValue);
@@ -2055,7 +2079,7 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
       opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
 
       for (const llvm::Use &opBundleOperand : bundle.Inputs) {
-        auto operandMlirValue = convertOperand(opBundleOperand.get());
+        auto operandMlirValue = convertValue(opBundleOperand.get());
         if (failed(operandMlirValue))
           return failure();
         valuesOut.push_back(*operandMlirValue);
