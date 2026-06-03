@@ -2721,7 +2721,7 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::wasm_funcref:
     return "__funcref";
   case LangAS::wasm_var:
-    return "__externref";
+    return "__wasm_var";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

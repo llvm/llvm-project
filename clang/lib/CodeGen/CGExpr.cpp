@@ -104,8 +104,9 @@ static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
 
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
-RawAddress
-CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty, LangAS UseAddrSpace, CharUnits Align, const Twine &Name, llvm::Value *ArraySize) {
+RawAddress CodeGenFunction::CreateTempAllocaWithoutCast(
+    llvm::Type *Ty, LangAS UseAddrSpace, CharUnits Align, const Twine &Name,
+    llvm::Value *ArraySize) {
   if (getLangOpts().EmitLogicalPointer) {
     auto Alloca = Builder.CreateStructuredAlloca(Ty, Name);
     return RawAddress(Alloca, Ty, Align, KnownNonNull);

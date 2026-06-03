@@ -5652,8 +5652,8 @@ DominatingLLVMValue::save(CodeGenFunction &CGF, llvm::Value *value) {
   auto align = CharUnits::fromQuantity(
                    CGF.CGM.getDataLayout().getPrefTypeAlign(value->getType()))
                    .getAsAlign();
-  llvm::AllocaInst *AI =
-      CGF.CreateTempAlloca(value->getType(), LangAS::Default, "cond-cleanup.save");
+  llvm::AllocaInst *AI = CGF.CreateTempAlloca(value->getType(), LangAS::Default,
+                                              "cond-cleanup.save");
   AI->setAlignment(align);
   CGF.Builder.CreateAlignedStore(value, AI, align);
 
