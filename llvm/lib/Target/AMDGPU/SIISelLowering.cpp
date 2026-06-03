@@ -4680,8 +4680,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
          "Stack grows upwards for AMDGPU");
 
   Chain = BaseAddr.getValue(1);
-  // When using flat-scratch, the stack offset is already is scaled by the
-  // wave-size by the hardware instructions.
+  // When using flat-scratch, the stack offset is already unscaled.
   const bool HasFlatScratch = Subtarget->hasFlatScratchEnabled();
   const unsigned WavefrontSizeLog2 = Subtarget->getWavefrontSizeLog2();
 

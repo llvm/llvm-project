@@ -1174,8 +1174,7 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   Register AllocSize = MI.getOperand(1).getReg();
   Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
-  // When using flat-scratch, the stack offset is already scaled by the
-  // wave-size by the hardware instructions.
+  // When using flat-scratch, the stack offset unscaled.
   const bool HasFlatScratch = ST.hasFlatScratchEnabled();
   const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
 
@@ -1205,8 +1204,9 @@ bool AMDGPURegisterBankInfo::applyMappingDynStackAlloc(
   auto OldSP = B.buildCopy(PtrTy, SPReg);
   if (Alignment > TFI.getStackAlign()) {
     const uint64_t ScaledAlignment =
-        Alignment.value() << (HasFlatScratch ? 0u : WavefrontSizeLog2);
-    auto StackAlignMask = ScaledAlignment - 1;
+        HasFlatScratch ? Alignment.value()
+                       : (Alignment.value() << WavefrontSizeLog2);
+    const uint64_t StackAlignMask = ScaledAlignment - 1;
     auto Tmp1 = B.buildPtrAdd(PtrTy, OldSP,
                               B.buildConstant(LLT::scalar(32), StackAlignMask));
     B.buildMaskLowPtrBits(Dst, Tmp1,
