@@ -4,10 +4,10 @@
 #   --run          Build and run all tests
 #   --arch=<arch>  Target architecture (default: auto-detect from build dirs)
 #   --analyze-deps Build & show which LLVM .a files were actually linked
-#   --lipo=<FILE>  Use a single lipo .a (from lipo.py) instead of 44 individual .a
+#   --lipo=<FILE>  Use a single lipo .o/.a (from lipo.py) instead of individual .a files
 #   test_name      Build only the named test (without .c extension)
 #
-# Requires a release build (static libs): ./build.sh release x86
+# Requires a release build (static libs): ./build.sh release <x86|aarch64>
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -54,8 +54,7 @@ if [[ -z "${ARCH}" ]]; then
   done
   if [[ -z "${ARCH}" ]]; then
     echo "ERROR: no build with static libs found."
-    echo "  Run: ../build.sh release x86"
-    echo "    or ../build.sh debug x86 --static"
+    echo "  Run: ../build.sh release aarch64  (or release x86)"
     exit 1
   fi
 else
@@ -124,7 +123,7 @@ _set_min_libs() {
 }
 
 if [[ -n "${LIPO_FILE}" ]]; then
-  # Lipo mode: use single pre-built .a instead of 44 individual .a files.
+  # Lipo mode: use single pre-built .o/.a instead of individual .a files.
   # The lipo .a already bundles EJIT + all LLVM dependencies (see lipo.py).
   # If --lipo is passed without =FILE, auto-detect from build dir + arch.
   if [[ "${LIPO_FILE}" == "auto" ]]; then
@@ -212,11 +211,6 @@ build_one() {
   echo "  Linking ${name} (${ARCH}) ..."
   if ${USE_LIPO}; then
     "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections ${STRIP_FLAG} \
-      "${LIPO_ABS}" \
-      ${LINK_LIBS} \
-      "${obj}" -o "${bin}"
-    echo "${CXX}" -fuse-ld="${LD_LLD}" \
       -Os -Wl,--gc-sections ${STRIP_FLAG} \
       "${LIPO_ABS}" \
       ${LINK_LIBS} \

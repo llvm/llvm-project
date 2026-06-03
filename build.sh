@@ -3,12 +3,12 @@
 # LLVM + EmbeddedJIT build helper.
 #
 # Usage:
+#   ./build.sh release aarch64         # → build_release_aarch64/  (native, recommended)
+#   ./build.sh release x86             # → build_release_x86/
 #   ./build.sh debug   x86             # → build_debug_x86/
 #   ./build.sh debug   x86 --static    # → build_debug_x86_static/
-#   ./build.sh release x86             # → build_release_x86/
 #   ./build.sh release x86 minimal     # → build_release_x86_minimal/
 #   ./build.sh debug   aarch64         # → build_debug_aarch64/
-#   ./build.sh release aarch64         # → build_release_aarch64/
 #   ./build.sh release aarch64 minimal # → build_release_aarch64_minimal/
 #
 # Options:
@@ -51,11 +51,10 @@ llvm_target() {
   esac
 }
 
-cross_cc() {
-  case "$1" in
-    x86)     echo "clang clang++" ;;
-    aarch64) echo "aarch64-linux-gnu-gcc aarch64-linux-gnu-g++" ;;
-  esac
+# Default compiler for native builds.  Override via CMAKE_C_COMPILER / CMAKE_CXX_COMPILER
+# environment variables for cross-compilation (e.g. aarch64-linux-gnu-gcc).
+native_cc() {
+  echo "clang clang++"
 }
 
 # Build directory naming convention.
@@ -75,7 +74,7 @@ build_dir() {
 do_configure() {
   local type="$1" arch="$2" build_dir="$3" variant="${4:-default}"
   local target; target=$(llvm_target "$arch")
-  local cc cxx; read -r cc cxx <<< "$(cross_cc "$arch")"
+  local cc cxx; read -r cc cxx <<< "$(native_cc)"
 
   local ccache_opts=""
   if $USE_CCACHE; then

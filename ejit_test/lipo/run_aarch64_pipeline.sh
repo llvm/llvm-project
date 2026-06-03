@@ -1,179 +1,41 @@
 #!/bin/bash
-# EJIT aarch64 ejit.o pipeline — trimmed for bare-metal.
+# EJIT aarch64 ejit.o pipeline — native build with clang, no bare-metal trimming.
 # Run from the llvm-project root, after building:
-#   ninja -C build_release_aarch64 LLVMEJIT
+#   ninja -C build_release_aarch64 clang LLVMEJIT lld
 #
-# Uses the x86_64 ld.lld as cross-linker (lld handles any ELF arch).
+# Uses the build directory's own clang/clang++ and ld.lld (native aarch64).
+# No --exclude needed; the resulting ejit.o is ~37 MB (larger than the
+# bare-metal version, but includes full LLVM functionality).
 
 set -euo pipefail
 
 BUILD_DIR="${1:-build_release_aarch64}"
-LD="${2:-build_release_x86/bin/ld.lld}"
-CXX="${3:-aarch64-linux-gnu-g++}"
-OUTPUT="${4:-ejit_test/lipo/ejit_aarch64.o}"
+OUTPUT="${2:-ejit_test/lipo/ejit.o}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORK_DIR="$SCRIPT_DIR/.lipo_work_aarch64"
 
 rm -rf "$WORK_DIR"
 
-# ── Exclude list ──────────────────────────────────────────────────────────────
-# These .o files are not needed for bare-metal EJIT runtime:
-#
-# OS/format-specific:
-#   WinEH/WasmEH/Windows*/CFGuard/MSVCPaths — Windows-only
-#   RuntimeDyldCOFF/MachO — non-ELF runtimes
-#   COFFPlatform/MachOPlatform/COFFVCRuntimeSupport/MachOObjectFormat — non-ELF
-#
-# Optimization passes not used by EJIT pipeline:
-#   ScalarOpts: LoopDataPrefetch, ScalarizeMaskedMemIntrin,
-#     PartiallyInlineLibCalls, MergeICmps, LowerConstantIntrinsics,
-#     ConstantHoisting, EarlyCSE, LICM, LoopStrengthReduce, LoopTermFold,
-#     SeparateConstOffsetFromGEP
-#   TransformUtils: BypassSlowDivision, Debugify, EntryExitInstrumenter,
-#     LowerIFunc, LowerGlobalDtors, SampleProfileInference,
-#     SampleProfileLoaderBaseUtil, PredicateInfo, CanonicalizeFreezeInLoops,
-#     EscapeEnumerator, IntegerDivision, LowerAtomic, LowerInvoke,
-#     LowerMemIntrinsics, LowerVectorIntrinsics, MemoryTaggingSupport,
-#     SizeOpts, AssumeBundleBuilder, DemoteRegToStack
-#
-# CodeGen machine passes not used by EJIT (uses its own minimal pipeline):
-#   Stack protector/ShadowStack/SafeStack, GlobalMerge,
-#   IndirectBr/ImplicitNullChecks, MachineFunctionSplitter, ResetMachine,
-#   PseudoProbe*, ExpandLargeDivRem/ExpandMemCmp/ExpandReductions,
-#   InterleavedAccess/InterleavedLoadCombine, MachinePipeliner,
-#   MachineTraceMetrics, LiveDebugValues/Variables, LiveIntervalCalc,
-#   LiveRangeShrink, LiveRegMatrix/RegUnits/Stacks, MachineLateInstrsCleanup,
-#   MachineVerifier, DetectDeadLanes, DeadMachineInstructionElim,
-#   AggressiveAntiDepBreaker/CriticalAntiDepBreaker, BreakFalseDeps,
-#   CalcSpillWeights, RenameIndependentSubregs, RegisterCoalescer,
-#   TailDuplication/Duplicator, UnreachableBlockElim, BasicBlockPathCloning,
-#   LocalStackSlotAllocation, ShrinkWrap, LazyMachineBlockFrequencyInfo,
-#   MachineBlockFrequencyInfo, MachineCSE/Sink/CopyPropagation,
-#   MachineCombiner, RegAllocBasic/PBQP, MLRegAlloc*, MemProf*,
-#   IndexedMemProfData, DataAccessProf, SymbolRemappingReader,
-#   ItaniumManglingCanonicalizer, RegAllocEvictionAdvisor,
-#   RegAllocPriorityAdvisor, LiveInterval/Intervals/IntervalUnion,
-#   LiveRangeCalc/Edit, SlotIndexes, VirtRegMap,
-#   TwoAddressInstructionPass, PHIEliminationUtils,
-#   MachineBlockPlacement, BranchFolding/Relaxation,
-#   EarlyIfConversion/IfConversion, PrologEpilogInserter
-#
-# MIR debug/metadata not needed at runtime:
-#   MIRCanonicalizerPass, MIRFSDiscriminator, MIRNamerPass,
-#   MIRPrintingPass, MIRPrinter, MIRSampleProfile, MIRVRegNamerUtils
-#
-# GC/Instrumentation/Sanitizer/misc:
-#   GCMetadata/Printer, GCRootLowering, GCEmptyBasicBlocks,
-#   HardwareLoops, TypePromotion, ReplaceWithVeclib,
-#   ComplexDeinterleavingPass, SelectOptimize, JMCInstrumenter,
-#   XRayInstrumentation, SanitizerBinaryMetadata, SwiftErrorValueTracking,
-#   SjLjEHPrepare, EHContGuardTargets, DwarfEHPrepare, KCFI, FaultMaps,
-#   StackMapLivenessAnalysis/StackMaps, PatchableFunction, FEntryInserter,
-#   FuncletLayout, BasicBlockSections*, RemoveRedundantDebugValues,
-#   DroppedVariableStatsMIR, RegUsageInfo*, RegisterUsageInfo,
-#   ScoreboardHazardRecognizer, PostRAHazardRecognizer
-
-EXCLUDES=(
-  # OS/format
-  InstrProfCorrelator  WinEHPrepare  WindowScheduler
-  WindowsSecureHotPatching  WasmEHPrepare
-  CFGuard  MSVCPaths
-  RuntimeDyldCOFF  RuntimeDyldMachO
-  MachOObjectFormat
-  COFFPlatform  MachOPlatform  COFFVCRuntimeSupport
-
-  # ScalarOpts unused
-  LoopDataPrefetch  ScalarizeMaskedMemIntrin
-  PartiallyInlineLibCalls  MergeICmps  LowerConstantIntrinsics
-  ConstantHoisting  EarlyCSE  LICM
-  LoopStrengthReduce  LoopTermFold  SeparateConstOffsetFromGEP
-
-  # TransformUtils unused
-  BypassSlowDivision  Debugify  EntryExitInstrumenter
-  LowerIFunc  LowerGlobalDtors
-  SampleProfileInference  SampleProfileLoaderBaseUtil
-  PredicateInfo  CanonicalizeFreezeInLoops
-  EscapeEnumerator  IntegerDivision  LowerAtomic
-  LowerInvoke  LowerMemIntrinsics  LowerVectorIntrinsics
-  MemoryTaggingSupport  SizeOpts  AssumeBundleBuilder  DemoteRegToStack
-
-  # CodeGen machine passes unused
-  ShadowStackGCLowering  SafeStack  SafeStackLayout  StackProtector
-  GlobalMerge  GlobalMergeFunctions
-  IndirectBrExpandPass  ImplicitNullChecks
-  MachineFunctionSplitter  ResetMachineFunctionPass
-  PseudoProbePrinter  PseudoProbeInserter
-  ExpandLargeDivRem  ExpandMemCmp  ExpandReductions
-  InterleavedAccessPass  InterleavedLoadCombinePass
-  MachinePipeliner  MachineTraceMetrics
-  LiveDebugValues  LiveDebugVariables
-  LiveIntervalCalc  LiveRangeShrink
-  LiveRegMatrix  LiveRegUnits  LiveStacks
-  MachineLateInstrsCleanup  MachineVerifier
-  DetectDeadLanes  DeadMachineInstructionElim
-  AggressiveAntiDepBreaker  CriticalAntiDepBreaker
-  BreakFalseDeps  CalcSpillWeights
-  RenameIndependentSubregs  RegisterCoalescer
-  TailDuplication  TailDuplicator
-  UnreachableBlockElim  BasicBlockPathCloning
-  LocalStackSlotAllocation  ShrinkWrap
-  LazyMachineBlockFrequencyInfo  MachineBlockFrequencyInfo
-  MachineCSE  MachineSink  MachineCopyPropagation
-  MachineCombiner  RegAllocBasic  RegAllocPBQP
-  MLRegAllocEvictAdvisor  MLRegAllocPriorityAdvisor
-  MemProf  MemProfRadixTree  MemProfSummary
-  IndexedMemProfData  DataAccessProf
-  SymbolRemappingReader  ItaniumManglingCanonicalizer
-  RegAllocEvictionAdvisor  RegAllocPriorityAdvisor
-  LiveInterval  LiveIntervals  LiveIntervalUnion
-  LiveRangeCalc  LiveRangeEdit
-  SlotIndexes  VirtRegMap  TwoAddressInstructionPass
-  PHIEliminationUtils
-  MachineBlockPlacement  BranchFolding  BranchRelaxation
-  EarlyIfConversion  IfConversion  PrologEpilogInserter
-
-  # MIR / debug metadata
-  MIRCanonicalizerPass  MIRFSDiscriminator
-  MIRNamerPass  MIRPrintingPass  MIRPrinter
-  MIRSampleProfile  MIRVRegNamerUtils
-
-  # GC / instrumentation / misc
-  GCMetadata  GCMetadataPrinter  GCRootLowering  GCEmptyBasicBlocks
-  HardwareLoops  TypePromotion  ReplaceWithVeclib
-  ComplexDeinterleavingPass  SelectOptimize  JMCInstrumenter
-  XRayInstrumentation  SanitizerBinaryMetadata
-  SwiftErrorValueTracking  SjLjEHPrepare  EHContGuardTargets
-  DwarfEHPrepare  KCFI  FaultMaps
-  StackMapLivenessAnalysis  StackMaps  PatchableFunction
-  FEntryInserter  FuncletLayout  BasicBlockSections
-  BasicBlockSectionsProfileReader
-  RemoveRedundantDebugValues  DroppedVariableStatsMIR
-  RegUsageInfoCollector  RegUsageInfoPropagate
-  RegisterUsageInfo  ScoreboardHazardRecognizer
-  PostRAHazardRecognizer
-)
-
-EXCLUDE_FLAGS=""
-for x in "${EXCLUDES[@]}"; do
-  EXCLUDE_FLAGS="$EXCLUDE_FLAGS --exclude=$x"
-done
-
 # ── Step 1: extract ───────────────────────────────────────────────────────────
+# Compiles a reference binary, parses the linker map, and uses nm -u dependency
+# tracing to extract only the .o files actually needed by EJIT.
 python3 "$SCRIPT_DIR/lipo.py" extract \
-  --arch=aarch64 --build-dir="$BUILD_DIR" \
-  --cxx="$CXX" --ld="$LD" \
-  $EXCLUDE_FLAGS
+  --arch=aarch64 --build-dir="$BUILD_DIR"
 
 # ── Step 2: gc-merge ─────────────────────────────────────────────────────────
+# ld -r --gc-sections: eliminates unreferenced sections from the merged .o,
+# using EJIT API entry points as gc roots.
 python3 "$SCRIPT_DIR/lipo.py" gc-merge \
   --input="$SCRIPT_DIR/libejit_lipo_aarch64.a" \
-  --build-dir="$BUILD_DIR" --ld="$LD"
+  --build-dir="$BUILD_DIR"
 
 # ── Step 3: merge ─────────────────────────────────────────────────────────────
+# ld -r -T merge.ld: merges per-function sections into single .text/.rodata/.data
+# sections, discards .group metadata, producing the final ejit.o.
 python3 "$SCRIPT_DIR/lipo.py" merge \
   --input="$SCRIPT_DIR/libejit_lipo_aarch64_gc.a" \
-  --build-dir="$BUILD_DIR" --ld="$LD" \
+  --build-dir="$BUILD_DIR" \
   --output="$OUTPUT"
 
 echo ""

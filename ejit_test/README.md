@@ -15,10 +15,14 @@ Integration tests for the EmbeddedJIT JIT compilation system.
 ./ejit_test/build.sh ejit_config_api_test
 ```
 
-**Prerequisites**: both debug and release builds must exist:
+**Prerequisites**: a release build must exist:
 ```bash
-./build.sh debug x86          # → build_debug_x86/ (clang for compilation)
-./build.sh release x86        # → build_release_x86/ (static libs for linking)
+# Native aarch64 (recommended):
+./build.sh release aarch64     # → build_release_aarch64/ (clang + static libs)
+
+# Or x86:
+./build.sh debug x86           # → build_debug_x86/ (clang for compilation)
+./build.sh release x86         # → build_release_x86/ (static libs for linking)
 ```
 
 ## Test Files
@@ -70,14 +74,15 @@ After compilation, check these LLVM IR features:
 ## Architecture
 
 ```
-./build.sh debug x86        # debug clang (build_debug_x86/)
-./build.sh release x86      # release static libs (build_release_x86/)
-./build.sh release aarch64  # cross-compile AArch64
+./build.sh release aarch64     # native AArch64 (build_release_aarch64/)
+./build.sh release x86         # native x86 (build_release_x86/)
+./build.sh debug x86           # debug clang (build_debug_x86/)
 ```
 
-- **Compiler**: `build_debug_x86/bin/clang` — debug build with EJIT attributes enabled
-- **Runtime**: `build_release_x86/lib/libLLVMEJIT.a` — release static library
-- **Linker**: `build_release_x86/bin/ld.lld`
+- **Compiler**: `build_<arch>/bin/clang` — with EJIT attributes enabled
+- **Runtime**: `build_<arch>/lib/libLLVMEJIT.a` — release static library
+- **Linker**: `build_<arch>/bin/ld.lld`
+- **Lipo**: `ejit_test/lipo/ejit.o` — single relocatable .o replacing all LLVM .a files (~37 MB)
 
 ## Related Documents
 

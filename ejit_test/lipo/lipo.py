@@ -2,16 +2,26 @@
 """
 EJIT Lipo — Extract the minimal set of .o files from LLVM .a archives.
 
-Two modes:
-  extract    Parse linker map, extract needed .o files, build single .a.
-  gc-merge   Further reduce the single .a via ld -r --gc-sections.
+Three-stage pipeline to produce a single ejit.o from ~36 LLVM .a files:
+
+  extract    Compile reference binary → linker map → nm -u dependency tracing
+             → single .a with only the .o files actually needed.
+  gc-merge   ld -r --gc-sections on the extracted .a, rooted at EJIT API
+             entry points.  Also strips ARM $x/$d mapping symbols and .group
+             metadata when llvm-objcopy is available.
+  merge      ld -r -T merge.ld → single relocatable ejit.o with merged
+             .text/.rodata/.data sections.
 
 Usage:
   python3 lipo.py extract  --arch=x86|aarch64 --build-dir=PATH [--output=PATH]
-  python3 lipo.py gc-merge --arch=x86|aarch64 --input=PATH [--output=PATH]
+  python3 lipo.py gc-merge --input=PATH --build-dir=PATH [--output=PATH]
+  python3 lipo.py merge    --input=PATH --build-dir=PATH [--output=PATH]
 
-The output .a can replace the 44 original LLVM .a files when linking
-EJIT test binaries.
+Default compiler/linker are build-dir/bin/clang++ and build-dir/bin/ld.lld.
+Override with --cxx / --ld for cross-compilation.
+
+The resulting ejit.o (~30-40 MB) can replace all individual LLVM .a files
+when linking EJIT test binaries.
 """
 
 import subprocess as sp, os, sys, re, argparse, struct, glob
@@ -79,6 +89,75 @@ def build_symbol_index(build_dir):
                 mangled, member = line.split(" in ", 1)
                 idx[mangled.strip()] = (aname, member.strip())
     return idx
+
+
+# ── objcopy helpers ──────────────────────────────────────────────────────────
+
+def _find_objcopy(build_dir):
+    """Return (tool_path, is_llvm) for the best available objcopy."""
+    llvm_oc = os.path.join(build_dir, "bin", "llvm-objcopy")
+    if os.path.exists(llvm_oc):
+        return llvm_oc, True
+    # GNU objcopy struggles with extended ELF (>65280 sections) from ld -r.
+    # Try it anyway; callers handle failure gracefully.
+    return "objcopy", False
+
+
+def _try_strip_arm_mapping_symbols(merged_o, work_dir, build_dir):
+    """Strip ARM $x/$d mapping symbols from *merged_o* (best-effort).
+
+    $x (code) and $d (data) are ARM ELF mapping symbols inserted by the
+    assembler.  They are not needed after a partial link and inflate the
+    symtab by ~60 000 entries on aarch64.  Failure is non-fatal: the
+    symbols are harmless metadata.
+    """
+    objcopy_tool, is_llvm = _find_objcopy(build_dir)
+    nostrip_o = os.path.join(work_dir, "_nostrip.o")
+
+    r = sp.run([objcopy_tool, "-w", "-N", "$x", "-N", "$d",
+                merged_o, nostrip_o], capture_output=True, text=True)
+    if r.returncode == 0 and os.path.exists(nostrip_o):
+        try:
+            before = len(sp.run(["nm", merged_o], capture_output=True,
+                                text=True).stdout.splitlines())
+            after = len(sp.run(["nm", nostrip_o], capture_output=True,
+                               text=True).stdout.splitlines())
+            if after < before:
+                print(f"       stripped {before - after} $x/$d mapping symbols"
+                      f"{' (llvm-objcopy)' if is_llvm else ''}")
+                # Replace merged_o with the stripped version
+                os.replace(nostrip_o, merged_o)
+                return
+            os.unlink(nostrip_o)
+        except OSError:
+            if os.path.exists(nostrip_o):
+                os.unlink(nostrip_o)
+    elif is_llvm:
+        print(f"       note: llvm-objcopy could not strip $x/$d (non-fatal)")
+    else:
+        print(f"       note: GNU objcopy cannot handle this ELF ("
+              f"{'>65280' if True else ''}sections from ld -r)."
+              f"  Build llvm-objcopy to enable $x/$d stripping."
+              f"  The $x/$d symbols are harmless ARM mapping metadata.")
+
+
+def _try_remove_group(merged_o, nogroup_o, build_dir):
+    """Remove .group (COMDAT) section from *merged_o* (best-effort).
+
+    After ld -r --gc-sections, COMDAT .group metadata is no longer needed.
+    merge.ld also discards .group, so failure here is non-fatal.
+    """
+    objcopy_tool, is_llvm = _find_objcopy(build_dir)
+    r = sp.run([objcopy_tool, "--remove-section=.group", merged_o, nogroup_o],
+               capture_output=True, text=True)
+    if r.returncode == 0 and os.path.exists(nogroup_o):
+        before_mb = os.path.getsize(merged_o) / (1024 * 1024)
+        after_mb = os.path.getsize(nogroup_o) / (1024 * 1024)
+        if after_mb < before_mb:
+            print(f"       after --remove-section=.group: {after_mb:.0f} MB")
+        else:
+            # No size reduction; keep original
+            os.unlink(nogroup_o)
 
 
 # ── extract mode ────────────────────────────────────────────────────────────
@@ -279,47 +358,16 @@ def doit_gc_merge(args):
     print(f"       {before_mb:.0f} MB -> {after_mb:.0f} MB (gc-sections)")
 
     # ── 2b. Strip ARM $x/$d mapping symbols (metadata, not needed after link) ──
-    # Must run before .group removal; objcopy needs intact COMDAT group info.
-    nostrip_o = os.path.join(work, "_nostrip.o")
-    # Use llvm-objcopy if available, else fall back to system objcopy
-    objcopy_tool = os.path.join(args.build_dir, "bin", "llvm-objcopy")
-    if not os.path.exists(objcopy_tool):
-        objcopy_tool = "objcopy"
-    r = sp.run([objcopy_tool, "-w", "-N", "$x", "-N", "$d",
-                merged_o, nostrip_o], capture_output=True, text=True)
-    if r.returncode == 0 and os.path.exists(nostrip_o):
-        before_syms = len(sp.run(["nm", merged_o], capture_output=True, text=True).stdout.splitlines())
-        after_syms = len(sp.run(["nm", nostrip_o], capture_output=True, text=True).stdout.splitlines())
-        stripped = before_syms - after_syms
-        if stripped > 0:
-            print(f"       stripped {stripped} $x/$d mapping symbols")
-            merged_o = nostrip_o
-        else:
-            os.unlink(nostrip_o)
-    else:
-        # objcopy failed (e.g. cross-arch), try aarch64-linux-gnu-objcopy
-        cross_objcopy = "aarch64-linux-gnu-objcopy"
-        r = sp.run([cross_objcopy, "-w", "-N", "$x", "-N", "$d",
-                    merged_o, nostrip_o], capture_output=True, text=True)
-        if r.returncode == 0 and os.path.exists(nostrip_o):
-            before_syms = len(sp.run(["nm", merged_o], capture_output=True, text=True).stdout.splitlines())
-            after_syms = len(sp.run(["nm", nostrip_o], capture_output=True, text=True).stdout.splitlines())
-            stripped = before_syms - after_syms
-            if stripped > 0:
-                print(f"       stripped {stripped} $x/$d mapping symbols (cross-objcopy)")
-                merged_o = nostrip_o
-            else:
-                os.unlink(nostrip_o)
-        else:
-            print(f"       note: objcopy cannot strip $x/$d (non-fatal)")
+    # $x/$d are ARM mapping symbols (~60K in aarch64) that only help
+    # disassemblers; they are safe to strip.  Prefer llvm-objcopy (handles
+    # extended ELF with >65280 sections); GNU objcopy rejects such files.
+    _try_strip_arm_mapping_symbols(merged_o, work, args.build_dir)
 
     # ── 2c. Remove .group (COMDAT metadata, not needed after partial link) ──
+    # Note: merge.ld also discards .group, so this is a best-effort early clean.
     nogroup_o = os.path.join(work, "_nogroup.o")
-    sp.run(["objcopy", "--remove-section=.group", merged_o, nogroup_o],
-           capture_output=True)
+    _try_remove_group(merged_o, nogroup_o, args.build_dir)
     if os.path.exists(nogroup_o):
-        nogroup_mb = os.path.getsize(nogroup_o) / (1024 * 1024)
-        print(f"       after --remove-section=.group: {nogroup_mb:.0f} MB")
         merged_o = nogroup_o
 
     # ── 3. Build new .a ───────────────────────────────────────────────────
