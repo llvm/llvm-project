@@ -2201,7 +2201,8 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
            "Only loops with a single exit are supported!");
 
     Value *IncomingValue = P.getIncomingValueForBlock(InnerLatch);
-    if (!isa<Instruction>(IncomingValue)) {
+    auto *IncI = dyn_cast<Instruction>(IncomingValue);
+    if (!IncI) {
       // If the incoming value is not an instruction, it must be loop invariant.
       // In that case, we can just replace the PHI with the incoming value and
       // remove the PHI.
@@ -2212,7 +2213,6 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
       continue;
     }
 
-    auto *IncI = cast<Instruction>(IncomingValue);
     // In case of multi-level nested loops, follow LCSSA to find the incoming
     // value defined from the innermost loop.
     auto IncIInnerMost = cast<Instruction>(followLCSSA(IncI));
