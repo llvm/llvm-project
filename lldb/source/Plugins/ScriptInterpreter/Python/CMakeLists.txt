@@ -116,12 +116,5 @@ else()
   target_link_directories(lldbPluginScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 endif()
 
-if (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API)
-  # Define Py_LIMITED_API directly so pyconfig.h emits #pragma comment(lib,
-  # "python3.lib") instead of the version-specific library.
-  target_compile_definitions(lldbPluginScriptInterpreterPython PUBLIC
-    "Py_LIMITED_API=0x03080000")
-endif()
-
 target_include_directories(lldbPluginScriptInterpreterPython
   PUBLIC ${Python3_INCLUDE_DIRS})
