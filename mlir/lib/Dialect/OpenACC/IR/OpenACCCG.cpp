@@ -274,11 +274,10 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
 
 /// Extract async for `clauseDeviceType`. Returns true if a clause was found.
 template <typename ComputeConstructT>
-static bool extractAsyncClause(ComputeConstructT computeConstruct,
-                               DeviceType clauseDeviceType,
-                               MLIRContext *context,
-                               std::optional<Value> &asyncOperand,
-                               UnitAttr &asyncOnly) {
+static bool
+extractAsyncClause(ComputeConstructT computeConstruct,
+                   DeviceType clauseDeviceType, MLIRContext *context,
+                   std::optional<Value> &asyncOperand, UnitAttr &asyncOnly) {
   if (computeConstruct.hasAsyncOnly(clauseDeviceType)) {
     asyncOnly = UnitAttr::get(context);
     return true;
@@ -293,8 +292,7 @@ static bool extractAsyncClause(ComputeConstructT computeConstruct,
 /// Extract wait for `clauseDeviceType`. Returns true if a clause was found.
 template <typename ComputeConstructT>
 static bool extractWaitClause(ComputeConstructT computeConstruct,
-                              DeviceType clauseDeviceType,
-                              MLIRContext *context,
+                              DeviceType clauseDeviceType, MLIRContext *context,
                               std::optional<Value> &waitDevnum,
                               SmallVectorImpl<Value> &waitOperands,
                               UnitAttr &waitOnly) {
@@ -332,7 +330,7 @@ static void populateKernelEnvironmentAsyncWait(
                          waitOperands, waitOnly)) {
     if (deviceType != DeviceType::None)
       extractWaitClause(computeConstruct, DeviceType::None, context, waitDevnum,
-                          waitOperands, waitOnly);
+                        waitOperands, waitOnly);
   }
 }
 
@@ -352,9 +350,8 @@ KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
 
   auto kernelEnvironment = KernelEnvironmentOp::create(
       builder, computeConstruct->getLoc(),
-      computeConstruct.getDataClauseOperands(),
-      asyncOperand.value_or(Value()), asyncOnly,
-      waitDevnum.value_or(Value()), waitOperands, waitOnly);
+      computeConstruct.getDataClauseOperands(), asyncOperand.value_or(Value()),
+      asyncOnly, waitDevnum.value_or(Value()), waitOperands, waitOnly);
   Block &block = kernelEnvironment.getRegion().emplaceBlock();
   builder.setInsertionPointToStart(&block);
   return kernelEnvironment;
