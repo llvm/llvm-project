@@ -303,8 +303,11 @@ jobs:
 
     - name: Create zstd compressed tarball
       shell: bash
+      env:
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
+        RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
       run: |
-        xz -dc ${{ needs.prepare.outputs.release-binary-filename }} | zstd --ultra -22 -T0 -o ${{ needs.prepare.outputs.release-binary-filename-zstd }}
+        xz -dc "$RELEASE_BINARY_FILENAME" | zstd --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
     - name: Generate sha256 digest for binaries
       id: digest
