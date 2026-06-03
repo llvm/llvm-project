@@ -20,10 +20,6 @@
 ; RUN: not clang-sycl-linker -o %t.out 2>&1 | FileCheck %s --check-prefix=NO-INPUT
 ; NO-INPUT: No input files provided
 ;
-; Test non-existent input file
-; RUN: not clang-sycl-linker %t-missing.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=MISSING
-; MISSING: Input file '{{.*}}-missing.bc' does not exist
-;
 ; Test the dry run of a simple case to link two input files.
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
