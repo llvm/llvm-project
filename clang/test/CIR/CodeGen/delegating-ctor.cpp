@@ -257,7 +257,7 @@ Derived::Derived(const void *inVoid) { squawk(); }
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store %[[INVOID_ARG]], %[[INVOID_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4BaseC2Ev(%[[BASE]])
 // CIR:   %[[VPTR_GLOBAL:.*]] = cir.vtable.address_point(@_ZTV7Derived, address_point = <index = 0, offset = 4>) : !cir.vptr
 // CIR:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>

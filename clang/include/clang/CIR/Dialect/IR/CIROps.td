@@ -5462,10 +5462,27 @@ def CIR_VecSplatOp : CIR_Op<"vec.splat", [
 }
 
 //===----------------------------------------------------------------------===//
-// BaseClassAddrOp
+// BaseClassAddrOp & DerivedClassAddrOp
 //===----------------------------------------------------------------------===//
 
-def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
+class CIR_ClassCastOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let arguments = (ins
+    CIR_PointerType:$src_addr,
+    IndexAttr:$offset, 
+    UnitAttr:$assume_not_null
+  );
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+      (`nonnull` $assume_not_null^)?
+      $src_addr ` ` `[` $offset `]` 
+      `:` qualified(type($src_addr)) `->` qualified(type($result)) 
+      attr-dict
+  }];
+}
+
+def CIR_BaseClassAddrOp : CIR_ClassCastOp<"base_class_addr"> {
   let summary = "Get the base class address for a class/struct";
   let description = [{
     The `cir.base_class_addr` operaration gets the address of a particular
@@ -5489,28 +5506,12 @@ def CIR_BaseClassAddrOp : CIR_Op<"base_class_addr", [Pure]> {
     ```
     will generate
     ```
-    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+    %3 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$derived_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$base_addr);
-
-  let assemblyFormat = [{
-      $derived_addr `:` qualified(type($derived_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
   }];
 }
 
-//===----------------------------------------------------------------------===//
-// DerivedClassAddrOp
-//===----------------------------------------------------------------------===//
-
-def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
+def CIR_DerivedClassAddrOp : CIR_ClassCastOp<"derived_class_addr"> {
   let summary = "Get the derived class address for a class/struct";
   let description = [{
     The `cir.derived_class_addr` operaration gets the address of a particular
@@ -5539,20 +5540,8 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr", [Pure]> {
     leads to
     ```
       %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-      %3 = cir.base_class_addr %2 : !cir.ptr<!rec_B> [0] -> !cir.ptr<!rec_A>
+      %3 = cir.derived_class_addr %2 [0] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_B>
     ```
-  }];
-
-  let arguments = (ins
-    CIR_PointerType:$base_addr,
-    IndexAttr:$offset, UnitAttr:$assume_not_null);
-
-  let results = (outs Res<CIR_PointerType, "">:$derived_addr);
-
-  let assemblyFormat = [{
-      $base_addr `:` qualified(type($base_addr))
-      (`nonnull` $assume_not_null^)?
-      ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
 }
 

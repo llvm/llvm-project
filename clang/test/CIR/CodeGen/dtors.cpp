@@ -293,7 +293,7 @@ struct F : public E {
 };
 
 // CIR: cir.func {{.*}} @_ZN1FD2Ev
-// CIR:   %[[BASE_E:.*]] = cir.base_class_addr %{{.*}} : !cir.ptr<!rec_F> nonnull [0] -> !cir.ptr<!rec_E>
+// CIR:   %[[BASE_E:.*]] = cir.base_class_addr nonnull %{{.*}} [0] : !cir.ptr<!rec_F> -> !cir.ptr<!rec_E>
 // CIR:   cir.call @_ZN1ED2Ev(%[[BASE_E]]) nothrow : (!cir.ptr<!rec_E> {{.*}}) -> ()
 
 // Because E is at offset 0 in F, there is no getelementptr needed.
@@ -472,7 +472,7 @@ void test_base_dtor_call_virtual_base() {
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
 // CIR:   %[[VTT:.*]] = cir.vtt.address_point @_ZTT7Derived, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
 // CIR:   cir.call @_ZN7DerivedD2Ev(%[[THIS]], %[[VTT]])
-// CIR:   %[[VIRTUAL_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_VirtualBase>
+// CIR:   %[[VIRTUAL_BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_VirtualBase>
 // CIR:   cir.call @_ZN11VirtualBaseD2Ev(%[[VIRTUAL_BASE]])
 
 // LLVM: define {{.*}} void @_ZN7DerivedD1Ev

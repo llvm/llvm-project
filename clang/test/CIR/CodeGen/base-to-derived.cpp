@@ -27,7 +27,7 @@ X *castAtoX(A *a) {
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["a", init]
 // CIR:   cir.store %[[ARG0]], %[[A_ADDR]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
-// CIR:   %[[X:.*]] = cir.derived_class_addr %[[A]] : !cir.ptr<!rec_A> [0] -> !cir.ptr<!rec_X>
+// CIR:   %[[X:.*]] = cir.derived_class_addr %[[A]] [0] : !cir.ptr<!rec_A> -> !cir.ptr<!rec_X>
 
 // Note: Because the offset is 0, a null check is not needed.
 
@@ -49,7 +49,7 @@ X *castBtoX(B *b) {
 // CIR:   %[[B_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["b", init]
 // CIR:   cir.store %[[ARG0]], %[[B_ADDR]] : !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
-// CIR:   %[[X:.*]] = cir.derived_class_addr %[[B]] : !cir.ptr<!rec_B> [4] -> !cir.ptr<!rec_X>
+// CIR:   %[[X:.*]] = cir.derived_class_addr %[[B]] [4] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_X>
 
 // LLVM: define {{.*}} ptr @_Z8castBtoXP1B(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[B_ADDR:.*]] = alloca ptr, i64 1, align 8
@@ -82,7 +82,7 @@ X &castBReftoXRef(B &b) {
 // CIR:   %[[B_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["b", init, const]
 // CIR:   cir.store %[[ARG0]], %[[B_ADDR]] : !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
-// CIR:   %[[X:.*]] = cir.derived_class_addr %[[B]] : !cir.ptr<!rec_B> nonnull [4] -> !cir.ptr<!rec_X>
+// CIR:   %[[X:.*]] = cir.derived_class_addr nonnull %[[B]] [4] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_X>
 
 // LLVM: define {{.*}} ptr @_Z14castBReftoXRefR1B(ptr {{.*}} %[[ARG0:.*]])
 // LLVM:   %[[B_ADDR:.*]] = alloca ptr

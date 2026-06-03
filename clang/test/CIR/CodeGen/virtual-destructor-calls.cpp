@@ -79,7 +79,7 @@ C::~C() { }
 // Base (D2) dtor for C: calls B's base dtor.
 
 // CIR: cir.func{{.*}} @_ZN1CD2Ev
-// CIR:   %[[B:.*]] = cir.base_class_addr %[[THIS:.*]] : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.base_class_addr nonnull %[[THIS:.*]] [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BD2Ev(%[[B]])
 
 // LLVM: define{{.*}} void @_ZN1CD2Ev

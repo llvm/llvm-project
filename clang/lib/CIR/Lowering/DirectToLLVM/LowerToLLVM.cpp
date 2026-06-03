@@ -1554,14 +1554,14 @@ mlir::LogicalResult CIRToLLVMBaseClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(baseClassOp.getType());
-  mlir::Value derivedAddr = adaptor.getDerivedAddr();
+  mlir::Value derivedAddr = adaptor.getSrcAddr();
   llvm::SmallVector<mlir::LLVM::GEPArg, 1> offset = {
       adaptor.getOffset().getZExtValue()};
   mlir::Type byteType = mlir::IntegerType::get(resultType.getContext(), 8,
                                                mlir::IntegerType::Signless);
   if (adaptor.getOffset().getZExtValue() == 0) {
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(
-        baseClassOp, resultType, adaptor.getDerivedAddr());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(baseClassOp, resultType,
+                                                       adaptor.getSrcAddr());
     return mlir::success();
   }
 
@@ -1586,12 +1586,12 @@ mlir::LogicalResult CIRToLLVMDerivedClassAddrOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   const mlir::Type resultType =
       getTypeConverter()->convertType(derivedClassOp.getType());
-  mlir::Value baseAddr = adaptor.getBaseAddr();
+  mlir::Value baseAddr = adaptor.getSrcAddr();
   // The offset is set in the operation as an unsigned value, but it must be
   // applied as a negative offset.
   int64_t offsetVal = -(adaptor.getOffset().getZExtValue());
   if (offsetVal == 0) {
-    // If the offset is zero, we can just return the base address,
+    // If the offset is zero, we can just return the source address.
     rewriter.replaceOp(derivedClassOp, baseAddr);
     return mlir::success();
   }
