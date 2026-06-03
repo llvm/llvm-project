@@ -28112,6 +28112,7 @@ bool SLPVectorizerPass::vectorizeStores(
     // Stores is already reversed, reverse again so that we generate
     // chains in program order in order for scheduling to occur
     const unsigned NumStores = Stores.size();
+    assert(NumStores > 0 && "Expected at least one StoreInst");
     unsigned Idx = NumStores - 1;
     while (Idx > 0) {
       StoreInst *StartSI = Stores[Idx];
