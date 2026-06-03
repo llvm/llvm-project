@@ -14,6 +14,10 @@ macros:
     macro_header: netinet-in-macros.h
   - macro_name: IPPROTO_RAW
     macro_header: netinet-in-macros.h
+  - macro_name: INET_ADDRSTRLEN
+    macro_header: inet-address-macros.h
+  - macro_name: INET6_ADDRSTRLEN
+    macro_header: inet-address-macros.h
 types:
   - type_name: in_port_t
   - type_name: in_addr_t

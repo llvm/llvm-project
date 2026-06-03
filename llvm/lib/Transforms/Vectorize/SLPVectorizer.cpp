@@ -6185,11 +6185,48 @@ private:
           ArrayRef<ScheduleBundle *> SDBundles;
           if (!isa<ScheduleCopyableData>(SD))
             SDBundles = getScheduleBundles(SD->getInst());
-          if (AreAllBundlesScheduled(SD, SDBundles)) {
-            SD->setScheduled(/*Scheduled=*/true);
+          if (!AreAllBundlesScheduled(SD, SDBundles))
+            continue;
+          SD->setScheduled(/*Scheduled=*/true);
+          if (isa<ScheduleCopyableData>(SD) ||
+              ScheduleCopyableDataMap.empty()) {
             ProcessBundleMember(SD, isa<ScheduleCopyableData>(SD) ? &Bundle
                                                                   : SDBundles);
+            continue;
           }
+          // The instruction may also belong to tree entries that do not need
+          // scheduling (e.g. all their values are used outside the block), so
+          // no schedule bundle is registered for them. Such an entry can still
+          // model one of this instruction's operands as a copyable element,
+          // registered on that non-scheduled parent edge. That copyable would
+          // never be decremented when the instruction is scheduled through a
+          // different bundle, leaving the copyable's bundle permanently
+          // unscheduled and tripping the unscheduled-deps assertion. Add
+          // pseudo-bundles for these missing tree entries, so their copyable
+          // operand dependencies are decremented here as well. Real operand
+          // dependencies are protected against double counting by the
+          // per-operand use counter in ProcessBundleMember.
+          Instruction *In = SD->getInst();
+          SmallVector<std::unique_ptr<ScheduleBundle>> PseudoBundles;
+          SmallVector<ScheduleBundle *> AllBundles(SDBundles.begin(),
+                                                   SDBundles.end());
+          for (TreeEntry *TE : R.getTreeEntries(In)) {
+            if (TE->isCopyableElement(In))
+              continue;
+            if (!isa<ExtractValueInst, ExtractElementInst, CallBase>(In) &&
+                In->getNumOperands() != TE->getNumOperands())
+              continue;
+            if (any_of(SDBundles, [&](const ScheduleBundle *SDBundle) {
+                  return SDBundle->getTreeEntry() == TE;
+                }))
+              continue;
+            ScheduleBundle &PseudoBundle =
+                *PseudoBundles.emplace_back(std::make_unique<ScheduleBundle>());
+            PseudoBundle.setTreeEntry(TE);
+            PseudoBundle.add(SD);
+            AllBundles.push_back(&PseudoBundle);
+          }
+          ProcessBundleMember(SD, AllBundles);
         }
       }
     }
@@ -19923,14 +19960,26 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     // scalar instruction executes at its definition site's frequency.
     if (!ExternalUsesAsOriginalScalar.contains(EU.Scalar)) {
       if (ExtraCost.isValid() && ExtraCost != 0) {
-        BasicBlock *ExtractBB = ScalarToExtractBlock.lookup(EU.Scalar);
-        if (const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr) {
-          uint64_t Scale = getLoopNestScale(
-              findInnermostNonInvariantLoop(L, ArrayRef<Value *>(EU.Scalar)));
-          LLVM_DEBUG(dbgs()
-                     << "SLP: Extract scale " << Scale << " (NCD block) for "
-                     << EU.Scalar->getNameOrAsOperand() << "\n");
-          ExtraCost *= Scale;
+        if (!EU.User) {
+          // No external user instruction is recorded (User == nullptr): the
+          // scalar stays live in vectorized instructions or is used as an
+          // extra arg, and is not present in ScalarToExtractBlock (the
+          // pre-pass only records sites of real users). vectorizeTree() then
+          // places the extractelement right after the vectorized instruction
+          // (in the entry's block) and replaces the scalar uses with it, so
+          // scale by the entry block's execution frequency to match that
+          // placement.
+          ExtraCost = ScaleCost(ExtraCost, *Entry, EU.Scalar, /*U=*/nullptr);
+        } else {
+          BasicBlock *ExtractBB = ScalarToExtractBlock.lookup(EU.Scalar);
+          if (const Loop *L = ExtractBB ? LI->getLoopFor(ExtractBB) : nullptr) {
+            uint64_t Scale = getLoopNestScale(
+                findInnermostNonInvariantLoop(L, ArrayRef<Value *>(EU.Scalar)));
+            LLVM_DEBUG(dbgs()
+                       << "SLP: Extract scale " << Scale << " (NCD block) for "
+                       << EU.Scalar->getNameOrAsOperand() << "\n");
+            ExtraCost *= Scale;
+          }
         }
       }
     } else {
@@ -25173,32 +25222,10 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   if (isa<PHINode>(S.getMainOp()) ||
       isVectorLikeInstWithConstOps(S.getMainOp()))
     return nullptr;
-  // If the parent node is non-schedulable and the current node is copyable, and
-  // any of parent instructions are used outside several basic blocks or in
-  // bin-op node - cancel scheduling, it may cause wrong def-use deps in
-  // analysis, leading to a crash.
-  // Non-scheduled nodes may not have related ScheduleData model, which may lead
-  // to a skipped dep analysis.
   bool HasCopyables = S.areInstructionsWithCopyableElements();
   bool DoesNotRequireScheduling =
       (!HasCopyables && doesNotNeedToSchedule(VL)) ||
       all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); });
-  if (!DoesNotRequireScheduling && S.areInstructionsWithCopyableElements() &&
-      EI && EI.UserTE->hasState() && EI.UserTE->doesNotNeedToSchedule() &&
-      EI.UserTE->getOpcode() != Instruction::PHI &&
-      EI.UserTE->getOpcode() != Instruction::InsertElement &&
-      any_of(EI.UserTE->Scalars, [](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I)
-          return false;
-        for (User *U : I->users()) {
-          auto *UI = cast<Instruction>(U);
-          if (isa<BinaryOperator>(UI))
-            return true;
-        }
-        return false;
-      }))
-    return std::nullopt;
   if (S.areInstructionsWithCopyableElements() && EI && EI.UserTE->hasState() &&
       EI.UserTE->hasCopyableElements() &&
       EI.UserTE->getMainOp()->getParent() == S.getMainOp()->getParent() &&

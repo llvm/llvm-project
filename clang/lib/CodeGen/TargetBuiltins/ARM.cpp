@@ -3939,11 +3939,13 @@ CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
   if (TypeFlags.isOverloadWhileRW())
     return {getSVEPredType(TypeFlags), Ops[0]->getType()};
 
+  if (TypeFlags.isOverloadDefaultAndOp0())
+    return {DefaultType, Ops[0]->getType()};
+
   if (TypeFlags.isOverloadFirstandLast())
     return {Ops[0]->getType(), Ops.back()->getType()};
 
-  if (TypeFlags.isReductionQV() && !ResultType->isScalableTy() &&
-      ResultType->isVectorTy())
+  if (TypeFlags.isReductionQV())
     return {ResultType, Ops[1]->getType()};
 
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
