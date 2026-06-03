@@ -9,22 +9,21 @@ if(EJIT_DEFAULT_TARGET_TRIPLE)
   message(STATUS "EmbeddedJIT: forcing target triple = ${EJIT_DEFAULT_TARGET_TRIPLE}")
 endif()
 
-#===-- Bare-metal configuration -------------------------------------------===#
-# EJIT_BARE_METAL option is defined in top-level llvm/CMakeLists.txt.
-# When enabled, it also defines -DEJIT_FREESTANDING for the EJIT library.
-if(EJIT_BARE_METAL)
-  message(STATUS "EmbeddedJIT: bare-metal mode enabled")
+#===-- Freestanding configuration -----------------------------------------===#
+# EJIT_FREESTANDING option is defined in top-level llvm/CMakeLists.txt.
+if(EJIT_FREESTANDING)
+  message(STATUS "EmbeddedJIT: freestanding mode enabled")
   if(NOT EJIT_DEFAULT_TARGET_TRIPLE)
-    message(FATAL_ERROR "EJIT_BARE_METAL requires EJIT_DEFAULT_TARGET_TRIPLE "
+    message(FATAL_ERROR "EJIT_FREESTANDING requires EJIT_DEFAULT_TARGET_TRIPLE "
             "(e.g. -DEJIT_DEFAULT_TARGET_TRIPLE=aarch64-none-elf)")
   endif()
 endif()
 
-option(EJIT_BARE_METAL_MUTEX
+option(EJIT_FREESTANDING_MUTEX
   "Inject no-op <mutex>/<shared_mutex>/<condition_variable> headers \
-(for bare-metal toolchains that lack these C++ standard headers). \
+(for freestanding toolchains that lack these C++ standard headers). \
 Enable this only when the toolchain does NOT provide <mutex>." OFF)
-if(EJIT_BARE_METAL_MUTEX)
+if(EJIT_FREESTANDING_MUTEX)
   set(BAREMETAL_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/BareMetal")
   message(STATUS "EmbeddedJIT: injecting bare-metal mutex stubs from ${BAREMETAL_INCLUDE}")
   # Inject into LLVM libraries that use std::mutex (OrcJIT, Support, JITLink, etc.)
@@ -70,7 +69,7 @@ set(EJIT_SOURCES
 )
 
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_FREESTANDING)
   list(APPEND EJIT_SOURCES
     EJitSyncCompiler.cpp
     EJitAsyncCompiler.cpp
