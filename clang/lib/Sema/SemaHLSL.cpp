@@ -2722,13 +2722,13 @@ static bool findExistingMatrixLayoutMarker(QualType T,
 }
 
 Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
+  if (T.isNull())
+    return nullptr;
+
   ASTContext &Ctx = getASTContext();
   attr::Kind AttrK = AL.getKind() == ParsedAttr::AT_HLSLRowMajor
                          ? attr::HLSLRowMajor
                          : attr::HLSLColumnMajor;
-
-  if (T.isNull())
-    return nullptr;
 
   // For non-dependent types, the operand must be a matrix (or array of
   // matrices).
@@ -2762,6 +2762,12 @@ Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
   return ::new (Ctx) HLSLColumnMajorAttr(Ctx, AL);
 }
 
+// Re-validates an HLSL `row_major` / `column_major` attribute after template
+// substitution. The parse-time check in `buildMatrixLayoutTypeAttr` is skipped
+// for dependent types; `TransformAttributedType` calls this once the type is
+// concrete. Returns `true` (and emits a diagnostic) if the substituted type is
+// not a matrix or array of matrices, signaling the caller to abort the
+// transform.
 bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
                                                  SourceLocation Loc) {
   if (K != attr::HLSLRowMajor && K != attr::HLSLColumnMajor)
