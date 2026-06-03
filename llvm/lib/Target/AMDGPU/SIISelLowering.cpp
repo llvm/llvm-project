@@ -7855,11 +7855,6 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   SDValue Src = N->getOperand(1);
   SDLoc SL(N);
 
-  // AMDGPUISD::SETCC produces a wave-sized mask; emit it at that width and
-  // zext/trunc to the user-requested return type.
-  EVT MaskVT = EVT::getIntegerVT(*DAG.getContext(),
-                                 TLI.getSubtarget()->getWavefrontSize());
-
   if (Src.getOpcode() == ISD::SETCC) {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
@@ -7869,9 +7864,7 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
       Op1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op1);
     }
     // (ballot (ISD::SETCC ...)) -> (AMDGPUISD::SETCC ...)
-    SDValue SetCC =
-        DAG.getNode(AMDGPUISD::SETCC, SL, MaskVT, Op0, Op1, Src.getOperand(2));
-    return DAG.getZExtOrTrunc(SetCC, SL, VT);
+    return DAG.getNode(AMDGPUISD::SETCC, SL, VT, Op0, Op1, Src.getOperand(2));
   }
   if (const ConstantSDNode *Arg = dyn_cast<ConstantSDNode>(Src)) {
     // (ballot 0) -> 0
@@ -7880,19 +7873,23 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
 
     // (ballot 1) -> EXEC/EXEC_LO
     if (Arg->isOne()) {
-      Register Exec = MaskVT == MVT::i32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      SDValue ExecVal =
-          DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, MaskVT);
-      return DAG.getZExtOrTrunc(ExecVal, SL, VT);
+      Register Exec;
+      if (VT.getScalarSizeInBits() == 32)
+        Exec = AMDGPU::EXEC_LO;
+      else if (VT.getScalarSizeInBits() == 64)
+        Exec = AMDGPU::EXEC;
+      else
+        return SDValue();
+
+      return DAG.getCopyFromReg(DAG.getEntryNode(), SL, Exec, VT);
     }
   }
 
   // (ballot (i1 $src)) -> (AMDGPUISD::SETCC (i32 (zext $src)) (i32 0)
   // ISD::SETNE)
-  SDValue SetCC = DAG.getNode(
-      AMDGPUISD::SETCC, SL, MaskVT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
+  return DAG.getNode(
+      AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
-  return DAG.getZExtOrTrunc(SetCC, SL, VT);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
