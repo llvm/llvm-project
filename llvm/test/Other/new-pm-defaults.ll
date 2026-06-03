@@ -220,7 +220,10 @@
 ; CHECK-O-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: ShouldNotRunFunctionPassesAnalysis
 ; CHECK-O-NEXT: Invalidating analysis: InlineAdvisorAnalysis
-; CHECK-O-NEXT: Running pass: DeadArgumentEliminationPass
+; CHECK-O1-NEXT: Running pass: DeadArgumentEliminationPass
+; CHECK-O2-NEXT: Running pass: DeadArgumentEliminationPass
+; CHECK-O3-NOEXT: Running pass: IPSCCPPass
+; CHECK-O3: Running pass: DeadArgumentEliminationPass
 ; CHECK-O-NEXT: Running pass: CoroCleanupPass
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
