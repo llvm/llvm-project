@@ -25,7 +25,7 @@ namespace llvm::omp::target::plugin {
 class L0QueueTy;
 
 class L0EventTy {
-  ze_event_handle_t ZeEvent;
+  ze_event_handle_t ZeEvent = nullptr;
   L0QueueTy *Queue = nullptr;
 
 public:
@@ -39,7 +39,7 @@ public:
     return Plugin::success();
   }
 
-  void recordQueue(L0QueueTy &Q) { Queue = &Q; }
+  void setQueue(L0QueueTy &Q) { Queue = &Q; }
 
   Error synchronize() {
     CALL_ZE_RET_ERROR(zeEventHostSynchronize, ZeEvent, L0DefaultTimeout);

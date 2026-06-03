@@ -19,9 +19,12 @@ namespace llvm::omp::target::plugin {
 Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
   if (Events.empty()) {
     // Need to create a new L0 pool.
-    ze_event_pool_desc_t Desc{ZE_STRUCTURE_TYPE_EVENT_POOL_DESC, nullptr, 0, 0};
+    ze_event_pool_desc_t Desc{/* stype */ ZE_STRUCTURE_TYPE_EVENT_POOL_DESC,
+                              /* pNext */ nullptr,
+                              /* flags */ 0,
+                              /* count */ 0};
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
-    Desc.count = PoolSize;
+    Desc.count = static_cast<uint32_t>(PoolSize);
     ze_event_pool_handle_t Pool;
     CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
     Pools.push_back(Pool);
@@ -31,14 +34,14 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
     EventDesc.wait = 0;
     EventDesc.signal = ZE_EVENT_SCOPE_FLAG_HOST;
     uint32_t CreatedEvents = 0;
-    for (uint32_t I = 0; I < PoolSize; I++) {
-      EventDesc.index = I;
+    for (uint32_t EventIdx = 0; EventIdx < PoolSize; EventIdx++) {
+      EventDesc.index = EventIdx;
       ze_event_handle_t Event;
       ze_result_t RC;
       CALL_ZE(RC, zeEventCreate, Pool, &EventDesc, &Event);
       if (RC != ZE_RESULT_SUCCESS) {
         // Log the error and skip this event.
-        ODBG(OLDT_Init) << "Warning: zeEventCreate failed at index " << I
+        ODBG(OLDT_Init) << "Warning: zeEventCreate failed at index " << EventIdx
                         << " with code " << RC << ". Skipping this event.";
         continue;
       }

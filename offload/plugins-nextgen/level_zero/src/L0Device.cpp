@@ -769,7 +769,7 @@ Error L0DeviceTy::recordEventImpl(void *EventPtr,
     return QueueOrErr.takeError();
   L0QueueTy *Queue = *QueueOrErr;
   L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
-  Event->recordQueue(*Queue);
+  Event->setQueue(*Queue);
   return Queue->appendSignalEvent(Event);
 }
 
