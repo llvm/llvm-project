@@ -17677,11 +17677,13 @@ SDValue SITargetLowering::performFSubCombine(SDNode *N,
 
   if (RHS.getOpcode() == ISD::FADD) {
     // (fsub c, (fadd a, a)) -> mad -2.0, a, c
+    // Bail out if a is NaN, as mad would not propagate sign from -2.0.
 
     SDValue A = RHS.getOperand(0);
     if (A == RHS.getOperand(1)) {
       unsigned FusedOp = getFusedOpcode(DAG, N, RHS.getNode());
-      if (FusedOp != 0) {
+      if (FusedOp != 0 &&
+          (N->getFlags().hasNoNaNs() || DAG.isKnownNeverNaN(A))) {
         const SDValue NegTwo = DAG.getConstantFP(-2.0, SL, VT);
         return DAG.getNode(FusedOp, SL, VT, A, NegTwo, LHS);
       }

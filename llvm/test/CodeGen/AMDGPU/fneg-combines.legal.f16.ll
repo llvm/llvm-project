@@ -85,11 +85,11 @@ define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
 ; GCN-LABEL: v_fneg_interp_p1_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, v0, v1
 ; GCN-NEXT:    s_mov_b32 m0, 0
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
-; GCN-NEXT:    v_interp_p1ll_f16 v0, v1, attr0.x
-; GCN-NEXT:    v_interp_p1ll_f16 v1, v1, attr0.y
+; GCN-NEXT:    v_interp_p1ll_f16 v0, -v1, attr0.x
+; GCN-NEXT:    v_interp_p1ll_f16 v1, -v1, attr0.y
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul
@@ -104,12 +104,12 @@ define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) #0 {
 ; GCN-LABEL: v_fneg_interp_p2_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mul_f32_e64 v1, v0, -v1
+; GCN-NEXT:    v_mul_f32_e32 v1, v0, v1
 ; GCN-NEXT:    v_mov_b32_e32 v2, 4.0
 ; GCN-NEXT:    s_mov_b32 m0, 0
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 3
-; GCN-NEXT:    v_interp_p2_f16 v0, v1, attr0.x, v2
-; GCN-NEXT:    v_interp_p2_f16 v1, v1, attr0.y, v2
+; GCN-NEXT:    v_interp_p2_f16 v0, -v1, attr0.x, v2
+; GCN-NEXT:    v_interp_p2_f16 v1, -v1, attr0.y, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %a, %b
   %fneg = fneg float %mul

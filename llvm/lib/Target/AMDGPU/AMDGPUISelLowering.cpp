@@ -931,12 +931,36 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
     SDValue Op, SelectionDAG &DAG, bool LegalOperations, bool ForCodeSize,
     NegatibleCost &Cost, unsigned Depth) const {
 
+  // Multiply instructions propagate NaN from the NaN-carrying source
+  // operand, taking the sign from that operand (including any NEG modifier
+  // applied to it). A NEG modifier on the OTHER (non-NaN) operand does NOT
+  // affect the result NaN sign. This means fneg(fmul(x,y)) cannot be folded
+  // to fmul(x,fneg(y)) when x might be NaN, because the outer fneg would
+  // flip x's NaN sign but the inner NEG on y doesn't. The fold is safe when
+  // the non-negated operand is known never-NaN, or the operation has nnan.
+  //
+  // For FMA/FMAD, the same constraint applies to the multiply operands.
+  // Negating the addend is always NaN-sign-safe.
+
   switch (Op.getOpcode()) {
   case ISD::FMA:
-  case ISD::FMAD: {
+  case ISD::FMULADD:
+  case ISD::FMAD:
     // Negating a fma is not free if it has users without source mods.
     if (!allUsesHaveSourceMods(Op.getNode()))
       return SDValue();
+    [[fallthrough]];
+  case ISD::FMUL:
+  case ISD::FDIV: {
+    // Block the fold when neither multiply operand is known non-NaN, unless
+    // nnan is set. Whichever operand receives the NEG modifier is only
+    // correct when the OTHER operand is known non-NaN; otherwise a runtime
+    // NaN in that other operand would propagate with the wrong sign.
+    if (!Op->getFlags().hasNoNaNs()) {
+      SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
+      if (!DAG.isKnownNeverNaN(X) || !DAG.isKnownNeverNaN(Y))
+        return SDValue();
+    }
     break;
   }
   case AMDGPUISD::RCP: {
@@ -5292,12 +5316,30 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue LHS = N0.getOperand(0);
     SDValue RHS = N0.getOperand(1);
 
-    if (LHS.getOpcode() == ISD::FNEG)
+    // Multiply NaN propagation: when one source is NaN, the hardware
+    // takes the NaN sign from that source operand (after its NEG modifier).
+    // A NEG on the non-NaN operand doesn't affect the result NaN sign.
+    // Only fold if we know that the non negated operand is known never-NAN or
+    // the operation has nnan.
+    bool CanFold = N0->getFlags().hasNoNaNs();
+
+    if (LHS.getOpcode() == ISD::FNEG) {
+      if (!CanFold && !DAG.isKnownNeverNaN(RHS))
+        return SDValue();
       LHS = LHS.getOperand(0);
-    else if (RHS.getOpcode() == ISD::FNEG)
+    } else if (RHS.getOpcode() == ISD::FNEG) {
+      if (!CanFold && !DAG.isKnownNeverNaN(LHS))
+        return SDValue();
       RHS = RHS.getOperand(0);
-    else
+    } else if (CanFold) {
       RHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+    } else if (DAG.isKnownNeverNaN(LHS)) {
+      RHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
+    } else if (DAG.isKnownNeverNaN(RHS)) {
+      LHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);
+    } else {
+      return SDValue();
+    }
 
     SDValue Res = DAG.getNode(Opc, SL, VT, LHS, RHS, N0->getFlags());
     if (Res.getOpcode() != Opc)
@@ -5317,12 +5359,28 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     SDValue MHS = N0.getOperand(1);
     SDValue RHS = N0.getOperand(2);
 
-    if (LHS.getOpcode() == ISD::FNEG)
+    // Same multiply NaN sign concern as FMUL: the operand that keeps its
+    // NEG state unchanged must be known never-NaN, or nnan must be set.
+    // Negating the addend is always NaN-sign-safe.
+    bool CanFold = N0->getFlags().hasNoNaNs();
+
+    if (LHS.getOpcode() == ISD::FNEG) {
+      if (!CanFold && !DAG.isKnownNeverNaN(MHS))
+        return SDValue();
       LHS = LHS.getOperand(0);
-    else if (MHS.getOpcode() == ISD::FNEG)
+    } else if (MHS.getOpcode() == ISD::FNEG) {
+      if (!CanFold && !DAG.isKnownNeverNaN(LHS))
+        return SDValue();
       MHS = MHS.getOperand(0);
-    else
+    } else if (CanFold) {
       MHS = DAG.getNode(ISD::FNEG, SL, VT, MHS);
+    } else if (DAG.isKnownNeverNaN(LHS)) {
+      MHS = DAG.getNode(ISD::FNEG, SL, VT, MHS);
+    } else if (DAG.isKnownNeverNaN(MHS)) {
+      LHS = DAG.getNode(ISD::FNEG, SL, VT, LHS);
+    } else {
+      return SDValue();
+    }
 
     if (RHS.getOpcode() != ISD::FNEG)
       RHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);

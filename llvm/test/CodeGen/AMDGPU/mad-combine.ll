@@ -775,7 +775,7 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32(ptr addrspace(1) noalias %o
 ; SI-STD-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:8 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-STD-NEXT:    v_mad_f32 v2, v2, -v3, -v4
+; SI-STD-NEXT:    v_mad_f32 v2, -v2, v3, -v4
 ; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-STD-NEXT:    s_endpgm
 ;
@@ -815,8 +815,8 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32(ptr addrspace(1) noalias %o
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_load_dword v4, v[0:1], s[4:7], 0 addr64 offset:8 glc
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt vmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-DENORM-SLOWFMAF-NEXT:    v_mul_f32_e64 v2, v2, -v3
-; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v2, v2, v4
+; SI-DENORM-SLOWFMAF-NEXT:    v_mul_f32_e32 v2, v2, v3
+; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e64 v2, -v2, v4
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64
 ; SI-DENORM-SLOWFMAF-NEXT:    s_endpgm
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() #0
@@ -857,8 +857,8 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(ptr addrspace(1) 
 ; SI-STD-NEXT:    buffer_load_dword v5, v[0:1], s[4:7], 0 addr64 offset:12 glc
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-STD-NEXT:    v_mad_f32 v4, v2, -v3, -v4
-; SI-STD-NEXT:    v_mad_f32 v2, v2, -v3, -v5
+; SI-STD-NEXT:    v_mad_f32 v4, -v2, v3, -v4
+; SI-STD-NEXT:    v_mad_f32 v2, -v2, v3, -v5
 ; SI-STD-NEXT:    buffer_store_dword v4, v[0:1], s[0:3], 0 addr64
 ; SI-STD-NEXT:    s_waitcnt vmcnt(0)
 ; SI-STD-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:4
@@ -909,9 +909,9 @@ define amdgpu_kernel void @combine_to_mad_fsub_2_f32_2uses_neg(ptr addrspace(1) 
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_load_dword v5, v[0:1], s[4:7], 0 addr64 offset:12 glc
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt vmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; SI-DENORM-SLOWFMAF-NEXT:    v_mul_f32_e64 v2, v2, -v3
-; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v3, v2, v4
-; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e32 v2, v2, v5
+; SI-DENORM-SLOWFMAF-NEXT:    v_mul_f32_e32 v2, v2, v3
+; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e64 v3, -v2, v4
+; SI-DENORM-SLOWFMAF-NEXT:    v_sub_f32_e64 v2, -v2, v5
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_store_dword v3, v[0:1], s[0:3], 0 addr64
 ; SI-DENORM-SLOWFMAF-NEXT:    s_waitcnt vmcnt(0)
 ; SI-DENORM-SLOWFMAF-NEXT:    buffer_store_dword v2, v[0:1], s[0:3], 0 addr64 offset:4

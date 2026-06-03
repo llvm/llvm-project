@@ -431,28 +431,31 @@ define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; SDAG-GFX9GEN:       ; %bb.0:
 ; SDAG-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-GFX9GEN-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; SDAG-GFX9GEN-NEXT:    v_mac_f32_e32 v1, v0, v3
+; SDAG-GFX9GEN-NEXT:    v_mov_b32_e32 v0, v1
 ; SDAG-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-VI-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; SDAG-VI-NEXT:    v_mac_f32_e32 v1, v0, v3
+; SDAG-VI-NEXT:    v_mov_b32_e32 v0, v1
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; SDAG-CI-NEXT:    v_mac_f32_e32 v1, v0, v3
+; SDAG-CI-NEXT:    v_mov_b32_e32 v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX9GEN-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
@@ -592,10 +595,12 @@ define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half
 ; SDAG-CI-LABEL: v_mad_mix_f32_negabsf16lo_f16lo_f16lo:
 ; SDAG-CI:       ; %bb.0:
 ; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
-; SDAG-CI-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-CI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v2
+; SDAG-CI-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
+; SDAG-CI-NEXT:    v_mac_f32_e32 v1, v0, v3
+; SDAG-CI-NEXT:    v_mov_b32_e32 v0, v1
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-CI-LABEL: v_mad_mix_f32_negabsf16lo_f16lo_f16lo:
@@ -2095,59 +2100,32 @@ define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1
 ; GFX906-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; SDAG-GFX9GEN:       ; %bb.0:
-; SDAG-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-GFX9GEN-NEXT:    v_mad_f32 v0, -v0, v1, v2
-; SDAG-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
+; GFX9GEN-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
+; GFX9GEN:       ; %bb.0:
+; GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9GEN-NEXT:    v_cvt_f32_f16_e64 v3, -v0
+; GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; GFX9GEN-NEXT:    v_mac_f32_e32 v0, v3, v1
+; GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-VI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; SDAG-VI:       ; %bb.0:
-; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-VI-NEXT:    v_mad_f32 v0, -v0, v1, v2
-; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_cvt_f32_f16_e64 v3, -v0
+; VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; VI-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; VI-NEXT:    v_mac_f32_e32 v0, v3, v1
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-CI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; SDAG-CI:       ; %bb.0:
-; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-CI-NEXT:    v_mad_f32 v0, -v0, v1, v2
-; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX9GEN-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; GISEL-GFX9GEN:       ; %bb.0:
-; GISEL-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_e64 v3, -v0
-; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GISEL-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v2
-; GISEL-GFX9GEN-NEXT:    v_mac_f32_e32 v0, v3, v1
-; GISEL-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-VI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; GISEL-VI:       ; %bb.0:
-; GISEL-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-VI-NEXT:    v_cvt_f32_f16_e64 v3, -v0
-; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GISEL-VI-NEXT:    v_cvt_f32_f16_e32 v0, v2
-; GISEL-VI-NEXT:    v_mac_f32_e32 v0, v3, v1
-; GISEL-VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-CI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
-; GISEL-CI:       ; %bb.0:
-; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e64 v3, -v0
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; GISEL-CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
-; GISEL-CI-NEXT:    v_mac_f32_e32 v0, v3, v1
-; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
+; CI-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f32_f16_e64 v3, -v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; CI-NEXT:    v_mac_f32_e32 v0, v3, v1
+; CI-NEXT:    s_setpc_b64 s[30:31]
   %src0.arg.bc = bitcast i32 %src0.arg to <2 x half>
   %src0 = extractelement <2 x half> %src0.arg.bc, i32 0
   %src0.neg = fneg half %src0
@@ -2331,19 +2309,19 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; SDAG-GFX9GEN:       ; %bb.0:
 ; SDAG-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v3, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-GFX9GEN-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; SDAG-GFX9GEN-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v3, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-VI-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; SDAG-VI-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
@@ -2505,19 +2483,19 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, 
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; SDAG-GFX9GEN:       ; %bb.0:
 ; SDAG-GFX9GEN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v0, |v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_sdwa v3, -|v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-GFX9GEN-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-GFX9GEN-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; SDAG-GFX9GEN-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-GFX9GEN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-VI-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; SDAG-VI:       ; %bb.0:
 ; SDAG-VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v0, |v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; SDAG-VI-NEXT:    v_cvt_f32_f16_sdwa v3, -|v0| dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SDAG-VI-NEXT:    v_mad_f32 v0, -v0, v1, v2
+; SDAG-VI-NEXT:    v_cvt_f32_f16_e32 v0, v2
+; SDAG-VI-NEXT:    v_mac_f32_e32 v0, v3, v1
 ; SDAG-VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-CI-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
