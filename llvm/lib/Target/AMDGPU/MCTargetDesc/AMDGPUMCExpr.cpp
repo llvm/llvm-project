@@ -167,7 +167,12 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
 bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
                                      const MCAssembler *Asm) const {
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, Generation,
-      NumSGPRs, NumVGPRs;
+      NumSGPRs, NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
+
+  // createOccupancy() always emits exactly these ten operands; bail out rather
+  // than read out of bounds if a hand-written expression has a different arity.
+  if (Args.size() != 10)
+    return false;
 
   bool Success = evaluateMCExprs(
       Args.slice(0, 5), Asm,
@@ -178,12 +183,24 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   if (!Success || !evaluateMCExprs(Args.slice(5, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
+  // Arguments 8 to 10 carry the SGPR budget of the code-generator's subtarget
+  // (total SGPRs, allocation granule, and the trap-handler reservation). They
+  // let the SGPR-limited occupancy be computed exactly as the code generator
+  // does (in particular trap-handler aware), instead of from the asm printer's
+  // MCSubtargetInfo which does not carry the implicit amdhsa features.
+  if (!evaluateMCExprs(Args.slice(7, 3), Asm,
+                       {SGPRTotal, SGPRGranule, SGPRTrapReserve}))
+    return false;
+
   unsigned Occupancy = InitOccupancy;
-  if (NumSGPRs)
-    Occupancy = std::min(
-        Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
-                       NumSGPRs, MaxWaves,
-                       static_cast<AMDGPUSubtarget::Generation>(Generation)));
+  // Mirror the GFX10+ rule of the getOccupancyWithNumSGPRs(MCSubtargetInfo)
+  // overload: on GFX10+ the SGPR file is large enough that SGPRs never limit
+  // occupancy. The MC layer only has the decoded Generation here, so it tests
+  // that rather than an MCSubtargetInfo.
+  if (NumSGPRs && Generation < AMDGPUSubtarget::GFX10)
+    Occupancy = std::min(Occupancy, IsaInfo::getOccupancyWithNumSGPRs(
+                                        NumSGPRs, MaxWaves, SGPRTotal,
+                                        SGPRGranule, SGPRTrapReserve));
   if (NumVGPRs)
     Occupancy = std::min(Occupancy,
                          IsaInfo::getNumWavesPerEUWithNumVGPRs(

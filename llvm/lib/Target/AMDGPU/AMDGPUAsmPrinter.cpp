@@ -436,16 +436,25 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
   unsigned Generation = STM.getGeneration();
 
+  // SGPR budget of the code generator's subtarget, so the printed occupancy
+  // matches what codegen assumed. In particular STM carries the implicit
+  // amdhsa trap-handler feature, which the asm printer's MCSubtargetInfo does
+  // not, so the reservation has to be threaded through explicitly here.
+  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
+  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
+
   auto CreateExpr = [&Ctx](unsigned Value) {
     return MCConstantExpr::create(Value, Ctx);
   };
 
-  return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
-                              {CreateExpr(MaxWaves), CreateExpr(Granule),
-                               CreateExpr(TargetTotalNumVGPRs),
-                               CreateExpr(Generation), CreateExpr(InitOcc),
-                               NumSGPRs, NumVGPRs},
-                              Ctx);
+  return AMDGPUMCExpr::create(
+      AMDGPUMCExpr::AGVK_Occupancy,
+      {CreateExpr(MaxWaves), CreateExpr(Granule),
+       CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
+       CreateExpr(InitOcc), NumSGPRs, NumVGPRs, CreateExpr(SGPRTotal),
+       CreateExpr(SGPRGranule), CreateExpr(SGPRTrapReserve)},
+      Ctx);
 }
 
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {

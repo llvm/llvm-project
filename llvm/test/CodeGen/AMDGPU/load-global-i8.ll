@@ -8104,7 +8104,7 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_mov_b32 s9, s5
 ; GCN-HSA-NEXT:    s_mov_b32 s3, s5
 ; GCN-HSA-NEXT:    s_mov_b32 s7, s5
-; GCN-HSA-NEXT:    s_mov_b32 s35, s5
+; GCN-HSA-NEXT:    s_mov_b32 s31, s5
 ; GCN-HSA-NEXT:    s_mov_b32 s27, s5
 ; GCN-HSA-NEXT:    s_mov_b32 s15, s5
 ; GCN-HSA-NEXT:    s_mov_b32 s11, s5
@@ -8125,7 +8125,7 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_bfe_i64 s[20:21], s[12:13], 0x80000
 ; GCN-HSA-NEXT:    s_lshr_b32 s12, s16, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s26, s16, 24
-; GCN-HSA-NEXT:    s_lshr_b32 s34, s16, 8
+; GCN-HSA-NEXT:    s_lshr_b32 s30, s16, 8
 ; GCN-HSA-NEXT:    s_bfe_i64 s[4:5], s[4:5], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[8:9], s[8:9], 0x80000
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(0)
@@ -8138,17 +8138,17 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_bfe_i64 s[46:47], s[16:17], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[16:17], s[14:15], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[28:29], s[24:25], 0x80000
-; GCN-HSA-NEXT:    s_bfe_i64 s[30:31], s[22:23], 0x80000
+; GCN-HSA-NEXT:    s_bfe_i64 s[34:35], s[22:23], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[36:37], s[18:19], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[42:43], s[10:11], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[40:41], s[6:7], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[50:51], s[2:3], 0x80000
-; GCN-HSA-NEXT:    s_bfe_i64 s[52:53], s[34:35], 0x80000
+; GCN-HSA-NEXT:    s_bfe_i64 s[52:53], s[30:31], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[54:55], s[26:27], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[56:57], s[12:13], 0x80000
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s4
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s8
-; GCN-HSA-NEXT:    s_lshr_b32 s34, s49, 16
+; GCN-HSA-NEXT:    s_lshr_b32 s30, s49, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s26, s49, 8
 ; GCN-HSA-NEXT:    s_lshr_b32 s14, s39, 16
 ; GCN-HSA-NEXT:    s_lshr_b32 s10, s39, 8
@@ -8183,7 +8183,7 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_bfe_i64 s[24:25], s[24:25], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[38:39], s[38:39], 0x80000
 ; GCN-HSA-NEXT:    s_bfe_i64 s[26:27], s[26:27], 0x80000
-; GCN-HSA-NEXT:    s_bfe_i64 s[34:35], s[34:35], 0x80000
+; GCN-HSA-NEXT:    s_bfe_i64 s[30:31], s[30:31], 0x80000
 ; GCN-HSA-NEXT:    s_add_u32 s48, s0, 0x70
 ; GCN-HSA-NEXT:    s_addc_u32 s49, s1, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v18, s48
@@ -8212,8 +8212,8 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_addc_u32 s37, s1, 0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v16, s50
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v17, s51
-; GCN-HSA-NEXT:    flat_store_dwordx4 v[18:19], v[4:7]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v31, s43
+; GCN-HSA-NEXT:    flat_store_dwordx4 v[18:19], v[4:7]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v18, s58
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v19, s45
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s20
@@ -8230,8 +8230,8 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v22, s40
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v23, s41
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v25, s37
-; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s30
-; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s31
+; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s34
+; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s35
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v19, s21
 ; GCN-HSA-NEXT:    s_add_u32 s20, s0, 0xe0
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v26, s48
@@ -8256,8 +8256,8 @@ define amdgpu_kernel void @global_sextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-HSA-NEXT:    s_add_u32 s20, s0, 0xd0
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[26:27], v[8:11]
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[28:29], v[12:15]
-; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s34
-; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s35
+; GCN-HSA-NEXT:    v_mov_b32_e32 v8, s30
+; GCN-HSA-NEXT:    v_mov_b32_e32 v9, s31
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v10, s62
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v11, s61
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v12, s38

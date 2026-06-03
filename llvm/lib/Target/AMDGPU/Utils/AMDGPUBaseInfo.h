@@ -375,10 +375,26 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
                                       unsigned MaxWaves,
                                       unsigned TotalNumVGPRs);
 
-/// \returns Occupancy for a given \p SGPRs usage, \p MaxWaves possible, and \p
-/// Gen.
+/// \returns Occupancy (waves per EU) limited by \p SGPRs usage for subtarget
+/// \p STI. This is the inverse of getMaxNumSGPRs(): it returns the largest
+/// number of waves W for which \p SGPRs still fits the per-wave SGPR budget
+/// (total SGPRs / W, minus the trap-handler reservation when enabled, rounded
+/// down to the allocation granule). Unlike getMaxNumSGPRs() the budget is not
+/// clamped to the addressable SGPR count, because the reported allocated SGPR
+/// count (which is what callers pass in) can legitimately exceed it.
+unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs);
+
+/// \returns Occupancy (waves per EU) limited by \p SGPRs usage, computed from
+/// explicit budget parameters rather than a subtarget: the \p MaxWaves cap, the
+/// \p TotalNumSGPRs in the file, the allocation \p Granule, and the
+/// trap-handler \p TrapReserve (0 when the trap handler is disabled). This is
+/// the subtarget-free core shared by the MCSubtargetInfo overload and the
+/// occupancy MCExpr, so that the asm printer reports the same trap-aware
+/// occupancy the code generator assumes. Callers must apply the GFX10+ "SGPRs
+/// never limit occupancy" rule themselves before calling this.
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
-                                  AMDGPUSubtarget::Generation Gen);
+                                  unsigned TotalNumSGPRs, unsigned Granule,
+                                  unsigned TrapReserve);
 
 /// \returns Number of VGPR blocks needed for given subtarget \p STI when
 /// \p NumVGPRs are used. We actually return the number of blocks -1, since

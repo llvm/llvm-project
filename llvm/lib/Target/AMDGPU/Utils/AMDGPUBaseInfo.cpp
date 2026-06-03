@@ -1334,6 +1334,27 @@ unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
   return 104;
 }
 
+// Per-wave SGPRs reserved for the trap handler when it is enabled, in the same
+// units as the budget computations below.
+static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits().test(FeatureTrapHandler) ? TRAP_NUM_SGPRS : 0;
+}
+
+// SGPRs usable per wave when \p WavesPerEU waves share the register file,
+// before any addressable clamp: the trap-handler reservation is taken off the
+// top and the remainder is rounded down to the allocation \p Granule. This is
+// the single source of truth shared by getMinNumSGPRs(), getMaxNumSGPRs() and
+// the occupancy inverse getOccupancyWithNumSGPRs(), so the budget and its
+// inverse cannot drift apart.
+static unsigned getSGPRBudgetPerWave(unsigned TotalNumSGPRs,
+                                     unsigned WavesPerEU, unsigned TrapReserve,
+                                     unsigned Granule) {
+  assert(WavesPerEU != 0 && Granule != 0);
+  unsigned Budget = TotalNumSGPRs / WavesPerEU;
+  Budget -= std::min(Budget, TrapReserve);
+  return alignDown(Budget, Granule);
+}
+
 unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
 
@@ -1344,10 +1365,11 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
 
-  unsigned MinNumSGPRs = getTotalNumSGPRs(STI) / (WavesPerEU + 1);
-  if (STI.getFeatureBits().test(FeatureTrapHandler))
-    MinNumSGPRs -= std::min(MinNumSGPRs, (unsigned)TRAP_NUM_SGPRS);
-  MinNumSGPRs = alignDown(MinNumSGPRs, getSGPRAllocGranule(STI)) + 1;
+  unsigned MinNumSGPRs =
+      getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU + 1,
+                           getSGPRTrapHandlerReserve(STI),
+                           getSGPRAllocGranule(STI)) +
+      1;
   return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI));
 }
 
@@ -1361,10 +1383,9 @@ unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
     return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
-  unsigned MaxNumSGPRs = getTotalNumSGPRs(STI) / WavesPerEU;
-  if (STI.getFeatureBits().test(FeatureTrapHandler))
-    MaxNumSGPRs -= std::min(MaxNumSGPRs, (unsigned)TRAP_NUM_SGPRS);
-  MaxNumSGPRs = alignDown(MaxNumSGPRs, getSGPRAllocGranule(STI));
+  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU,
+                                              getSGPRTrapHandlerReserve(STI),
+                                              getSGPRAllocGranule(STI));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
@@ -1499,30 +1520,31 @@ unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
 }
 
 unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
-                                  AMDGPUSubtarget::Generation Gen) {
-  if (Gen >= AMDGPUSubtarget::GFX10)
+                                  unsigned TotalNumSGPRs, unsigned Granule,
+                                  unsigned TrapReserve) {
+  // Invert getMaxNumSGPRs(): find the largest number of waves W whose per-wave
+  // SGPR budget still accommodates \p SGPRs. Higher occupancy means a smaller
+  // budget, so search from the maximum downwards and return the first fit. The
+  // budget is computed by the same helper getMaxNumSGPRs() uses, so the two
+  // stay exact inverses (modulo the addressable clamp, which is intentionally
+  // not applied here - see the header).
+  for (unsigned Waves = MaxWaves; Waves > 1; --Waves)
+    if (SGPRs <=
+        getSGPRBudgetPerWave(TotalNumSGPRs, Waves, TrapReserve, Granule))
+      return Waves;
+  return 1;
+}
+
+unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
+  unsigned MaxWaves = getMaxWavesPerEU(STI);
+
+  // On GFX10+ the SGPR file is large enough that SGPRs never limit occupancy.
+  if (getIsaVersion(STI.getCPU()).Major >= 10)
     return MaxWaves;
 
-  if (Gen >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    if (SGPRs <= 80)
-      return 10;
-    if (SGPRs <= 88)
-      return 9;
-    if (SGPRs <= 100)
-      return 8;
-    return 7;
-  }
-  if (SGPRs <= 48)
-    return 10;
-  if (SGPRs <= 56)
-    return 9;
-  if (SGPRs <= 64)
-    return 8;
-  if (SGPRs <= 72)
-    return 7;
-  if (SGPRs <= 80)
-    return 6;
-  return 5;
+  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(STI),
+                                  getSGPRAllocGranule(STI),
+                                  getSGPRTrapHandlerReserve(STI));
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
