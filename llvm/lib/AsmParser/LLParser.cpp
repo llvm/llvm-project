@@ -7752,9 +7752,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for select without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
@@ -7773,9 +7775,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for phi without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
