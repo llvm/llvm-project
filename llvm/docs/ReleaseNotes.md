@@ -145,6 +145,10 @@ Makes programs 10x faster by doing Special New Thing.
   Use the new ``remove_if`` member to erase matching elements in a single pass
   instead of erasing while iterating.
 
+* ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
+  refactored and no longer take a type. This API is also now precomputed in
+  TableGen to improve compile-time.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
@@ -179,6 +183,12 @@ Makes programs 10x faster by doing Special New Thing.
   are now deprecated. Use `"amdgpu-waves-per-eu"` instead. The backend still
   honors the attributes; Clang emits a `-Wdeprecated-declarations` warning when
   the source attributes are used.
+* The `relaxed-buffer-oob-mode` subtarget feature has been replaced by two
+  module flags, `amdgpu.buffer.oob.mode` and `amdgpu.tbuffer.oob.mode`, which
+  control out-of-bounds semantics (see the AMDGPU User Guide). Frontends that
+  previously relied on the subtarget feature to enable misaligned buffer merging
+  must now set the corresponding module flag to `1` (relaxed). An absent flag is
+  treated as strict by the backend.
 
 ### Changes to the ARM Backend
 
@@ -226,6 +236,7 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.
@@ -359,6 +370,9 @@ Makes programs 10x faster by doing Special New Thing.
 #### Windows
 
 * Python 3.11 or later is now recommended for building LLDB 23 on Windows. From LLDB 24, Python 3.11 or later will be required.
+* Messages from `OutputDebugString[A|W]` are now shown inline when using LLDB
+  from the command-line and in the output window when using lldb-dap.
+
 
 ### Changes to BOLT
 

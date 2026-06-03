@@ -6513,11 +6513,9 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
-                                     const SimplifyQuery &Q,
-                                     const CallBase *Call) {
+Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                    FastMathFlags FMF, const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
-  Intrinsic::ID IID = F->getIntrinsicID();
   if (isIdempotent(IID))
     if (auto *II = dyn_cast<IntrinsicInst>(Op0))
       if (II->getIntrinsicID() == IID)
@@ -6543,7 +6541,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
-        KnownClass.isKnownNeverNaN() && Call->hasNoSignedZeros())
+        KnownClass.isKnownNeverNaN() && FMF.noSignedZeros())
       return Op0;
 
     break;
@@ -6572,31 +6570,31 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6605,7 +6603,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (FMF.allowReassoc() &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
@@ -6620,7 +6618,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       return Op0;
     break;
   case Intrinsic::structured_gep:
-    return cast<StructuredGEPInst>(Call)->getPointerOperand();
+    return Op0;
   default:
     break;
   }
@@ -7250,15 +7248,12 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   }
 
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(F, Args[0], Q, Call);
+    return simplifyUnaryIntrinsic(IID, Args[0], Call->getFastMathFlagsOrNone(),
+                                  Q);
 
-  if (NumOperands == 2) {
-    FastMathFlags FMF;
-    if (auto *FPMO = dyn_cast<FPMathOperator>(Call))
-      FMF = FPMO->getFastMathFlags();
+  if (NumOperands == 2)
     return simplifyBinaryIntrinsic(IID, F->getReturnType(), Args[0], Args[1],
-                                   FMF, Q.getWithInstruction(Call));
-  }
+                                   Call->getFastMathFlagsOrNone(), Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
@@ -7266,8 +7261,9 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];
     Value *PassthruArg = Args[2];
-    // If the mask is all zeros or undef, the "passthru" argument is the result.
-    if (maskIsAllZeroOrUndef(MaskArg))
+    // If the mask is all zeros or poison, the "passthru" argument is the
+    // result.
+    if (match(MaskArg, m_ZeroOrPoison()))
       return PassthruArg;
     return nullptr;
   }

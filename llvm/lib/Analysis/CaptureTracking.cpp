@@ -278,11 +278,10 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     auto *Call = cast<CallBase>(I);
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
-    // marked with nocapture do not capture. This means that places like
-    // getUnderlyingObject in ValueTracking or DecomposeGEPExpression
-    // in BasicAA also need to know about this property.
+    // marked with nocapture do not capture. This logic needs to stay in
+    // sync with isEscapeSource().
     if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-            Call, /*MustPreserveOffset=*/true))
+            Call, /*MustPreserveOffset=*/false))
       return UseCaptureInfo::passthrough();
 
     // Volatile operations effectively capture the memory location that they
@@ -373,23 +372,11 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
+    // Check whether this is a comparison of the base pointer against
+    // null.
     if (isa<ConstantPointerNull>(I->getOperand(OtherIdx)) &&
-        cast<ICmpInst>(I)->isEquality()) {
-      // TODO(captures): Remove these special cases once we make use of
-      // captures(address_is_null).
-
-      // Don't count comparisons of a no-alias return value against null as
-      // captures. This allows us to ignore comparisons of malloc results
-      // with null, for example.
-      if (U->getType()->getPointerAddressSpace() == 0)
-        if (isNoAliasCall(U.get()->stripPointerCasts()))
-          return CaptureComponents::None;
-
-      // Check whether this is a comparison of the base pointer against
-      // null.
-      if (U.get() == Base)
-        return CaptureComponents::AddressIsNull;
-    }
+        cast<ICmpInst>(I)->isEquality() && U.get() == Base)
+      return CaptureComponents::AddressIsNull;
 
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons. However, only the address is captured, not the

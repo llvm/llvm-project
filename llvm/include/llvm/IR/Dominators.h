@@ -123,10 +123,6 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
     return BasicBlockEdge(BBInfo::getEmptyKey(), BBInfo::getEmptyKey());
   }
 
-  static inline BasicBlockEdge getTombstoneKey() {
-    return BasicBlockEdge(BBInfo::getTombstoneKey(), BBInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const BasicBlockEdge &Edge) {
     return hash_combine(BBInfo::getHashValue(Edge.getStart()),
                         BBInfo::getHashValue(Edge.getEnd()));

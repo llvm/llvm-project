@@ -13,58 +13,12 @@
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/IR/Instruction.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
 
 #define DEBUG_TYPE "vplan"
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
-  Type *ResTy = inferScalarType(R->getIncomingValue(0));
-  for (unsigned I = 1, E = R->getNumIncomingValues(); I != E; ++I) {
-    VPValue *Inc = R->getIncomingValue(I);
-    assert(inferScalarType(Inc) == ResTy &&
-           "different types inferred for different incoming values");
-    CachedTypes[Inc] = ResTy;
-  }
-  return ResTy;
-}
-
-Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
-  if (Type *CachedTy = CachedTypes.lookup(V))
-    return CachedTy;
-
-  if (isa<VPIRValue, VPRegionValue, VPSymbolicValue, VPMultiDefValue,
-          VPExpandSCEVRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe,
-          VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
-          VPVectorEndPointerRecipe, VPWidenCallRecipe, VPWidenLoadRecipe,
-          VPWidenLoadEVLRecipe, VPDerivedIVRecipe, VPHeaderPHIRecipe,
-          VPInstruction, VPReplicateRecipe, VPWidenRecipe>(V)) {
-    Type *Ty = V->getScalarType();
-    assert(Ty && "Scalar type must be set by recipe construction");
-    return Ty;
-  }
-
-  Type *ResultTy =
-      TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPBlendRecipe>(
-              [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case([this](const VPReductionRecipe *R) {
-            return inferScalarType(R->getChainOp());
-          })
-          .Case([this](const VPExpressionRecipe *R) {
-            return inferScalarType(R->getOperandOfResultType());
-          });
-
-  assert(ResultTy && "could not infer type for the given VPValue");
-  CachedTypes[V] = ResultTy;
-  return ResultTy;
-}
 
 void llvm::collectEphemeralRecipesForVPlan(
     VPlan &Plan, DenseSet<VPRecipeBase *> &EphRecipes) {
@@ -233,8 +187,6 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
   LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
 
-  VPTypeAnalysis TypeInfo(Plan);
-
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
@@ -303,7 +255,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {
           unsigned ClassID =
-              TTI.getRegisterClassForType(false, TypeInfo.inferScalarType(VPV));
+              TTI.getRegisterClassForType(false, VPV->getScalarType());
           // FIXME: The target might use more than one register for the type
           // even in the scalar case.
           RegUsage[ClassID] += 1;
@@ -319,7 +271,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
                               << " to " << VF << " for " << *R << "\n";);
           }
 
-          Type *ScalarTy = TypeInfo.inferScalarType(VPV);
+          Type *ScalarTy = VPV->getScalarType();
           unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
           RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
         }
@@ -358,9 +310,9 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       bool IsScalar = vputils::onlyScalarValuesUsed(In);
 
       ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
-      unsigned ClassID = TTI.getRegisterClassForType(
-          VF.isVector(), TypeInfo.inferScalarType(In));
-      Invariant[ClassID] += GetRegUsage(TypeInfo.inferScalarType(In), VF);
+      unsigned ClassID =
+          TTI.getRegisterClassForType(VF.isVector(), In->getScalarType());
+      Invariant[ClassID] += GetRegUsage(In->getScalarType(), VF);
     }
 
     LLVM_DEBUG({
