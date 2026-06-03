@@ -68,7 +68,7 @@ TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
   }
 }
 
-TEST_F(LlvmLibcBfloat16ConversionTest, shortHandOperators) {
+TEST_F(LlvmLibcBfloat16ConversionTest, compoundAssignmentOperators) {
 
   constexpr BFloat16 VAL[] = {zero,           neg_zero,        inf,
                               neg_inf,        min_normal,      max_normal,
