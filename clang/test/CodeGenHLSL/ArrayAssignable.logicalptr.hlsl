@@ -15,14 +15,14 @@ cbuffer CBArrays : register(b0) {
 }
 
 // CHECK-DXIL: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, target("dx.Padding", 12) }>], float }>, target("dx.Padding", 12), [2 x <4 x i32>], <{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>, target("dx.Padding", 12), <{ [1 x <{ %S, target("dx.Padding", 8) }>], %S }> }>
-// CHECK-DXIL: @CBArrays.cb = internal global target("dx.CBuffer", [[CBLayout]])
+// CHECK-DXIL: @CBArrays.cb = hidden global target("dx.CBuffer", [[CBLayout]])
 // CHECK-DXIL: @c1 = external hidden addrspace(2) global <{ [1 x <{ float, target("dx.Padding", 12) }>], float }>, align 4
 // CHECK-DXIL: @c2 = external hidden addrspace(2) global [2 x <4 x i32>], align 4
 // CHECK-DXIL: @c3 = external hidden addrspace(2) global <{ [1 x <{ <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }>, target("dx.Padding", 12) }>], <{ [1 x <{ i32, target("dx.Padding", 12) }>], i32 }> }>, align 4
 // CHECK-DXIL: @c4 = external hidden addrspace(2) global <{ [1 x <{ %S, target("dx.Padding", 8) }>], %S }>, align 1
 
 // CHECK-SPIR: [[CBLayout:%.*]] = type <{ <{ [1 x <{ float, target("spirv.Padding", 12) }>], float }>, target("spirv.Padding", 12), [2 x <4 x i32>], <{ [1 x <{ <{ [1 x <{ i32, target("spirv.Padding", 12) }>], i32 }>, target("spirv.Padding", 12) }>], <{ [1 x <{ i32, target("spirv.Padding", 12) }>], i32 }> }>, target("spirv.Padding", 12), <{ [1 x <{ %S, target("spirv.Padding", 8) }>], %S }> }>
-// CHECK-SPIR: @CBArrays.cb = internal global target("spirv.VulkanBuffer", %__cblayout_CBArrays, 2, 0) poison
+// CHECK-SPIR: @CBArrays.cb = hidden global target("spirv.VulkanBuffer", %__cblayout_CBArrays, 2, 0) poison
 // CHECK-SPIR: @c1 = external hidden addrspace(12) global <{ [1 x <{ float, target("spirv.Padding", 12) }>], float }>, align 4
 // CHECK-SPIR: @c2 = external hidden addrspace(12) global [2 x <4 x i32>], align 4
 // CHECK-SPIR: @c3 = external hidden addrspace(12) global <{ [1 x <{ <{ [1 x <{ i32, target("spirv.Padding", 12) }>], i32 }>, target("spirv.Padding", 12) }>], <{ [1 x <{ i32, target("spirv.Padding", 12) }>], i32 }> }>, align 4

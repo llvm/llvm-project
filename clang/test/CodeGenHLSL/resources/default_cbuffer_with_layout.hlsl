@@ -17,7 +17,7 @@
 
 // CHECK: %S = type <{ <2 x float> }>
 
-// CHECK-DAG: @"$Globals.cb" = internal global target("dx.CBuffer", %"__cblayout_$Globals")
+// CHECK-DAG: @"$Globals.cb" = hidden global target("dx.CBuffer", %"__cblayout_$Globals")
 // CHECK-DAG: @a = external hidden addrspace(2) global i32, align 4
 // CHECK-DAG: @b = external hidden addrspace(2) global float, align 4
 // CHECK-DAG: @c = external hidden addrspace(2) global <{ [3 x <{ double, target("dx.Padding", 8) }>], double }>, align 8

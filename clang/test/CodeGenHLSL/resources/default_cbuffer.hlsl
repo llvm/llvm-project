@@ -4,12 +4,12 @@
 // CHECK: %"__cblayout_$Globals" = type <{ float, float, target("{{.*}}.Padding", 8), %__cblayout_S }>
 // CHECK: %__cblayout_S = type <{ float }>
 
-// DXIL-DAG: @"$Globals.cb" = internal global target("dx.CBuffer", %"__cblayout_$Globals")
+// DXIL-DAG: @"$Globals.cb" = hidden global target("dx.CBuffer", %"__cblayout_$Globals")
 // DXIL-DAG: @a = external hidden addrspace(2) global float
 // DXIL-DAG: @g = external hidden addrspace(2) global float
 // DXIL-DAG: @h = external hidden addrspace(2) global %__cblayout_S, align 4
 
-// SPIRV-DAG: @"$Globals.cb" = internal global target("spirv.VulkanBuffer", %"__cblayout_$Globals", 2, 0)
+// SPIRV-DAG: @"$Globals.cb" = hidden global target("spirv.VulkanBuffer", %"__cblayout_$Globals", 2, 0)
 // SPIRV-DAG: @a = external hidden addrspace(12) global float
 // SPIRV-DAG: @g = external hidden addrspace(12) global float
 // SPIRV-DAG: @h = external hidden addrspace(12) global %__cblayout_S, align 8

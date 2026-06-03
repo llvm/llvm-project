@@ -16,7 +16,7 @@
 // CHECK-SAME:   float
 // CHECK-SAME: }>
 
-// CHECK-DAG: @CB.cb = internal global target("dx.CBuffer", %__cblayout_CB)
+// CHECK-DAG: @CB.cb = hidden global target("dx.CBuffer", %__cblayout_CB)
 // CHECK-DAG: @a = external hidden addrspace(2) global float, align 4
 // CHECK-DAG: @b = external hidden addrspace(2) global double, align 8
 // CHECK-DAG: @c = external hidden addrspace(2) global <2 x i32>, align 4
@@ -28,7 +28,7 @@ cbuffer CB : register(b1, space3) {
   int2 c : packoffset(c5.z);
 }
 
-// CHECK-DAG: @CB.cb.1 = internal global target("dx.CBuffer", %__cblayout_CB_1)
+// CHECK-DAG: @CB.cb.1 = hidden global target("dx.CBuffer", %__cblayout_CB_1)
 // CHECK-DAG: @x = external hidden addrspace(2) global float, align 4
 // CHECK-DAG: @y = external hidden addrspace(2) global <2 x float>, align 4
 
