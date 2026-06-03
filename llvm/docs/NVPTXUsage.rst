@@ -3841,9 +3841,7 @@ Syntax:
 
   declare void @llvm.nvvm.st.async.space.cluster.i32(ptr addrspace(7) %dest_addr, i32 %value, ptr addrspace(7) %mbarrier_addr)
   declare void @llvm.nvvm.st.async.space.cluster.i64(ptr addrspace(7) %dest_addr, i64 %value, ptr addrspace(7) %mbarrier_addr)
-  declare void @llvm.nvvm.st.async.space.cluster.v2i32(ptr addrspace(7) %dest_addr, <2 x i32> %value, ptr addrspace(7) %mbarrier_addr)
-  declare void @llvm.nvvm.st.async.space.cluster.v2i64(ptr addrspace(7) %dest_addr, <2 x i64> %value, ptr addrspace(7) %mbarrier_addr)
-  declare void @llvm.nvvm.st.async.space.cluster.v4i32(ptr addrspace(7) %dest_addr, <4 x i32> %value, ptr addrspace(7) %mbarrier_addr)
+  declare void @llvm.nvvm.st.async.space.cluster.i128(ptr addrspace(7) %dest_addr, i128 %value, ptr addrspace(7) %mbarrier_addr)
   
 Overview:
 """""""""
@@ -3851,7 +3849,9 @@ Overview:
 The '``llvm.nvvm.st.async.space.cluster``' intrinsic initiates a weak 
 asynchronous store operation to shared memory that stores the value specified 
 by the `%value` operand to the destination address specified by the 
-`%dest_addr` operand.
+`%dest_addr` operand. The `%value` operand must be an ``i32``, ``i64`` or 
+``i128``, lowering to the ``.b32``, ``.b64`` and ``.b128`` variants 
+of the ``st.async`` PTX instruction respectively.
 
 The store operation is treated as a weak memory operation. The effects of this 
 operation become visible to other threads only when synchronization is 

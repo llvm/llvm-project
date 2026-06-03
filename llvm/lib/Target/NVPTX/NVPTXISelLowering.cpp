@@ -1116,10 +1116,12 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       MVT::v64f32, MVT::v128f32},
                      Custom);
 
-  // Custom lowering for tcgen05.st vector operands
+  // Custom lowering for tcgen05.st vector operands and the st.async mbarrier
+  // i128 (.b128) operand. MVT::i8 is needed for the st.async.release b8
+  // variant.
   setOperationAction(ISD::INTRINSIC_VOID,
                      {MVT::i8, MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,
-                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::v2i64,
+                      MVT::v32i32, MVT::v64i32, MVT::v128i32, MVT::i128,
                       MVT::Other},
                      Custom);
 
@@ -2652,55 +2654,25 @@ static SDValue lowerStAsyncWithMbarrier(SDValue Op, SelectionDAG &DAG) {
 
   MVT ValueVT = Value.getSimpleValueType();
 
-  if (ValueVT.getSizeInBits() > 128) {
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        Fn, "total bit-width of the value to be stored must be <= 128",
-        DiagnosticLocation(DL.getDebugLoc())));
-    return Op.getOperand(0); // Return only the chain
+  if (ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i128) {
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, Value);
+    SDValue ValueLo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(0, DL));
+    SDValue ValueHi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cast,
+                                  DAG.getIntPtrConstant(1, DL));
+    SDValue Ops[] = {N->getOperand(0), DestAddr, ValueLo, ValueHi, MbarAddr};
+    return DAG.getNode(NVPTXISD::ST_ASYNC_MBARRIER_B128, DL, MVT::Other, Ops);
   }
 
-  auto OpCode = [&]() -> std::optional<unsigned> {
-    switch (ValueVT.SimpleTy) {
-    case MVT::i32:
-      return NVPTXISD::ST_ASYNC_MBARRIER_B32;
-    case MVT::i64:
-      return NVPTXISD::ST_ASYNC_MBARRIER_B64;
-    case MVT::v2i32:
-      return NVPTXISD::ST_ASYNC_MBARRIER_V2B32;
-    case MVT::v2i64:
-      return NVPTXISD::ST_ASYNC_MBARRIER_V2B64;
-    case MVT::v4i32:
-      return NVPTXISD::ST_ASYNC_MBARRIER_V4B32;
-    default:
-      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-          Fn,
-          Twine("unsupported argument type ") +
-              llvm::EVT(ValueVT).getEVTString() + " for " +
-              llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
-          DiagnosticLocation(DL.getDebugLoc())));
-      return {};
-    }
-  }();
-
-  if (!OpCode)
-    return Op.getOperand(0); // Return only the chain
-
-  SmallVector<SDValue, 6> Ops;
-
-  Ops.push_back(N->getOperand(0)); // Chain
-  Ops.push_back(DestAddr);
-  if (ValueVT.isVector()) {
-    for (unsigned i = 0; i < ValueVT.getVectorNumElements(); ++i) {
-      Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                ValueVT.getVectorElementType(), Value,
-                                DAG.getIntPtrConstant(i, DL)));
-    }
-  } else {
-    Ops.push_back(Value);
-  }
-  Ops.push_back(MbarAddr);
-
-  return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
 }
 
 static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {

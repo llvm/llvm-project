@@ -6087,60 +6087,43 @@ let Predicates = [hasSM<100>, hasPTX<86>] in {
 // Asynchronous store instructions
 //
 
-def SDTAsyncStoreMbarrier : SDTypeProfile<0, 3, 
-  [SDTCisPtrTy<0>, SDTCisPtrTy<2>]>;
-def SDTAsyncStoreMbarrierV2 : SDTypeProfile<0, 4,
-  [SDTCisPtrTy<0>, SDTCisPtrTy<3>]>;
-def SDTAsyncStoreMbarrierV4 : SDTypeProfile<0, 6,
-  [SDTCisPtrTy<0>, SDTCisPtrTy<5>]>;
-
-class StAsyncMbarrierNode<string vec, string type> :
-  SDNode<"NVPTXISD::ST_ASYNC_MBARRIER_" # vec # type, 
-         !cast<SDTypeProfile>("SDTAsyncStoreMbarrier" # vec), 
+def SDTAsyncStoreMbarrierB128 : SDTypeProfile<0, 4,
+  [SDTCisPtrTy<0>, SDTCisVT<1, i64>, SDTCisVT<2, i64>, SDTCisPtrTy<3>]>;
+def st_async_mbarrier_b128 :
+  SDNode<"NVPTXISD::ST_ASYNC_MBARRIER_B128", SDTAsyncStoreMbarrierB128,
          [SDNPHasChain, SDNPMayStore]>;
-
 
 class ST_ASYNC_MBARRIER<string type, NVPTXRegClass reg> :
   NVPTXInst<(outs),
             (ins ADDR:$dest_addr, reg:$value, ADDR:$mbar),
     "st.async.shared::cluster.mbarrier::complete_tx::bytes." # type # "\t [$dest_addr], $value, [$mbar];">;
 
-class ST_ASYNC_MBARRIER_V2<string type, NVPTXRegClass reg> :
+def ST_ASYNC_MBARRIER_B128 :
   NVPTXInst<(outs),
-            (ins ADDR:$dest_addr, reg:$value1, reg:$value2, ADDR:$mbar),
-    "st.async.shared::cluster.mbarrier::complete_tx::bytes.v2." # type # "\t [$dest_addr], {{$value1, $value2}}, [$mbar];">;
-
-class ST_ASYNC_MBARRIER_V4<string type, NVPTXRegClass reg> :
-  NVPTXInst<(outs),
-            (ins ADDR:$dest_addr, reg:$value1, reg:$value2, reg:$value3, 
-               reg:$value4, ADDR:$mbar),
-    "st.async.shared::cluster.mbarrier::complete_tx::bytes.v4." # type # "\t [$dest_addr], {{$value1, $value2, $value3, $value4}}, [$mbar];">;
-
+            (ins ADDR:$dest_addr, B64:$value0, B64:$value1, ADDR:$mbar),
+    "{{\n\t"
+    ".reg .b128 %in_128;\n\t"
+    "mov.b128 %in_128, {$value0, $value1};\n\t"
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes.b128 \t[$dest_addr], %in_128, [$mbar];\n\t"
+    "}}">;
 
 let Predicates = [hasSM<90>, hasPTX<81>] in {
   foreach size = ["32", "64"] in {
     defvar valueType = !cast<ValueType>("i" # size);
     defvar reg = !cast<NVPTXRegClass>("B" # size);
-    defvar type_str = "B" # size;
 
-    def : Pat<(StAsyncMbarrierNode<"", type_str> 
-                 addr:$dest_addr, valueType:$value, addr:$mbar), 
-              (ST_ASYNC_MBARRIER<!tolower(type_str), reg> 
+    def : Pat<(int_nvvm_st_async_space_cluster
+                 addr:$dest_addr, valueType:$value, addr:$mbar),
+              (ST_ASYNC_MBARRIER<"b" # size, reg>
                  addr:$dest_addr, valueType:$value, addr:$mbar)>;
-    def : Pat<(StAsyncMbarrierNode<"V2", type_str> 
-                 addr:$dest_addr, valueType:$value1, valueType:$value2, 
-                 addr:$mbar), 
-              (ST_ASYNC_MBARRIER_V2<!tolower(type_str), reg> 
-                 addr:$dest_addr, valueType:$value1, valueType:$value2, 
-                 addr:$mbar)>;
   }
+}
 
-  def : Pat<(StAsyncMbarrierNode<"V4", "B32"> 
-                 addr:$dest_addr, i32:$value1, i32:$value2, 
-                 i32:$value3, i32:$value4, addr:$mbar), 
-              (ST_ASYNC_MBARRIER_V4<"b32", B32> 
-                 addr:$dest_addr, i32:$value1, i32:$value2, 
-                 i32:$value3, i32:$value4, addr:$mbar)>;
+let Predicates = [hasSM<90>, hasPTX<92>] in {
+  def : Pat<(st_async_mbarrier_b128
+               addr:$dest_addr, i64:$value0, i64:$value1, addr:$mbar),
+            (ST_ASYNC_MBARRIER_B128
+               addr:$dest_addr, B64:$value0, B64:$value1, addr:$mbar)>;
 }
 
 def SDTAsyncStoreRelease : SDTypeProfile<0, 3,
