@@ -1,22 +1,18 @@
-================
-The LLVM Lexicon
-================
+# The LLVM Lexicon
 
-.. note::
+```{note}
+This document is a work in progress!
+```
 
-    This document is a work in progress!
+## Definitions
 
-Definitions
-===========
-
-A
--
+### A
 
 **ADCE**
-    Aggressive Dead Code Elimination
+:   Aggressive Dead Code Elimination
 
 **AST**
-    Abstract Syntax Tree.
+:   Abstract Syntax Tree.
 
     Due to Clang's influence (mostly the fact that parsing and semantic
     analysis are so intertwined for C and especially C++), the typical
@@ -30,31 +26,29 @@ A
 
     Consult your favorite compiler book or search engine for more details.
 
-B
--
+### B
 
-.. _lexicon-bb-vectorization:
+(lexicon-bb-vectorization)=
 
 **BB Vectorization**
-    Basic-Block Vectorization
+:   Basic-Block Vectorization
 
 **BDCE**
-    Bit-tracking dead code elimination. Some bit-wise instructions (shifts,
+:   Bit-tracking dead code elimination. Some bit-wise instructions (shifts,
     ands, ors, etc.) "kill" some of their input bits -- that is, they make it
     such that those bits can be either zero or one without affecting control or
     data flow of a program. The BDCE pass removes instructions that only
     compute these dead bits.
 
 **BURS**
-    Bottom Up Rewriting System --- A method of instruction selection for code
-    generation.  An example is the `BURG
-    <http://www.program-transformation.org/Transform/BURG>`_ tool.
+:   Bottom Up Rewriting System --- A method of instruction selection for code
+    generation.  An example is the
+    [BURG](http://www.program-transformation.org/Transform/BURG) tool.
 
-C
--
+### C
 
 **CFI**
-    This abbreviation has two meanings.
+:   This abbreviation has two meanings.
     Either:
     Call Frame Information. Used in DWARF debug info and in C++ unwind info
     to show how the function prologue lays out the stack frame.
@@ -65,132 +59,126 @@ C
     of execution (the control flow) of a program.
 
 **CIE**
-    Common Information Entry.  A kind of CFI used to reduce the size of FDEs.
+:   Common Information Entry.  A kind of CFI used to reduce the size of FDEs.
     The compiler creates a CIE which contains the information common across all
     the FDEs.  Each FDE then points to its CIE.
 
 **CSE**
-    Common Subexpression Elimination. An optimization that removes common
-    subexpression computation. For example ``(a+b)*(a+b)`` has two
-    subexpressions that are the same: ``(a+b)``. This optimization would
+:   Common Subexpression Elimination. An optimization that removes common
+    subexpression computation. For example `(a+b)*(a+b)` has two
+    subexpressions that are the same: `(a+b)`. This optimization would
     perform the addition only once and then perform the multiply (but only if
     it's computationally correct/safe).
 
-D
--
+### D
 
 **DAG**
-    Directed Acyclic Graph
+:   Directed Acyclic Graph
 
-.. _derived pointer:
-.. _derived pointers:
+(derived pointer)=
+(derived pointers)=
 
 **Derived Pointer**
-    A pointer to the interior of an object, such that a garbage collector is
+:   A pointer to the interior of an object, such that a garbage collector is
     unable to use the pointer for reachability analysis. While a derived pointer
     is live, the corresponding object pointer must be kept in a root, otherwise
     the collector might free the referenced object. With copying collectors,
     derived pointers pose an additional hazard that they may be invalidated at
-    any `safe point`_. This term is used in opposition to `object pointer`_.
+    any {ref}`safe point <safe point>`. This term is used in opposition to
+    {ref}`object pointer <object pointer>`.
 
 **DSA**
-    Data Structure Analysis
+:   Data Structure Analysis
 
 **DSE**
-    Dead Store Elimination
+:   Dead Store Elimination
 
-E
--
+### E
 
 **ento**
-    This namespace houses the
-    `Clang Static Analyzer <https://clang.llvm.org/docs/ClangStaticAnalyzer.html>`_.
-    It is an abbreviation of `entomology <https://en.wikipedia.org/wiki/Entomology>`_.
+:   This namespace houses the
+    [Clang Static Analyzer](https://clang.llvm.org/docs/ClangStaticAnalyzer.html).
+    It is an abbreviation of [entomology](https://en.wikipedia.org/wiki/Entomology).
 
       *"Entomology is the scientific study of insects."*
 
-    In the past, this namespace had not only the name `GR` (aka. Graph Reachability)
-    but also `entoSA`.
+    In the past, this namespace had not only the name `GR` (aka. Graph
+    Reachability) but also `entoSA`.
 
-F
--
+### F
 
 **FCA**
-    First Class Aggregate
+:   First Class Aggregate
 
 **FDE**
-    Frame Description Entry. A kind of CFI used to describe the stack frame of
+:   Frame Description Entry. A kind of CFI used to describe the stack frame of
     one function.
 
-G
--
+### G
 
 **GC**
-    Garbage Collection. The practice of using reachability analysis instead of
+:   Garbage Collection. The practice of using reachability analysis instead of
     explicit memory management to reclaim unused memory.
 
 **GEP**
-    ``GetElementPtr``. An LLVM IR instruction that is used to get the address
+:   `GetElementPtr`. An LLVM IR instruction that is used to get the address
     of a subelement of an aggregate data structure. It is documented in detail
-    `here <https://llvm.org/docs/GetElementPtr.html>`_.
+    [here](https://llvm.org/docs/GetElementPtr.html).
 
 **GVN**
-    Global Value Numbering. GVN is a pass that partitions values computed by a
+:   Global Value Numbering. GVN is a pass that partitions values computed by a
     function into congruence classes. Values ending up in the same congruence
     class are guaranteed to be the same for every execution of the program.
     In that respect, congruency is a compile-time approximation of equivalence
     of values at runtime.
 
-H
--
+### H
 
-.. _heap:
+(heap)=
 
 **Heap**
-    In garbage collection, the region of memory which is managed using
+:   In garbage collection, the region of memory which is managed using
     reachability analysis.
 
-I
--
+### I
 
 **ICE**
-    Internal Compiler Error. This abbreviation is used to describe errors
+:   Internal Compiler Error. This abbreviation is used to describe errors
     that occur in LLVM or Clang as they are compiling source code. For example,
     if a valid C++ source program were to trigger an assert in Clang when
     compiled, that could be referred to as an "ICE".
 
 **ICF**
-    Identical Code Folding
+:   Identical Code Folding
 
 **ICP**
-    Indirect Call Promotion
+:   Indirect Call Promotion
 
 **IPA**
-    Inter-Procedural Analysis. Refers to any variety of code analysis that
+:   Inter-Procedural Analysis. Refers to any variety of code analysis that
     occurs between procedures, functions or compilation units (modules).
 
 **IPO**
-    Inter-Procedural Optimization. Refers to any variety of code optimization
+:   Inter-Procedural Optimization. Refers to any variety of code optimization
     that occurs between procedures, functions or compilation units (modules).
 
 **ISel**
-    Instruction Selection
+:   Instruction Selection
 
-L
--
+### L
 
 **LCSSA**
-    Loop-Closed Static Single Assignment Form
+:   Loop-Closed Static Single Assignment Form
 
 **LGTM**
-    "Looks Good To Me". In a review thread, this indicates that the
+:   "Looks Good To Me". In a review thread, this indicates that the
     reviewer thinks that the patch is okay to commit.
 
 **LICM**
-    Loop Invariant Code Motion
+:   Loop Invariant Code Motion
 
 **LSDA**
-    Language Specific Data Area.  C++ "zero cost" unwinding is built on top a
+:   Language Specific Data Area.  C++ "zero cost" unwinding is built on top a
     generic unwinding mechanism.  As the unwinder walks each frame, it calls
     a "personality" function to do language-specific analysis.  Each function's
     FDE points to an optional LSDA which is passed to the personality function.
@@ -198,115 +186,114 @@ L
     statements in that function.
 
 **Load-VN**
-    Load Value Numbering
+:   Load Value Numbering
 
 **LTO**
-    Link-Time Optimization
+:   Link-Time Optimization
 
-M
--
+### M
 
 **MC**
-    Machine Code
+:   Machine Code
 
-N
--
-.. _nfc:
+### N
+
+(nfc)=
 
 **NFC**
-  "No functional change". Used in a commit message to indicate that a patch
-  is a pure refactoring/cleanup.
-  Usually used in the first line, so it is visible without opening the
-  actual commit email.
+:   "No functional change". Used in a commit message to indicate that a patch
+    is a pure refactoring/cleanup.
+    Usually used in the first line, so it is visible without opening the
+    actual commit email.
 
-O
--
-.. _object pointer:
-.. _object pointers:
+### O
+
+(object pointer)=
+(object pointers)=
 
 **Object Pointer**
-    A pointer to an object such that the garbage collector is able to trace
+:   A pointer to an object such that the garbage collector is able to trace
     references contained within the object. This term is used in opposition to
-    `derived pointer`_.
+    {ref}`derived pointer <derived pointer>`.
 
-P
--
+### P
 
 **PGO**
-    Profile-Guided Optimization
+:   Profile-Guided Optimization
 
 **PR**
-    Problem report. A bug filed on `the LLVM Bug Tracking System
-    <https://bugs.llvm.org/enter_bug.cgi>`_.
+:   Problem report. A bug filed on
+    [the LLVM Bug Tracking System](https://bugs.llvm.org/enter_bug.cgi).
 
 **PRE**
-    Partial Redundancy Elimination
+:   Partial Redundancy Elimination
 
-R
--
+### R
 
 **RAUW**
-
-    Replace All Uses With. The functions ``User::replaceUsesOfWith()``,
-    ``Value::replaceAllUsesWith()``, and
-    ``Constant::replaceUsesOfWithOnConstant()`` implement the replacement of one
+:   Replace All Uses With. The functions `User::replaceUsesOfWith()`,
+    `Value::replaceAllUsesWith()`, and
+    `Constant::replaceUsesOfWithOnConstant()` implement the replacement of one
     Value with another by iterating over its def/use chain and fixing up all of
     the pointers to point to the new value.  See
-    also `def/use chains <ProgrammersManual.html#iterating-over-def-use-use-def-chains>`_.
+    also
+    {ref}`def/use chains <iterate_chains>`.
 
 **Reassociation**
-    Rearranging associative expressions to promote better redundancy elimination
-    and other optimizations.  For example, changing ``(A+B-A)`` into ``(B+A-A)``,
-    permitting it to be optimized into ``(B+0)`` then ``(B)``.
+:   Rearranging associative expressions to promote better redundancy elimination
+    and other optimizations.  For example, changing `(A+B-A)` into `(B+A-A)`,
+    permitting it to be optimized into `(B+0)` then `(B)`.
 
 **RFC**
-  Request for Comment. An email sent to a project mailing list in order to
-  solicit feedback on a proposed change. See also: the :doc:`RFC process <RFCProcess>`
-  documentation.
+:   Request for Comment. An email sent to a project mailing list in order to
+    solicit feedback on a proposed change. See also: the {doc}`RFC process
+    <RFCProcess>` documentation.
 
-.. _roots:
-.. _stack roots:
+(roots)=
+(stack roots)=
 
 **Root**
-    In garbage collection, a pointer variable lying outside of the `heap`_ from
+:   In garbage collection, a pointer variable lying outside of the
+    {ref}`heap <heap>` from
     which the collector begins its reachability analysis. In the context of code
     generation, "root" almost always refers to a "stack root" --- a local or
     temporary variable within an executing function.
 
 **RPO**
-    Reverse postorder
+:   Reverse postorder
 
 **RTTI**
-    Run-time Type Information
+:   Run-time Type Information
 
-S
--
+### S
 
-.. _safe point:
+(safe point)=
 
 **Safe Point**
-    In garbage collection, it is necessary to identify `stack roots`_ so that
+:   In garbage collection, it is necessary to identify
+    {ref}`stack roots <stack roots>` so that
     reachability analysis may proceed. It may be infeasible to provide this
     information for every instruction, so instead the information is
     calculated only at designated safe points. With a copying collector,
-    `derived pointers`_ must not be retained across safe points and `object
-    pointers`_ must be reloaded from stack roots.
+    {ref}`derived pointers <derived pointers>` must not be retained across safe
+    points and {ref}`object pointers <object pointers>` must be reloaded from
+    stack roots.
 
 **SDISel**
-    Selection DAG Instruction Selection.
+:   Selection DAG Instruction Selection.
 
 **SCC**
-    Strongly Connected Component
+:   Strongly Connected Component
 
 **SCCP**
-    Sparse Conditional Constant Propagation
+:   Sparse Conditional Constant Propagation
 
 **SLP**
-    Superword-Level Parallelism, same as :ref:`Basic-Block Vectorization
+:   Superword-Level Parallelism, same as {ref}`Basic-Block Vectorization
     <lexicon-bb-vectorization>`.
 
 **Splat**
-    Splat refers to a vector of identical scalar elements.
+:   Splat refers to a vector of identical scalar elements.
 
     The term is based on the PowerPC Altivec instructions that provided
     this functionality in hardware. For example, "vsplth" and the corresponding
@@ -314,25 +301,23 @@ S
     action include "duplicate" (ARM) and "broadcast" (x86).
 
 **SRoA**
-    Scalar Replacement of Aggregates
+:   Scalar Replacement of Aggregates
 
 **SSA**
-    Static Single Assignment
+:   Static Single Assignment
 
 **Stack Map**
-    In garbage collection, metadata emitted by the code generator which
-    identifies `roots`_ within the stack frame of an executing function.
+:   In garbage collection, metadata emitted by the code generator which
+    identifies {ref}`roots <roots>` within the stack frame of an executing
+    function.
 
-T
--
+### T
 
 **TBAA**
-    Type-Based Alias Analysis
+:   Type-Based Alias Analysis
 
 
-W
--
+### W
 
 **WPD**
-    Whole Program Devirtualization
-
+:   Whole Program Devirtualization
