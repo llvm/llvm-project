@@ -1040,12 +1040,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // Macros to help identify the narrow and wide character sets. This is set
   // to fexec-charset. If fexec-charset is not specified, the default is the
   // system charset.
-  if (!LangOpts.ExecEncoding.empty())
-    Builder.defineMacro("__clang_literal_encoding__",
-                        Twine("\"" + LangOpts.ExecEncoding + "\""));
-  else
-    Builder.defineMacro("__clang_literal_encoding__",
-                        Twine("\"" + TI.getDefaultNarrowTextEncoding() + "\""));
+  Builder.defineMacro(
+      "__clang_literal_encoding__",
+      Twine("\"" +
+            (LangOpts.ExecEncoding.empty() ? TI.getDefaultOrdinaryTextEncoding()
+                                           : LangOpts.ExecEncoding) +
+            "\""));
 
   if (TI.getTypeWidth(TI.getWCharType()) >= 32) {
     // FIXME: 32-bit wchar_t signals UTF-32. This may change

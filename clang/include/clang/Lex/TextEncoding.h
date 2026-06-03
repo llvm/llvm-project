@@ -1,4 +1,4 @@
-//===-- clang/Lex/TextEncodingConfig.h - Text Conversion Config -*- C++ -*-===//
+//===-- clang/Lex/TextEncoding.h - Text Encoding Conversion ------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
-#define LLVM_CLANG_LEX_TEXTENCODINGCONFIG_H
+#ifndef LLVM_CLANG_LEX_TEXTENCODING_H
+#define LLVM_CLANG_LEX_TEXTENCODING_H
 
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,15 +15,14 @@
 
 enum ConversionAction { CA_NoConversion, CA_ToExecEncoding };
 
-class TextEncodingConfig {
+class TextEncoding {
   llvm::StringRef ExecEncoding;
   llvm::TextEncodingConverter *ToExecEncodingConverter = nullptr;
 
 public:
   llvm::TextEncodingConverter *getConverter(ConversionAction Action) const;
   static std::error_code
-  setConvertersFromOptions(TextEncodingConfig &TEC,
-                           const clang::LangOptions &Opts);
+  setConvertersFromOptions(TextEncoding &TE, const clang::LangOptions &Opts);
 
   llvm::StringRef getExecEncoding() { return ExecEncoding; }
 };

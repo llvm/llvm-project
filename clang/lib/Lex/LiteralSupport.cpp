@@ -1858,10 +1858,10 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   uint32_t *buffer_begin = &codepoint_buffer.front();
   uint32_t *buffer_end = buffer_begin + codepoint_buffer.size();
 
-  const TextEncodingConfig &TEC = PP.getTextEncodingConfig();
+  const TextEncoding &TE = PP.getTextEncoding();
   llvm::TextEncodingConverter *Converter = nullptr;
   if (isOrdinary())
-    Converter = TEC.getConverter(CA_ToExecEncoding);
+    Converter = TE.getConverter(CA_ToExecEncoding);
 
   // Unicode escapes representing characters that cannot be correctly
   // represented in a single code unit are disallowed in character literals
@@ -2082,7 +2082,7 @@ StringLiteralParser::StringLiteralParser(ArrayRef<Token> StringToks,
                                          ConversionAction Action)
     : SM(PP.getSourceManager()), Features(PP.getLangOpts()),
       Target(PP.getTargetInfo()), Diags(&PP.getDiagnostics()),
-      TEC(&PP.getTextEncodingConfig()), MaxTokenLength(0), SizeBound(0),
+      TE(&PP.getTextEncoding()), MaxTokenLength(0), SizeBound(0),
       CharByteWidth(0), Kind(tok::unknown), ResultPtr(ResultBuf.data()),
       EvalMethod(EvalMethod), hadError(false), Pascal(false) {
   init(StringToks, Action);
@@ -2182,8 +2182,8 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks,
   SourceLocation UDSuffixTokLoc;
 
   llvm::TextEncodingConverter *Converter = nullptr;
-  if (isOrdinary() && TEC)
-    Converter = TEC->getConverter(Action);
+  if (isOrdinary() && TE)
+    Converter = TE->getConverter(Action);
 
   for (unsigned i = 0, e = StringToks.size(); i != e; ++i) {
     const char *ThisTokBuf = &TokenBuf[0];
@@ -2569,7 +2569,7 @@ unsigned StringLiteralParser::getOffsetOfStringByte(const Token &Tok,
       ProcessCharEscape(SpellingStart, SpellingPtr, SpellingEnd, HadError,
                         FullSourceLoc(Tok.getLocation(), SM), CharByteWidth * 8,
                         Diags, Features, StringLiteralEvalMethod::Evaluated,
-                        /*TextEncodingConfig=*/nullptr);
+                        /*TextEncoding=*/nullptr);
       --ByteNo;
     }
     assert(!HadError && "This method isn't valid on erroneous strings");
