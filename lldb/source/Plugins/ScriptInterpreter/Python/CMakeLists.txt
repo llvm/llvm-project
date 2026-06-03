@@ -62,9 +62,12 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:--unresolved-symbols=ignore-all")
   else()
-    # Windows continues to use delay-load + import lib.
-    target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
-      ${Python3_LIBRARIES})
+    # For the limited API, rely on #pragma comment(lib, "python3.lib")
+    # emitted by SWIG. For the full API, link the version-specific import lib.
+    if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
+      target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
+        ${Python3_LIBRARIES})
+    endif()
     target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
       ${PYTHON_SABI_LIBRARY_DIRS})
   endif()
@@ -92,6 +95,9 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
 
   target_link_directories(lldbStaticScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 else()
+  if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
+    set(python_link_libs ${Python3_LIBRARIES})
+  endif()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${python_plugin_sources}
     LINK_COMPONENTS
@@ -104,10 +110,17 @@ else()
       lldbInterpreter
       lldbTarget
       lldbValueObject
-      ${Python3_LIBRARIES}
+      ${python_link_libs}
       ${LLDB_LIBEDIT_LIBS}
   )
   target_link_directories(lldbPluginScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+endif()
+
+if (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API)
+  # Define Py_LIMITED_API directly so pyconfig.h emits #pragma comment(lib,
+  # "python3.lib") instead of the version-specific library.
+  target_compile_definitions(lldbPluginScriptInterpreterPython PUBLIC
+    "Py_LIMITED_API=0x03080000")
 endif()
 
 target_include_directories(lldbPluginScriptInterpreterPython
