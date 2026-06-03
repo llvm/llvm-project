@@ -832,6 +832,27 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
         Succ != OuterLoopLatch)
       return false;
 
+  // Reject nests where the outer-loop header conditionally branches to the
+  // outer latch. Such a branch guards the inner loop, so it runs only on a
+  // subset of the outer iterations. If interchanged, the inner loop would move
+  // outside the guard and run on every outer iteration, including the
+  // guarded-off ones. That is illegal when the inner loop relies on the guard
+  // to terminate.
+  //
+  // TODO: Bailing out is conservative; such a nest can be interchanged when
+  // the guard is preserved by the transform. If the guard condition is
+  // invariant across the interchanged pair, keep it wrapping the interchanged
+  // nest so the inner loop is skipped for the outer iterations the guard
+  // excludes, instead of routing the guard edge into the inner latch as
+  // adjustLoopBranches() does today. Only bail when the guard depends on the
+  // interchanged induction variables or the inner loop cannot be proven to
+  // run zero times when the guard is false. See llvm/llvm-project#201273.
+  if (OuterLoopHeader->getTerminator()->getNumSuccessors() > 1 &&
+      is_contained(successors(OuterLoopHeader), OuterLoopLatch)) {
+    LLVM_DEBUG(dbgs() << "Outer loop header guards the inner loop\n");
+    return false;
+  }
+
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
 
   // The inner loop reduction pattern requires storing the LCSSA PHI in
