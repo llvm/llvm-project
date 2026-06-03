@@ -1291,6 +1291,32 @@ static llvm::Error Evaluate_DW_OP_call_frame_cfa(EvalContext &eval_ctx) {
   return llvm::Error::success();
 }
 
+static llvm::Error CheckScalarOperandsHaveSameType(const Scalar &lhs,
+                                                   const Scalar &rhs,
+                                                   LocationAtom opcode) {
+  // Scalar does not preserve the original DWARF DIE, but it does carry the
+  // pieces of base-type information used by the evaluator: kind, size, and
+  // integer signedness.
+  if (lhs.GetType() != rhs.GetType())
+    return llvm::createStringError(
+        "%s requires operands to have the same type",
+        DW_OP_value_to_name(opcode));
+
+  if (lhs.GetByteSize() != rhs.GetByteSize())
+    return llvm::createStringError(
+        "%s requires operands to have the same type",
+        DW_OP_value_to_name(opcode));
+
+  // Floating scalars do not have integer signedness, so only compare
+  // signedness after establishing that both operands are integers.
+  if (lhs.GetType() == Scalar::e_int && lhs.IsSigned() != rhs.IsSigned())
+    return llvm::createStringError(
+        "%s requires operands to have the same type",
+        DW_OP_value_to_name(opcode));
+
+  return llvm::Error::success();
+}
+
 llvm::Expected<Value> DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
@@ -1470,12 +1496,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_and:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() & tmp.GetScalar();
       break;
 
     case DW_OP_div: {
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       if (tmp.GetScalar().IsZero())
         return llvm::createStringError("divide by zero");
@@ -1493,12 +1527,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_minus:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() - tmp.GetScalar();
       break;
 
     case DW_OP_mod:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() % tmp.GetScalar();
@@ -1521,12 +1563,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_or:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() | tmp.GetScalar();
       break;
 
     case DW_OP_plus:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() += tmp.GetScalar();
@@ -1541,12 +1591,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_shl:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() <<= tmp.GetScalar();
       break;
 
     case DW_OP_shr:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       if (!stack.back().GetScalar().ShiftRightLogical(tmp.GetScalar()))
@@ -1554,12 +1612,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       break;
 
     case DW_OP_shra:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() >>= tmp.GetScalar();
       break;
 
     case DW_OP_xor:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() ^ tmp.GetScalar();
@@ -1601,36 +1667,60 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     } break;
 
     case DW_OP_eq:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() == tmp.GetScalar();
       break;
 
     case DW_OP_ge:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() >= tmp.GetScalar();
       break;
 
     case DW_OP_gt:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() > tmp.GetScalar();
       break;
 
     case DW_OP_le:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() <= tmp.GetScalar();
       break;
 
     case DW_OP_lt:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() < tmp.GetScalar();
       break;
 
     case DW_OP_ne:
+      if (llvm::Error err = CheckScalarOperandsHaveSameType(
+              stack[stack.size() - 2].GetScalar(), stack.back().GetScalar(),
+              opcode))
+        return err;
       tmp = stack.back();
       stack.pop_back();
       stack.back().GetScalar() = stack.back().GetScalar() != tmp.GetScalar();
