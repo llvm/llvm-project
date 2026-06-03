@@ -5,36 +5,24 @@
 
 ; Test cases that contain atomic instructions inside the loops thus interchange
 ; must not be applied.
-;
-; FIXME: Currently some of them are interchanged.
 
 define void @atomicrmw() {
 ; CHECK-LABEL: define void @atomicrmw() {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
-; CHECK:       [[FOR_J_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_J_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[FOR_J]] ], [ [[TMP0:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[OLD:%.*]] = atomicrmw xchg ptr @g, i64 [[J]] monotonic, align 8
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 8
-; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
-; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 8
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_I_LATCH]], label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT]], label %[[FOR_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[FOR_J]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -64,31 +52,21 @@ exit:
 define void @cmpxchg(i64 %cmp) {
 ; CHECK-LABEL: define void @cmpxchg(
 ; CHECK-SAME: i64 [[CMP:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
-; CHECK:       [[FOR_J_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_J_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[FOR_J]] ], [ [[TMP0:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[OLD:%.*]] = cmpxchg ptr @g, i64 [[CMP]], i64 [[J]] monotonic monotonic, align 8
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 8
-; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
-; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 8
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_I_LATCH]], label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 8
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT]], label %[[FOR_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[FOR_J]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
