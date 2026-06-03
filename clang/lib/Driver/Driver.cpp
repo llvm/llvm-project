@@ -3076,9 +3076,10 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   if (Arg *TCTP = Args.getLastArgNoClaim(options::OPT__SLASH_TC,
                                          options::OPT__SLASH_TP)) {
     InputTypeArg = TCTP;
-    // /TC forces C, but -fsycl requires C++; let the per-file check below
-    // handle the error rather than silently setting all inputs to TY_C.
-    InputType = TCTP->getOption().matches(options::OPT__SLASH_TC) && !IsSYCL
+    if (TCTP->getOption().matches(options::OPT__SLASH_TC) && IsSYCL)
+      Diag(clang::diag::err_drv_argument_not_allowed_with)
+          << TCTP->getAsString(Args) << "-fsycl";
+    InputType = TCTP->getOption().matches(options::OPT__SLASH_TC)
                     ? types::TY_C
                     : types::TY_CXX;
 
@@ -3225,11 +3226,13 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
 
     } else if (A->getOption().matches(options::OPT__SLASH_Tc)) {
       StringRef Value = A->getValue();
-      if (DiagnoseInputExistence(Value, types::TY_C,
-                                 /*TypoCorrect=*/false)) {
+      if (IsSYCL)
+        Diag(clang::diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "-fsycl";
+      else if (DiagnoseInputExistence(Value, types::TY_C,
+                                      /*TypoCorrect=*/false)) {
         Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
-        Inputs.push_back(
-            std::make_pair(IsSYCL ? types::TY_CXX : types::TY_C, InputArg));
+        Inputs.push_back(std::make_pair(types::TY_C, InputArg));
       }
       A->claim();
     } else if (A->getOption().matches(options::OPT__SLASH_Tp)) {
