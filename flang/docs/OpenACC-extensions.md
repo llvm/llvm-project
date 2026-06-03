@@ -42,6 +42,19 @@ These extensions require no flag.
   in clauses of `!$acc declare` directives for a function, subroutine, program,
   or module, but Flang permits it with a warning when the same clause is used.
 
+## Extensions enabled by default
+
+### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
+
+The `ROUTINE` directive accepts a parenthesized list of more than one name
+(e.g. `!$acc routine(foo, bar) seq`).  The OpenACC specification permits only a
+single name; this extension is equivalent to writing one `ROUTINE` directive
+per name, each with identical clauses.  A `BIND` clause may not be combined
+with multiple names.  A warning is emitted for each such directive
+(`-Wopenacc-multiple-names-in-routine`; suppress with
+`-Wno-openacc-multiple-names-in-routine`).  This extension may be disabled with
+`-fno-openacc-multiple-names-in-routine`.
+
 ## Extensions enabled by flag
 
 ### `-facc-allow-default-none-scalars` — pre-OpenACC-3.2 scalar behavior under `DEFAULT(NONE)`
