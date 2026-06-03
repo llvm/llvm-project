@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -fmatrix-memory-layout=column-major -o - | FileCheck %s
-// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -fmatrix-memory-layout=row-major -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=column-major -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes -fmatrix-memory-layout=row-major -o - | FileCheck %s
 
 // Verifies that a per-decl `[[hlsl::row_major]]` / `[[hlsl::column_major]]`
 // (spelled `row_major` / `column_major` in HLSL) overrides the
