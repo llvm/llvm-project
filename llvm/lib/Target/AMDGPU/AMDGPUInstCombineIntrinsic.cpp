@@ -1639,7 +1639,18 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
-        break;
+
+        // The result of V_ICMP/V_FCMP assembly instructions (which this
+        // intrinsic exposes) is one bit per thread, masked with the EXEC
+        // register (which contains the bitmask of live threads). So a
+        // comparison that always returns true is the same as a read of the
+        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
+        // zext/trunc the result to the intrinsic's return type.
+        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
+        Value *Ballot = IC.Builder.CreateIntrinsic(
+            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
+        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
+        return IC.replaceInstUsesWith(II, Result);
       }
 
       // Canonicalize constants to RHS.
