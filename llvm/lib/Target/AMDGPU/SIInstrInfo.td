@@ -1862,7 +1862,7 @@ class getSDWADstForVT<ValueType VT> {
 // instructions for the given VT.
 class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
   RegisterOperand ret =
-  !cond(!eq(VT, i64)    : VSrc_b64,
+  !cond(!eq(VT, i64)    : VSrc_u64,
         !eq(VT, f64)    : VSrc_f64,
         !eq(VT, i32)    : VSrc_b32,
         !eq(VT, f32)    : VSrc_f32,
@@ -1910,7 +1910,7 @@ class getVCSrcForVT<ValueType VT> {
 }
 
 class getSOPSrcForVT<ValueType VT> {
-  RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
+  RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_u64, SSrc_b32);
 }
 
 // Returns the vreg register operand to use for source operand given VT.
@@ -1975,7 +1975,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT.Size, 192)  : VRegSrc_192,
         !eq(VT.Size, 128)  : VRegSrc_128,
         !eq(VT.Size, 96)   : VRegSrc_96,
-        !eq(VT.Size, 64)   : VSrc_b64,
+        !eq(VT.Size, 64)   : VSrc_u64,
         1                  : VSrc_b32);
 }
 
@@ -3145,6 +3145,20 @@ def VOP_I32_V8BF16_I32_F32 : VOPProfile<[i32, v8bf16, i32, f32]>;
 def VOP_I64_I64_I32 : VOPProfile <[i64, i64, i32, untyped]>;
 def VOP_I64_I32_I64 : VOPProfile <[i64, i32, i64, untyped]>;
 def VOP_I64_I64_I64 : VOPProfile <[i64, i64, i64, untyped]>;
+
+// Signed 64-bit operand variants for arithmetic shift operations
+def VOP_I64_I64_I32_Signed : VOPProfile <[i64, i64, i32, untyped]> {
+  let Src0RC64 = VSrc_i64;
+}
+
+def VOP_I64_I32_I64_Signed : VOPProfile <[i64, i32, i64, untyped]> {
+  let Src1RC64 = VSrc_i64;
+}
+
+def VOP_I64_I64_I64_Signed : VOPProfile <[i64, i64, i64, untyped]> {
+  let Src0RC64 = VSrc_i64;
+  let Src1RC64 = VSrc_i64;
+}
 
 def VOP_F16_F32_F16_F32 : VOPProfile <[f16, f32, f16, f32]>;
 def VOP_F32_F32_F16_F16 : VOPProfile <[f32, f32, f16, f16]>;

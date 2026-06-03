@@ -2230,9 +2230,8 @@ define amdgpu_ps i64 @lshr_mad_i64_sgpr(i64 inreg %arg0) #0 {
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_mov_b32 s3, 0
 ; GFX1250-NEXT:    s_mov_b32 s2, s1
-; GFX1250-NEXT:    s_mov_b64 s[4:5], 0xffffffffffff1c18
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_mul_u64 s[2:3], s[2:3], s[4:5]
+; GFX1250-NEXT:    s_mul_u64 s[2:3], s[2:3], 0xffffffffffff1c18
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
   %lsh = lshr i64 %arg0, 32

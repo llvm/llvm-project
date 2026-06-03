@@ -1331,8 +1331,8 @@ public:
       unsigned Size = getOpSize(MI, OpIdx);
       assert(Size == 8 || Size == 4);
 
-      uint8_t OpType = (Size == 8) ?
-        AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
+      uint8_t OpType = (Size == 8) ? AMDGPU::OPERAND_REG_IMM_I64
+                                   : AMDGPU::OPERAND_REG_IMM_INT32;
       return isInlineConstant(ImmVal, OpType);
     }
 

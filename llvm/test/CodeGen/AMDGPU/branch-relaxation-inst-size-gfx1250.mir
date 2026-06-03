@@ -4,9 +4,11 @@
 # Test that getInstSizeInBytes correctly estimates S_MOV_B64 with 64-bit
 # literal values on targets with 64-bit literal support (gfx1250).
 #
-# Values outside [0, 2^31-1] require 64-bit literal encoding, making the
-# instruction 12 bytes (4-byte opcode + 8-byte literal) instead of 8 bytes
-# (4-byte opcode + 4-byte literal).
+# S_MOV_B64 uses an unsigned 64-bit operand (OPERAND_REG_IMM_B64), so values
+# outside the uint32_t range [0, 2^32-1] require 64-bit literal encoding,
+# making the instruction 12 bytes (4-byte opcode + 8-byte literal) instead of
+# 8 bytes (4-byte opcode + 4-byte literal). Negative values (when sign-extended
+# to 64 bits) don't fit in uint32_t and require 64-bit literals.
 #
 # With -amdgpu-s-branch-bits=4, forward branches can reach at most +7 dwords.
 # Three S_MOV_B64 with 64-bit literals = 3 * 12 = 36 bytes = 9 dwords,
@@ -47,9 +49,9 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr10_sgpr11 = S_MOV_B64 4294967295
-  ; CHECK-NEXT:   $sgpr12_sgpr13 = S_MOV_B64 2147483648
-  ; CHECK-NEXT:   $sgpr14_sgpr15 = S_MOV_B64 -17
+  ; CHECK-NEXT:   $sgpr10_sgpr11 = S_MOV_B64 -17
+  ; CHECK-NEXT:   $sgpr12_sgpr13 = S_MOV_B64 -100
+  ; CHECK-NEXT:   $sgpr14_sgpr15 = S_MOV_B64 -1000
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -60,14 +62,16 @@ body: |
 
   bb.1:
     ; S_MOV_B64 with values requiring 64-bit literal encoding (12 bytes each).
-    ; These values are outside the [0, 2^31-1] range where 32-bit literal
-    ; can be used, so they need 64-bit literal encoding on gfx1250.
-    ; 0xFFFFFFFF (4294967295) is in [2^31, 2^32-1].
-    ; 0x80000000 (2147483648) is exactly 2^31.
-    ; -17 (0xFFFFFFFFFFFFFFEF) is a negative non-inline constant.
-    $sgpr10_sgpr11 = S_MOV_B64 4294967295
-    $sgpr12_sgpr13 = S_MOV_B64 2147483648
-    $sgpr14_sgpr15 = S_MOV_B64 -17
+    ; S_MOV_B64 uses an unsigned operand type (OPERAND_REG_IMM_B64), so values
+    ; must fit in uint32_t [0, 2^32-1] to use 32-bit literal encoding.
+    ; Negative values (sign-extended to 64 bits) don't fit in uint32_t,
+    ; so they require 64-bit literal encoding on gfx1250.
+    ; -17 (0xFFFFFFFFFFFFFFEF) requires 64-bit literal.
+    ; -100 (0xFFFFFFFFFFFFFF9C) requires 64-bit literal.
+    ; -1000 (0xFFFFFFFFFFFFFC18) requires 64-bit literal.
+    $sgpr10_sgpr11 = S_MOV_B64 -17
+    $sgpr12_sgpr13 = S_MOV_B64 -100
+    $sgpr14_sgpr15 = S_MOV_B64 -1000
 
   bb.2:
     S_ENDPGM 0

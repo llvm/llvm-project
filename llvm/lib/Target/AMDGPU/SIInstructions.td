@@ -123,7 +123,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 // No align needed as it will be decomposed anyway
 // TODO: Remove alignment requirement from sources
 def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
-  (ins VSrc_b64:$src0, VSrc_b64:$src1, SSrc_b64:$src2), "", []> {
+  (ins VSrc_u64:$src0, VSrc_u64:$src1, SSrc_u64:$src2), "", []> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
   let usesCustomInserter = 1;
@@ -132,7 +132,7 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
 def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
-                                      (ins VSrc_b64:$src0)> {
+                                      (ins VSrc_u64:$src0)> {
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
   let isMoveImm = 1;
@@ -261,7 +261,7 @@ def S_INVERSE_BALLOT_U32 : SPseudoInstSI<
 
 let WaveSizePredicate = isWave64 in
 def S_INVERSE_BALLOT_U64 : SPseudoInstSI<
-  (outs SReg_64:$sdst), (ins SSrc_b64:$mask),
+  (outs SReg_64:$sdst), (ins SSrc_u64:$mask),
   [(set i1:$sdst, (int_amdgcn_inverse_ballot i64:$mask))]
 >;
 } // End usesCustomInserter = 1, hasSideEffects = 0
@@ -385,24 +385,24 @@ defvar Operations = [
   WaveReduceOp<"or", "B32", i32, SGPR_32, VSrc_b32>,
   WaveReduceOp<"xor", "B32", i32, SGPR_32, VSrc_b32>,
 
-  WaveReduceOp<"umin", "U64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"min", "I64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"umax", "U64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"max", "I64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"add", "U64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"sub", "U64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"and", "B64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"or", "B64", i64, SGPR_64, VSrc_b64>,
-  WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"umin", "U64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"min", "I64", i64, SGPR_64, VSrc_i64>,
+  WaveReduceOp<"umax", "U64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"max", "I64", i64, SGPR_64, VSrc_i64>,
+  WaveReduceOp<"add", "U64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"sub", "U64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"and", "B64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"or", "B64", i64, SGPR_64, VSrc_u64>,
+  WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_u64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_u64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_u64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_u64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
-  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_u64>,
 ];
 
 foreach Op = Operations in {
@@ -412,24 +412,24 @@ foreach Op = Operations in {
 
 let usesCustomInserter = 1, Defs = [VCC] in {
 def V_ADD_U64_PSEUDO : VPseudoInstSI <
-  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_u64:$src0, VSrc_u64:$src1),
   [(set VReg_64_AlignTarget:$vdst, (DivergentBinFrag<add> i64:$src0, i64:$src1))]
 >;
 
 def V_SUB_U64_PSEUDO : VPseudoInstSI <
-  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_b64:$src0, VSrc_b64:$src1),
+  (outs VReg_64_AlignTarget:$vdst), (ins VSrc_u64:$src0, VSrc_u64:$src1),
   [(set VReg_64_AlignTarget:$vdst, (DivergentBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 } // End usesCustomInserter = 1, Defs = [VCC]
 
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  (outs SReg_64:$sdst), (ins SSrc_u64:$src0, SSrc_u64:$src1),
   [(set SReg_64:$sdst, (UniformBinFrag<add> i64:$src0, i64:$src1))]
 >;
 
 def S_SUB_U64_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  (outs SReg_64:$sdst), (ins SSrc_u64:$src0, SSrc_u64:$src1),
   [(set SReg_64:$sdst, (UniformBinFrag<sub> i64:$src0, i64:$src1))]
 >;
 
@@ -806,7 +806,7 @@ def SI_RETURN : SPseudoInstSI <
 // This version is only needed so we can fill in the output register
 // in the custom inserter.
 def SI_CALL_ISEL : SPseudoInstSI <
-  (outs), (ins SSrc_b64:$src0, unknown:$callee),
+  (outs), (ins SSrc_u64:$src0, unknown:$callee),
   [(AMDGPUcall i64:$src0, tglobaladdr:$callee)]> {
   let Size = 4;
   let isCall = 1;
@@ -835,7 +835,7 @@ def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, (i32 ShiftAmt32Imm:
 // Wrapper around s_swappc_b64 with extra $callee parameter to track
 // the called function after regalloc.
 def SI_CALL : SPseudoInstSI <
-  (outs SReg_64:$dst), (ins SSrc_b64:$src0, unknown:$callee)> {
+  (outs SReg_64:$dst), (ins SSrc_u64:$src0, unknown:$callee)> {
   let Size = 4;
   let FixedSize = 1;
   let isCall = 1;
@@ -1059,7 +1059,7 @@ class S_INDIRECT_REG_WRITE_MOVREL_pseudo<RegisterClass rc,
 class S_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<RegisterClass rc> :
   S_INDIRECT_REG_WRITE_MOVREL_pseudo<rc, SSrc_b32>;
 class S_INDIRECT_REG_WRITE_MOVREL_B64_pseudo<RegisterClass rc> :
-  S_INDIRECT_REG_WRITE_MOVREL_pseudo<rc, SSrc_b64>;
+  S_INDIRECT_REG_WRITE_MOVREL_pseudo<rc, SSrc_u64>;
 
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V1 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VGPR_32>;
 def V_INDIRECT_REG_WRITE_MOVREL_B32_V2 : V_INDIRECT_REG_WRITE_MOVREL_B32_pseudo<VReg_64>;
@@ -4529,13 +4529,13 @@ def fpimm_neg_pow2_prefer_ldexp_f64 : FPImmLeaf<f64, [{
 def : GCNPat<
   (any_fmul (f64 (VOP3Mods f64:$src0, i32:$src0_mods)),
             fpimm_pos_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 i32:$src0_mods, VSrc_u64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
 def : GCNPat<
   (any_fmul f64:$src0, fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG, VSrc_u64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 
@@ -4545,7 +4545,7 @@ def : GCNPat<
 // for a second operand.
 def : GCNPat<
   (any_fmul (fabs f64:$src0), fpimm_neg_pow2_prefer_ldexp_f64:$src1),
-  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_b64:$src0,
+  (V_LDEXP_F64_e64 SRCMODS.NEG_ABS, VSrc_u64:$src0,
                    0, (S_MOV_B32 (i32 (FPPow2ToExponentXForm $src1))))
 >;
 

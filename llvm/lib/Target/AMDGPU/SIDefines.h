@@ -201,7 +201,8 @@ namespace AMDGPU {
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
-  OPERAND_REG_IMM_INT64,
+  OPERAND_REG_IMM_I64,
+  OPERAND_REG_IMM_U64,
   OPERAND_REG_IMM_INT16,
   OPERAND_REG_IMM_FP32,
   OPERAND_REG_IMM_FP64,

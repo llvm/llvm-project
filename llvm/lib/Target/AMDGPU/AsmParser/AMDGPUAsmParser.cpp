@@ -480,7 +480,7 @@ public:
     return isSSrc_b16();
   }
 
-  bool isSSrc_b64() const {
+  bool isSSrc_u64() const {
     // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
     // See isVSrc64().
     return isSCSrc_b64() || isLiteralImm(MVT::i64) ||
@@ -488,6 +488,8 @@ public:
                 ->getAvailableFeatures()[AMDGPU::Feature64BitLiterals] &&
             isExpr());
   }
+
+  bool isSSrc_i64() const { return isSSrc_u64(); }
 
   bool isSSrc_f32() const {
     return isSCSrc_b32() || isLiteralImm(MVT::f32) || isExpr();
@@ -615,7 +617,9 @@ public:
     return isVCSrc_f32() || isLiteralImm(MVT::i32) || isExpr();
   }
 
-  bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
+  bool isVSrc_u64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
+
+  bool isVSrc_i64() const { return isVSrc_u64(); }
 
   bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
@@ -637,7 +641,7 @@ public:
 
   bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
-  bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
+  bool isVSrc_v2b32() const { return isVSrc_u64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
     return isVCSrc_f32() || isLiteralImm(MVT::f32) || isExpr();
@@ -2075,7 +2079,8 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_INLINE_SPLIT_BARRIER_INT32:
     return &APFloat::IEEEsingle();
-  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_I64:
+  case AMDGPU::OPERAND_REG_IMM_U64:
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -2395,7 +2400,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
 
   if (Imm.IsFPImm) { // We got fp literal token
     switch (OpTy) {
-    case AMDGPU::OPERAND_REG_IMM_INT64:
+    case AMDGPU::OPERAND_REG_IMM_I64:
+    case AMDGPU::OPERAND_REG_IMM_U64:
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -2531,7 +2537,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
 
-  case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_I64:
+  case AMDGPU::OPERAND_REG_IMM_U64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     if (Lit == LitModifier::None &&
         AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {

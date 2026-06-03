@@ -492,12 +492,24 @@ defm VOPC_I1_I16_I16 : VOPC_Profile_t16<[Write32Bit], i16>;
 def VOPC_I1_I32_I32 : VOPC_Profile<[Write32Bit], i32>;
 def VOPC_I1_I64_I64 : VOPC_Profile<[Write64Bit], i64>;
 
+// Signed 64-bit operand variants for signed integer comparisons
+def VOPC_I1_I64_I64_Signed : VOPC_Profile<[Write64Bit], i64> {
+  let Src0RC64 = VSrc_i64;
+  let Src1RC64 = VSrc_i64;
+}
+
 defm VOPC_F16_F16 : VOPC_NoSdst_Profile_t16<[Write32Bit], f16>;
 def VOPC_F32_F32 : VOPC_NoSdst_Profile<[Write32Bit], f32>;
 def VOPC_F64_F64 : VOPC_NoSdst_Profile<[Write64Bit], f64>;
 defm VOPC_I16_I16 : VOPC_NoSdst_Profile_t16<[Write32Bit], i16>;
 def VOPC_I32_I32 : VOPC_NoSdst_Profile<[Write32Bit], i32>;
 def VOPC_I64_I64 : VOPC_NoSdst_Profile<[Write64Bit], i64>;
+
+// Signed 64-bit operand variant for signed integer comparisons (NoSdst)
+def VOPC_I64_I64_Signed : VOPC_NoSdst_Profile<[Write64Bit], i64> {
+  let Src0RC64 = VSrc_i64;
+  let Src1RC64 = VSrc_i64;
+}
 
 multiclass VOPC_F16 <string opName, SDPatternOperator cond = COND_NULL,
                      string revOp = opName> {
@@ -537,7 +549,7 @@ multiclass VOPC_I32 <string opName, SDPatternOperator cond = COND_NULL, string r
   VOPC_Pseudos <opName, VOPC_I1_I32_I32, cond, revOp, 0>;
 
 let IsDPMACCInstruction = 1 in {
-  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+  multiclass VOPC_U64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
     VOPC_Pseudos <opName, VOPC_I1_I64_I64, cond, revOp, 0>;
 }
 
@@ -577,8 +589,19 @@ multiclass VOPCX_I32 <string opName, string revOp = opName> :
   VOPCX_Pseudos <opName, VOPC_I1_I32_I32, VOPC_I32_I32, COND_NULL, revOp>;
 
 let IsDPMACCInstruction = 1 in {
-  multiclass VOPCX_I64 <string opName, string revOp = opName> :
+  multiclass VOPCX_U64 <string opName, string revOp = opName> :
     VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+}
+
+// Signed 64-bit operand multiclasses for signed integer comparisons
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPC_I64 <string opName, SDPatternOperator cond = COND_NULL, string revOp = opName> :
+    VOPC_Pseudos <opName, VOPC_I1_I64_I64_Signed, cond, revOp, 0>;
+}
+
+let IsDPMACCInstruction = 1 in {
+  multiclass VOPCX_I64 <string opName, string revOp = opName> :
+    VOPCX_Pseudos <opName, VOPC_I1_I64_I64_Signed, VOPC_I64_I64_Signed, COND_NULL, revOp>;
 }
 
 
@@ -854,23 +877,23 @@ defm V_CMPX_NE_U32 : VOPCX_I32 <"v_cmpx_ne_u32">;
 defm V_CMPX_GE_U32 : VOPCX_I32 <"v_cmpx_ge_u32">;
 defm V_CMPX_T_U32 : VOPCX_I32 <"v_cmpx_t_u32">;
 
-defm V_CMP_F_U64 : VOPC_I64 <"v_cmp_f_u64">;
-defm V_CMP_LT_U64 : VOPC_I64 <"v_cmp_lt_u64", COND_ULT, "v_cmp_gt_u64">;
-defm V_CMP_EQ_U64 : VOPC_I64 <"v_cmp_eq_u64", COND_EQ>;
-defm V_CMP_LE_U64 : VOPC_I64 <"v_cmp_le_u64", COND_ULE, "v_cmp_ge_u64">;
-defm V_CMP_GT_U64 : VOPC_I64 <"v_cmp_gt_u64", COND_UGT>;
-defm V_CMP_NE_U64 : VOPC_I64 <"v_cmp_ne_u64", COND_NE>;
-defm V_CMP_GE_U64 : VOPC_I64 <"v_cmp_ge_u64", COND_UGE>;
-defm V_CMP_T_U64 : VOPC_I64 <"v_cmp_t_u64">;
+defm V_CMP_F_U64 : VOPC_U64 <"v_cmp_f_u64">;
+defm V_CMP_LT_U64 : VOPC_U64 <"v_cmp_lt_u64", COND_ULT, "v_cmp_gt_u64">;
+defm V_CMP_EQ_U64 : VOPC_U64 <"v_cmp_eq_u64", COND_EQ>;
+defm V_CMP_LE_U64 : VOPC_U64 <"v_cmp_le_u64", COND_ULE, "v_cmp_ge_u64">;
+defm V_CMP_GT_U64 : VOPC_U64 <"v_cmp_gt_u64", COND_UGT>;
+defm V_CMP_NE_U64 : VOPC_U64 <"v_cmp_ne_u64", COND_NE>;
+defm V_CMP_GE_U64 : VOPC_U64 <"v_cmp_ge_u64", COND_UGE>;
+defm V_CMP_T_U64 : VOPC_U64 <"v_cmp_t_u64">;
 
-defm V_CMPX_F_U64 : VOPCX_I64 <"v_cmpx_f_u64">;
-defm V_CMPX_LT_U64 : VOPCX_I64 <"v_cmpx_lt_u64", "v_cmpx_gt_u64">;
-defm V_CMPX_EQ_U64 : VOPCX_I64 <"v_cmpx_eq_u64">;
-defm V_CMPX_LE_U64 : VOPCX_I64 <"v_cmpx_le_u64", "v_cmpx_ge_u64">;
-defm V_CMPX_GT_U64 : VOPCX_I64 <"v_cmpx_gt_u64">;
-defm V_CMPX_NE_U64 : VOPCX_I64 <"v_cmpx_ne_u64">;
-defm V_CMPX_GE_U64 : VOPCX_I64 <"v_cmpx_ge_u64">;
-defm V_CMPX_T_U64 : VOPCX_I64 <"v_cmpx_t_u64">;
+defm V_CMPX_F_U64 : VOPCX_U64 <"v_cmpx_f_u64">;
+defm V_CMPX_LT_U64 : VOPCX_U64 <"v_cmpx_lt_u64", "v_cmpx_gt_u64">;
+defm V_CMPX_EQ_U64 : VOPCX_U64 <"v_cmpx_eq_u64">;
+defm V_CMPX_LE_U64 : VOPCX_U64 <"v_cmpx_le_u64", "v_cmpx_ge_u64">;
+defm V_CMPX_GT_U64 : VOPCX_U64 <"v_cmpx_gt_u64">;
+defm V_CMPX_NE_U64 : VOPCX_U64 <"v_cmpx_ne_u64">;
+defm V_CMPX_GE_U64 : VOPCX_U64 <"v_cmpx_ge_u64">;
+defm V_CMPX_T_U64 : VOPCX_U64 <"v_cmpx_t_u64">;
 
 //===----------------------------------------------------------------------===//
 // Class instructions

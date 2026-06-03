@@ -106,7 +106,7 @@ class SOP1_32_movreld <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 
 // Special case for movreld where sdst is treated as a use operand.
 class SOP1_64_movreld <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs), (ins SReg_64:$sdst, SSrc_b64:$src0),
+  opName, (outs), (ins SReg_64:$sdst, SSrc_u64:$src0),
   "$sdst, $src0", pattern
 >;
 
@@ -117,7 +117,7 @@ class SOP1_0_32R <string opName, list<dag> pattern = []> : SOP1_Pseudo <
 }
 
 class SOP1_64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_64:$sdst), (ins SSrc_b64:$src0),
+  opName, (outs SReg_64:$sdst), (ins SSrc_u64:$src0),
   "$sdst, $src0", pattern
 >;
 
@@ -129,7 +129,13 @@ class SOP1_64R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 
 // 64-bit input, 32-bit output.
 class SOP1_32_64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs SReg_32:$sdst), (ins SSrc_b64:$src0),
+  opName, (outs SReg_32:$sdst), (ins SSrc_u64:$src0),
+  "$sdst, $src0", pattern
+>;
+
+// Signed 64-bit input, 32-bit output.
+class SOP1_32_I64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs SReg_32:$sdst), (ins SSrc_i64:$src0),
   "$sdst, $src0", pattern
 >;
 
@@ -155,7 +161,13 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
 }
 
 class SOP1_1_REGIMM64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
-  opName, (outs), (ins SSrc_b64:$src0), "$src0", pattern> {
+  opName, (outs), (ins SSrc_u64:$src0), "$src0", pattern> {
+  let has_sdst = 0;
+}
+
+// Signed 64-bit immediate input, no output (for S_ADD_PC_I64)
+class SOP1_1_REGIMM_I64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SSrc_i64:$src0), "$src0", pattern> {
   let has_sdst = 0;
 }
 
@@ -250,7 +262,7 @@ def : GCNPat <
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (int_amdgcn_wqm_vote i1:$src0),
-  (S_WQM_B64 SSrc_b64:$src0)
+  (S_WQM_B64 SSrc_u64:$src0)
 >;
 }
 
@@ -295,7 +307,7 @@ def S_FLBIT_I32_B64 : SOP1_32_64 <"s_flbit_i32_b64",
 def S_FLBIT_I32 : SOP1_32 <"s_flbit_i32",
   [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_sffbh> i32:$src0))]
 >;
-def S_FLBIT_I32_I64 : SOP1_32_64 <"s_flbit_i32_i64">;
+def S_FLBIT_I32_I64 : SOP1_32_I64 <"s_flbit_i32_i64">;
 def S_SEXT_I32_I8 : SOP1_32 <"s_sext_i32_i8",
   [(set i32:$sdst, (UniformSextInreg<i8> i32:$src0))]
 >;
@@ -323,7 +335,7 @@ let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
 let SubtargetPredicate = HasAddPC64Inst in
-def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
+def S_ADD_PC_I64 : SOP1_1_REGIMM_I64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
 let isReturn = 1 in {
@@ -675,12 +687,18 @@ class SOP2_F32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
 >;
 
 class SOP2_64 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
-  opName, (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
+  opName, (outs SReg_64:$sdst), (ins SSrc_u64:$src0, SSrc_u64:$src1),
   "$sdst, $src0, $src1", pattern
 >;
 
-class SOP2_64_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
-  opName, (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b32:$src1),
+class SOP2_U64_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
+  opName, (outs SReg_64:$sdst), (ins SSrc_u64:$src0, SSrc_b32:$src1),
+  "$sdst, $src0, $src1", pattern
+>;
+
+// Signed 64-bit shift: first operand is signed 64-bit, second is 32-bit
+class SOP2_I64_32 <string opName, list<dag> pattern=[]> : SOP2_Pseudo <
+  opName, (outs SReg_64:$sdst), (ins SSrc_i64:$src0, SSrc_b32:$src1),
   "$sdst, $src0, $src1", pattern
 >;
 
@@ -744,12 +762,12 @@ let SubtargetPredicate = isGFX12Plus in {
   // The higher 32-bits of the inputs contain the sign extension bits.
   let hasSideEffects = 0 in {
     def S_MUL_I64_I32_PSEUDO : SPseudoInstSI <
-      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+      (outs SReg_64:$sdst), (ins SSrc_i64:$src0, SSrc_i64:$src1)
     >;
 
     // The higher 32-bits of the inputs are zero.
     def S_MUL_U64_U32_PSEUDO : SPseudoInstSI <
-      (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+      (outs SReg_64:$sdst), (ins SSrc_u64:$src0, SSrc_u64:$src1)
     >;
   }
 
@@ -837,20 +855,20 @@ let Defs = [SCC] in {
 def S_LSHL_B32 : SOP2_32 <"s_lshl_b32",
   [(set SReg_32:$sdst, (UniformBinFrag<cshl_32> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]
 >;
-def S_LSHL_B64 : SOP2_64_32 <"s_lshl_b64",
-  [(set SReg_64:$sdst, (UniformBinFrag<cshl_64> (i64 SSrc_b64:$src0), (i32 SSrc_b32:$src1)))]
+def S_LSHL_B64 : SOP2_U64_32 <"s_lshl_b64",
+  [(set SReg_64:$sdst, (UniformBinFrag<cshl_64> (i64 SSrc_u64:$src0), (i32 SSrc_b32:$src1)))]
 >;
 def S_LSHR_B32 : SOP2_32 <"s_lshr_b32",
   [(set SReg_32:$sdst, (UniformBinFrag<csrl_32> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]
 >;
-def S_LSHR_B64 : SOP2_64_32 <"s_lshr_b64",
-  [(set SReg_64:$sdst, (UniformBinFrag<csrl_64> (i64 SSrc_b64:$src0), (i32 SSrc_b32:$src1)))]
+def S_LSHR_B64 : SOP2_U64_32 <"s_lshr_b64",
+  [(set SReg_64:$sdst, (UniformBinFrag<csrl_64> (i64 SSrc_u64:$src0), (i32 SSrc_b32:$src1)))]
 >;
 def S_ASHR_I32 : SOP2_32 <"s_ashr_i32",
   [(set SReg_32:$sdst, (UniformBinFrag<csra_32> (i32 SSrc_b32:$src0), (i32 SSrc_b32:$src1)))]
 >;
-def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
-  [(set SReg_64:$sdst, (UniformBinFrag<csra_64> (i64 SSrc_b64:$src0), (i32 SSrc_b32:$src1)))]
+def S_ASHR_I64 : SOP2_I64_32 <"s_ashr_i64",
+  [(set SReg_64:$sdst, (UniformBinFrag<csra_64> (i64 SSrc_i64:$src0), (i32 SSrc_b32:$src1)))]
 >;
 } // End Defs = [SCC]
 
@@ -869,8 +887,8 @@ def S_MUL_I32 : SOP2_32 <"s_mul_i32",
 let Defs = [SCC] in {
 def S_BFE_U32 : SOP2_32 <"s_bfe_u32">;
 def S_BFE_I32 : SOP2_32 <"s_bfe_i32">;
-def S_BFE_U64 : SOP2_64_32 <"s_bfe_u64">;
-def S_BFE_I64 : SOP2_64_32 <"s_bfe_i64">;
+def S_BFE_U64 : SOP2_U64_32 <"s_bfe_u64">;
+def S_BFE_I64 : SOP2_I64_32 <"s_bfe_i64">;
 } // End Defs = [SCC]
 
 def S_CBRANCH_G_FORK : SOP2_Pseudo <
@@ -890,7 +908,7 @@ def S_ABSDIFF_I32 : SOP2_32 <"s_absdiff_i32",
 let SubtargetPredicate = isGFX8GFX9 in {
   def S_RFE_RESTORE_B64 : SOP2_Pseudo <
     "s_rfe_restore_b64", (outs),
-    (ins SSrc_b64:$src0, SSrc_b32:$src1),
+    (ins SSrc_u64:$src0, SSrc_b32:$src1),
     "$src0, $src1"
   > {
     let hasSideEffects = 1;
@@ -1383,7 +1401,7 @@ class SOPC_CMP_F16<string opName,
 
 class SOPC_CMP_64<string opName,
                   SDPatternOperator cond = COND_NULL, string revOp = opName>
-  : SOPC_Helper<SSrc_b64, i64, opName, cond>,
+  : SOPC_Helper<SSrc_u64, i64, opName, cond>,
     Commutable_REV<revOp, !eq(revOp, opName)> {
   let isCompare = 1;
   let isCommutable = 1;
@@ -1393,7 +1411,7 @@ class SOPC_32<string opName, list<dag> pattern = []>
   : SOPC_Base<SSrc_b32, SSrc_b32, opName, pattern>;
 
 class SOPC_64_32<string opName, list<dag> pattern = []>
-  : SOPC_Base<SSrc_b64, SSrc_b32, opName, pattern>;
+  : SOPC_Base<SSrc_u64, SSrc_b32, opName, pattern>;
 
 def S_CMP_EQ_I32 : SOPC_CMP_32 <"s_cmp_eq_i32">;
 def S_CMP_LG_I32 : SOPC_CMP_32 <"s_cmp_lg_i32">;

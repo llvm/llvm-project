@@ -3570,43 +3570,41 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX1250-LABEL: s_mul_i128:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_clause 0x2
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[8:11], s[4:5], 0x7c nv
 ; GFX1250-NEXT:    s_load_b128 s[12:15], s[4:5], 0x4c nv
+; GFX1250-NEXT:    s_mov_b32 s3, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[4:5], 0xffffffff
-; GFX1250-NEXT:    s_mov_b32 s3, 0
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_mov_b32 s5, s3
 ; GFX1250-NEXT:    s_mov_b32 s7, s3
 ; GFX1250-NEXT:    s_mov_b32 s17, s3
-; GFX1250-NEXT:    s_mov_b32 s19, s3
-; GFX1250-NEXT:    s_mov_b32 s20, s3
+; GFX1250-NEXT:    s_mov_b32 s18, s3
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s2, s8
-; GFX1250-NEXT:    s_and_b64 s[4:5], s[12:13], s[4:5]
-; GFX1250-NEXT:    s_mov_b32 s6, s13
+; GFX1250-NEXT:    s_and_b64 s[20:21], s[12:13], 0xffffffff
+; GFX1250-NEXT:    s_mov_b32 s4, s13
 ; GFX1250-NEXT:    s_mul_u64 s[10:11], s[10:11], s[12:13]
-; GFX1250-NEXT:    s_mul_u64 s[12:13], s[4:5], s[2:3]
-; GFX1250-NEXT:    s_mov_b32 s16, s9
+; GFX1250-NEXT:    s_mul_u64 s[12:13], s[20:21], s[2:3]
+; GFX1250-NEXT:    s_mov_b32 s6, s9
 ; GFX1250-NEXT:    s_mul_u64 s[8:9], s[8:9], s[14:15]
-; GFX1250-NEXT:    s_mul_u64 s[14:15], s[6:7], s[2:3]
+; GFX1250-NEXT:    s_mul_u64 s[14:15], s[4:5], s[2:3]
 ; GFX1250-NEXT:    s_mov_b32 s2, s13
-; GFX1250-NEXT:    s_mul_u64 s[4:5], s[4:5], s[16:17]
+; GFX1250-NEXT:    s_mul_u64 s[20:21], s[20:21], s[6:7]
 ; GFX1250-NEXT:    s_add_nc_u64 s[14:15], s[14:15], s[2:3]
-; GFX1250-NEXT:    s_mul_u64 s[6:7], s[6:7], s[16:17]
+; GFX1250-NEXT:    s_mul_u64 s[4:5], s[4:5], s[6:7]
 ; GFX1250-NEXT:    s_mov_b32 s2, s15
 ; GFX1250-NEXT:    s_mov_b32 s15, s3
+; GFX1250-NEXT:    s_add_nc_u64 s[6:7], s[10:11], s[8:9]
+; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[20:21], s[14:15]
 ; GFX1250-NEXT:    s_mov_b32 s13, s3
-; GFX1250-NEXT:    s_add_nc_u64 s[4:5], s[4:5], s[14:15]
-; GFX1250-NEXT:    s_add_nc_u64 s[8:9], s[10:11], s[8:9]
-; GFX1250-NEXT:    s_mov_b32 s18, s5
-; GFX1250-NEXT:    s_mov_b32 s21, s4
-; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[18:19]
-; GFX1250-NEXT:    s_or_b64 s[4:5], s[12:13], s[20:21]
-; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[6:7], s[2:3]
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[8:9]
+; GFX1250-NEXT:    s_mov_b32 s16, s9
+; GFX1250-NEXT:    s_mov_b32 s19, s8
+; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[16:17]
+; GFX1250-NEXT:    s_or_b64 s[8:9], s[12:13], s[18:19]
+; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[4:5], s[2:3]
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s8 :: v_dual_mov_b32 v1, s9
+; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[6:7]
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX1250-NEXT:    s_mov_b32 s3, 0x31016000
