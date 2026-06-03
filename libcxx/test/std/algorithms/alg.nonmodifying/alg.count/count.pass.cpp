@@ -20,6 +20,8 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
+#include <list>
 #include <vector>
 
 #include "sized_allocator.h"
@@ -87,10 +89,58 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+void test_segmented_iterators() {
+  {
+    // Verify that segmented deque iterators work properly
+    const int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049, 4097};
+    for (const int size : sizes) {
+      std::deque<int> deque(size, 1);
+
+      int twos = 0;
+      for (int i = 0; i < size; i += 3) {
+        deque[i] = 2;
+        ++twos;
+      }
+      int ones = deque.size() - twos;
+
+      assert(std::count(deque.begin(), deque.end(), 1) == ones);
+      assert(std::count(deque.begin(), deque.end(), 2) == twos);
+      assert(std::count(deque.begin(), deque.end(), 99) == 0);
+    }
+  }
+
+#if TEST_STD_VER >= 20
+  {
+    // Verify that join_view of lists work properly
+    std::list<std::list<int>> list = {{}, {0}, {1, 2}, {}, {0, 1, 2}, {0, 1, 2, 0}, {1}, {2, 0, 1}};
+    auto joined                    = list | std::views::join;
+
+    assert(std::count(joined.begin(), joined.end(), 0) == 5);
+    assert(std::count(joined.begin(), joined.end(), 1) == 5);
+    assert(std::count(joined.begin(), joined.end(), 2) == 4);
+    assert(std::count(joined.begin(), joined.end(), 99) == 0);
+  }
+
+  {
+    // Verify that join_view of vectors work properly
+    std::vector<std::vector<int>> vector = {{}, {0}, {1, 2}, {}, {0, 1, 2}, {0, 1, 2, 0}, {1}, {2, 0, 1}};
+    auto joined                          = vector | std::views::join;
+
+    assert(std::count(joined.begin(), joined.end(), 0) == 5);
+    assert(std::count(joined.begin(), joined.end(), 1) == 5);
+    assert(std::count(joined.begin(), joined.end(), 2) == 4);
+    assert(std::count(joined.begin(), joined.end(), 99) == 0);
+  }
+#endif // TEST_STD_VER >= 20
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());
+#endif
+#if TEST_STD_VER >= 11
+  test_segmented_iterators();
 #endif
 
   return 0;

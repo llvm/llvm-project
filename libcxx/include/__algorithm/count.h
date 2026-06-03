@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___ALGORITHM_COUNT_H
 #define _LIBCPP___ALGORITHM_COUNT_H
 
+#include <__algorithm/for_each.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/min.h>
 #include <__bit/invert_if.h>
@@ -19,7 +20,7 @@
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/invoke.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,11 +35,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 typename _IterOps<_AlgPolicy>::template __difference_type<_Iter>
 __count(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
-  typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __r(0);
-  for (; __first != __last; ++__first)
-    if (std::__invoke(__proj, *__first) == __value)
-      ++__r;
-  return __r;
+  typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __counter(0);
+
+  auto __apply = [&__value, &__counter](auto&& __elem) {
+    if (__elem == __value) {
+      ++__counter;
+    }
+  };
+
+  // We implement __count using __for_each to inherit its optimizations for
+  // segmented iterators. This improves performance without adding complexity.
+  std::__for_each(std::move(__first), std::move(__last), __apply, __proj);
+  return __counter;
 }
 
 // __bit_iterator implementation
@@ -50,25 +58,25 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_t
   using difference_type = typename _It::difference_type;
 
   const int __bits_per_word = _It::__bits_per_word;
-  difference_type __r       = 0;
+  difference_type __counter = 0;
   // do first partial word
   if (__first.__ctz_ != 0) {
     __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
     __storage_type __dn    = std::min(__clz_f, __n);
     __storage_type __m     = std::__middle_mask<__storage_type>(__clz_f - __dn, __first.__ctz_);
-    __r                    = std::__popcount(__storage_type(std::__invert_if<!_ToCount>(*__first.__seg_) & __m));
+    __counter              = std::__popcount(__storage_type(std::__invert_if<!_ToCount>(*__first.__seg_) & __m));
     __n -= __dn;
     ++__first.__seg_;
   }
   // do middle whole words
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-    __r += std::__popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
+    __counter += std::__popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
   // do last partial word
   if (__n > 0) {
     __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
-    __r += std::__popcount(__storage_type(std::__invert_if<!_ToCount>(*__first.__seg_) & __m));
+    __counter += std::__popcount(__storage_type(std::__invert_if<!_ToCount>(*__first.__seg_) & __m));
   }
-  return __r;
+  return __counter;
 }
 
 template <class, class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>

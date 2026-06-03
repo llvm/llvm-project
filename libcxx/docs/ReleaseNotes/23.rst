@@ -60,6 +60,8 @@ Improvements and New Features
   for ``std::deque<int>`` iterators.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
+- The ``std::count`` and ``std::count_if`` algorithms have been optimized for
+  segmented iterators.
 
 Deprecations and Removals
 -------------------------

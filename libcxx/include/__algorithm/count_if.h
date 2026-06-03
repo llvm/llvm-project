@@ -10,11 +10,13 @@
 #ifndef _LIBCPP___ALGORITHM_COUNT_IF_H
 #define _LIBCPP___ALGORITHM_COUNT_IF_H
 
+#include <__algorithm/for_each.h>
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/invoke.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,13 +25,19 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Iter, class _Sent, class _Proj, class _Pred>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __policy_iter_diff_t<_AlgPolicy, _Iter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __policy_iter_diff_t<_AlgPolicy, _Iter>
 __count_if(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   __policy_iter_diff_t<_AlgPolicy, _Iter> __counter(0);
-  for (; __first != __last; ++__first) {
-    if (std::__invoke(__pred, std::__invoke(__proj, *__first)))
+
+  auto __apply = [&__pred, &__counter](auto&& __elem) {
+    if (std::__invoke(__pred, __elem)) {
       ++__counter;
-  }
+    }
+  };
+
+  // We implement __count_if using __for_each to inherit its optimizations for
+  // segmented iterators. This improves performance without adding complexity.
+  std::__for_each(std::move(__first), std::move(__last), __apply, __proj);
   return __counter;
 }
 
