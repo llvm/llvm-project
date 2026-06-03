@@ -10,6 +10,9 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// Missing fwprintf, fwscanf, swscanf, vfwprintf, vfwscanf, vswprintf, vswscanf, wcsftime, vwscanf, wscanf
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cwchar>
 #include <ctime>
 #include <cstdarg>
