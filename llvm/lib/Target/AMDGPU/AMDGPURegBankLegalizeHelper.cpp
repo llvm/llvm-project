@@ -36,8 +36,9 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
     : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
-      ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B), MRI(*B.getMRI()), MUI(MUI),
-      RBI(RBI), MORE(MF, nullptr), RBLRules(RBLRules), IsWave32(ST.isWave32()),
+      ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B),
+      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
+      RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
@@ -315,9 +316,9 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
     }
   }
   const bool CheckNUW = ST.hasGFX1250Insts();
-  auto [Base, Offset] =
-      AMDGPU::getBaseWithConstantOffset(MRI, CombinedOffset, /*KnownBits=*/nullptr,
-                                        /*CheckNUW=*/CheckNUW);
+  auto [Base, Offset] = AMDGPU::getBaseWithConstantOffset(
+      MRI, CombinedOffset, /*KnownBits=*/nullptr,
+      /*CheckNUW=*/CheckNUW);
   uint32_t SOffset, ImmOffset;
   if (static_cast<int32_t>(Offset) > 0 &&
       TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
@@ -654,8 +655,7 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   // widened) register type. E.g. 96-bit loads are widened to 128-bit during
   // legalization but the MMO still reflects the original 96-bit access size.
   const unsigned MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
-  MachineMemOperand *BaseMMO =
-      MF.getMachineMemOperand(OrigMMO, 0, MemSize);
+  MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
   if (MMOOffset != 0)
     BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
   // If only the offset is divergent, emit a MUBUF buffer load
@@ -696,16 +696,12 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   else
     B.buildMergeLikeInstr(Dst, LoadParts);
   B.setInstr(*MRI.getVRegDef(LoadParts[0]));
-  MI.eraseFromParent();
-  // TODO: If only the resource is a VGPR, it may be better to execute the
-  // scalar load in the waterfall loop if the resource is expected to
-  // frequently be dynamically uniform.
   if (RSrcBank != SgprRB) {
     WFI.SgprWaterfallOperandRegs.insert(RSrc);
-    WFI.Start = MRI.getVRegDef(LoadParts[0])->getIterator();
-    WFI.End = std::next(
-        MRI.getVRegDef(LoadParts[NumLoads - 1])->getIterator());
+    WFI.Start = MRI.getVRegDef(LoadParts.front());
+    WFI.End = std::next(MRI.getVRegDef(LoadParts.back())->getIterator());
   }
+  MI.eraseFromParent();
   return true;
 }
 
@@ -889,9 +885,9 @@ bool RegBankLegalizeHelper::lowerUniMAD64(MachineInstr &MI) {
   Register Src0 = MI.getOperand(2).getReg();
   Register Src1 = MI.getOperand(3).getReg();
   Register Src2 = MI.getOperand(4).getReg();
-  
+
   const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
-  
+
   // Keep the multiplication on the SALU.
   Register DstLo = B.buildMul(SgprRB_S32, Src0, Src1).getReg(0);
   Register DstHi = MRI.createVirtualRegister(SgprRB_S32);
@@ -1415,9 +1411,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     break;
   }
   case S_BUF_to_BUF:
-    if (!lowerSBufToBuf(MI, WFI))
-      return false;
-    break;
+    return lowerSBufToBuf(MI, WFI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -1770,7 +1764,8 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB32_M0:
   case SgprB32_ReadFirstLane:
   case UniInVgprB32:
-    if (Ty.getSizeInBits() == 32)
+    if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
+        isAnyPtr(Ty, 32))
       return Ty;
     return LLT();
   case SgprPtr32:
@@ -1786,13 +1781,15 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case VgprB64:
   case SgprB64_ReadFirstLane:
   case UniInVgprB64:
-    if (Ty.getSizeInBits() == 64)
+    if (Ty == LLT::scalar(64) || Ty == LLT::fixed_vector(2, 32) ||
+        Ty == LLT::fixed_vector(4, 16) || isAnyPtr(Ty, 64))
       return Ty;
     return LLT();
   case SgprB96:
   case VgprB96:
   case UniInVgprB96:
-    if (Ty.getSizeInBits() == 96)
+    if (Ty == LLT::scalar(96) || Ty == LLT::fixed_vector(3, 32) ||
+        Ty == LLT::fixed_vector(6, 16))
       return Ty;
     return LLT();
   case SgprB128:
@@ -1809,10 +1806,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB256:
   case VgprB256:
   case UniInVgprB256:
-    if (Ty == LLT::scalar(256) || Ty == LLT::fixed_vector(8, 32) ||
-        Ty == LLT::fixed_vector(4, 64) || Ty == LLT::fixed_vector(16, 16) ||
-        Ty == LLT::fixed_vector(4, LLT::pointer(1, 64)) ||
-        Ty == LLT::fixed_vector(8, LLT::pointer(3, 32)))
+    if (Ty.getSizeInBits() == 256)
       return Ty;
     return LLT();
   case SgprB512:

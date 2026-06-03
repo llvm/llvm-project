@@ -140,7 +140,7 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(3, 32) &&
            MUI.isUniformAtDef(Reg);
   case UniV4S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && 
+    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) &&
            MUI.isUniformAtDef(Reg);
   case UniV6S32:
     return MRI.getType(Reg) == LLT::fixed_vector(6, 32) &&
@@ -196,8 +196,6 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::scalar(32) && MUI.isDivergentAtDef(Reg);
   case DivS64:
     return MRI.getType(Reg) == LLT::scalar(64) && MUI.isDivergentAtDef(Reg);
-  case DivS96:
-    return MRI.getType(Reg) == LLT::scalar(96) && MUI.isDivergentAtDef(Reg);
   case DivS128:
     return MRI.getType(Reg) == LLT::scalar(128) && MUI.isDivergentAtDef(Reg);
   case DivP0:
@@ -225,10 +223,10 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32) &&
            MUI.isDivergentAtDef(Reg);
   case DivV4S32:
-    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && 
+    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) &&
            MUI.isDivergentAtDef(Reg);
   case DivV2S64:
-    return MRI.getType(Reg) == LLT::fixed_vector(2, 64) && 
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 64) &&
            MUI.isDivergentAtDef(Reg);
   case DivV3S32:
     return MRI.getType(Reg) == LLT::fixed_vector(3, 32) &&
