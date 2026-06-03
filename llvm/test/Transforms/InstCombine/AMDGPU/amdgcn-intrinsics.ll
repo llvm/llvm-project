@@ -3968,10 +3968,9 @@ define amdgpu_kernel void @image_load_a16_mip_1d(ptr addrspace(1) %out, <8 x i32
   ret void
 }
 
-define amdgpu_kernel void @image_load_a16_mip_1d_noopt(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, i16 %s) {
-; CHECK-LABEL: @image_load_a16_mip_1d_noopt(
-; CHECK-NEXT:    [[S32:%.*]] = sext i16 [[S:%.*]] to i32
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32.v8i32(i32 15, i32 [[S32]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
+define amdgpu_kernel void @image_load_a16_mip_1d_sext(ptr addrspace(1) %out, <8 x i32> inreg %rsrc, i16 %s) {
+; CHECK-LABEL: @image_load_a16_mip_1d_sext(
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i16.v8i32(i32 15, i16 [[S:%.*]], <8 x i32> [[RSRC:%.*]], i32 0, i32 0)
 ; CHECK-NEXT:    store <4 x float> [[RES]], ptr addrspace(1) [[OUT:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
