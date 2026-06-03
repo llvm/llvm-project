@@ -311,6 +311,19 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC) const;
+
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
@@ -319,7 +332,8 @@ public:
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
-                                       const SIMachineFunctionInfo &MFI) const;
+                                       const SIMachineFunctionInfo &MFI,
+                                       bool NeedsCFI) const;
   unsigned
   getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                  unsigned Size,
@@ -501,6 +515,9 @@ public:
     return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
            isFLAT(Opcode);
   }
+
+  /// True if MI implicitly drains XCNT.
+  static bool isXcntDrain(const MachineInstr &MI);
 
   static bool isSOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
@@ -732,6 +749,7 @@ public:
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
@@ -1100,12 +1118,10 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IntClamp;
   }
 
-  uint64_t getClampMask(const MachineInstr &MI) const {
-    const uint64_t ClampFlags = SIInstrFlags::FPClamp |
-                                SIInstrFlags::IntClamp |
-                                SIInstrFlags::ClampLo |
-                                SIInstrFlags::ClampHi;
-      return MI.getDesc().TSFlags & ClampFlags;
+  static bool hasSameClamp(const MachineInstr &A, const MachineInstr &B) {
+    const uint64_t Mask = SIInstrFlags::FPClamp | SIInstrFlags::IntClamp |
+                          SIInstrFlags::ClampLo | SIInstrFlags::ClampHi;
+    return (A.getDesc().TSFlags & Mask) == (B.getDesc().TSFlags & Mask);
   }
 
   static bool usesFPDPRounding(const MachineInstr &MI) {
@@ -1663,6 +1679,11 @@ public:
                                     Register Dst) const override;
 
   bool isWave32() const;
+
+  bool isVOPDAntidependencyAllowed(const MachineInstr &MI) const;
+
+  bool hasRAWDependency(const MachineInstr &FirstMI,
+                        const MachineInstr &SecondMI) const;
 
   /// Return a partially built integer add instruction without carry.
   /// Caller must add source operands.

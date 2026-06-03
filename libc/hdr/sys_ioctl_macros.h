@@ -17,6 +17,6 @@
 
 #include <sys/ioctl.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_SYS_IOCTL_MACROS_H

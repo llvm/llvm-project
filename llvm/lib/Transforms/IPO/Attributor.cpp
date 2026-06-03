@@ -283,9 +283,6 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
     if (!CB->isConvergent() && !CB->mayReadOrWriteMemory())
       return true;
 
-    if (AANoSync::isNoSyncIntrinsic(&I))
-      return true;
-
     bool IsKnownNoSync;
     return AA::hasAssumedIRAttr<Attribute::NoSync>(
         A, &QueryingAA, IRPosition::callsite_function(*CB),
@@ -295,7 +292,7 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
   if (!I.mayReadOrWriteMemory())
     return true;
 
-  return !I.isVolatile() && !AANoSync::isNonRelaxedAtomic(&I);
+  return !AANoSync::isNonRelaxedAtomic(&I);
 }
 
 bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
@@ -1207,13 +1204,11 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     break;
   };
 
-  AttributeList AL;
+  AttributeList AL = IRP.getAttrList();
   Value *AttrListAnchor = IRP.getAttrListAnchor();
-  auto It = AttrsMap.find(AttrListAnchor);
-  if (It == AttrsMap.end())
-    AL = IRP.getAttrList();
-  else
-    AL = It->getSecond();
+  auto [Iter, Inserted] = AttrsMap.insert({AttrListAnchor, AL});
+  if (!Inserted)
+    AL = Iter->second;
 
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AttrIdx = IRP.getAttrIdx();
@@ -1231,8 +1226,9 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
 
   AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
-  AttrsMap[AttrListAnchor] = AL;
-  return ChangeStatus::CHANGED;
+
+  Iter->second = AL;
+  return HasChanged;
 }
 
 bool Attributor::hasAttr(const IRPosition &IRP,
@@ -1337,8 +1333,6 @@ ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
 }
 
 const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);

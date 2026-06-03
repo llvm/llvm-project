@@ -491,10 +491,10 @@ define void @constant_fold_vector_to_double() {
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0xFFFFFFFFFFFFFFFF, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0x162E000004D2, ptr undef, align 8
+; CHECK-NEXT:    store volatile double -nan(0x7FFFFFFFFFFFF), ptr undef, align 8
+; CHECK-NEXT:    store volatile double f0x0000162E000004D2, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (ptr @g to i32)> to double), ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0x400000003F800000, ptr undef, align 8
+; CHECK-NEXT:    store volatile double f0x400000003F800000, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
@@ -541,8 +541,8 @@ define void @constant_fold_vector_to_float() {
 
 define void @constant_fold_vector_to_half() {
 ; CHECK-LABEL: @constant_fold_vector_to_half(
-; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
-; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
+; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
+; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
 ; CHECK-NEXT:    ret void
 ;
   store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), ptr undef

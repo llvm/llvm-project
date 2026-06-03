@@ -7,8 +7,8 @@
 // CHECK: @[[GLOB_INT:.+]] = internal global i32 0
 // CHECK: @[[GLOB_FLT:.+]] = internal global float {{[0e\+-\.]+}}, align
 // CHECK: @[[GLOB_DBL:.+]] = internal global double {{[0e\+-\.]+}}, align
-// X86:   @[[GLOB_LONGDBL:.+]] = internal global x86_fp80 {{[0xK]+}}, align
-// SYSTEMZ: @[[GLOB_LONGDBL:.+]] = internal global fp128 {{[0xL]+}}, align
+// X86:   @[[GLOB_LONGDBL:.+]] = internal global x86_fp80 {{[0e\+-\.]+}}, align
+// SYSTEMZ: @[[GLOB_LONGDBL:.+]] = internal global fp128 {{[0e\+-\.]+}}, align
 
 int atomic(void) {
   // non-sensical test for sync functions

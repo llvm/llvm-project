@@ -15,7 +15,7 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    movq %rcx, %rax
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; SSE-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -34,7 +34,6 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; SSE-NEXT:    shldq %cl, %r14, %r11
 ; SSE-NEXT:    movq -32(%rsp,%rbx), %rbx
 ; SSE-NEXT:    shldq %cl, %rbx, %r14
-; SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; SSE-NEXT:    shlq %cl, %rbx
 ; SSE-NEXT:    addq $-1, %rbx
 ; SSE-NEXT:    adcq $-1, %r14
@@ -81,7 +80,7 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX2-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [1,0,0,0]
@@ -143,7 +142,7 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    movq %rcx, %rax
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512F-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,0,0,0,1,0,0,0]
 ; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %ecx, %r10d
@@ -203,7 +202,7 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512VL-NEXT:    pushq %rbx
 ; AVX512VL-NEXT:    movq %rcx, %r10
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512VL-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [1,0,0,0]
@@ -264,7 +263,7 @@ define i256 @bext_i256(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512VBMI-NEXT:    pushq %rbx
 ; AVX512VBMI-NEXT:    movq %rcx, %r10
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512VBMI-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovaps {{.*#+}} xmm1 = [1,0,0,0]
@@ -632,7 +631,7 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    movq %rcx, %rax
-; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; SSE-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movups %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -651,7 +650,6 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; SSE-NEXT:    shldq %cl, %r14, %r11
 ; SSE-NEXT:    movq -32(%rsp,%rbx), %rbx
 ; SSE-NEXT:    shldq %cl, %rbx, %r14
-; SSE-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; SSE-NEXT:    shlq %cl, %rbx
 ; SSE-NEXT:    addq $-1, %rbx
 ; SSE-NEXT:    adcq $-1, %r14
@@ -698,7 +696,7 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX2-NEXT:    pushq %r14
 ; AVX2-NEXT:    pushq %rbx
 ; AVX2-NEXT:    movq %rcx, %rax
-; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; AVX2-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = [1,0,0,0]
@@ -760,7 +758,7 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512F-NEXT:    pushq %r14
 ; AVX512F-NEXT:    pushq %rbx
 ; AVX512F-NEXT:    movq %rcx, %rax
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512F-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512F-NEXT:    vmovaps {{.*#+}} zmm0 = [0,0,0,0,1,0,0,0]
 ; AVX512F-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-NEXT:    movl %ecx, %r10d
@@ -820,7 +818,7 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512VL-NEXT:    pushq %rbx
 ; AVX512VL-NEXT:    movq %rcx, %r10
 ; AVX512VL-NEXT:    movq %rdi, %rax
-; AVX512VL-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512VL-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [1,0,0,0]
@@ -881,7 +879,7 @@ define i256 @bext_i256_load(i256 %a0, i256 %idx, i256 %len) nounwind {
 ; AVX512VBMI-NEXT:    pushq %rbx
 ; AVX512VBMI-NEXT:    movq %rcx, %r10
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512VBMI-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
 ; AVX512VBMI-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovaps {{.*#+}} xmm1 = [1,0,0,0]

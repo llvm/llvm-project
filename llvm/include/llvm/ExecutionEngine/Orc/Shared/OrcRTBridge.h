@@ -65,13 +65,29 @@ LLVM_ABI extern const char *RunAsMainWrapperName;
 LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
 LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
 
+/// Symbol names for memory management implementation.
+/// FIXME: We should find a better home for this struct.
+struct SimpleExecutorMemoryManagerSymbolNames {
+  StringRef AllocatorName;
+  StringRef ReserveName;
+  StringRef InitializeName;
+  StringRef DeinitializeName;
+  StringRef ReleaseName;
+};
+
+/// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
+/// interface.
+extern const SimpleExecutorMemoryManagerSymbolNames
+    orc_rt_SimpleNativeMemoryMapSPSSymbols;
+
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);
 
 using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
     shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
-    shared::SPSExecutorAddr, shared::SPSRemoteSymbolLookupSet);
+    shared::SPSExecutorAddr, shared::SPSExecutorAddr,
+    shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorMemoryManagerReserveSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,

@@ -59,10 +59,14 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
 
   set(${arch_var} ${target_arch} PARENT_SCOPE)
   list(GET triple_comps ${system_index} target_sys)
+  list(GET triple_comps 2 target_os)
 
   # Correcting OS name for Apple's systems.
   if(target_sys STREQUAL "apple")
     list(GET triple_comps 2 target_sys)
+  endif()
+  if(target_os MATCHES "^freebsd")
+    set(target_sys ${target_os})
   endif()
   # Strip version from `darwin###`
   if(target_sys MATCHES "^darwin")
@@ -78,7 +82,7 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
-execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version -v
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -c -v
                 RESULT_VARIABLE libc_compiler_info_result
                 OUTPUT_VARIABLE libc_compiler_info
                 ERROR_VARIABLE libc_compiler_info)
@@ -209,6 +213,9 @@ elseif(LIBC_TARGET_OS STREQUAL "darwin")
   set(LIBC_TARGET_OS_IS_DARWIN TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "windows")
   set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+elseif(LIBC_TARGET_OS MATCHES "^freebsd.*")
+  set(LIBC_TARGET_OS_IS_FREEBSD TRUE)
+  set(LIBC_TARGET_OS "freebsd")
 elseif(LIBC_TARGET_OS STREQUAL "gpu")
   set(LIBC_TARGET_OS_IS_GPU TRUE)
 elseif(LIBC_TARGET_OS STREQUAL "uefi")

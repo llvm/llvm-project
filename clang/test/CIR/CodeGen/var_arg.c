@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// CIR: !rec___va_list_tag = !cir.record<struct "__va_list_tag" {!u32i, !u32i, !cir.ptr<!void>, !cir.ptr<!void>}
+// CIR: !rec___va_list_tag = !cir.struct<"__va_list_tag" {!u32i, !u32i, !cir.ptr<!void>, !cir.ptr<!void>}
 // LLVM: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 // OGCG: %struct.__va_list_tag = type { i32, i32, ptr, ptr }
 

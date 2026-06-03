@@ -12,9 +12,16 @@ set (FILES
   ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
+  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )
+
+if (LLDB_ENABLE_PYTHON)
+  list(APPEND FILES
+    PythonRuntimeLoaderTest.cpp
+  )
+endif()
 
 if (UNIX)
   list(APPEND FILES

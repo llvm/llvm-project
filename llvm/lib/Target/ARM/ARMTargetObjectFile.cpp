@@ -38,7 +38,7 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
   const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
   bool isAAPCS_ABI = ARM_TM.TargetABI == ARM::ARMABI::ARM_ABI_AAPCS;
   bool genExecuteOnly =
-      ARM_TM.getMCSubtargetInfo()->hasFeature(ARM::FeatureExecuteOnly);
+      ARM_TM.getMCSubtargetInfo().hasFeature(ARM::FeatureExecuteOnly);
 
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(isAAPCS_ABI);

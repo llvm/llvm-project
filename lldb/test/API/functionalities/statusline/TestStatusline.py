@@ -15,10 +15,6 @@ from lldbgdbserverutils import get_lldb_server_exe
 # under ASAN on a loaded machine..
 @skipIfAsan
 class TestStatusline(PExpectTest):
-    # Change this value to something smaller to make debugging this test less
-    # tedious.
-    TIMEOUT = 60
-
     TERMINAL_HEIGHT = 10
     TERMINAL_WIDTH = 60
 
@@ -42,7 +38,7 @@ class TestStatusline(PExpectTest):
     def test(self):
         """Basic test for the statusline."""
         self.build()
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.do_setup()
 
         # Enable the statusline and check for the control character and that we
@@ -79,7 +75,7 @@ class TestStatusline(PExpectTest):
     def test_no_color(self):
         """Basic test for the statusline with colors disabled."""
         self.build()
-        self.launch(use_colors=False, timeout=self.TIMEOUT)
+        self.launch(use_colors=False)
         self.do_setup()
 
         # Enable the statusline and check for the "reverse video" control character.
@@ -94,9 +90,7 @@ class TestStatusline(PExpectTest):
         """Regression test for lock inversion between the statusline mutex and
         the output mutex."""
         self.build()
-        self.launch(
-            extra_args=["-o", "settings set use-color false"], timeout=self.TIMEOUT
-        )
+        self.launch(extra_args=["-o", "settings set use-color false"])
         self.child.expect("(lldb)")
         self.resize()
 
@@ -107,7 +101,7 @@ class TestStatusline(PExpectTest):
 
     def test_no_target(self):
         """Test that we print "no target" when launched without a target."""
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
 
         self.expect("set set show-statusline true", ["no target"])
@@ -115,7 +109,7 @@ class TestStatusline(PExpectTest):
     @skipIfEditlineSupportMissing
     def test_resize(self):
         """Test that move the cursor when resizing."""
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
         self.expect("set set show-statusline true", ["no target"])
         self.resize(20, 60)
@@ -136,7 +130,7 @@ class TestStatusline(PExpectTest):
         stripped_exe = self.getBuildArtifact("stripped.out")
         shutil.copy2(symfile, stripped_exe)
         subprocess.check_call(["strip", "--strip-debug", stripped_exe])
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
 
         self.expect(
             "target create {}".format(stripped_exe),
@@ -165,7 +159,7 @@ class TestStatusline(PExpectTest):
     @skipIfRemote
     @skipIfWindows
     @skipIfDarwin
-    @skipIfLinux # https://github.com/llvm/llvm-project/issues/154763
+    @skipIfLinux  # https://github.com/llvm/llvm-project/issues/154763
     @add_test_categories(["lldb-server"])
     def test_modulelist_deadlock(self):
         """Regression test for a deadlock that occurs when the status line is enabled before connecting
@@ -235,7 +229,7 @@ class TestStatusline(PExpectTest):
         _wait_for_server_ready_in_log(server_log_file, server_ready_message)
 
         # Launch LLDB client and connect to lldb-server with statusline enabled
-        self.launch(timeout=self.TIMEOUT)
+        self.launch()
         self.resize()
         self.expect("settings set show-statusline true", ["no target"])
         self.expect(

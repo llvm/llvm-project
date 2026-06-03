@@ -506,19 +506,6 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.emitInstruction(Inst, getSubtargetInfo());
 }
 
-void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
-  if (DD) {
-    assert(OutStreamer->hasRawTextSupport() &&
-           "Expected assembly output mode.");
-    // This is NVPTX specific and it's unclear why.
-    // PR51079: If we have code without debug information we need to give up.
-    DISubprogram *MFSP = MF.getFunction().getSubprogram();
-    if (!MFSP)
-      return;
-    (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
-  }
-}
-
 /// getCurrentSection() - Return the current section we are emitting to.
 const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();
@@ -558,7 +545,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   // information (such as the embedded command line) to be associated
   // with all sections in the object file rather than a single section.
   if (!Target.isOSBinFormatXCOFF())
-    OutStreamer->initSections(*TM.getMCSubtargetInfo());
+    OutStreamer->initSections(TM.getMCSubtargetInfo());
 
   // Emit the version-min deployment target directive if needed.
   //
@@ -627,7 +614,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
     emitInlineAsm(
-        M.getModuleInlineAsm() + "\n", *TM.getMCSubtargetInfo(),
+        M.getModuleInlineAsm() + "\n", TM.getMCSubtargetInfo(),
         TM.Options.MCOptions, nullptr,
         InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
@@ -1083,14 +1070,10 @@ void AsmPrinter::emitFunctionHeader() {
 
   // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
   // place prefix data before NOPs.
-  unsigned PatchableFunctionPrefix = 0;
-  unsigned PatchableFunctionEntry = 0;
-  (void)F.getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionPrefix);
-  (void)F.getFnAttribute("patchable-function-entry")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionEntry);
+  unsigned PatchableFunctionPrefix =
+      F.getFnAttributeAsParsedInteger("patchable-function-prefix");
+  unsigned PatchableFunctionEntry =
+      F.getFnAttributeAsParsedInteger("patchable-function-entry");
   if (PatchableFunctionPrefix) {
     CurrentPatchableFunctionEntrySym =
         OutContext.createLinkerPrivateTempSymbol();
@@ -2093,7 +2076,7 @@ void AsmPrinter::emitFunctionBody() {
   if (this->MF)
     STI = &getSubtargetInfo();
   else
-    STI = TM.getMCSubtargetInfo();
+    STI = &TM.getMCSubtargetInfo();
 
   bool CanDoExtraAnalysis = ORE->allowExtraAnalysis(DEBUG_TYPE);
   // Create a slot for the entry basic block section so that the section
@@ -3849,7 +3832,7 @@ Align AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
     if (this->MF)
       STI = &getSubtargetInfo();
     else
-      STI = TM.getMCSubtargetInfo();
+      STI = &TM.getMCSubtargetInfo();
     OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
   } else
     OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
@@ -5101,13 +5084,10 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
 
 void AsmPrinter::emitPatchableFunctionEntries() {
   const Function &F = MF->getFunction();
-  unsigned PatchableFunctionPrefix = 0, PatchableFunctionEntry = 0;
-  (void)F.getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionPrefix);
-  (void)F.getFnAttribute("patchable-function-entry")
-      .getValueAsString()
-      .getAsInteger(10, PatchableFunctionEntry);
+  unsigned PatchableFunctionPrefix =
+      F.getFnAttributeAsParsedInteger("patchable-function-prefix");
+  unsigned PatchableFunctionEntry =
+      F.getFnAttributeAsParsedInteger("patchable-function-entry");
   if (!PatchableFunctionPrefix && !PatchableFunctionEntry)
     return;
   const unsigned PointerSize = getPointerSize();

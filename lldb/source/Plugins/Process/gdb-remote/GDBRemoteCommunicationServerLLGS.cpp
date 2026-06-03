@@ -31,6 +31,7 @@
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
@@ -54,6 +55,7 @@
 
 using namespace lldb;
 using namespace lldb_private;
+using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
@@ -221,6 +223,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jMultiBreakpoint,
       &GDBRemoteCommunicationServerLLGS::Handle_jMultiBreakpoint);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
+      &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -1052,6 +1057,11 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     response.Printf("%s:p%" PRIx64 ".%" PRIx64 ";", reason_str,
                     tid_stop_info.details.fork.child_pid,
                     tid_stop_info.details.fork.child_tid);
+  }
+
+  if (process.HasPendingLibraryEvents()) {
+    // 1 is an arbitrary value here. The parameter is ignored.
+    response.PutCString("library:1;");
   }
 
   return response;
@@ -3386,6 +3396,24 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
   }
 
+  if (object == "libraries") {
+    auto library_list = m_current_process->GetLoadedLibraries();
+    if (!library_list)
+      return library_list.takeError();
+
+    StreamString response;
+    response.Printf("<library-list>");
+    for (auto const &library : *library_list) {
+      response.Printf("<library name=\"%s\">",
+                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+      response.Printf("<section address=\"0x%" PRIx64 "\"/>",
+                      library.base_addr);
+      response.Printf("</library>");
+    }
+    response.Printf("</library-list>");
+    return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
+  }
+
   if (object == "features" && annex == "target.xml")
     return BuildTargetXml();
 
@@ -4401,12 +4429,16 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("qXfer:auxv:read+");
   if (bool(plugin_features & Extension::libraries_svr4))
     ret.push_back("qXfer:libraries-svr4:read+");
+  if (bool(plugin_features & Extension::libraries))
+    ret.push_back("qXfer:libraries:read+");
   if (bool(plugin_features & Extension::siginfo_read))
     ret.push_back("qXfer:siginfo:read+");
   if (bool(plugin_features & Extension::memory_tagging))
     ret.push_back("memory-tagging+");
   if (bool(plugin_features & Extension::savecore))
     ret.push_back("qSaveCore+");
+  if (!m_accelerator_plugins.empty())
+    ret.push_back("accelerator-plugins+");
 
   // check for client features
   m_extensions_supported = {};
@@ -4497,4 +4529,22 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   // If none of the above applied, interpret the argument as UNIX socket path.
   return (reverse_connect ? "unix-connect://" : "unix-accept://") +
          url_arg.str();
+}
+
+void GDBRemoteCommunicationServerLLGS::InstallPlugin(
+    std::unique_ptr<LLDBServerAcceleratorPlugin> plugin_up) {
+  m_accelerator_plugins.emplace_back(std::move(plugin_up));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
+    StringExtractorGDBRemote &) {
+  std::vector<AcceleratorActions> accelerator_actions;
+  for (auto &plugin_up : m_accelerator_plugins) {
+    if (auto actions = plugin_up->GetInitializeActions())
+      accelerator_actions.push_back(std::move(*actions));
+  }
+  StreamGDBRemote response;
+  response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
 }

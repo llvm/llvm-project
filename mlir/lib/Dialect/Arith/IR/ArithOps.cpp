@@ -67,6 +67,21 @@ static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
+static IntegerAttr andIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_and<APInt>());
+}
+
+static IntegerAttr orIntegerAttrs(PatternRewriter &builder, Value res,
+                                  Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_or<APInt>());
+}
+
+static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
+                                   Attribute lhs, Attribute rhs) {
+  return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
+}
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
@@ -489,6 +504,80 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
 void arith::AddUIExtendedOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<AddUIExtendedToAddI>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// SubUIExtendedOp
+//===----------------------------------------------------------------------===//
+
+std::optional<SmallVector<int64_t, 4>>
+arith::SubUIExtendedOp::getShapeForUnroll() {
+  if (auto vt = dyn_cast<VectorType>(getType(0)))
+    return llvm::to_vector<4>(vt.getShape());
+  return std::nullopt;
+}
+
+// Returns the borrow bit, assuming `lhs` and `rhs` are operands of an unsigned
+// subtraction whose mathematical result underflows iff `lhs < rhs`.
+static APInt calculateUnsignedBorrow(const APInt &lhs, const APInt &rhs) {
+  return lhs.ult(rhs) ? APInt::getAllOnes(1) : APInt::getZero(1);
+}
+
+LogicalResult
+arith::SubUIExtendedOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<OpFoldResult> &results) {
+  Type borrowTy = getBorrow().getType();
+  // subui_extended(x, 0) -> x, false
+  if (matchPattern(getRhs(), m_Zero())) {
+    Builder builder(getContext());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+
+    results.push_back(getLhs());
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(x, x) -> 0, false
+  if (getLhs() == getRhs()) {
+    Builder builder(getContext());
+    auto zeroDiff = builder.getZeroAttr(getDiff().getType());
+    auto falseValue = builder.getZeroAttr(borrowTy);
+    if (!zeroDiff)
+      return failure();
+
+    results.push_back(zeroDiff);
+    results.push_back(falseValue);
+    return success();
+  }
+
+  // subui_extended(constant_a, constant_b) -> constant_diff, constant_borrow
+  if (Attribute diffAttr = constFoldBinaryOp<IntegerAttr>(
+          adaptor.getOperands(),
+          [](APInt a, const APInt &b) { return std::move(a) - b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (matchPattern(diffAttr, ub::m_Poison())) {
+      results.push_back(diffAttr);
+      results.push_back(diffAttr);
+      return success();
+    }
+    Attribute borrowAttr = constFoldBinaryOp<IntegerAttr>(
+        adaptor.getOperands(),
+        getI1SameShape(llvm::cast<TypedAttr>(diffAttr).getType()),
+        calculateUnsignedBorrow);
+    if (!borrowAttr)
+      return failure();
+
+    results.push_back(diffAttr);
+    results.push_back(borrowAttr);
+    return success();
+  }
+
+  return failure();
+}
+
+void arith::SubUIExtendedOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<SubUIExtendedToSubI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1090,7 +1179,8 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1161,6 +1251,11 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
         result.subtract(b, convertArithRoundingModeToLLVMIR(rm));
         return result;
       });
+}
+
+void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<SubFOfNegZero>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1808,7 +1903,7 @@ LogicalResult arith::ScalingTruncFOp::verify() {
 
 void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<AndOfExtUI, AndOfExtSI>(context);
+  patterns.add<AndIAndIConstant, AndOfExtUI, AndOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1817,7 +1912,7 @@ void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 void arith::OrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                MLIRContext *context) {
-  patterns.add<OrOfExtUI, OrOfExtSI>(context);
+  patterns.add<OrIOrIConstant, OrOfExtUI, OrOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//

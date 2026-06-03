@@ -515,6 +515,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_neon_fmmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfdot : AdvSIMD_Dot_Intrinsic;
+  def int_aarch64_neon_fdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfmmla
     : DefaultAttrsIntrinsic<[llvm_v4f32_ty],
                 [llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v8bf16_ty],
@@ -2848,8 +2849,6 @@ def int_aarch64_sve_fp8_fmmla
 def int_aarch64_sve_bfdot   : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalb : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalt : SVE_4Vec_BF16;
-
-def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
 
 def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;

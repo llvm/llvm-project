@@ -2,6 +2,7 @@
 ;; Test jump table generation with Indirect Branch Tracking on x86.
 ; RUN: opt -S -passes=lowertypetests -mtriple=i686 %s | FileCheck --check-prefixes=X86_32 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64 %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-jump-table-debug-info=0 -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64-OFF %s
 
 @0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 
@@ -38,6 +39,11 @@ define i1 @foo(ptr %p) {
 ; X86_64: @f = alias [16 x i8], ptr @.cfi.jumptable
 ; X86_64: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
 ;.
+; X86_64-OFF: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
+; X86_64-OFF: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
+; X86_64-OFF: @f = alias [16 x i8], ptr @.cfi.jumptable
+; X86_64-OFF: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+;.
 ; X86_32-LABEL: @f.cfi(
 ; X86_32-NEXT:    ret void
 ;
@@ -56,9 +62,9 @@ define i1 @foo(ptr %p) {
 ;
 ; X86_32-LABEL: @.cfi.jumptable(
 ; X86_32-NEXT:  entry:
-; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
-; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
-; X86_32-NEXT:    unreachable
+; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
+; X86_32-NEXT:    call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG11:![0-9]+]]
+; X86_32-NEXT:    unreachable, !dbg [[DBG11]]
 ;
 ;
 ; X86_64-LABEL: @f.cfi(
@@ -79,9 +85,32 @@ define i1 @foo(ptr %p) {
 ;
 ; X86_64-LABEL: @.cfi.jumptable(
 ; X86_64-NEXT:  entry:
-; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
-; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
-; X86_64-NEXT:    unreachable
+; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi), !dbg [[DBG8:![0-9]+]]
+; X86_64-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi), !dbg [[DBG11:![0-9]+]]
+; X86_64-NEXT:    unreachable, !dbg [[DBG11]]
+;
+;
+; X86_64-OFF-LABEL: @f.cfi(
+; X86_64-OFF-NEXT:    ret void
+;
+;
+; X86_64-OFF-LABEL: @g.cfi(
+; X86_64-OFF-NEXT:    ret void
+;
+;
+; X86_64-OFF-LABEL: @foo(
+; X86_64-OFF-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; X86_64-OFF-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 16) to i64), [[TMP1]]
+; X86_64-OFF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 4)
+; X86_64-OFF-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 1
+; X86_64-OFF-NEXT:    ret i1 [[TMP4]]
+;
+;
+; X86_64-OFF-LABEL: @.cfi.jumptable(
+; X86_64-OFF-NEXT:  entry:
+; X86_64-OFF-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
+; X86_64-OFF-NEXT:    call void asm sideeffect "endbr64\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)
+; X86_64-OFF-NEXT:    unreachable
 ;
 ;.
 ; X86_32: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -92,13 +121,40 @@ define i1 @foo(ptr %p) {
 ; X86_64: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
 ; X86_64: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
+; X86_64-OFF: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; X86_64-OFF: attributes #[[ATTR1:[0-9]+]] = { naked nocf_check noinline }
+; X86_64-OFF: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+;.
 ; X86_32: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_32: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; X86_32: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; X86_32: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_32: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META4:![0-9]+]], producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+; X86_32: [[META4]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+; X86_32: [[META5:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_32: [[META6:![0-9]+]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: null, file: [[META4]], type: [[META7:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_32: [[META7]] = !DISubroutineType(types: null)
+; X86_32: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
+; X86_32: [[META9]] = distinct !DISubprogram(name: "f.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_32: [[META10]] = !DILocation(line: 0, scope: [[META6]])
+; X86_32: [[DBG11]] = !DILocation(line: 0, scope: [[META12:![0-9]+]], inlinedAt: [[META10]])
+; X86_32: [[META12]] = distinct !DISubprogram(name: "g.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
 ;.
 ; X86_64: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
 ; X86_64: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; X86_64: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; X86_64: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_64: [[META3:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META4:![0-9]+]], producer: "llvm", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+; X86_64: [[META4]] = !DIFile(filename: "{{.*}}ubsan_interface.h", directory: {{.*}})
+; X86_64: [[META5:![0-9]+]] = !{i32 0, !"typeid1"}
+; X86_64: [[META6:![0-9]+]] = distinct !DISubprogram(name: "__ubsan_check_cfi_icall_jt", scope: null, file: [[META4]], type: [[META7:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_64: [[META7]] = !DISubroutineType(types: null)
+; X86_64: [[DBG8]] = !DILocation(line: 0, scope: [[META9:![0-9]+]], inlinedAt: [[META10:![0-9]+]])
+; X86_64: [[META9]] = distinct !DISubprogram(name: "f.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+; X86_64: [[META10]] = !DILocation(line: 0, scope: [[META6]])
+; X86_64: [[DBG11]] = !DILocation(line: 0, scope: [[META12:![0-9]+]], inlinedAt: [[META10]])
+; X86_64: [[META12]] = distinct !DISubprogram(name: "g.cfi_jt", scope: null, file: [[META4]], type: [[META7]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META3]])
+;.
+; X86_64-OFF: [[META0:![0-9]+]] = !{i32 8, !"cf-protection-branch", i32 1}
+; X86_64-OFF: [[META1:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
+; X86_64-OFF: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
+; X86_64-OFF: [[META3:![0-9]+]] = !{i32 0, !"typeid1"}
 ;.

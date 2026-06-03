@@ -2771,6 +2771,9 @@ public:
     Value *DynCGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// True if the kernel strictly requires the number of blocks and threads
+    /// above to run.
+    bool StrictBlocksAndThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2780,12 +2783,13 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait,
+                     bool HasNoWait, bool StrictBlocksAndThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
-          HasNoWait(HasNoWait), DynCGroupMemFallback(DynCGroupMemFallback) {}
+          HasNoWait(HasNoWait), StrictBlocksAndThreads(StrictBlocksAndThreads),
+          DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -3583,7 +3587,8 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB,
+      bool PreserveMemberOfFlags = false);
 
   /// Generator for '#omp target data'
   ///
@@ -4008,6 +4013,18 @@ public:
   ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
+  /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
+  /// atomic compare operations on floating-point types.
+  bool HandleFPNegZero = false;
+
+  /// Set whether atomic compare should handle -0.0/+0.0 equivalence.
+  /// Returns the previous value so callers can save and restore it.
+  bool setHandleFPNegZero(bool FPNegZero) {
+    bool Old = HandleFPNegZero;
+    HandleFPNegZero = FPNegZero;
+    return Old;
+  }
+
   LLVM_ABI InsertPointTy
   createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
                       AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,

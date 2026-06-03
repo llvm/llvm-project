@@ -8,16 +8,16 @@ Finds common idioms which can be replaced by standard functions from the
 
 Covered scenarios:
 
-============================== =======================
+============================== ==========================
 Expression                     Replacement
------------------------------- -----------------------
-``x && !(x & (x - 1))``        ``std::has_one_bit(x)``
-``(x != 0) && !(x & (x - 1))`` ``std::has_one_bit(x)``
-``(x > 0) && !(x & (x - 1))``  ``std::has_one_bit(x)``
+------------------------------ --------------------------
+``x && !(x & (x - 1))``        ``std::has_single_bit(x)``
+``(x != 0) && !(x & (x - 1))`` ``std::has_single_bit(x)``
+``(x > 0) && !(x & (x - 1))``  ``std::has_single_bit(x)``
 ``std::bitset<N>(x).count()``  ``std::popcount(x)``
 ``x << 3 | x >> 61``           ``std::rotl(x, 3)``
 ``x << 61 | x >> 3``           ``std::rotr(x, 3)``
-============================== =======================
+============================== ==========================
 
 Options
 -------
