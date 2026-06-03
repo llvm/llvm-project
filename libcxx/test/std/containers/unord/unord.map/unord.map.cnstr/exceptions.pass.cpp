@@ -76,7 +76,7 @@ int main(int, char**) {
   for (int fail_at = 0; fail_at < 32; ++fail_at) {
     const int outstanding_before = globalMemCounter.outstanding_new;
 
-    countdown                    = fail_at;
+    countdown = fail_at;
     try {
       Map copy(src);
       (void)copy;
