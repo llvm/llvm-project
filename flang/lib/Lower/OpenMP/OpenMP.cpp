@@ -4786,6 +4786,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (dynamicCond) {
         constexpr llvm::omp::TraitProperty dynamicConditionTrait =
             llvm::omp::TraitProperty::user_condition_unknown;
+        constexpr llvm::omp::TraitProperty matchAnyTrait =
+            llvm::omp::TraitProperty::implementation_extension_match_any;
         constexpr llvm::omp::TraitProperty matchNoneTrait =
             llvm::omp::TraitProperty::implementation_extension_match_none;
 
@@ -4804,23 +4806,60 @@ static void genMetadirective(lower::AbstractConverter &converter,
           staticVMI.ScoreMap.erase(scoreIt);
         }
         staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+        llvm::APInt *conditionScorePtr =
+            conditionScore ? &*conditionScore : nullptr;
 
-        if (!llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx))
-          continue;
+        bool hasMatchAny = rawVMI.RequiredTraits.test(unsigned(matchAnyTrait));
+        bool hasMatchNone =
+            rawVMI.RequiredTraits.test(unsigned(matchNoneTrait));
+        bool isStaticVMIApplicable =
+            llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx);
+        // If staticVMI does not match, only match_any can still apply. Check
+        // conditionTrueVMI because the runtime condition may satisfy match_any.
+        if (!isStaticVMIApplicable) {
+          if (!hasMatchAny || staticVMI.RequiredTraits.test(
+                                  unsigned(llvm::omp::TraitProperty::invalid)))
+            continue;
 
-        // Add a user-condition trait to rankingVMI so dynamic selectors stay
-        // more specific than their static subset and retain any explicit score.
-        // Normally use the active user_condition_true trait. For
-        // extension(match_none), keep user_condition_unknown so the selector is
-        // still scored without matching an active user condition.
-        llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
-        if (isExplicit) {
-          bool matchNone = rawVMI.RequiredTraits.test(unsigned(matchNoneTrait));
-          rankingVMI.addTrait(
-              matchNone ? dynamicConditionTrait
-                        : llvm::omp::TraitProperty::user_condition_true,
-              "<condition>", conditionScore ? &*conditionScore : nullptr);
+          llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
+          conditionTrueVMI.addTrait(
+              llvm::omp::TraitProperty::user_condition_true, "<condition>",
+              conditionScorePtr);
+          if (!llvm::omp::isVariantApplicableInContext(conditionTrueVMI,
+                                                       ompCtx))
+            continue;
         }
+
+        auto addConditionTraitForRanking =
+            [&](llvm::omp::VariantMatchInfo &rankingVMI) {
+              rankingVMI.addTrait(
+                  hasMatchNone ? dynamicConditionTrait
+                               : llvm::omp::TraitProperty::user_condition_true,
+                  "<condition>", conditionScorePtr);
+            };
+
+        if (hasMatchAny && isStaticVMIApplicable) {
+          // A statically matched match_any selector needs two candidates: a
+          // guarded candidate with the user condition and score, and an
+          // unguarded candidate with only the statically matched traits. If the
+          // when clause omits its directive, only add the unguarded candidate.
+          if (isExplicit) {
+            llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
+            addConditionTraitForRanking(conditionTrueVMI);
+            candidates.emplace_back(spec, conditionTrueVMI, isExplicit,
+                                    dynamicCond);
+          }
+          candidates.emplace_back(spec, staticVMI, isExplicit);
+          continue;
+        }
+
+        llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
+        // An omitted directive is implicit nothing, so do not let the runtime
+        // condition raise its rank. Explicit `nothing` is still a variant.
+        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
+          rankingVMI = llvm::omp::VariantMatchInfo();
+        else if (isExplicit)
+          addConditionTraitForRanking(rankingVMI);
         candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond);
         continue;
       }
@@ -4916,12 +4955,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
 
   lower::StatementContext stmtCtx;
 
-  // All candidates are statically applicable here; only the user condition may
-  // require a runtime check. Candidates are still selected using normal OpenMP
-  // variant ranking.
-  //
-  // When the best-ranked candidate has a runtime condition, emit it as the next
-  // if/else branch and rank the remaining candidates in the else branch:
+  // Candidates that reach this loop passed static filtering. Runtime user
+  // conditions are lowered as a ranked if/else cascade:
   //
   //   when(user={condition(a)}: barrier)
   //   when(user={condition(b)}: taskwait)
@@ -4933,8 +4968,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   //   else if (b) taskwait
   //   else nothing
   //
-  // The cascade ends when the selected candidate has no runtime condition, or
-  // when all runtime-conditioned candidates failed and the fallback is emitted.
+  // If the false path selects the same unguarded directive, lower it directly.
+  // Stop when selection reaches an unguarded candidate or the fallback.
   while (!remainingCandidates.empty()) {
     std::optional<unsigned> selected =
         selectBestCandidate(remainingCandidates, candidates, ompCtx);
@@ -4947,6 +4982,29 @@ static void genMetadirective(lower::AbstractConverter &converter,
     if (!candidate.dynamicCond) {
       genVariant(candidate.spec);
       return;
+    }
+
+    llvm::SmallVector<unsigned, 4> falsePathCandidates(remainingCandidates);
+    auto *remainingIt = llvm::find(falsePathCandidates, *selected);
+    assert(remainingIt != falsePathCandidates.end() &&
+           "selected candidate missing from remaining candidates");
+    falsePathCandidates.erase(remainingIt);
+
+    // match_any may create a guarded condition-true candidate and an unguarded
+    // static candidate for the same directive. If the false path picks the
+    // unguarded one then fold it:
+    //
+    //   if (flag) barrier    into just    barrier
+    //   else barrier
+    if (std::optional<unsigned> selectedIfFalse =
+            selectBestCandidate(falsePathCandidates, candidates, ompCtx)) {
+      const MetadirectiveCandidate &candidateIfFalse =
+          candidates[*selectedIfFalse];
+      if (!candidateIfFalse.dynamicCond &&
+          candidateIfFalse.spec == candidate.spec) {
+        genVariant(candidate.spec);
+        return;
+      }
     }
 
     mlir::Location condLoc =
@@ -4967,10 +5025,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
     genVariant(candidate.spec);
 
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    auto *remainingIt = llvm::find(remainingCandidates, *selected);
-    assert(remainingIt != remainingCandidates.end() &&
-           "selected candidate missing from remaining candidates");
-    remainingCandidates.erase(remainingIt);
+    remainingCandidates = std::move(falsePathCandidates);
   }
   genVariant(fallback);
 }

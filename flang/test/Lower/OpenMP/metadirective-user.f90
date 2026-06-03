@@ -355,6 +355,74 @@ subroutine test_dynamic_user_score_match_none(flag)
 #endif
 end subroutine
 
+! Under extension(match_any), a dynamic condition can be the selector that makes
+! the candidate applicable when no static trait matches.
+! CHECK-LABEL: func.func @_QPtest_dynamic_user_match_any_runtime(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
+! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           omp.taskwait
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_user_match_any_runtime(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={extension(match_any), vendor(gnu)}, user={condition(flag)}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskwait)
+#else
+  !$omp & default(taskwait)
+#endif
+end subroutine
+
+! Under extension(match_any), a candidate already satisfied by a static trait does
+! not need a runtime condition guard.
+! CHECK-LABEL: func.func @_QPtest_dynamic_user_match_any_static(
+! CHECK-NOT:     fir.if
+! CHECK:         omp.barrier
+! CHECK-NOT:     fir.if
+! CHECK-NOT:     omp.taskwait
+! CHECK:         return
+subroutine test_dynamic_user_match_any_static(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={extension(match_any), vendor(llvm)}, user={condition(flag)}: barrier) &
+#ifdef OMP_52
+  !$omp & otherwise(taskwait)
+#else
+  !$omp & default(taskwait)
+#endif
+end subroutine
+
+! Under extension(match_any), the dynamic condition score only affects ranking
+! on the guarded path where the condition is true.
+! CHECK-LABEL: func.func @_QPtest_dynamic_user_match_any_static_score(
+! CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK:         %[[DECL:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK:         %[[LOAD:.*]] = fir.load %[[DECL]]#0
+! CHECK:         %[[COND:.*]] = fir.convert %[[LOAD]] : (!fir.logical<4>) -> i1
+! CHECK:         fir.if %[[COND]] {
+! CHECK:           omp.barrier
+! CHECK:         } else {
+! CHECK:           omp.taskwait
+! CHECK:         }
+! CHECK:         return
+subroutine test_dynamic_user_match_any_static_score(flag)
+  logical, intent(in) :: flag
+  !$omp metadirective &
+  !$omp & when(implementation={extension(match_any), vendor(llvm)}, user={condition(score(100): flag)}: barrier) &
+  !$omp & when(user={condition(score(10): .true.)}: taskwait) &
+#ifdef OMP_52
+  !$omp & otherwise(nothing)
+#else
+  !$omp & default(nothing)
+#endif
+end subroutine
+
 ! The explicit directive variant wins this tie over the earlier implicit
 ! nothing candidate.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_tie_break(
