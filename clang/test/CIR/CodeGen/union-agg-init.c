@@ -54,12 +54,11 @@ struct outer ret_outer() {
 
   // CIR-LABEL: ret_outer
   // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_outer, !cir.ptr<!rec_outer>, ["__retval", init]
-  // CIR: %[[BITCAST:.*]] = cir.cast bitcast %0 : !cir.ptr<!rec_outer> -> !cir.ptr<!{{.*}}>
-  // CIR: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.zero : !{{.*}}, #cir.int<1> : !s32i, #cir.const_array<[#cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i, #cir.zero : !u8i]> : !cir.array<!u8i x 4>}> 
-  // CIR: cir.store {{.*}}%[[RECORD]], %[[BITCAST]] 
+  // CIR: %[[CONST:.*]] = cir.get_global @__const.ret_outer.__retval : !cir.ptr<!rec_outer>
+  // CIR: cir.copy %[[CONST]] to %[[RET_ALLOCA]]
 
   // LLVM-LABEL: ret_outer
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %struct.outer
-  // LLVMCIR: store { { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }, ptr %[[RET_ALLOCA]]
+  // LLVMCIR: call void @llvm.memcpy{{.*}}(ptr {{.*}}%[[RET_ALLOCA]], ptr {{.*}}@__const.ret_outer.__retval
   // OGCG: call void @llvm.memcpy{{.*}}(ptr{{.*}}%[[RET_ALLOCA]], ptr {{.*}}@__const.ret_outer.o, i64 16, i1 false)
 }

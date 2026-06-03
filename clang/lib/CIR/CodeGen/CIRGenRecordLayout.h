@@ -184,6 +184,14 @@ public:
     return fieldIdxMap.lookup(fd);
   }
 
+  /// True if this AST FieldDecl has its own slot in the CIR record layout
+  /// (either as a unique CIR member or as a bitfield sharing a storage
+  /// member). Returns false for fields that were elided by the layout builder,
+  /// e.g. empty struct fields or zero-length bitfields.
+  bool hasField(const clang::FieldDecl *fd) const {
+    return fieldIdxMap.count(fd->getCanonicalDecl());
+  }
+
   unsigned getNonVirtualBaseCIRFieldNo(const CXXRecordDecl *rd) const {
     assert(nonVirtualBases.count(rd) && "Invalid non-virtual base!");
     return nonVirtualBases.lookup(rd);

@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-cir -fcxx-exceptions -fexceptions -mmlir --mlir-print-ir-before=cir-cxxabi-lowering -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR,CIR-BEFORE
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM
-// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fclangir -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -o - | FileCheck %s --check-prefixes=LLVM,LLVMOG
 
 struct Base1 {
   int i, j, k;
@@ -37,8 +37,9 @@ Inherits I;
 // LLVM: @I = global %struct.Inherits zeroinitializer, align 4
 
 Inherits I2 {{1,2,3},{1.1, 2.2, 3.3}, 4, 5, 6};
-// CIR: cir.global external @I2 = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float, #cir.fp<3.300000e+00> : !cir.float, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i}> : !rec_anon_struct {alignment = 4 : i64}
-// LLVM: @I2 = global { i32, i32, i32, float, float, float, i32, i32, i32 } { i32 1, i32 2, i32 3, float {{.*}}, float {{.*}}, float {{.*}}, i32 4, i32 5, i32 6 }, align 4
+// CIR: cir.global external @I2 = #cir.const_record<{#cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_Base1, #cir.const_record<{#cir.fp<1.100000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float, #cir.fp<3.300000e+00> : !cir.float}> : !rec_Base2, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i}> : !rec_Inherits {alignment = 4 : i64}
+// LLVMCIR: @I2 = global %struct.Inherits { %struct.Base1 { i32 1, i32 2, i32 3 }, %struct.Base2 { float 1.100000e+00, float 2.200000e+00, float 3.300000e+00 }, i32 4, i32 5, i32 6 }, align 4
+// LLVMOG: @I2 = global { i32, i32, i32, float, float, float, i32, i32, i32 } { i32 1, i32 2, i32 3, float 1.100000e+00, float 2.200000e+00, float 3.300000e+00, i32 4, i32 5, i32 6 }, align 4
 
 VirtualInherits VI;
 // CIR-BEFORE: cir.global external @VI = ctor : !rec_VirtualInherits {

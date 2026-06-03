@@ -21,13 +21,12 @@ extern "C" void construct() {
 
 // CIR-LABEL: construct()
 // CIR-NEXT: %[[WC_ALLOCA:.*]] = cir.alloca !rec_WithCtor
-// CIR-NEXT: %[[CONST_VAL:.*]] = cir.const #cir.const_record<{#cir.int<4> : !s32i, #cir.int<10> : !s64i, #cir.const_record<{#cir.int<5> : !s32i}> : !rec_HasVal}>
-// CIR-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[WC_ALLOCA]]
-// CIR-NEXT: cir.store{{.*}}%[[CONST_VAL]], %[[BITCAST]]
+// CIR-NEXT: %[[CONST_GLOB:.*]] = cir.get_global @__const.construct.c : !cir.ptr<!rec_WithCtor>
+// CIR-NEXT: cir.copy %[[CONST_GLOB]] to %[[WC_ALLOCA]]
 
 // LLVM-LABEL: construct()
 // LLVM-NEXT: %[[WC_ALLOCA:.*]] = alloca %struct.WithCtor
-// LLVM-NEXT: store { i32, i64, %struct.HasVal } { i32 4, i64 10, %struct.HasVal { i32 5 } }, ptr %[[WC_ALLOCA]]
+// LLVM-NEXT: call void @llvm.memcpy{{.*}}(ptr {{.*}}%[[WC_ALLOCA]], ptr {{.*}}@__const.construct.c
 
 // OGCG-LABEL: construct()
 // OGCG: %[[WC_ALLOCA:.*]] = alloca %struct.WithCtor

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMOG
 
   constexpr const int &normal = 42;
 // CIR: cir.global "private" constant external @_ZGR6normal_ = #cir.int<42> : !s32i
@@ -13,9 +13,10 @@ struct SelfRef {
   int ints[3] = {1, 2, 3};
 };
 constexpr const SelfRef &sr = SelfRef();
-// CIR: cir.global "private" constant external @_ZGR2sr_ = #cir.const_record<{#cir.global_view<@_ZGR2sr_, [1 : i32]> : !cir.ptr<!s32i>, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3>}> 
+// CIR: cir.global "private" constant external @_ZGR2sr_ = #cir.const_record<{#cir.global_view<@_ZGR2sr_, [1 : i32]> : !cir.ptr<!s32i>, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3>, #cir.zero : !cir.array<!u8i x 4>}>
 // CIR: cir.global constant external @sr = #cir.global_view<@_ZGR2sr_> : !cir.ptr<!rec_SelfRef>
-// LLVM: @_ZGR2sr_ = {{.*}}constant { ptr, [3 x i32] } { ptr getelementptr {{.*}}(i8, ptr @_ZGR2sr_, i64 8), [3 x i32] [i32 1, i32 2, i32 3] }, align 8
+// LLVMCIR: @_ZGR2sr_ = {{.*}}constant %struct.SelfRef <{ ptr getelementptr inbounds nuw (i8, ptr @_ZGR2sr_, i64 8), [3 x i32] [i32 1, i32 2, i32 3], [4 x i8] zeroinitializer }>, align 8
+// LLVMOG: @_ZGR2sr_ = {{.*}}constant { ptr, [3 x i32] } { ptr getelementptr (i8, ptr @_ZGR2sr_, i64 8), [3 x i32] [i32 1, i32 2, i32 3] }, align 8
 // LLVM: @sr = constant ptr @_ZGR2sr_, align 8
 
 struct MultiSelfRef {
@@ -25,8 +26,9 @@ struct MultiSelfRef {
 };
 
 constexpr const MultiSelfRef &msr = MultiSelfRef();
-// CIR: cir.global "private" constant external @_ZGR3msr_ = #cir.const_record<{#cir.global_view<@_ZGR3msr_, [2 : i32]> : !cir.ptr<!s32i>, #cir.global_view<@_ZGR3msr_, [2 : i32]> : !cir.ptr<!s32i>, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3>}>
+// CIR: cir.global "private" constant external @_ZGR3msr_ = #cir.const_record<{#cir.global_view<@_ZGR3msr_, [2 : i32]> : !cir.ptr<!s32i>, #cir.global_view<@_ZGR3msr_, [2 : i32]> : !cir.ptr<!s32i>, #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 3>, #cir.zero : !cir.array<!u8i x 4>}>
 // CIR: cir.global constant external @msr = #cir.global_view<@_ZGR3msr_> : !cir.ptr<!rec_MultiSelfRef>
-// LLVM: @_ZGR3msr_ = {{.*}}constant { ptr, ptr, [3 x i32] } { ptr getelementptr {{.*}}(i8, ptr @_ZGR3msr_, i64 16), ptr getelementptr {{.*}}(i8, ptr @_ZGR3msr_, i64 16), [3 x i32] [i32 1, i32 2, i32 3] }, align 8
+// LLVMCIR: @_ZGR3msr_ = {{.*}}constant %struct.MultiSelfRef <{ ptr getelementptr inbounds nuw (i8, ptr @_ZGR3msr_, i64 16), ptr getelementptr inbounds nuw (i8, ptr @_ZGR3msr_, i64 16), [3 x i32] [i32 1, i32 2, i32 3], [4 x i8] zeroinitializer }>, align 8
+// LLVMOG: @_ZGR3msr_ = {{.*}}constant { ptr, ptr, [3 x i32] } { ptr getelementptr (i8, ptr @_ZGR3msr_, i64 16), ptr getelementptr (i8, ptr @_ZGR3msr_, i64 16), [3 x i32] [i32 1, i32 2, i32 3] }, align 8
 // LLVM: @msr = constant ptr @_ZGR3msr_, align 8
 

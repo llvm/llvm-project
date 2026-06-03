@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
 // RUN: FileCheck %s --input-file=%t-before.cir --check-prefixes=CIR,CIR-BEFORE
 // RUN: FileCheck %s --input-file=%t.cir --check-prefixes=CIR,CIR-AFTER
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVMOG
 
 struct DefCtor{};
 struct WithCtor{
@@ -32,17 +32,19 @@ const int &constGlobalIntRef = 5;
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
 
 DefCtor defCtor{};
-// CIR: cir.global external @defCtor = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
-// LLVM: @defCtor = global %struct.DefCtor undef, align 1
+// CIR: cir.global external @defCtor = #cir.zero : !rec_DefCtor {alignment = 1 : i64}
+// LLVMCIR: @defCtor = global %struct.DefCtor zeroinitializer, align 1
+// LLVMOG: @defCtor = global %struct.DefCtor undef, align 1
 
 DefCtor &defCtorRef = defCtor;
 // CIR: cir.global constant external @defCtorRef = #cir.global_view<@defCtor> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
 // LLVM: @defCtorRef = constant ptr @defCtor, align 8
 
 const DefCtor &constDefCtorRef{};
-// CIR: cir.global "private" constant external @_ZGR15constDefCtorRef_ = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
+// CIR: cir.global "private" constant external @_ZGR15constDefCtorRef_ = #cir.zero : !rec_DefCtor {alignment = 1 : i64}
 // CIR: cir.global constant external @constDefCtorRef = #cir.global_view<@_ZGR15constDefCtorRef_> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
-// LLVM: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
+// LLVMCIR: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor zeroinitializer, align 1
+// LLVMOG: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
 // LLVM: @constDefCtorRef = constant ptr @_ZGR15constDefCtorRef_, align 8
 
 WithCtor withCtor{};

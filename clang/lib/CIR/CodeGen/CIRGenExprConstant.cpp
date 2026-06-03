@@ -834,31 +834,429 @@ mlir::Attribute ConstRecordBuilder::finalize(QualType type) {
   return builder.build(valTy, rd->hasFlexibleArrayMember());
 }
 
+//===----------------------------------------------------------------------===//
+// Layout-driven record initializer emission.
+//
+// Walk the CIR record layout (CIRGenRecordLayout::getCIRType()) directly:
+// for each CIR member, decide what value goes there based on the AST init,
+// then assemble a ConstRecordAttr of that exact CIR record type. This avoids
+// synthesizing an anon storage record whose member list disagrees with the
+// logical record type that other code paths see for the same VarDecl.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Pack a bitfield value into a per-storage-member accumulator.
+/// `cirIdx` is the CIR field index of the storage member.
+struct BitfieldAccumulator {
+  llvm::APInt value;
+  mlir::Type storageType;
+};
+
+/// Compute the IntAttr that fills a bitfield storage member.
+static cir::IntAttr packBitfield(CIRGenModule &cgm,
+                                 const CIRGenBitFieldInfo &info,
+                                 llvm::APInt fieldValue,
+                                 cir::IntAttr existing) {
+  llvm::APInt accum(info.storageSize, 0);
+  if (existing)
+    accum = existing.getValue().zextOrTrunc(info.storageSize);
+
+  // Truncate the field value to its bitfield size, then position into the
+  // storage word. Bit ordering follows the target endianness.
+  if (fieldValue.getBitWidth() > info.size)
+    fieldValue = fieldValue.trunc(info.size);
+  fieldValue = fieldValue.zextOrTrunc(info.storageSize);
+
+  unsigned offset = info.offset;
+  if (cgm.getDataLayout().isBigEndian())
+    offset = info.storageSize - info.size - offset;
+  fieldValue = fieldValue.shl(offset);
+
+  // Mask the destination bits to zero (in case allow-overwrite scenarios put
+  // something there) and OR in the new value.
+  llvm::APInt mask(info.storageSize, 0);
+  mask.setBits(offset, offset + info.size);
+  accum &= ~mask;
+  accum |= fieldValue;
+
+  return cir::IntAttr::get(info.storageType, accum);
+}
+
+/// True for AST fields that the CIR record layout doesn't keep as their own
+/// member (empty struct fields, zero-length bitfields, etc). Their init still
+/// has to be evaluated for side effects but contributes nothing to the
+/// const_record's element list.
+static bool astFieldElidedFromCIRLayout(const ASTContext &ctx,
+                                        const CIRGenRecordLayout &layout,
+                                        const FieldDecl *field) {
+  if (field->isUnnamedBitField())
+    return true;
+  if (field->isZeroSize(ctx))
+    return true;
+  if (isEmptyFieldForLayout(ctx, field))
+    return true;
+  // A bitfield may live inside a shared storage member, so it is not elided —
+  // its FieldDecl still maps to a CIR index via getCIRFieldNo.
+  if (field->isBitField())
+    return false;
+  // Non-bitfield FieldDecls that survive show up in fieldIdxMap. Anything not
+  // there must have been elided (e.g. zero-length bitfield not skipped above).
+  return !layout.hasField(field);
+}
+
+/// Emit a ConstRecordAttr whose element list is keyed off the CIR record
+/// layout. Callers supply per-AST-field initializers via `getFieldInit`,
+/// per-base initializers via `getBaseInit`, and optionally a vtable address
+/// via `vtableInit`. Returns null on failure (caller should fall back to
+/// emitNull or NYI).
+template <typename FieldInitFn, typename BaseInitFn>
+static mlir::Attribute
+emitRecordInitializer(ConstantEmitter &emitter, const RecordDecl *rd,
+                      bool asCompleteObject, FieldInitFn getFieldInit,
+                      BaseInitFn getBaseInit, mlir::Attribute vtableInit) {
+  CIRGenModule &cgm = emitter.cgm;
+  const ASTContext &astCtx = cgm.getASTContext();
+  const CIRGenRecordLayout &layout = cgm.getTypes().getCIRGenRecordLayout(rd);
+  cir::RecordType recordTy =
+      asCompleteObject ? layout.getCIRType() : layout.getBaseSubobjectCIRType();
+
+  // Unions are represented in CIR with a multi-member RecordType that
+  // enumerates every union field for type info, but at lowering time only
+  // a single storage member survives. A ConstRecordAttr of the union's CIR
+  // type would have N>=1 elements that don't line up with the lowered LLVM
+  // struct's single element, so we synthesize a single-member anonymous
+  // record for the active union initializer instead. This matches OG's
+  // behavior. Unions don't have nested non-zero offsets, so the type-swap
+  // back-pressure that motivates the layout-driven build for structs doesn't
+  // apply.
+  if (rd->isUnion()) {
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    // The LLVM lowering of a UnionType picks a single storage member, so the
+    // value we hand back has to match that storage type. If the active C
+    // union field has a different type, bitcast its constant into the storage
+    // type's representation.
+    auto unionTy = mlir::cast<cir::UnionType>(recordTy);
+    mlir::Type storageTy =
+        unionTy.getUnionStorageType(cir::CIRDataLayout(cgm.getModule()).layout);
+    for (const FieldDecl *field : rd->fields()) {
+      const FieldDecl *active = getFieldInit.unionActiveField();
+      if (active && !declaresSameEntity(active->getCanonicalDecl(),
+                                        field->getCanonicalDecl()))
+        continue;
+      if (field->isZeroSize(astCtx))
+        continue;
+      auto initInfo = getFieldInit(/*astIdx=*/0, field);
+      if (initInfo.failed)
+        return {};
+      if (initInfo.skip)
+        continue;
+      mlir::TypedAttr eltAttr = initInfo.attr;
+      if (!eltAttr) {
+        if (active)
+          return {};
+        continue;
+      }
+
+      if (eltAttr.getType() != storageTy) {
+        // The active field's type differs from the union's storage type.
+        // Repack the bits as an integer that matches the storage type's
+        // bit width. Higher bits stay zero (representing the union's
+        // trailing-padding bytes); lowering will widen/bitcast as needed.
+        cir::CIRDataLayout dl(cgm.getModule());
+        uint64_t eltBits = (uint64_t)dl.getTypeSizeInBits(eltAttr.getType());
+        uint64_t storageBits = (uint64_t)dl.getTypeSizeInBits(storageTy);
+        if (eltBits > storageBits)
+          return {};
+        llvm::APInt bits(eltBits ? eltBits : 1, 0);
+        if (auto i = mlir::dyn_cast<cir::IntAttr>(eltAttr))
+          bits = i.getValue();
+        else if (auto f = mlir::dyn_cast<cir::FPAttr>(eltAttr))
+          bits = f.getValue().bitcastToAPInt();
+        else
+          return {};
+        bits = bits.zextOrTrunc(storageBits);
+        if (auto sti = mlir::dyn_cast<cir::IntType>(storageTy))
+          eltAttr = cir::IntAttr::get(storageTy, bits);
+        else if (auto stf = mlir::dyn_cast<cir::FPTypeInterface>(storageTy))
+          eltAttr = cir::FPAttr::get(
+              storageTy, llvm::APFloat(stf.getFloatSemantics(), bits));
+        else
+          return {};
+      }
+
+      return cir::ConstRecordAttr::get(recordTy,
+                                       builder.getArrayAttr({eltAttr}));
+    }
+    // No active union field initialized -> zero of the union type.
+    return cir::ZeroAttr::get(recordTy);
+  }
+
+  unsigned numElements = recordTy.getNumElements();
+  llvm::SmallVector<mlir::Attribute> elements(numElements);
+
+  // Bases first (C++).
+  if (const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (asCompleteObject) {
+      for (auto [idx, base] : llvm::enumerate(cxxrd->bases())) {
+        if (base.isVirtual())
+          continue;
+        const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
+        if (isEmptyRecordForLayout(astCtx, base.getType()) ||
+            astCtx.getASTRecordLayout(baseDecl).getNonVirtualSize().isZero())
+          continue;
+        mlir::Attribute baseAttr = getBaseInit(idx, baseDecl);
+        if (!baseAttr)
+          return {};
+        unsigned cirIdx = layout.getNonVirtualBaseCIRFieldNo(baseDecl);
+        elements[cirIdx] = baseAttr;
+      }
+    }
+    if (cxxrd->getNumVBases()) {
+      cgm.errorNYI(cxxrd->getSourceRange(),
+                   "emitRecordInitializer: virtual base");
+      return {};
+    }
+  }
+
+  // Vtable pointer, if any.
+  if (vtableInit) {
+    // Vtable lives at offset 0 of the complete object's CIR layout.
+    elements[0] = vtableInit;
+  }
+
+  // Fields. Bitfields accumulate into their shared storage member.
+  unsigned astFieldIdx = 0;
+  for (const FieldDecl *field : rd->fields()) {
+    unsigned thisAstIdx = astFieldIdx++;
+
+    auto initInfo = getFieldInit(thisAstIdx, field);
+    if (initInfo.failed)
+      return {};
+    if (initInfo.skip)
+      continue;
+
+    if (astFieldElidedFromCIRLayout(astCtx, layout, field)) {
+      // Init has already been evaluated by the accessor for side effects.
+      continue;
+    }
+
+    if (field->isBitField()) {
+      auto intAttr = mlir::dyn_cast_if_present<cir::IntAttr>(initInfo.attr);
+      if (!intAttr)
+        return {};
+      const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
+      unsigned cirIdx = layout.getCIRFieldNo(field);
+      auto existing = mlir::dyn_cast_if_present<cir::IntAttr>(elements[cirIdx]);
+      elements[cirIdx] = packBitfield(cgm, info, intAttr.getValue(), existing);
+    } else {
+      if (!initInfo.attr)
+        return {};
+      unsigned cirIdx = layout.getCIRFieldNo(field);
+      elements[cirIdx] = initInfo.attr;
+    }
+  }
+
+  // Zero-fill any CIR member that wasn't explicitly set (padding members,
+  // unset bases under the complete-object form, etc).
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  for (unsigned i = 0; i < numElements; ++i) {
+    if (!elements[i])
+      elements[i] = builder.getZeroInitAttr(recordTy.getElementType(i));
+  }
+
+  // Let the helper collapse all-zero records to a single ZeroAttr.
+  return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
+                                          /*packed=*/recordTy.getPacked(),
+                                          /*padded=*/recordTy.getPadded(),
+                                          recordTy);
+}
+
+/// Per-field result returned by the init accessors used in
+/// emitRecordInitializer.
+struct FieldInitResult {
+  /// The TypedAttr to place into the const_record (null for skip/fail).
+  mlir::TypedAttr attr;
+  /// True if this field has no initializer and shouldn't contribute (e.g.
+  /// NoInitExpr from a designated initializer).
+  bool skip = false;
+  /// True if the accessor encountered an error and emission must abort.
+  bool failed = false;
+};
+
+/// Accessor adapter for InitListExpr.
+struct InitListExprAccessor {
+  ConstantEmitter &emitter;
+  InitListExpr *ile;
+  mlir::Location loc;
+  unsigned elementNo = 0;
+
+  const FieldDecl *unionActiveField() const {
+    return ile->getInitializedFieldInUnion();
+  }
+
+  FieldInitResult operator()(unsigned, const FieldDecl *field) {
+    CIRGenModule &cgm = emitter.cgm;
+    const ASTContext &astCtx = cgm.getASTContext();
+    FieldInitResult r;
+    if (field->isUnnamedBitField())
+      return (r.skip = true, r);
+
+    Expr *init = nullptr;
+    if (elementNo < ile->getNumInits())
+      init = ile->getInit(elementNo++);
+    if (isa_and_nonnull<NoInitExpr>(init))
+      return (r.skip = true, r);
+
+    if (field->isZeroSize(astCtx)) {
+      if (init && init->HasSideEffects(astCtx)) {
+        r.failed = true;
+        return r;
+      }
+      r.skip = true;
+      return r;
+    }
+    if (isEmptyFieldForLayout(astCtx, field)) {
+      r.skip = true;
+      return r;
+    }
+
+    mlir::Attribute attr =
+        init ? emitter.tryEmitPrivateForMemory(init, field->getType())
+             : emitter.emitNullForMemory(loc, field->getType());
+    if (!attr) {
+      r.failed = true;
+      return r;
+    }
+    r.attr = mlir::cast<mlir::TypedAttr>(attr);
+    return r;
+  }
+};
+
+/// Accessor adapter for APValue.
+struct APValueAccessor {
+  ConstantEmitter &emitter;
+  const APValue &val;
+  const RecordDecl *rd;
+  mlir::Location loc;
+
+  const FieldDecl *unionActiveField() const {
+    return rd->isUnion() ? val.getUnionField() : nullptr;
+  }
+
+  FieldInitResult operator()(unsigned astFieldIdx, const FieldDecl *field) {
+    CIRGenModule &cgm = emitter.cgm;
+    const ASTContext &astCtx = cgm.getASTContext();
+    FieldInitResult r;
+    if (field->isUnnamedBitField())
+      return (r.skip = true, r);
+    if (field->isZeroSize(astCtx)) {
+      r.skip = true;
+      return r;
+    }
+    if (isEmptyFieldForLayout(astCtx, field)) {
+      r.skip = true;
+      return r;
+    }
+
+    const APValue &fieldVal =
+        rd->isUnion() ? val.getUnionValue() : val.getStructField(astFieldIdx);
+    mlir::Attribute attr =
+        emitter.tryEmitPrivateForMemory(fieldVal, field->getType());
+    if (!attr) {
+      r.failed = true;
+      return r;
+    }
+    r.attr = mlir::cast<mlir::TypedAttr>(attr);
+    return r;
+  }
+};
+
+} // namespace
+
 mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
                                                 InitListExpr *ile,
                                                 QualType valTy) {
-  ConstantAggregateBuilder constant(emitter.cgm);
-  ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
+  RecordDecl *rd = ile->getType()->castAsRecordDecl();
+  if (auto *cxxrd = dyn_cast<CXXRecordDecl>(rd))
+    if (cxxrd->getNumBases())
+      return nullptr;
+  mlir::Location loc = emitter.cgm.getLoc(ile->getSourceRange());
+  InitListExprAccessor fieldAcc{emitter, ile, loc};
+  auto baseAcc = [&](unsigned, const CXXRecordDecl *) {
+    return mlir::Attribute{};
+  };
+  return emitRecordInitializer(emitter, rd, /*asCompleteObject=*/true, fieldAcc,
+                               baseAcc, /*vtableInit=*/{});
+}
 
-  if (!builder.build(ile, /*allowOverwrite*/ false))
-    return nullptr;
+/// Build the vtable address-point GlobalViewAttr for a class whose CIR layout
+/// reports `hasOwnVFPtr()`. When emitting a base subobject within some larger
+/// derived class, the vtable used is the *derived's* vtable (`vTableClass`),
+/// indexed at the address point for `(rd, offsetInDerived)`. For the
+/// most-derived (top-level) call, vTableClass == cxxrd and offsetInDerived
+/// is zero.
+static mlir::Attribute buildVTableInit(CIRGenModule &cgm,
+                                       const CXXRecordDecl *rd,
+                                       const CXXRecordDecl *vTableClass,
+                                       CharUnits offsetInDerived) {
+  const ASTRecordLayout &astLayout = cgm.getASTContext().getASTRecordLayout(rd);
+  if (!astLayout.hasOwnVFPtr())
+    return {};
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  cir::GlobalOp vtable =
+      cgm.getCXXABI().getAddrOfVTable(vTableClass, CharUnits());
+  clang::VTableLayout::AddressPointLocation addressPoint =
+      cgm.getItaniumVTableContext()
+          .getVTableLayout(vTableClass)
+          .getAddressPoint(BaseSubobject(rd, offsetInDerived));
+  assert(!cir::MissingFeatures::addressPointerAuthInfo());
+  mlir::ArrayAttr indices = builder.getArrayAttr({
+      builder.getI32IntegerAttr(addressPoint.VTableIndex),
+      builder.getI32IntegerAttr(addressPoint.AddressPointIndex),
+  });
+  auto vptrTy = cir::VPtrType::get(builder.getContext());
+  auto symbol = mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr());
+  return cir::GlobalViewAttr::get(vptrTy, symbol, indices);
+}
 
-  return builder.finalize(valTy);
+static mlir::Attribute buildRecordFromAPValue(ConstantEmitter &emitter,
+                                              const APValue &val,
+                                              const RecordDecl *rd,
+                                              const CXXRecordDecl *vTableClass,
+                                              CharUnits offsetInDerived) {
+  const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+  CIRGenModule &cgm = emitter.cgm;
+  mlir::Location loc = cgm.getBuilder().getUnknownLoc();
+
+  mlir::Attribute vtableInit;
+  if (cxxrd && vTableClass)
+    vtableInit = buildVTableInit(cgm, cxxrd, vTableClass, offsetInDerived);
+
+  APValueAccessor fieldAcc{emitter, val, rd, loc};
+  auto baseAcc = [&](unsigned baseIdx,
+                     const CXXRecordDecl *baseDecl) -> mlir::Attribute {
+    const APValue &baseVal = val.getStructBase(baseIdx);
+    // Recurse into the base subobject, keeping vTableClass pinned to the
+    // most-derived class so any vtables emitted inside use its layout.
+    const ASTRecordLayout &derivedLayout =
+        cgm.getASTContext().getASTRecordLayout(rd);
+    CharUnits baseOff =
+        offsetInDerived + derivedLayout.getBaseClassOffset(baseDecl);
+    return buildRecordFromAPValue(emitter, baseVal, baseDecl, vTableClass,
+                                  baseOff);
+  };
+  return emitRecordInitializer(emitter, rd, /*asCompleteObject=*/true, fieldAcc,
+                               baseAcc, vtableInit);
 }
 
 mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
                                                 const APValue &val,
                                                 QualType valTy) {
-  ConstantAggregateBuilder constant(emitter.cgm);
-  ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
-
   const RecordDecl *rd =
       valTy->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
-  const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd);
-  if (!builder.build(val, rd, false, cd, CharUnits::Zero()))
-    return nullptr;
-
-  return builder.finalize(valTy);
+  const auto *cxxrd = dyn_cast<CXXRecordDecl>(rd);
+  return buildRecordFromAPValue(emitter, val, rd, cxxrd, CharUnits::Zero());
 }
 
 bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
@@ -1157,6 +1555,22 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
     return cir::ZeroAttr::get(desiredType);
 
   const unsigned trailingZeroes = arrayBound - nonzeroLength;
+
+  // If we have a significant block of trailing zeros and a common element
+  // type, prefer a single ConstArrayAttr of the desired array type with a
+  // `trailingZerosNum` hint instead of synthesizing a packed anonymous record
+  // around a `[N x t] zeroinitializer` tail. This keeps the array's type in
+  // agreement with what the enclosing record layout expects.
+  if (trailingZeroes >= 8 && commonElementType) {
+    SmallVector<mlir::Attribute> eles;
+    eles.reserve(nonzeroLength);
+    for (unsigned i = 0; i < nonzeroLength; ++i)
+      eles.push_back(elements[i]);
+    return cir::ConstArrayAttr::get(
+        cir::ArrayType::get(commonElementType, arrayBound),
+        mlir::ArrayAttr::get(builder.getContext(), eles),
+        /*trailingZerosNum=*/trailingZeroes);
+  }
 
   // Add a zeroinitializer array filler if we have lots of trailing zeroes.
   if (trailingZeroes >= 8) {

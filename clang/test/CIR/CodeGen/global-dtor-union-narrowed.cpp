@@ -20,21 +20,19 @@ struct S {
 
 S g;
 
-// The dtor region must bitcast `@g`'s narrowed pointer back to `!rec_S`
-// before the dtor call.
+// With the layout-driven const_record path, @g keeps its logical !rec_S
+// type, so no pointer narrowing/bitcast is needed.
 
 // CIR: !rec_S = !cir.struct<"S"
-// CIR: cir.global external @g = #cir.zero : ![[NARROW_TY:rec_anon_struct[0-9]*]] dtor {
-// CIR:   %[[ADDR:.+]] = cir.get_global @g : !cir.ptr<![[NARROW_TY]]>
-// CIR:   %[[CAST:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<![[NARROW_TY]]> -> !cir.ptr<!rec_S>
-// CIR:   cir.call @_ZN1SD2Ev(%[[CAST]]) : (!cir.ptr<!rec_S>) -> ()
+// CIR: cir.global external @g = ctor : !rec_S {
+// CIR:   %[[GET_GLOB:.+]] = cir.get_global @g : !cir.ptr<!rec_S>
+// CIR:   cir.call @_ZN1SC2Ev(%[[GET_GLOB]])
 // CIR: }
 
-// LLVM: @g = global { { { [16 x i8] } } } zeroinitializer
-// LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[A0:.*]])
-// LLVM:   call void @_ZN1SD2Ev(ptr %[[A0]])
+// LLVM: @g = global %struct.S zeroinitializer
 // LLVM: define internal void @__cxx_global_var_init()
-// LLVM:   call void @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @g, ptr @__dso_handle)
+// LLVM:   call void @_ZN1SC2Ev(ptr {{.*}}@g)
+// LLVM:   call void @__cxa_atexit(ptr @_ZN1SD2Ev, ptr @g, ptr @__dso_handle)
 
 // OGCG: @g = global { { { [16 x i8] } } } zeroinitializer
 // OGCG: define internal void @__cxx_global_var_init()
