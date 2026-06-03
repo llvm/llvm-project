@@ -348,6 +348,33 @@ define double @copysign_floor_fabs_to_trunc_fmf(double %x) {
   ret double %result
 }
 
+; Fold applies without any FMF -- copysign's implicit fabs handles NaN.
+define double @copysign_floor_fabs_to_trunc_no_fmf(double %x) {
+; CHECK-LABEL: @copysign_floor_fabs_to_trunc_no_fmf(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.trunc.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.copysign.f64(double [[RESULT]], double [[X]])
+; CHECK-NEXT:    ret double [[RESULT1]]
+;
+  %abs = call double @llvm.fabs.f64(double %x)
+  %fl = call double @llvm.floor.f64(double %abs)
+  %result = call double @llvm.copysign.f64(double %fl, double %x)
+  ret double %result
+}
+
+; stripSignOnlyFPOps folds fabs(fneg(X)) inside floor.
+define double @copysign_floor_fabs_fneg_to_trunc(double %x) {
+; CHECK-LABEL: @copysign_floor_fabs_fneg_to_trunc(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.trunc.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.copysign.f64(double [[RESULT]], double [[X]])
+; CHECK-NEXT:    ret double [[RESULT1]]
+;
+  %neg = fneg double %x
+  %abs = call double @llvm.fabs.f64(double %neg)
+  %fl = call double @llvm.floor.f64(double %abs)
+  %result = call double @llvm.copysign.f64(double %fl, double %x)
+  ret double %result
+}
+
 ; Negative test: sign argument differs from fabs argument -- must not fold.
 define double @copysign_floor_fabs_no_fold_different_sign(double %x, double %y) {
 ; CHECK-LABEL: @copysign_floor_fabs_no_fold_different_sign(
