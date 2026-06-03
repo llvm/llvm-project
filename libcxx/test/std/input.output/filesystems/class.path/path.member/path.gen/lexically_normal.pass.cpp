@@ -107,6 +107,12 @@ int main(int, char**) {
       {"foo/bar/baz/../../", "foo/"},
       {"foo/bar/./..", "foo/"},
       {"foo/bar/./../", "foo/"},
+#ifdef _WIN32
+      /// A root-name followed by a dot-dot filename should not be removed.
+      {"C:..", "C:.."},
+      {"C:..\\..", "C:..\\.."},
+      {"C:foo\\..\\..", "C:.."},
+#endif
       // p6: If there is a root-directory, remove all dot-dot filenames and any
       // directory-separators immediately following them. [ Note: These dot-dot
       // filenames attempt to refer to nonexistent parent directories. - end note ]
