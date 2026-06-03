@@ -18,9 +18,22 @@ using namespace clang::interp;
 
 State::~State() {}
 
-// With -fms-compatibility we allow pointer to integer casts
-// followed by nullptr casts.
+// In MSVC compatibility mode we relax constexpr evaluation for the
+// FIELD_OFFSET-style pattern:
+//
+//   (LONG_PTR)(&((T*)0)->field)
+//
+// Evaluation of such expressions first produces a ptr-to-int cast
+// diagnostic and may then encounter a null-subobject access while
+// forming the field address. Both diagnostics are considered part of
+// the same accepted pattern and should not prevent constant folding.
+//
+// If a ptr-to-int cast diagnostic was recorded but evaluation later
+// reaches any other failure, discard the recorded diagnostic so the
+// expression is rejected.
 void State::clearDiagIfNeeded(diag::kind DiagId) {
+  if (!Ctx.getLangOpts().MSVCCompat)
+    return;
   switch (DiagId) {
   case diag::note_constexpr_invalid_cast_ptrtoint:
   case diag::note_constexpr_null_subobject:
@@ -28,7 +41,7 @@ void State::clearDiagIfNeeded(diag::kind DiagId) {
   }
 
   auto *Diag = EvalStatus.Diag;
-  if (!Ctx.getLangOpts().MSVCCompat || !Diag || Diag->size() != 1 ||
+  if (!Diag || Diag->size() != 1 ||
       (*Diag)[0].second.getDiagID() !=
           diag::note_constexpr_invalid_cast_ptrtoint)
     return;
