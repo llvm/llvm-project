@@ -55,18 +55,22 @@ release_links = (
     (
         (
             "LINUX_X86",
-            "* [Linux x86_64]({0}) ([signature]({1}))",
+            "* Linux x86_64: [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-Linux-X64.tar.xz",
                 "LLVM-{release}-Linux-X64.tar.xz.jsonl",
+                "LLVM-{release}-Linux-X64.tar.zst",
+                "LLVM-{release}-Linux-X64.tar.zst.jsonl",
             ),
         ),
         (
             "LINUX_ARM64",
-            "* [Linux Arm64]({0}) ([signature]({1}))",
+            "* Linux Arm64: [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-Linux-ARM64.tar.xz",
                 "LLVM-{release}-Linux-ARM64.tar.xz.jsonl",
+                "LLVM-{release}-Linux-ARM64.tar.zst",
+                "LLVM-{release}-Linux-ARM64.tar.zst.jsonl",
             ),
         ),
         (
@@ -81,30 +85,36 @@ release_links = (
     (
         (
             "MACOS_ARM64",
-            "* [macOS Apple Silicon]({0}) (ARM64) ([signature]({1}))",
+            "* macOS Apple Silicon (ARM64): [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-macOS-ARM64.tar.xz",
                 "LLVM-{release}-macOS-ARM64.tar.xz.jsonl",
+                "LLVM-{release}-macOS-ARM64.tar.zst",
+                "LLVM-{release}-macOS-ARM64.tar.zst.jsonl",
             ),
         ),
         (
             "MACOS_X86",
-            "* [macOS Intel]({0}) (x86-64) ([signature]({1}))",
+            "* macOS Intel (x86-64): [xz archive]({0}) ([signature]({1})), [zstd archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-macOS-X64.tar.xz",
                 "LLVM-{release}-macOS-X64.tar.xz.jsonl",
+                "LLVM-{release}-macOS-X64.tar.zst",
+                "LLVM-{release}-macOS-X64.tar.zst.jsonl",
             ),
         ),
     ),
     (
         (
             "WINDOWS_X64",
-            "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
+            "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [xz archive]({2}) ([signature]({3})), [zstd archive]({4}) ([signature]({5}))",
             (
                 "LLVM-{release}-win64.exe",
                 "LLVM-{release}-win64.exe.jsonl",
                 "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz",
                 "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.jsonl",
+                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.zst",
+                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.zst.jsonl",
             ),
         ),
         (
@@ -114,12 +124,14 @@ release_links = (
         ),
         (
             "WINDOWS_ARM64",
-            "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
+            "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [xz archive]({2}) ([signature]({3})), [zstd archive]({4}) ([signature]({5}))",
             (
                 "LLVM-{release}-woa64.exe",
                 "LLVM-{release}-woa64.exe.jsonl",
                 "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz",
                 "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.jsonl",
+                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.zst",
+                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.zst.jsonl",
             ),
         ),
     ),
