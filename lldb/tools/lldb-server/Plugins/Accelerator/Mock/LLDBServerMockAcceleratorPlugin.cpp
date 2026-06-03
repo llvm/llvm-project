@@ -21,5 +21,30 @@ llvm::StringRef LLDBServerMockAcceleratorPlugin::GetPluginName() {
 
 std::optional<AcceleratorActions>
 LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
-  return AcceleratorActions(GetPluginName(), 0);
+  AcceleratorActions actions(GetPluginName(), 1);
+
+  AcceleratorBreakpointInfo bp;
+  bp.identifier = kBreakpointIDInitialize;
+  bp.by_name = AcceleratorBreakpointByName{std::nullopt, "main"};
+  actions.breakpoints.push_back(std::move(bp));
+
+  return actions;
+}
+
+llvm::Expected<AcceleratorBreakpointHitResponse>
+LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
+    AcceleratorBreakpointHitArgs &args) {
+  AcceleratorBreakpointHitResponse response;
+  if (args.breakpoint.identifier == kBreakpointIDInitialize) {
+    response.disable_bp = true;
+    response.auto_resume_native = false;
+
+    AcceleratorActions actions(GetPluginName(), kBreakpointIDExit);
+    AcceleratorBreakpointInfo bp;
+    bp.identifier = kBreakpointIDExit;
+    bp.by_name = AcceleratorBreakpointByName{std::nullopt, "exit"};
+    actions.breakpoints.push_back(std::move(bp));
+    response.actions = std::move(actions);
+  }
+  return response;
 }

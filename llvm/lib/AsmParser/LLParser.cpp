@@ -7752,9 +7752,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for select without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
@@ -7773,9 +7775,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for phi without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
@@ -9947,11 +9951,7 @@ bool LLParser::addGlobalValueToIndex(
       if (!GV)
         return error(Loc, "Reference to undefined global \"" + Name + "\"");
 
-      // Be a little lenient here, to accomodate older files without GUIDs
-      // already computed and assigned as metadata.
-      GUID = GV->getGUIDOrFallback();
-
-      VI = Index->getOrInsertValueInfo(GV, GUID);
+      VI = Index->getOrInsertValueInfo(GV);
     } else {
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&
