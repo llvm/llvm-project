@@ -2191,6 +2191,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
+  unsigned version{context_.langOptions().OpenMPVersion};
   using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   std::map<const Symbol *, WithOmpDeclarative> details;
   std::optional<common::OmpDeviceType> device;
@@ -2244,6 +2245,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
         [&](auto &d) {
           using TypeD = llvm::remove_cvref_t<decltype(d)>;
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+            d.set_version(version);
             auto &clauseSet{const_cast<OmpClauseSet &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
