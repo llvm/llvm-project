@@ -415,8 +415,12 @@ mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
     return val;
 
   // Get the src/dest element type.
-  QualType srcElemTy = srcType->castAs<ComplexType>()->getElementType();
-  QualType destElemTy = destType->castAs<ComplexType>()->getElementType();
+  QualType srcElemTy = srcType.getAtomicUnqualifiedType()
+                           ->castAs<ComplexType>()
+                           ->getElementType();
+  QualType destElemTy = destType.getAtomicUnqualifiedType()
+                            ->castAs<ComplexType>()
+                            ->getElementType();
 
   cir::CastKind castOpKind;
   if (srcElemTy->isFloatingType() && destElemTy->isFloatingType())
@@ -452,6 +456,7 @@ mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value val,
 
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
+  destTy = destTy.getAtomicUnqualifiedType();
   switch (ck) {
   case CK_Dependent:
     llvm_unreachable("dependent type must be resolved before the CIR codegen");
@@ -808,7 +813,7 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 LValue ComplexExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ComplexExprEmitter::*func)(const BinOpInfo &), RValue &value) {
-  QualType lhsTy = e->getLHS()->getType();
+  QualType lhsTy = e->getLHS()->getType().getAtomicUnqualifiedType();
   QualType rhsTy = e->getRHS()->getType();
   SourceLocation exprLoc = e->getExprLoc();
   mlir::Location loc = cgf.getLoc(exprLoc);
