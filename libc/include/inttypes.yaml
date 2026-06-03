@@ -313,7 +313,6 @@ macros:
     macro_header: inttypes-macros.h
 types:
   - type_name: imaxdiv_t
-  - type_name: wchar_t
 enums: []
 objects: []
 functions:
