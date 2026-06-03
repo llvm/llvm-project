@@ -104,7 +104,7 @@ public:
     reportNoescapeViolations();
     reportLifetimeboundViolations();
     reportMisplacedLifetimebound();
-    reportMeaninglessLifetimebound();
+    reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -468,21 +468,16 @@ public:
     }
   }
 
-  static bool canBeLifetimebound(QualType QT) {
-    if (QT->isReferenceType() || QT->isAnyPointerType())
-      return true;
-    if (isGslOwnerType(QT) || QT->isScalarType())
-      return false;
-    return true;
-  }
+  void reportInapplicableLifetimebound() {
+    const auto *FDef = cast<FunctionDecl>(FD);
+    if (FDef->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
+        FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return;
 
-  void reportMeaninglessLifetimebound() {
-    for (const auto &PVD : cast<FunctionDecl>(FD)->parameters()) {
-      if (!PVD->hasAttr<LifetimeBoundAttr>())
-        continue;
-      if (!canBeLifetimebound(PVD->getType()))
-        SemaHelper->reportMeaninglessLifetimebound(PVD);
-    }
+    for (const auto &PVD : FDef->parameters())
+      if (PVD->hasAttr<LifetimeBoundAttr>() &&
+          !FactMgr.getOriginMgr().hasOrigins(PVD->getType()))
+        SemaHelper->reportInapplicableLifetimebound(PVD);
   }
 
   void inferAnnotations() {

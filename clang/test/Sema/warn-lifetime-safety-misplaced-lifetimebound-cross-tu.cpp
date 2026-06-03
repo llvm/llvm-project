@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -verify %t/cross.cpp
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -fdiagnostics-parseable-fixits %t/cross.cpp 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -fixit %t/cross.cpp
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wno-dangling -I%t -Werror %t/cross.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -I%t -verify %t/cross.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -I%t -fdiagnostics-parseable-fixits %t/cross.cpp 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -I%t -fixit %t/cross.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-cross-tu-misplaced-lifetimebound -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -I%t -Werror %t/cross.cpp
 
 //--- cross.h
 struct HeaderObj {

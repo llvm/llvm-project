@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -flifetime-safety-inference \
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
-// RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
+// RUN:   -Wlifetime-safety-suggestions -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: cp %s %t.cpp
 // RUN: %clang_cc1 -std=c++17 -flifetime-safety-inference \
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
-// RUN:   -Wlifetime-safety-suggestions -Wno-dangling -fixit %t.cpp
+// RUN:   -Wlifetime-safety-suggestions -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -fixit %t.cpp
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -flifetime-safety-inference \
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Werror=lifetime-safety-suggestions -Wno-dangling %t.cpp

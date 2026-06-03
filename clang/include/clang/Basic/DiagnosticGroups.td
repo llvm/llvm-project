@@ -631,8 +631,8 @@ This warning may produce false-positives diagnostics when it cannot fully model 
   }];
 }
 
-def LifetimeSafetyMeaninglessLifetimebound
-    : DiagGroup<"lifetime-safety-meaningless-lifetimebound"> {
+def LifetimeSafetyInapplicableLifetimebound
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
   code Documentation = [{
 Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
   }];
@@ -693,10 +693,10 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
 }
 
 def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                           [LifetimeSafetyNoescape,
-                                            LifetimeSafetyLifetimeboundViolation,
-                                            LifetimeSafetyMeaninglessLifetimebound,
-                                            LifetimeSafetyMisplacedLifetimebound]> {
+                                         [LifetimeSafetyNoescape,
+                                          LifetimeSafetyLifetimeboundViolation,
+                                          LifetimeSafetyInapplicableLifetimebound,
+                                          LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
 Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
 like verifying [[clang::noescape]] and [[clang::lifetimebound]].

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 

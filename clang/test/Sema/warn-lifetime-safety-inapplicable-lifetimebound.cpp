@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-meaningless-lifetimebound -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify %s
 
 struct [[gsl::Owner]] Owner {};
 
@@ -57,20 +57,20 @@ View view_value(View v [[clang::lifetimebound]]) {
   return v;
 }
 
-Plain *plain_value(Plain p [[clang::lifetimebound]]) {
+Plain *plain_value(Plain p [[clang::lifetimebound]]) { // expected-warning {{'lifetimebound' attribute has no effect on parameter of type 'Plain'}}
   return {};
 }
 
-Mixed *mixed_value(Mixed m [[clang::lifetimebound]]) {
+Mixed *mixed_value(Mixed m [[clang::lifetimebound]]) { // expected-warning {{'lifetimebound' attribute has no effect on parameter of type 'Mixed'}}
   return {};
 }
 
 template <class T>
-Owner *template_value(T t [[clang::lifetimebound]]) { // expected-warning {{'lifetimebound' attribute has no effect on parameter of type 'Owner'}}
+Owner *template_value(T t [[clang::lifetimebound]]) {
   return {};
 }
 
 void instantiate_template() {
   Owner o;
-  (void)template_value(o); // expected-note {{in instantiation of function template specialization 'template_value<Owner>' requested here}}
+  (void)template_value(o);
 }

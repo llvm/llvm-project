@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -fcxx-exceptions -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify=expected,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -fcxx-exceptions -verify=expected,function %s
 
 #include "Inputs/lifetime-analysis.h"
 
