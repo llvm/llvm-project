@@ -15,6 +15,7 @@ add_llvm_target(AIRCodeGen
   AIRAsyncEventToAlloca.cpp
   AIRBFloat16CastDecompose.cpp
   AIRBarrierRename.cpp
+  AIRDemoteF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp
   LLVMToAIRIntrinsics.cpp

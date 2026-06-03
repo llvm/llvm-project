@@ -527,6 +527,79 @@ static bool mergeByteMMA(Module &M,
   return true;
 }
 
+static Value *stripIdentityIntOps(Value *V) {
+  for (;;) {
+    auto *BO = dyn_cast<BinaryOperator>(V);
+    if (!BO)
+      return V;
+    unsigned Op = BO->getOpcode();
+    if (auto *C = dyn_cast<ConstantInt>(BO->getOperand(1)))
+      if (C->isZero() && (Op == Instruction::Xor || Op == Instruction::Add ||
+                          Op == Instruction::Or || Op == Instruction::Sub)) {
+        V = BO->getOperand(0);
+        continue;
+      }
+    if (auto *C0 = dyn_cast<ConstantInt>(BO->getOperand(0)))
+      if (C0->isZero() && (Op == Instruction::Xor || Op == Instruction::Add ||
+                           Op == Instruction::Or)) {
+        V = BO->getOperand(1);
+        continue;
+      }
+    return V;
+  }
+}
+
+static unsigned minTrailingZeros(Value *V, unsigned Depth = 0) {
+  Type *Ty = V->getType();
+  if (!Ty->isIntegerTy())
+    return 0;
+  unsigned BitW = Ty->getIntegerBitWidth();
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->isZero() ? BitW : CI->getValue().countr_zero();
+  if (Depth > 24)
+    return 0;
+  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+    Value *A = BO->getOperand(0), *B = BO->getOperand(1);
+    switch (BO->getOpcode()) {
+    case Instruction::Shl:
+      if (auto *C = dyn_cast<ConstantInt>(B))
+        return std::min(BitW, minTrailingZeros(A, Depth + 1) +
+                                  (unsigned)C->getZExtValue());
+      return minTrailingZeros(A, Depth + 1);
+    case Instruction::LShr:
+    case Instruction::AShr:
+      if (auto *C = dyn_cast<ConstantInt>(B)) {
+        unsigned Sh = (unsigned)C->getZExtValue();
+        unsigned TZA = minTrailingZeros(A, Depth + 1);
+        return TZA > Sh ? TZA - Sh : 0;
+      }
+      return 0;
+    case Instruction::Mul:
+      return std::min(BitW, minTrailingZeros(A, Depth + 1) +
+                                minTrailingZeros(B, Depth + 1));
+    case Instruction::Add:
+    case Instruction::Sub:
+    case Instruction::Or:
+    case Instruction::Xor:
+      return std::min(minTrailingZeros(A, Depth + 1),
+                      minTrailingZeros(B, Depth + 1));
+    case Instruction::And:
+      return std::max(minTrailingZeros(A, Depth + 1),
+                      minTrailingZeros(B, Depth + 1));
+    default:
+      return 0;
+    }
+  }
+  if (auto *Sel = dyn_cast<SelectInst>(V))
+    return std::min(minTrailingZeros(Sel->getTrueValue(), Depth + 1),
+                    minTrailingZeros(Sel->getFalseValue(), Depth + 1));
+  if (auto *ZE = dyn_cast<ZExtInst>(V))
+    return minTrailingZeros(ZE->getOperand(0), Depth + 1);
+  if (auto *TR = dyn_cast<TruncInst>(V))
+    return std::min(BitW, minTrailingZeros(TR->getOperand(0), Depth + 1));
+  return 0;
+}
+
 // 14c: Retype [N x i8] -> [M x T].
 static bool retypeByteGlobals(Module &M) {
   bool Changed = false;
@@ -593,11 +666,12 @@ static bool retypeByteGlobals(Module &M) {
         return true;
       if (GEP->getNumIndices() != 1)
         return false;
-      Value *Idx = GEP->getOperand(1);
+      Value *Idx = stripIdentityIntOps(GEP->getOperand(1));
       if (auto *CI = dyn_cast<ConstantInt>(Idx))
         return CI->getZExtValue() % ElemSize == 0;
-      KnownBits Known = computeKnownBits(Idx, DL);
-      return (1u << Known.countMinTrailingZeros()) >= ElemSize;
+      unsigned TZ = std::max(minTrailingZeros(Idx),
+                             computeKnownBits(Idx, DL).countMinTrailingZeros());
+      return (1u << TZ) >= ElemSize;
     };
 
     // If any byte GEP into GV has a dynamic index whose alignment to ElemSize
@@ -1025,6 +1099,80 @@ static bool fixMismatchedTGGEPs(Module &M) {
   return Changed;
 }
 
+static bool scalarizeMixedWidthTGVecStores(Module &M) {
+  bool Changed = false;
+  Type *I32 = Type::getInt32Ty(M.getContext());
+  const DataLayout &DL = M.getDataLayout();
+
+  auto collect = [&](GlobalVariable &GV, SmallVectorImpl<StoreInst *> &Stores,
+                     unsigned &MaxStoreElems, unsigned &MinAccessElems,
+                     bool &SawNarrowerAccess) {
+    SmallVector<Value *, 16> Work{&GV};
+    SmallPtrSet<Value *, 16> Seen;
+    while (!Work.empty()) {
+      Value *V = Work.pop_back_val();
+      if (!Seen.insert(V).second)
+        continue;
+      for (User *U : V->users()) {
+        if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U)) {
+          Work.push_back(U);
+          continue;
+        }
+        Type *AccTy = nullptr;
+        StoreInst *SI = dyn_cast<StoreInst>(U);
+        if (SI && SI->getPointerOperand() == V)
+          AccTy = SI->getValueOperand()->getType();
+        else if (auto *LI = dyn_cast<LoadInst>(U))
+          AccTy = LI->getType();
+        if (!AccTy)
+          continue;
+        unsigned Elems = 1;
+        if (auto *VT = dyn_cast<FixedVectorType>(AccTy))
+          Elems = VT->getNumElements();
+        MinAccessElems = std::min(MinAccessElems, Elems);
+        if (SI && SI->getPointerOperand() == V) {
+          if (Elems > 1) {
+            Stores.push_back(SI);
+            MaxStoreElems = std::max(MaxStoreElems, Elems);
+          }
+        }
+      }
+    }
+    SawNarrowerAccess = MinAccessElems < MaxStoreElems;
+  };
+
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.getAddressSpace() != ASThreadgroup)
+      continue;
+    SmallVector<StoreInst *, 8> WideStores;
+    unsigned MaxStoreElems = 1, MinAccessElems = ~0u;
+    bool Mixed = false;
+    collect(GV, WideStores, MaxStoreElems, MinAccessElems, Mixed);
+    if (!Mixed || WideStores.empty())
+      continue;
+
+    for (StoreInst *SI : WideStores) {
+      auto *VT = cast<FixedVectorType>(SI->getValueOperand()->getType());
+      Type *ElemTy = VT->getElementType();
+      IRBuilder<> B(SI);
+      Value *Vec = SI->getValueOperand();
+      Value *BasePtr = SI->getPointerOperand();
+      Align A = SI->getAlign();
+      for (unsigned i = 0, e = VT->getNumElements(); i != e; ++i) {
+        Value *Elt = B.CreateExtractElement(Vec, ConstantInt::get(I32, i));
+        Value *Ptr = i == 0 ? BasePtr
+                            : B.CreateInBoundsGEP(ElemTy, BasePtr,
+                                                  ConstantInt::get(I32, i));
+        Align EltAlign = i == 0 ? A : DL.getABITypeAlign(ElemTy);
+        B.CreateAlignedStore(Elt, Ptr, EltAlign, SI->isVolatile());
+      }
+      SI->eraseFromParent();
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
 static bool rewriteTGGlobalGEPs(Module &M) {
   // Cheap early-out: nothing to do unless there is an array-typed TG global.
   bool HasArrayTG = false;
@@ -1068,6 +1216,7 @@ static bool rewriteTGGlobalGEPs(Module &M) {
            << LastFiringIter << "\n";
 
   Changed |= fixMismatchedTGGEPs(M);
+  Changed |= scalarizeMixedWidthTGVecStores(M);
   return Changed;
 }
 

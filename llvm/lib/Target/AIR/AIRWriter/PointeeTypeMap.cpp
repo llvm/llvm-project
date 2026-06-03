@@ -399,6 +399,32 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
         }
       }
 
+  for (auto &F : M)
+    for (auto &BB : F)
+      for (auto &I : BB) {
+        auto *Sel = dyn_cast<SelectInst>(&I);
+        if (!Sel || !Sel->getType()->isPointerTy())
+          continue;
+        Value *TV = Sel->getTrueValue();
+        Value *FV = Sel->getFalseValue();
+        Type *TT = PTM.get(TV);
+        Type *FT = PTM.get(FV);
+        if (TT == FT)
+          continue;
+        Type *Unified = nullptr;
+        if (TT && !isa<IntToPtrInst>(TV))
+          Unified = TT;
+        else if (FT && !isa<IntToPtrInst>(FV))
+          Unified = FT;
+        else
+          Unified = TT ? TT : FT;
+        if (!Unified)
+          continue;
+        PTM.set(TV, Unified);
+        PTM.set(FV, Unified);
+        PTM.set(Sel, Unified);
+      }
+
   // Phase 9: Function pointer
   for (auto &F : M)
     if (!F.isDeclaration()) {

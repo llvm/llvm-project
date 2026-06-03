@@ -20,6 +20,7 @@
 #include "AIRBFloat16CastDecompose.h"
 #include "AIRBarrierRename.h"
 #include "AIRAliasAnnotate.h"
+#include "AIRDemoteF64.h"
 #include "AIRDeviceLoadsVolatile.h"
 #include "AIRInlineNonKernel.h"
 #include "LLVMToAIRIntrinsics.h"
@@ -58,6 +59,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   RegisterTargetMachine<AIRTargetMachine> X(getTheAIRTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeAIRInlineNonKernelLegacyPass(*PR);
+  initializeAIRDemoteF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
   initializeAIRNaNMinMaxLegacyPass(*PR);
   initializeLLVMToAIRIntrinsicsLegacyPass(*PR);
@@ -111,6 +113,7 @@ public:
   void addCodeGenPrepare() override {
     // IR-to-AIR conformance passes, in order.
     addPass(createAIRInlineNonKernelLegacyPass());
+    addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());
     addPass(createAIRNaNMinMaxLegacyPass());
     addPass(createLLVMToAIRIntrinsicsLegacyPass());

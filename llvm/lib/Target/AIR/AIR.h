@@ -25,6 +25,12 @@ void initializeAIRInlineNonKernelLegacyPass(PassRegistry &);
 /// Pass to inline all calls to defined functions (AIR has no call stack).
 ModulePass *createAIRInlineNonKernelLegacyPass();
 
+/// Initializer for the AIR f64-to-f32 demotion pass.
+void initializeAIRDemoteF64LegacyPass(PassRegistry &);
+
+/// Pass to rewrite all `double` operations to `float` (AIR has no f64).
+ModulePass *createAIRDemoteF64LegacyPass();
+
 /// Initializer for the AIR lower-fneg pass.
 void initializeAIRLowerFNegLegacyPass(PassRegistry &);
 

@@ -6,7 +6,7 @@
 ; CHECK-NOT: llvm.sin.f32
 ; CHECK-NOT: llvm.sqrt.f32
 ; CHECK-NOT: __mulhi
-; CHECK: call float @air.fast_sin.f32
+; CHECK: call float @air.sin.f32
 ; CHECK: call float @air.fast_sqrt.f32
 ; CHECK: zext i32 {{.*}} to i64
 ; CHECK: mul i64

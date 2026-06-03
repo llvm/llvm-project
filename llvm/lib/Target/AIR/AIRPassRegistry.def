@@ -17,6 +17,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("air-inline-non-kernel", AIRInlineNonKernelPass())
+MODULE_PASS("air-demote-f64", AIRDemoteF64Pass())
 MODULE_PASS("air-lower-fneg", AIRLowerFNegPass())
 MODULE_PASS("air-nan-min-max", AIRNaNMinMaxPass())
 MODULE_PASS("air-llvm-to-air-intrinsics", LLVMToAIRIntrinsicsPass())

@@ -31,15 +31,16 @@ def : IntrinsicRename<"llvm.minnum.f32", "air.fmin.f32">;
 def : IntrinsicRename<"llvm.maxnum.f16", "air.fmax.f16">;
 def : IntrinsicRename<"llvm.minnum.f16", "air.fmin.f16">;
 
-def : IntrinsicRename<"llvm.sin.f32", "air.fast_sin.f32">;
-def : IntrinsicRename<"llvm.cos.f32", "air.fast_cos.f32">;
-def : IntrinsicRename<"llvm.sin.f16", "air.fast_sin.f16">;
-def : IntrinsicRename<"llvm.cos.f16", "air.fast_cos.f16">;
+def : IntrinsicRename<"llvm.sin.f32", "air.sin.f32">;
+def : IntrinsicRename<"llvm.cos.f32", "air.cos.f32">;
+def : IntrinsicRename<"llvm.sin.f16", "air.sin.f16">;
+def : IntrinsicRename<"llvm.cos.f16", "air.cos.f16">;
 
 def : IntrinsicRename<"llvm.exp.f32",  "air.fast_exp.f32">;
 def : IntrinsicRename<"llvm.log.f32",  "air.fast_log.f32">;
-def : IntrinsicRename<"llvm.exp2.f32", "air.fast_exp2.f32">;
-def : IntrinsicRename<"llvm.log2.f32", "air.fast_log2.f32">;
+def : IntrinsicRename<"llvm.exp2.f32", "air.exp2.f32">;
+def : IntrinsicRename<"llvm.log2.f32", "air.log2.f32">;
+def : IntrinsicRename<"llvm.pow.f32",  "air.pow.f32">;
 def : IntrinsicRename<"llvm.exp.f16",  "air.fast_exp.f16">;
 def : IntrinsicRename<"llvm.log.f16",  "air.fast_log.f16">;
 def : IntrinsicRename<"llvm.exp2.f16", "air.fast_exp2.f16">;

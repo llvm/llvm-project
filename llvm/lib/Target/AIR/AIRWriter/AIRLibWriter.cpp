@@ -66,6 +66,7 @@ static std::vector<uint8_t> wrapBitcode(const std::vector<uint8_t> &BC) {
   writeU32(RSO, BC.size());  // bitcode size
   writeU32(RSO, 0xFFFFFFFF); // CPU type
   RSO.write(reinterpret_cast<const char *>(BC.data()), BC.size());
+  RSO.write("\0\0\0\0\0\0\0\0", 8);
   RSO.flush();
   return std::vector<uint8_t>(Buf.begin(), Buf.end());
 }
