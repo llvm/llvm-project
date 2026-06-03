@@ -16727,11 +16727,19 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     // specific annotations, such as implicit casts, are discarded. Calling the
     // corresponding sema action is necessary to recover those. Otherwise,
     // equivalency of the result would be lost.
+    //
+    // In an unevaluated context, skip the constant evaluation of the
+    // replacement: only its converted form matters there, and the evaluation
+    // can spuriously fail for otherwise valid replacements, because the
+    // entities they refer to are not odr-used in such a context (e.g. the
+    // implicit copy of a function argument of class type cannot be constant
+    // folded when the special members were never instantiated).
     TemplateArgument SugaredConverted, CanonicalConverted;
     Replacement = SemaRef.CheckTemplateArgument(
         Param, ParamType, Replacement.get(), SugaredConverted,
         CanonicalConverted,
-        /*StrictCheck=*/false, Sema::CTAK_Specified);
+        /*StrictCheck=*/false, Sema::CTAK_Specified,
+        /*SkipConstantEvaluation=*/SemaRef.isUnevaluatedContext());
     if (Replacement.isInvalid())
       return true;
   } else {
