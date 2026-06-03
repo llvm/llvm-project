@@ -190,4 +190,4 @@ movq %mm7, %mm0
 # CHECK-NEXT: 5.     10    35.5   0.0    0.0       movq	%mm5, %mm6
 # CHECK-NEXT: 6.     10    36.1   0.0    0.0       movq	%mm6, %mm7
 # CHECK-NEXT: 7.     10    37.0   0.0    0.0       movq	%mm7, %mm0
-# CHECK-NEXT:        10    34.2   0.0    0.0       <total>
+# CHECK-NEXT:        80    34.2   0.0    0.0       <total>

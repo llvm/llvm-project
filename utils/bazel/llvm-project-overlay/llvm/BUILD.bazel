@@ -457,7 +457,7 @@ cc_library(
         # be an empty library unless zstd is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
         "//third-party:zstd",
-        "//libc:shared_math_headers",
+        "//libc:shared_math_headers_for_apfloat",
     ],
 )
 
@@ -896,8 +896,8 @@ cc_binary(
             "utils/TableGen/Basic/*.h",
             "utils/TableGen/Common/*.cpp",
             "utils/TableGen/Common/*.h",
-            "utils/TableGen/Common/GlobalISel/*.cpp",
-            "utils/TableGen/Common/GlobalISel/*.h",
+            "utils/TableGen/Common/GlobalISel/**/*.cpp",
+            "utils/TableGen/Common/GlobalISel/**/*.h",
 
             # Some tablegen sources include headers from MC, so these have to be
             # listed here. MC uses headers produced by tablegen, so it cannot be a
@@ -1309,6 +1309,9 @@ cc_library(
         "include/llvm-c/Object.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = glob([
+        "include/llvm/Object/*.def",
+    ]),
     deps = [
         ":BinaryFormat",
         ":BitReader",
@@ -1743,6 +1746,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":Demangle",
+        ":FrontendOffloading",
         ":MC",
         ":ProfileData",
         ":Scalar",
@@ -2100,6 +2104,13 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "instrumentor_variables_gen",
+    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
+    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
+    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
@@ -2111,6 +2122,9 @@ cc_library(
         "include/llvm/Transforms/IPO.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = [
+        "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    ],
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",

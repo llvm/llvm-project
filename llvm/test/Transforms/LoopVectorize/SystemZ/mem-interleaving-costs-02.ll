@@ -11,7 +11,7 @@
 ; two vector registers using one vperm each, which gives a cost of 2 + 4 = 6.
 ;
 ; CHECK: LV: Checking a loop in 'fun0'
-; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 4 at %ld0, vp<%next.gep>
+; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 4, vp<%next.gep>
 ; CHECK:   ir<%ld0> = load from index 0
 ; CHECK:   ir<%ld1> = load from index 1
 ; CHECK:   ir<%ld2> = load from index 2
@@ -50,7 +50,7 @@ for.end:
 ; which gives a cost of 5.
 ;
 ; CHECK: LV: Checking a loop in 'fun1'
-; CHECK: Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 3 at %ld0, vp<%next.gep>
+; CHECK: Cost of 5 for VF 16: INTERLEAVE-GROUP with factor 3, vp<%next.gep>
 ; CHECK:   ir<%ld0> = load from index 0
 define void @fun1(ptr %ptr, ptr %dst) {
 entry:
@@ -76,7 +76,7 @@ for.end:
 ; produce the vector values, which gives a cost of 6.
 ;
 ; CHECK: LV: Checking a loop in 'fun2'
-; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 32 at %ld0, vp<%next.gep>
+; CHECK: Cost of 6 for VF 2: INTERLEAVE-GROUP with factor 32, vp<%next.gep>
 ; CHECK:   ir<%ld0> = load from index 0
 ; CHECK:   ir<%ld1> = load from index 1
 ; CHECK:   ir<%ld2> = load from index 2
@@ -116,7 +116,7 @@ for.end:
 ; vector register boundary.
 ;
 ; CHECK: LV: Checking a loop in 'fun3'
-; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 30 at %ld0, vp<%next.gep>
+; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 30, vp<%next.gep>
 ; CHECK:   ir<%ld0> = load from index 0
 ; CHECK:   ir<%ld1> = load from index 1
 ; CHECK:   ir<%ld2> = load from index 2

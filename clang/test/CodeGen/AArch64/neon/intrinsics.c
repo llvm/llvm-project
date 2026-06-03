@@ -4476,6 +4476,314 @@ uint64_t test_vcvtd_n_u64_f64(float64_t a) {
 }
 
 //===------------------------------------------------------===//
+// 2.1.3.2.3 Vector shift right and accumulate
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vsra_n_s8(
+int8x8_t test_vsra_n_s8(int8x8_t a, int8x8_t b) {
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSRA_N:%.*]] = ashr <8 x i8> [[B]], splat (i8 3)
+// LLVM: [[TMP0:%.*]] = add <8 x i8> [[A]], [[VSRA_N]]
+// LLVM: ret <8 x i8> [[TMP0]]
+  return vsra_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_s16(
+int16x4_t test_vsra_n_s16(int16x4_t a, int16x4_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <4 x i16> [[TMP3]], splat (i16 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <4 x i16> [[TMP4]]
+  return vsra_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_s32(
+int32x2_t test_vsra_n_s32(int32x2_t a, int32x2_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <2 x i32> [[TMP3]], splat (i32 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <2 x i32> [[TMP4]]
+  return vsra_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_s8(
+int8x16_t test_vsraq_n_s8(int8x16_t a, int8x16_t b) {
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSRA_N:%.*]] = ashr <16 x i8> [[B]], splat (i8 3)
+// LLVM: [[TMP0:%.*]] = add <16 x i8> [[A]], [[VSRA_N]]
+// LLVM: ret <16 x i8> [[TMP0]]
+  return vsraq_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_s16(
+int16x8_t test_vsraq_n_s16(int16x8_t a, int16x8_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <8 x i16> [[TMP3]], splat (i16 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <8 x i16> [[TMP4]]
+  return vsraq_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_s32(
+int32x4_t test_vsraq_n_s32(int32x4_t a, int32x4_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <4 x i32> [[TMP3]], splat (i32 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <4 x i32> [[TMP4]]
+  return vsraq_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_s64(
+int64x2_t test_vsraq_n_s64(int64x2_t a, int64x2_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <2 x i64> [[TMP3]], splat (i64 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <2 x i64> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <2 x i64> [[TMP4]]
+  return vsraq_n_s64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_u8(
+uint8x8_t test_vsra_n_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSRA_N:%.*]] = lshr <8 x i8> [[B]], splat (i8 3)
+// LLVM: [[TMP0:%.*]] = add <8 x i8> [[A]], [[VSRA_N]]
+// LLVM: ret <8 x i8> [[TMP0]]
+  return vsra_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_u16(
+uint16x4_t test_vsra_n_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <4 x i16> [[TMP3]], splat (i16 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <4 x i16> [[TMP4]]
+  return vsra_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_u32(
+uint32x2_t test_vsra_n_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <2 x i32> [[TMP3]], splat (i32 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <2 x i32> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <2 x i32> [[TMP4]]
+  return vsra_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_u8(
+uint8x16_t test_vsraq_n_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[VSRA_N:%.*]] = lshr <16 x i8> [[B]], splat (i8 3)
+// LLVM: [[TMP0:%.*]] = add <16 x i8> [[A]], [[VSRA_N]]
+// LLVM: ret <16 x i8> [[TMP0]]
+  return vsraq_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_u16(
+uint16x8_t test_vsraq_n_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <8 x i16> [[TMP3]], splat (i16 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <8 x i16> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <8 x i16> [[TMP4]]
+  return vsraq_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_u32(
+uint32x4_t test_vsraq_n_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <4 x i32> [[TMP3]], splat (i32 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <4 x i32> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <4 x i32> [[TMP4]]
+  return vsraq_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsraq_n_u64(
+uint64x2_t test_vsraq_n_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <2 x i64> [[TMP3]], splat (i64 3)
+// LLVM-NEXT: [[TMP4:%.*]] = add <2 x i64> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <2 x i64> [[TMP4]]
+  return vsraq_n_u64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsra_n_s64(
+int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM-NEXT: [[VSRA_N:%.*]] = ashr <1 x i64> [[TMP3]], splat (i64 1)
+// LLVM-NEXT: [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <1 x i64> [[TMP4]]
+  return vsra_n_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsra_n_u64(
+uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: cir.cast bitcast
+// CIR: cir.vec.splat
+// CIR: cir.shift(right,
+// CIR: cir.add
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM-NEXT: [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM-NEXT: [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM-NEXT: [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM-NEXT: [[VSRA_N:%.*]] = lshr <1 x i64> [[TMP3]], splat (i64 1)
+// LLVM-NEXT: [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
+// LLVM: ret <1 x i64> [[TMP4]]
+  return vsra_n_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsrad_n_s64(
+int64_t test_vsrad_n_s64(int64_t a, int64_t b) {
+// CIR: [[SHR:%.*]] = cir.shift(right, %{{.*}} : !s64i, %{{.*}} : !s64i) -> !s64i
+// CIR: cir.add %{{.*}}, [[SHR]] : !s64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[SHRD_N:%.*]] = ashr i64 [[B]], 63
+// LLVM: [[TMP0:%.*]] = add i64 [[A]], [[SHRD_N]]
+// LLVM: ret i64 [[TMP0]]
+  return (int64_t)vsrad_n_s64(a, b, 63);
+}
+
+// ALL-LABEL: @test_vsrad_n_u64(
+uint64_t test_vsrad_n_u64(uint64_t a, uint64_t b) {
+// CIR: [[SHR:%.*]] = cir.shift(right, %{{.*}} : !u64i, %{{.*}} : !u64i) -> !u64i
+// CIR: cir.add %{{.*}}, [[SHR]] : !u64i
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[SHRD_N:%.*]] = lshr i64 [[B]], 63
+// LLVM: [[TMP0:%.*]] = add i64 [[A]], [[SHRD_N]]
+// LLVM: ret i64 [[TMP0]]
+  return (uint64_t)vsrad_n_u64(a, b, 63);
+}
+
+// ALL-LABEL: @test_vsrad_n_u64_2(
+uint64_t test_vsrad_n_u64_2(uint64_t a, uint64_t b) {
+// CIR-NOT: cir.shift
+// CIR-NOT: cir.add
+// CIR: cir.return
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: ret i64 [[A]]
+  return (uint64_t)vsrad_n_u64(a, b, 64);
+}
+
+//===------------------------------------------------------===//
 // 2.1.3.2.4 Vector rounding shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-rounding-shift-right-and-accumulate
 //===------------------------------------------------------===//
@@ -5847,4 +6155,319 @@ poly16x8_t test_vsliq_n_p16(poly16x8_t a, poly16x8_t b) {
 // LLVM: [[VSLI:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16> [[VSLI_N]], <8 x i16> [[VSLI_N1]], i32 15)
 // LLVM: ret <8 x i16> [[VSLI]]
   return vsliq_n_p16(a, b, 15);
+}
+
+//===------------------------------------------------------===//
+// 2.1.3.2.9 Vector Shift Right and Insert
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-insert
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vsri_n_s8(
+int8x8_t test_vsri_n_s8(int8x8_t a, int8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsri.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM:    ret <8 x i8> [[VSRI_N]]
+  return vsri_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_s16(
+int16x4_t test_vsri_n_s16(int16x4_t a, int16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsri.v4i16(<4 x i16> [[VSRI_N]], <4 x i16> [[VSRI_N1]], i32 3)
+// LLVM:    ret <4 x i16> [[VSRI_N2]]
+  return vsri_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_s32(
+int32x2_t test_vsri_n_s32(int32x2_t a, int32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <2 x i32> @llvm.aarch64.neon.vsri.v2i32(<2 x i32> [[VSRI_N]], <2 x i32> [[VSRI_N1]], i32 3)
+// LLVM:    ret <2 x i32> [[VSRI_N2]]
+  return vsri_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_s8(
+int8x16_t test_vsriq_n_s8(int8x16_t a, int8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsri.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM:    ret <16 x i8> [[VSRI_N]]
+  return vsriq_n_s8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_s16(
+int16x8_t test_vsriq_n_s16(int16x8_t a, int16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsri.v8i16(<8 x i16> [[VSRI_N]], <8 x i16> [[VSRI_N1]], i32 3)
+// LLVM:    ret <8 x i16> [[VSRI_N2]]
+  return vsriq_n_s16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_s32(
+int32x4_t test_vsriq_n_s32(int32x4_t a, int32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <4 x i32> @llvm.aarch64.neon.vsri.v4i32(<4 x i32> [[VSRI_N]], <4 x i32> [[VSRI_N1]], i32 3)
+// LLVM:    ret <4 x i32> [[VSRI_N2]]
+  return vsriq_n_s32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_s64(
+int64x2_t test_vsriq_n_s64(int64x2_t a, int64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> [[VSRI_N]], <2 x i64> [[VSRI_N1]], i32 3)
+// LLVM:    ret <2 x i64> [[VSRI_N2]]
+  return vsriq_n_s64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_u8(
+uint8x8_t test_vsri_n_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsri.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM:    ret <8 x i8> [[VSRI_N]]
+  return vsri_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_u16(
+uint16x4_t test_vsri_n_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsri.v4i16(<4 x i16> [[VSRI_N]], <4 x i16> [[VSRI_N1]], i32 3)
+// LLVM:    ret <4 x i16> [[VSRI_N2]]
+  return vsri_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_u32(
+uint32x2_t test_vsri_n_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x i32>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <2 x i32> @llvm.aarch64.neon.vsri.v2i32(<2 x i32> [[VSRI_N]], <2 x i32> [[VSRI_N1]], i32 3)
+// LLVM:    ret <2 x i32> [[VSRI_N2]]
+  return vsri_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_u8(
+uint8x16_t test_vsriq_n_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsri.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM:    ret <16 x i8> [[VSRI_N]]
+  return vsriq_n_u8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_u16(
+uint16x8_t test_vsriq_n_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsri.v8i16(<8 x i16> [[VSRI_N]], <8 x i16> [[VSRI_N1]], i32 3)
+// LLVM:    ret <8 x i16> [[VSRI_N2]]
+  return vsriq_n_u16(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_u32(
+uint32x4_t test_vsriq_n_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <4 x i32> @llvm.aarch64.neon.vsri.v4i32(<4 x i32> [[VSRI_N]], <4 x i32> [[VSRI_N1]], i32 3)
+// LLVM:    ret <4 x i32> [[VSRI_N2]]
+  return vsriq_n_u32(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_u64(
+uint64x2_t test_vsriq_n_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> [[VSRI_N]], <2 x i64> [[VSRI_N1]], i32 3)
+// LLVM:    ret <2 x i64> [[VSRI_N2]]
+  return vsriq_n_u64(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_p8(
+poly8x8_t test_vsri_n_p8(poly8x8_t a, poly8x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.vsri.v8i8(<8 x i8> [[A]], <8 x i8> [[B]], i32 3)
+// LLVM:    ret <8 x i8> [[VSRI_N]]
+  return vsri_n_p8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsri_n_p16(
+poly16x4_t test_vsri_n_p16(poly16x4_t a, poly16x4_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <4 x i16> @llvm.aarch64.neon.vsri.v4i16(<4 x i16> [[VSRI_N]], <4 x i16> [[VSRI_N1]], i32 15)
+// LLVM:    ret <4 x i16> [[VSRI_N2]]
+  return vsri_n_p16(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsriq_n_p8(
+poly8x16_t test_vsriq_n_p8(poly8x16_t a, poly8x16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[VSRI_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.vsri.v16i8(<16 x i8> [[A]], <16 x i8> [[B]], i32 3)
+// LLVM:    ret <16 x i8> [[VSRI_N]]
+  return vsriq_n_p8(a, b, 3);
+}
+
+// ALL-LABEL: @test_vsriq_n_p16(
+poly16x8_t test_vsriq_n_p16(poly16x8_t a, poly16x8_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <8 x i16>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <8 x i16> @llvm.aarch64.neon.vsri.v8i16(<8 x i16> [[VSRI_N]], <8 x i16> [[VSRI_N1]], i32 15)
+// LLVM:    ret <8 x i16> [[VSRI_N2]]
+  return vsriq_n_p16(a, b, 15);
+}
+
+// ALL-LABEL: @test_vsrid_n_s64(
+int64_t test_vsrid_n_s64(int64_t a, int64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[T0:%.*]] = bitcast i64 [[A]] to <1 x i64>
+// LLVM-NEXT:    [[T1:%.*]] = bitcast i64 [[B]] to <1 x i64>
+// LLVM-NEXT:    [[T2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[T0]], <1 x i64> [[T1]], i32 63)
+// LLVM-NEXT:    [[T3:%.*]] = bitcast <1 x i64> [[T2]] to i64
+// LLVM:    ret i64 [[T3]]
+  return (int64_t)vsrid_n_s64(a, b, 63);
+}
+
+// ALL-LABEL: @test_vsri_n_s64(
+int64x1_t test_vsri_n_s64(int64x1_t a, int64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[VSRI_N]], <1 x i64> [[VSRI_N1]], i32 1)
+// LLVM:    ret <1 x i64> [[VSRI_N2]]
+  return vsri_n_s64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsrid_n_u64(
+uint64_t test_vsrid_n_u64(uint64_t a, uint64_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[T0:%.*]] = bitcast i64 [[A]] to <1 x i64>
+// LLVM-NEXT:    [[T1:%.*]] = bitcast i64 [[B]] to <1 x i64>
+// LLVM-NEXT:    [[T2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[T0]], <1 x i64> [[T1]], i32 63)
+// LLVM-NEXT:    [[T3:%.*]] = bitcast <1 x i64> [[T2]] to i64
+// LLVM:    ret i64 [[T3]]
+  return (uint64_t)vsrid_n_u64(a, b, 63);
+}
+
+// ALL-LABEL: @test_vsri_n_u64(
+uint64x1_t test_vsri_n_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]]) {{.*}} {
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[VSRI_N]], <1 x i64> [[VSRI_N1]], i32 1)
+// LLVM:    ret <1 x i64> [[VSRI_N2]]
+  return vsri_n_u64(a, b, 1);
+}
+
+// ALL-LABEL: @test_vsri_n_p64(
+poly64x1_t test_vsri_n_p64(poly64x1_t a, poly64x1_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> [[VSRI_N]], <1 x i64> [[VSRI_N1]], i32 33)
+// LLVM:    ret <1 x i64> [[VSRI_N2]]
+  return vsri_n_p64(a, b, 33);
+}
+
+// ALL-LABEL: @test_vsriq_n_p64(
+poly64x2_t test_vsriq_n_p64(poly64x2_t a, poly64x2_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.vsri"
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// LLVM-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[B]] to <16 x i8>
+// LLVM-NEXT:    [[VSRI_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N1:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
+// LLVM-NEXT:    [[VSRI_N2:%.*]] = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> [[VSRI_N]], <2 x i64> [[VSRI_N1]], i32 64)
+// LLVM:    ret <2 x i64> [[VSRI_N2]]
+  return vsriq_n_p64(a, b, 64);
 }

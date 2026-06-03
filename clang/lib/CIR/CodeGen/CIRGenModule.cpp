@@ -561,11 +561,13 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
         deferredAnnotations[mangledName] = fd;
     }
     if (!fd->doesThisDeclarationHaveABody()) {
-      if (!fd->doesDeclarationForceExternallyVisibleDefinition())
+      if (!fd->doesDeclarationForceExternallyVisibleDefinition() &&
+          (!fd->isMultiVersion() || !getTarget().getTriple().isAArch64()))
         return;
 
-      errorNYI(fd->getSourceRange(),
-               "function declaration that forces code gen");
+      const CIRGenFunctionInfo &fi = getTypes().arrangeGlobalDeclaration(gd);
+      cir::FuncType ty = getTypes().getFunctionType(fi);
+      getAddrOfFunction(gd, ty, /*ForVTable=*/false, /*DontDefer=*/false);
       return;
     }
   } else {
@@ -974,6 +976,23 @@ static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
   if (isExternallyVisible(lv.getLinkage()) &&
       (nd->hasAttr<WeakAttr>() || nd->isWeakImported()))
     gv.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+}
+
+static void setLinkageForFunction(CIRGenModule &cgm, cir::FuncOp &func,
+                                  const NamedDecl *nd) {
+  // Mirrors CodeGenModule::setLinkageForGV for function declarations.
+  LinkageInfo lv = nd->getLinkageAndVisibility();
+  if (isExternallyVisible(lv.getLinkage()) &&
+      (nd->hasAttr<WeakAttr>() || nd->isWeakImported())) {
+    auto linkage = cir::GlobalLinkageKind::ExternalWeakLinkage;
+    func.setLinkage(linkage);
+    func.setLinkageAttr(
+        cir::GlobalLinkageKindAttr::get(&cgm.getMLIRContext(), linkage));
+    // Declarations must keep 'private' MLIR visibility; only update for defs.
+    if (!func.isDeclaration())
+      mlir::SymbolTable::setSymbolVisibility(
+          func, cgm.getMLIRVisibilityFromCIRLinkage(linkage));
+  }
 }
 
 static llvm::SmallVector<int64_t> indexesOfArrayAttr(mlir::ArrayAttr indexes) {
@@ -2992,6 +3011,9 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
 
   if (!isIncompleteFunction && func.isDeclaration())
     getTargetCIRGenInfo().setTargetAttributes(funcDecl, func, *this);
+
+  // Mirrors setLinkageForGV in CodeGenModule::SetFunctionAttributes.
+  setLinkageForFunction(*this, func, funcDecl);
 
   // If we plan on emitting this inline builtin, we can't treat it as a builtin.
   if (funcDecl->isInlineBuiltinDeclaration()) {

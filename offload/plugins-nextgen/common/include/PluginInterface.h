@@ -529,7 +529,7 @@ private:
   /// Get the effective number of threads for the kernel based on the
   /// user-defined number of threads.
   uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                  uint32_t UserThreadLimit[3]) const;
+                                  uint32_t UserThreadLimit) const;
 
   /// Get the effective number of blocks for the kernel based on the
   /// user-defined number of blocks and the loop trip count.
@@ -537,8 +537,7 @@ private:
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
   uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
-                                 uint32_t UserNumBlocks[3],
-                                 uint64_t LoopTripCount,
+                                 uint32_t UserNumBlocks, uint64_t LoopTripCount,
                                  uint32_t &EffectiveNumThreads,
                                  bool IsNumThreadsFromUser) const;
 

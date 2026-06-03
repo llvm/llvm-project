@@ -2059,6 +2059,7 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   Ctx.save();
   EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg1);
+  Add1->setOperand(0, Arg1);
   Ctx.save();
   EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
   Add1->setOperand(0, Arg0);

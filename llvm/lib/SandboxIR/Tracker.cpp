@@ -349,16 +349,22 @@ void Tracker::revert(bool RevertAll) {
     if (CntReverts++ == ToRevert)
       break;
     Change->revert(*this);
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    // There may be multiple changes between snapshots, so use the snapshot
+    // checker only if this change has an associated snapshot.
+    unsigned ChangeIdx = Changes.size() - CntReverts;
+    bool ChangeHasSnapshot = ChangeIdx == Snapshots.back();
+    if (ChangeHasSnapshot) {
+      SnapshotChecker.back().expectNoDiff();
+      SnapshotChecker.pop_back();
+    }
+#endif
   }
   Changes.erase(Changes.end() - ToRevert, Changes.end());
   if (RevertAll)
     Snapshots.clear();
   else
     Snapshots.pop_back();
-#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
-  SnapshotChecker.back().expectNoDiff();
-  SnapshotChecker.pop_back();
-#endif
   State = Snapshots.empty() ? TrackerState::Disabled : TrackerState::Record;
 }
 

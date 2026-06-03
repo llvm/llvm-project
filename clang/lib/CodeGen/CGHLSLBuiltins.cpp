@@ -115,6 +115,12 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
           CGF->Int32Ty, ElementCount::getFixed(Op0VecTy->getNumElements()));
+    else if (auto *Op0MatTy =
+                 E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+      RetElementTy = llvm::VectorType::get(
+          CGF->Int32Ty, ElementCount::getFixed(Op0MatTy->getNumRows() *
+                                               Op0MatTy->getNumColumns()));
+
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
     CallInst *CI = CGF->Builder.CreateIntrinsic(
@@ -136,6 +142,9 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
       if (const auto *VecTy =
               E->getArg(0)->getType()->getAs<clang::VectorType>())
         NumElements = VecTy->getNumElements();
+      else if (const auto *MatTy =
+                   E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+        NumElements = MatTy->getNumRows() * MatTy->getNumColumns();
 
       FixedVectorType *Uint32VecTy =
           FixedVectorType::get(CGF->Int32Ty, NumElements * 2);
