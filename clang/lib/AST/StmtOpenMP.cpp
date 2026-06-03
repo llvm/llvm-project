@@ -10,11 +10,47 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Stmt.h"
 
 using namespace clang;
 using namespace llvm::omp;
+
+// True if the attributed statement carries the internal `omp tile` intra-tile
+// body-guard marker.
+static bool hasOMPInvariantPredicateBound(const AttributedStmt *AS) {
+  for (const Attr *A : AS->getAttrs())
+    if (isa<OMPInvariantPredicateBoundAttr>(A))
+      return true;
+  return false;
+}
+
+// Like `Stmt::IgnoreContainers`, but also treats the `omp tile` body-guard
+static Stmt *IgnoreContainersAndOMPTileBodyGuard(Stmt *S) {
+  while (true) {
+    if (auto *AS = dyn_cast_or_null<AttributedStmt>(S)) {
+      if (hasOMPInvariantPredicateBound(AS)) {
+        if (auto *If = dyn_cast<IfStmt>(AS->getSubStmt());
+            If && !If->getElse()) {
+          S = If->getThen();
+          continue;
+        }
+      }
+      S = AS->getSubStmt();
+      continue;
+    }
+    if (auto *CS = dyn_cast_or_null<CompoundStmt>(S)) {
+      if (CS->size() != 1)
+        break;
+      S = CS->body_back();
+      continue;
+    }
+    break;
+  }
+  return S;
+}
 
 size_t OMPChildren::size(unsigned NumClauses, bool HasAssociatedStmt,
                          unsigned NumChildren) {
@@ -78,7 +114,7 @@ Stmt *
 OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
                                               bool TryImperfectlyNestedLoops) {
   Stmt *OrigStmt = CurStmt;
-  CurStmt = CurStmt->IgnoreContainers();
+  CurStmt = IgnoreContainersAndOMPTileBodyGuard(CurStmt);
   // Additional work for imperfectly nested loops, introduced in OpenMP 5.0.
   if (TryImperfectlyNestedLoops) {
     if (auto *CS = dyn_cast<CompoundStmt>(CurStmt)) {
@@ -94,6 +130,10 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
             continue;
           if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(S))
             S = CanonLoop->getLoopStmt();
+          // Check for the `omp tile` body-guard marker.
+          if (auto *AS = dyn_cast<AttributedStmt>(S);
+              AS && hasOMPInvariantPredicateBound(AS))
+            S = IgnoreContainersAndOMPTileBodyGuard(S);
           if (isa<ForStmt>(S) || isa<CXXForRangeStmt>(S) ||
               (isa<OMPLoopBasedDirective>(S) && !isa<OMPLoopDirective>(S))) {
             // Only single loop construct is allowed.
@@ -127,7 +167,7 @@ bool OMPLoopBasedDirective::doForAllLoops(
     llvm::function_ref<bool(unsigned, Stmt *)> Callback,
     llvm::function_ref<void(OMPLoopTransformationDirective *)>
         OnTransformationCallback) {
-  CurStmt = CurStmt->IgnoreContainers();
+  CurStmt = IgnoreContainersAndOMPTileBodyGuard(CurStmt);
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
     while (true) {
       auto *Dir = dyn_cast<OMPLoopTransformationDirective>(CurStmt);
