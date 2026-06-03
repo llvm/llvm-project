@@ -28,8 +28,12 @@ foreach(arch ${PROFILE_TEST_ARCH})
   # with MultiThreadedDLL (/MD), so the .objs reference __imp_* symbols;
   # the test binary defaults to /MT and fails to link (LNK2019 __imp__stricmp
   # from interception_win.cpp, LNK4098 default-lib conflicts). Match the
-  # DLL CRT here so test executables link against the same runtime.
-  if(MSVC AND COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
+  # DLL CRT here so test executables link against the same runtime. This must
+  # mirror the archive's interceptor gate in lib/profile/CMakeLists.txt: the
+  # libs are only merged (and the archive only goes /MD) when ROCm device PGO
+  # is enabled, so without it the test binaries stay on the default /MT.
+  if(MSVC AND COMPILER_RT_BUILD_PROFILE_ROCM
+     AND COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL)
     string(APPEND PROFILE_TEST_TARGET_CFLAGS
            " -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames")
   endif()

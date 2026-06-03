@@ -323,7 +323,12 @@ option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatom
 option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
 set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM ON)
-if(APPLE)
+if(APPLE OR WIN32)
+  # On Windows the HIP host interceptor (InstrProfilingPlatformROCm.cpp) pulls in
+  # RTInterception + sanitizer_common, which are built /MD and force the whole
+  # profile library to /MD, breaking the default static-CRT (/MT) profile builds.
+  # Device PGO on Windows is not wired up yet, so default this off; users who need
+  # it can opt in explicitly and accept the /MD profile library.
   set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM OFF)
 endif()
 option(COMPILER_RT_BUILD_PROFILE_ROCM
