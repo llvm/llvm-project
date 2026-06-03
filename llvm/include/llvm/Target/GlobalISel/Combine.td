@@ -2165,6 +2165,8 @@ def add_shift : GICombineRule<
   (apply (G_SHL $new_shl, $y, $n),
          (G_SUB $dst, $x, $new_shl))>;
 
+// FIXME: Tablegen should be able to handle commutativity of G_AND and G_OR. 
+//        Remove once commutativity is handled automatically.
 def combine_or_of_and_frags : GICombinePatFrag<
   (outs root: $dst), (ins $x, $y),
   [
