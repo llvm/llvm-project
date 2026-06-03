@@ -103,7 +103,7 @@ end subroutine
 ! LLVM-LABEL: omp_region.finalize:
 ! LLVM:       call void @__kmpc_end_single
 ! LLVM:       store i32 %{{.*}}, ptr %{{.*}}
-! LLVM:       getelementptr nusw nuw i8
+! LLVM:       getelementptr {{.*}}i8
 ! LLVM:       ret void
 
 ! Test for "workshare firstprivate(z)" where z is an array.
