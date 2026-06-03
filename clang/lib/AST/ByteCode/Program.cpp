@@ -249,6 +249,12 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
                                      bool IsStatic, bool IsExtern, bool IsWeak,
                                      bool IsConstexprUnknown,
                                      const Expr *Init) {
+  // Since this global variable is constexpr-unknown and a reference, register
+  // the pointee type instead. When referencing the variable, the pointer will
+  // then be of the pointee type instead of just PT_Ptr.
+  if (Ty->isReferenceType() && IsConstexprUnknown)
+    Ty = Ty->getPointeeType();
+
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
