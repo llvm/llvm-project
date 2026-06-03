@@ -29,6 +29,12 @@
 # Nested build directory
 /build*
 
+# Custom build directory (added by user)
+build/
+
+# Setup script (added by user)
+setup.sh
+
 #==============================================================================#
 # Explicit files to ignore (only matches one).
 #==============================================================================#
