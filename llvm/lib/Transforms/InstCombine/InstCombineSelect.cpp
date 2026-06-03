@@ -4190,6 +4190,64 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *Mul = foldSelectZeroOrFixedOp(SI, *this))
     return Mul;
 
+  {
+    // In the following, if there are no other uses of x:
+    // x = select c1, a, b
+    // y = select c2, x, c  or  y = select c2, c, x
+    // we can get rid of the first select by forward propagating it into
+    // the second select.  The resulting operation can be further
+    // simplified into some logical operations of c1 and c2.  This has the
+    // nice benefit of being automatically recursively applied to n (>= 2)
+    // selects
+    SelectInst *X;
+    if ((X = dyn_cast<SelectInst>(TrueVal)) && X->hasOneUse()) {
+      // x = select c1, a, b
+      // y = select CondVal, x, FalseVal
+      Value *C1 = X->getCondition();
+      Value *A  = X->getTrueValue();
+      Value *B  = X->getFalseValue();
+      if (C1->getType()->isIntegerTy(1) &&
+          CondVal->getType()->isIntegerTy(1) &&
+          impliesPoison(C1, CondVal)) {
+        if (FalseVal == A) {
+          // y = !c1 && CondVal ? b : a
+          Value *NewCond = Builder.CreateAnd(Builder.CreateNot(C1), CondVal);
+          Value *NewSel = Builder.CreateSelect(NewCond, B, A);
+          return replaceInstUsesWith(SI, NewSel);
+        }
+        if (FalseVal == B) {
+          // y = c1 && CondVal ? a : b
+          Value *NewCond = Builder.CreateAnd(C1, CondVal);
+          Value *NewSel = Builder.CreateSelect(NewCond, A, B);
+          return replaceInstUsesWith(SI, NewSel);
+        }
+      }
+    }
+    if ((X = dyn_cast<SelectInst>(FalseVal)) && X->hasOneUse()) {
+      // x = select c1, a, b
+      // y = select CondVal, TrueVal, x
+      Value *C1 = X->getCondition();
+      Value *A  = X->getTrueValue();
+      Value *B  = X->getFalseValue();
+      if (C1->getType()->isIntegerTy(1) &&
+          CondVal->getType()->isIntegerTy(1) &&
+          impliesPoison(C1, CondVal)) {
+        if (TrueVal == A) {
+          // y = !c1 && !CondVal ? b : a
+          // Use De Morgan's law to simplify.
+          Value *NewCond = Builder.CreateOr(C1, CondVal);
+          Value *NewSel = Builder.CreateSelect(NewCond, A, B);
+          return replaceInstUsesWith(SI, NewSel);
+        }
+        if (TrueVal == B) {
+          // y = c1 && !CondVal ? a : b
+          Value *NewCond = Builder.CreateAnd(C1, Builder.CreateNot(CondVal));
+          Value *NewSel = Builder.CreateSelect(NewCond, A, B);
+          return replaceInstUsesWith(SI, NewSel);
+        }
+      }
+  }
+
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
   auto *TI = dyn_cast<Instruction>(TrueVal);
   auto *FI = dyn_cast<Instruction>(FalseVal);

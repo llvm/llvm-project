@@ -17,7 +17,7 @@ define void @y() {
 ; CHECK:       for.cond5.preheader.i:
 ; CHECK-NEXT:    br i1 false, label [[FOR_INC19_I:%.*]], label [[FOR_COND1_LOOPEXIT_I:%.*]]
 ; CHECK:       for.inc19.i:
-; CHECK-NEXT:    br i1 poison, label [[FOR_INC19_I]], label [[FOR_COND1_LOOPEXIT_I]]
+; CHECK-NEXT:    br i1 poison, label [[FOR_COND1_LOOPEXIT_I]], label [[FOR_INC19_I]]
 ;
 entry:
   br label %for.cond.i
