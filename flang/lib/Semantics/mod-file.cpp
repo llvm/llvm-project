@@ -364,39 +364,51 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
+        } else {
+          return nullptr;
+        }
+      },
+      symbol.details());
+}
+
 static void PutOpenMPRequirements(
     llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
   using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
-  using OmpMemoryOrderType = common::OmpMemoryOrderType;
   unsigned version{semaCtx.langOptions().OpenMPVersion};
 
-  const auto [reqs, order]{common::visit(
-      [&](auto &&details)
-          -> std::pair<const OmpClauseSet *, const OmpMemoryOrderType *> {
-        if constexpr (std::is_convertible_v<decltype(details),
-                          const WithOmpDeclarative &>) {
-          if (const auto &memOrder{details.ompAtomicDefaultMemOrder()}) {
-            return {&details.ompRequires(), &*memOrder};
-          }
-          return {&details.ompRequires(), nullptr};
-        } else {
-          return {nullptr, nullptr};
-        }
-      },
-      symbol.details())};
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs);
+      os << "\n";
+    }
+  }
+}
 
-  if (reqs->count()) {
-    os << "!$omp requires";
-    reqs->IterateOverMembers([&, order = order](llvm::omp::Clause f) {
-      os << ' '
-         << parser::ToLowerCaseLetters(
-                llvm::omp::getOpenMPClauseName(f, version));
-      if (f == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-        os << '(' << parser::ToLowerCaseLetters(EnumToString(DEREF(order)))
-           << ')';
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(os, dtgt, symbol.name());
+        os << "\n";
       }
-    });
-    os << "\n";
+    }
   }
 }
 
@@ -438,6 +450,8 @@ void ModFileWriter::PutSymbols(
     PutUse(symbol);
   }
   PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
