@@ -1073,13 +1073,13 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
   // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when Y has bit 23 (i.e. 0x800000) set.
+  // when (Y>0x800000).
   // For example,
   // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
   // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
   //
   // Note that for IsSigned, abs(Y) is at most
-  // 0x7fffff so it cannot hit this issue.
+  // 0x800000 so it cannot hit this issue.
   if (!IsSigned && LHSBits == 24)
     return nullptr;
 
