@@ -2263,6 +2263,29 @@ static bool isReachingDefAGPRForm(MachineInstr *RD,
   return false;
 }
 
+void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
+  for (auto [MI, OriginalOpcode] : RewriteCands) {
+    assert(TII->isMAI(*MI));
+    const TargetRegisterClass *ADefRC =
+        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
+    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
+    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
+    MI->setDesc(TII->get(OriginalOpcode));
+
+    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
+    if (!Src2->isReg())
+      continue;
+
+    // Have to get src types separately since subregs may cause C and D
+    // registers to be different types even though the actual operand is
+    // the same size.
+    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
+    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
+    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
+  }
+}
+
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
@@ -2378,7 +2401,7 @@ bool RewriteMFMAFormStage::initHeuristics(
 }
 
 int64_t RewriteMFMAFormStage::getRewriteCost(
-    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
@@ -2430,8 +2453,10 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       SpillCost *= (int64_t)RelativeFreq;
 
     // If we have increased spilling in any block, just bail.
-    if (SpillCost > 0)
+    if (SpillCost > 0) {
+      resetRewriteCandsToVGPR(RewriteCands);
       return SpillCost;
+    }
 
     if (SpillCost < BestSpillCost)
       BestSpillCost = SpillCost;
@@ -2468,36 +2493,17 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     }
   }
 
-  // Reset the classes that were changed to AGPR for better RB analysis.
-  // We must do rewriting after copy-insertion, as some defs of the register
-  // may require VGPR.  Additionally, if we bail out and don't perform the
-  // rewrite then these need to be restored anyway.
-  for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    assert(TII->isMAI(*MI));
-    const TargetRegisterClass *ADefRC =
-        DAG.MRI.getRegClass(MI->getOperand(0).getReg());
-    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
-    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
-    MI->setDesc(TII->get(OriginalOpcode));
-
-    MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
-    assert(Src2);
-    if (!Src2->isReg())
-      continue;
-
-    // Have to get src types separately since subregs may cause C and D
-    // registers to be different types even though the actual operand is
-    // the same size.
-    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
-    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
-    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
-  }
+  // Reset the classes that were changed to AGPR for better register bank
+  // analysis. We must do rewriting after copy-insertion, as some defs of the
+  // register may require VGPR.  Additionally, if we bail out and don't perform
+  // the rewrite then these need to be restored anyway.
+  resetRewriteCandsToVGPR(RewriteCands);
 
   return Cost + CopyCost;
 }
 
 bool RewriteMFMAFormStage::rewrite(
-    const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands) {
+    ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands) {
   DenseMap<MachineInstr *, unsigned> FirstMIToRegion;
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {

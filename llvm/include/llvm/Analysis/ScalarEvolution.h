@@ -63,6 +63,7 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
@@ -205,11 +206,6 @@ template <> struct DenseMapInfo<SCEVUse> {
     return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
   }
 
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
     return hash_value(U.getOpaqueValue());
   }
@@ -336,7 +332,7 @@ public:
   LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 
   /// Return the canonical SCEV.
-  LLVM_ABI const SCEV *getCanonical() const {
+  const SCEV *getCanonical() const {
     assert(CanonicalSCEV && "canonical SCEV not yet computed");
     return CanonicalSCEV;
   }
@@ -1660,6 +1656,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
@@ -2655,8 +2652,11 @@ public:
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
-  /// context.
-  LLVM_ABI const SCEVAddRecExpr *getAsAddRec(Value *V);
+  /// context. If \p WrapPredsAdded is non-null, the required predicates are
+  /// collected there instead of being added to this context.
+  LLVM_ABI const SCEVAddRecExpr *
+  getAsAddRec(Value *V,
+              SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
   /// Proves that V doesn't overflow by adding SCEV predicate.
   LLVM_ABI void setNoOverflow(Value *V,
@@ -2678,9 +2678,10 @@ public:
   LLVM_ABI void print(raw_ostream &OS, unsigned Depth) const;
 
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
-  /// Equal predicates in Preds.
-  LLVM_ABI bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
-                                         const SCEVAddRecExpr *AR2) const;
+  /// Equal predicates in Preds and \p ExtraPreds.
+  LLVM_ABI bool areAddRecsEqualWithPreds(
+      const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
+      ArrayRef<const SCEVPredicate *> ExtraPreds = {}) const;
 
 private:
   /// Increments the version number of the predicate.  This needs to be called
@@ -2730,10 +2731,6 @@ private:
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
   static inline ScalarEvolution::FoldID getEmptyKey() {
     ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
     return ID;
   }
 

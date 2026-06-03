@@ -44,4 +44,4 @@ stmxcsr (%rsp)
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.0    0.5    0.0       int3
 # CHECK-NEXT: 1.     2     9.5    9.0    90.0      stmxcsr	(%rsp)
-# CHECK-NEXT:        2     5.3    4.8    45.0      <total>
+# CHECK-NEXT:        4     5.3    4.8    45.0      <total>

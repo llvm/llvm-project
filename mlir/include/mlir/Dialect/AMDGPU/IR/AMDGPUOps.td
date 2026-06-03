@@ -500,14 +500,17 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 
 // Raw buffer atomic floating point add
 def AMDGPU_RawBufferAtomicFaddOp :
-    AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fadd", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Add (MI-* only)";
   let description = [{
@@ -523,7 +526,7 @@ def AMDGPU_RawBufferAtomicFaddOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -539,14 +542,17 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
 // Raw buffer atomic floating point max
 def AMDGPU_RawBufferAtomicFmaxOp :
-    AMDGPU_Op<"raw_buffer_atomic_fmax", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fmax", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, F64]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, F64]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Max (non-GFX9)";
   let description = [{
@@ -561,7 +567,8 @@ def AMDGPU_RawBufferAtomicFmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -578,13 +585,15 @@ def AMDGPU_RawBufferAtomicFmaxOp :
 // Raw buffer atomic signed integer max
 def AMDGPU_RawBufferAtomicSmaxOp :
     AMDGPU_Op<"raw_buffer_atomic_smax", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Signed Integer Atomic Max";
   let description = [{
@@ -599,7 +608,8 @@ def AMDGPU_RawBufferAtomicSmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -616,13 +626,15 @@ def AMDGPU_RawBufferAtomicSmaxOp :
 // Raw buffer atomic unsigned integer min
 def AMDGPU_RawBufferAtomicUminOp :
     AMDGPU_Op<"raw_buffer_atomic_umin", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Unsigned Integer Atomic Min";
   let description = [{
@@ -637,7 +649,8 @@ def AMDGPU_RawBufferAtomicUminOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -823,6 +836,43 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
     $src $row_length attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
+}
+
+def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
+    [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU variable-selector permlane op (GFX12+)";
+  let description = [{
+    High-level wrapper on `rocdl.permlane16.var` and `rocdl.permlanex16.var`
+    for per-lane variable-selector permutations within a wave32 subgroup.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32
+    and one or more ROCDL intrinsic calls during lowering.
+
+    - `cross = false`: intra-row permutation (each lane in a 16-lane row reads
+      from a lane in the same row, selected by `$selector`). Maps to
+      `rocdl.permlane16.var`.
+    - `cross = true`: cross-row permutation (each lane reads from the opposite
+      16-lane row, selected by `$selector`). Maps to `rocdl.permlanex16.var`.
+
+    `$selector` is an i32 VGPR providing the per-lane source-lane index.
+
+    Example:
+    ```mlir
+    %0 = amdgpu.permlane_var %src, %sel { cross = false } : f16
+    %1 = amdgpu.permlane_var %src, %sel { cross = true } : f32
+    ```
+
+    Note: Lowering is only supported on GFX12+.
+  }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       I32:$selector,
+                       DefaultValuedAttr<BoolAttr, "false">:$cross,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src `,` $selector attr-dict `:` type($result)
+  }];
 }
 
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {

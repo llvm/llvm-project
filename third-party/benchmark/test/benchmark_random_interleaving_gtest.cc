@@ -34,7 +34,8 @@ class EventQueue : public std::queue<std::string> {
   }
 };
 
-EventQueue* queue = new EventQueue();
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+EventQueue* const queue = new EventQueue();
 
 class NullReporter : public BenchmarkReporter {
  public:
@@ -48,7 +49,7 @@ class BenchmarkTest : public testing::Test {
 
   static void TeardownHook(int /* num_threads */) { queue->push("Teardown"); }
 
-  void Execute(const std::string& pattern) {
+  static void Execute(const std::string& pattern) {
     queue->Clear();
 
     std::unique_ptr<BenchmarkReporter> reporter(new NullReporter());

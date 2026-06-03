@@ -182,8 +182,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       NumInsts++;
-      if (!isa<Instruction>(I))
-        return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
@@ -1476,8 +1474,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   for (auto *BB : OuterLoop->blocks())
     for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // readnone functions do not prevent interchanging.
-        if (CI->onlyWritesMemory() || isa<PseudoProbeInst>(CI))
+        // Functions which don't access memory do not prevent interchanging.
+        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "
@@ -2202,8 +2200,19 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     assert(P.getNumIncomingValues() == 1 &&
            "Only loops with a single exit are supported!");
 
-    // Incoming values are guaranteed be instructions currently.
-    auto IncI = cast<Instruction>(P.getIncomingValueForBlock(InnerLatch));
+    Value *IncomingValue = P.getIncomingValueForBlock(InnerLatch);
+    auto *IncI = dyn_cast<Instruction>(IncomingValue);
+    if (!IncI) {
+      // If the incoming value is not an instruction, it must be loop invariant.
+      // In that case, we can just replace the PHI with the incoming value and
+      // remove the PHI.
+      assert(InnerLoop->isLoopInvariant(IncomingValue) &&
+             "Expected non-instruction incoming value to be loop invariant");
+      P.replaceAllUsesWith(IncomingValue);
+      P.eraseFromParent();
+      continue;
+    }
+
     // In case of multi-level nested loops, follow LCSSA to find the incoming
     // value defined from the innermost loop.
     auto IncIInnerMost = cast<Instruction>(followLCSSA(IncI));

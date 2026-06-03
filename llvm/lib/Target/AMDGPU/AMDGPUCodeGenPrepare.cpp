@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
@@ -1113,8 +1114,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  FQ->copyFastMathFlags(Builder.getFastMathFlags());
+  Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
+  auto *FQI = dyn_cast<Instruction>(FQ);
+  if (FQI)
+    FQI->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
   Value *FQNeg = Builder.CreateFNeg(FQ);
@@ -1123,18 +1126,18 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   auto FMAD = !ST.hasMadMacF32Insts()
                   ? Intrinsic::fma
                   : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR = Builder.CreateIntrinsic(FMAD,
-                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
+  Value *FR =
+      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQI);
 
   // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQI);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
@@ -1559,17 +1562,15 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 
     Type *I32Ty = Builder.getInt32Ty();
     LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
-    WidenLoad->copyMetadata(I);
+    AMDGPU::copyMetadataForWidenedLoad(*WidenLoad, I);
 
-    // If we have range metadata, we need to convert the type, and not make
+    // The widened load reads the original bytes in the low bits, so a !range
+    // lower bound still holds. Convert it to the new type and don't make
     // assumptions about the high bits.
-    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
+    if (auto *Range = I.getMetadata(LLVMContext::MD_range)) {
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->isNullValue()) {
-        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
-      } else {
+      if (!Lower->isNullValue()) {
         Metadata *LowAndHigh[] = {
           ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
           // Don't make assumptions about the high bits.
