@@ -52,12 +52,6 @@ def match_where_to_frame(
     return True
 
 
-class StepMatchResult:
-    """Represents the result of matching the given DexterScript against the given StepIR, used both for running a
-    debugger session and for evaluating the result of a test.
-    """
-
-
 @dataclass
 class WhereMatchResult:
     """Class storing the result of a single !where matched against a stack frame. The primary information stored is just
