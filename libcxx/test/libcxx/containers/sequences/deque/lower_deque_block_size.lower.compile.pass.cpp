@@ -10,7 +10,7 @@
 
 // Test that std::__deque_block_size has lowered sizes when _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE is defined to 1.
 
-// REQUIRES: libcpp-abi-use-small-deque-block-size
+// UNSUPPORTED: libcpp-abi-use-small-deque-block-size
 
 #include <deque>
 #include <cstddef>
