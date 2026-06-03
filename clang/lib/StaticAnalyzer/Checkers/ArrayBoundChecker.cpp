@@ -57,24 +57,41 @@ getAsCleanArraySubscriptExpr(const Expr *E, const CheckerContext &C) {
   return ASE;
 }
 
-/// If `E` is a "clean" array subscript expression, return the type of the
-/// accessed element; otherwise return std::nullopt because that's the best (or
-/// least bad) option for the diagnostic generation that relies on this.
-static std::optional<QualType> determineElementType(const Expr *E,
-                                                    const CheckerContext &C) {
-  const auto *ASE = getAsCleanArraySubscriptExpr(E, C);
-  if (!ASE)
-    return std::nullopt;
+class SizeUnit {
+  QualType AsType;
+  int64_t AsCharUnits;
 
-  return ASE->getType();
-}
+  SizeUnit() : AsType(), AsCharUnits(1) {}
 
-static std::optional<int64_t>
-determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
-  if (!T)
-    return std::nullopt;
-  return C.getASTContext().getTypeSizeInChars(*T).getQuantity();
-}
+public:
+  SizeUnit(QualType T, const ASTContext &ACtx)
+      : AsType(T), AsCharUnits(ACtx.getTypeSizeInChars(T).getQuantity()) {
+    assert(!T.isNull());
+  }
+
+  static SizeUnit bytes() { return SizeUnit(); }
+
+  bool isBytes() const { return AsType.isNull(); }
+
+  /// If `E` is a "clean" array subscript expression, return the type of the
+  /// accessed element; otherwise return 'Bytes' because that's the best (or
+  /// least bad) option for the diagnostic generation that relies on this.
+  static SizeUnit forExpr(const Expr *E, const CheckerContext &C) {
+    const auto *ASE = getAsCleanArraySubscriptExpr(E, C);
+    if (!ASE)
+      return bytes();
+
+    return SizeUnit(ASE->getType(), C.getASTContext());
+  }
+
+  int64_t asCharUnits() const { return AsCharUnits; }
+
+  std::string asExtentDesc(bool ForceBytes) const {
+    if (ForceBytes || isBytes())
+      return "the extent of";
+    return formatv("the number of '{0}' elements in", AsType.getAsString());
+  }
+};
 
 struct Messages {
   std::string Short, Full;
@@ -96,15 +113,11 @@ static StringRef asPreposition(BadOffsetKind Problem) {
 
 class StateUpdateReporter {
   const NonLoc ByteOffsetVal;
-  const std::optional<QualType> ElementType;
-  const std::optional<int64_t> ElementSize;
   bool AssumedNonNegative = false;
   std::optional<NonLoc> AssumedUpperBound = std::nullopt;
 
 public:
-  StateUpdateReporter(NonLoc ByteOffsVal, const Expr *E, CheckerContext &C)
-      : ByteOffsetVal(ByteOffsVal), ElementType(determineElementType(E, C)),
-        ElementSize(determineElementSize(ElementType, C)) {}
+  StateUpdateReporter(NonLoc ByteOffsVal) : ByteOffsetVal(ByteOffsVal) {}
 
   void recordNonNegativeAssumption() { AssumedNonNegative = true; }
   void recordUpperBoundAssumption(NonLoc UpperBoundVal) {
@@ -115,7 +128,8 @@ public:
 
   bool hasAssumption() const { return AssumedNonNegative || AssumedUpperBound; }
 
-  std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName) const;
+  std::string getMessage(PathSensitiveBugReport &BR, StringRef RegName,
+                         SizeUnit SU) const;
 
 private:
   /// Return true if information about the value of `Sym` can put constraints
@@ -486,7 +500,8 @@ static Messages getTaintMsgs(const MemSpaceRegion *Space,
 }
 
 std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
-                                            StringRef RegName) const {
+                                            StringRef RegName,
+                                            SizeUnit SU) const {
   bool ShouldReportNonNegative = AssumedNonNegative;
   if (!providesInformationAboutInteresting(ByteOffsetVal, BR)) {
     if (AssumedUpperBound &&
@@ -505,7 +520,7 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
   std::optional<int64_t> ExtentN = getConcreteValue(AssumedUpperBound);
 
   const bool UseIndex =
-      ElementSize && tryDividePair(OffsetN, ExtentN, *ElementSize);
+      !SU.isBytes() && tryDividePair(OffsetN, ExtentN, SU.asCharUnits());
 
   SmallString<256> Buf;
   llvm::raw_svector_ostream Out(Buf);
@@ -532,12 +547,7 @@ std::string StateUpdateReporter::getMessage(PathSensitiveBugReport &BR,
     Out << " less than ";
     if (ExtentN)
       Out << *ExtentN << ", ";
-    if (UseIndex && ElementType)
-      Out << "the number of '" << ElementType->getAsString()
-          << "' elements in ";
-    else
-      Out << "the extent of ";
-    Out << RegName;
+    Out << SU.asExtentDesc(/*ForceBytes=*/!UseIndex) << ' ' << RegName;
   }
   return std::string(Out.str());
 }
@@ -584,7 +594,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
   // The state updates will be reported as a single note tag, which will be
   // composed by this helper class.
-  StateUpdateReporter SUR(ByteOffset, E, C);
+  StateUpdateReporter SUR(ByteOffset);
 
   // CHECK LOWER BOUND
   const MemSpaceRegion *Space = Reg->getMemorySpace(State);
@@ -716,16 +726,17 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
 NormalTransition:
   // Add a transition, reporting the state updates that we accumulated.
-  const NoteTag *Tag = nullptr;
+  const NoteTag *T = nullptr;
 
   if (SUR.hasAssumption()) {
     std::string RN = getRegionName(Reg->getMemorySpace(C.getState()), Reg);
-    Tag = C.getNoteTag([SUR, RN](PathSensitiveBugReport &BR) -> std::string {
-      return SUR.getMessage(BR, RN);
+    SizeUnit SU = SizeUnit::forExpr(E, C);
+    T = C.getNoteTag([SUR, RN, SU](PathSensitiveBugReport &BR) -> std::string {
+      return SUR.getMessage(BR, RN, SU);
     });
   }
 
-  C.addTransition(State, Tag);
+  C.addTransition(State, T);
 }
 
 void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
