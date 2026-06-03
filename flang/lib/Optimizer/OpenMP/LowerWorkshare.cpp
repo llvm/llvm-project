@@ -484,28 +484,32 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
         if (alloca.isDynamic()) {
-          // Dynamic allocas (e.g. firstprivate arrays with runtime extent)
-          // are hoisted so each thread gets its own allocation, providing
-          // true firstprivate semantics. The array data is broadcast via
-          // copyprivate using a box that carries shape information. The
-          // copyprivate copy function uses _FortranAAssign to copy the
-          // actual array data (not just the descriptor) between threads.
+          // Dynamic allocas (e.g. firstprivate arrays with runtime extent
+          // or characters with runtime length) are hoisted so each thread
+          // gets its own allocation, providing true firstprivate semantics.
+          // The data is broadcast via copyprivate using a box that carries
+          // shape/length information. The copyprivate copy function uses
+          // _FortranAAssign to copy the actual data between threads.
           auto hoisted =
               cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
           rootMapping.map(&*alloca, &*hoisted);
           rootMapping.map(alloca.getResult(), hoisted.getResult());
 
           if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            // Create a box slot for copyprivate to broadcast the array data.
+            // Create a box slot for copyprivate to broadcast the data.
             Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
             auto boxTy = fir::BoxType::get(eleTy);
             Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
 
-            // Embox the per-thread array allocation with its shape extents.
-            Value shape =
-                fir::ShapeOp::create(allocaBuilder, loc, hoisted.getShape());
-            Value box = fir::EmboxOp::create(allocaBuilder, loc, boxTy,
-                                             hoisted.getResult(), shape);
+            // Embox the per-thread allocation. Dynamic arrays need shape
+            // information; dynamic characters need typeparams (length).
+            Value shape;
+            if (hoisted.hasShapeOperands())
+              shape =
+                  fir::ShapeOp::create(allocaBuilder, loc, hoisted.getShape());
+            Value box = fir::EmboxOp::create(
+                allocaBuilder, loc, boxTy, hoisted.getResult(), shape,
+                /*slice=*/{}, hoisted.getTypeparams());
             fir::StoreOp::create(allocaBuilder, loc, box, boxAlloc);
 
             copyPrivate.push_back(boxAlloc);
