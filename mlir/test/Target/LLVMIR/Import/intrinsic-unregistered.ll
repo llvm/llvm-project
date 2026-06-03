@@ -88,10 +88,10 @@ define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 
 ; CHECK-LABEL: llvm.func @constrained_sqrt
-; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
-; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
-; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
 define float @constrained_sqrt(float %a) {
+  ; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  ; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
   %r = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %r
 }
@@ -104,11 +104,14 @@ define float @constrained_sqrt(float %a) {
 declare i32 @llvm.read_register.i32(metadata)
 
 ; CHECK-LABEL: llvm.func @read_named_register
-; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
-; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
 define i32 @read_named_register() {
-  %r = call i32 @llvm.read_register.i32(metadata !0)
-  ret i32 %r
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  ; CHECK: %[[R0:.*]] = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r0 = call i32 @llvm.read_register.i32(metadata !0)
+  ; CHECK-NOT: llvm.mlir.metadata_as_value
+  ; CHECK: %[[R1:.*]] = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r1 = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r1
 }
 
 !0 = !{!"sp"}

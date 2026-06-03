@@ -159,10 +159,10 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
 /// set lets the traversal recognize such a back-edge and bail out. `attrMap`
 /// caches the attributes of fully converted nodes so that shared subgraphs
 /// are visited only once.
-static Attribute
-convertMetadataToAttrImpl(MLIRContext *ctx, const llvm::Metadata *md,
-                          SmallPtrSetImpl<const llvm::Metadata *> &path,
-                          DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
+static Attribute convertMetadataToAttrImpl(
+    MLIRContext *ctx, const llvm::Metadata *md,
+    SmallPtrSetImpl<const llvm::Metadata *> &path,
+    DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
   if (!md)
     return {};
   if (auto *mdStr = dyn_cast<llvm::MDString>(md))
@@ -190,11 +190,10 @@ convertMetadataToAttrImpl(MLIRContext *ctx, const llvm::Metadata *md,
     SmallVector<Attribute> operands;
     operands.reserve(node->getNumOperands());
     for (const llvm::MDOperand &op : node->operands()) {
-      Attribute opAttr = convertMetadataToAttrImpl(ctx, op.get(), path, attrMap);
-      if (!opAttr) {
-        path.erase(node);
+      Attribute opAttr =
+          convertMetadataToAttrImpl(ctx, op.get(), path, attrMap);
+      if (!opAttr)
         return {};
-      }
       operands.push_back(opAttr);
     }
     path.erase(node);
@@ -1971,6 +1970,11 @@ FailureOr<Value> ModuleImport::convertConstantExpr(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
+  // Return the mapped value if it has been converted before.
+  auto it = valueMapping.find(value);
+  if (it != valueMapping.end())
+    return it->getSecond();
+
   // `llvm::MetadataAsValue` operands (e.g. the rounding-mode / FP-exception
   // MDString arguments used by the constrained floating-point intrinsics, or
   // the named-register MDNode used by `llvm.read_register`) are lifted into a
@@ -1982,14 +1986,12 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << diagMD(md, llvmModule.get());
-    return MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
-        .getRes();
+    auto op =
+        MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
+            .getRes();
+    mapValue(value, op);
+    return op;
   }
-
-  // Return the mapped value if it has been converted before.
-  auto it = valueMapping.find(value);
-  if (it != valueMapping.end())
-    return it->getSecond();
 
   // Convert constants such as immediate values that have no mapping yet.
   if (auto *constant = dyn_cast<llvm::Constant>(value))
