@@ -297,6 +297,7 @@ run(testLocationCapsule)
 # CHECK-LABEL: TEST: testLocationFromDiagnostic
 def testLocationFromDiagnostic():
     with Context() as ctx:
+
         def callback(d):
             assert isinstance(d.location, FileLineColLoc)
             assert isinstance(d.location, Location)
