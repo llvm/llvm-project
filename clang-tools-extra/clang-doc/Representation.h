@@ -110,7 +110,7 @@ template <typename T, typename... Args> T *allocateTransient(Args &&...args) {
   return new (getTransientArena().Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
-// A helper function to create memory allocated in the getTransientArena().
+// A helper function to create memory allocated in the TransientArena.
 template <typename T, typename... Args> T *allocatePersistent(Args &&...args) {
   return new (getPersistentArena().Allocate<T>())
       T(std::forward<Args>(args)...);
