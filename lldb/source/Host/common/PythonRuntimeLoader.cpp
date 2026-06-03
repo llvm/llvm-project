@@ -12,8 +12,10 @@
 #include "PythonRuntimeLoaderInternal.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
 #include <cstdlib>
@@ -128,6 +130,19 @@ private:
     llvm::call_once(m_once, [this] {
       if (llvm::Expected<std::string> result = LoadPythonRuntime()) {
         m_path = std::move(*result);
+        if (m_path.empty())
+          return;
+#if defined(_WIN32)
+        // liblldb.dll may link against python3.dll (stable ABI). Ensure it is
+        // loaded from the same directory as the version-specific runtime so
+        // the delay-load resolver can find it.
+        llvm::SmallString<256> stable_abi_path(m_path);
+        llvm::sys::path::remove_filename(stable_abi_path);
+        llvm::sys::path::append(stable_abi_path, "python3.dll");
+        std::string err;
+        llvm::sys::DynamicLibrary::getPermanentLibrary(stable_abi_path.c_str(),
+                                                       &err);
+#endif
       } else {
         m_error_message = llvm::toString(result.takeError());
         LLDB_LOG(GetLog(LLDBLog::Host), "Python runtime load failed: {0}",
