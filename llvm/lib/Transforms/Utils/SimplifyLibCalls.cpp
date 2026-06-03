@@ -2118,6 +2118,8 @@ static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
 /// ldexp(1.0, x) for pow(2.0, itofp(x)); exp2(n * x) for pow(2.0 ** n, x);
 /// exp10(x) for pow(10.0, x); exp2(log2(n) * x) for pow(n, x).
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
+  if (isCalledFromStrictFPFunction(Pow))
+    return nullptr;
   Module *M = Pow->getModule();
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
   Type *Ty = Pow->getType();
@@ -2371,6 +2373,9 @@ static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
 }
 
 Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
+  if (isCalledFromStrictFPFunction(Pow))
+    return nullptr;
+
   Value *Base = Pow->getArgOperand(0);
   Value *Expo = Pow->getArgOperand(1);
   Function *Callee = Pow->getCalledFunction();
@@ -2483,6 +2488,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
+  if (isCalledFromStrictFPFunction(CI))
+    return nullptr;
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
@@ -2545,6 +2552,8 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B,
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
+  if (isCalledFromStrictFPFunction(Log))
+    return nullptr;
   Function *LogFn = Log->getCalledFunction();
   StringRef LogNm = LogFn->getName();
   Intrinsic::ID LogID = LogFn->getIntrinsicID();
@@ -2719,7 +2728,7 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
 
 // sqrt(exp(X)) -> exp(X * 0.5)
 Value *LibCallSimplifier::mergeSqrtToExp(CallInst *CI, IRBuilderBase &B) {
-  if (!CI->hasAllowReassoc())
+  if (!CI->hasAllowReassoc() || isCalledFromStrictFPFunction(CI))
     return nullptr;
 
   Function *SqrtFn = CI->getCalledFunction();
@@ -2796,7 +2805,7 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
   if (Value *Opt = mergeSqrtToExp(CI, B))
     return Opt;
 
-  if (!CI->isFast())
+  if (!CI->isFast() || isCalledFromStrictFPFunction(CI))
     return Ret;
 
   Instruction *I = dyn_cast<Instruction>(CI->getArgOperand(0));
@@ -2883,6 +2892,8 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeTrigInversionPairs(CallInst *CI,
                                                      IRBuilderBase &B) {
+  if (isCalledFromStrictFPFunction(CI))
+    return nullptr;
   Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   Value *Ret = nullptr;
@@ -4019,6 +4030,9 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   if (CI->isStrictFP())
     return nullptr;
 
+  if (isCalledFromStrictFPFunction(CI))
+    return nullptr;
+
   if (Value *V = optimizeSymmetric(CI, Func, Builder))
     return V;
 
@@ -4205,7 +4219,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI, IRBuilderBase &Builder) {
       return optimizeMemMove(CI, Builder);
     case Intrinsic::sin:
     case Intrinsic::cos:
-      if (UnsafeFPShrink)
+      if (UnsafeFPShrink && !isCalledFromStrictFPFunction(CI))
         return optimizeUnaryDoubleFP(CI, Builder, TLI, /*isPrecise=*/true);
       return nullptr;
     default:

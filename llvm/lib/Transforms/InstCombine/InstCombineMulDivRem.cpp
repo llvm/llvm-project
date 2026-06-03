@@ -647,6 +647,8 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
   unsigned Opcode = I.getOpcode();
   assert((Opcode == Instruction::FMul || Opcode == Instruction::FDiv) &&
          "Unexpected opcode");
+  if (StrictFPFunction)
+    return nullptr;
 
   // powi(X, Y) * X --> powi(X, Y+1)
   // X * powi(X, Y) --> powi(X, Y+1)
@@ -866,7 +868,7 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   // nnan disallows the possibility of returning a number if both operands are
   // negative (in that case, we should return NaN).
   if (I.hasNoNaNs() && match(Op0, m_OneUse(m_Sqrt(m_Value(X)))) &&
-      match(Op1, m_OneUse(m_Sqrt(m_Value(Y))))) {
+      match(Op1, m_OneUse(m_Sqrt(m_Value(Y)))) && !StrictFPFunction) {
     Value *XY = Builder.CreateFMulFMF(X, Y, &I);
     Value *Sqrt = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, XY, &I);
     return replaceInstUsesWith(I, Sqrt);
@@ -878,18 +880,19 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   //  2) X * 1.0/sqrt(X) -> X/sqrt(X)
   // We always expect the backend to reduce X/sqrt(X) to sqrt(X), if it
   // has the necessary (reassoc) fast-math-flags.
-  if (I.hasNoSignedZeros() &&
+  if (I.hasNoSignedZeros() && !StrictFPFunction &&
       match(Op0, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
       match(Y, m_Sqrt(m_Value(X))) && Op1 == X)
     return BinaryOperator::CreateFDivFMF(X, Y, &I);
-  if (I.hasNoSignedZeros() &&
+  if (I.hasNoSignedZeros() && !StrictFPFunction &&
       match(Op1, (m_FDiv(m_SpecificFP(1.0), m_Value(Y)))) &&
       match(Y, m_Sqrt(m_Value(X))) && Op0 == X)
     return BinaryOperator::CreateFDivFMF(X, Y, &I);
 
   // Like the similar transform in instsimplify, this requires 'nsz' because
   // sqrt(-0.0) = -0.0, and -0.0 * -0.0 does not simplify to -0.0.
-  if (I.hasNoNaNs() && I.hasNoSignedZeros() && Op0 == Op1 && Op0->hasNUses(2)) {
+  if (I.hasNoNaNs() && I.hasNoSignedZeros() && Op0 == Op1 && Op0->hasNUses(2) &&
+      !StrictFPFunction) {
     // Peek through fdiv to find squaring of square root:
     // (X / sqrt(Y)) * (X / sqrt(Y)) --> (X * X) / Y
     if (match(Op0, m_FDiv(m_Value(X), m_Sqrt(m_Value(Y))))) {
@@ -907,7 +910,8 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   // X * pow(X, Y) --> pow(X, Y+1)
   if (match(&I, m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Value(X),
                                                               m_Value(Y))),
-                         m_Deferred(X)))) {
+                         m_Deferred(X))) &&
+      !StrictFPFunction) {
     Value *Y1 = Builder.CreateFAddFMF(Y, ConstantFP::get(I.getType(), 1.0), &I);
     Value *Pow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, Y1, &I);
     return replaceInstUsesWith(I, Pow);
@@ -919,14 +923,16 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
   if (I.isOnlyUserOfAnyOperand()) {
     // pow(X, Y) * pow(X, Z) -> pow(X, Y + Z)
     if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_Intrinsic<Intrinsic::pow>(m_Specific(X), m_Value(Z)))) {
+        match(Op1, m_Intrinsic<Intrinsic::pow>(m_Specific(X), m_Value(Z))) &&
+        !StrictFPFunction) {
       auto *YZ = Builder.CreateFAddFMF(Y, Z, &I);
       auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, YZ, &I);
       return replaceInstUsesWith(I, NewPow);
     }
     // pow(X, Y) * pow(Z, Y) -> pow(X * Z, Y)
     if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
-        match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y)))) {
+        match(Op1, m_Intrinsic<Intrinsic::pow>(m_Value(Z), m_Specific(Y))) &&
+        !StrictFPFunction) {
       auto *XZ = Builder.CreateFMulFMF(X, Z, &I);
       auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, XZ, Y, &I);
       return replaceInstUsesWith(I, NewPow);
@@ -934,7 +940,8 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
 
     // exp(X) * exp(Y) -> exp(X + Y)
     if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(Y)))) {
+        match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(Y))) &&
+        !StrictFPFunction) {
       Value *XY = Builder.CreateFAddFMF(X, Y, &I);
       Value *Exp = Builder.CreateUnaryIntrinsic(Intrinsic::exp, XY, &I);
       return replaceInstUsesWith(I, Exp);
@@ -942,7 +949,8 @@ Instruction *InstCombinerImpl::foldFMulReassoc(BinaryOperator &I) {
 
     // exp2(X) * exp2(Y) -> exp2(X + Y)
     if (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::exp2>(m_Value(Y)))) {
+        match(Op1, m_Intrinsic<Intrinsic::exp2>(m_Value(Y))) &&
+        !StrictFPFunction) {
       Value *XY = Builder.CreateFAddFMF(X, Y, &I);
       Value *Exp2 = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, XY, &I);
       return replaceInstUsesWith(I, Exp2);
@@ -1036,7 +1044,7 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       return FoldedMul;
 
   // log2(X * 0.5) * Y = log2(X) * Y - Y
-  if (I.isFast()) {
+  if (I.isFast() && !StrictFPFunction) {
     IntrinsicInst *Log2 = nullptr;
     if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::log2>(
             m_OneUse(m_FMul(m_Value(X), m_SpecificFP(0.5))))))) {
@@ -1065,7 +1073,8 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, Start);
 
   // minimum(X, Y) * maximum(X, Y) => X * Y.
-  if (match(&I,
+  if (!StrictFPFunction &&
+      match(&I,
             m_c_FMul(m_Intrinsic<Intrinsic::maximum>(m_Value(X), m_Value(Y)),
                      m_c_Intrinsic<Intrinsic::minimum>(m_Deferred(X),
                                                        m_Deferred(Y))))) {
@@ -1079,7 +1088,7 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   }
 
   // tan(X) * cos(X) -> sin(X)
-  if (I.hasAllowContract() &&
+  if (I.hasAllowContract() && !StrictFPFunction &&
       match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
                      m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
@@ -1986,7 +1995,7 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   auto *II = dyn_cast<IntrinsicInst>(Op1);
   if (!II || !II->hasOneUse() || !I.hasAllowReassoc() ||
-      !I.hasAllowReciprocal())
+      !I.hasAllowReciprocal() || isCalledFromStrictFPFunction(II))
     return nullptr;
 
   // Z / pow(X, Y) --> Z * pow(X, -Y)
@@ -2035,7 +2044,8 @@ static Instruction *foldFDivSqrtDivisor(BinaryOperator &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   auto *II = dyn_cast<IntrinsicInst>(Op1);
   if (!II || II->getIntrinsicID() != Intrinsic::sqrt || !II->hasOneUse() ||
-      !II->hasAllowReassoc() || !II->hasAllowReciprocal())
+      !II->hasAllowReassoc() || !II->hasAllowReciprocal() ||
+      isCalledFromStrictFPFunction(II))
     return nullptr;
 
   Value *Y, *Z;
@@ -2157,7 +2167,7 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   // r2 = sqrt(a)
   // x = r1 * r2
   SmallPtrSet<Instruction *, 2> R1, R2;
-  if (isFSqrtDivToFMulLegal(&I, R1, R2)) {
+  if (isFSqrtDivToFMulLegal(&I, R1, R2) && !StrictFPFunction) {
     CallInst *CI = cast<CallInst>(I.getOperand(1));
     if (Instruction *D = convertFSqrtDivIntoFMul(CI, &I, R1, R2, Builder, this))
       return D;
@@ -2197,7 +2207,8 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
       return BinaryOperator::CreateFMulFMF(Y, Op0, &I);
   }
 
-  if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse()) {
+  if (I.hasAllowReassoc() && Op0->hasOneUse() && Op1->hasOneUse() &&
+      !StrictFPFunction) {
     // sin(X) / cos(X) -> tan(X)
     // cos(X) / sin(X) -> 1/tan(X) (cotangent)
     Value *X;
@@ -2226,7 +2237,7 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
   // Reassociate to (X / X -> 1.0) is legal when NaNs are not allowed.
   // We can ignore the possibility that X is infinity because INF/INF is NaN.
   Value *X, *Y;
-  if (I.hasNoNaNs() && I.hasAllowReassoc() &&
+  if (I.hasNoNaNs() && I.hasAllowReassoc() && !StrictFPFunction &&
       match(Op1, m_c_FMul(m_Specific(Op0), m_Value(Y)))) {
     replaceOperand(I, 0, ConstantFP::get(I.getType(), 1.0));
     replaceOperand(I, 1, Y);
@@ -2235,7 +2246,7 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
 
   // X / fabs(X) -> copysign(1.0, X)
   // fabs(X) / X -> copysign(1.0, X)
-  if (I.hasNoNaNs() && I.hasNoInfs() &&
+  if (I.hasNoNaNs() && I.hasNoInfs() && !StrictFPFunction &&
       (match(&I, m_FDiv(m_Value(X), m_FAbs(m_Deferred(X)))) ||
        match(&I, m_FDiv(m_FAbs(m_Value(X)), m_Deferred(X))))) {
     Value *V = Builder.CreateBinaryIntrinsic(
@@ -2250,7 +2261,7 @@ Instruction *InstCombinerImpl::visitFDiv(BinaryOperator &I) {
     return Mul;
 
   // pow(X, Y) / X --> pow(X, Y-1)
-  if (I.hasAllowReassoc() &&
+  if (I.hasAllowReassoc() && !StrictFPFunction &&
       match(Op0, m_OneUse(m_Intrinsic<Intrinsic::pow>(m_Specific(Op1),
                                                       m_Value(Y))))) {
     Value *Y1 =

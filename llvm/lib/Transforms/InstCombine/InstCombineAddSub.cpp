@@ -2096,7 +2096,8 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   }
 
   // minumum(X, Y) + maximum(X, Y) => X + Y.
-  if (match(&I,
+  if (!StrictFPFunction &&
+      match(&I,
             m_c_FAdd(m_Intrinsic<Intrinsic::maximum>(m_Value(X), m_Value(Y)),
                      m_c_Intrinsic<Intrinsic::minimum>(m_Deferred(X),
                                                        m_Deferred(Y))))) {

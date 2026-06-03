@@ -8559,6 +8559,9 @@ static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   if (!match(I.getOperand(1), m_PosZeroFP()))
     return nullptr;
 
+  if (IC.isStrictFP())
+    return nullptr;
+
   auto ReplacePredAndOp0 = [&](FCmpInst::Predicate P) {
     I.setPredicate(P);
     return IC.replaceOperand(I, 0, X);
@@ -8681,6 +8684,9 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
 
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
                                              InstCombinerImpl &IC) {
+  if (IC.isStrictFP())
+    return nullptr;
+
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Type *OpType = LHS->getType();
   CmpInst::Predicate Pred = I.getPredicate();

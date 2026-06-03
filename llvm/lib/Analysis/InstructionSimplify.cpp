@@ -6093,8 +6093,11 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
   // 3. Ignore -0.0 because sqrt(-0.0) == -0.0, but -0.0 * -0.0 == 0.0.
   Value *X;
   if (Op0 == Op1 && match(Op0, m_Sqrt(m_Value(X))) && FMF.allowReassoc() &&
-      FMF.noNaNs() && FMF.noSignedZeros())
+      FMF.noNaNs() && FMF.noSignedZeros()) {
+    if (Q.isStrictFP())
+      return nullptr;
     return X;
+  }
 
   return nullptr;
 }
@@ -6571,31 +6574,31 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   }
   case Intrinsic::exp:
     // exp(log(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         match(Op0, m_Intrinsic<Intrinsic::log>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp2:
     // exp2(log2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
   case Intrinsic::exp10:
     // exp10(log10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log:
     // log(exp(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))))
       return X;
     break;
   case Intrinsic::log2:
     // log2(exp2(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(2.0), m_Value(X)))))
@@ -6604,7 +6607,7 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   case Intrinsic::log10:
     // log10(pow(10.0, x)) -> x
     // log10(exp10(x)) -> x
-    if (Call->hasAllowReassoc() &&
+    if (Call->hasAllowReassoc() && !isCalledFromStrictFPFunction(Call) &&
         (match(Op0, m_Intrinsic<Intrinsic::exp10>(m_Value(X))) ||
          match(Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
@@ -6737,6 +6740,9 @@ static MinMaxOptResult OptimizeConstMinMax(const Constant *RHSConst,
     *OutNewConstVal = const_cast<Constant *>(RHSConst);
     return MinMaxOptResult::UseEither;
   }
+
+  if (isCalledFromStrictFPFunction(Call))
+    return MinMaxOptResult::CannotOptimize;
 
   const ConstantFP *CFP = dyn_cast<ConstantFP>(RHSConst);
   if (!CFP)
@@ -7075,16 +7081,18 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::powi:
     if (auto *Power = dyn_cast<ConstantInt>(Op1)) {
-      // powi(x, 0) -> 1.0
-      if (Power->isZero())
-        return ConstantFP::get(Op0->getType(), 1.0);
-      // powi(x, 1) -> x
-      if (Power->isOne())
-        return Op0;
+      if (!isCalledFromStrictFPFunction(Call)) {
+        // powi(x, 0) -> 1.0
+        if (Power->isZero())
+          return ConstantFP::get(Op0->getType(), 1.0);
+        // powi(x, 1) -> x
+        if (Power->isOne())
+          return Op0;
+      }
     }
     break;
   case Intrinsic::ldexp:
-    return simplifyLdexp(Op0, Op1, Q, false);
+    return simplifyLdexp(Op0, Op1, Q, isCalledFromStrictFPFunction(Call));
   case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)
@@ -7118,6 +7126,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // For instance, we may return one of the arguments unmodified instead of
     // inserting an llvm.canonicalize to transform input sNaNs into qNaNs,
     // or may assume all NaN inputs are qNaNs.
+
+    if (isCalledFromStrictFPFunction(Call))
+      break;
 
     // If the arguments are the same, this is a no-op (ignoring NaN quieting)
     if (Op0 == Op1)
