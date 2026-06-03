@@ -387,10 +387,6 @@ template <> struct llvm::DenseMapInfo<VTableSlot> {
     return {DenseMapInfo<Metadata *>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
   }
-  static VTableSlot getTombstoneKey() {
-    return {DenseMapInfo<Metadata *>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlot &I) {
     return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -405,10 +401,6 @@ template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
   static VTableSlotSummary getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlotSummary getTombstoneKey() {
-    return {DenseMapInfo<StringRef>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
   }
   static unsigned getHashValue(const VTableSlotSummary &I) {
     return DenseMapInfo<StringRef>::getHashValue(I.TypeID) ^
@@ -886,6 +878,7 @@ void llvm::updateVCallVisibilityInModule(
     function_ref<bool(StringRef)> IsVisibleToRegularObj) {
   if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
     return;
+
   for (GlobalVariable &GV : M.globals()) {
     // Add linkage unit visibility to any variable with type metadata, which are
     // the vtable definitions. We won't have an existing vcall_visibility

@@ -263,10 +263,6 @@ module std_core [system] {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -1088,6 +1084,7 @@ module std [system] {
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
     module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1889,6 +1886,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {

@@ -1110,39 +1110,25 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("failed to get module from target");
+    return llvm::createStringError("could not get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("failed to get symbol file from executable");
+    return llvm::createStringError("could not get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(
-        "Failed to resolve SDK for target: executable's symbol file has no "
+        "could not resolve SDK for target: executable's symbol file has no "
         "compile units");
 
   XcodeSDK merged_sdk;
-  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
-    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
-      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
-      merged_sdk.Merge(cu_sdk);
-    }
-  }
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
+      merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
 
   // TODO: The result of this loop is almost equivalent to deriving the SDK
   // from the target triple, which would be a lot cheaper.
-  FileSpec sdk_path = merged_sdk.GetSysroot();
-  if (FileSystem::Instance().Exists(sdk_path)) {
-    return sdk_path;
-  }
-  Progress progress("Looking for Xcode SDK", merged_sdk.GetString().str());
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
-  if (!path_or_err)
-    return llvm::createStringError(
-        llvm::formatv("Failed to resolve SDK path: {0}",
-                      llvm::toString(path_or_err.takeError())));
-
-  return FileSpec(*path_or_err);
+  return PlatformDarwin::ResolveXcodeSDK(std::move(merged_sdk));
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
@@ -1506,30 +1492,32 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   return std::pair{std::move(merged_sdk), found_mismatch};
 }
 
-llvm::Expected<std::string>
-PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
-  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
-  if (!sdk_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
-                      llvm::toString(sdk_or_err.takeError())));
-
-  auto [sdk, _] = std::move(*sdk_or_err);
-
-  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
-    return sdk.GetSysroot().GetPath();
+llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
+  if (FileSpec sysroot = sdk.GetSysroot();
+      FileSystem::Instance().Exists(sysroot))
+    return sysroot;
 
   Progress progress("Looking for Xcode SDK", sdk.GetString().str());
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
-                      sdk.GetString(),
-                      llvm::toString(path_or_err.takeError())));
+    return llvm::joinErrors(llvm::createStringError(llvm::formatv(
+                                "could not find SDK '{0}'", sdk.GetString())),
+                            path_or_err.takeError());
+  return FileSpec(*path_or_err);
+}
 
-  return path_or_err->str();
+llvm::Expected<std::string>
+PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
+
+  auto path_or_err = ResolveXcodeSDK(std::move(sdk_or_err->first));
+  if (!path_or_err)
+    return path_or_err.takeError();
+  return path_or_err->GetPath();
 }
 
 llvm::Expected<XcodeSDK>
@@ -1550,23 +1538,14 @@ llvm::Expected<std::string>
 PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
   auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
   if (!sdk_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
-                      llvm::toString(sdk_or_err.takeError())));
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
 
-  auto sdk = std::move(*sdk_or_err);
-
-  Progress progress("Looking for Xcode SDK", sdk.GetString().str());
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto path_or_err = ResolveXcodeSDK(std::move(*sdk_or_err));
   if (!path_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
-                      sdk.GetString(),
-                      llvm::toString(path_or_err.takeError())));
-
-  return path_or_err->str();
+    return path_or_err.takeError();
+  return path_or_err->GetPath();
 }
 
 llvm::Expected<FileSpecList>
@@ -1579,8 +1558,7 @@ PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
   info.type = sdk_type;
   XcodeSDK sdk(info);
 
-  Progress progress("Looking for Xcode SDK", sdk.GetString().str());
-  auto sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto sdk_root_or_err = ResolveXcodeSDK(sdk);
   if (!sdk_root_or_err) {
     LLDB_LOG_ERROR(log, sdk_root_or_err.takeError(),
                    "Failed to resolve SDK root for triple '{1}': {0}",
@@ -1589,15 +1567,14 @@ PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
     // Fall back to any macOS SDK.
     sdk = XcodeSDK::GetAnyMacOS();
     LLDB_LOG(log, "Falling back to SDK '{0}'", sdk.GetString());
-    progress.Increment(1, sdk.GetString().str());
-    sdk_root_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+    sdk_root_or_err = ResolveXcodeSDK(sdk);
   }
 
   if (!sdk_root_or_err)
     return sdk_root_or_err.takeError();
 
   // $SDKROOT/usr/share/lldb is an auto-loadable path.
-  llvm::SmallString<256> resolved(*sdk_root_or_err);
+  llvm::SmallString<256> resolved(sdk_root_or_err->GetPath());
   llvm::sys::path::append(resolved, "usr", "share", "lldb");
 
   FileSpecList fspecs;

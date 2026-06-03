@@ -182,8 +182,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       NumInsts++;
-      if (!isa<Instruction>(I))
-        return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
@@ -1476,8 +1474,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   for (auto *BB : OuterLoop->blocks())
     for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // readnone functions do not prevent interchanging.
-        if (CI->onlyWritesMemory() || isa<PseudoProbeInst>(CI))
+        // Functions which don't access memory do not prevent interchanging.
+        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "

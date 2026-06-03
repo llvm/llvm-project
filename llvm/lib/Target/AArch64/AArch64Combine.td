@@ -60,6 +60,14 @@ def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
 def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
+def simplify_uaddo_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
+def simplify_uaddo : GICombineRule<
+  (defs root:$root, simplify_uaddo_matchinfo:$matchinfo),
+  (match (G_UADDO $dst, $carry_out, $src1, $src2):$root,
+         [{ return matchSimplifyUADDO(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
+                               ${matchinfo}); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       combine_shuffle_vector,
@@ -72,7 +80,8 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_mul_through_zext,
                                       push_sub_through_sext,
                                       push_add_through_sext,
-                                      push_mul_through_sext]> {
+                                      push_mul_through_sext,
+                                      simplify_uaddo]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 

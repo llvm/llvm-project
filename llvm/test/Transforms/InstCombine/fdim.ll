@@ -77,9 +77,17 @@ define double @fdim_inf_ninf() {
 
 define double @fdim_inf() {
 ; CHECK-LABEL: define double @fdim_inf() {
-; CHECK-NEXT:    ret double +qnan
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
   %dim = call double @fdim(double 0x7FF0000000000000, double 0x7FF0000000000000)
+  ret double %dim
+}
+
+define double @fdim_ninf() {
+; CHECK-LABEL: define double @fdim_ninf() {
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+  %dim = call double @fdim(double 0xFFF0000000000000, double 0xFFF0000000000000)
   ret double %dim
 }
 
