@@ -3119,8 +3119,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
     // copysign ignores the sign bit of its magnitude argument (implicit fabs),
     // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
-    // including NaN without requiring nnan. Use stripSignOnlyFPOps inside the
-    // fabs to also handle fabs(fneg(X)) and fabs(copysign(X,Y)) patterns.
+    // including NaN without requiring nnan. The m_FAbs ensures the floor arg
+    // is non-negative; stripSignOnlyFPOps handles sign variants inside fabs
+    // such as fabs(copysign(X,Y)).
     Value *FAbsArg;
     if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
         stripSignOnlyFPOps(FAbsArg) == Sign) {

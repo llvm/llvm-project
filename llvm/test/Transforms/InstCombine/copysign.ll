@@ -361,16 +361,32 @@ define double @copysign_floor_fabs_to_trunc_no_fmf(double %x) {
   ret double %result
 }
 
-; stripSignOnlyFPOps folds fabs(fneg(X)) inside floor.
-define double @copysign_floor_fabs_fneg_to_trunc(double %x) {
-; CHECK-LABEL: @copysign_floor_fabs_fneg_to_trunc(
+; Fold applies when fabs wraps a sign-only op: fabs(copysign(X, Y)).
+define double @copysign_floor_fabs_copysign_to_trunc(double %x, double %y) {
+; CHECK-LABEL: @copysign_floor_fabs_copysign_to_trunc(
 ; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.trunc.f64(double [[X:%.*]])
 ; CHECK-NEXT:    [[RESULT1:%.*]] = call double @llvm.copysign.f64(double [[RESULT]], double [[X]])
 ; CHECK-NEXT:    ret double [[RESULT1]]
 ;
-  %neg = fneg double %x
-  %abs = call double @llvm.fabs.f64(double %neg)
+  %cs = call double @llvm.copysign.f64(double %x, double %y)
+  %abs = call double @llvm.fabs.f64(double %cs)
   %fl = call double @llvm.floor.f64(double %abs)
+  %result = call double @llvm.copysign.f64(double %fl, double %x)
+  ret double %result
+}
+
+; Negative test: fneg(fabs(X)) is not non-negative so floor differs from trunc.
+define double @copysign_floor_fneg_fabs_no_fold(double %x) {
+; CHECK-LABEL: @copysign_floor_fneg_fabs_no_fold(
+; CHECK-NEXT:    [[ABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[ABS]]
+; CHECK-NEXT:    [[FL:%.*]] = call double @llvm.floor.f64(double [[FNEG]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.copysign.f64(double [[FL]], double [[X]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %abs = call double @llvm.fabs.f64(double %x)
+  %fneg = fneg double %abs
+  %fl = call double @llvm.floor.f64(double %fneg)
   %result = call double @llvm.copysign.f64(double %fl, double %x)
   ret double %result
 }
