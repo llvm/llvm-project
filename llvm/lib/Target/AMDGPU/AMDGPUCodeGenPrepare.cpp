@@ -1023,7 +1023,6 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 /// already known to require more than MaxDivBits.  Return false if DivBits is
 /// known to be too big. Also, calculate LHSBits, the number of bits needed to
 /// represent Num.
-
 bool AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
                                              Value *Den, unsigned MaxDivBits,
                                              bool IsSigned, unsigned &DivBits,
