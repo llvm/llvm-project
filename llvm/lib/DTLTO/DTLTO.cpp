@@ -66,12 +66,10 @@ Error lto::DTLTO::performThinLink() {
   Cfg.GetCacheKeyOutputString = [&](size_t task) -> std::string & {
     return CacheKeysList[task];
   };
-  if (ShouldEmitImportFiles) {
-    Cfg.GetImportsListOutputArray =
-        [&](size_t task) -> std::vector<std::string> & {
-      return ImportsFilesList[task];
-    };
-  }
+  Cfg.GetImportsListOutputArray =
+      [&](size_t task) -> std::vector<std::string> & {
+    return ImportsFilesList[task];
+  };
   return Base::run(AddStreamFunc, {});
 }
 
