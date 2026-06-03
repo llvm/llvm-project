@@ -154,4 +154,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(unittests)
+
+  if(TARGET check-sycl AND TARGET check-sycl-unittests)
+    add_dependencies(check-sycl check-sycl-unittests)
+  endif()
 endif()
