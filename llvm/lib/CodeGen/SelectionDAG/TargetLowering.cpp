@@ -8996,10 +8996,12 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
     SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, M);
     SDValue ShiftI = DAG.getShiftAmountConstant(I, VT, DL);
     SDValue MvS = DAG.getNode(ISD::SRL, DL, VT, Mv, ShiftI);
-    M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv), MvS);
+    M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv), MvS,
+                    SDNodeFlags::Disjoint);
     SDValue T = DAG.getNode(ISD::AND, DL, VT, X, Mv);
     SDValue TS = DAG.getNode(ISD::SRL, DL, VT, T, ShiftI);
-    X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T), TS);
+    X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T), TS,
+                    SDNodeFlags::Disjoint);
     if (I * 2 < BW)
       Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
   }
@@ -9033,7 +9035,8 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
       SDValue McXorMv = DAG.getNode(ISD::XOR, DL, VT, Mc, Mv);
       SDValue MvShifted = DAG.getNode(
           ISD::SRL, DL, VT, Mv, DAG.getShiftAmountConstant(ShiftS, VT, DL));
-      Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted);
+      Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted,
+                       SDNodeFlags::Disjoint);
       Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
     }
   }
@@ -9047,7 +9050,8 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
     SDValue ShiftedBits = DAG.getNode(ISD::AND, DL, VT, T, MvArray[S]);
-    X = DAG.getNode(ISD::OR, DL, VT, UnshiftedBits, ShiftedBits);
+    X = DAG.getNode(ISD::OR, DL, VT, UnshiftedBits, ShiftedBits,
+                    SDNodeFlags::Disjoint);
   }
 
   return DAG.getNode(ISD::AND, DL, VT, X, Msk);
