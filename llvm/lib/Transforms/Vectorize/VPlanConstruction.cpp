@@ -1046,7 +1046,6 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
 
 void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
                                                    ElementCount MinVF) {
-  VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPRecipeBase *> ToDelete;
 
@@ -1141,7 +1140,7 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         VecOp = FMulRecipe;
       } else if (Kind == RecurKind::AddChainWithSubs &&
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
-        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+        Type *PhiTy = PhiR->getScalarType();
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
         VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
         auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
@@ -1236,7 +1235,7 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB, Loop *TheLoop,
       }
 
       // Check dereferenceability using the SCEV-based version.
-      Type *LoadTy = VPI->getResultType();
+      Type *LoadTy = VPI->getScalarType();
       const SCEV *SizeSCEV =
           SE.getStoreSizeOfExpr(DL.getIndexType(PtrSCEV->getType()), LoadTy);
       auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
@@ -1266,11 +1265,15 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   //       here from handleUncountableEarlyExits, but we need to improve
   //       detection of recipes which may write to memory.
   if (Style != UncountableExitStyle::NoUncountableExit) {
-    if (!areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
+    // Dereferenceability is checked separately for uncountable exit loops with
+    // stores, as only the loads contributing to the exit condition need to
+    // be checked.
+    if (Style == UncountableExitStyle::ReadOnly &&
+        !areAllLoadsDereferenceable(HeaderVPBB, TheLoop, PSE, DT, AC))
       return false;
     // TODO: Check target preference for style.
-    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
-    return true;
+    return handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB,
+                                       TheLoop, PSE, DT, AC, Style);
   }
 
   // Disconnect countable early exits from the loop, leaving it with a single
@@ -1403,12 +1406,11 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   // Insert phis for values coming past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
-  VPTypeAnalysis TypeInfo(Plan);
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
     VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
+        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1938,7 +1940,7 @@ static bool handleFirstArgMinOrMax(
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
   // TODO: Emit remarks for failed transformations.
-  if (Ty != VPTypeAnalysis(Plan).inferScalarType(WideIV))
+  if (Ty != WideIV->getScalarType())
     return false;
 
   auto *FindIVSelectR = cast<VPSingleDefRecipe>(

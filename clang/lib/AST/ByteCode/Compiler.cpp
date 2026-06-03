@@ -2501,7 +2501,7 @@ bool Compiler<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
                              UnaryExprOrTypeTrait Kind) {
   bool AlignOfReturnsPreferred =
-      ASTCtx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      ASTCtx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
@@ -7836,7 +7836,6 @@ bool Compiler<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitDesignatedInitUpdateExpr(
     const DesignatedInitUpdateExpr *E) {
-  assert(E->getType()->isRecordType());
   if (!this->visitInitializer(E->getBase()))
     return false;
   return this->visitInitializer(E->getUpdater());

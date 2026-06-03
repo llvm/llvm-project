@@ -46,8 +46,6 @@ public:
   /// Clear data.
   void reset() { resetImpl(); }
 
-  ze_command_list_handle_t getCmdList() const { return CmdList->getCmdList(); }
-
   Error init();
   Error deinit();
   Error synchronize() { return synchronizeImpl(); }
@@ -83,6 +81,8 @@ public:
     return launchKernelImpl(Kernel, KEnv);
   }
 
+  Error dataFence() { return dataFenceImpl(); }
+
   virtual Error initImpl() { return Plugin::success(); }
   virtual Error deinitImpl() { return Plugin::success(); }
   virtual void resetImpl() {}
@@ -104,6 +104,7 @@ public:
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
   }
+  virtual Error dataFenceImpl() = 0;
 };
 
 class L0AsyncQueueTy : public L0QueueTy {
@@ -150,6 +151,7 @@ public:
                          L0LaunchEnvTy &KEnv) override;
   Error memoryFillImpl(void *Ptr, const void *Pattern, size_t PatternSize,
                        size_t Size) override;
+  Error dataFenceImpl() override;
 };
 
 class L0AsyncOrderedQueueTy : public L0AsyncQueueTy {
@@ -165,6 +167,7 @@ public:
   Error synchronizeImpl() override;
   std::tuple<size_t, ze_event_handle_t *> getMemCopyEvents() override;
   std::tuple<size_t, ze_event_handle_t *> getLaunchKernelEvents() override;
+  Error dataFenceImpl() override { return Plugin::success(); }
 };
 
 class L0InorderQueueTy : public L0QueueTy {
@@ -182,6 +185,7 @@ public:
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
+  Error dataFenceImpl() override { return Plugin::success(); }
 };
 
 class L0SyncQueueTy : public L0InorderQueueTy {
