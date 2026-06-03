@@ -95,9 +95,7 @@ if (CMAKE_Fortran_COMPILER)
     set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
     set(CMAKE_Fortran_COMPILER_FORCED TRUE)
     set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-    if (CMAKE_C_SIMULATE_ID)
-      set(CMAKE_Fortran_SIMULATE_ID "${CMAKE_C_SIMULATE_ID}")
-    endif ()
+    set(CMAKE_Fortran_SIMULATE_ID "GNU")
 
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
@@ -159,7 +157,17 @@ endif ()
 if (CMAKE_Fortran_COMPILER_FORCED AND NOT EXISTS "${CMAKE_Fortran_COMPILER}")
   get_filename_component(_compiler_dir "${CMAKE_Fortran_COMPILER}" DIRECTORY)
   file(MAKE_DIRECTORY "${_compiler_dir}")
-  file(WRITE "${CMAKE_Fortran_COMPILER}" "")
+  file(WRITE "${CMAKE_Fortran_COMPILER}" "stub")
+  file(CHMOD "${CMAKE_Fortran_COMPILER}"
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
+                GROUP_READ GROUP_EXECUTE
+                WORLD_READ WORLD_EXECUTE)
+  # Ninja uses file mtimes to decide whether build outputs are up-to-date.
+  # If this placeholder's mtime is recent it may match what is recorded in
+  # .ninja_log, causing ninja to skip building the real compiler binary.
+  # Set it so that any subsequent real build always has a newer mtime.
+  execute_process(COMMAND touch -t 197001020000 "${CMAKE_Fortran_COMPILER}"
+                  ERROR_QUIET)
 endif ()
 
 include(CheckLanguage)

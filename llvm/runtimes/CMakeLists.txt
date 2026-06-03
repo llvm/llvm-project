@@ -115,26 +115,24 @@ macro(append_passthrough_options out type names)
   endforeach()
 endmacro()
 
-# Wire build-order dependencies on flang for targets that invoke it. This allows
-# us to build the runtimes separately without first building flang.
-macro(add_flang_mod_deps build_target extra_targets_list)
+# Wire build-order dependencies on flang for targets that invoke it. This
+# allows us to configure the runtimes without first building flang. Attaches the
+# flang dependency to the main build target and any fortran module file builds,
+# like 'install-libomp-mod' or `install-flang-rt-mod'.
+function(add_flang_mod_deps build_target)
   if(TARGET flang)
-    set(_fortran_deps flang)
-    if(TARGET module_files)
-      list(APPEND _fortran_deps module_files)
-    endif()
     if(TARGET ${build_target})
-      add_dependencies(${build_target} ${_fortran_deps})
+      add_dependencies(${build_target} flang)
     endif()
-    foreach(tgt IN LISTS ${extra_targets_list})
+    foreach(tgt IN LISTS ARGN)
       if(tgt MATCHES "-mod($|-)")
         if(TARGET ${tgt})
-          add_dependencies(${tgt} ${_fortran_deps})
+          add_dependencies(${tgt} flang)
         endif()
       endif()
     endforeach()
   endif()
-endmacro()
+endfunction()
 
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
@@ -366,7 +364,7 @@ function(runtime_default_target)
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 
-  add_flang_mod_deps(runtimes-build extra_targets)
+  add_flang_mod_deps(runtimes-build ${extra_targets})
 endfunction()
 
 # runtime_register_target(name)
@@ -522,7 +520,7 @@ function(runtime_register_target name)
     add_dependencies(install-${component}-stripped install-${component}-${name}-stripped)
   endforeach()
 
-  add_flang_mod_deps(runtimes-${name}-build ${name}_extra_targets)
+  add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
 endfunction()
 
 # Check if we have any runtimes to build.
