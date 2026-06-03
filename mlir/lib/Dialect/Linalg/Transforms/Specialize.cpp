@@ -223,12 +223,16 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       return replaceOp(TanhOp{}, ElementwiseKind::tanh);
     if (isa<math::ErfOp>(op))
       return replaceOp(ErfOp{}, ElementwiseKind::erf);
-    if (isa<math::SinOp>(op))
-      return replaceOp(SinOp{}, ElementwiseKind::sin);
-    if (isa<math::CosOp>(op))
-      return replaceOp(CosOp{}, ElementwiseKind::cos);
-    if (isa<math::TanOp>(op))
-      return replaceOp(TanOp{}, ElementwiseKind::tan);
+
+    // sin, cos, tan only have the category (elementwise) form, no named op.
+    if (emitCategoryOp) {
+      if (isa<math::SinOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::sin);
+      if (isa<math::CosOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::cos);
+      if (isa<math::TanOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::tan);
+    }
 
     // At this point, we exhaustively checked the available unary named ops. The
     // 1-input generic op might be representable as a `linalg.elementwise` that

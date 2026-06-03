@@ -167,15 +167,6 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
 // NAMED: %[[RES12:.+]] = linalg.erf
 // NAMED-SAME: ins(%[[RES11]] : tensor<?x?x?xf32>)
 // NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES13:.+]] = linalg.sin
-// NAMED-SAME: ins(%[[RES12]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES14:.+]] = linalg.cos
-// NAMED-SAME: ins(%[[RES13]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// NAMED: %[[RES15:.+]] = linalg.tan
-// NAMED-SAME: ins(%[[RES14]] : tensor<?x?x?xf32>)
-// NAMED-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
 // CATEGORY: %[[RES0:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
 // CATEGORY-SAME: ins(%[[A]] : tensor<?x?x?xf32>)
