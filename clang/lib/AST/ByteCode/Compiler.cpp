@@ -4388,6 +4388,9 @@ bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
+  if (Src->containsErrors())
+    return false;
+
   const auto *VT = E->getType()->castAs<VectorType>();
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
