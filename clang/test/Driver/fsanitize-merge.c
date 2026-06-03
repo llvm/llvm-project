@@ -9,7 +9,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge                                 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fsanitize-merge=bool                       -fsanitize-merge=undefined                       %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                             -fsanitize-merge=undefined -fsanitize-merge=bool %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE
-// CHECK-UNDEFINED-MERGE: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+// CHECK-UNDEFINED-MERGE: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,fixed-point-divide-by-zero,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
 
 // The trailing arguments (-fsanitize-merge -fno-sanitize-merge=signed-integer-overflow) take precedence
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                                                        -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
@@ -19,7 +19,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge=undefined -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge           -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge=undefined -fno-sanitize-merge=signed-integer-overflow %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE2
-// CHECK-UNDEFINED-MERGE2: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
+// CHECK-UNDEFINED-MERGE2: "-fsanitize-merge=alignment,array-bounds,bool,builtin,enum,fixed-point-divide-by-zero,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,unreachable,vla-bound"
 
 // The trailing -fno-sanitize-merge takes precedence
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                            -fno-sanitize-merge                                    %s -### 2>&1 | not FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE3
@@ -40,7 +40,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge                         -fsanitize-merge=undefined -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge           -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined -fno-sanitize-merge=signed-integer-overflow -fsanitize-merge=undefined -fno-sanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE4
-// CHECK-UNDEFINED-MERGE4: "-fsanitize-merge=array-bounds,bool,builtin,enum,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
+// CHECK-UNDEFINED-MERGE4: "-fsanitize-merge=array-bounds,bool,builtin,enum,fixed-point-divide-by-zero,float-cast-overflow,function,integer-divide-by-zero,nonnull-attribute,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound"
 
 // The trailing arguments (-fno-sanitize-merge -fsanitize-merge=alignment,null) take precedence
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -fsanitize-trap=undefined                                          -fno-sanitize-merge           -fsanitize-merge=alignment,null %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UNDEFINED-MERGE5

@@ -354,6 +354,11 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
+- New option ``-fsanitize=fixed-point-divide-by-zero`` added to instrument
+  code involving fixed point numbers (``-ffixed-point``) with checks for
+  division by zero. Also added a new sanitizer group ``-fsanitize=fixed-point``
+  that includes the new option.
+
 Deprecated Compiler Flags
 -------------------------
 
