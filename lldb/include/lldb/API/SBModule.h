@@ -290,9 +290,13 @@ public:
   /// Get a list of filespecs associated with all the separate symbol files
   /// associated with this module.
   ///
+  /// If this module uses split DWARF, a .dwp will be returned if it is exists
+  /// otherwise, it will return a list of all .dwos.
+  ///
   /// \return
   ///     A list of filespecs associated with all the separate symbol files
-  ///     associated with this module.
+  ///     associated with this module. If this module contains no separate
+  ///     debug info, an empty list will be returned.
   lldb::SBModuleSpecList GetSeparateDebugInfoFiles();
 
   lldb::SBAddress GetObjectFileHeaderAddress() const;

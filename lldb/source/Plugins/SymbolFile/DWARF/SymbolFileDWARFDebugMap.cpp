@@ -1298,6 +1298,19 @@ SymbolFileDWARFDebugMap::GetSeparateDebugInfoFiles() {
     if (info.so_file.GetPath().empty())
       continue;
 
+    ModuleSpec spec;
+    FileSpec oso_file;
+    ConstString oso_object;
+    if (ObjectFile::SplitArchivePathWithObject(info.oso_path.GetStringRef(),
+                                              oso_file, oso_object,
+                                              /*must_exist=*/false)) {
+      spec.GetFileSpec() = oso_file;
+      spec.GetObjectName() = oso_object;
+    } else {
+      spec.GetFileSpec() = FileSpec(info.oso_path.GetStringRef());
+    }
+
+    spec.GetObjectModificationTime() = info.oso_mod_time;
     spec_list.Append(lldb_private::FileSpec(info.oso_path));
   }
   return spec_list;

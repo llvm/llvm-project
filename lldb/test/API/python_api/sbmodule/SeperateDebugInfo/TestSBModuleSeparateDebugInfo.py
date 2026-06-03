@@ -18,7 +18,7 @@ class SBModuleSeparateDebugInfoCase(TestBase):
 
     @skipIf(debug_info=no_match("dwo"))
     def test_get_separate_debug_info_files_dwo(self):
-        """Test the SBModule::GetSeparateDebugInfoFiles"""
+        """Test the SBModule::GetSeparateDebugInfoFiles with dwos"""
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
@@ -29,10 +29,23 @@ class SBModuleSeparateDebugInfoCase(TestBase):
         self.assertEqual(len(file_specs), 1)
         self.assertTrue(file_specs[0].GetFileSpec().GetFilename().endswith(".dwo"))
 
+    @skipIf(debug_info=no_match("dwp"))
+    def test_get_separate_debug_info_files_dwp(self):
+        """Test the SBModule::GetSeparateDebugInfoFiles with dwps"""
+        self.build(debug_info="dwp")
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+
+        # Target should have a DWO
+        main_module = target.GetModuleAtIndex(0)
+        file_specs = main_module.GetSeparateDebugInfoFiles()
+        self.assertEqual(len(file_specs), 1)
+        self.assertTrue(file_specs[0].GetFileSpec().GetFilename().endswith(".dwp"))
+
     @skipUnlessDarwin
     @skipIf(debug_info=no_match("dwarf"))
     def test_get_separate_debug_info_files_darwin_dwarf(self):
-        """Test the SBModule::GetSeparateDebugInfoFiles"""
+        """Test the SBModule::GetSeparateDebugInfoFiles on darwin with dwos"""
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
