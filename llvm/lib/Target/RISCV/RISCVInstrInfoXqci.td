@@ -1386,14 +1386,14 @@ def qc_access_symbol : Operand<XLenVT> {
 
 // This is modelled after `PseudoAddTPRel` but with `mayLoad = true`
 let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 4,
-  isCodeGenOnly = false in
+    isCodeGenOnly = false in
 class PseudoQCAccessLoad_ri<string opcodestr>
   : Pseudo<(outs GPR:$rd),
            (ins GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr), [],
            opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
 
 let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 4,
-  isCodeGenOnly = false in
+    isCodeGenOnly = false in
 class PseudoQCAccessStore_rri<string opcodestr>
   : Pseudo<(outs), (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr),
            [], opcodestr, "$rs2, ${imm12}(${rs1}), $expr">;
@@ -1407,11 +1407,16 @@ def PseudoQCAccessLHU : PseudoQCAccessLoad_ri<"lhu">;
 def PseudoQCAccessLW  : PseudoQCAccessLoad_ri<"lw">;
 
 let EmitPriority = 0 in {
-def : InstAlias<"lb $rd, (${rs1}), $expr", (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"lbu $rd, (${rs1}), $expr", (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"lh $rd, (${rs1}), $expr", (PseudoQCAccessLH GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"lhu $rd, (${rs1}), $expr", (PseudoQCAccessLHU GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"lw $rd, (${rs1}), $expr", (PseudoQCAccessLW GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"lb $rd, (${rs1}), $expr",
+                (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"lbu $rd, (${rs1}), $expr",
+                (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"lh $rd, (${rs1}), $expr",
+                (PseudoQCAccessLH GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"lhu $rd, (${rs1}), $expr",
+                (PseudoQCAccessLHU GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"lw $rd, (${rs1}), $expr",
+                (PseudoQCAccessLW GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 
 def PseudoQCAccessSW : PseudoQCAccessStore_rri<"sw">;
@@ -1419,21 +1424,24 @@ def PseudoQCAccessSH : PseudoQCAccessStore_rri<"sh">;
 def PseudoQCAccessSB : PseudoQCAccessStore_rri<"sb">;
 
 let EmitPriority = 0 in {
-def : InstAlias<"sb $rs2, (${rs1}), $expr", (PseudoQCAccessSB GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"sh $rs2, (${rs1}), $expr", (PseudoQCAccessSH GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"sw $rs2, (${rs1}), $expr", (PseudoQCAccessSW GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"sb $rs2, (${rs1}), $expr",
+                (PseudoQCAccessSB GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"sh $rs2, (${rs1}), $expr",
+                (PseudoQCAccessSH GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"sw $rs2, (${rs1}), $expr",
+                (PseudoQCAccessSW GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 }
 
 let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 2,
-  isCodeGenOnly = false in
+    isCodeGenOnly = false in
 class PseudoQCAccessCLoad_ri<string opcodestr, DAGOperand immop>
   : Pseudo<(outs GPRC:$rd),
            (ins GPRCMem:$rs1, immop:$imm, qc_access_symbol:$expr),
            [], opcodestr, "$rd, ${imm}(${rs1}), $expr">;
 
 let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 2,
-  isCodeGenOnly = false in
+    isCodeGenOnly = false in
 class PseudoQCAccessCStore_rri<string opcodestr, DAGOperand immop>
   : Pseudo<(outs),
            (ins GPRC:$rs2, GPRCMem:$rs1, immop:$imm, qc_access_symbol:$expr),
@@ -1442,11 +1450,13 @@ class PseudoQCAccessCStore_rri<string opcodestr, DAGOperand immop>
 let Predicates = [IsRV32, HasStdExtZca] in {
 def PseudoQCAccessC_LW : PseudoQCAccessCLoad_ri<"c.lw", uimm7_lsb00>;
 let EmitPriority = 0 in
-def : InstAlias<"c.lw $rd, (${rs1}), $expr", (PseudoQCAccessC_LW GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.lw $rd, (${rs1}), $expr",
+                (PseudoQCAccessC_LW GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
 
 def PseudoQCAccessC_SW : PseudoQCAccessCStore_rri<"c.sw", uimm7_lsb00>;
 let EmitPriority = 0 in
-def : InstAlias<"c.sw $rs2, (${rs1}), $expr", (PseudoQCAccessC_SW GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.sw $rs2, (${rs1}), $expr",
+               (PseudoQCAccessC_SW GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 
 let Predicates = [IsRV32, HasStdExtZcb] in {
@@ -1457,17 +1467,22 @@ def PseudoQCAccessC_LHU : PseudoQCAccessCLoad_ri<"c.lhu", uimm2_lsb0>;
 
 let EmitPriority = 0 in {
 // No c.lb so no alias
-def : InstAlias<"c.lbu $rd, (${rs1}), $expr", (PseudoQCAccessC_LBU GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.lh $rd, (${rs1}), $expr", (PseudoQCAccessC_LH GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.lhu $rd, (${rs1}), $expr", (PseudoQCAccessC_LHU GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.lbu $rd, (${rs1}), $expr",
+                (PseudoQCAccessC_LBU GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.lh $rd, (${rs1}), $expr",
+                (PseudoQCAccessC_LH GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.lhu $rd, (${rs1}), $expr",
+                (PseudoQCAccessC_LHU GPRC:$rd, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 
 def PseudoQCAccessC_SB : PseudoQCAccessCStore_rri<"c.sb", uimm2>;
 def PseudoQCAccessC_SH : PseudoQCAccessCStore_rri<"c.sh", uimm2_lsb0>;
 
 let EmitPriority = 0 in {
-def : InstAlias<"c.sb $rs2, (${rs1}), $expr", (PseudoQCAccessC_SB GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
-def : InstAlias<"c.sh $rs2, (${rs1}), $expr", (PseudoQCAccessC_SH GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.sb $rs2, (${rs1}), $expr",
+                (PseudoQCAccessC_SB GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
+def : InstAlias<"c.sh $rs2, (${rs1}), $expr",
+                (PseudoQCAccessC_SH GPRC:$rs2, GPRCMem:$rs1, 0, qc_access_symbol:$expr)>;
 }
 }
 

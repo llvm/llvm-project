@@ -543,8 +543,8 @@ void RISCVMCCodeEmitter::expandPseudoQCAccess(
   const MCOperand &AccessSymbol = MI.getOperand(3);
   assert(AccessSymbol.isExpr() && "Expected expression in PseudoQCAccess");
 
-  const auto *AccessExpr = dyn_cast<MCSpecifierExpr>(AccessSymbol.getExpr());
-  assert(AccessExpr && AccessExpr->getSpecifier() == RISCV::S_QC_ACCESS &&
+  const auto *AccessExpr = cast<MCSpecifierExpr>(AccessSymbol.getExpr());
+  assert(AccessExpr->getSpecifier() == RISCV::S_QC_ACCESS &&
          "Expected qc.access specifier on symbol");
 
   addFixup(Fixups, /*Offset=*/0, AccessExpr, FixupKind);
