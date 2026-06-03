@@ -190,7 +190,8 @@ static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
 /// otherwise fall back to the default (DeviceType::None).
 static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
                                                 DeviceType deviceType) {
-  if (deviceType != DeviceType::None && loopOp.hasAnyGangWorkerVector(deviceType))
+  if (deviceType != DeviceType::None &&
+      loopOp.hasAnyGangWorkerVector(deviceType))
     return deviceType;
   return DeviceType::None;
 }
@@ -198,7 +199,8 @@ static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
 template <typename ComputeConstructT>
 static DeviceType getParDimsDeviceType(ComputeConstructT computeOp,
                                        DeviceType deviceType) {
-  if (deviceType != DeviceType::None && computeOp.hasAnyGangWorkerVector(deviceType))
+  if (deviceType != DeviceType::None &&
+      computeOp.hasAnyGangWorkerVector(deviceType))
     return deviceType;
   return DeviceType::None;
 }
