@@ -161,12 +161,15 @@ endif()
 # The HIP host interceptor in InstrProfilingPlatformROCm.cpp pulls in
 # RTInterception + sanitizer_common object libs. Those targets are only created
 # when COMPILER_RT_BUILD_SANITIZERS / _MEMPROF / _XRAY / _CTX_PROFILE is enabled
-# (see lib/CMakeLists.txt). In a profile-only build the targets do not exist;
-# skip both the object-lib merge and the ROCm source file so the static archive
-# remains self-contained.
+# (see lib/CMakeLists.txt). Only merge them (and keep the ROCm source) when ROCm
+# device PGO is requested and the targets exist; otherwise skip both so the
+# static archive stays self-contained. This also keeps the profile library on
+# the static CRT (/MT) on Windows by default, since the merged sanitizer object
+# libs are built /MD.
 set(PROFILE_OBJECT_LIBS)
 set(PROFILE_HAS_HIP_INTERCEPTOR FALSE)
-if(COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL
+if(COMPILER_RT_BUILD_PROFILE_ROCM
+   AND COMPILER_RT_HAS_INTERCEPTION AND NOT COMPILER_RT_PROFILE_BAREMETAL
    AND TARGET RTInterception.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
