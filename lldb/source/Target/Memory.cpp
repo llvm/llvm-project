@@ -306,19 +306,17 @@ MemoryCache::ReadRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   if (missed_ranges.empty())
     return results;
 
-  auto fetched_buffers = m_process.DoReadMemoryRanges(missed_ranges, buffer);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> fetched_buffers_vec =
+      m_process.DoReadMemoryRanges(missed_ranges, buffer);
+  auto fetched_buffers = llvm::ArrayRef(fetched_buffers_vec);
 
   for (auto [missed_range, fetched] : llvm::zip(missed_ranges, fetched_buffers))
     AddL1CacheData(missed_range.GetRangeBase(), fetched);
 
-  auto *results_it = results.begin();
-  auto *end = results.end();
-  for (auto fetched : fetched_buffers) {
-    results_it = std::find_if(
-        results_it, end, [](auto result) { return result.data() == nullptr; });
-    assert(results_it != end);
-    *results_it = fetched;
-  }
+  // Use the just-fetched memory to fill in the gaps left by the cache.
+  for (auto &result : results)
+    if (result.data() == nullptr)
+      result = fetched_buffers.consume_front();
 
   return results;
 }
