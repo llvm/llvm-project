@@ -2776,7 +2776,16 @@ static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
   if (ValueVT == MVT::i8)
     Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
 
-  SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+  // The `.mmio` variant has no multimem form and therefore no `isMultimem`
+  // operand.
+  if (IntrinsicID == Intrinsic::nvvm_st_async_mmio_scope_sys_space_global) {
+    SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+    return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+  }
+
+  SDValue IsMultimem =
+      DAG.getTargetConstant(N->getConstantOperandVal(4), DL, MVT::i32);
+  SDValue Ops[] = {N->getOperand(0), DestAddr, Value, IsMultimem};
   return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
 }
 

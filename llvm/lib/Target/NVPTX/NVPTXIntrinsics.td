@@ -6143,14 +6143,21 @@ let Predicates = [hasSM<90>, hasPTX<81>] in {
                  i32:$value3, i32:$value4, addr:$mbar)>;
 }
 
-def SDTAsyncStoreRelease : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+def SDTAsyncStoreRelease : SDTypeProfile<0, 3,
+  [SDTCisPtrTy<0>, SDTCisVT<2, i32>]>;
+def SDTAsyncStoreMMIO : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 
-class StAsyncReleaseNode<string variant, string type> :
+class StAsyncReleaseNode<string variant, string type, SDTypeProfile sdt> :
   SDNode<"NVPTXISD::ST_ASYNC_" # variant # "_" # type,
-         SDTAsyncStoreRelease,
+         sdt,
          [SDNPHasChain, SDNPMayStore]>;
 
-class ST_ASYNC_RELEASE_BODY<string instr_prefix, string type> {
+def MultimemFlag : Operand<i32> {
+  let PrintMethod = "printMultimem";
+}
+
+class ST_ASYNC_RELEASE_BODY<string instr_prefix, string type, bit is_mmio> {
+  string prefix = !if(is_mmio, "", "${is_multimem}");
   string body = !if(!eq(type, "b8"),
     // The minimum supported register size to pass in arguments is 16-bits, so 
     // the 8-bit value is passed in using a 16-bit register and truncated to 
@@ -6158,25 +6165,25 @@ class ST_ASYNC_RELEASE_BODY<string instr_prefix, string type> {
     "{{ \n\t"
     ".reg .b8 \t%st_async_val; \n\t"
     "cvt.u8.u16 \t%st_async_val, $value; \n\t" #
-    instr_prefix # ".b8\t [$dest_addr], %st_async_val; \n\t"
+    prefix # instr_prefix # ".b8\t [$dest_addr], %st_async_val; \n\t"
     "}}",
-    instr_prefix # "." # type # "\t [$dest_addr], $value;");
+    prefix # instr_prefix # "." # type # "\t [$dest_addr], $value;");
 }
 
 class ST_ASYNC_SYS<string type, NVPTXRegClass reg> :
   NVPTXInst<(outs),
-            (ins ADDR:$dest_addr, reg:$value),
-    ST_ASYNC_RELEASE_BODY<"st.async.release.sys.global", type>.body>;
+            (ins ADDR:$dest_addr, reg:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_BODY<"st.async.release.sys.global", type, 0>.body>;
 
 class ST_ASYNC_GPU<string type, NVPTXRegClass reg> :
   NVPTXInst<(outs),
-            (ins ADDR:$dest_addr, reg:$value),
-    ST_ASYNC_RELEASE_BODY<"st.async.release.gpu.global", type>.body>;
+            (ins ADDR:$dest_addr, reg:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_BODY<"st.async.release.gpu.global", type, 0>.body>;
 
 class ST_ASYNC_MMIO_SYS<string type, NVPTXRegClass reg> :
   NVPTXInst<(outs),
             (ins ADDR:$dest_addr, reg:$value),
-    ST_ASYNC_RELEASE_BODY<"st.async.mmio.release.sys.global", type>.body>;
+    ST_ASYNC_RELEASE_BODY<"st.async.mmio.release.sys.global", type, 1>.body>;
 
 
 let Predicates = [hasSM<100>, hasPTX<87>] in {
@@ -6186,15 +6193,15 @@ let Predicates = [hasSM<100>, hasPTX<87>] in {
     defvar valueType = [i16,  i16,  i32,  i64 ][i];
     defvar width = "b" # size;
 
-    def : Pat<(StAsyncReleaseNode<"SYS", !toupper(width)>
-                 addr:$dest_addr, valueType:$value),
+    def : Pat<(StAsyncReleaseNode<"SYS", !toupper(width), SDTAsyncStoreRelease>
+                 addr:$dest_addr, valueType:$value, timm:$is_multimem),
               (ST_ASYNC_SYS<width, reg>
-                 addr:$dest_addr, valueType:$value)>;
-    def : Pat<(StAsyncReleaseNode<"GPU", !toupper(width)>
-                 addr:$dest_addr, valueType:$value),
+                 addr:$dest_addr, valueType:$value, timm:$is_multimem)>;
+    def : Pat<(StAsyncReleaseNode<"GPU", !toupper(width), SDTAsyncStoreRelease>
+                 addr:$dest_addr, valueType:$value, timm:$is_multimem),
               (ST_ASYNC_GPU<width, reg>
-                 addr:$dest_addr, valueType:$value)>;
-    def : Pat<(StAsyncReleaseNode<"MMIO_SYS", !toupper(width)>
+                 addr:$dest_addr, valueType:$value, timm:$is_multimem)>;
+    def : Pat<(StAsyncReleaseNode<"MMIO_SYS", !toupper(width), SDTAsyncStoreMMIO>
                  addr:$dest_addr, valueType:$value),
               (ST_ASYNC_MMIO_SYS<width, reg>
                  addr:$dest_addr, valueType:$value)>;

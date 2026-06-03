@@ -3873,16 +3873,16 @@ Syntax:
 .. code-block:: llvm
   
   ; sys scope
-  declare void @llvm.nvvm.st.async.scope.sys.space.global.i8(ptr addrspace(1) %dest_addr, i8 %value)
-  declare void @llvm.nvvm.st.async.scope.sys.space.global.i16(ptr addrspace(1) %dest_addr, i16 %value)
-  declare void @llvm.nvvm.st.async.scope.sys.space.global.i32(ptr addrspace(1) %dest_addr, i32 %value)
-  declare void @llvm.nvvm.st.async.scope.sys.space.global.i64(ptr addrspace(1) %dest_addr, i64 %value)
+  declare void @llvm.nvvm.st.async.scope.sys.space.global.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.sys.space.global.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.sys.space.global.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.sys.space.global.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
    
   ; gpu scope
-  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i8(ptr addrspace(1) %dest_addr, i8 %value)
-  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i16(ptr addrspace(1) %dest_addr, i16 %value)
-  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i32(ptr addrspace(1) %dest_addr, i32 %value)
-  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i64(ptr addrspace(1) %dest_addr, i64 %value)
+  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.scope.gpu.space.global.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
    
 Overview:
 """""""""
@@ -3893,11 +3893,19 @@ asynchronous release store to global memory that stores the value specified by
 the `%value` operand to the destination address specified by the `%dest_addr` 
 operand.
 
+The `%is_multimem` immediate argument selects the variant of the store. When it 
+is `0`, a regular ``st.async`` is emitted. When it is `1`, a
+``multimem.st.async`` is emitted and the `%dest_addr` operand must be a 
+multimem address.
+
 The store operation is treated as a strong memory operation with ``.release`` 
 semantics. The effects of prior stores from the current thread are made visible 
 to some operations in other threads in the scope.
 
 The scope of this operation can be ``sys`` or ``gpu``.
+
+These intrinsics lower to the `.b8`, `.b16`, `.b32`, and `.b64` variants of the
+``st.async`` instruction.
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
 

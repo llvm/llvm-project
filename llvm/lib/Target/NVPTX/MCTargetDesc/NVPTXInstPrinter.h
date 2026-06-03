@@ -66,6 +66,8 @@ public:
                         raw_ostream &O, StringRef Modifier = {});
   void printFTZFlag(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printMultimem(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                     raw_ostream &O);
   void printNegatedPredicate(const MCInst *MI, int OpNum,
                              const MCSubtargetInfo &STI, raw_ostream &O);
 
