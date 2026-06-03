@@ -793,4 +793,4 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 136.   1     0.0    0.0    0.0       vpxorq	%ymm19, %ymm19, %ymm21
 # CHECK-NEXT: 137.   1     0.0    0.0    0.0       vpxord	%zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 138.   1     0.0    0.0    0.0       vpxorq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:        1     0.2    0.1    0.9       <total>
+# CHECK-NEXT:        139   0.2    0.1    0.9       <total>

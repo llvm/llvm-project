@@ -88,4 +88,4 @@ vpxord zmm1, zmm1, zmm1
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       vpconflictd	zmm0, zmm3
 # CHECK-NEXT: 1.     1     1.0    1.0    2.0       kxnorw	k1, k1, k1
 # CHECK-NEXT: 2.     1     0.0    0.0    4.0       vpxord	zmm1, zmm1, zmm1
-# CHECK-NEXT:        1     0.7    0.7    2.0       <total>
+# CHECK-NEXT:        3     0.7    0.7    2.0       <total>

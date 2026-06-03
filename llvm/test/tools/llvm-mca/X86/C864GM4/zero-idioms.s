@@ -504,4 +504,4 @@ vpxor  %ymm3, %ymm3, %ymm5
 # CHECK-NEXT: 80.    1     0.0    0.0    0.0       vxorpd	%ymm1, %ymm1, %ymm3
 # CHECK-NEXT: 81.    1     0.0    0.0    1.0       vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 82.    1     0.0    0.0    1.0       vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT:        1     0.3    0.2    1.2       <total>
+# CHECK-NEXT:        83    0.3    0.2    1.2       <total>
