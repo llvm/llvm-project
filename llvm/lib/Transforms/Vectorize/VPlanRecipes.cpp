@@ -1404,7 +1404,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
       return 0;
     // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
-    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *ValTy = getOperand(0)->getScalarType();
     return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy,
                                       CmpInst::makeCmpResultType(ValTy),
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
