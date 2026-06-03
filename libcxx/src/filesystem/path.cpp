@@ -142,7 +142,7 @@ string_view_t path::__extension() const { return parser::separate_filename(__fil
 
 enum PathPartKind : unsigned char { PK_None, PK_RootName, PK_RootSep, PK_Filename, PK_Dot, PK_DotDot, PK_TrailingSep };
 
-static PathPartKind ClassifyPathPart(const PathParser &PP) {
+static PathPartKind ClassifyPathPart(const PathParser& PP) {
   if (PP.inRootName())
     return PK_RootName;
   if (PP.inRootDir())
