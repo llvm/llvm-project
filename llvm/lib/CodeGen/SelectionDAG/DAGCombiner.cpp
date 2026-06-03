@@ -15891,16 +15891,35 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
 
   // Fold (zext (and (trunc x), cst)) -> (and x, cst),
   // if either of the casts is not free.
+  // Also handles (zext (and (bitcast (extract_subvector vNi1, 0)) cst))
+  // by treating the bitcast+extract as equivalent to a truncate of the
+  // wider bitcast, e.g. on AVX512DQ where v8i1 extract replaces truncate.
   if (N0.getOpcode() == ISD::AND &&
-      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
-      N0.getOperand(1).getOpcode() == ISD::Constant &&
-      (!TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType()) ||
-       !TLI.isZExtFree(N0.getValueType(), VT))) {
-    SDValue X = N0.getOperand(0).getOperand(0);
-    X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
-    APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
-    return DAG.getNode(ISD::AND, DL, VT,
-                       X, DAG.getConstant(Mask, DL, VT));
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue AndSrc = N0.getOperand(0);
+    SDValue X;
+    if (AndSrc.getOpcode() == ISD::TRUNCATE) {
+      X = AndSrc.getOperand(0);
+    } else if (AndSrc.getOpcode() == ISD::BITCAST &&
+               AndSrc.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+               AndSrc.getOperand(0).getConstantOperandVal(1) == 0) {
+      // (bitcast (extract_subvector vNi1, 0) -> iK) is equivalent to
+      // (truncate (bitcast vNi1 -> iN) -> iK); use the wider vNi1 as X.
+      SDValue Src = AndSrc.getOperand(0).getOperand(0);
+      EVT SrcVT = Src.getValueType();
+      if (SrcVT.isFixedLengthVectorOf(MVT::i1)) {
+        EVT WideIntVT =
+            EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
+        if (TLI.isTypeLegal(WideIntVT))
+          X = DAG.getBitcast(WideIntVT, Src);
+      }
+    }
+    if (X && (!TLI.isTruncateFree(X, N0.getValueType()) ||
+              !TLI.isZExtFree(N0.getValueType(), VT))) {
+      X = DAG.getAnyExtOrTrunc(X, SDLoc(X), VT);
+      APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
+      return DAG.getNode(ISD::AND, DL, VT, X, DAG.getConstant(Mask, DL, VT));
+    }
   }
 
   // Try to simplify (zext (load x)).
@@ -16144,15 +16163,36 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
     return DAG.getAnyExtOrTrunc(N0.getOperand(0), DL, VT);
 
   // Fold (aext (and (trunc x), cst)) -> (and x, cst)
-  // if the trunc is not free.
+  // if either of the casts is not free, and sign-extending the narrow type is
+  // not cheaper than zero-extending it (which would indicate the target prefers
+  // to keep operations at the narrower width).
+  // Also handles (aext (and (bitcast (extract_subvector vNi1, 0)) cst))
+  // which arises on AVX512DQ where v8i1 extract replaces truncate.
   if (N0.getOpcode() == ISD::AND &&
-      N0.getOperand(0).getOpcode() == ISD::TRUNCATE &&
-      N0.getOperand(1).getOpcode() == ISD::Constant &&
-      !TLI.isTruncateFree(N0.getOperand(0).getOperand(0), N0.getValueType())) {
-    SDValue X = DAG.getAnyExtOrTrunc(N0.getOperand(0).getOperand(0), DL, VT);
-    SDValue Y = DAG.getNode(ISD::ANY_EXTEND, DL, VT, N0.getOperand(1));
-    assert(isa<ConstantSDNode>(Y) && "Expected constant to be folded!");
-    return DAG.getNode(ISD::AND, DL, VT, X, Y);
+      N0.getOperand(1).getOpcode() == ISD::Constant) {
+    SDValue AndSrc = N0.getOperand(0);
+    SDValue X;
+    if (AndSrc.getOpcode() == ISD::TRUNCATE) {
+      X = AndSrc.getOperand(0);
+    } else if (AndSrc.getOpcode() == ISD::BITCAST &&
+               AndSrc.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+               AndSrc.getOperand(0).getConstantOperandVal(1) == 0) {
+      SDValue Src = AndSrc.getOperand(0).getOperand(0);
+      EVT SrcVT = Src.getValueType();
+      if (SrcVT.isFixedLengthVectorOf(MVT::i1)) {
+        EVT WideIntVT =
+            EVT::getIntegerVT(*DAG.getContext(), SrcVT.getSizeInBits());
+        if (TLI.isTypeLegal(WideIntVT))
+          X = DAG.getBitcast(WideIntVT, Src);
+      }
+    }
+    if (X && (!TLI.isTruncateFree(X, N0.getValueType()) ||
+              (!TLI.isZExtFree(N0.getValueType(), VT) &&
+               !TLI.isSExtCheaperThanZExt(N0.getValueType(), VT)))) {
+      X = DAG.getAnyExtOrTrunc(X, DL, VT);
+      APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
+      return DAG.getNode(ISD::AND, DL, VT, X, DAG.getConstant(Mask, DL, VT));
+    }
   }
 
   // fold (aext (load x)) -> (aext (truncate (extload x)))
