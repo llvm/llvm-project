@@ -11052,8 +11052,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       PointerOps.push_back(SI->getPointerOperand());
     }
 
-    Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
-
     // Check the order of pointer operands.
     if (llvm::sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
       Value *Ptr0;
@@ -11070,21 +11068,24 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       // Check that the sorted pointer operands are consecutive.
       if (static_cast<uint64_t>(*Dist) == VL.size() - 1)
         return TreeEntry::Vectorize;
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       if (EnableStridedStores &&
           analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                          CurrentOrder, *Dist, Ptr0, SPtrInfo))
         return TreeEntry::StridedVectorize;
     }
-    if (EnableStridedStores && analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
-                                                        CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
-      if (isIdentityOrder(CurrentOrder)) {
-        CurrentOrder.clear();
-      } else if (isReverseOrder(CurrentOrder)) {
-        SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
-        CurrentOrder.clear();
+    if (EnableStridedStores) {
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
+      if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                   CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
+        if (isIdentityOrder(CurrentOrder)) {
+          CurrentOrder.clear();
+        } else if (isReverseOrder(CurrentOrder)) {
+          SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
+          CurrentOrder.clear();
+        }
+        return TreeEntry::StridedVectorize;
       }
-
-      return TreeEntry::StridedVectorize;
     }
 
     LLVM_DEBUG(dbgs() << "SLP: Non-consecutive store.\n");
