@@ -268,6 +268,14 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_param_macros
+  HDR
+    sys-param-macros.h
+  DEPENDS
+    .limits_macros
+)
+
+add_macro_header(
   sys_queue_macros
   HDR
     sys-queue-macros.h
@@ -334,6 +342,12 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inet_address_macros
+  HDR
+    inet-address-macros.h
 )
 
 add_macro_header(

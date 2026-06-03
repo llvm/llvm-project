@@ -96,16 +96,12 @@ private:
 
   friend struct llvm::DenseMapInfo<DirectoryEntryRef>;
   struct dense_map_empty_tag {};
-  struct dense_map_tombstone_tag {};
 
-  // Private constructors for use by DenseMapInfo.
+  // Private constructor for use by DenseMapInfo.
   DirectoryEntryRef(dense_map_empty_tag)
       : ME(llvm::DenseMapInfo<const MapEntry *>::getEmptyKey()) {}
-  DirectoryEntryRef(dense_map_tombstone_tag)
-      : ME(llvm::DenseMapInfo<const MapEntry *>::getTombstoneKey()) {}
   bool isSpecialDenseMapKey() const {
-    return isSameRef(DirectoryEntryRef(dense_map_empty_tag())) ||
-           isSameRef(DirectoryEntryRef(dense_map_tombstone_tag()));
+    return isSameRef(DirectoryEntryRef(dense_map_empty_tag()));
   }
 
   const MapEntry *ME;
@@ -208,18 +204,13 @@ template <> struct DenseMapInfo<clang::DirectoryEntryRef> {
         clang::DirectoryEntryRef::dense_map_empty_tag());
   }
 
-  static inline clang::DirectoryEntryRef getTombstoneKey() {
-    return clang::DirectoryEntryRef(
-        clang::DirectoryEntryRef::dense_map_tombstone_tag());
-  }
-
   static unsigned getHashValue(clang::DirectoryEntryRef Val) {
     return hash_value(Val);
   }
 
   static bool isEqual(clang::DirectoryEntryRef LHS,
                       clang::DirectoryEntryRef RHS) {
-    // Catch the easy cases: both empty, both tombstone, or the same ref.
+    // Catch the easy cases: both empty or the same ref.
     if (LHS.isSameRef(RHS))
       return true;
 
