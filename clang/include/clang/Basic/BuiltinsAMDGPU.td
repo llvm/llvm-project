@@ -285,12 +285,14 @@ def __builtin_amdgcn_struct_ptr_buffer_load_async_lds : AMDGPUBuiltin<"void(__am
 //===----------------------------------------------------------------------===//
 
 def __builtin_amdgcn_av_load_b128
-    : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "gfx9-insts"> {
+    : AMDGPUBuiltin<"_ExtVector<4, unsigned int>(_ExtVector<4, unsigned int> *, int)", [], "flat-global-insts"> {
   let Documentation = [DocAVLoadB128];
+  let ArgNames = ["ptr", "scope"];
 }
 def __builtin_amdgcn_av_store_b128
-    : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "gfx9-insts"> {
+    : AMDGPUBuiltin<"void(_ExtVector<4, unsigned int> *, _ExtVector<4, unsigned int>, int)", [], "flat-global-insts"> {
   let Documentation = [DocAVStoreB128];
+  let ArgNames = ["ptr", "data", "scope"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -375,7 +377,7 @@ def __builtin_amdgcn_perm : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned i
 // GFX9+ only builtins.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "gfx9-insts">;
+def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "flat-global-insts">;
 
 def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
 def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;
