@@ -84,17 +84,52 @@ def imm8 : Operand<i8>, ImmLeaf<i32, [{return isInt<8>(Imm);}]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Instruction Class Templates
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+
+    // imm -> Sign Extension -> Rn
+    class Op_ir<bits<16> op, string opcodestr>
+        : SHInstOP_N4_I8<op, (outs GPR:$n), (ins imm8:$imm),
+                         !strconcat(opcodestr, " $imm, $n")>;
+
+    // Rm -> Rn
+    class Op_rr<bits<16> op, string opcodestr>
+        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
+                         !strconcat(opcodestr, " $m, $n")>;
+}
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
+
+    // Rm -> (Rn)
+    class Store_rr<bits<16> op, string opcodestr>
+        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
+                         !strconcat(opcodestr, " $m, $n")>;
+}
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
+
+    // (Rm) -> Sign Extension -> Rn
+    class Load_rr<bits<16> op, string opcodestr>
+        : SHInstOP_N4_M4<op, (outs GPR:$n), (ins GPR:$m),
+                         !strconcat(opcodestr, " $m, $n")>;
+}
+
+//===----------------------------------------------------------------------===//
 // Basic Instructions
 //===----------------------------------------------------------------------===//
 
 // NOP instruction, does nothing.
 def NOP : SHInstOP<0b0000000000000000, (outs), (ins), "nop">;
+def RTS : SHInstOP<0b0000000000001011, (outs), (ins), "rts">;
 
 //===----------------------------------------------------------------------===//
 // Subsystems
 //===----------------------------------------------------------------------===//
 
 include "SuperHInstrData.td"
+include "SuperHInstrArithmetic.td"
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
