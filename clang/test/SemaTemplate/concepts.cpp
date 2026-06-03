@@ -2004,7 +2004,7 @@ namespace GH196375 {
 
 namespace GH175831 {
 
-namespace ShuoldResolve {
+namespace ShouldResolve {
 
 template<class>
 struct reference {};
