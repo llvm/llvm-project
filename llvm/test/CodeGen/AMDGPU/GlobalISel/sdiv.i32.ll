@@ -84,7 +84,7 @@ define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    s_add_i32 s1, s1, s2
 ; GISEL-NEXT:    s_xor_b32 s1, s1, s2
 ; GISEL-NEXT:    v_cvt_f32_u32_e32 v0, s1
-; GISEL-NEXT:    s_sub_i32 s3, 0, s1
+; GISEL-NEXT:    s_sub_u32 s3, 0, s1
 ; GISEL-NEXT:    v_rcp_iflag_f32_e32 v0, v0
 ; GISEL-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -95,7 +95,7 @@ define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    s_add_i32 s0, s0, s3
 ; GISEL-NEXT:    s_xor_b32 s0, s0, s3
 ; GISEL-NEXT:    v_readfirstlane_b32 s5, v0
-; GISEL-NEXT:    s_add_i32 s4, s4, s5
+; GISEL-NEXT:    s_add_u32 s4, s4, s5
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s4, v0
@@ -103,15 +103,15 @@ define amdgpu_ps i32 @s_sdiv_i32(i32 inreg %num, i32 inreg %den) {
 ; GISEL-NEXT:    s_sub_i32 s0, s0, s5
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
 ; GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GISEL-NEXT:    s_add_i32 s6, s4, 1
+; GISEL-NEXT:    s_add_u32 s6, s4, 1
 ; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; GISEL-NEXT:    s_cselect_b32 s4, s6, s4
-; GISEL-NEXT:    s_sub_i32 s6, s0, s1
+; GISEL-NEXT:    s_sub_u32 s6, s0, s1
 ; GISEL-NEXT:    s_cmp_lg_u32 s5, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, s6, s0
 ; GISEL-NEXT:    s_cmp_ge_u32 s0, s1
 ; GISEL-NEXT:    s_cselect_b32 s0, 1, 0
-; GISEL-NEXT:    s_add_i32 s1, s4, 1
+; GISEL-NEXT:    s_add_u32 s1, s4, 1
 ; GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-NEXT:    s_cselect_b32 s0, s1, s4
 ; GISEL-NEXT:    s_xor_b32 s1, s3, s2
@@ -366,7 +366,7 @@ define <2 x i32> @v_sdiv_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-NEXT:    s_mul_i32 s5, s4, 0xffed2705
 ; GISEL-NEXT:    v_mul_hi_u32 v2, v2, s5
 ; GISEL-NEXT:    v_readfirstlane_b32 s5, v2
-; GISEL-NEXT:    s_add_i32 s6, s4, s5
+; GISEL-NEXT:    s_add_u32 s6, s4, s5
 ; GISEL-NEXT:    v_mul_hi_u32 v2, v0, s6
 ; GISEL-NEXT:    v_mul_lo_u32 v7, v2, v5
 ; GISEL-NEXT:    v_add_i32_e32 v8, vcc, 1, v2

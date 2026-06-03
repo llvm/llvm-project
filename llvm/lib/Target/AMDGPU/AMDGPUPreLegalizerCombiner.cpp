@@ -172,7 +172,7 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
   Register Src = MatchInfo.Origin;
   assert(MI.getMF()->getRegInfo().getType(Src) == LLT::scalar(64));
-  const LLT S32 = LLT::scalar(32);
+  const LLT S32 = LLT::integer(32);
 
   auto Unmerge = B.buildUnmerge(S32, Src);
 

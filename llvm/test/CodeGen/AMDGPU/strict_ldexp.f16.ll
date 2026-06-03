@@ -157,9 +157,11 @@ define <2 x half> @test_ldexp_v2f16_v2i32(ptr addrspace(1) %out, <2 x half> %a, 
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fff
 ; GFX8-GISEL-NEXT:    v_med3_i32 v3, v3, v0, v1
 ; GFX8-GISEL-NEXT:    v_med3_i32 v0, v4, v0, v1
+; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 16
 ; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v3, v2, v3
-; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v3, v0
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_ldexp_v2f16_v2i32:
@@ -273,11 +275,14 @@ define <3 x half> @test_ldexp_v3f16_v3i32(ptr addrspace(1) %out, <3 x half> %a, 
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, 0x7fff
 ; GFX8-GISEL-NEXT:    v_med3_i32 v4, v4, v0, v1
 ; GFX8-GISEL-NEXT:    v_med3_i32 v5, v5, v0, v1
-; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v4, v2, v4
-; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v2, v2, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_med3_i32 v0, v6, v0, v1
+; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v4, v2, v4
+; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v2, v2, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v1, v3, v0
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v2
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, 16
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_ldexp_v3f16_v3i32:
@@ -415,13 +420,16 @@ define <4 x half> @test_ldexp_v4f16_v4i32(ptr addrspace(1) %out, <4 x half> %a, 
 ; GFX8-GISEL-NEXT:    v_med3_i32 v4, v4, v0, v1
 ; GFX8-GISEL-NEXT:    v_med3_i32 v5, v5, v0, v1
 ; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v4, v2, v4
-; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v2, v2, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v2, v2, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    v_med3_i32 v5, v6, v0, v1
 ; GFX8-GISEL-NEXT:    v_med3_i32 v0, v7, v0, v1
 ; GFX8-GISEL-NEXT:    v_ldexp_f16_e32 v5, v3, v5
-; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v3, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v0, v4, v2
-; GFX8-GISEL-NEXT:    v_or_b32_e32 v1, v5, v1
+; GFX8-GISEL-NEXT:    v_ldexp_f16_sdwa v1, v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v3, 16
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v0, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_lshlrev_b32_sdwa v1, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-GISEL-NEXT:    v_or_b32_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: test_ldexp_v4f16_v4i32:

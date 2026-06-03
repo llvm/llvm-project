@@ -1770,6 +1770,8 @@ define <2 x half> @fmul_select_v2f16_test3(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX7-GISEL-NEXT:    v_ldexp_f32_e32 v1, v3, v2
 ; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 16
+; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1936,6 +1938,8 @@ define <2 x half> @fmul_select_v2f16_test4(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX7-GISEL-NEXT:    v_ldexp_f32_e32 v1, v3, v2
 ; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX7-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX7-GISEL-NEXT:    v_bfe_u32 v1, v1, 0, 16
+; GFX7-GISEL-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX7-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-GISEL-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]

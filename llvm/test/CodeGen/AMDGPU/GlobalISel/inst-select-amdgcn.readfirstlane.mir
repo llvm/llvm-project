@@ -20,7 +20,7 @@ body: |
     ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_READFIRSTLANE_B32_]]
     %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
+    %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
 ...
 
@@ -39,7 +39,7 @@ body: |
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:vgpr(s32) = G_CONSTANT i32 123
-    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
+    %1:sgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
 ...
 
@@ -57,8 +57,8 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[INT]](s32)
+    ; GCN-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[INTRINSIC_CONVERGENT]](s32)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1

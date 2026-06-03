@@ -36,8 +36,8 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = COPY $sgpr2
-    %3:sgpr(s32) = G_OR %0, %1
-    %4:sgpr(s32) = G_OR %3, %2
+    %3:sgpr(i32) = G_OR %0, %1
+    %4:sgpr(i32) = G_OR %3, %2
     S_ENDPGM 0, implicit %4
 ...
 
@@ -72,8 +72,8 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_OR %0, %1
-    %4:vgpr(s32) = G_OR %3, %2
+    %3:vgpr(i32) = G_OR %0, %1
+    %4:vgpr(i32) = G_OR %3, %2
     S_ENDPGM 0, implicit %4
 ...
 
@@ -109,8 +109,8 @@ body: |
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_OR %0, %1
-    %4:vgpr(s32) = G_OR %3, %2
+    %3:vgpr(i32) = G_OR %0, %1
+    %4:vgpr(i32) = G_OR %3, %2
     S_ENDPGM 0, implicit %4, implicit %3
 ...
 

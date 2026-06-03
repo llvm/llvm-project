@@ -216,9 +216,9 @@ body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
 
-    %0:vgpr(s32) = COPY $vgpr0
+    %0:vgpr(f32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0:vgpr(s32), %1:vgpr(s32)
+    %2:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0:vgpr(f32), %1:vgpr(s32)
     G_BRCOND %2(s1), %bb.1
 
   bb.1:
@@ -253,7 +253,7 @@ body: |
 
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
+    %2:vgpr(f32) = COPY $vgpr2
     %3:vgpr(s32) = COPY $vgpr3
     %4:vcc(s1) = G_ICMP intpred(eq), %0, %1
     %5:vcc(s1) = G_FCMP floatpred(oeq), %2, %3

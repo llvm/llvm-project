@@ -12,8 +12,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), addrspace 6)
     ; CI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
@@ -33,8 +33,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), align 2, addrspace 6)
     ; CI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
@@ -54,8 +54,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), align 1, addrspace 6)
     ; CI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
@@ -75,8 +75,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[INTTOPTR]](p4) :: (load (s8), addrspace 6)
     ; CI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
@@ -95,8 +95,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[INTTOPTR]](p4) :: (load (s16), addrspace 6)
     ; CI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
@@ -115,8 +115,8 @@ body: |
     ; CI: liveins: $sgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p6) = COPY $sgpr0
-    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p6)
-    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](s32)
+    ; CI-NEXT: [[PTRTOINT:%[0-9]+]]:_(i32) = G_PTRTOINT [[COPY]](p6)
+    ; CI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[PTRTOINT]](i32)
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](s64)
     ; CI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[INTTOPTR]](p4) :: (load (s16), align 1, addrspace 6)
     ; CI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)

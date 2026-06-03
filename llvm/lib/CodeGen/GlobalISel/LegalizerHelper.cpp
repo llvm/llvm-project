@@ -2139,13 +2139,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   }
 }
 
-Register LegalizerHelper::coerceToScalar(Register Val) {
+Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
   if (Ty.isScalar())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
-  LLT NewTy = LLT::scalar(Ty.getSizeInBits());
+  LLT NewTy = LLT::integer(Ty.getSizeInBits());
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();
@@ -2756,6 +2756,21 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   switch (Opcode) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_BITCAST: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    if (!SrcTy.isScalar())
+      return UnableToLegalize;
+    // Widening both sides to WideTy produces a same-type bitcast; replace with
+    // COPY so the widened instruction is valid.
+    Observer.changingInstr(MI);
+    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::COPY));
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_ANYEXT);
+    widenScalarDst(MI, WideTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_ATOMICRMW_XCHG:
   case TargetOpcode::G_ATOMICRMW_ADD:
   case TargetOpcode::G_ATOMICRMW_SUB:
@@ -8722,7 +8737,7 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
 
   if (MI.getFlag(MachineInstr::FmAfn)) {
     unsigned Flags = MI.getFlags();
-    auto Src32 = MIRBuilder.buildFPTrunc(S32, Src, Flags);
+    auto Src32 = MIRBuilder.buildFPTrunc(LLT::float32(), Src, Flags);
     MIRBuilder.buildFPTrunc(Dst, Src32, Flags);
     MI.eraseFromParent();
     return Legalized;
@@ -8744,52 +8759,59 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   E = MIRBuilder.buildAdd(
     S32, E, MIRBuilder.buildConstant(S32, -ExpBiasf64 + ExpBiasf16));
 
-  auto M = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 8));
-  M = MIRBuilder.buildAnd(S32, M, MIRBuilder.buildConstant(S32, 0xffe));
+  auto M = MIRBuilder.buildLShr(LLT::integer(32), UH,
+                                MIRBuilder.buildConstant(S32, 8));
+  M = MIRBuilder.buildAnd(LLT::integer(32), M,
+                          MIRBuilder.buildConstant(S32, 0xffe));
 
-  auto MaskedSig = MIRBuilder.buildAnd(S32, UH,
+  auto MaskedSig = MIRBuilder.buildAnd(LLT::integer(32), UH,
                                        MIRBuilder.buildConstant(S32, 0x1ff));
-  MaskedSig = MIRBuilder.buildOr(S32, MaskedSig, U);
+  MaskedSig = MIRBuilder.buildOr(LLT::integer(32), MaskedSig, U);
 
   auto Zero = MIRBuilder.buildConstant(S32, 0);
   auto SigCmpNE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, MaskedSig, Zero);
   auto Lo40Set = MIRBuilder.buildZExt(S32, SigCmpNE0);
-  M = MIRBuilder.buildOr(S32, M, Lo40Set);
+  M = MIRBuilder.buildOr(LLT::integer(32), M, Lo40Set);
 
   // (M != 0 ? 0x0200 : 0) | 0x7c00;
   auto Bits0x200 = MIRBuilder.buildConstant(S32, 0x0200);
   auto CmpM_NE0 = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, M, Zero);
-  auto SelectCC = MIRBuilder.buildSelect(S32, CmpM_NE0, Bits0x200, Zero);
+  auto SelectCC =
+      MIRBuilder.buildSelect(LLT::integer(32), CmpM_NE0, Bits0x200, Zero);
 
   auto Bits0x7c00 = MIRBuilder.buildConstant(S32, 0x7c00);
-  auto I = MIRBuilder.buildOr(S32, SelectCC, Bits0x7c00);
+  auto I = MIRBuilder.buildOr(LLT::integer(32), SelectCC, Bits0x7c00);
 
   // N = M | (E << 12);
-  auto EShl12 = MIRBuilder.buildShl(S32, E, MIRBuilder.buildConstant(S32, 12));
-  auto N = MIRBuilder.buildOr(S32, M, EShl12);
+  auto EShl12 = MIRBuilder.buildShl(LLT::integer(32), E,
+                                    MIRBuilder.buildConstant(S32, 12));
+  auto N = MIRBuilder.buildOr(LLT::integer(32), M, EShl12);
 
   // B = clamp(1-E, 0, 13);
   auto One = MIRBuilder.buildConstant(S32, 1);
   auto OneSubExp = MIRBuilder.buildSub(S32, One, E);
-  auto B = MIRBuilder.buildSMax(S32, OneSubExp, Zero);
-  B = MIRBuilder.buildSMin(S32, B, MIRBuilder.buildConstant(S32, 13));
+  auto B = MIRBuilder.buildSMax(LLT::integer(32), OneSubExp, Zero);
+  B = MIRBuilder.buildSMin(LLT::integer(32), B,
+                           MIRBuilder.buildConstant(S32, 13));
 
-  auto SigSetHigh = MIRBuilder.buildOr(S32, M,
+  auto SigSetHigh = MIRBuilder.buildOr(LLT::integer(32), M,
                                        MIRBuilder.buildConstant(S32, 0x1000));
 
-  auto D = MIRBuilder.buildLShr(S32, SigSetHigh, B);
-  auto D0 = MIRBuilder.buildShl(S32, D, B);
+  auto D = MIRBuilder.buildLShr(LLT::integer(32), SigSetHigh, B);
+  auto D0 = MIRBuilder.buildShl(LLT::integer(32), D, B);
 
   auto D0_NE_SigSetHigh = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1,
                                              D0, SigSetHigh);
   auto D1 = MIRBuilder.buildZExt(S32, D0_NE_SigSetHigh);
-  D = MIRBuilder.buildOr(S32, D, D1);
+  D = MIRBuilder.buildOr(LLT::integer(32), D, D1);
 
   auto CmpELtOne = MIRBuilder.buildICmp(CmpInst::ICMP_SLT, S1, E, One);
   auto V = MIRBuilder.buildSelect(S32, CmpELtOne, D, N);
 
-  auto VLow3 = MIRBuilder.buildAnd(S32, V, MIRBuilder.buildConstant(S32, 7));
-  V = MIRBuilder.buildLShr(S32, V, MIRBuilder.buildConstant(S32, 2));
+  auto VLow3 = MIRBuilder.buildAnd(LLT::integer(32), V,
+                                   MIRBuilder.buildConstant(S32, 7));
+  V = MIRBuilder.buildLShr(LLT::integer(32), V,
+                           MIRBuilder.buildConstant(S32, 2));
 
   auto VLow3Eq3 = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, VLow3,
                                        MIRBuilder.buildConstant(S32, 3));
@@ -8812,11 +8834,13 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   V = MIRBuilder.buildSelect(S32, CmpEGt1039, I, V);
 
   // Extract the sign bit.
-  auto Sign = MIRBuilder.buildLShr(S32, UH, MIRBuilder.buildConstant(S32, 16));
-  Sign = MIRBuilder.buildAnd(S32, Sign, MIRBuilder.buildConstant(S32, 0x8000));
+  auto Sign = MIRBuilder.buildLShr(LLT::integer(32), UH,
+                                   MIRBuilder.buildConstant(S32, 16));
+  Sign = MIRBuilder.buildAnd(LLT::integer(32), Sign,
+                             MIRBuilder.buildConstant(S32, 0x8000));
 
   // Insert the sign bit
-  V = MIRBuilder.buildOr(S32, Sign, V);
+  V = MIRBuilder.buildOr(LLT::integer(32), Sign, V);
 
   MIRBuilder.buildTrunc(Dst, V);
   MI.eraseFromParent();
@@ -9252,7 +9276,7 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
   auto [DstReg, DstTy, Src0Reg, Src0Ty] = MI.getFirst2RegLLTs();
   unsigned PartSize = Src0Ty.getSizeInBits();
 
-  LLT WideTy = LLT::scalar(DstTy.getSizeInBits());
+  LLT WideTy = LLT::integer(DstTy.getSizeInBits());
   Register ResultReg = MIRBuilder.buildZExt(WideTy, Src0Reg).getReg(0);
 
   for (unsigned I = 2; I != NumOps; ++I) {
@@ -9293,12 +9317,12 @@ LegalizerHelper::lowerUnmergeValues(MachineInstr &MI) {
   if (DstTy.isPointer())
     return UnableToLegalize; // TODO
 
-  SrcReg = coerceToScalar(SrcReg);
+  SrcReg = coerceToInteger(SrcReg);
   if (!SrcReg)
     return UnableToLegalize;
 
   // Expand scalarizing unmerge as bitcast to integer and shift.
-  LLT IntTy = MRI.getType(SrcReg);
+  LLT IntTy = LLT::integer(MRI.getType(SrcReg).getSizeInBits());
 
   MIRBuilder.buildTrunc(Dst0Reg, SrcReg);
 
@@ -9644,7 +9668,7 @@ LegalizerHelper::lowerExtract(MachineInstr &MI) {
     Register ResultReg = DstReg;
     if (DstTy.isPointer())
       ResultReg =
-          MRI.createGenericVirtualRegister(LLT::scalar(DstTy.getSizeInBits()));
+          MRI.createGenericVirtualRegister(LLT::integer(DstTy.getSizeInBits()));
 
     if (Offset == 0)
       MIRBuilder.buildTrunc(ResultReg, SrcReg);

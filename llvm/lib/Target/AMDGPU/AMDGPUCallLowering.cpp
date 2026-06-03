@@ -36,7 +36,7 @@ static Register extendRegisterMin32(CallLowering::ValueHandler &Handler,
   if (VA.getLocVT().getSizeInBits() < 32) {
     // 16-bit types are reported as legal for 32-bit registers. We need to
     // extend and do a 32-bit copy to avoid the verifier complaining about it.
-    return Handler.MIRBuilder.buildAnyExt(LLT::scalar(32), ValVReg).getReg(0);
+    return Handler.MIRBuilder.buildAnyExt(LLT::integer(32), ValVReg).getReg(0);
   }
 
   return Handler.extendRegister(ValVReg, VA);
@@ -73,21 +73,9 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       = static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
-      LLT S32 = LLT::scalar(32);
-      if (Ty != S32) {
-        // FIXME: We should probably support readfirstlane intrinsics with all
-        // legal 32-bit types.
-        assert(Ty.getSizeInBits() == 32);
-        if (Ty.isPointer())
-          ExtReg = MIRBuilder.buildPtrToInt(S32, ExtReg).getReg(0);
-        else
-          ExtReg = MIRBuilder.buildBitcast(S32, ExtReg).getReg(0);
-      }
-
-      auto ToSGPR = MIRBuilder
-                        .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
-                                        {MRI.getType(ExtReg)})
-                        .addReg(ExtReg);
+      auto ToSGPR =
+          MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, {Ty})
+              .addReg(ExtReg);
       ExtReg = ToSGPR.getReg(0);
     }
 
@@ -123,7 +111,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
       // 16-bit types are reported as legal for 32-bit registers. We need to
       // do a 32-bit copy, and truncate to avoid the verifier complaining
       // about it.
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+      auto Copy = MIRBuilder.buildCopy(LLT::integer(32), PhysReg);
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
@@ -977,8 +965,12 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LI->buildLoadInputValue(Y, MIRBuilder, IncomingArgY,
                             std::get<1>(WorkitemIDY), std::get<2>(WorkitemIDY));
 
-    Y = MIRBuilder.buildShl(S32, Y, MIRBuilder.buildConstant(S32, 10)).getReg(0);
-    InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Y).getReg(0) : Y;
+    Y = MIRBuilder
+            .buildShl(LLT::integer(32), Y, MIRBuilder.buildConstant(S32, 10))
+            .getReg(0);
+    InputReg = InputReg
+                   ? MIRBuilder.buildOr(LLT::integer(32), InputReg, Y).getReg(0)
+                   : Y;
   }
 
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo.WorkItemIDZ &&
@@ -987,8 +979,12 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LI->buildLoadInputValue(Z, MIRBuilder, IncomingArgZ,
                             std::get<1>(WorkitemIDZ), std::get<2>(WorkitemIDZ));
 
-    Z = MIRBuilder.buildShl(S32, Z, MIRBuilder.buildConstant(S32, 20)).getReg(0);
-    InputReg = InputReg ? MIRBuilder.buildOr(S32, InputReg, Z).getReg(0) : Z;
+    Z = MIRBuilder
+            .buildShl(LLT::integer(32), Z, MIRBuilder.buildConstant(S32, 20))
+            .getReg(0);
+    InputReg = InputReg
+                   ? MIRBuilder.buildOr(LLT::integer(32), InputReg, Z).getReg(0)
+                   : Z;
   }
 
   if (!InputReg &&

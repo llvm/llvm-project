@@ -18,6 +18,7 @@ body: |
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
     ; CHECK-NEXT: [[FSHR:%[0-9]+]]:vgpr(s32) = G_FSHR [[COPY3]], [[COPY4]], [[COPY5]](s32)
+    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[FSHR]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2

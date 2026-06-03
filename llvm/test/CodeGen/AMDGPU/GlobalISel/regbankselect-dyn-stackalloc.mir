@@ -19,9 +19,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -30,9 +30,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -56,9 +56,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -67,9 +67,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -93,9 +93,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -104,9 +104,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -130,9 +130,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -141,9 +141,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -167,9 +167,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -178,9 +178,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -204,13 +204,13 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2047
     ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     ;
@@ -219,13 +219,13 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1023
     ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1024
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -249,13 +249,13 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 4095
     ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -4096
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     ;
@@ -264,13 +264,13 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2047
     ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -294,13 +294,13 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 8191
     ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -8192
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     ;
@@ -309,13 +309,13 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 4095
     ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -4096
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     %0:_(s32) = COPY $sgpr0
@@ -336,18 +336,18 @@ body: |
     ; WAVE64-LABEL: name: test_dyn_stackalloc_sgpr_constant_align4
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2048
+    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 2048
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     ;
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_constant_align4
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1024
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     %0:_(s32) = G_CONSTANT i32 32
@@ -371,9 +371,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2048
+    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 2048
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     ;
@@ -382,9 +382,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1024
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     %0:_(s32) = G_CONSTANT i32 32
@@ -408,9 +408,9 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2048
+    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 2048
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     ;
@@ -419,9 +419,9 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1024
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C2]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]](p5)
     %0:_(s32) = G_CONSTANT i32 32
@@ -445,13 +445,13 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2048
+    ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 2048
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE64-NEXT: [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2047
     ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C3]](s32)
     ; WAVE64-NEXT: [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C4]](s32)
-    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[C2]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[C2]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     ;
@@ -460,13 +460,13 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1024
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 1024
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE32-NEXT: [[C3:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1023
     ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[C3]](s32)
     ; WAVE32-NEXT: [[C4:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1024
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C4]](s32)
-    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[C2]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[C2]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     %0:_(s32) = G_CONSTANT i32 32
@@ -491,9 +491,9 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -503,9 +503,9 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $vgpr0
@@ -530,9 +530,9 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     ;
@@ -542,9 +542,9 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](p5)
     %0:_(s32) = COPY $vgpr0
@@ -569,13 +569,13 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 4095
     ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -4096
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE64-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     ;
@@ -585,13 +585,13 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.wave.reduce.umax), [[COPY]](s32), 0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[INTRINSIC_CONVERGENT]], [[C]](s32)
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 2047
     ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[C1]](s32)
     ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
-    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[PTR_ADD1:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PTRMASK]], [[SHL]](i32)
     ; WAVE32-NEXT: $sp_reg = COPY [[PTR_ADD1]](p5)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
     %0:_(s32) = COPY $vgpr0

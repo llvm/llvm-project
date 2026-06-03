@@ -753,6 +753,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
   addRulesForGOpcs({G_BITCAST})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16}}})
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
@@ -1910,7 +1912,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniB32, _, DivB32}, {{}, {SgprB32, None, VgprB32}}})
       // this should not exist in the first place, it is from call lowering
       // readfirstlaning just in case register is not in sgpr.
-      .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
+      .Any({{UniB32, _, UniB32}, {{}, {SgprB32, None, VgprB32}}});
 
   addRulesForIOpcs({amdgcn_readlane}, StandardB)
       .Uni(B32, {{SgprB32}, {IntrId, VgprB32, SgprB32_ReadFirstLane}});

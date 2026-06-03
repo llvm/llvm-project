@@ -355,9 +355,9 @@ body: |
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[BITCAST:%[0-9]+]]:vgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY1]], [[C]](s32)
+    ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY1]], [[C]](s32)
     ; WAVE64-NEXT: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C]]
-    ; WAVE64-NEXT: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
+    ; WAVE64-NEXT: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](i32)
     ; WAVE64-NEXT: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD]](s32)
     ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[EVEC]](s32), [[EVEC1]](s32)
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
@@ -369,9 +369,9 @@ body: |
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[BITCAST:%[0-9]+]]:vgpr(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY1]], [[C]](s32)
+    ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(i32) = G_SHL [[COPY1]], [[C]](s32)
     ; WAVE32-NEXT: [[ADD:%[0-9]+]]:sgpr(s32) = G_ADD [[SHL]], [[C]]
-    ; WAVE32-NEXT: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](s32)
+    ; WAVE32-NEXT: [[EVEC:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[SHL]](i32)
     ; WAVE32-NEXT: [[EVEC1:%[0-9]+]]:vgpr(s32) = G_EXTRACT_VECTOR_ELT [[BITCAST]](<16 x s32>), [[ADD]](s32)
     ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[EVEC]](s32), [[EVEC1]](s32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
