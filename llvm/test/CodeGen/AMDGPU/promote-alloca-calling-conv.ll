@@ -86,7 +86,6 @@ entry:
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
-; ASM: .section .AMDGPU.csdata
 ; promote_alloca_shaders (Kernel info):
 ; ASM: ; ScratchSize: 24
 ; promote_to_vector_call_c (Function info):

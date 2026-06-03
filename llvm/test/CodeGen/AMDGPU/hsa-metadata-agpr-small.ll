@@ -16,7 +16,6 @@ bb:
   ret void
 }
 
-; CHECK: .section .AMDGPU.csdata
 ; CHECK: ; kernel_32_agprs:
 ; GFX908:   ; NumVgprs: 9
 ; GFX908:   ; NumAgprs: 32

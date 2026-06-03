@@ -790,10 +790,6 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
     bool IsMemoryBound =
         F.getFnAttribute("amdgpu-memory-bound").getValueAsBool();
 
-    MCSectionELF *CommentSection =
-        OutContext.getELFSection(".AMDGPU.csdata", ELF::SHT_PROGBITS, 0);
-    OutStreamer->switchSection(CommentSection);
-
     if (!AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
       using RIK = MCResourceInfo::ResourceInfoKind;
       OutStreamer->emitRawComment(" " + Twine(FuncName) + ":", false);
