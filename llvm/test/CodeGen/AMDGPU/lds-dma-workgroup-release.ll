@@ -35,8 +35,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-LABEL: barrier_release:
 ; GFX90A:       ; %bb.1:
-; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_branch .LBB0_0
 ; GFX90A-NEXT:    .p2align 8
@@ -57,8 +57,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-TGSPLIT-LABEL: barrier_release:
 ; GFX90A-TGSPLIT:       ; %bb.1:
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    s_branch .LBB0_0
 ; GFX90A-TGSPLIT-NEXT:    .p2align 8
@@ -80,8 +80,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-LABEL: barrier_release:
 ; GFX942:       ; %bb.1:
-; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_branch .LBB0_0
 ; GFX942-NEXT:    .p2align 8
@@ -102,8 +102,8 @@ define amdgpu_kernel void @barrier_release(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-TGSPLIT-LABEL: barrier_release:
 ; GFX942-TGSPLIT:       ; %bb.1:
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    s_branch .LBB0_0
 ; GFX942-TGSPLIT-NEXT:    .p2align 8
@@ -193,8 +193,8 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-LABEL: fence_fence:
 ; GFX90A:       ; %bb.1:
-; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_branch .LBB1_0
 ; GFX90A-NEXT:    .p2align 8
@@ -218,8 +218,8 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-TGSPLIT-LABEL: fence_fence:
 ; GFX90A-TGSPLIT:       ; %bb.1:
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    s_branch .LBB1_0
 ; GFX90A-TGSPLIT-NEXT:    .p2align 8
@@ -244,8 +244,8 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-LABEL: fence_fence:
 ; GFX942:       ; %bb.1:
-; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_branch .LBB1_0
 ; GFX942-NEXT:    .p2align 8
@@ -269,8 +269,8 @@ define amdgpu_kernel void @fence_fence(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-TGSPLIT-LABEL: fence_fence:
 ; GFX942-TGSPLIT:       ; %bb.1:
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    s_branch .LBB1_0
 ; GFX942-TGSPLIT-NEXT:    .p2align 8
@@ -378,8 +378,8 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-LABEL: release_acquire:
 ; GFX90A:       ; %bb.1:
-; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    s_branch .LBB2_0
 ; GFX90A-NEXT:    .p2align 8
@@ -403,8 +403,8 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ;
 ; GFX90A-TGSPLIT-LABEL: release_acquire:
 ; GFX90A-TGSPLIT:       ; %bb.1:
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX90A-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX90A-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-TGSPLIT-NEXT:    s_branch .LBB2_0
 ; GFX90A-TGSPLIT-NEXT:    .p2align 8
@@ -429,8 +429,8 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-LABEL: release_acquire:
 ; GFX942:       ; %bb.1:
-; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_branch .LBB2_0
 ; GFX942-NEXT:    .p2align 8
@@ -454,8 +454,8 @@ define amdgpu_kernel void @release_acquire(<4 x i32> inreg %rsrc,
 ;
 ; GFX942-TGSPLIT-LABEL: release_acquire:
 ; GFX942-TGSPLIT:       ; %bb.1:
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
-; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x10
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
+; GFX942-TGSPLIT-NEXT:    s_load_dwordx2 s[12:13], s[4:5], 0x34
 ; GFX942-TGSPLIT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-TGSPLIT-NEXT:    s_branch .LBB2_0
 ; GFX942-TGSPLIT-NEXT:    .p2align 8
