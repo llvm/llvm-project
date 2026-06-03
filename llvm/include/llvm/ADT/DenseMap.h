@@ -62,7 +62,7 @@ struct DenseMapPair : std::pair<KeyT, ValueT> {
 } // end namespace detail
 
 namespace densemap::detail {
-using used_t = uint32_t;
+using UsedT = uint32_t;
 
 // Number of used words backing N buckets where N is zero or a power of two.
 constexpr size_t usedWords(size_t N) {
@@ -71,23 +71,23 @@ constexpr size_t usedWords(size_t N) {
   return (N + 31) / 32;
 }
 
-inline bool used(const used_t *U, size_t I) {
+inline bool used(const UsedT *U, size_t I) {
   return (U[I >> 5] >> (I & 31)) & 1;
 }
-inline void setUsed(used_t *U, size_t I) { U[I >> 5] |= used_t(1) << (I & 31); }
-inline void unsetUsed(used_t *U, size_t I) {
-  U[I >> 5] &= ~(used_t(1) << (I & 31));
+inline void setUsed(UsedT *U, size_t I) { U[I >> 5] |= UsedT(1) << (I & 31); }
+inline void unsetUsed(UsedT *U, size_t I) {
+  U[I >> 5] &= ~(UsedT(1) << (I & 31));
 }
 
 // Invoke Func(I) for each occupied bucket index I in [0, N). Set always_inline;
 // otherwise, for a heavy caller such as moveFrom's rehash, the inliner can
 // leave it out of line and the per-element call dwarfs the work.
 template <typename Fn>
-LLVM_ATTRIBUTE_ALWAYS_INLINE void forEachUsed(const used_t *U, unsigned N,
+LLVM_ATTRIBUTE_ALWAYS_INLINE void forEachUsed(const UsedT *U, unsigned N,
                                               Fn Func) {
   const unsigned NW = usedWords(N);
   for (unsigned W = 0; W != NW; ++W) {
-    used_t Bits = U[W];
+    UsedT Bits = U[W];
     while (Bits) {
       Func((W << 5) + llvm::countr_zero(Bits));
       Bits &= Bits - 1;
@@ -97,13 +97,13 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE void forEachUsed(const used_t *U, unsigned N,
 
 // Buckets and the used array share one allocation: the bucket array first, then
 // the used words.  NumBuckets is a power of two >= 4, so the bucket region size
-// is a multiple of sizeof(used_t) and the trailing used words are aligned.
+// is a multiple of sizeof(UsedT) and the trailing used words are aligned.
 template <typename BucketT> constexpr size_t allocAlign() {
-  return std::max(alignof(BucketT), alignof(used_t));
+  return std::max(alignof(BucketT), alignof(UsedT));
 }
 template <typename BucketT> size_t allocBytes(unsigned Num) {
   return sizeof(BucketT) * static_cast<size_t>(Num) +
-         usedWords(Num) * sizeof(used_t);
+         usedWords(Num) * sizeof(UsedT);
 }
 
 } // namespace densemap::detail
@@ -124,7 +124,7 @@ class DenseMapBase : public DebugEpochBase {
   template <typename T>
   using const_arg_type_t = typename const_pointer_or_const_ref<T>::type;
 
-  using used_t = llvm::densemap::detail::used_t;
+  using UsedT = llvm::densemap::detail::UsedT;
 
 public:
   using size_type = unsigned;
@@ -197,7 +197,7 @@ public:
     destroyAll();
     std::memset(getUsed(), 0,
                 llvm::densemap::detail::usedWords(getNumBuckets()) *
-                    sizeof(used_t));
+                    sizeof(UsedT));
     setNumEntries(0);
   }
 
@@ -393,7 +393,7 @@ public:
   /// Returns whether anything was removed. If so, all iterators and references
   /// into the map are invalidated.
   template <typename Predicate> bool remove_if(Predicate Pred) {
-    used_t *U = getUsed();
+    UsedT *U = getUsed();
     unsigned NumBuckets = getNumBuckets();
     BucketT *B = getBuckets();
     bool Removed = false;
@@ -452,7 +452,7 @@ protected:
   // once per accessor; for plain DenseMap it is three member loads either way.
   struct Rep {
     const BucketT *Buckets;
-    const used_t *Used;
+    const UsedT *Used;
     unsigned NumBuckets;
   };
 
@@ -474,7 +474,7 @@ protected:
       return;
 
     BucketT *B = getBuckets();
-    const used_t *U = getUsed();
+    const UsedT *U = getUsed();
     const unsigned E = getNumBuckets();
     llvm::densemap::detail::forEachUsed(U, E, [&](unsigned I) {
       B[I].getSecond().~ValueT();
@@ -491,7 +491,7 @@ protected:
            "# initial buckets must be a power of two!");
     std::memset(getUsed(), 0,
                 llvm::densemap::detail::usedWords(getNumBuckets()) *
-                    sizeof(used_t));
+                    sizeof(UsedT));
   }
 
   /// Returns the number of buckets to allocate to ensure that the DenseMap can
@@ -510,9 +510,9 @@ protected:
   LLVM_ATTRIBUTE_NOINLINE void moveFrom(DerivedT &Other) {
     assert(getNumEntries() == 0 && "moveFrom requires an empty destination");
     BucketT *OtherB = Other.getBuckets();
-    used_t *OtherU = Other.getUsed();
+    UsedT *OtherU = Other.getUsed();
     const unsigned E = Other.getNumBuckets();
-    used_t *U = getUsed();
+    UsedT *U = getUsed();
     BucketT *B = getBuckets();
     const unsigned Mask = getNumBuckets() - 1;
     llvm::densemap::detail::forEachUsed(OtherU, E, [&](unsigned I) {
@@ -551,10 +551,10 @@ protected:
     BucketT *Buckets = getBuckets();
     const BucketT *OtherBuckets = other.getBuckets();
     const unsigned NumBuckets = getNumBuckets();
-    used_t *U = getUsed();
-    const used_t *OtherU = other.getUsed();
+    UsedT *U = getUsed();
+    const UsedT *OtherU = other.getUsed();
     std::memcpy(U, OtherU,
-                llvm::densemap::detail::usedWords(NumBuckets) * sizeof(used_t));
+                llvm::densemap::detail::usedWords(NumBuckets) * sizeof(UsedT));
     if constexpr (std::is_trivially_copyable_v<KeyT> &&
                   std::is_trivially_copyable_v<ValueT>) {
       memcpy(reinterpret_cast<void *>(Buckets), OtherBuckets,
@@ -585,7 +585,7 @@ private:
     decrementNumEntries();
 
     BucketT *BucketsPtr = getBuckets();
-    used_t *U = getUsed();
+    UsedT *U = getUsed();
     const unsigned Mask = getNumBuckets() - 1;
     unsigned I = TheBucket - BucketsPtr;
     unsigned J = I;
@@ -671,9 +671,9 @@ private:
 
   Rep getRep() const { return derived().getRep(); }
 
-  const used_t *getUsed() const { return derived().getUsed(); }
+  const UsedT *getUsed() const { return derived().getUsed(); }
 
-  used_t *getUsed() { return derived().getUsed(); }
+  UsedT *getUsed() { return derived().getUsed(); }
 
   unsigned getNumBuckets() const { return derived().getNumBuckets(); }
 
@@ -835,10 +835,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   // Lift some types from the dependent base class into this class for
   // simplicity of referring to them.
   using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-  using used_t = llvm::densemap::detail::used_t;
+  using UsedT = llvm::densemap::detail::UsedT;
 
   BucketT *Buckets = nullptr;
-  used_t *Used = nullptr;
+  UsedT *Used = nullptr;
   unsigned NumEntries = 0;
   unsigned NumBuckets = 0;
 
@@ -904,7 +904,7 @@ private:
 
   typename BaseT::Rep getRep() const { return {Buckets, Used, NumBuckets}; }
 
-  used_t *getUsed() const { return Used; }
+  UsedT *getUsed() const { return Used; }
 
   unsigned getNumBuckets() const { return NumBuckets; }
 
@@ -931,7 +931,7 @@ private:
         allocate_buffer(llvm::densemap::detail::allocBytes<BucketT>(NumBuckets),
                         llvm::densemap::detail::allocAlign<BucketT>()));
     Buckets = reinterpret_cast<BucketT *>(Storage);
-    Used = reinterpret_cast<used_t *>(Storage + sizeof(BucketT) * NumBuckets);
+    Used = reinterpret_cast<UsedT *>(Storage + sizeof(BucketT) * NumBuckets);
     return true;
   }
 
@@ -974,7 +974,7 @@ class SmallDenseMap
   // Lift some types from the dependent base class into this class for
   // simplicity of referring to them.
   using BaseT = DenseMapBase<SmallDenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
-  using used_t = llvm::densemap::detail::used_t;
+  using UsedT = llvm::densemap::detail::UsedT;
 
   static_assert(isPowerOf2_64(InlineBuckets),
                 "InlineBuckets must be a power of 2.");
@@ -989,11 +989,11 @@ class SmallDenseMap
   // Inline storage: the bucket array followed by the parallel used words.
   struct InlineRep {
     alignas(BucketT) char Buckets[sizeof(BucketT) * InlineBuckets];
-    used_t Used[InlineUsedWords];
+    UsedT Used[InlineUsedWords];
   };
   struct LargeRep {
     BucketT *Buckets;
-    used_t *Used;
+    UsedT *Used;
     unsigned NumBuckets;
   };
 
@@ -1069,7 +1069,7 @@ private:
       // Both inline: swap the live bucket contents slot by slot, then the used
       // used words.  Buckets are raw storage, so a value may only move in one
       // direction when exactly one side is occupied.
-      used_t *LU = getInlineUsed(), *RU = RHS.getInlineUsed();
+      UsedT *LU = getInlineUsed(), *RU = RHS.getInlineUsed();
       BucketT *LB = getInlineBuckets(), *RB = RHS.getInlineBuckets();
       for (unsigned I = 0; I != InlineBuckets; ++I) {
         bool L = llvm::densemap::detail::used(LU, I);
@@ -1105,7 +1105,7 @@ private:
     LargeRep TmpRep = LargeSide.storage.Large;
     LargeSide.Small = true;
     {
-      used_t *SU = SmallSide.getInlineUsed(), *LU = LargeSide.getInlineUsed();
+      UsedT *SU = SmallSide.getInlineUsed(), *LU = LargeSide.getInlineUsed();
       BucketT *SB = SmallSide.getInlineBuckets(),
               *LB = LargeSide.getInlineBuckets();
       for (unsigned I = 0; I != InlineBuckets; ++I)
@@ -1139,12 +1139,12 @@ private:
     return reinterpret_cast<BucketT *>(storage.Inline.Buckets);
   }
 
-  const used_t *getInlineUsed() const {
+  const UsedT *getInlineUsed() const {
     assert(Small);
     return storage.Inline.Used;
   }
 
-  used_t *getInlineUsed() {
+  UsedT *getInlineUsed() {
     assert(Small);
     return storage.Inline.Used;
   }
@@ -1165,12 +1165,12 @@ private:
         const_cast<const SmallDenseMap *>(this)->getBuckets());
   }
 
-  const used_t *getUsed() const {
+  const UsedT *getUsed() const {
     return Small ? getInlineUsed() : storage.Large.Used;
   }
 
-  used_t *getUsed() {
-    return const_cast<used_t *>(
+  UsedT *getUsed() {
+    return const_cast<UsedT *>(
         const_cast<const SmallDenseMap *>(this)->getUsed());
   }
 
@@ -1201,7 +1201,7 @@ private:
         allocate_buffer(llvm::densemap::detail::allocBytes<BucketT>(Num),
                         llvm::densemap::detail::allocAlign<BucketT>()));
     storage.Large.Buckets = reinterpret_cast<BucketT *>(S);
-    storage.Large.Used = reinterpret_cast<used_t *>(S + sizeof(BucketT) * Num);
+    storage.Large.Used = reinterpret_cast<UsedT *>(S + sizeof(BucketT) * Num);
     storage.Large.NumBuckets = Num;
     return true;
   }
@@ -1255,7 +1255,7 @@ class DenseMapIterator : DebugEpochBase::HandleBase {
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, true>;
   friend class DenseMapIterator<KeyT, ValueT, KeyInfoT, Bucket, false>;
 
-  using used_t = llvm::densemap::detail::used_t;
+  using UsedT = llvm::densemap::detail::UsedT;
 
 public:
   using difference_type = ptrdiff_t;
@@ -1274,10 +1274,10 @@ private:
   // The non-reversed bucket base and the parallel used array.  They map a
   // bucket back to its index so AdvancePastEmptyBuckets can consult the bits.
   pointer Buckets = {};
-  const used_t *Used = {};
+  const UsedT *Used = {};
 
   DenseMapIterator(BucketItTy Pos, BucketItTy E, pointer BucketsBase,
-                   const used_t *U, const DebugEpochBase &Epoch)
+                   const UsedT *U, const DebugEpochBase &Epoch)
       : DebugEpochBase::HandleBase(&Epoch), Ptr(Pos), End(E),
         Buckets(BucketsBase), Used(U) {
     assert(isHandleInSync() && "invalid construction!");
@@ -1286,7 +1286,7 @@ private:
 public:
   DenseMapIterator() = default;
 
-  static DenseMapIterator makeBegin(pointer Buckets, const used_t *Used,
+  static DenseMapIterator makeBegin(pointer Buckets, const UsedT *Used,
                                     unsigned NumBuckets, bool IsEmpty,
                                     const DebugEpochBase &Epoch) {
     // When the map is empty, avoid the overhead of advancing/retreating past
@@ -1299,7 +1299,7 @@ public:
     return Iter;
   }
 
-  static DenseMapIterator makeEnd(pointer Buckets, const used_t *Used,
+  static DenseMapIterator makeEnd(pointer Buckets, const UsedT *Used,
                                   unsigned NumBuckets,
                                   const DebugEpochBase &Epoch) {
     auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
@@ -1307,7 +1307,7 @@ public:
   }
 
   static DenseMapIterator makeIterator(pointer P, pointer Buckets,
-                                       const used_t *Used, unsigned NumBuckets,
+                                       const UsedT *Used, unsigned NumBuckets,
                                        const DebugEpochBase &Epoch) {
     auto R = maybeReverse(llvm::make_range(Buckets, Buckets + NumBuckets));
     constexpr int Offset = shouldReverseIterate<KeyT>() ? 1 : 0;
@@ -1378,7 +1378,7 @@ private:
       }
       const size_t NW = llvm::densemap::detail::usedWords(N);
       size_t W = I >> 5;
-      used_t Bits = Used[W] & (~used_t(0) << (I & 31));
+      UsedT Bits = Used[W] & (~UsedT(0) << (I & 31));
       while (Bits == 0) {
         if (++W == NW) {
           Ptr = End;
