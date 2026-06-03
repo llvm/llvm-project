@@ -30368,8 +30368,6 @@ private:
           if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
-            auto *DstTy = FixedVectorType::get(VecTy->getScalarType(),
-                                               ReducedVals.size());
             for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
               VectorCost +=
                   ::getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
