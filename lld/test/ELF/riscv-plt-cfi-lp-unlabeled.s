@@ -16,20 +16,20 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --mattr=+experimental-zicfilp out64 | FileCheck --check-prefixes=DIS,DIS64 %s
 
 # SEC32: .plt     PROGBITS {{0*}}00011210
-# SEC32: .got.plt PROGBITS {{0*}}000132b8
+# SEC32: .got.plt PROGBITS {{0*}}000132a8
 
 # SEC64: .plt     PROGBITS {{0*}}00011330
-# SEC64: .got.plt PROGBITS {{0*}}00013440
+# SEC64: .got.plt PROGBITS {{0*}}00013430
 
 # DIS:      Disassembly of section .plt:
 # DIS:      <.plt>:
 # DIS-NEXT:     auipc t3, 0x2
 # DIS-NEXT:     sub t1, t1, t2
-# DIS32-NEXT:   lw t2, 0xa4(t3)
-# DIS64-NEXT:   ld t2, 0x10c(t3)
-# DIS-NEXT:     addi t1, t1, -0x40
-# DIS32-NEXT:   addi t0, t3, 0xa4
-# DIS64-NEXT:   addi t0, t3, 0x10c
+# DIS32-NEXT:   lw t2, 0x94(t3)
+# DIS64-NEXT:   ld t2, 0xfc(t3)
+# DIS-NEXT:     addi t1, t1, -0x30
+# DIS32-NEXT:   addi t0, t3, 0x94
+# DIS64-NEXT:   addi t0, t3, 0xfc
 # DIS32-NEXT:   srli t1, t1, 0x2
 # DIS64-NEXT:   srli t1, t1, 0x1
 # DIS32-NEXT:   lw t0, 0x4(t0)

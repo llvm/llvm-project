@@ -222,6 +222,31 @@ void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void RISCV::writePltHeader(uint8_t *buf) const {
+
+  if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) {
+    // 1:  auipc  t3, %pcrel_hi(.got.plt)
+    //     sub    t1, t1, t2
+    //     l[w|d] t2, %pcrel_lo(1b)(t3)
+    //     addi   t1, t1, -(hdr size + 16)
+    //     addi   t0, t3, %pcrel_lo(1b)
+    //     srli   t1, t1, log2(16/PTRSIZE)
+    //     l[w|d] t0, PTRSIZE(t0)
+    //     jr     t2
+    const uint32_t offset = ctx.in.gotPlt->getVA() -
+                            (ctx.in.plt->getVA() + 4 /* offset for lpad */);
+    const uint32_t load = ctx.arg.is64 ? LD : LW;
+    write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
+    write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T2));
+    write32le(buf + 8, itype(load, X_T2, X_T3, lo12(offset)));
+    write32le(buf + 12,
+              itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 16));
+    write32le(buf + 16, itype(ADDI, X_T0, X_T3, lo12(offset)));
+    write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
+    write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.is64 ? 8 : 4));
+    write32le(buf + 28, itype(JALR, 0, X_T2, 0));
+    return;
+  }
+
   // 1: auipc t2, %pcrel_hi(.got.plt)
   // sub t1, t1, t3
   // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
@@ -244,6 +269,21 @@ void RISCV::writePltHeader(uint8_t *buf) const {
 
 void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t pltEntryAddr) const {
+
+  if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) {
+    //     lpad 0
+    // 1:  auipc   t2, %pcrel_hi(function@.got.plt)
+    //     l[w|d]  t2, %pcrel_lo(1b)(t2)
+    //     jalr    t1, t2
+    const uint32_t offset =
+        sym.getGotPltVA(ctx) - (pltEntryAddr + 4 /* offset for lpad */);
+    write32le(buf + 0, utype(AUIPC, 0, 0)); // lpad 0
+    write32le(buf + 4, utype(AUIPC, X_T2, hi20(offset)));
+    write32le(buf + 8, itype(ctx.arg.is64 ? LD : LW, X_T2, X_T2, lo12(offset)));
+    write32le(buf + 12, itype(JALR, X_T1, X_T2, 0));
+    return;
+  }
+
   // 1: auipc t3, %pcrel_hi(f@.got.plt)
   // l[wd] t3, %pcrel_lo(1b)(t3)
   // jalr t1, t3
@@ -1066,58 +1106,6 @@ void RISCV::finalizeRelax(int passes) const {
 }
 
 namespace {
-
-class RISCVCfiLpUnlabeledPLT final : public RISCV {
-public:
-  RISCVCfiLpUnlabeledPLT(Ctx &ctx);
-  void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, const Symbol &sym,
-                uint64_t pltEntryAddr) const override;
-};
-
-} // namespace
-
-RISCVCfiLpUnlabeledPLT::RISCVCfiLpUnlabeledPLT(Ctx &ctx) : RISCV(ctx) {
-  pltHeaderSize = 48;
-}
-
-void RISCVCfiLpUnlabeledPLT::writePltHeader(uint8_t *buf) const {
-  // 1:  auipc  t3, %pcrel_hi(.got.plt)
-  //     sub    t1, t1, t2
-  //     l[w|d] t2, %pcrel_lo(1b)(t3)
-  //     addi   t1, t1, -(hdr size + 16)
-  //     addi   t0, t3, %pcrel_lo(1b)
-  //     srli   t1, t1, log2(16/PTRSIZE)
-  //     l[w|d] t0, PTRSIZE(t0)
-  //     jr     t2
-  const uint32_t offset =
-      ctx.in.gotPlt->getVA() - (ctx.in.plt->getVA() + 4 /* offset for lpad */);
-  const uint32_t load = ctx.arg.is64 ? LD : LW;
-  write32le(buf + 0, utype(AUIPC, X_T3, hi20(offset)));
-  write32le(buf + 4, rtype(SUB, X_T1, X_T1, X_T2));
-  write32le(buf + 8, itype(load, X_T2, X_T3, lo12(offset)));
-  write32le(buf + 12, itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 16));
-  write32le(buf + 16, itype(ADDI, X_T0, X_T3, lo12(offset)));
-  write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
-  write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.is64 ? 8 : 4));
-  write32le(buf + 28, itype(JALR, 0, X_T2, 0));
-}
-
-void RISCVCfiLpUnlabeledPLT::writePlt(uint8_t *buf, const Symbol &sym,
-                                      uint64_t pltEntryAddr) const {
-  //     lpad 0
-  // 1:  auipc   t2, %pcrel_hi(function@.got.plt)
-  //     l[w|d]  t2, %pcrel_lo(1b)(t2)
-  //     jalr    t1, t2
-  const uint32_t offset =
-      sym.getGotPltVA(ctx) - (pltEntryAddr + 4 /* offset for lpad */);
-  write32le(buf + 0, utype(AUIPC, 0, 0)); // lpad 0
-  write32le(buf + 4, utype(AUIPC, X_T2, hi20(offset)));
-  write32le(buf + 8, itype(ctx.arg.is64 ? LD : LW, X_T2, X_T2, lo12(offset)));
-  write32le(buf + 12, itype(JALR, X_T1, X_T2, 0));
-}
-
-namespace {
 // Representation of the merged .riscv.attributes input sections. The psABI
 // specifies merge policy for attributes. E.g. if we link an object without an
 // extension with an object with the extension, the output Tag_RISCV_arch shall
@@ -1409,12 +1397,4 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
                            mergeAttributesSection(ctx, sections));
 }
 
-void elf::setRISCVTargetInfo(Ctx &ctx) {
-  RISCV *target;
-  if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED)
-    target = new RISCVCfiLpUnlabeledPLT(ctx);
-  else
-    target = new RISCV(ctx);
-
-  ctx.target.reset(target);
-}
+void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
