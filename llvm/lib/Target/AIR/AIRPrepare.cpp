@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -26,6 +27,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/SCCPSolver.h"
 #include <cstdlib>
 #include <functional>
 
@@ -1539,9 +1543,54 @@ static bool atomicTypedPointerFixup(Module &M) {
   return Changed;
 }
 
+static bool foldConditionalConstants(Module &M) {
+  bool Changed = false;
+  TargetLibraryInfoImpl TLIImpl(Triple(M.getTargetTriple()));
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    SCCPSolver Solver(
+        M.getDataLayout(),
+        [&](Function &Fn) -> const TargetLibraryInfo & {
+          static TargetLibraryInfo TLI(TLIImpl, &Fn);
+          return TLI;
+        },
+        M.getContext());
+
+    Solver.markBlockExecutable(&F.front());
+    for (Argument &A : F.args())
+      Solver.trackValueOfArgument(&A);
+
+    bool ResolvedUndefs = true;
+    while (ResolvedUndefs) {
+      Solver.solve();
+      ResolvedUndefs = Solver.resolvedUndefsIn(F);
+    }
+
+    for (BasicBlock &BB : F) {
+      if (!Solver.isBlockExecutable(&BB))
+        continue;
+      for (Instruction &I : llvm::make_early_inc_range(BB)) {
+        if (!I.getType()->isIntegerTy() || I.use_empty())
+          continue;
+        Constant *C = Solver.getConstantOrNull(&I);
+        if (!C)
+          continue;
+        I.replaceAllUsesWith(C);
+        if (isInstructionTriviallyDead(&I))
+          I.eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
+  return Changed;
+}
+
 static bool metalPrepare(Module &M) {
   bool Changed = false;
   SmallPtrSet<Function *, 4> DecomposedFns;
+  Changed |= foldConditionalConstants(M);
   Changed |= decomposeStructPhis(M, DecomposedFns);
   Changed |= rewriteTGGlobalGEPs(M);
   Changed |= normalizeI1Pointers(M);
