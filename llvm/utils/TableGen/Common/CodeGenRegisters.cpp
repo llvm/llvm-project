@@ -1328,8 +1328,17 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   if (FoundI != Key2RC.end())
     return {FoundI->second, false};
 
+  auto HasRegClassNamed = [&](StringRef Candidate) {
+    return llvm::any_of(RegClasses, [&](const CodeGenRegisterClass &RC) {
+      return RC.getName() == Candidate;
+    });
+  };
+  std::string UniqueName = Name.str();
+  for (unsigned I = 1; HasRegClassNamed(UniqueName); ++I)
+    UniqueName = (Name + "_" + Twine(I)).str();
+
   // Sub-class doesn't exist, create a new one.
-  RegClasses.emplace_back(*this, Name, K);
+  RegClasses.emplace_back(*this, UniqueName, K);
   addToMaps(&RegClasses.back());
   return {&RegClasses.back(), true};
 }
