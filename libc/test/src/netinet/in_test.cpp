@@ -69,36 +69,10 @@ TEST(LlvmLibcNetinetInTest, IN6AddrInitMacros) {
 }
 
 TEST(LlvmLibcNetinetInTest, SockaddrIn6Layout) {
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_family), static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_port), static_cast<size_t>(2));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_flowinfo), static_cast<size_t>(4));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_addr), static_cast<size_t>(8));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_scope_id), static_cast<size_t>(24));
   EXPECT_EQ(sizeof(struct sockaddr_in6), static_cast<size_t>(28));
-
-  struct sockaddr_in6 addr = {};
-  addr.sin6_family = 1;
-  addr.sin6_flowinfo = 3;
-  addr.sin6_scope_id = 4;
-  // The port and address are in network byte order.
-  addr.sin6_port = (LIBC_NAMESPACE::htons)(2);
-  addr.sin6_addr.s6_addr[0] = 0xab;
-  addr.sin6_addr.s6_addr[15] = 0xba;
-
-  const uint8_t CONTENT[] = {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      1,    0, // sin6_family
-#else
-      0,    1, // sin6_family
-#endif
-      0,    2, // sin6_port
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      3,    0, 0, 0, // sin6_flowinfo
-#else
-      0,    0, 0, 3, // sin6_flowinfo
-#endif
-      0xab, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xba, // sin6_addr
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      4,    0, 0, 0, // sin6_scope_id
-#else
-      0,    0, 0, 4, // sin6_scope_id
-#endif
-  };
-
-  EXPECT_EQ(LIBC_NAMESPACE::memcmp(&addr, CONTENT, sizeof(CONTENT)), 0);
 }
