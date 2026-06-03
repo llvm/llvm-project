@@ -1689,6 +1689,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         AggBuffer->addZeros(AllocSize);
         break;
       }
+      // A symbol-relative integer whose offset is applied outside the
+      // ptrtoint, e.g. add/sub(ptrtoint(@g), C). It can't fold to a ConstantInt
+      // because it references a symbol; emit it through lowerConstantForGV, the
+      // same path scalar symbol-relative integer globals use.
+      AggBuffer->addSymbol(Cexpr, Cexpr);
+      AggBuffer->addZeros(AllocSize);
+      break;
     }
     llvm_unreachable("unsupported integer const type");
     break;
@@ -1979,12 +1986,15 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
 
   // The MC library also has a right-shift operator, but it isn't consistently
   // signed or unsigned between different targets.
-  case Instruction::Add: {
+  case Instruction::Add:
+  case Instruction::Sub: {
     const MCExpr *LHS = lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
     const MCExpr *RHS = lowerConstantForGV(CE->getOperand(1), ProcessingGeneric);
     switch (CE->getOpcode()) {
     default: llvm_unreachable("Unknown binary operator constant cast expr");
     case Instruction::Add: return MCBinaryExpr::createAdd(LHS, RHS, Ctx);
+    case Instruction::Sub:
+      return MCBinaryExpr::createSub(LHS, RHS, Ctx);
     }
   }
   }
