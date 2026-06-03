@@ -176,4 +176,35 @@ define amdgpu_kernel void @no_widen_noundef(ptr addrspace(4) align 4 %p, ptr add
   ret void
 }
 
+; The widened i32 load reads bytes outside the original f16 load, so !nofpclass
+; must not be carried over for GFX9.
+define amdgpu_kernel void @no_widen_nofpclass(ptr addrspace(4) align 4 %p, ptr addrspace(1) %out) {
+; GFX9-LABEL: @no_widen_nofpclass(
+; GFX9-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr addrspace(4) [[P:%.*]], i64 0
+; GFX9-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4
+; GFX9-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP2]], 16
+; GFX9-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
+; GFX9-NEXT:    [[TMP5:%.*]] = bitcast i16 [[TMP4]] to half
+; GFX9-NEXT:    [[VB:%.*]] = bitcast half [[TMP5]] to i16
+; GFX9-NEXT:    [[VZ:%.*]] = zext i16 [[VB]] to i32
+; GFX9-NEXT:    store i32 [[VZ]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX9-NEXT:    ret void
+;
+; GFX12-LABEL: @no_widen_nofpclass(
+; GFX12-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[P:%.*]], i64 2
+; GFX12-NEXT:    [[V:%.*]] = load half, ptr addrspace(4) [[P1]], align 2, !nofpclass [[META1:![0-9]+]]
+; GFX12-NEXT:    [[VB:%.*]] = bitcast half [[V]] to i16
+; GFX12-NEXT:    [[VZ:%.*]] = zext i16 [[VB]] to i32
+; GFX12-NEXT:    store i32 [[VZ]], ptr addrspace(1) [[OUT:%.*]], align 4
+; GFX12-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr addrspace(4) %p, i64 2
+  %v = load half, ptr addrspace(4) %p1, align 2, !nofpclass !1
+  %vb = bitcast half %v to i16
+  %vz = zext i16 %vb to i32
+  store i32 %vz, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 !0 = !{}
+!1 = !{i32 3}
