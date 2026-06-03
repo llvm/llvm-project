@@ -180,18 +180,11 @@ do.end:                                           ; preds = %4
 }
 
 define i64 @test_and1(i64 %x, i64 %y) {
-; CHECK-SD-LABEL: test_and1:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ands x8, x0, #0x3
-; CHECK-SD-NEXT:    csel x0, x8, x1, eq
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_and1:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and x8, x0, #0x3
-; CHECK-GI-NEXT:    tst x0, #0x3
-; CHECK-GI-NEXT:    csel x0, x8, x1, eq
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_and1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ands x8, x0, #0x3
+; CHECK-NEXT:    csel x0, x8, x1, eq
+; CHECK-NEXT:    ret
   %a = and i64 %x, 3
   %c = icmp eq i64 %a, 0
   %s = select i1 %c, i64 %a, i64 %y

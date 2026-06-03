@@ -1654,10 +1654,8 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     // instructions.
     SrcReg = MI.getOperand(1).getReg();
     SrcReg2 = 0;
-    CmpMask = ~0;
-    CmpValue = AArch64_AM::decodeLogicalImmediate(
-                   MI.getOperand(2).getImm(),
-                   MI.getOpcode() == AArch64::ANDSWri ? 32 : 64);
+    CmpMask = MI.getOperand(2).getImm();
+    CmpValue = 0;
     return true;
   }
 
@@ -1976,63 +1974,6 @@ bool AArch64InstrInfo::optimizePTestInstr(
   return true;
 }
 
-/// Try to optimize a compare instruction. A compare instruction is an
-/// instruction which produces AArch64::NZCV. It can be truly compare
-/// instruction
-/// when there are no uses of its destination register.
-///
-/// The following steps are tried in order:
-/// 1. Convert CmpInstr into an unconditional version.
-/// 2. Remove CmpInstr if above there is an instruction producing a needed
-///    condition code or an instruction which can be converted into such an
-///    instruction.
-///    Only comparison with zero is supported.
-bool AArch64InstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
-    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
-  assert(CmpInstr.getParent());
-  assert(MRI);
-
-  // Replace SUBSWrr with SUBWrr if NZCV is not used.
-  int DeadNZCVIdx =
-      CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
-  if (DeadNZCVIdx != -1) {
-    if (CmpInstr.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
-        CmpInstr.definesRegister(AArch64::XZR, /*TRI=*/nullptr)) {
-      CmpInstr.eraseFromParent();
-      return true;
-    }
-    unsigned Opc = CmpInstr.getOpcode();
-    unsigned NewOpc = convertToNonFlagSettingOpc(CmpInstr);
-    if (NewOpc == Opc)
-      return false;
-    const MCInstrDesc &MCID = get(NewOpc);
-    CmpInstr.setDesc(MCID);
-    CmpInstr.removeOperand(DeadNZCVIdx);
-    bool succeeded = UpdateOperandRegClass(CmpInstr);
-    (void)succeeded;
-    assert(succeeded && "Some operands reg class are incompatible!");
-    return true;
-  }
-
-  if (CmpInstr.getOpcode() == AArch64::PTEST_PP ||
-      CmpInstr.getOpcode() == AArch64::PTEST_PP_ANY ||
-      CmpInstr.getOpcode() == AArch64::PTEST_PP_FIRST)
-    return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
-
-  if (SrcReg2 != 0)
-    return false;
-
-  // CmpInstr is a Compare instruction if destination register is not used.
-  if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
-    return false;
-
-  if (CmpValue == 0 && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
-    return true;
-  return (CmpValue == 0 || CmpValue == 1) &&
-         removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
-}
-
 /// Get opcode of S version of Instr.
 /// If Instr is S version its opcode is returned.
 /// AArch64::INSTRUCTION_LIST_END is returned if Instr does not have S version
@@ -2256,6 +2197,10 @@ static bool isSUBSRegImm(unsigned Opcode) {
   return Opcode == AArch64::SUBSWri || Opcode == AArch64::SUBSXri;
 }
 
+static bool isANDSRegImm(unsigned Opcode) {
+  return Opcode == AArch64::ANDSWri || Opcode == AArch64::ANDSXri;
+}
+
 static bool isANDOpcode(MachineInstr &MI) {
   unsigned Opc = sForm(MI);
   switch (Opc) {
@@ -2278,48 +2223,68 @@ static bool isANDOpcode(MachineInstr &MI) {
 /// Check if CmpInstr can be substituted by MI.
 ///
 /// CmpInstr can be substituted:
+/// - CmpInstr is 'ANDSWri'/'ANDSXri' (TST), or
 /// - CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0'
 /// - and, MI and CmpInstr are from the same MachineBB
 /// - and, condition flags are not alive in successors of the CmpInstr parent
-/// - and, if MI opcode is the S form there must be no defs of flags between
-///        MI and CmpInstr
-///        or if MI opcode is not the S form there must be neither defs of flags
-///        nor uses of flags between MI and CmpInstr.
-/// - and, if C/V flags are not used after CmpInstr
-///        or if N flag is used but MI produces poison value if signed overflow
-///        occurs.
+/// - and, if MI is not already flag-setting there must be neither defs of flags
+///        nor uses of flags between MI and CmpInstr
+/// - and, flag uses after CmpInstr are compatible (ANDS: no C/V; add/sub: see
+/// below)
 static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
                                        const TargetRegisterInfo &TRI) {
-  // NOTE this assertion guarantees that MI.getOpcode() is add or subtraction
-  // that may or may not set flags.
   assert(sForm(MI) != AArch64::INSTRUCTION_LIST_END);
 
   const unsigned CmpOpcode = CmpInstr.getOpcode();
-  if (!isADDSRegImm(CmpOpcode) && !isSUBSRegImm(CmpOpcode))
+  const bool IsAndsCmp = isANDSRegImm(CmpOpcode);
+  if (IsAndsCmp) {
+    if (MI.getParent() != CmpInstr.getParent() || &MI == &CmpInstr)
+      return false;
+  } else if (!isADDSRegImm(CmpOpcode) && !isSUBSRegImm(CmpOpcode)) {
     return false;
-
-  assert((CmpInstr.getOperand(2).isImm() &&
-          CmpInstr.getOperand(2).getImm() == 0) &&
-         "Caller guarantees that CmpInstr compares with constant 0");
+  } else {
+    assert((CmpInstr.getOperand(2).isImm() &&
+            CmpInstr.getOperand(2).getImm() == 0) &&
+           "Caller guarantees that CmpInstr compares with constant 0");
+  }
 
   std::optional<UsedNZCV> NZVCUsed = examineCFlagsUse(MI, CmpInstr, TRI);
-  if (!NZVCUsed || NZVCUsed->C)
+  if (!NZVCUsed)
     return false;
-
-  // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
-  // '%vreg = add ...' or '%vreg = sub ...'.
-  // Condition flag V is used to indicate signed overflow.
-  // 1) MI and CmpInstr set N and V to the same value.
-  // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
-  //    signed overflow occurs, so CmpInstr could still be simplified away.
-  // Note that Ands and Bics instructions always clear the V flag.
-  if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDOpcode(MI))
-    return false;
+  if (IsAndsCmp) {
+    // ANDS clears C and V; only allow consumers that do not depend on them.
+    if (NZVCUsed->C || NZVCUsed->V)
+      return false;
+  } else {
+    if (NZVCUsed->C)
+      return false;
+    // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
+    // '%vreg = add ...' or '%vreg = sub ...'.
+    // Condition flag V is used to indicate signed overflow.
+    // Note that Ands and Bics instructions always clear the V flag.
+    if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDOpcode(MI))
+      return false;
+  }
 
   AccessKind AccessToCheck = AK_Write;
   if (sForm(MI) != MI.getOpcode())
     AccessToCheck = AK_All;
   return !areCFlagsAccessedBetweenInstrs(&MI, &CmpInstr, &TRI, AccessToCheck);
+}
+
+static bool promoteToSFormAndEraseCmp(MachineInstr &MI, MachineInstr &CmpInstr,
+                                      const AArch64InstrInfo &TII) {
+  unsigned NewOpc = sForm(MI);
+  if (NewOpc == AArch64::INSTRUCTION_LIST_END)
+    return false;
+  const TargetRegisterInfo &TRI = TII.getRegisterInfo();
+  MI.setDesc(TII.get(NewOpc));
+  CmpInstr.eraseFromParent();
+  bool succeeded = UpdateOperandRegClass(MI);
+  (void)succeeded;
+  assert(succeeded && "Some operands reg class are incompatible!");
+  MI.addRegisterDefined(AArch64::NZCV, &TRI);
+  return true;
 }
 
 /// Substitute an instruction comparing to zero with another instruction
@@ -2336,21 +2301,115 @@ bool AArch64InstrInfo::substituteCmpToZero(
 
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
-  unsigned NewOpc = sForm(*MI);
-  if (NewOpc == AArch64::INSTRUCTION_LIST_END)
+  if (sForm(*MI) == AArch64::INSTRUCTION_LIST_END)
     return false;
 
   if (!canInstrSubstituteCmpInstr(*MI, CmpInstr, TRI))
     return false;
 
-  // Update the instruction to set NZCV.
-  MI->setDesc(get(NewOpc));
-  CmpInstr.eraseFromParent();
-  bool succeeded = UpdateOperandRegClass(*MI);
-  (void)succeeded;
-  assert(succeeded && "Some operands reg class are incompatible!");
-  MI->addRegisterDefined(AArch64::NZCV, &TRI);
-  return true;
+  return promoteToSFormAndEraseCmp(*MI, CmpInstr, *this);
+}
+
+/// Identify a plain \c and immediate that applies \p CmpMask to \p SrcReg.
+static bool isSuitableForMask(MachineInstr *MI, Register SrcReg,
+                              int64_t CmpMask, bool CommonUse) {
+  if (!MI)
+    return false;
+  unsigned Opc = MI->getOpcode();
+  if (Opc != AArch64::ANDWri && Opc != AArch64::ANDXri)
+    return false;
+  if (CmpMask != MI->getOperand(2).getImm())
+    return false;
+  return SrcReg == MI->getOperand(CommonUse ? 1 : 0).getReg();
+}
+
+/// Remove a redundant ANDS/TST when an earlier AND applies the same mask.
+static bool substituteAndMaskCmp(MachineInstr &CmpInstr, Register SrcReg,
+                                 int64_t CmpMask,
+                                 const MachineRegisterInfo *MRI,
+                                 const AArch64InstrInfo *TII) {
+  MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
+  // Masked compares sometimes use the source register; scan other uses for the
+  // AND.
+  if (!isSuitableForMask(MI, SrcReg, CmpMask, false)) {
+    MI = nullptr;
+    for (MachineRegisterInfo::use_instr_iterator
+             UI = MRI->use_instr_begin(SrcReg),
+             UE = MRI->use_instr_end();
+         UI != UE; ++UI) {
+      if (UI->getParent() != CmpInstr.getParent())
+        continue;
+      if (!isSuitableForMask(&*UI, SrcReg, CmpMask, true))
+        continue;
+      MI = &*UI;
+      break;
+    }
+    if (!MI)
+      return false;
+  }
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
+  if (!canInstrSubstituteCmpInstr(*MI, CmpInstr, TRI))
+    return false;
+  return promoteToSFormAndEraseCmp(*MI, CmpInstr, *TII);
+}
+
+/// Try to optimize a compare instruction. A compare instruction is an
+/// instruction which produces AArch64::NZCV. It can be truly compare
+/// instruction
+/// when there are no uses of its destination register.
+///
+/// The following steps are tried in order:
+/// 1. Convert CmpInstr into an unconditional version.
+/// 2. Remove CmpInstr if above there is an instruction producing a needed
+///    condition code or an instruction which can be converted into such an
+///    instruction (including redundant AND + TST with the same mask).
+bool AArch64InstrInfo::optimizeCompareInstr(
+    MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2, int64_t CmpMask,
+    int64_t CmpValue, const MachineRegisterInfo *MRI) const {
+  assert(CmpInstr.getParent());
+  assert(MRI);
+
+  // Replace SUBSWrr with SUBWrr if NZCV is not used.
+  int DeadNZCVIdx =
+      CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
+  if (DeadNZCVIdx != -1) {
+    if (CmpInstr.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+        CmpInstr.definesRegister(AArch64::XZR, /*TRI=*/nullptr)) {
+      CmpInstr.eraseFromParent();
+      return true;
+    }
+    unsigned Opc = CmpInstr.getOpcode();
+    unsigned NewOpc = convertToNonFlagSettingOpc(CmpInstr);
+    if (NewOpc == Opc)
+      return false;
+    const MCInstrDesc &MCID = get(NewOpc);
+    CmpInstr.setDesc(MCID);
+    CmpInstr.removeOperand(DeadNZCVIdx);
+    bool succeeded = UpdateOperandRegClass(CmpInstr);
+    (void)succeeded;
+    assert(succeeded && "Some operands reg class are incompatible!");
+    return true;
+  }
+
+  if (CmpInstr.getOpcode() == AArch64::PTEST_PP ||
+      CmpInstr.getOpcode() == AArch64::PTEST_PP_ANY ||
+      CmpInstr.getOpcode() == AArch64::PTEST_PP_FIRST)
+    return optimizePTestInstr(&CmpInstr, SrcReg, SrcReg2, MRI);
+
+  // CmpInstr is a Compare instruction if destination register is not used.
+  if (!MRI->use_nodbg_empty(CmpInstr.getOperand(0).getReg()))
+    return false;
+
+  if (CmpMask != ~0)
+    return substituteAndMaskCmp(CmpInstr, SrcReg, CmpMask, MRI, this);
+
+  if (SrcReg2 != 0)
+    return false;
+
+  if (CmpValue == 0 && substituteCmpToZero(CmpInstr, SrcReg, *MRI))
+    return true;
+  return (CmpValue == 0 || CmpValue == 1) &&
+         removeCmpToZeroOrOne(CmpInstr, SrcReg, CmpValue, *MRI);
 }
 
 /// \returns True if \p CmpInstr can be removed.

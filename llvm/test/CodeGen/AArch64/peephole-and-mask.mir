@@ -1,0 +1,61 @@
+# RUN: llc %s -o - -mtriple=aarch64 -run-pass=peephole-opt -verify-machineinstrs | FileCheck %s
+# RUN: llc %s -o - -mtriple=aarch64 -passes=peephole-opt -verify-machineinstrs | FileCheck %s
+---
+name:            fold_and_tst_w
+tracksRegLiveness: true
+isSSA:           true
+registers:
+  - { id: 0, class: gpr32common }
+  - { id: 1, class: gpr32common }
+  - { id: 2, class: gpr32common }
+  - { id: 3, class: gpr32common }
+liveins:
+  - { reg: '$w0', virtual-reg: '%0' }
+  - { reg: '$w1', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: fold_and_tst_w
+    ; CHECK: [[SRC:%[0-9]+]]:gpr32common = COPY $w0
+    ; CHECK-NEXT: [[OTHER:%[0-9]+]]:gpr32common = COPY $w1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr32common = ANDSWri [[SRC]], 3, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSEL:%[0-9]+]]:gpr32common = CSELWr [[AND]], [[OTHER]], 0, implicit $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:gpr32common = COPY $w0
+    %1:gpr32common = COPY $w1
+    %2:gpr32common = ANDWri %0, 3
+    $wzr = ANDSWri %0, 3, implicit-def $nzcv
+    %3:gpr32common = CSELWr %2, %1, 0, implicit $nzcv
+    RET_ReallyLR
+...
+
+---
+name:            fold_and_tst_unused_cmp_dest
+tracksRegLiveness: true
+isSSA:           true
+registers:
+  - { id: 0, class: gpr64common }
+  - { id: 1, class: gpr64common }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+liveins:
+  - { reg: '$x0', virtual-reg: '%0' }
+  - { reg: '$x1', virtual-reg: '%1' }
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    ; Unused ANDSXri destination (GISel TST shape), not $xzr.
+    ; CHECK-LABEL: name: fold_and_tst_unused_cmp_dest
+    ; CHECK: [[SRC:%[0-9]+]]:gpr64common = COPY $x0
+    ; CHECK-NEXT: [[OTHER:%[0-9]+]]:gpr64common = COPY $x1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr64common = ANDSXri [[SRC]], 3, implicit-def $nzcv
+    ; CHECK-NEXT: [[CSEL:%[0-9]+]]:gpr64common = CSELXr [[AND]], [[OTHER]], 0, implicit $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = COPY $x1
+    %2:gpr64common = ANDXri %0, 3
+    %3:gpr64common = ANDSXri %0, 3, implicit-def $nzcv
+    %4:gpr64common = CSELXr %2, %1, 0, implicit $nzcv
+    RET_ReallyLR
+...
