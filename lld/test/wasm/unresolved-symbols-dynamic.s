@@ -1,8 +1,7 @@
 # Unresolve data symbols are allowing under import-dynamic when GOT
 # relocations are used
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t-dynamic.o
-# RUN: wasm-ld %t-dynamic.o -o %t.wasm --unresolved-symbols=import-dynamic 2>&1 | FileCheck -check-prefix=WARN %s
-# WARN: wasm-ld: warning: dynamic imports are not yet stable (--unresolved-symbols=import-dynamic)
+# RUN: wasm-ld %t-dynamic.o -o %t.wasm --unresolved-symbols=import-dynamic
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 .functype undef () -> ()

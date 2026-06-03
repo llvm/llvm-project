@@ -14,12 +14,14 @@
   }
   !3 = !DIFile(filename: "main.swift", directory: "/Volumes/Data/swift")
   !23 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, sdk: "blah.sdk")
-  !57 = distinct !DISubprogram(name: "main", unit: !23)
+  !57 = distinct !DISubprogram(name: "main", unit: !23, type: !73)
   !64 = distinct !DILexicalBlock(scope: !57, column: 1)
   !66 = distinct !DILexicalBlock(scope: !64, column: 1)
   !68 = !DILocation(line: 12, scope: !66)
   !70 = distinct !DILexicalBlock(scope: !66, column: 1)
   !71 = !DILocation(line: 13, scope: !70)
+  !72 = !{null}
+  !73 = !DISubroutineType(types: !72)
 name:            main
 body:             |
   bb.0:

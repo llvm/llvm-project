@@ -505,7 +505,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectSimple(
             thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) &
             0xffffffff);
         return_valobj_sp = ValueObjectMemory::Create(
-            &thread, "", Address(storage_addr, nullptr), return_compiler_type);
+            &thread, "", Address(storage_addr), return_compiler_type);
       }
     } else // Neither 'Integral' nor 'Floating Point'
     {
@@ -614,7 +614,7 @@ ValueObjectSP ABISysV_i386::GetReturnValueObjectImpl(
         thread.GetRegisterContext()->ReadRegisterAsUnsigned(eax_id, 0) &
         0xffffffff);
     return_valobj_sp = ValueObjectMemory::Create(
-        &thread, "", Address(storage_addr, nullptr), return_compiler_type);
+        &thread, "", Address(storage_addr), return_compiler_type);
   }
 
   return return_valobj_sp;

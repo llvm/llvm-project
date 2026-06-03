@@ -71,6 +71,7 @@ protected:
   friend class Type;              // For LLVMCtx.
   friend class PointerType;       // For LLVMCtx.
   friend class IntegerType;       // For LLVMCtx.
+  friend class ByteType;          // For LLVMCtx.
   friend class StructType;        // For LLVMCtx.
   friend class Region;            // For LLVMCtx.
   friend class IRSnapshotChecker; // To snapshot LLVMModuleToModuleMap.
@@ -178,8 +179,10 @@ protected:
   friend ExtractValueInst; // For createExtractValueInst()
   LLVM_ABI InsertValueInst *createInsertValueInst(llvm::InsertValueInst *IVI);
   friend InsertValueInst; // For createInsertValueInst()
-  LLVM_ABI BranchInst *createBranchInst(llvm::BranchInst *I);
-  friend BranchInst; // For createBranchInst()
+  LLVM_ABI UncondBrInst *createUncondBrInst(llvm::UncondBrInst *UBI);
+  friend UncondBrInst; // For createUncondBrInst()
+  LLVM_ABI CondBrInst *createCondBrInst(llvm::CondBrInst *CBI);
+  friend CondBrInst; // For createCondBrInst()
   LLVM_ABI LoadInst *createLoadInst(llvm::LoadInst *LI);
   friend LoadInst; // For createLoadInst()
   LLVM_ABI StoreInst *createStoreInst(llvm::StoreInst *SI);
@@ -238,7 +241,7 @@ protected:
 
 public:
   LLVM_ABI Context(LLVMContext &LLVMCtx);
-  LLVM_ABI ~Context();
+  LLVM_ABI virtual ~Context();
   /// Clears function-level state.
   LLVM_ABI void clear();
 

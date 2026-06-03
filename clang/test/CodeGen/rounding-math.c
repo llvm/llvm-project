@@ -39,7 +39,7 @@ struct S *func_06(void) {
   return &var_06;
 }
 
-// CHECK: @var_04 = {{.*}} %struct.S { float 0x3FF0000020000000 }
-// CHECK: @var_05 = {{.*}} %struct.S { float 0x3FF0000020000000 }
-// CHECK: @func_06.var_06 = {{.*}} %struct.S { float 0x3FF0000020000000 }
+// CHECK: @var_04 = {{.*}} %struct.S { float f0x3F800001 }
+// CHECK: @var_05 = {{.*}} %struct.S { float f0x3F800001 }
+// CHECK: @func_06.var_06 = {{.*}} %struct.S { float f0x3F800001 }
 

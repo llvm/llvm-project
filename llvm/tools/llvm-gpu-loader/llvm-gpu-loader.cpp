@@ -192,7 +192,7 @@ void launchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   OFFLOAD_ERR(olLaunchKernel(Queue, Device, Kernel, &KernelArgs,
                              std::is_empty_v<Args> ? 0 : sizeof(Args),
-                             &LaunchArgs));
+                             &LaunchArgs, /*Properties=*/nullptr));
 }
 
 int main(int argc, const char **argv, const char **envp) {
@@ -268,7 +268,9 @@ int main(int argc, const char **argv, const char **envp) {
   void *DevEnvp = copyEnvironment(envp, Device);
 
   void *DevRet;
+  int Zero = 0;
   OFFLOAD_ERR(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(int), &DevRet));
+  OFFLOAD_ERR(olMemcpy(Queue, DevRet, Device, &Zero, Host, sizeof(int)));
 
   ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
   BeginArgs BeginArgs = {DevArgc, DevArgv, DevEnvp};
@@ -291,6 +293,7 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olMemcpy(Queue, &Ret, Host, DevRet, Device, sizeof(int)));
   OFFLOAD_ERR(olSyncQueue(Queue));
 
+  OFFLOAD_ERR(olMemFree(DevRet));
   OFFLOAD_ERR(olMemFree(DevArgv));
   OFFLOAD_ERR(olMemFree(DevEnvp));
   OFFLOAD_ERR(olDestroyQueue(Queue));

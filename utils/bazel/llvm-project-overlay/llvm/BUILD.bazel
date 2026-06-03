@@ -42,6 +42,60 @@ exports_files([
     "utils/lldbDataFormatters.py",
 ])
 
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "darwin_x86_64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_aarch64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_ppc64le",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:ppc",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_riscv64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:riscv64",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "linux_s390x",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:s390x",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 # It may be tempting to add compiler flags here, but that should be avoided.
 # The necessary warnings and other compile flags should be provided by the
 # toolchain or the `.bazelrc` file. This is just a workaround until we have a
@@ -354,6 +408,7 @@ cc_library(
             "-luuid",
             "-lws2_32",
             "-lntdll",
+            "-lwinhttp",
         ],
         ":is_windows_clang_cl": [
             "/STACK:10000000",
@@ -361,6 +416,7 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
+            "winhttp.lib",
         ],
         ":is_windows_msvc": [
             "/STACK:10000000",
@@ -368,6 +424,7 @@ cc_library(
             "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
+            "winhttp.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -627,6 +684,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfoDWARF",
+        ":HTTP",
         ":Object",
         ":Support",
         ":Symbolize",
@@ -736,6 +794,7 @@ cc_library(
         ":DebugInfoGSYM",
         ":DebugInfoPDB",
         ":Demangle",
+        ":HTTP",
         ":Object",
         ":Support",
         ":TargetParser",
@@ -1084,6 +1143,8 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
+        # Resolves circular-dep b/w Coroutines and Core.
+        "include/llvm/Transforms/Coroutines/CoroInstr.h",
     ]),
     hdrs = glob(
         [
@@ -1323,7 +1384,10 @@ cc_library(
 cc_library(
     name = "ABI",
     srcs = glob(
-        ["lib/ABI/*.cpp"],
+        [
+            "lib/ABI/*.cpp",
+            "lib/ABI/Targets/*.cpp",
+        ],
     ),
     hdrs = glob(
         ["include/llvm/ABI/*.h"],
@@ -1331,6 +1395,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
+        ":ir_headers",
     ],
 )
 
@@ -1585,6 +1650,8 @@ cc_library(
     hdrs = glob(["include/llvm/DWP/*.h"]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
+        ":BinaryFormatELF",
         ":DebugInfoDWARF",
         ":MC",
         ":Object",
@@ -1712,7 +1779,10 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
+    textual_hdrs = glob([
+        "include/llvm/SandboxIR/*.def",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -1753,9 +1823,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
-    textual_hdrs = [
-        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
-    ],
+    textual_hdrs = glob([
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -2306,7 +2376,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/AArch64/AArch64GenGlobalISel.inc",
             ),
             (
@@ -3691,7 +3764,10 @@ gentbl_cc_library(
     name = "webassembly_isel_target_gen",
     strip_include_prefix = "lib/Target/WebAssembly",
     tbl_outs = {
-        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": [
+            "-gen-global-isel",
+            "-gisel-extended-llt",
+        ],
         "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
             "-gen-global-isel-combiner",
             "-combiners=WebAssemblyPreLegalizerCombiner",
@@ -4242,9 +4318,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["-lrt"],
     }),
     deps = [
@@ -4332,9 +4408,9 @@ cc_library(
     copts = llvm_copts,
     linkopts = select({
         "@platforms//os:android": [],
-        "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-lrt",
         ],
@@ -4663,6 +4739,21 @@ cc_library(
     }),
 )
 
+cc_library(
+    name = "HTTP",
+    srcs = glob(["lib/HTTP/*.cpp"]),
+    hdrs = glob(["include/llvm/HTTP/*.h"]),
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "crypt32.lib",
+            "winhttp.lib",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [":Support"],
+)
+
 ################################################################################
 # LLVM toolchain and development binaries
 
@@ -4761,8 +4852,8 @@ cc_binary(
     # ll scripts rely on symbols from dependent
     # libraries being resolvable.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -4814,6 +4905,7 @@ cc_binary(
         ":Core",
         ":IRReader",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
@@ -4969,6 +5061,7 @@ cc_binary(
     deps = [
         ":Coverage",
         ":Debuginfod",
+        ":HTTP",
         ":Instrumentation",
         ":Object",
         ":ProfileData",
@@ -5097,6 +5190,7 @@ cc_library(
         ":Core",
         ":DebugInfodFindOptsTableGen",
         ":Debuginfod",
+        ":HTTP",
         ":Option",
         ":Support",
         ":Symbolize",
@@ -5201,6 +5295,7 @@ cc_library(
         ":DWP",
         ":DwpOptionsTableGen",
         ":MC",
+        ":Object",
         ":Option",
         ":Support",
     ],
@@ -5331,8 +5426,8 @@ cc_binary(
     copts = llvm_copts,
     # Make symbols from the standard library dynamically resolvable.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-Wl,--undefined=_ZTIi",
             "-Wl,--export-dynamic-symbol=_ZTIi",
@@ -5728,6 +5823,17 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "llvm-extract-bundle-entry-opts",
+    strip_include_prefix = "tools/llvm-objcopy",
+    tbl_outs = {"tools/llvm-objcopy/ExtractBundleEntryOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-objcopy/ExtractBundleEntryOpts.td",
+    deps = [
+        ":OptParserTdFiles",
+    ],
+)
+
 cc_library(
     name = "llvm-objcopy-lib",
     srcs = glob([
@@ -5746,6 +5852,7 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":llvm-bitcode-strip-opts",
+        ":llvm-extract-bundle-entry-opts",
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
@@ -5773,6 +5880,11 @@ binary_alias(
     binary = ":llvm-objcopy",
 )
 
+binary_alias(
+    name = "llvm-extract-bundle-entry",
+    binary = ":llvm-objcopy",
+)
+
 cc_library(
     name = "llvm-objdump-lib",
     srcs = glob([
@@ -5792,6 +5904,7 @@ cc_library(
         ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
+        ":HTTP",
         ":MC",
         ":MCDisassembler",
         ":ObjdumpOptsTableGen",
@@ -5907,6 +6020,7 @@ cc_library(
     deps = [
         ":Core",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":ProfileData",
         ":Support",
@@ -5930,6 +6044,7 @@ cc_binary(
     deps = [
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":BinaryFormat",
         ":Core",
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
@@ -6206,6 +6321,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":DebugInfoPDB",
         ":Debuginfod",
+        ":HTTP",
         ":Object",
         ":Option",
         ":Support",
@@ -6264,8 +6380,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": ["-Wl,--export-dynamic"],
     }),
     deps = [
@@ -6466,10 +6582,8 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/Testing/Support/*.h"]),
     copts = llvm_copts,
-    features = ["-layering_check"],
     deps = [
         ":Support",
-        ":config",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
     ],
@@ -6523,8 +6637,8 @@ cc_binary(
     # isn't even used in the main binary, so we also need to force it
     # to be included.
     linkopts = select({
-        "@platforms//os:windows": [],
         "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
         "//conditions:default": [
             "-rdynamic",
             "-u_ZTIi",
@@ -6764,7 +6878,7 @@ cc_binary(
     srcs = glob(
         [
             "tools/llvm-ir2vec/**/*.cpp",
-            "tools/llvm-ir2vec/lib/*.h",
+            "tools/llvm-ir2vec/**/*.h",
         ],
         exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
     ),
@@ -6817,6 +6931,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":MC",
         ":Object",
         ":ObjectYAML",
         ":Support",

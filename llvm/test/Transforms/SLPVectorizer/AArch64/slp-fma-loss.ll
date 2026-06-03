@@ -7,21 +7,19 @@ define void @slp_not_profitable_with_fast_fmf(ptr %A, ptr %B) {
 ; CHECK-LABEL: @slp_not_profitable_with_fast_fmf(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul fast float [[B_1]], [[A_0]]
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
 ; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B_2]], [[B_0]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[B_0]], [[B_1]]
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul fast float [[B_2]], [[A_0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL_3]], [[MUL_2]]
+; CHECK-NEXT:    store float [[SUB]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    store float [[B_2]], ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -48,21 +46,19 @@ define void @slp_not_profitable_with_reassoc_fmf(ptr %A, ptr %B) {
 ; CHECK-LABEL: @slp_not_profitable_with_reassoc_fmf(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul reassoc float [[B_1]], [[A_0]]
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
 ; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul reassoc <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub reassoc <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd reassoc <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[B_2]], [[B_0]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[B_0]], [[B_1]]
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul reassoc float [[B_2]], [[A_0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc float [[MUL_3]], [[MUL_2]]
+; CHECK-NEXT:    store float [[SUB]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    store float [[B_2]], ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -90,21 +86,19 @@ define void @slp_profitable_missing_fmf_on_fadd_fsub(ptr %A, ptr %B) {
 ; CHECK-LABEL: @slp_profitable_missing_fmf_on_fadd_fsub(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul fast float [[B_1]], [[A_0]]
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
 ; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul fast float [[B_2]], [[B_0]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[B_0]], [[B_1]]
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul fast float [[B_2]], [[A_0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[MUL_3]], [[MUL_2]]
+; CHECK-NEXT:    store float [[SUB]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    store float [[B_2]], ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -132,21 +126,19 @@ define void @slp_profitable_missing_fmf_on_fmul_fadd_fsub(ptr %A, ptr %B) {
 ; CHECK-LABEL: @slp_profitable_missing_fmf_on_fmul_fadd_fsub(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul float [[B_1]], [[A_0]]
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
 ; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[B_2]], [[B_0]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[B_0]], [[B_1]]
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul float [[B_2]], [[A_0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[MUL_3]], [[MUL_2]]
+; CHECK-NEXT:    store float [[SUB]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    store float [[B_2]], ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -174,21 +166,19 @@ define void @slp_profitable_missing_fmf_nnans_only(ptr %A, ptr %B) {
 ; CHECK-LABEL: @slp_profitable_missing_fmf_nnans_only(
 ; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[A_0:%.*]] = load float, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[B_1:%.*]] = load float, ptr [[GEP_B_1]], align 4
+; CHECK-NEXT:    [[MUL_0:%.*]] = fmul nnan float [[B_1]], [[A_0]]
 ; CHECK-NEXT:    [[B_0:%.*]] = load float, ptr [[B]], align 4
 ; CHECK-NEXT:    [[GEP_B_2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[B_2:%.*]] = load float, ptr [[GEP_B_2]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[GEP_B_1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[B_0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul nnan <2 x float> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[A_0]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul nnan <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub nnan <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd nnan <2 x float> [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul nnan float [[B_2]], [[B_0]]
+; CHECK-NEXT:    [[SUB:%.*]] = fsub nnan float [[MUL_0]], [[MUL_1]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul nnan float [[B_0]], [[B_1]]
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul nnan float [[B_2]], [[A_0]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd nnan float [[MUL_3]], [[MUL_2]]
+; CHECK-NEXT:    store float [[SUB]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    store float [[ADD]], ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    store float [[B_2]], ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -216,14 +206,14 @@ define void @slp_profitable_missing_fmf_nnans_only(ptr %A, ptr %B) {
 define float @slp_not_profitable_in_loop(float %x, ptr %A) {
 ; CHECK-LABEL: @slp_not_profitable_in_loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds float, ptr [[A1:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[L_2:%.*]] = load float, ptr [[A1]], align 4
-; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[A1]], align 4
+; CHECK-NEXT:    [[L_3:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[L_4:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float 3.000000e+00, float 3.000000e+00, float poison, float 3.000000e+00>, float [[X:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L_2]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L_3]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[L_3]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[L_4]], i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -268,19 +258,19 @@ exit:
 define void @slp_profitable(ptr %A, ptr %B, float %0) {
 ; CHECK-LABEL: @slp_profitable(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[SUB_I1096:%.*]] = fsub fast float 1.000000e+00, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[SUB_I1096]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x float> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <2 x float> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_I1100:%.*]] = fmul fast float [[TMP1]], [[SUB_I1096]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[MUL7_I1101:%.*]] = fmul fast float [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[ADD_I1102:%.*]] = fadd fast float [[MUL7_I1101]], [[MUL_I1100]]
+; CHECK-NEXT:    [[MUL14_I:%.*]] = fmul fast float [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], [[SUB_I1096]]
+; CHECK-NEXT:    [[ADD15_I:%.*]] = fsub fast float [[MUL14_I]], [[TMP3]]
+; CHECK-NEXT:    store float [[ADD_I1102]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    store float [[ADD15_I]], ptr [[GEP_B_1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

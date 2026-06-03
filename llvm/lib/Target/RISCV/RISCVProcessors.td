@@ -45,6 +45,8 @@ class RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   code PostRASchedDirection = TopDown;
+
+  bit IsJumpExpensive = false;
 }
 
 def RISCVTuneInfoTable : GenericTable {
@@ -58,7 +60,7 @@ def RISCVTuneInfoTable : GenericTable {
                 "MaxStoresPerMemcpyOptSize", "MaxStoresPerMemcpy",
                 "MaxStoresPerMemmoveOptSize", "MaxStoresPerMemmove",
                 "MaxLoadsPerMemcmpOptSize", "MaxLoadsPerMemcmp",
-                "PostRASchedDirection"];
+                "PostRASchedDirection", "IsJumpExpensive"];
 }
 
 def getRISCVTuneInfo : SearchIndex {
@@ -347,6 +349,102 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
                                        FeatureVendorXSiFivecflushdlone],
                                       !listconcat(SiFiveIntelligenceTuneFeatures,
                                                   [TuneHasSingleElementVecFP64])> {
+  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
+}
+
+def SIFIVE_X160 : RISCVProcessorModel<"sifive-x160",
+                                      SiFiveX100Model,
+                                      [Feature32Bit,
+                                       FeatureStdExtI,
+                                       FeatureStdExtM,
+                                       FeatureStdExtA,
+                                       FeatureStdExtF,
+                                       FeatureStdExtC,
+                                       FeatureStdExtB,
+                                       FeatureStdExtZicbom,
+                                       FeatureStdExtZicbop,
+                                       FeatureStdExtZicboz,
+                                       FeatureStdExtZicond,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtZihintntl,
+                                       FeatureStdExtZihintpause,
+                                       FeatureStdExtZihpm,
+                                       FeatureStdExtZimop,
+                                       FeatureStdExtZawrs,
+                                       FeatureStdExtZfa,
+                                       FeatureStdExtZfbfmin,
+                                       FeatureStdExtZfh,
+                                       FeatureStdExtZcb,
+                                       FeatureStdExtZce,
+                                       FeatureStdExtZcf,
+                                       FeatureStdExtZcmop,
+                                       FeatureStdExtZcmp,
+                                       FeatureStdExtZcmt,
+                                       FeatureStdExtZkt,
+                                       FeatureStdExtZvbb,
+                                       FeatureStdExtZve32f,
+                                       FeatureStdExtZve32x,
+                                       FeatureStdExtZvfbfmin,
+                                       FeatureStdExtZvfbfwma,
+                                       FeatureStdExtZvfh,
+                                       FeatureStdExtZvkt,
+                                       FeatureStdExtZvl128b,
+                                       FeatureVendorXSfcease,
+                                       FeatureStdExtZicfilp,
+                                       FeatureStdExtZvdot4a8i,
+                                       FeatureStdExtZvfbfa],
+                                       SiFiveIntelligenceTuneFeatures>;
+
+def SIFIVE_X180 : RISCVProcessorModel<"sifive-x180",
+                                      SiFiveX100Model,
+                                      [Feature64Bit,
+                                       FeatureStdExtI,
+                                       FeatureStdExtM,
+                                       FeatureStdExtA,
+                                       FeatureStdExtF,
+                                       FeatureStdExtD,
+                                       FeatureStdExtC,
+                                       FeatureStdExtB,
+                                       FeatureStdExtV,
+                                       FeatureStdExtZic64b,
+                                       FeatureStdExtZicbom,
+                                       FeatureStdExtZicbop,
+                                       FeatureStdExtZicboz,
+                                       FeatureStdExtZiccamoa,
+                                       FeatureStdExtZiccif,
+                                       FeatureStdExtZiccrse,
+                                       FeatureStdExtZicond,
+                                       FeatureStdExtZifencei,
+                                       FeatureStdExtZihintntl,
+                                       FeatureStdExtZihintpause,
+                                       FeatureStdExtZihpm,
+                                       FeatureStdExtZimop,
+                                       FeatureStdExtZa64rs,
+                                       FeatureStdExtZawrs,
+                                       FeatureStdExtZfa,
+                                       FeatureStdExtZfbfmin,
+                                       FeatureStdExtZfh,
+                                       FeatureStdExtZcb,
+                                       FeatureStdExtZcd,
+                                       FeatureStdExtZcmop,
+                                       FeatureStdExtZkt,
+                                       FeatureStdExtZvbb,
+                                       FeatureStdExtZvfbfmin,
+                                       FeatureStdExtZvfbfwma,
+                                       FeatureStdExtZvfh,
+                                       FeatureStdExtZvkb,
+                                       FeatureStdExtZvkt,
+                                       FeatureStdExtZvl128b,
+                                       FeatureVendorXSfcease,
+                                       FeatureVendorXSfvfbfexp16e,
+                                       FeatureVendorXSfvfexp16e,
+                                       FeatureVendorXSfvfexp32e,
+                                       FeatureVendorXSfvfexpa,
+                                       FeatureVendorXSiFivecflushdlone,
+                                       FeatureStdExtZicfilp,
+                                       FeatureStdExtZvdot4a8i,
+                                       FeatureStdExtZvfbfa],
+                                       SiFiveIntelligenceTuneFeatures> {
   let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
 }
 
@@ -803,7 +901,8 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
                                         TuneEnableSelectOptimize,
-                                        TuneVXRMPipelineFlush]> {
+                                        TuneVXRMPipelineFlush,
+                                        TunePreferAscendingLoadStore]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
   let MImpID = 0x1000000049772200;
@@ -811,8 +910,12 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
 
 def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
                                         SpacemitX100Model,
-                                        !listconcat(RVA23U64Features,
-                                        [FeatureStdExtZbc,
+                                        !listconcat(RVA23S64Features,
+                                        [FeatureStdExtSmepmp,
+                                         FeatureStdExtSmnpm,
+                                         FeatureStdExtSmstateen,
+                                         FeatureStdExtSspm,
+                                         FeatureStdExtZbc,
                                          FeatureStdExtZbkc,
                                          FeatureStdExtZfbfmin,
                                          FeatureStdExtZfh,

@@ -29,6 +29,7 @@
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -1276,8 +1277,9 @@ bool RISCVVLOptimizer::tryReduceVL(MachineInstr &MI,
     });
     if (VLMI->getParent() == MI.getParent() &&
         all_of(UsesSameBB, VLDominates) &&
-        RISCVInstrInfo::isSafeToMove(MI, *VLMI->getNextNode())) {
-      MI.moveBefore(VLMI->getNextNode());
+        RISCVInstrInfo::isSafeToMove(MI, std::next(VLMI->getIterator()))) {
+      VLMI->getParent()->splice(std::next(VLMI->getIterator()), MI.getParent(),
+                                MI.getIterator());
     } else {
       LLVM_DEBUG(dbgs() << "  Abort due to VL not dominating.\n");
       return false;

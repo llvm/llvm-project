@@ -42,29 +42,27 @@ public:
 
 /// Printer pass for the \c UniformityInfo.
 class UniformityInfoPrinterPass
-    : public PassInfoMixin<UniformityInfoPrinterPass> {
+    : public RequiredPassInfoMixin<UniformityInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit UniformityInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
 class UniformityInfoWrapperPass : public FunctionPass {
-  Function *m_function = nullptr;
-  UniformityInfo m_uniformityInfo;
+  Function *Fn = nullptr;
+  UniformityInfo UI;
 
 public:
   static char ID;
 
   UniformityInfoWrapperPass();
 
-  UniformityInfo &getUniformityInfo() { return m_uniformityInfo; }
-  const UniformityInfo &getUniformityInfo() const { return m_uniformityInfo; }
+  UniformityInfo &getUniformityInfo() { return UI; }
+  const UniformityInfo &getUniformityInfo() const { return UI; }
 
   bool runOnFunction(Function &F) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

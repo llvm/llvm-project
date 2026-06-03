@@ -197,16 +197,15 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (!Sym->getType()) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
-    if (Subtarget) {
-      // Subtarget is only set when a function is defined, because
-      // each function can declare a different subtarget. For example,
-      // on ARM a compilation unit might have a function on ARM and
-      // another on Thumb. Therefore only if Subtarget is non-null we
-      // can actually calculate the legal VTs.
-      const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
-      computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getDataLayout(), GlobalVT, VTs);
-    }
+    // Function-specific subtargets are not needed here: WebAssembly
+    // coalesces features before isel, so use the TargetMachine's
+    // module-wide subtarget to compute legal value types.
+    auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
+    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
+    const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
+    computeLegalValueVTs(TLI, GV->getParent()->getContext(),
+                         GV->getDataLayout(), GlobalVT, VTs);
+
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
 

@@ -29,11 +29,11 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -859,13 +859,11 @@ public:
 
   void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned index) const {
-    assert(index < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[index];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   void setTemplateParameterListsInfo(ASTContext &Context,
@@ -1210,6 +1208,21 @@ public:
             // C++11 [dcl.stc]p4
             (getStorageClass() == SC_None && getTSCSpec() == TSCS_thread_local))
       && !isFileVarDecl();
+  }
+
+  /// Returns true if this is a file-scope variable with internal linkage.
+  bool isInternalLinkageFileVar() const {
+    // Calling isExternallyVisible() can trigger linkage computation/caching,
+    // which may produce stale results when a decl's DeclContext changes after
+    // creation (e.g., OpenMP declare mapper variables), so here we determine
+    // it syntactically instead.
+    if (!isFileVarDecl())
+      return false;
+    // Linkage is determined by enclosing class/namespace for static data
+    // members.
+    if (getStorageClass() == SC_Static && !isStaticDataMember())
+      return true;
+    return isInAnonymousNamespace();
   }
 
   /// Returns true if a variable has extern or __private_extern__
@@ -1715,6 +1728,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1749,16 +1766,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1776,6 +1784,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
@@ -3975,13 +3993,11 @@ public:
 
   void setQualifierInfo(NestedNameSpecifierLoc QualifierLoc);
 
-  unsigned getNumTemplateParameterLists() const {
-    return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
-  }
-
-  TemplateParameterList *getTemplateParameterList(unsigned i) const {
-    assert(i < getNumTemplateParameterLists());
-    return getExtInfo()->TemplParamLists[i];
+  ArrayRef<TemplateParameterList *> getTemplateParameterLists() const {
+    if (!hasExtInfo())
+      return {};
+    return {/*data=*/getExtInfo()->TemplParamLists,
+            /*length=*/getExtInfo()->NumTemplParamLists};
   }
 
   // These types are created lazily, use the ASTContext methods to obtain them.

@@ -4,7 +4,7 @@
    done
  */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/odr-member-functions -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/odr-member-functions -y %p/dummy-debug-map.map -o - | llvm-dwarfdump -debug-info - | FileCheck %s
 
 struct S {
   __attribute__((always_inline)) void foo() { bar(); }

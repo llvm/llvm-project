@@ -10,23 +10,23 @@ define void @test(i32 %arg) {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP5:%.*]], %[[BB1]] ]
 ; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP6:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[XOR26:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 0, i32 0, i32 1, i32 0, i32 0>
-; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[PHI2]], 0
-; CHECK-NEXT:    [[ADD18:%.*]] = add i32 [[PHI2]], 0
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[XOR27:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <8 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP8:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[ADD14:%.*]] = add i32 [[PHI2]], 0
+; CHECK-NEXT:    [[ADD20:%.*]] = add i32 [[PHI2]], 0
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[PHI]], 0
-; CHECK-NEXT:    [[ADD19:%.*]] = add i32 [[PHI2]], 0
+; CHECK-NEXT:    [[ADD21:%.*]] = add i32 [[PHI2]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4]] = add <2 x i32> [[TMP0]], <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP5]] = extractelement <2 x i32> [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP6]] = extractelement <2 x i32> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP0]], <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP8]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP5]] = extractelement <8 x i32> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP6]] = extractelement <8 x i32> [[TMP8]], i32 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> [[TMP3]])
-; CHECK-NEXT:    [[ADD25:%.*]] = xor i32 [[TMP7]], [[ADD13]]
-; CHECK-NEXT:    [[XOR22:%.*]] = xor i32 [[ADD18]], [[ADD19]]
-; CHECK-NEXT:    [[ADD24:%.*]] = xor i32 [[ADD5]], [[TMP6]]
-; CHECK-NEXT:    [[XOR25:%.*]] = xor i32 [[ADD25]], [[XOR22]]
-; CHECK-NEXT:    [[XOR26]] = xor i32 [[XOR25]], [[ADD24]]
+; CHECK-NEXT:    [[ADD23:%.*]] = xor i32 [[TMP7]], [[ADD14]]
+; CHECK-NEXT:    [[XOR23:%.*]] = xor i32 [[ADD20]], [[ADD21]]
+; CHECK-NEXT:    [[ADD26:%.*]] = xor i32 [[ADD5]], [[TMP6]]
+; CHECK-NEXT:    [[XOR28:%.*]] = xor i32 [[ADD23]], [[XOR23]]
+; CHECK-NEXT:    [[XOR27]] = xor i32 [[XOR28]], [[ADD26]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[TMP5]], 0
 ; CHECK-NEXT:    br label %[[BB1]]
 ;

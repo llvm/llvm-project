@@ -566,6 +566,7 @@ namespace clang {
     ExpectedDecl VisitObjCImplementationDecl(ObjCImplementationDecl *D);
     ExpectedDecl VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     ExpectedDecl VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
+    ExpectedDecl VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     ExpectedDecl VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D);
     ExpectedDecl VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     ExpectedDecl VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
@@ -1733,9 +1734,10 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  ExpectedDecl ToTypeConstraintConcept = import(T->getTypeConstraintConcept());
-  if (!ToTypeConstraintConcept)
-    return ToTypeConstraintConcept.takeError();
+  Expected<TemplateDecl *> ToTypeConstraint =
+      import(T->getTypeConstraintConcept());
+  if (!ToTypeConstraint)
+    return ToTypeConstraint.takeError();
 
   SmallVector<TemplateArgument, 2> ToTemplateArgs;
   if (Error Err = ImportTemplateArguments(T->getTypeConstraintArguments(),
@@ -1743,9 +1745,8 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
     return std::move(Err);
 
   return Importer.getToContext().getAutoType(
-      *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
-      /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
-      ToTemplateArgs);
+      T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
+      *ToTypeConstraint, ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
@@ -1759,8 +1760,8 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
     return ToDeducedTypeOrErr.takeError();
 
   return Importer.getToContext().getDeducedTemplateSpecializationType(
-      T->getKeyword(), *ToTemplateNameOrErr, *ToDeducedTypeOrErr,
-      T->isDependentType());
+      T->getDeducedKind(), *ToDeducedTypeOrErr, T->getKeyword(),
+      *ToTemplateNameOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
@@ -3579,13 +3580,13 @@ ExpectedDecl ASTNodeImporter::VisitEnumConstantDecl(EnumConstantDecl *D) {
 template <typename DeclTy>
 Error ASTNodeImporter::ImportTemplateParameterLists(const DeclTy *FromD,
                                                     DeclTy *ToD) {
-  unsigned int Num = FromD->getNumTemplateParameterLists();
-  if (Num == 0)
+  ArrayRef<TemplateParameterList *> FromTPLs =
+      FromD->getTemplateParameterLists();
+  if (FromTPLs.empty())
     return Error::success();
-  SmallVector<TemplateParameterList *, 2> ToTPLists(Num);
-  for (unsigned int I = 0; I < Num; ++I)
-    if (Expected<TemplateParameterList *> ToTPListOrErr =
-            import(FromD->getTemplateParameterList(I)))
+  SmallVector<TemplateParameterList *, 2> ToTPLists(FromTPLs.size());
+  for (unsigned int I = 0; I < FromTPLs.size(); ++I)
+    if (Expected<TemplateParameterList *> ToTPListOrErr = import(FromTPLs[I]))
       ToTPLists[I] = *ToTPListOrErr;
     else
       return ToTPListOrErr.takeError();
@@ -6135,6 +6136,22 @@ ASTNodeImporter::VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D) {
   }
 
   return ToImpl;
+}
+
+ExpectedDecl
+ASTNodeImporter::VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, D->getType());
+  auto ToValue = importChecked(Err, D->getValue());
+  if (Err)
+    return std::move(Err);
+
+  TemplateParamObjectDecl *ToD;
+  auto Create = [this](QualType T, const APValue &V) {
+    return Importer.ToContext.getTemplateParamObjectDecl(T, V);
+  };
+  (void)GetImportedOrCreateSpecialDecl(ToD, Create, D, ToType, ToValue);
+  return ToD;
 }
 
 ExpectedDecl
@@ -9028,8 +9045,8 @@ ExpectedStmt ASTNodeImporter::VisitInitListExpr(InitListExpr *E) {
     return std::move(Err);
 
   ASTContext &ToCtx = Importer.getToContext();
-  InitListExpr *To = new (ToCtx) InitListExpr(
-      ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc);
+  InitListExpr *To = new (ToCtx)
+      InitListExpr(ToCtx, ToLBraceLoc, ToExprs, ToRBraceLoc, E->isExplicit());
   To->setType(ToType);
 
   if (E->hasArrayFiller()) {
@@ -9749,12 +9766,16 @@ Expected<Attr *> ASTImporter::Import(const Attr *FromAttr) {
   }
   case attr::GuardedBy: {
     const auto *From = cast<GuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::PtGuardedBy: {
     const auto *From = cast<PtGuardedByAttr>(FromAttr);
-    AI.importAttr(From, AI.importArg(From->getArg()).value());
+    AI.importAttr(From,
+                  AI.importArrayArg(From->args(), From->args_size()).value(),
+                  From->args_size());
     break;
   }
   case attr::AcquiredAfter: {

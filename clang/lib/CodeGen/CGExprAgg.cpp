@@ -246,7 +246,7 @@ public:
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
 void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
-  LValue LV = CGF.EmitLValue(E);
+  LValue LV = CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
 
   // If the type of the l-value is atomic, then do an atomic load.
   if (LV.getType()->isAtomicType() || CGF.LValueIsSuitableForInlineAtomic(LV)) {
@@ -288,13 +288,18 @@ void AggExprEmitter::withReturnValueSlot(
   // its lifetime before we have the chance to emit a proper destructor call.
   //
   // We also need a temporary if the destination is in a different address space
-  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
-  // Look through addrspacecasts to avoid unnecessary temps when the
-  // destination is already in the alloca AS.
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
-      CGF.CGM.getASTAllocaAddressSpace());
-  bool DestASMismatch = !Dest.isIgnored() &&
-                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+  // from the sret AS. Use the target hook to get the actual sret AS for this
+  // return type.
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
+  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
+  bool CanAggregateCopy =
+      RD ? (RD->hasTrivialCopyConstructor() ||
+            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
+            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
+            RD->isUnion())
+         : RetTy.isTriviallyCopyableType(CGF.getContext());
+  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
                         Dest.getAddress()
                                 .getBasePointer()
                                 ->stripPointerCasts()
@@ -647,9 +652,15 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   auto Emit = [&](Expr *Init, uint64_t ArrayIndex) {
     llvm::Value *element = begin;
     if (ArrayIndex > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, begin,
-          llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex), "arrayinit.element");
+      if (CGF.getLangOpts().EmitLogicalPointer)
+        element = Builder.CreateStructuredGEP(
+            AType, begin, llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
+      else
+        element = Builder.CreateInBoundsGEP(
+            llvmElementType, begin,
+            llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -1337,7 +1348,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
     return;
   }
 
-  LValue LHS = CGF.EmitLValue(E->getLHS());
+  LValue LHS = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
 
   // If we have an atomic type, evaluate into the destination and then
   // do an atomic copy.
@@ -2176,7 +2187,7 @@ void CodeGenFunction::EmitAggExpr(const Expr *E, AggValueSlot Slot) {
 
 LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
   assert(hasAggregateEvaluationKind(E->getType()) && "Invalid argument!");
-  Address Temp = CreateMemTemp(E->getType());
+  Address Temp = CreateMemTempWithoutCast(E->getType());
   LValue LV = MakeAddrLValue(Temp, E->getType());
   EmitAggExpr(E, AggValueSlot::forLValue(LV, AggValueSlot::IsNotDestructed,
                                          AggValueSlot::DoesNotNeedGCBarriers,

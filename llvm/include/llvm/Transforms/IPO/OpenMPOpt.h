@@ -39,7 +39,7 @@ KernelSet getDeviceKernels(Module &M);
 } // namespace omp
 
 /// OpenMP optimizations pass.
-class OpenMPOptPass : public PassInfoMixin<OpenMPOptPass> {
+class OpenMPOptPass : public OptionalPassInfoMixin<OpenMPOptPass> {
 public:
   OpenMPOptPass() = default;
   OpenMPOptPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}
@@ -50,7 +50,7 @@ private:
   const ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None;
 };
 
-class OpenMPOptCGSCCPass : public PassInfoMixin<OpenMPOptCGSCCPass> {
+class OpenMPOptCGSCCPass : public OptionalPassInfoMixin<OpenMPOptCGSCCPass> {
 public:
   OpenMPOptCGSCCPass() = default;
   OpenMPOptCGSCCPass(ThinOrFullLTOPhase LTOPhase) : LTOPhase(LTOPhase) {}

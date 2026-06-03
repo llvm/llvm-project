@@ -1206,7 +1206,7 @@ void test_builtin_elementwise_fma(float f32, double f64,
 
   // CHECK:      [[V2F16_0:%.+]] = load <2 x half>, ptr %v2f16.addr
   // CHECK-NEXT: [[V2F16_1:%.+]] = load <2 x half>, ptr %v2f16.addr
-  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 0xH4400))
+  // CHECK-NEXT: call <2 x half> @llvm.fma.v2f16(<2 x half> [[V2F16_0]], <2 x half> [[V2F16_1]], <2 x half> splat (half 4.000000e+00))
   half2 tmp2_v2f16 = __builtin_elementwise_fma(v2f16, v2f16, (half2)4.0);
 
 }

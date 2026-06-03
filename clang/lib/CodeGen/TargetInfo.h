@@ -32,6 +32,7 @@ class Value;
 }
 
 namespace clang {
+class CXXRecordDecl;
 class Decl;
 
 namespace CodeGen {
@@ -318,8 +319,11 @@ public:
   virtual LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                           const VarDecl *D) const;
 
-  /// Get the AST address space for alloca.
-  virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
+  /// Get the address space for an indirect (sret) return of the given type.
+  /// The default falls back to the alloca AS.
+  virtual LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const {
+    return LangAS::Default;
+  }
 
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {

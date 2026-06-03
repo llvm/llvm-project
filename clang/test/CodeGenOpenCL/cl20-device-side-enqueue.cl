@@ -419,31 +419,31 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   size = get_kernel_sub_group_count_for_ndrange(ndrange, ^(){});
 }
 
-// COMMON: define spir_kernel void [[INVLK1]](ptr addrspace(4) %0) #{{[0-9]+}} {
+// COMMON: define{{.*}} void [[INVLK1]](ptr addrspace(4) %0) #{{[0-9]+}} {
 // COMMON: entry:
 // COMMON:  call {{(spir_func )?}}void @__device_side_enqueue_block_invoke(ptr addrspace(4) %0)
 // COMMON:  ret void
 // COMMON: }
-// COMMON: define spir_kernel void [[INVLK2]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})  [[INVOKE_KERNEL_ATTR:#[0-9]+]]
-// COMMON: define spir_kernel void [[INVGK2]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK3]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK4]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK5]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK6]](ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3) #{{[0-9]+}} {
+// COMMON: define{{.*}} void [[INVLK2]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK1]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})  [[INVOKE_KERNEL_ATTR:#[0-9]+]]
+// COMMON: define{{.*}} void [[INVGK2]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK3]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK4]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK5]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK6]](ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3) #{{[0-9]+}} {
 // COMMON: entry:
 // COMMON:  call {{(spir_func )?}}void @__device_side_enqueue_block_invoke_9(ptr addrspace(4) %0, ptr addrspace(3) %1, ptr addrspace(3) %2, ptr addrspace(3) %3)
 // COMMON:  ret void
 // COMMON: }
-// COMMON: define spir_kernel void [[INVGK7]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK7]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
 // COMMON: define internal {{(spir_func )?}}void [[INVG8]](ptr addrspace(4){{.*}}) [[INVG8_INVOKE_FUNC_ATTR:#[0-9]+]]
 // COMMON: define internal {{(spir_func )?}}void [[INVG9]](ptr addrspace(4){{.*}}, ptr addrspace(3) %{{.*}})
-// COMMON: define spir_kernel void [[INVGK8]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INV_G_K]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVLK3]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK9]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
-// COMMON: define spir_kernel void [[INVGK10]](ptr addrspace(4){{.*}})
-// COMMON: define spir_kernel void [[INVGK11]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK8]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INV_G_K]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVLK3]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK9]](ptr addrspace(4){{.*}}, ptr addrspace(3){{.*}})
+// COMMON: define{{.*}} void [[INVGK10]](ptr addrspace(4){{.*}})
+// COMMON: define{{.*}} void [[INVGK11]](ptr addrspace(4){{.*}})
 
 // SPIR: attributes [[INVG8_INVOKE_FUNC_ATTR]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // SPIR: attributes [[INVOKE_KERNEL_ATTR]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }

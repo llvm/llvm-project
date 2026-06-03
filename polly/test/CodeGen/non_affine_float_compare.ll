@@ -12,8 +12,7 @@
 ; CHECK:   %[[offset:.*]] = shl nuw nsw i64 %polly.indvar, 2
 ; CHECK:   %scevgep[[R0:[0-9]*]] = getelementptr i8, ptr %A, i64 %[[offset]]
 ; CHECK:   %tmp3_p_scalar_ = load float, ptr %scevgep[[R0]], align 4, !alias.scope !2, !noalias !5
-; CHECK:   %[[offset2:.*]] = shl nuw nsw i64 %polly.indvar, 2
-; CHECK:   %scevgep[[R2:[0-9]*]] = getelementptr i8, ptr %scevgep{{[0-9]*}}, i64 %[[offset2]]
+; CHECK:   %scevgep[[R2:[0-9]*]] = getelementptr i8, ptr %scevgep{{[0-9]*}}, i64 %[[offset]]
 ; CHECK:   %tmp6_p_scalar_ = load float, ptr %scevgep[[R2]], align 4, !alias.scope !2, !noalias !5
 ; CHECK:   %p_tmp7 = fcmp oeq float %tmp3_p_scalar_, %tmp6_p_scalar_
 ; CHECK:   br i1 %p_tmp7, label %polly.stmt.bb8, label %polly.stmt.bb12.[[R:[a-zA-Z_.0-9]*]]

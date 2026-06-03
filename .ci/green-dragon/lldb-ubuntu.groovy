@@ -6,14 +6,12 @@ pipeline {
     }
 
     parameters {
-        string(name: 'LABEL', defaultValue: params.LABEL ?: 'linux-x86_64', description: 'Node label to run on')
-
         string(name: 'BUILD_TYPE', defaultValue: params.BUILD_TYPE ?: 'Release', description: 'Default CMake build type; one of: Release, Debug, ...')
     }
 
     agent {
         node {
-            label params.LABEL
+            label env.JOB_NAME.contains('aarch64') ? 'linux-aarch64' : 'linux-x86_64'
         }
     }
 
@@ -24,7 +22,7 @@ pipeline {
                     script {
                         env.AWS_DEFAULT_REGION = 'us-west-2'
                         env.DOCKER_SERVER = "${AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_DEFAULT_REGION}.amazonaws.com"
-                        def tag = (params.LABEL == 'linux-aarch64')
+                        def tag = env.JOB_NAME.contains('aarch64')
                             ? 'main-ci-ecr-8ce5c7b:swift-ci-ubuntu2404-aarch64'
                             : 'main-ci-ecr-8ce5c7b:swift-ci-ubuntu2404'
                         env.DOCKER_IMAGE = "${env.DOCKER_SERVER}/${tag}"
@@ -40,6 +38,11 @@ pipeline {
                 timeout(30) {
                     dir('llvm-project') {
                         checkout scm
+                    }
+                }
+                timeout(10) {
+                    dir('llvm-zorg') {
+                        git url: 'https://github.com/llvm/llvm-zorg.git', branch: 'main'
                     }
                 }
             }
@@ -62,6 +65,8 @@ pipeline {
                         writeFile file: 'build.sh', text: '''#!/usr/bin/env bash
 set -ex
 
+pip3 install --break-system-packages -r /workspace/llvm-zorg/zorg/jenkins/jobs/requirements.txt
+
 /usr/bin/cmake -G Ninja \
     -S /workspace/llvm-project/llvm \
     -B /workspace/llvm-build \
@@ -70,14 +75,14 @@ set -ex
     -DLLDB_ENABLE_LIBXML2=ON \
     -DLLDB_ENABLE_LUA=OFF \
     -DLLDB_ENABLE_LZMA=OFF \
-    -DLLDB_ENABLE_PYTHON=FORCE_ON \
-    -DLLDB_ENABLE_SWIG=FORCE_ON \
+    -DLLDB_ENABLE_PYTHON=ON \
+    -DLLDB_ENABLE_SWIG=ON \
     -DLLVM_BUILD_TOOLS=TRUE \
     -DLLVM_ENABLE_ASSERTIONS:BOOL=TRUE \
     -DLLVM_ENABLE_LIBEDIT=FORCE_ON \
     -DLLVM_ENABLE_LIBXML2=FORCE_ON \
     -DLLVM_BUILD_UTILS=TRUE \
-    -DLLVM_ENABLE_PROJECTS="clang;lldb" \
+    -DLLVM_ENABLE_PROJECTS="clang;lldb;lld" \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
     -DLLVM_OPTIMIZED_TABLEGEN:BOOL=TRUE \
     -DLLVM_TARGETS_TO_BUILD=Native \
@@ -96,6 +101,10 @@ ninja -C /workspace/llvm-build check-lldb
                                 --cap-add=SYS_PTRACE \\
                                 --security-opt seccomp=unconfined \\
                                 -e BUILD_TYPE=${params.BUILD_TYPE} \\
+                                -e http_proxy \\
+                                -e https_proxy \\
+                                -e HTTP_PROXY \\
+                                -e HTTPS_PROXY \\
                                 -v "\${WORKSPACE}:/workspace" \\
                                 ${env.DOCKER_IMAGE} \\
                                 bash /workspace/build.sh

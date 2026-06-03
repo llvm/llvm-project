@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
 #include "src/wctype/iswdigit.h"
 
 #include "test/UnitTest/Test.h"

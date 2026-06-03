@@ -15,7 +15,10 @@ using namespace lldb_private;
 using namespace lldb_private::process_aix;
 
 NativeThreadAIX::NativeThreadAIX(NativeProcessAIX &process, lldb::tid_t tid)
-    : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid) {}
+    : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
+      m_reg_context_up(
+          NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
+              process.GetArchitecture(), *this)) {}
 
 std::string NativeThreadAIX::GetName() { return ""; }
 

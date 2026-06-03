@@ -339,20 +339,20 @@ func.func @tma_generate_descriptor_incorrect_last_dim(%desc: !desc,  %buffer2: m
 // -----
 
 func.func @rcp_unsupported_rounding_0(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rn> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rn, ftz} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvvm.fp_rnd_mode<rn> is not supported yet.}}
+  %out = nvgpu.rcp %in {rounding = #nvvm.fp_rnd_mode<rn>, approx = true, ftz = true} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_rounding_1(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode rz> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = rz} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. non-approx or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {ftz = true} : vector<16xf32>
 }
 // -----
 
 func.func @rcp_unsupported_ftz(%in : vector<16xf32>) {
-  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. #nvgpu<rcp_rounding_mode approx> or non-ftz is not supported yet.}}
-  %out = nvgpu.rcp %in {rounding = approx} : vector<16xf32>
+  // expected-error @+1 {{'nvgpu.rcp' op has a limitation. non-approx or non-ftz is not supported yet.}}
+  %out = nvgpu.rcp %in {approx = true} : vector<16xf32>
 }
 
 // -----
@@ -388,4 +388,38 @@ func.func @tma_last_dim_bytes(%desc: !desc, %buffer: memref<32x8xi8,3>, %mbarrie
   // expected-error @+1 {{the bytes in the last dimension of the tensor map must be a multiple of 16}}
   nvgpu.tma.async.load %desc[%c0, %c0], %mbarrier[%c0] to %buffer : !desc, !mbarrier -> memref<32x8xi8,3>
   return
+}
+
+// -----
+
+func.func @mma_sync_invalid_shape_2_elements(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{mmaShape must have exactly 3 elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @mma_sync_invalid_shape_4_elements(%arg0: vector<4x2xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{mmaShape must have exactly 3 elements}}
+  %d = nvgpu.mma.sync (%arg0, %arg1, %arg2) {mmaShape = [16, 8, 16, 4]} : (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @mma_sparse_sync_invalid_shape_2_elements(%arg0: vector<2x2xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>, %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{mmaShape must have exactly 3 elements}}
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8], sparsitySelector = 0 : i32} :
+       (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// -----
+
+func.func @mma_sparse_sync_invalid_shape_4_elements(%arg0: vector<2x2xf16>, %arg1: vector<2x2xf16>, %arg2: vector<2x2xf16>, %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  // expected-error @+1 {{mmaShape must have exactly 3 elements}}
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16, 4], sparsitySelector = 0 : i32} :
+       (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
 }

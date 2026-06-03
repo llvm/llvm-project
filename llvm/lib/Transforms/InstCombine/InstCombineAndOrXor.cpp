@@ -947,8 +947,7 @@ static Value *foldIsPowerOf2OrZero(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
                                    InstCombinerImpl &IC) {
   CmpPredicate Pred0, Pred1;
   Value *X;
-  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                          m_SpecificInt(1))) ||
+  if (!match(Cmp0, m_ICmp(Pred0, m_Ctpop(m_Value(X)), m_SpecificInt(1))) ||
       !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())))
     return nullptr;
 
@@ -985,8 +984,7 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
   Value *X;
   if (JoinedByAnd &&
       match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(X), m_ZeroInt())) &&
-      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT,
-                                 m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_ULT, m_Ctpop(m_Specific(X)),
                                  m_SpecificInt(2)))) {
     auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
@@ -997,8 +995,7 @@ static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
   // (X == 0) || (ctpop(X) u> 1) --> ctpop(X) != 1
   if (!JoinedByAnd &&
       match(Cmp0, m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(X), m_ZeroInt())) &&
-      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT,
-                                 m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
+      match(Cmp1, m_SpecificICmp(ICmpInst::ICMP_UGT, m_Ctpop(m_Specific(X)),
                                  m_SpecificInt(1)))) {
     auto *CtPop = cast<Instruction>(Cmp1->getOperand(0));
     // Drop range attributes and re-infer them in the next iteration.
@@ -1558,8 +1555,7 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       if (!IsLogicalSelect)
         NewFlag |= RHS->getFastMathFlags();
 
-      Value *FAbs =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, LHS0, NewFlag);
+      Value *FAbs = Builder.CreateFAbs(LHS0, NewFlag);
       return Builder.CreateFCmpFMF(
           PredL, FAbs, ConstantFP::get(LHS0->getType(), *LHSC), NewFlag);
     }
@@ -2692,7 +2688,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     Type *EltTy = CastOp->getType()->getScalarType();
     if (EltTy->isFloatingPointTy() &&
         APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+      Value *FAbs = Builder.CreateFAbs(CastOp);
       return new BitCastInst(FAbs, I.getType());
     }
   }
@@ -2758,7 +2754,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                         ? Builder.CreateNot(C)
                         : getFreelyInverted(C, C->hasOneUse(), &Builder);
       if (NotC != nullptr)
-        return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
+        return BinaryOperator::CreateAnd(Op1, NotC);
     }
 
     // (A | B) & (~A ^ B) -> A & B
@@ -3158,7 +3154,7 @@ static Value *matchOrConcat(Instruction &Or, InstCombiner::BuilderTy &Builder) {
     Value *NewLower = Builder.CreateZExt(Lo, Ty);
     Value *NewUpper = Builder.CreateZExt(Hi, Ty);
     NewUpper = Builder.CreateShl(NewUpper, HalfWidth);
-    Value *BinOp = Builder.CreateOr(NewLower, NewUpper);
+    Value *BinOp = Builder.CreateDisjointOr(NewLower, NewUpper);
     return Builder.CreateIntrinsic(id, Ty, BinOp);
   };
 
@@ -3968,16 +3964,16 @@ Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
   Value *X, *Y;
   if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(LHS, X))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(LHS, Y))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
     if (Value *Res = foldDisjointOr(X, RHS))
-      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, Y);
     if (Value *Res = foldDisjointOr(Y, RHS))
-      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
+      return Builder.CreateDisjointOr(Res, X);
   }
 
   return nullptr;
@@ -4208,6 +4204,16 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
+  // Canonicalization to achieve lowering to Bit Manipulation Instructions (BMI)
+  // ~X | (X-1) => ~(X & -X)
+  Value *Op;
+  if (match(&I, m_c_Or(m_OneUse(m_Not(m_Value(Op))),
+                       m_OneUse(m_Add(m_Deferred(Op), m_AllOnes()))))) {
+    Value *NegX = Builder.CreateNeg(Op);
+    Value *And = Builder.CreateAnd(Op, NegX);
+    return BinaryOperator::CreateNot(And);
+  }
+
   // (C && A) || (C && B) => select C, A, B (and similar cases)
   //
   // Note: This is the same transformation used in `foldSelectOfBools`,
@@ -4432,8 +4438,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       match(Op0, m_Or(m_Value(A), m_ConstantInt(CI)))) {
     bool IsDisjointOuter = cast<PossiblyDisjointInst>(I).isDisjoint();
     bool IsDisjointInner = cast<PossiblyDisjointInst>(Op0)->isDisjoint();
-    Value *Inner = Builder.CreateOr(A, Op1);
-    cast<PossiblyDisjointInst>(Inner)->setIsDisjoint(IsDisjointOuter);
+    Value *Inner = Builder.CreateOr(A, Op1, "", /*IsDisjoint=*/IsDisjointOuter);
     Inner->takeName(Op0);
     return IsDisjointOuter && IsDisjointInner
                ? BinaryOperator::CreateDisjointOr(Inner, CI)
@@ -4628,7 +4633,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     Type *EltTy = CastOp->getType()->getScalarType();
     if (EltTy->isFloatingPointTy() &&
         APFloat::hasSignBitInMSB(EltTy->getFltSemantics())) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+      Value *FAbs = Builder.CreateFAbs(CastOp);
       Value *FNegFAbs = Builder.CreateFNeg(FAbs);
       return new BitCastInst(FNegFAbs, I.getType());
     }

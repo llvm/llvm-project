@@ -47,7 +47,7 @@ bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Set the current MCSubtargetInfo to a copy which has the correct
   // feature bits for the current MachineFunction
   MCSubtargetInfo &NewSTI =
-      OutStreamer->getContext().getSubtargetCopy(*TM.getMCSubtargetInfo());
+      OutStreamer->getContext().getSubtargetCopy(TM.getMCSubtargetInfo());
   NewSTI.setFeatureBits(MF.getSubtarget().getFeatureBits());
   Subtarget = &NewSTI;
 
@@ -72,8 +72,8 @@ void CSKYAsmPrinter::expandTLSLA(const MachineInstr *MI) {
   DebugLoc DL = MI->getDebugLoc();
 
   MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-      Twine(MAI->getInternalSymbolPrefix()) + "PC" +
-      Twine(getFunctionNumber()) + "_" + Twine(MI->getOperand(3).getImm()));
+      Twine(MAI.getInternalSymbolPrefix()) + "PC" + Twine(getFunctionNumber()) +
+      "_" + Twine(MI->getOperand(3).getImm()));
 
   OutStreamer->emitLabel(PCLabel);
 
@@ -223,7 +223,7 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   if (CCPV->getPCAdjustment()) {
 
     MCSymbol *PCLabel = OutContext.getOrCreateSymbol(
-        Twine(MAI->getInternalSymbolPrefix()) + "PC" +
+        Twine(MAI.getInternalSymbolPrefix()) + "PC" +
         Twine(getFunctionNumber()) + "_" + Twine(CCPV->getLabelID()));
 
     const MCExpr *PCRelExpr = MCSymbolRefExpr::create(PCLabel, OutContext);

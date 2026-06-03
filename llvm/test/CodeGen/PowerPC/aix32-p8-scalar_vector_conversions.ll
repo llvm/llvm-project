@@ -990,14 +990,15 @@ entry:
 define i64 @getvelsl(<2 x i64> %vsl, i32 signext %i) {
 ; CHECK-LABEL: getvelsl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add 5, 3, 3
+; CHECK-NEXT:    rlwinm 5, 3, 3, 28, 28
+; CHECK-NEXT:    slwi 3, 3, 1
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
-; CHECK-NEXT:    addi 5, 5, 1
+; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
-; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
-; CHECK-NEXT:    lwzx 3, 4, 3
-; CHECK-NEXT:    lwzx 4, 4, 5
+; CHECK-NEXT:    lwzx 5, 4, 5
+; CHECK-NEXT:    rlwinm 3, 3, 2, 28, 29
+; CHECK-NEXT:    lwzx 4, 4, 3
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %vsl, i32 %i
@@ -1008,14 +1009,15 @@ entry:
 define i64 @getvelul(<2 x i64> %vul, i32 signext %i) {
 ; CHECK-LABEL: getvelul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    add 5, 3, 3
+; CHECK-NEXT:    rlwinm 5, 3, 3, 28, 28
+; CHECK-NEXT:    slwi 3, 3, 1
 ; CHECK-NEXT:    addi 4, 1, -16
-; CHECK-NEXT:    rlwinm 3, 5, 2, 28, 29
-; CHECK-NEXT:    addi 5, 5, 1
+; CHECK-NEXT:    addi 3, 3, 1
 ; CHECK-NEXT:    stxvw4x 34, 0, 4
-; CHECK-NEXT:    rlwinm 5, 5, 2, 28, 29
-; CHECK-NEXT:    lwzx 3, 4, 3
-; CHECK-NEXT:    lwzx 4, 4, 5
+; CHECK-NEXT:    lwzx 5, 4, 5
+; CHECK-NEXT:    rlwinm 3, 3, 2, 28, 29
+; CHECK-NEXT:    lwzx 4, 4, 3
+; CHECK-NEXT:    mr 3, 5
 ; CHECK-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %vul, i32 %i

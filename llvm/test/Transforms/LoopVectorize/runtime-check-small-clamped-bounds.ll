@@ -406,3 +406,87 @@ loop:
 exit:
   ret void
 }
+
+; NUSW on the wider i32 AddRec does no imply NUSW on a narrower i8 AddRec.
+; Test for https://github.com/llvm/llvm-project/issues/191382.
+define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
+; CHECK-LABEL: @wider_nusw_does_not_imply_narrower(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX4:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[UMAX4]] to i32
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP5]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK:       vector.scevcheck:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 1, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP5]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP5]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i32 [ 0, [[VECTOR_MEMCHECK]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_MEMCHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[OFFSET_IDX]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = zext nneg i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC:%.*]], i64 [[TMP11]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = xor <4 x i8> [[WIDE_LOAD]], splat (i8 11)
+; CHECK-NEXT:    store <4 x i8> [[TMP14]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[OFFSET_IDX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 1)
+; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i32> [[TMP16]] to <4 x i64>
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP13]], i64 3
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP5]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi i32 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV_ZEXT:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT_ZEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL6]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_MOD:%.*]] = and i32 [[IV]], 15
+; CHECK-NEXT:    [[IV_MOD_ZEXT:%.*]] = zext nneg i32 [[IV_MOD]] to i64
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[IV_MOD_ZEXT]]
+; CHECK-NEXT:    [[L_DST:%.*]] = load i8, ptr [[GEP_DST]], align 1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[L_DST]], 11
+; CHECK-NEXT:    store i8 [[XOR]], ptr [[GEP_DST]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT_ZEXT]] = zext i32 [[IV_NEXT]] to i64
+; CHECK-NEXT:    [[DONE:%.*]] = icmp ugt i64 [[N]], [[IV_NEXT_ZEXT]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.zext = phi i64 [ 0, %entry ], [ %iv.next.zext, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.mod = and i32 %iv, 15
+  %iv.mod.zext = zext nneg i32 %iv.mod to i64
+  %gep.dst = getelementptr inbounds nuw i8, ptr %dst, i64 %iv.mod.zext
+  %l.dst = load i8, ptr %gep.dst, align 1
+  %xor = xor i8 %l.dst, 11
+  store i8 %xor, ptr %gep.dst, align 1
+  %iv.next = add i32 %iv, 1
+  %iv.next.zext = zext i32 %iv.next to i64
+  %done = icmp ugt i64 %n, %iv.next.zext
+  br i1 %done, label %loop, label %exit
+
+exit:
+  ret void
+}

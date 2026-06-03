@@ -1639,20 +1639,33 @@ the Clang Static Analyzer makes sure that allocating functions annotated with
 ``malloc`` are treated like they used the standard ``malloc()``, and can be
 safely deallocated with the standard ``free()``.
 
-* Use ``ownership_returns`` to mark a function as an allocating function. Takes
-  1 parameter to denote the allocation type.
+* Use ``ownership_returns`` to mark a function as an allocating function.
+  It takes 1 or 2 arguments.
+  The first argument is a user-provided identifier representing the "kind" of the allocation.
+  This is basically what is enforced when checking the deallocation. This is mandatory.
+  The second argument is optional.
+  It represents the index of the parameter that represents the allocation size in bytes (counting from 1).
+  The referenced parameter must have some integral type.
+  This attribute may appear at most once per declaration.
+  If this argument is not set, then tooling, such as the Clang Static Analyzer,
+  won't be able to reason about the size of the allocation, thus check potential out-of-bounds accesses.
+  However, such tooling could still warn if the wrong deallocation function
+  was used for the ``ownership_returns`` attributed resource.
+  If forward declarations have this attribute, those must have the same arguments.
 * Use ``ownership_takes`` to mark a function as a deallocating function. Takes 2
-  parameters: the allocation type, and the index of the parameter that is being
+  arguments: the allocation type, and the index of the parameter that is being
   deallocated (counting from 1).
 * Use ``ownership_holds`` to mark that a function takes over the ownership of a
   piece of memory and will free it at some unspecified point in the future. Like
-  ``ownership_takes``, this takes 2 parameters: the allocation type, and the
+  ``ownership_takes``, this takes 2 arguments: the allocation type, and the
   index of the parameter whose ownership will be taken over (counting from 1).
 
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
-leak reports (concerning the specified argument); the difference between them
+leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -1660,12 +1673,15 @@ Example:
 
   // Denotes that my_malloc will return with a dynamically allocated piece of
   // memory using malloc().
-  void __attribute((ownership_returns(malloc))) *my_malloc(size_t);
+  void __attribute((ownership_returns(malloc))) *my_malloc(size_t sz);
 
-  // Denotes that my_free will deallocate its parameter using free().
+  // 'sz' (parameter 1) is the allocation size.
+  void __attribute((ownership_returns(malloc, 1))) *my_sized_malloc(size_t sz);
+
+  // Denotes that my_free will deallocate its argument using free().
   void __attribute((ownership_takes(malloc, 1))) my_free(void *);
 
-  // Denotes that my_hold will take over the ownership of its parameter that was
+  // Denotes that my_hold will take over the ownership of its argument that was
   // allocated via malloc().
   void __attribute((ownership_holds(malloc, 1))) my_hold(void *);
 
@@ -2184,6 +2200,7 @@ attributes are ignored. Supported platforms are:
 ``visionOS``
 ``visionOSApplicationExtension``
 ``driverkit``
+``anyAppleOS``
 ``swift``
 ``android``
 ``fuchsia``
@@ -2207,6 +2224,7 @@ Some platforms have alias names:
 ``maccatalyst_app_extension``
 ``visionos``
 ``visionos_app_extension``
+``anyappleos``
 ``shadermodel``
 
 Supported environment names for the ShaderModel platform:
@@ -2226,6 +2244,13 @@ Supported environment names for the ShaderModel platform:
 ``mesh``
 ``amplification``
 ``library``
+
+The special platform ``anyAppleOS`` (alias: ``anyappleos``) is a shorthand that
+applies the availability attribute to all Apple Darwin platforms. An explicit
+platform-specific availability attribute takes precedence over an ``anyAppleOS``
+attribute for that platform. Versions specified with ``anyAppleOS`` must be at
+least 26.0, which is the first OS release where all supported Apple platforms
+share a unified version number.
 
 A declaration can typically be used even when deploying back to a platform
 version prior to when the declaration was introduced. When this happens, the
@@ -2686,8 +2711,10 @@ path of execution, but that can be confusing:
 .. code-block:: c++
 
   if (b) {
-    [[unlikely]] --b; // In the path of execution,
-                      // this branch is considered unlikely.
+    [[unlikely]] --b; // Per the standard this is in the path of
+                      // execution, so this branch should be considered
+                      // unlikely. However, Clang ignores the attribute
+                      // here since it is not on the substatement.
   }
 
   if (b) {
@@ -3292,6 +3319,12 @@ multiversioned function would have if it had been declared without the attribute
 For backward compatibility with earlier Clang releases, a function alias with an
 ``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
+
+For PowerPC targets, ``target_clones`` is supported on AIX only. Only CPU
+(specified as ``cpu=CPU``) and ``default`` options are allowed. IFUNC is supported
+on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
+An FMV function that is only declared in a translation unit is treated as a
+non-FMV. The resolver and the function clones are given internal linkage.
 }];
 }
 
@@ -3401,6 +3434,10 @@ create machine code that meets the request.
 def AMDGPUNumSGPRNumVGPRDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
+.. warning::
+  These attributes are deprecated. Use the ``amdgpu_waves_per_eu`` attribute to
+  control SGPR and VGPR usage instead.
+
 Clang supports the ``__attribute__((amdgpu_num_sgpr(<num_sgpr>)))`` and
 ``__attribute__((amdgpu_num_vgpr(<num_vgpr>)))`` attributes for the AMDGPU
 target. These attributes may be attached to a kernel function definition and are
@@ -6011,6 +6048,25 @@ TUs where it is used.
 This attribute can be used on static and non-static member functions of class
 templates, static data members of class templates and member classes of class
 templates.
+
+**Interaction with __declspec(dllexport/dllimport)**
+
+For a DLL platform (i.e., Windows), this attribute also means "this member will
+never be exported or imported". Despite its name, this semantics applies to
+implicit instantiations and non-template entities as well.
+
+  .. code-block:: c++
+
+    // in <exception>
+    class __declspec(dllimport) nested_exception {
+      ...
+    public:
+      __attribute__((exclude_from_explicit_instantiation))
+      exception_ptr nested_ptr() const noexcept { ... }
+    };
+
+In this case, ``nested_exception::nested_ptr`` will never be attempted to be
+imported.
   }];
 }
 
@@ -7787,7 +7843,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,
@@ -8552,6 +8608,18 @@ pointing to precise locations of the call site in the source.
       dontcall(); // No Warning
     sizeof(dontcall()); // No Warning
   }
+
+When the call occurs through inlined functions, the
+``-fdiagnostics-show-inlining-chain`` option can be used to show the
+inlining chain that led to the call. This helps identify which call site
+triggered the diagnostic when the attributed function is called from
+multiple locations through inline functions.
+
+When enabled, this option automatically uses debug info for accurate source
+locations if available (``-gline-directives-only`` (implicitly enabled at
+``-g1``) or higher), or falls back to a heuristic based on metadata tracking.
+When falling back, a note is emitted suggesting ``-gline-directives-only`` for
+more accurate locations.
   }];
 }
 
@@ -8951,6 +9019,29 @@ https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
   }];
 }
 
+def HLSLVkExtBuiltinOutputDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `Output` builtins. Those variables are externally
+visible to the driver/pipeline, but each copy is private to the current
+lane.
+
+Those builtins can be declared using the `[[vk::ext_builtin_output]]`
+attribute like follows:
+
+.. code-block:: c++
+
+  [[vk::ext_builtin_output(/* Position */ 0)]]
+  static float4 position;
+
+This variable will be lowered into a module-level variable, with the `Output`
+storage class, and the `BuiltIn 0` decoration.
+
+The full documentation for this inline SPIR-V attribute can be found here:
+https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
+  }];
+}
+
 def HLSLVkPushConstantDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -9163,6 +9254,23 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the 'Location' SPIR-V decoration.
+  }];
+}
+
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout 
+of an HLSL matrix type. 
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
   }];
 }
 
@@ -9827,16 +9935,16 @@ not all aspects of the implementation are needed for a given call, the compiler
 may redirect the call to the identifier given as the first argument to the
 attribute (the modular implementation function).
 
-The second argument is a implementation name, and the remaining arguments are
+The second argument is an implementation name, and the remaining arguments are
 aspects of the format string for the compiler to report. The implementation
-name is an unevaluated identifier be in the C namespace.
+name is an unevaluated identifier in the C namespace.
 
 The compiler reports that a call requires an aspect by issuing a relocation for
 the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
 code and data needed to support the aspect of the implementation to be brought
 into the link to satisfy weak references in the modular implemenation function.
 If the compiler does not understand an aspect, it must summarily consider any
-call to require that aspect. 
+call to require that aspect.
 
 For example, say ``printf`` is annotated with
 ``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
@@ -9884,7 +9992,7 @@ def PersonalityDocs : Documentation {
 routine that is different from the language that is being used to implement the
 function. This is a targeted, low-level feature aimed at language runtime
 implementors who write runtime support code in C/C++ but need that code to
-participate in a foreign language’s exception-handling or unwinding model.
+participate in a foreign language's exception-handling or unwinding model.
 
 A personality routine is a language-specific callback attached to each stack
 frame that the unwinder invokes to determine whether that frame handles a given

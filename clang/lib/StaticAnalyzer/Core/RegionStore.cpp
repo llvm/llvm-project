@@ -786,8 +786,8 @@ public: // Part of public interface to class.
 
   /// removeDeadBindings - Scans the RegionStore of 'state' for dead values.
   ///  It returns a new Store with these values removed.
-  StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                              SymbolReaper& SymReaper) override;
+  StoreRef removeDeadBindings(Store store, const StackFrame *SF,
+                              SymbolReaper &SymReaper) override;
 
   //===------------------------------------------------------------------===//
   // Utility methods.
@@ -2566,11 +2566,12 @@ RegionStoreManager::setImplicitDefaultValue(LimitedRegionBindingsConstRef B,
   if (B.hasExhaustedBindingLimit())
     return B;
 
-  // Prefer to keep the previous default binding if we had one; that is likely a
-  // better choice than setting some arbitrary new default value.
-  // This isn't ideal (more of a hack), but better than dropping the more
-  // accurate default binding.
-  if (B.getDefaultBinding(R).has_value()) {
+  // Preserve an existing aggregate default binding. This handles partially
+  // initialized union-containing aggregates where bindAggregate() may already
+  // have installed a more precise default value at offset 0. Still allow
+  // implicit defaults for scalars and pointers so regular zero-initialization
+  // continues to work, e.g. for `new int[10]{}`.
+  if (T->isAggregateType() && B.getDefaultBinding(R).has_value()) {
     return B;
   }
 
@@ -2948,15 +2949,14 @@ class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
   SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
-  const StackFrameContext *CurrentLCtx;
+  const StackFrame *CurrentSF;
 
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm,
-                           ProgramStateManager &stateMgr,
-                           RegionBindingsRef b, SymbolReaper &symReaper,
-                           const StackFrameContext *LCtx)
-    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
-      SymReaper(symReaper), CurrentLCtx(LCtx) {}
+                           ProgramStateManager &stateMgr, RegionBindingsRef b,
+                           SymbolReaper &symReaper, const StackFrame *SF)
+      : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
+        SymReaper(symReaper), CurrentSF(SF) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
@@ -3005,9 +3005,8 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
-    const StackFrameContext *RegCtx = StackReg->getStackFrame();
-    if (CurrentLCtx &&
-        (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
+    const StackFrame *RegSF = StackReg->getStackFrame();
+    if (CurrentSF && (RegSF == CurrentSF || RegSF->isParentOf(CurrentSF)))
       AddToWorkList(TR, &C);
   }
 }
@@ -3080,10 +3079,10 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
-                                                const StackFrameContext *LCtx,
-                                                SymbolReaper& SymReaper) {
+                                                const StackFrame *SF,
+                                                SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
-  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
+  RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, SF);
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.

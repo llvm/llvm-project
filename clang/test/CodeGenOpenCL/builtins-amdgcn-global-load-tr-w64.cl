@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1200
 
 typedef short  v4s   __attribute__((ext_vector_type(4)));
-typedef _Float16 v4h __attribute__((ext_vector_type(4)));
+typedef  half  v4h   __attribute__((ext_vector_type(4)));
 typedef __bf16 v4y   __attribute__((ext_vector_type(4)));
 
 // CHECK-GFX1200-LABEL: @test_amdgcn_global_load_tr_b64_i32(

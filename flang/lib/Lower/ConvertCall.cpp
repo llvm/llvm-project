@@ -145,12 +145,11 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
   // mismatch on the arguments. The argument are always prepared according
   // to the implicit interface. Cast the actual function if any of the
   // argument mismatch cannot be dealt with a simple fir.convert.
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    for (auto [actualType, dummyType] :
-         llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
-      if (actualType != dummyType &&
-          !fir::ConvertOp::canBeConverted(actualType, dummyType))
-        return true;
+  for (auto [actualType, dummyType] :
+       llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
+    if (actualType != dummyType &&
+        !fir::ConvertOp::canBeConverted(actualType, dummyType))
+      return true;
   return false;
 }
 
@@ -408,7 +407,6 @@ Fortran::lower::genCallOpAndResult(
     }
   }
   const bool isExprCall =
-      converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
       llvm::isa<fir::SequenceType>(callSiteType.getResult(0));
 
@@ -622,8 +620,6 @@ Fortran::lower::genCallOpAndResult(
         // With the lowering to HLFIR, box arguments have already been built
         // according to the attributes, rank, bounds, and type they should have.
         // Do not attempt any reboxing here that could break this.
-        bool legacyLowering =
-            !converter.getLoweringOptions().getLowerToHighLevelFIR();
         // When dealing with a dummy character argument (fir.boxchar), the
         // effective argument might be a non-character raw pointer. This may
         // happen when calling an implicit interface that was previously called
@@ -635,7 +631,7 @@ Fortran::lower::genCallOpAndResult(
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
                                             allowCharacterConversions,
-                                            /*allowRebox=*/legacyLowering);
+                                            /*allowRebox=*/false);
       }
     }
     operands.push_back(cast);
@@ -845,9 +841,7 @@ Fortran::lower::genCallOpAndResult(
   // In HLFIR, this is skipped when the result does not need to be finalized
   // because the result is moved to an expression that will deal with the
   // finalization.
-  if (allocatedResult &&
-      (mustFinalizeResult ||
-       !converter.getLoweringOptions().getLowerToHighLevelFIR())) {
+  if (allocatedResult && mustFinalizeResult) {
     // The result must be optionally destroyed (if it is of a derived type
     // that may need finalization or deallocation of the components).
     // For an allocatable result we have to free the memory allocated
@@ -1349,7 +1343,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   hlfir::Entity actual = preparedActual.getActual(loc, builder);
 
   if (arg.testTKR(Fortran::common::IgnoreTKR::Contiguous) &&
-      actual.isBoxAddress()) {
+      actual.isBoxAddress() && fir::isBoxAddressOrValue(dummyType)) {
     // With ignore_tkr(c), pointer to a descriptor should be passed as is
     return PreparedDummyArgument{actual, /*cleanups=*/{}};
   }
@@ -2342,6 +2336,14 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     const fir::IntrinsicHandlerEntry &intrinsicEntry,
     CallContext &callContext) {
+  // Delegate intrinsics with custom optional handling to
+  // genCustomIntrinsicRefCore before attempting any HLFIR op lowering. This
+  // ensures consistent dispatch symmetry with genIntrinsicRefCore and
+  // genIntrinsicRef, both of which check for custom optional handling before
+  // reaching the HLFIR intrinsic path.
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, callContext.converter))
+    return genCustomIntrinsicRefCore(loweredActuals, intrinsic, callContext);
   // Try lowering transformational intrinsic ops to HLFIR ops if enabled
   // (transformational always have a result type)
   if (useHlfirIntrinsicOps && callContext.resultType) {
@@ -2758,10 +2760,53 @@ public:
           intrinsic->name == "merge")
         return loweredActuals[0].value().genCharLength(
             callContext.loc, callContext.getBuilder());
-    // Character MIN/MAX is the min/max of the arguments length that are
-    // present.
-    TODO(callContext.loc,
-         "compute elemental character min/max function result length in HLFIR");
+    // Character MIN/MAX result length is the length of the longest
+    // argument that is present.
+    assert(intrinsic &&
+           (intrinsic->name == "min" || intrinsic->name == "max") &&
+           "unexpected elemental intrinsic with character result");
+    fir::FirOpBuilder &builder = callContext.getBuilder();
+    mlir::Location loc = callContext.loc;
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Value resultLength;
+    for (auto &preparedActual : loweredActuals) {
+      if (!preparedActual)
+        continue;
+      mlir::Value argLen;
+      if (preparedActual->handleDynamicOptional()) {
+        // genCharLength must not be called on an absent optional: the
+        // descriptor may be unreadable (e.g. assumed-length character).
+        // Guard it with a fir.if so the read only happens when present.
+        mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+        mlir::Value isPresent = preparedActual->getIsPresent();
+        auto &capture = *preparedActual;
+        argLen =
+            builder
+                .genIfOp(loc, {idxTy}, isPresent,
+                         /*withElseRegion=*/true)
+                .genThen([&]() {
+                  mlir::Value len = capture.genCharLength(loc, builder);
+                  len = builder.createConvert(loc, idxTy, len);
+                  fir::ResultOp::create(builder, loc, len);
+                })
+                .genElse([&]() { fir::ResultOp::create(builder, loc, zero); })
+                .getResults()[0];
+      } else {
+        argLen = preparedActual->genCharLength(loc, builder);
+        argLen = builder.createConvert(loc, idxTy, argLen);
+      }
+      if (!resultLength) {
+        resultLength = argLen;
+      } else {
+        mlir::Value cmp = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::sgt, argLen,
+            resultLength);
+        resultLength = mlir::arith::SelectOp::create(builder, loc, cmp, argLen,
+                                                     resultLength);
+      }
+    }
+    assert(resultLength && "MIN/MAX must have at least two arguments");
+    return resultLength;
   }
 
   mlir::Value getPolymorphicResultMold(
@@ -3211,19 +3256,13 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
   return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
-static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
-  // The MASK of the outer WHERE is not masked itself.
-  mlir::Operation *op = builder.getRegion().getParentOp();
-  return op && op->getParentOfType<hlfir::WhereOp>();
-}
-
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   auto &builder = converter.getFirOpBuilder();
   if (resultType && !procRef.IsElemental() &&
-      isInWhereMaskedExpression(builder) &&
+      hlfir::isInsideHlfirWhereMaskedExpression(builder.getRegion()) &&
       !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
     // Non elemental calls inside a where-assignment-stmt must be executed
     // exactly once without mask control. Lower them in a special region so that

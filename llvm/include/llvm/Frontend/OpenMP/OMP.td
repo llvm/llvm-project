@@ -142,6 +142,7 @@ def OMPC_CopyPrivate : Clause<[Spelling<"copyprivate">]> {
   let flangClass = "OmpObjectList";
 }
 def OMPC_Counts : Clause<[Spelling<"counts">]> {
+  let clangClass = "OMPCountsClause";
 }
 def OMPC_Default : Clause<[Spelling<"default">]> {
   let clangClass = "OMPDefaultClause";
@@ -377,8 +378,7 @@ def OMPC_NoGroup : Clause<[Spelling<"nogroup">]> {
 }
 def OMPC_NonTemporal : Clause<[Spelling<"nontemporal">]> {
   let clangClass = "OMPNontemporalClause";
-  let flangClass = "Name";
-  let isValueList = true;
+  let flangClass = "OmpObjectList";
 }
 def OMPC_Notinbranch : Clause<[Spelling<"notinbranch">]> {
 }
@@ -453,7 +453,7 @@ def OMPC_Partial: Clause<[Spelling<"partial">]> {
 }
 def OMPC_Permutation: Clause<[Spelling<"permutation">]> {
   let clangClass = "OMPPermutationClause";
-  let flangClass = "ScalarIntExpr";
+  let flangClass = "ScalarIntConstantExpr";
   let isValueList = true;
 }
 def OMPC_Priority : Clause<[Spelling<"priority">]> {
@@ -829,6 +829,7 @@ def OMP_DeclareTarget : Directive<[Spelling<"declare target", 1, 52>,
     VersionedClause<OMPC_Enter, 52>,
     VersionedClause<OMPC_Indirect, 51>,
     VersionedClause<OMPC_Link>,
+    VersionedClause<OMPC_Local, 60>,
     VersionedClause<OMPC_To>,
   ];
   let allowedOnceClauses = [
@@ -1202,16 +1203,6 @@ def OMP_EndSingle : Directive<[Spelling<"end single">]> {
   let category = OMP_Single.category;
   let languages = [L_Fortran];
 }
-def OMP_Split : Directive<[Spelling<"split">]> {
-  let allowedClauses = [
-    VersionedClause<OMPC_Apply, 60>,
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<OMPC_Counts, 60>,
-  ];
-  let association = AS_LoopNest;
-  let category = CA_Executable;
-}
 def OMP_Target : Directive<[Spelling<"target">]> {
   let allowedClauses = [
     VersionedClause<OMPC_Allocate>,
@@ -1430,6 +1421,16 @@ def OMP_Tile : Directive<[Spelling<"tile">]> {
 def OMP_Stripe : Directive<[Spelling<"stripe">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Sizes, 60>,
+  ];
+  let association = AS_LoopNest;
+  let category = CA_Executable;
+}
+def OMP_Split : Directive<[Spelling<"split">]> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Counts, 60>,
+  ];
+  let requiredClauses = [
+    VersionedClause<OMPC_Counts, 60>,
   ];
   let association = AS_LoopNest;
   let category = CA_Executable;

@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===-- TestBase.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 #include "Handler/ResponseHandler.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
@@ -69,11 +70,26 @@ void DAPTestBase::SetUpTestSuite() {
   lldb::SBError error = SBDebugger::InitializeWithErrorHandling();
   EXPECT_TRUE(error.Success());
 }
-
 void DAPTestBase::TearDownTestSuite() { SBDebugger::Terminate(); }
 
-void DAPTestBase::ConfigureDebugger() {
-  dap->debugger = lldb::SBDebugger::Create(/*source_init_files=*/false);
+bool DAPTestBase::GetDebuggerSupportsTarget(StringRef platform) {
+  EXPECT_TRUE(dap->debugger);
+
+  lldb::SBStructuredData data = dap->debugger.GetBuildConfiguration()
+                                    .GetValueForKey("targets")
+                                    .GetValueForKey("value");
+  for (size_t i = 0; i < data.GetSize(); i++) {
+    char buf[100] = {0};
+    size_t size = data.GetItemAtIndex(i).GetStringValue(buf, sizeof(buf));
+    if (StringRef(buf, size) == platform)
+      return true;
+  }
+
+  return false;
+}
+
+void DAPTestBase::CreateDebugger() {
+  dap->debugger = lldb::SBDebugger::Create();
   ASSERT_TRUE(dap->debugger);
   dap->target = dap->debugger.GetDummyTarget();
 
@@ -95,8 +111,24 @@ void DAPTestBase::ConfigureDebugger() {
   dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 }
 
-void DAPTestBase::LoadCore(llvm::StringRef binary_path,
-                           llvm::StringRef core_path) {
-  std::tie(dap->target, process) =
-      lldb_private::LoadCore(dap->debugger, binary_path, core_path);
+void DAPTestBase::LoadCore() {
+  ASSERT_TRUE(dap->debugger);
+  llvm::Expected<lldb_private::TestFile> binary_yaml =
+      lldb_private::TestFile::fromYamlFile(k_linux_binary);
+  ASSERT_THAT_EXPECTED(binary_yaml, Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> binary_file =
+      binary_yaml->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(binary_file, Succeeded());
+  binary = std::move(*binary_file);
+  dap->target = dap->debugger.CreateTarget(binary->TmpName.data());
+  ASSERT_TRUE(dap->target);
+  llvm::Expected<lldb_private::TestFile> core_yaml =
+      lldb_private::TestFile::fromYamlFile(k_linux_core);
+  ASSERT_THAT_EXPECTED(core_yaml, Succeeded());
+  llvm::Expected<llvm::sys::fs::TempFile> core_file =
+      core_yaml->writeToTemporaryFile();
+  ASSERT_THAT_EXPECTED(core_file, Succeeded());
+  this->core = std::move(*core_file);
+  SBProcess process = dap->target.LoadCore(this->core->TmpName.data());
+  ASSERT_TRUE(process);
 }

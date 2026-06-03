@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/main.h"
+#include "io-api-gpu.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include <cfenv>
@@ -32,6 +33,10 @@ void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
   Fortran::runtime::executionEnvironment.Configure(
       argc, argv, envp, envDefaults);
   ConfigureFloatingPoint();
+  // Register the IO handlers with the offloading runtime only if present.
+#ifdef FLANG_RT_HAS_RPC_SERVER
+  Fortran::runtime::io::RegisterRPCHandlers();
+#endif
   // I/O is initialized on demand so that it works for non-Fortran main().
 }
 

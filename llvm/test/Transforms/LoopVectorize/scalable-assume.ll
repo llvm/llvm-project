@@ -10,8 +10,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1600, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1600, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1600, [[N_MOD_VF]]
@@ -21,9 +20,9 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD]], i64 0
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 2 x float>, ptr [[TMP9]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 2 x float> [[WIDE_LOAD1]], i64 0
 ; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[TMP10]], 1.000000e+02
 ; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt float [[TMP12]], 1.000000e+02
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1]])
@@ -45,7 +44,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -58,13 +57,10 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
-declare void @llvm.assume(i1) #0
-
-attributes #0 = { nounwind willreturn }
 
 %struct.data = type { ptr, ptr }
 
@@ -81,8 +77,7 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1600, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP6]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1600, [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1600, [[N_MOD_VF]]
@@ -117,7 +112,7 @@ entry:
   br label %for.body
 
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.assume(i1 %maskcond)
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
@@ -130,7 +125,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -147,8 +142,7 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
@@ -186,17 +180,17 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.assume(i1 %cmp2)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -207,7 +201,7 @@ if.end5:                                          ; preds = %for.body, %if.else
   %cmp = icmp eq i64 %indvars.iv.next, %n
   br i1 %cmp, label %for.cond.cleanup, label %for.body, !llvm.loop !0
 
-for.cond.cleanup:                                 ; preds = %if.end5, %entry
+for.cond.cleanup:
   ret void
 }
 

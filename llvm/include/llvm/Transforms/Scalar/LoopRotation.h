@@ -21,10 +21,10 @@ class LPMUpdater;
 class Loop;
 
 /// A simple loop rotation transformation.
-class LoopRotatePass : public PassInfoMixin<LoopRotatePass> {
+class LoopRotatePass : public OptionalPassInfoMixin<LoopRotatePass> {
 public:
   LoopRotatePass(bool EnableHeaderDuplication = true,
-                 bool PrepareForLTO = false);
+                 bool PrepareForLTO = false, bool CheckExitCount = false);
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 
@@ -34,6 +34,7 @@ public:
 private:
   const bool EnableHeaderDuplication;
   const bool PrepareForLTO;
+  const bool CheckExitCount;
 };
 }
 

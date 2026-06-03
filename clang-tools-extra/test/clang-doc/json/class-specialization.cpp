@@ -35,8 +35,8 @@ template<> struct MyClass<int> {};
 // SPECIALIZATION-NEXT:    "Specialization": {
 // SPECIALIZATION-NEXT:      "Parameters": [
 // SPECIALIZATION-NEXT:        {
-// SPECIALIZATION-NEXT:          "End": true,
-// SPECIALIZATION-NEXT:          "Param": "int"
+// SPECIALIZATION-NEXT:          "Param": "int",
+// SPECIALIZATION-NEXT:          "SpecParamEnd": true
 // SPECIALIZATION-NEXT:        }
 // SPECIALIZATION-NEXT:      ],
 // SPECIALIZATION-NEXT:      "SpecializationOf": "{{[0-9A-F]*}}",

@@ -51,4 +51,33 @@ TEST_F(PlatformMacOSXTest, TestGetSupportedArchitectures) {
                             arm64_ios_arch));
 #endif
 }
+
+struct NameAndResult {
+  std::string dir;
+  llvm::VersionTuple version;
+  std::string build;
+};
+
+TEST_F(PlatformMacOSXTest, TestDeviceSupportDirectoryNames) {
+  PlatformMacOSX platform;
+
+  NameAndResult tests[] = {
+      {"10.0 (21R329) universal", llvm::VersionTuple(10, 0), "21R329"},
+      {"17.0 (23X1010104078) universal", llvm::VersionTuple(17, 0),
+       "23X1010104078"},
+      {"17.0 (23A200) arm64e", llvm::VersionTuple(17, 0), "23A200"},
+      {"17.0 (20A352)", llvm::VersionTuple(17, 0), "20A352"},
+      {"Watch4,2 10.0 (21R329)", llvm::VersionTuple(10, 0), "21R329"},
+      {"iPhone11,2 26.0 (23A276)", llvm::VersionTuple(26, 0), "23A276"},
+      {"iPhone13,2 17.0 (18C22)", llvm::VersionTuple(17, 0), "18C22"},
+  };
+  for (size_t i = 0; i < std::size(tests); i++) {
+    llvm::VersionTuple version;
+    llvm::StringRef build_str;
+    std::tie(version, build_str) = platform.ParseVersionBuildDir(tests[i].dir);
+    EXPECT_EQ(tests[i].version, version);
+    EXPECT_EQ(tests[i].build, build_str);
+  }
+}
+
 #endif

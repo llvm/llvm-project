@@ -590,9 +590,6 @@ def FeatureLSCP : ExtensionWithMArch<"lscp", "LSCP", "FEAT_LSCP",
 def FeatureTLBID: ExtensionWithMArch<"tlbid", "TLBID", "FEAT_TLBID",
   "Enable Armv9.7-A TLBI Domains extension">;
 
-def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
-  "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
-
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
   "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
@@ -792,6 +789,14 @@ def FeatureFuseCmpCSet : SubtargetFeature<
     "fuse-cset", "HasFuseCmpCSet", "true",
     "CPU can fuse CMP and CSET operations">;
 
+def FeatureFuseFCmpFCSel : SubtargetFeature<
+    "fuse-fcsel", "HasFuseFCmpFCSel", "true",
+    "CPU can fuse FCMP and FCSEL operations">;
+
+def FeatureAlignCmpCSelPairs : SubtargetFeature<
+    "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations">;
@@ -906,6 +911,18 @@ def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
 def FeatureDisableFastIncVL : SubtargetFeature<"disable-fast-inc-vl",
                                                "HasDisableFastIncVL", "true",
                                                "Do not prefer INC/DEC, ALL, { 1, 2, 4 } over ADDVL">;
+
+// For some cores it is preferable to choose a destination predicate register
+// that does not match the governing predicate, for example integer compares
+// and logical predicate instructions.
+// While the algorithm avoids introducing callee-save spill/fills and therefore
+// shouldn't have any adverse affects on cores where using distinct registers is
+// not necessarily preferable, we still provide a way to turn the feature off.
+def FeatureDisableDistinctPredicateDstReg : SubtargetFeature<
+    "disable-distinct-predicate-dst-reg", "UseDistinctPredicateDstReg",
+    "false",
+    "Disabling selecting a distinct predicate register for the destination "
+    "operand of instructions that take a governing predicate">;
 
 // On most processors we want to avoid moving from WZR to vector registers
 // (relying on materializing 0 to a FPR and moving from there instead),

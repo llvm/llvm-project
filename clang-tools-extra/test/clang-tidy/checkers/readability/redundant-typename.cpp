@@ -366,3 +366,15 @@ typename T::R Foo::PartiallySpecializedDataMember<T, typename T::V> = false;
 // CHECK-FIXES-20: T::R Foo::PartiallySpecializedDataMember<T, typename T::V> = false;
 
 #endif // __cplusplus >= 201402L
+
+struct Int {
+  using R = int;
+};
+
+template <typename T>
+struct BaseClass {};
+
+template <typename T>
+struct SubClass : BaseClass<typename T::R> {};
+
+template struct SubClass<Int>;

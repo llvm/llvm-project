@@ -51,7 +51,7 @@ public:
       : UA(&UA), MSSA(&MSSA), AA(&AA),
         isEntryFunc(AMDGPU::isEntryFunctionCC(F.getCallingConv())) {}
 
-  void visitBranchInst(BranchInst &I);
+  void visitCondBrInst(CondBrInst &I);
   void visitLoadInst(LoadInst &I);
 
   bool changed() const { return Changed; }
@@ -59,14 +59,14 @@ public:
 
 } // End anonymous namespace
 
-void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
-  if (UA->isUniform(&I))
+void AMDGPUAnnotateUniformValues::visitCondBrInst(CondBrInst &I) {
+  if (UA->isUniformAtDef(&I))
     setUniformMetadata(&I);
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
-  if (!UA->isUniform(Ptr))
+  if (UA->isDivergentAtDef(Ptr))
     return;
   Instruction *PtrI = dyn_cast<Instruction>(Ptr);
   if (PtrI)

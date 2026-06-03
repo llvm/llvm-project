@@ -128,31 +128,22 @@ struct VFInfo {
   std::string VectorName; /// Vector Function Name associated to this VFInfo.
   VFISAKind ISA;          /// Instruction Set Architecture.
 
-  /// Returns the index of the first parameter with the kind 'GlobalPredicate',
-  /// if any exist.
-  std::optional<unsigned> getParamIndexForOptionalMask() const {
-    unsigned ParamCount = Shape.Parameters.size();
-
+  /// Returns true if the last operand to the vectorized function has the
+  /// kind 'GlobalPredicate'.
+  bool isMasked() const {
 #ifndef NDEBUG
     unsigned NumMaskParams =
         llvm::count_if(Shape.Parameters, [](const VFParameter &I) {
           return I.ParamKind == VFParamKind::GlobalPredicate;
         });
-    assert(NumMaskParams <= 1 && "Unexpected number of mask parameters");
-    assert((!NumMaskParams || Shape.Parameters[ParamCount - 1].ParamKind ==
+    assert(NumMaskParams <= 1 && "Should be at most one mask parameter");
+    assert((!NumMaskParams || Shape.Parameters.back().ParamKind ==
                                   VFParamKind::GlobalPredicate) &&
            "Mask parameter in unexpected position");
 #endif
-
-    if (!ParamCount || Shape.Parameters[ParamCount - 1].ParamKind !=
-                           VFParamKind::GlobalPredicate)
-      return std::nullopt;
-    return ParamCount - 1;
+    return !Shape.Parameters.empty() &&
+           Shape.Parameters.back().ParamKind == VFParamKind::GlobalPredicate;
   }
-
-  /// Returns true if at least one of the operands to the vectorized function
-  /// has the kind 'GlobalPredicate'.
-  bool isMasked() const { return getParamIndexForOptionalMask().has_value(); }
 };
 
 namespace VFABI {

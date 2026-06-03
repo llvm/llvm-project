@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=HSA %s
-; RUN: llc -mtriple=amdgcn -global-isel=1 -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GISEL %s
+; RUN: llc -mtriple=amdgcn -global-isel=1 -new-reg-bank-select -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-scalarize-global-loads=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GISEL %s
 
 declare hidden void @external_void_func_i1(i1) #0
 declare hidden void @external_void_func_i1_signext(i1 signext) #0
@@ -287,13 +287,15 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GISEL-NEXT:    s_add_u32 s36, s36, s5
 ; GISEL-NEXT:    s_addc_u32 s37, s37, 0
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, external_void_func_i1_signext@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, external_void_func_i1_signext@rel32@hi+12
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GISEL-NEXT:    s_mov_b32 s32, 0
-; GISEL-NEXT:    v_bfe_i32 v0, v0, 0, 1
+; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GISEL-NEXT:    s_bfe_i32 s8, s0, 0x10000
+; GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   %var = load volatile i1, ptr addrspace(1) poison
@@ -420,13 +422,15 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GISEL-NEXT:    s_add_u32 s36, s36, s5
 ; GISEL-NEXT:    s_addc_u32 s37, s37, 0
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, external_void_func_i1_zeroext@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, external_void_func_i1_zeroext@rel32@hi+12
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GISEL-NEXT:    s_mov_b32 s32, 0
-; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GISEL-NEXT:    s_and_b32 s8, s0, 1
+; GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   %var = load volatile i1, ptr addrspace(1) poison

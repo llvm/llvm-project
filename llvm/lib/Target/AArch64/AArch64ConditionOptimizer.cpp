@@ -6,17 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//
 // This pass tries to make consecutive comparisons of values use the same
-// operands to allow the CSE pass to remove duplicate instructions. It adjusts
-// comparisons with immediate values by converting between inclusive and
-// exclusive forms (GE <-> GT, LE <-> LT) and correcting immediate values to
-// make them equal.
+// operands to allow the CSE pass to remove duplicate instructions.
 //
-// The pass handles:
-//  * Cross-block: SUBS/ADDS followed by conditional branches
-//  * Intra-block: CSINC conditional instructions
+// For two producer-consumer pairs P1 = (v, N1, CC1) and P2 = (v, N2, CC2) over
+// F where:
+// - v is a shared operand
+// - Nx are the immediates being compared such that 1 <= |N1 - N2| <= 2
+// - CCx are ordered conditions tested by the consumers (GT/LT/GE/LE)
+// - (Nx, CCx) are predicates over v
+// - F is a flag register, implicitly defined by the producers and tested by the
+//   consumers
+// - No instruction between P1 and P2 reads or writes F
 //
+// Apply the following transformation:
+// 1. Find an immediate N' reachable from N1 and N2 via +-1 adjustment
+// 2. Derive CC1' and CC2' such that P1' = (v, N', CC1') and P2' = (v, N', CC2')
+//    are semantically equivalent to the originals
+// 3. Modify the producers to compare against N'
+// 4. Modify the consumers to test CC1' and CC2', respectively
+//
+// This enables CSE to eliminate one of the compares.
 //
 // Consider the following example in C:
 //
@@ -51,32 +61,23 @@
 //     b.le     .LBB0_6
 //     ...
 //
-// See optimizeCrossBlock() and optimizeIntraBlock() for implementation details.
+// See optimizeBlock() for implementation details.
 //
 // TODO: maybe handle TBNZ/TBZ the same way as CMP when used instead for "a < 0"
-// TODO: For cross-block:
-//   - handle other conditional instructions (e.g. CSET)
-//   - allow second branching to be anything if it doesn't require adjusting
-// TODO: For intra-block:
-//   - handle CINC and CSET (CSINC aliases) as their conditions are inverted
-//   compared to CSINC.
-//   - handle other non-CSINC conditional instructions
 //
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -89,7 +90,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
-#include <tuple>
 
 using namespace llvm;
 
@@ -99,33 +99,55 @@ STATISTIC(NumConditionsAdjusted, "Number of conditions adjusted");
 
 namespace {
 
-class AArch64ConditionOptimizer : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
+/// Bundles the parameters needed to adjust a comparison instruction.
+struct CmpInfo {
+  int Imm;
+  unsigned Opc;
+  AArch64CC::CondCode CC;
+};
+
+class AArch64ConditionOptimizerImpl {
+  /// Represents a comparison instruction paired with its consuming
+  /// conditional instruction
+  struct CmpCondPair {
+    MachineInstr *CmpMI = nullptr;
+    MachineInstr *CondMI = nullptr;
+    AArch64CC::CondCode CC = AArch64CC::Invalid;
+
+    int getImm() const { return CmpMI->getOperand(2).getImm(); }
+    unsigned getOpc() const { return CmpMI->getOpcode(); }
+  };
+
+  using PairSHT = ScopedHashTable<Register, CmpCondPair>;
+
+  const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineDominatorTree *DomTree;
   const MachineRegisterInfo *MRI;
+  PairSHT BlockPairs;
 
 public:
-  // Stores immediate, compare instruction opcode and branch condition (in this
-  // order) of adjusted comparison.
-  using CmpInfo = std::tuple<int, unsigned, AArch64CC::CondCode>;
+  bool run(MachineFunction &MF, MachineDominatorTree &MDT);
 
+private:
+  bool canAdjustCmp(MachineInstr &CmpMI);
+  bool nzcvLivesOut(MachineBasicBlock *MBB);
+  CmpInfo getAdjustedCmpInfo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
+  void updateCmpInstr(MachineInstr *CmpMI, int NewImm, unsigned NewOpc);
+  void updateCondInstr(MachineInstr *CondMI, AArch64CC::CondCode NewCC);
+  void applyCmpAdjustment(CmpCondPair &Pair, const CmpInfo &Info);
+  bool commitPendingPair(std::optional<CmpCondPair> &PendingPair);
+  bool tryOptimizePair(CmpCondPair &First, CmpCondPair &Second);
+  bool optimizeBlock(MachineBasicBlock &MBB);
+  void visitBlock(MachineDomTreeNode *Node, bool &Changed);
+};
+
+class AArch64ConditionOptimizerLegacy : public MachineFunctionPass {
+public:
   static char ID;
-
-  AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
+  AArch64ConditionOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool canAdjustCmp(MachineInstr &CmpMI);
-  bool registersMatch(MachineInstr *FirstMI, MachineInstr *SecondMI);
-  bool nzcvLivesOut(MachineBasicBlock *MBB);
-  MachineInstr *getBccTerminator(MachineBasicBlock *MBB);
-  MachineInstr *findAdjustableCmp(MachineInstr *CondMI);
-  CmpInfo adjustCmp(MachineInstr *CmpMI, AArch64CC::CondCode Cmp);
-  void modifyCmp(MachineInstr *CmpMI, const CmpInfo &Info);
-  bool adjustTo(MachineInstr *CmpMI, AArch64CC::CondCode Cmp, MachineInstr *To,
-                int ToImm);
-  bool optimizeIntraBlock(MachineBasicBlock &MBB);
-  bool optimizeCrossBlock(MachineBasicBlock &HBB);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -135,19 +157,20 @@ public:
 
 } // end anonymous namespace
 
-char AArch64ConditionOptimizer::ID = 0;
+char AArch64ConditionOptimizerLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizer, "aarch64-condopt",
+INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizerLegacy, "aarch64-condopt",
                       "AArch64 CondOpt Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(AArch64ConditionOptimizer, "aarch64-condopt",
+INITIALIZE_PASS_END(AArch64ConditionOptimizerLegacy, "aarch64-condopt",
                     "AArch64 CondOpt Pass", false, false)
 
-FunctionPass *llvm::createAArch64ConditionOptimizerPass() {
-  return new AArch64ConditionOptimizer();
+FunctionPass *llvm::createAArch64ConditionOptimizerLegacyPass() {
+  return new AArch64ConditionOptimizerLegacy();
 }
 
-void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void AArch64ConditionOptimizerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -155,7 +178,7 @@ void AArch64ConditionOptimizer::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // Verify that the MI's immediate is adjustable and it only sets flags (pure
 // cmp)
-bool AArch64ConditionOptimizer::canAdjustCmp(MachineInstr &CmpMI) {
+bool AArch64ConditionOptimizerImpl::canAdjustCmp(MachineInstr &CmpMI) {
   unsigned ShiftAmt = AArch64_AM::getShiftValue(CmpMI.getOperand(3).getImm());
   if (!CmpMI.getOperand(2).isImm()) {
     LLVM_DEBUG(dbgs() << "Immediate of cmp is symbolic, " << CmpMI << '\n');
@@ -172,25 +195,8 @@ bool AArch64ConditionOptimizer::canAdjustCmp(MachineInstr &CmpMI) {
   return true;
 }
 
-// Ensure both compare MIs use the same register, tracing through copies.
-bool AArch64ConditionOptimizer::registersMatch(MachineInstr *FirstMI,
-                                               MachineInstr *SecondMI) {
-  Register FirstReg = FirstMI->getOperand(1).getReg();
-  Register SecondReg = SecondMI->getOperand(1).getReg();
-  Register FirstCmpReg =
-      FirstReg.isVirtual() ? TRI->lookThruCopyLike(FirstReg, MRI) : FirstReg;
-  Register SecondCmpReg =
-      SecondReg.isVirtual() ? TRI->lookThruCopyLike(SecondReg, MRI) : SecondReg;
-  if (FirstCmpReg != SecondCmpReg) {
-    LLVM_DEBUG(dbgs() << "CMPs compare different registers\n");
-    return false;
-  }
-
-  return true;
-}
-
 // Check if NZCV lives out to any successor block.
-bool AArch64ConditionOptimizer::nzcvLivesOut(MachineBasicBlock *MBB) {
+bool AArch64ConditionOptimizerImpl::nzcvLivesOut(MachineBasicBlock *MBB) {
   for (auto *SuccBB : MBB->successors()) {
     if (SuccBB->isLiveIn(AArch64::NZCV)) {
       LLVM_DEBUG(dbgs() << "NZCV live into successor "
@@ -215,65 +221,6 @@ static bool isCmpInstruction(unsigned Opc) {
   default:
     return false;
   }
-}
-
-static bool isCSINCInstruction(unsigned Opc) {
-  return Opc == AArch64::CSINCWr || Opc == AArch64::CSINCXr;
-}
-
-// Returns the Bcc terminator if present, otherwise nullptr.
-MachineInstr *
-AArch64ConditionOptimizer::getBccTerminator(MachineBasicBlock *MBB) {
-  MachineBasicBlock::iterator Term = MBB->getFirstTerminator();
-  if (Term == MBB->end()) {
-    LLVM_DEBUG(dbgs() << "No terminator in " << printMBBReference(*MBB)
-                      << '\n');
-    return nullptr;
-  }
-
-  if (Term->getOpcode() != AArch64::Bcc) {
-    LLVM_DEBUG(dbgs() << "Non-Bcc terminator in " << printMBBReference(*MBB)
-                      << ": " << *Term);
-    return nullptr;
-  }
-
-  return &*Term;
-}
-
-// Find the CMP instruction controlling the given conditional instruction and
-// ensure it can be adjusted for CSE optimization. Searches backward from
-// CondMI, ensuring no NZCV interference. Returns nullptr if no suitable CMP
-// is found or if adjustments are not safe.
-MachineInstr *
-AArch64ConditionOptimizer::findAdjustableCmp(MachineInstr *CondMI) {
-  assert(CondMI && "CondMI cannot be null");
-  MachineBasicBlock *MBB = CondMI->getParent();
-
-  // Search backward from the conditional to find the instruction controlling
-  // it.
-  for (MachineBasicBlock::iterator B = MBB->begin(),
-                                   It = MachineBasicBlock::iterator(CondMI);
-       It != B;) {
-    It = prev_nodbg(It, B);
-    MachineInstr &I = *It;
-    assert(!I.isTerminator() && "Spurious terminator");
-    // Ensure there is no use of NZCV between CMP and conditional.
-    if (I.readsRegister(AArch64::NZCV, /*TRI=*/nullptr))
-      return nullptr;
-
-    if (isCmpInstruction(I.getOpcode())) {
-      if (!canAdjustCmp(I)) {
-        return nullptr;
-      }
-      return &I;
-    }
-
-    if (I.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr))
-      return nullptr;
-  }
-  LLVM_DEBUG(dbgs() << "Flags not defined in " << printMBBReference(*MBB)
-                    << '\n');
-  return nullptr;
 }
 
 // Changes opcode adds <-> subs considering register operand width.
@@ -312,11 +259,11 @@ static AArch64CC::CondCode getAdjustedCmp(AArch64CC::CondCode Cmp) {
   }
 }
 
-// Transforms GT -> GE, GE -> GT, LT -> LE, LE -> LT by updating comparison
-// operator and condition code.
-AArch64ConditionOptimizer::CmpInfo
-AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
-                                     AArch64CC::CondCode Cmp) {
+// Returns the adjusted immediate, opcode, and condition code for switching
+// between inclusive/exclusive forms (GT <-> GE, LT <-> LE).
+CmpInfo
+AArch64ConditionOptimizerImpl::getAdjustedCmpInfo(MachineInstr *CmpMI,
+                                                  AArch64CC::CondCode Cmp) {
   unsigned Opc = CmpMI->getOpcode();
 
   bool IsSigned = Cmp == AArch64CC::GT || Cmp == AArch64CC::GE ||
@@ -338,7 +285,7 @@ AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
   // Bail out on cmn 0 (ADDS with immediate 0). It is a valid instruction but
   // doesn't set flags in a way we can safely transform, so skip optimization.
   if (OldImm == 0 && Negative)
-    return CmpInfo(OldImm, Opc, Cmp);
+    return {OldImm, Opc, Cmp};
 
   if ((OldImm == 1 && Negative && Correction == -1) ||
       (OldImm == 0 && Correction == -1)) {
@@ -346,69 +293,37 @@ AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
     // unsigned wrap (e.g., 0 wrapping to 0xFFFFFFFF), so return the old cmp.
     // Note: For signed comparisons, opcode changes (cmn 1 ↔ cmp 0) are valid.
     if (!IsSigned)
-      return CmpInfo(OldImm, Opc, Cmp);
+      return {OldImm, Opc, Cmp};
     Opc = getComplementOpc(Opc);
   }
 
-  return CmpInfo(NewImm, Opc, getAdjustedCmp(Cmp));
+  return {NewImm, Opc, getAdjustedCmp(Cmp)};
 }
 
-// Applies changes to comparison instruction suggested by adjustCmp().
-void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
-    const CmpInfo &Info) {
-  int Imm;
-  unsigned Opc;
-  AArch64CC::CondCode Cmp;
-  std::tie(Imm, Opc, Cmp) = Info;
+// Modifies a comparison instruction's immediate and opcode.
+void AArch64ConditionOptimizerImpl::updateCmpInstr(MachineInstr *CmpMI,
+                                                   int NewImm,
+                                                   unsigned NewOpc) {
+  CmpMI->getOperand(2).setImm(NewImm);
+  CmpMI->setDesc(TII->get(NewOpc));
+}
 
-  MachineBasicBlock *const MBB = CmpMI->getParent();
-
-  // Change immediate in comparison instruction (ADDS or SUBS).
-  BuildMI(*MBB, CmpMI, CmpMI->getDebugLoc(), TII->get(Opc))
-      .add(CmpMI->getOperand(0))
-      .add(CmpMI->getOperand(1))
-      .addImm(Imm)
-      .add(CmpMI->getOperand(3));
-  CmpMI->eraseFromParent();
-
-  // The fact that this comparison was picked ensures that it's related to the
-  // first terminator instruction.
-  MachineInstr &BrMI = *MBB->getFirstTerminator();
-
-  // Change condition in branch instruction.
-  BuildMI(*MBB, BrMI, BrMI.getDebugLoc(), TII->get(AArch64::Bcc))
-      .addImm(Cmp)
-      .add(BrMI.getOperand(1));
-  BrMI.eraseFromParent();
-
+// Modifies the condition code of a conditional instruction.
+void AArch64ConditionOptimizerImpl::updateCondInstr(MachineInstr *CondMI,
+                                                    AArch64CC::CondCode NewCC) {
+  int CCOpIdx =
+      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(*CondMI);
+  assert(CCOpIdx >= 0 && "Unsupported conditional instruction");
+  CondMI->getOperand(CCOpIdx).setImm(NewCC);
   ++NumConditionsAdjusted;
 }
 
-// Parse a condition code returned by analyzeBranch, and compute the CondCode
-// corresponding to TBB.
-// Returns true if parsing was successful, otherwise false is returned.
-static bool parseCond(ArrayRef<MachineOperand> Cond, AArch64CC::CondCode &CC) {
-  // A normal br.cond simply has the condition code.
-  if (Cond[0].getImm() != -1) {
-    assert(Cond.size() == 1 && "Unknown Cond array format");
-    CC = (AArch64CC::CondCode)(int)Cond[0].getImm();
-    return true;
-  }
-  return false;
-}
-
-// Adjusts one cmp instruction to another one if result of adjustment will allow
-// CSE.  Returns true if compare instruction was changed, otherwise false is
-// returned.
-bool AArch64ConditionOptimizer::adjustTo(MachineInstr *CmpMI,
-  AArch64CC::CondCode Cmp, MachineInstr *To, int ToImm)
-{
-  CmpInfo Info = adjustCmp(CmpMI, Cmp);
-  if (std::get<0>(Info) == ToImm && std::get<1>(Info) == To->getOpcode()) {
-    modifyCmp(CmpMI, Info);
-    return true;
-  }
-  return false;
+// Applies a comparison adjustment to a cmp/cond instruction pair.
+void AArch64ConditionOptimizerImpl::applyCmpAdjustment(CmpCondPair &Pair,
+                                                       const CmpInfo &Info) {
+  updateCmpInstr(Pair.CmpMI, Info.Imm, Info.Opc);
+  updateCondInstr(Pair.CondMI, Info.CC);
+  Pair.CC = Info.CC;
 }
 
 static bool isGreaterThan(AArch64CC::CondCode Cmp) {
@@ -419,9 +334,121 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
   return Cmp == AArch64CC::LT || Cmp == AArch64CC::LO;
 }
 
-// This function transforms two CMP+CSINC pairs within the same basic block
-// when both conditions are the same (GT/GT or LT/LT) and immediates differ
-// by 1.
+bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
+                                                    CmpCondPair &Second) {
+  if (!((isGreaterThan(First.CC) || isLessThan(First.CC)) &&
+        (isGreaterThan(Second.CC) || isLessThan(Second.CC))))
+    return false;
+
+  int FirstImmTrueValue = First.getImm();
+  int SecondImmTrueValue = Second.getImm();
+
+  // Normalize immediate of CMN (ADDS) instructions
+  if (First.getOpc() == AArch64::ADDSWri || First.getOpc() == AArch64::ADDSXri)
+    FirstImmTrueValue = -FirstImmTrueValue;
+  if (Second.getOpc() == AArch64::ADDSWri ||
+      Second.getOpc() == AArch64::ADDSXri)
+    SecondImmTrueValue = -SecondImmTrueValue;
+
+  CmpInfo FirstAdj = getAdjustedCmpInfo(First.CmpMI, First.CC);
+  CmpInfo SecondAdj = getAdjustedCmpInfo(Second.CmpMI, Second.CC);
+
+  if (((isGreaterThan(First.CC) && isLessThan(Second.CC)) ||
+       (isLessThan(First.CC) && isGreaterThan(Second.CC))) &&
+      std::abs(SecondImmTrueValue - FirstImmTrueValue) == 2) {
+    // This branch transforms machine instructions that correspond to
+    //
+    // 1) (a > {SecondImm} && ...) || (a < {FirstImm} && ...)
+    // 2) (a < {SecondImm} && ...) || (a > {FirstImm} && ...)
+    //
+    // into
+    //
+    // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
+    // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
+
+    // Verify both adjustments converge to identical comparisons (same
+    // immediate and opcode). This ensures CSE can eliminate the duplicate.
+    if (FirstAdj.Imm != SecondAdj.Imm || FirstAdj.Opc != SecondAdj.Opc)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "Optimized (opposite): "
+                      << AArch64CC::getCondCodeName(First.CC) << " #"
+                      << First.getImm() << ", "
+                      << AArch64CC::getCondCodeName(Second.CC) << " #"
+                      << Second.getImm() << " -> "
+                      << AArch64CC::getCondCodeName(FirstAdj.CC) << " #"
+                      << FirstAdj.Imm << ", "
+                      << AArch64CC::getCondCodeName(SecondAdj.CC) << " #"
+                      << SecondAdj.Imm << '\n');
+    applyCmpAdjustment(First, FirstAdj);
+    applyCmpAdjustment(Second, SecondAdj);
+    return true;
+
+  } else if (((isGreaterThan(First.CC) && isGreaterThan(Second.CC)) ||
+              (isLessThan(First.CC) && isLessThan(Second.CC))) &&
+             std::abs(SecondImmTrueValue - FirstImmTrueValue) == 1) {
+    // This branch transforms machine instructions that correspond to
+    //
+    // 1) (a > {SecondImm} && ...) || (a > {FirstImm} && ...)
+    // 2) (a < {SecondImm} && ...) || (a < {FirstImm} && ...)
+    //
+    // into
+    //
+    // 1) (a <= {NewImm} && ...) || (a >  {NewImm} && ...)
+    // 2) (a <  {NewImm} && ...) || (a >= {NewImm} && ...)
+
+    // GT -> GE transformation increases immediate value, so picking the
+    // smaller one; LT -> LE decreases immediate value so invert the choice.
+    bool AdjustFirst = (FirstImmTrueValue < SecondImmTrueValue);
+    if (isLessThan(First.CC))
+      AdjustFirst = !AdjustFirst;
+
+    CmpCondPair &Target = AdjustFirst ? Second : First;
+    CmpCondPair &ToChange = AdjustFirst ? First : Second;
+    CmpInfo &Adj = AdjustFirst ? FirstAdj : SecondAdj;
+
+    // Verify the adjustment converges to the target's comparison (same
+    // immediate and opcode). This ensures CSE can eliminate the duplicate.
+    if (Adj.Imm != Target.getImm() || Adj.Opc != Target.getOpc())
+      return false;
+
+    LLVM_DEBUG(dbgs() << "Optimized (same-direction): "
+                      << AArch64CC::getCondCodeName(ToChange.CC) << " #"
+                      << ToChange.getImm() << " -> "
+                      << AArch64CC::getCondCodeName(Adj.CC) << " #" << Adj.Imm
+                      << '\n');
+    applyCmpAdjustment(ToChange, Adj);
+    return true;
+  }
+
+  // Other transformation cases almost never occur due to generation of < or >
+  // comparisons instead of <= and >=.
+  return false;
+}
+
+bool AArch64ConditionOptimizerImpl::commitPendingPair(
+    std::optional<CmpCondPair> &PendingPair) {
+  if (!PendingPair)
+    return false;
+
+  Register Reg = PendingPair->CmpMI->getOperand(1).getReg();
+  Register Key = Reg.isVirtual() ? TRI->lookThruCopyLike(Reg, MRI) : Reg;
+
+  CmpCondPair Prior = BlockPairs.lookup(Key);
+  bool Changed = Prior.CmpMI && tryOptimizePair(Prior, *PendingPair);
+
+  BlockPairs.insert(Key, *PendingPair);
+  PendingPair = std::nullopt;
+  return Changed;
+}
+
+// This function transforms cmps and their consuming conditionals (CmpCondPairs)
+// 1. Same direction: when both conditions are the same (e.g. GT/GT or LT/LT)
+//    and immediates differ by 1
+// 2. Opposite direction: when both conditions are adjustable to a common middle
+//    (e.g., GT/LT) and immediates differ by 2.
+// The compare instructions are made to match to enable CSE.
+// All cmp/cond pairs within a basic block are examined
 //
 // Example transformation:
 //   cmp  w8, #10
@@ -432,266 +459,104 @@ static bool isLessThan(AArch64CC::CondCode Cmp) {
 // Into:
 //   cmp  w8, #10
 //   csinc w9, w0, w1, gt     ; w9 = (w8 > 10) ? w0 : w1+1
+//   cmp w8, #10              ; <- CSE can remove the redundant cmp
 //   csinc w10, w0, w1, ge    ; w10 = (w8 >= 10) ? w0 : w1+1
 //
-// The second CMP is eliminated, enabling CSE to remove the redundant
-// comparison.
-bool AArch64ConditionOptimizer::optimizeIntraBlock(MachineBasicBlock &MBB) {
-  MachineInstr *FirstCSINC = nullptr;
-  MachineInstr *SecondCSINC = nullptr;
+bool AArch64ConditionOptimizerImpl::optimizeBlock(MachineBasicBlock &MBB) {
+  std::optional<CmpCondPair> PendingPair;
+  MachineInstr *ActiveCmp = nullptr;
+  bool Changed = false;
 
-  // Find two CSINC instructions
   for (MachineInstr &MI : MBB) {
-    if (isCSINCInstruction(MI.getOpcode())) {
-      if (!FirstCSINC) {
-        FirstCSINC = &MI;
-      } else if (!SecondCSINC) {
-        SecondCSINC = &MI;
-        break; // Found both
+    if (MI.isDebugInstr())
+      continue;
+
+    if (isCmpInstruction(MI.getOpcode()) && canAdjustCmp(MI)) {
+      Changed |= commitPendingPair(PendingPair);
+      ActiveCmp = &MI;
+      continue;
+    }
+
+    if (MI.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      // Non-CMP clobber: commit any pending pair and reset local state.
+      Changed |= commitPendingPair(PendingPair);
+      ActiveCmp = nullptr;
+      continue;
+    }
+
+    if (AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(MI) >= 0) {
+      if (PendingPair) {
+        // A second conditional consuming the same CMP would invalidate any
+        // optimization: modifying the CMP would silently change what both
+        // consumers compare against. Mark the CMP spent.
+        PendingPair = std::nullopt;
+        ActiveCmp = nullptr;
+      } else if (ActiveCmp) {
+        int CCOpIdx =
+            AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(MI);
+        assert(CCOpIdx >= 0 && "Unsupported conditional instruction");
+        AArch64CC::CondCode CC =
+            (AArch64CC::CondCode)(int)MI.getOperand(CCOpIdx).getImm();
+        PendingPair = CmpCondPair{ActiveCmp, &MI, CC};
       }
+      continue;
+    }
+
+    if (MI.readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      ActiveCmp = nullptr;
+      PendingPair = std::nullopt;
+      continue;
     }
   }
 
-  if (!FirstCSINC || !SecondCSINC) {
-    return false;
-  }
+  // Only commit the final pending pair if NZCV doesn't live out: a cross-block
+  // consumer would be affected by any CMP adjustment we make.
+  if (!nzcvLivesOut(&MBB))
+    Changed |= commitPendingPair(PendingPair);
 
-  // Since we may modify cmps in this MBB, make sure NZCV does not live out.
-  if (nzcvLivesOut(&MBB))
-    return false;
-
-  // Find the CMPs controlling each CSINC
-  MachineInstr *FirstCmpMI = findAdjustableCmp(FirstCSINC);
-  MachineInstr *SecondCmpMI = findAdjustableCmp(SecondCSINC);
-  if (!FirstCmpMI || !SecondCmpMI)
-    return false;
-
-  // Ensure we have two distinct CMPs
-  if (FirstCmpMI == SecondCmpMI) {
-    LLVM_DEBUG(dbgs() << "Both CSINCs already controlled by same CMP\n");
-    return false;
-  }
-
-  if (!registersMatch(FirstCmpMI, SecondCmpMI))
-    return false;
-
-  // Check that nothing else modifies the flags between the first CMP and second
-  // conditional
-  for (auto It = std::next(MachineBasicBlock::iterator(FirstCmpMI));
-       It != std::next(MachineBasicBlock::iterator(SecondCSINC)); ++It) {
-    if (&*It != SecondCmpMI &&
-        It->modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
-      LLVM_DEBUG(dbgs() << "Flags modified between CMPs by: " << *It << '\n');
-      return false;
-    }
-  }
-
-  // Check flags aren't read after second conditional within the same block
-  for (auto It = std::next(MachineBasicBlock::iterator(SecondCSINC));
-       It != MBB.end(); ++It) {
-    if (It->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
-      LLVM_DEBUG(dbgs() << "Flags read after second CSINC by: " << *It << '\n');
-      return false;
-    }
-  }
-
-  // Extract condition codes from both CSINCs (operand 3)
-  AArch64CC::CondCode FirstCond =
-      (AArch64CC::CondCode)(int)FirstCSINC->getOperand(3).getImm();
-  AArch64CC::CondCode SecondCond =
-      (AArch64CC::CondCode)(int)SecondCSINC->getOperand(3).getImm();
-
-  const int FirstImm = (int)FirstCmpMI->getOperand(2).getImm();
-  const int SecondImm = (int)SecondCmpMI->getOperand(2).getImm();
-
-  LLVM_DEBUG(dbgs() << "Comparing intra-block CSINCs: "
-                    << AArch64CC::getCondCodeName(FirstCond) << " #" << FirstImm
-                    << " and " << AArch64CC::getCondCodeName(SecondCond) << " #"
-                    << SecondImm << '\n');
-
-  // Check if both conditions are the same (GT/GT, LT/LT, HI/HI, LO/LO)
-  // and immediates differ by 1.
-  if (FirstCond == SecondCond &&
-      (isGreaterThan(FirstCond) || isLessThan(FirstCond)) &&
-      std::abs(SecondImm - FirstImm) == 1) {
-    // Pick which comparison to adjust to match the other
-    // For GT/HI: adjust the one with smaller immediate
-    // For LT/LO: adjust the one with larger immediate
-    bool adjustFirst = (FirstImm < SecondImm);
-    if (isLessThan(FirstCond)) {
-      adjustFirst = !adjustFirst;
-    }
-
-    MachineInstr *CmpToAdjust = adjustFirst ? FirstCmpMI : SecondCmpMI;
-    MachineInstr *CSINCToAdjust = adjustFirst ? FirstCSINC : SecondCSINC;
-    AArch64CC::CondCode CondToAdjust = adjustFirst ? FirstCond : SecondCond;
-    int TargetImm = adjustFirst ? SecondImm : FirstImm;
-
-    CmpInfo AdjustedInfo = adjustCmp(CmpToAdjust, CondToAdjust);
-
-    if (std::get<0>(AdjustedInfo) == TargetImm &&
-        std::get<1>(AdjustedInfo) ==
-            (adjustFirst ? SecondCmpMI : FirstCmpMI)->getOpcode()) {
-      LLVM_DEBUG(dbgs() << "Successfully optimizing intra-block CSINC pair\n");
-
-      // Modify the selected CMP and CSINC
-      CmpToAdjust->getOperand(2).setImm(std::get<0>(AdjustedInfo));
-      CmpToAdjust->setDesc(TII->get(std::get<1>(AdjustedInfo)));
-      CSINCToAdjust->getOperand(3).setImm(std::get<2>(AdjustedInfo));
-
-      return true;
-    }
-  }
-
-  return false;
+  return Changed;
 }
 
-// Optimize across blocks
-bool AArch64ConditionOptimizer::optimizeCrossBlock(MachineBasicBlock &HBB) {
-  SmallVector<MachineOperand, 4> HeadCond;
-  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-  if (TII->analyzeBranch(HBB, TBB, FBB, HeadCond)) {
-    return false;
-  }
-
-  // Equivalence check is to skip loops.
-  if (!TBB || TBB == &HBB) {
-    return false;
-  }
-
-  SmallVector<MachineOperand, 4> TrueCond;
-  MachineBasicBlock *TBB_TBB = nullptr, *TBB_FBB = nullptr;
-  if (TII->analyzeBranch(*TBB, TBB_TBB, TBB_FBB, TrueCond)) {
-    return false;
-  }
-
-  MachineInstr *HeadBrMI = getBccTerminator(&HBB);
-  MachineInstr *TrueBrMI = getBccTerminator(TBB);
-  if (!HeadBrMI || !TrueBrMI)
-    return false;
-
-  // Since we may modify cmps in these blocks, make sure NZCV does not live out.
-  if (nzcvLivesOut(&HBB) || nzcvLivesOut(TBB))
-    return false;
-
-  MachineInstr *HeadCmpMI = findAdjustableCmp(HeadBrMI);
-  MachineInstr *TrueCmpMI = findAdjustableCmp(TrueBrMI);
-  if (!HeadCmpMI || !TrueCmpMI)
-    return false;
-
-  if (!registersMatch(HeadCmpMI, TrueCmpMI))
-    return false;
-
-  AArch64CC::CondCode HeadCmp;
-  if (HeadCond.empty() || !parseCond(HeadCond, HeadCmp)) {
-    return false;
-  }
-
-  AArch64CC::CondCode TrueCmp;
-  if (TrueCond.empty() || !parseCond(TrueCond, TrueCmp)) {
-    return false;
-  }
-
-  const int HeadImm = (int)HeadCmpMI->getOperand(2).getImm();
-  const int TrueImm = (int)TrueCmpMI->getOperand(2).getImm();
-
-  int HeadImmTrueValue = HeadImm;
-  int TrueImmTrueValue = TrueImm;
-
-  LLVM_DEBUG(dbgs() << "Head branch:\n");
-  LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(HeadCmp)
-                    << '\n');
-  LLVM_DEBUG(dbgs() << "\timmediate: " << HeadImm << '\n');
-
-  LLVM_DEBUG(dbgs() << "True branch:\n");
-  LLVM_DEBUG(dbgs() << "\tcondition: " << AArch64CC::getCondCodeName(TrueCmp)
-                    << '\n');
-  LLVM_DEBUG(dbgs() << "\timmediate: " << TrueImm << '\n');
-
-  unsigned Opc = HeadCmpMI->getOpcode();
-  if (Opc == AArch64::ADDSWri || Opc == AArch64::ADDSXri)
-    HeadImmTrueValue = -HeadImmTrueValue;
-
-  Opc = TrueCmpMI->getOpcode();
-  if (Opc == AArch64::ADDSWri || Opc == AArch64::ADDSXri)
-    TrueImmTrueValue = -TrueImmTrueValue;
-
-  if (((isGreaterThan(HeadCmp) && isLessThan(TrueCmp)) ||
-       (isLessThan(HeadCmp) && isGreaterThan(TrueCmp))) &&
-      std::abs(TrueImmTrueValue - HeadImmTrueValue) == 2) {
-    // This branch transforms machine instructions that correspond to
-    //
-    // 1) (a > {TrueImm} && ...) || (a < {HeadImm} && ...)
-    // 2) (a < {TrueImm} && ...) || (a > {HeadImm} && ...)
-    //
-    // into
-    //
-    // 1) (a >= {NewImm} && ...) || (a <= {NewImm} && ...)
-    // 2) (a <= {NewImm} && ...) || (a >= {NewImm} && ...)
-
-    CmpInfo HeadCmpInfo = adjustCmp(HeadCmpMI, HeadCmp);
-    CmpInfo TrueCmpInfo = adjustCmp(TrueCmpMI, TrueCmp);
-    if (std::get<0>(HeadCmpInfo) == std::get<0>(TrueCmpInfo) &&
-        std::get<1>(HeadCmpInfo) == std::get<1>(TrueCmpInfo)) {
-      modifyCmp(HeadCmpMI, HeadCmpInfo);
-      modifyCmp(TrueCmpMI, TrueCmpInfo);
-      return true;
-    }
-  } else if (((isGreaterThan(HeadCmp) && isGreaterThan(TrueCmp)) ||
-              (isLessThan(HeadCmp) && isLessThan(TrueCmp))) &&
-             std::abs(TrueImmTrueValue - HeadImmTrueValue) == 1) {
-    // This branch transforms machine instructions that correspond to
-    //
-    // 1) (a > {TrueImm} && ...) || (a > {HeadImm} && ...)
-    // 2) (a < {TrueImm} && ...) || (a < {HeadImm} && ...)
-    //
-    // into
-    //
-    // 1) (a <= {NewImm} && ...) || (a >  {NewImm} && ...)
-    // 2) (a <  {NewImm} && ...) || (a >= {NewImm} && ...)
-
-    // GT -> GE transformation increases immediate value, so picking the
-    // smaller one; LT -> LE decreases immediate value so invert the choice.
-    bool adjustHeadCond = (HeadImmTrueValue < TrueImmTrueValue);
-    if (isLessThan(HeadCmp)) {
-      adjustHeadCond = !adjustHeadCond;
-    }
-
-    if (adjustHeadCond) {
-      return adjustTo(HeadCmpMI, HeadCmp, TrueCmpMI, TrueImm);
-    } else {
-      return adjustTo(TrueCmpMI, TrueCmp, HeadCmpMI, HeadImm);
-    }
-  }
-  // Other transformation cases almost never occur due to generation of < or >
-  // comparisons instead of <= and >=.
-
-  return false;
-}
-
-bool AArch64ConditionOptimizer::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
-                    << "********** Function: " << MF.getName() << '\n');
+bool AArch64ConditionOptimizerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  return AArch64ConditionOptimizerImpl().run(MF, MDT);
+}
 
-  TII = MF.getSubtarget().getInstrInfo();
+void AArch64ConditionOptimizerImpl::visitBlock(MachineDomTreeNode *Node,
+                                               bool &Changed) {
+  ScopedHashTableScope<Register, CmpCondPair> Scope(BlockPairs);
+  Changed |= optimizeBlock(*Node->getBlock());
+  for (auto *Child : Node->children())
+    visitBlock(Child, Changed);
+}
+
+bool AArch64ConditionOptimizerImpl::run(MachineFunction &MF,
+                                        MachineDominatorTree &MDT) {
+  LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
+                    << "********** Function: " << MF.getName() << '\n');
+
+  TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = MF.getSubtarget().getRegisterInfo();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  DomTree = &MDT;
   MRI = &MF.getRegInfo();
 
   bool Changed = false;
-
-  // Visit blocks in dominator tree pre-order. The pre-order enables multiple
-  // cmp-conversions from the same head block.
-  // Note that updateDomTree() modifies the children of the DomTree node
-  // currently being visited. The df_iterator supports that; it doesn't look at
-  // child_begin() / child_end() until after a node has been visited.
-  for (MachineDomTreeNode *I : depth_first(DomTree)) {
-    MachineBasicBlock *HBB = I->getBlock();
-    Changed |= optimizeIntraBlock(*HBB);
-    Changed |= optimizeCrossBlock(*HBB);
-  }
-
+  visitBlock(DomTree->getRootNode(), Changed);
   return Changed;
+}
+
+PreservedAnalyses
+AArch64ConditionOptimizerPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  bool Changed = AArch64ConditionOptimizerImpl().run(MF, MDT);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
