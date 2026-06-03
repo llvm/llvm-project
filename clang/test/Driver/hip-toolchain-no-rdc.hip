@@ -114,9 +114,9 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV_A_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
 
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
+// NEW-SAME: "--no-lto"
 // NEW-SAME: "--host-triple=x86_64-unknown-linux-gnu"
 // NEW-SAME: "--emit-fatbin-only"
-// NEW-SAME: "--no-lto"
 // NEW-SAME: "-o" "[[HIPFB_A:.*.hipfb]]" "[[PACKAGE_A]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"
@@ -188,8 +188,8 @@
 // NEW-SAME: "--image=file=[[OBJ_DEV_B_900]],triple=amdgcn-amd-amdhsa,arch=gfx900,kind=hip"
 
 // NEW: [[WRAPPER:".*clang-linker-wrapper]]"
-// NEW-SAME: "--emit-fatbin-only"
 // NEW-SAME: "--no-lto"
+// NEW-SAME: "--emit-fatbin-only"
 // NEW-SAME: "-o" "[[HIPFB_B:.*.hipfb]]" "[[PACKAGE_B]]"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "x86_64-unknown-linux-gnu"

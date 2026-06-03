@@ -640,6 +640,8 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l << r);
   case BinaryOpKind::Shr:
     return value_object(l >> r);
+  default:
+    break;
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -837,6 +839,60 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
   return EvaluateScalarOp(BinaryOpKind::Rem, lhs, rhs, result_type, location);
 }
 
+static bool HasFloatingRepresentation(CompilerType ct) {
+  return ct.GetTypeInfo() & lldb::eTypeIsFloat;
+}
+
+static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
+                                                  CompilerType rhs_type) {
+  // Make sure lhs is a legal type for DIL assignment.
+  if (!lhs_type.IsInteger() && !lhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
+      !lhs_type.IsScalarType())
+    return llvm::createStringError(
+        "Illegal type for lhs of assignment (not scalar numeric type)");
+
+  // Make sure rhs is a legal type for DIL assignment.
+  if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
+    return llvm::createStringError(
+        "Illegal type for rhs of assignment (not scalar numeric type)");
+
+  // Only allow assigning pointers to pointers.
+  if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
+      (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
+    return llvm::createStringError(
+        "Invalid assignment: Can only assign pointers to pointers");
+
+  // For "real numbers", the types must match exactly.
+  if ((HasFloatingRepresentation(rhs_type) ||
+       HasFloatingRepresentation(lhs_type)) &&
+      lhs_type != rhs_type) {
+    std::string err_msg =
+        llvm::formatv("Incompatible types for assignment: Cannot assign {0} "
+                      "to {1}",
+                      rhs_type.TypeDescription(), lhs_type.TypeDescription());
+    return llvm::createStringError(err_msg);
+  }
+
+  return true;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
+                                lldb::ValueObjectSP rhs, uint32_t location) {
+
+  auto all_ok =
+      VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
+  if (!all_ok)
+    return all_ok.takeError();
+
+  if (llvm::Error e = lhs->SetValueFromInteger(rhs, m_allow_var_updates))
+    return e;
+
+  return lhs;
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                  lldb::ValueObjectSP rhs, uint32_t location) {
@@ -902,8 +958,22 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::AddAssign: {
+    auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::Assign:
+    return EvaluateAssignment(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::SubAssign: {
+    auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
   case BinaryOpKind::Mul:
     return EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Div:

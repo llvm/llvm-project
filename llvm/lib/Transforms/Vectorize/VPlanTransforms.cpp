@@ -30,6 +30,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -3987,6 +3988,19 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     VPBlockBase *Succ0 = Successors[0];
     VPBlockBase *Succ1 = Successors[1];
     VPBlockBase *Succ2 = Successors[2];
+
+    // If the successor block for both conditions is the same, then combine the
+    // two conditions and plant a single conditional branch.
+    if (Succ0 == Succ1) {
+      VPBuilder Builder(Br);
+      VPValue *Combined = Builder.createOr(Cond0, Cond1, DL);
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined}, DL);
+      VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ0);
+      VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ2);
+      Br->eraseFromParent();
+      continue;
+    }
+
     assert(!Succ0->getParent() && !Succ1->getParent() && !Succ2->getParent() &&
            !BrOnTwoCondsBB->getParent() && "regions must already be dissolved");
 
@@ -4188,19 +4202,174 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
-                                                  VPBasicBlock *HeaderVPBB,
-                                                  VPBasicBlock *LatchVPBB,
-                                                  VPBasicBlock *MiddleVPBB,
-                                                  UncountableExitStyle Style) {
-  struct EarlyExitInfo {
-    VPBasicBlock *EarlyExitingVPBB;
-    VPIRBasicBlock *EarlyExitVPBB;
-    VPValue *CondToExit;
-  };
+struct EarlyExitInfo {
+  VPBasicBlock *EarlyExitingVPBB;
+  VPIRBasicBlock *EarlyExitVPBB;
+  VPValue *CondToExit;
+};
 
+/// Update \p Plan to mask memory operations in the loop based on whether the
+/// early exit is taken or not.
+static bool handleUncountableExitsWithSideEffects(
+    VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
+    Loop *TheLoop, PredicatedScalarEvolution &PSE, DominatorTree &DT,
+    AssumptionCache *AC, VPDominatorTree &VPDT) {
+
+  // Disconnect early exiting blocks from successors, remove branches. We
+  // currently don't support multiple uses for recipes involved in creating
+  // the uncountable exit condition.
+  for (auto &Exit : Exits) {
+    if (Exit.EarlyExitingVPBB == LatchVPBB)
+      continue;
+
+    for (VPRecipeBase &R : Exit.EarlyExitVPBB->phis())
+      cast<VPIRPhi>(&R)->removeIncomingValueFor(Exit.EarlyExitingVPBB);
+    Exit.EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
+  }
+
+  // We can abandon a VPlan entirely if we return false here, so we shouldn't
+  // crash if some earlier assumptions on scalar IR don't hold for the vplan
+  // version of the loop.
+  SmallVector<VPInstruction *, 2> GEPs;
+  SmallVector<VPInstruction *, 8> ConditionRecipes;
+
+  std::optional<VPValue *> Cond =
+      vputils::getRecipesForUncountableExit(ConditionRecipes, GEPs, LatchVPBB);
+  if (!Cond)
+    return false;
+
+  // Find load contributing to condition.
+  VPRecipeBase *CondLoad = nullptr;
+  for (auto *Recipe : ConditionRecipes) {
+    if (match(Recipe, m_VPInstruction<Instruction::Load>(m_VPValue()))) {
+      // TODO: Support more than one load. Needs legality updates too.
+      assert(CondLoad == nullptr && "Too many condition loads");
+      CondLoad = Recipe;
+    }
+  }
+  assert(CondLoad && "Couldn't find load");
+
+  // Ensure that we are guaranteed to be able to dereference the memory used
+  // for determining the uncountable exit for the maximum possible number of
+  // scalar iterations of the loop.
+  //
+  // TODO: Support first-faulting loads in cases where we don't know whether
+  //       all possible addresses are dereferenceable.
+  {
+    SmallVector<const SCEVPredicate *, 4> Predicates;
+    VPSingleDefRecipe *Load = cast<VPSingleDefRecipe>(CondLoad);
+    VPValue *Ptr = Load->getOperand(0);
+    const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
+    const DataLayout &DL = Plan.getDataLayout();
+    APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getScalarType()),
+                  DL.getTypeStoreSize(Load->getScalarType()).getFixedValue());
+    if (!isDereferenceableAndAlignedInLoop(
+            PtrSCEV, cast<LoadInst>(Load->getUnderlyingInstr())->getAlign(),
+            PSE.getSE()->getConstant(EltSize), TheLoop, *PSE.getSE(), DT, AC,
+            &Predicates))
+      return false;
+  }
+
+  // Check GEPs to see if we can link them to a widen IV recipe with a step of
+  // 1; we're only interested in contiguous accesses for the condition load
+  // right now.
+  for (auto *GEP : GEPs) {
+    VPValue *MaybeIV = nullptr;
+    if (!match(GEP, m_VPInstruction<Instruction::GetElementPtr>(
+                        m_LiveIn(), m_VPValue(MaybeIV))))
+      return false;
+
+    auto *WIV = dyn_cast<VPWidenInductionRecipe>(MaybeIV);
+    if (!WIV)
+      return false;
+
+    if (!match(WIV->getStartValue(), m_SpecificInt(0)) ||
+        !match(WIV->getStepValue(), m_SpecificInt(1)))
+      return false;
+  }
+
+  // Find an insertion point. Default to the end of the header but override
+  // if we find a memory op that needs masking before the condition load.
+  auto InsertIt = HeaderVPBB->end();
+  VPRecipeBase *CondR = (*Cond)->getDefiningRecipe();
+  bool CondMoveNeeded = CondR->getParent() != HeaderVPBB;
+  for (VPRecipeBase &R : *HeaderVPBB) {
+    if (&R == CondLoad)
+      continue;
+
+    if (R.mayReadOrWriteMemory()) {
+      if (!VPDT.properlyDominates(CondR, &R)) {
+        CondMoveNeeded = true;
+        InsertIt = R.getIterator();
+      }
+      break;
+    }
+  }
+
+  // If another memory operation would take place before the comparison to
+  // determine whether to exit early or the comparison doesn't take place in
+  // the header, move the comparison (and supporting recipes).
+  if (CondMoveNeeded)
+    for (auto *Recipe : reverse(ConditionRecipes))
+      Recipe->moveBefore(*HeaderVPBB, InsertIt);
+
+  // Create a mask to represent all lanes that fully execute in the vector loop,
+  // stopping short of any early exit.
+  VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
+  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
+  VPValue *IV = cast<VPSingleDefRecipe>(&HeaderVPBB->front());
+  Type *IVScalarTy = IV->getScalarType();
+  Type *FirstActiveTy = FirstActive->getScalarType();
+  VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
+  VPValue *Zero = Plan.getZero(IVScalarTy);
+  FirstActive = MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy,
+                                                    FirstActiveTy, DebugLoc());
+  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                           {Zero, FirstActive, ALMMultiplier},
+                                           DebugLoc(), "uncountable.exit.mask");
+
+  // Convert all other memory operations to use the mask.
+  for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
+    for (VPRecipeBase &R : *VPBB)
+      if (R.mayReadOrWriteMemory() && &R != CondLoad) {
+        // TODO: Handle conditional memory operations in the loop.
+        if (!VPDT.dominates(R.getParent(), LatchVPBB))
+          return false;
+        cast<VPInstruction>(&R)->addMask(Mask);
+      }
+
+  // Update middle block branch to compare (IV + however many lanes were active)
+  // against the full trip count, since we may be exiting the vector loop early.
+  // If we didn't take an early exit, we should get the equivalent of VF from
+  // the FirstActiveLane.
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->end());
+  VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
+                                                 {Zero, IV}, DebugLoc());
+  VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
+  VPValue *FullTC =
+      MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
+  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {FullTC});
+
+  // Update resume phi in scalar.ph.
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  auto Phis = ScalarPH->phis();
+  // TODO: Handle more than one Phi; re-derive from IV.
+  // TODO: Handle reductions.
+  if (range_size(Phis) != 1)
+    return false;
+  VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
+  ContinueIV->setOperand(0, ExitIV);
+  return true;
+}
+
+bool VPlanTransforms::handleUncountableEarlyExits(
+    VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
+    VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+    DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style) {
   VPDominatorTree VPDT(Plan);
-  VPBuilder Builder(LatchVPBB->getTerminator());
+  VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
@@ -4265,13 +4434,36 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   // exit is taken.
   VPValue *Combined = Exits[0].CondToExit;
   for (const EarlyExitInfo &Info : drop_begin(Exits))
-    Combined = Builder.createLogicalOr(Combined, Info.CondToExit);
+    Combined = LatchBuilder.createLogicalOr(Combined, Info.CondToExit);
 
   VPValue *IsAnyExitTaken =
-      Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {Combined});
 
-  assert(Style == UncountableExitStyle::ReadOnly &&
-         "Early exit store masking not implemented");
+  // Create a comparison for the latch exit condition and replace the
+  // BranchOnCond with a BranchOnTwoConds. The original BranchOnCond's condition
+  // is used as the latch-exit condition; canonical IV recipes have not been
+  // introduced yet, so there is no BranchOnCount to derive the condition from.
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCond &&
+         "Unexpected terminator");
+  VPValue *IsLatchExitTaken = LatchExitingBranch->getOperand(0);
+  DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
+  LatchExitingBranch->eraseFromParent();
+  LatchBuilder.setInsertPoint(LatchVPBB);
+  LatchBuilder.createNaryOp(VPInstruction::BranchOnTwoConds,
+                            {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
+  LatchVPBB->clearSuccessors();
+
+  if (Style == UncountableExitStyle::MaskedHandleExitInScalarLoop) {
+    // If handling the exiting lane in the scalar loop, combine the exit
+    // conditions into a single BranchOnCond.
+    LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
+    MiddleVPBB->clearPredecessors();
+    MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
+    return handleUncountableExitsWithSideEffects(Plan, Exits, HeaderVPBB,
+                                                 LatchVPBB, MiddleVPBB, TheLoop,
+                                                 PSE, DT, AC, VPDT);
+  }
 
   // Create the vector.early.exit blocks.
   SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());
@@ -4290,6 +4482,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       Exits.size() == 1 ? VectorEarlyExitVPBBs[0]
                         : Plan.createVPBasicBlock("vector.early.exit.check");
   DispatchVPBB->setPredecessors({LatchVPBB});
+  LatchVPBB->setSuccessors({DispatchVPBB, MiddleVPBB, HeaderVPBB});
   VPBuilder DispatchBuilder(DispatchVPBB, DispatchVPBB->begin());
   VPValue *FirstActiveLane = DispatchBuilder.createFirstActiveLane(
       {Combined}, DebugLoc::getUnknown(), "first.active.lane");
@@ -4396,22 +4589,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     DispatchBuilder.setInsertPoint(CurrentBB);
   }
 
-  // Replace the latch terminator with the new branching logic. The original
-  // BranchOnCond's condition is used as the latch-exit condition; canonical IV
-  // recipes have not been introduced yet, so there is no BranchOnCount to
-  // derive the condition from.
-  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCond &&
-         "Unexpected terminator");
-  VPValue *IsLatchExitTaken = LatchExitingBranch->getOperand(0);
-
-  DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
-  LatchExitingBranch->eraseFromParent();
-  Builder.setInsertPoint(LatchVPBB);
-  Builder.createNaryOp(VPInstruction::BranchOnTwoConds,
-                       {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
-  LatchVPBB->clearSuccessors();
-  LatchVPBB->setSuccessors({DispatchVPBB, MiddleVPBB, HeaderVPBB});
+  return true;
 }
 
 /// This function tries convert extended in-loop reductions to
@@ -6193,6 +6371,15 @@ createPartialReductionExpression(VPReductionRecipe *Red) {
   if (match(VecOp, m_WidenAnyExtend(m_VPValue())))
     return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
+  // reduce.[f]add(neg(ext(op)))
+  // -> VPExpressionRecipe(op, sub/neg, red)
+  if (match(VecOp, m_AnyNeg(m_WidenAnyExtend(m_VPValue())))) {
+    auto *Neg = cast<VPWidenRecipe>(VecOp);
+    auto *Ext =
+        cast<VPWidenCastRecipe>(Neg->getOperand(Neg->getNumOperands() - 1));
+    return new VPExpressionRecipe(Ext, Neg, Red);
+  }
+
   // reduce.[f]add([f]mul(ext(a), ext(b)))
   //  -> VPExpressionRecipe(a, b, mul, red)
   if (match(VecOp, m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue()))) ||
@@ -6446,11 +6633,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       // FIXME: createPartialReductionExpression can't handle sub(ext(mul(...)))
       if (UpdateR->getOpcode() == Instruction::Sub)
         return std::nullopt;
-    } else if (UpdateR->getOpcode() == Instruction::Add ||
-               UpdateR->getOpcode() == Instruction::FAdd) {
-      // Match: UpdateR(PrevValue, ext(...))
-      // TODO: Remove the add/fadd restriction (we should be able to handle this
-      // case for sub reductions too).
+    } else {
       return ExtendedReductionOperand{
           UpdateR,
           /*ExtendA=*/{CastSource->getScalarType(), *OuterExtKind},
@@ -6466,8 +6649,8 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
       !is_contained({Instruction::Mul, Instruction::FMul}, MulOp->getOpcode()))
     return std::nullopt;
 
-  // The rest of the matching assumes `Op` is a (possibly extended/negated)
-  // binary operation.
+  // The rest of the matching assumes `Op` is a (possibly extended) mul
+  // operation.
 
   VPValue *LHS = MulOp->getOperand(0);
   VPValue *RHS = MulOp->getOperand(1);

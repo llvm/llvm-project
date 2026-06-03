@@ -211,6 +211,21 @@ body:             |
 ...
 
 ---
+name:            fold_sreg_64_hi16_to_sgpr_lo16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_sreg_64_hi16_to_sgpr_lo16
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1125912791875585
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 2
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 1125912791875585
+    $sgpr0_lo16 = COPY killed %0.hi16
+    SI_RETURN_TO_EPILOG $sgpr0_lo16
+
+...
+
+---
 name:            fold_sreg_64_sub1_lo16_to_sgpr_lo16
 body:             |
   bb.0:
@@ -221,6 +236,21 @@ body:             |
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
     %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 1125912791875585
     $sgpr0_lo16 = COPY killed %0.sub1_lo16
+    SI_RETURN_TO_EPILOG $sgpr0_lo16
+
+...
+
+---
+name:            fold_sreg_64_sub1_hi16_to_sgpr_lo16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_sreg_64_sub1_hi16_to_sgpr_lo16
+    ; GCN: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 1125912791875585
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 4
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    %0:sreg_64 = S_MOV_B64_IMM_PSEUDO 1125912791875585
+    $sgpr0_lo16 = COPY killed %0.sub1_hi16
     SI_RETURN_TO_EPILOG $sgpr0_lo16
 
 ...
@@ -791,6 +821,20 @@ body:             |
     SI_RETURN_TO_EPILOG %1
 
 ...
+---
+name:            fold_simm_16_sub_to_hi_from_mov_64_inline_imm_virt_sgpr16
+body:             |
+  bb.0:
+
+    ; GCN-LABEL: name: fold_simm_16_sub_to_hi_from_mov_64_inline_imm_virt_sgpr16
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_lo16 = COPY killed [[S_MOV_B64_]].hi16
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG [[COPY]]
+    %0:sreg_64 = S_MOV_B64 64
+    %1:sgpr_lo16 = COPY killed %0.hi16
+    SI_RETURN_TO_EPILOG %1
+
+...
 
 ---
 name:            fold_simm_16_sub_to_lo_from_mov_64_phys_sgpr16_lo
@@ -806,7 +850,20 @@ body:             |
     SI_RETURN_TO_EPILOG $sgpr0_lo16
 
 ...
+---
+name:            fold_simm_16_sub_to_hi_from_mov_64_inline_imm_phys_sgpr16_lo
+body:             |
+  bb.0:
 
+    ; GCN-LABEL: name: fold_simm_16_sub_to_hi_from_mov_64_inline_imm_phys_sgpr16_lo
+    ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 64
+    ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
+    ; GCN-NEXT: SI_RETURN_TO_EPILOG $sgpr0_lo16
+    %0:sreg_64 = S_MOV_B64 64
+    $sgpr0_lo16 = COPY killed %0.hi16
+    SI_RETURN_TO_EPILOG $sgpr0_lo16
+
+...
 ---
 # Test that foldImmediate correctly handles kill flags when eliminating
 # redundant instructions. Without the fix, kill flags are not cleared when
