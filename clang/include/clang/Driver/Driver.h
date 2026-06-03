@@ -55,12 +55,7 @@ class JobAction;
 class ToolChain;
 
 /// Describes the kind of LTO mode selected via -f(no-)?lto(=.*)? options.
-enum LTOKind {
-  LTOK_None,
-  LTOK_Full,
-  LTOK_Thin,
-  LTOK_Unknown
-};
+enum LTOKind : int { LTOK_None, LTOK_Full, LTOK_Thin, LTOK_Unknown };
 
 /// Whether headers used to construct C++20 module units should be looked
 /// up by the path supplied on the command line, or in the user or system
@@ -134,12 +129,6 @@ class Driver {
   /// Set if we should process inputs and jobs with C++20 module
   /// interpretation.
   bool ModulesModeCXX20;
-
-  /// LTO mode selected via -f(no-)?lto(=.*)? options.
-  LTOKind LTOMode;
-
-  /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
-  LTOKind OffloadLTOMode;
 
   /// Options for CUID
   CUIDOptions CUIDOpts;
@@ -662,7 +651,8 @@ public:
   Action *ConstructPhaseAction(
       Compilation &C, const llvm::opt::ArgList &Args, phases::ID Phase,
       Action *Input,
-      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None) const;
+      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None,
+      LTOKind TargetLTOMode = LTOK_None) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
@@ -738,18 +728,6 @@ public:
   /// Get the mode for handling headers as set by fmodule-header{=}.
   ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
-  /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO() const { return getLTOMode() != LTOK_None; }
-
-  /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode() const { return LTOMode; }
-
-  /// Returns true if we are performing any kind of offload LTO.
-  bool isUsingOffloadLTO() const { return getOffloadLTOMode() != LTOK_None; }
-
-  /// Get the specific kind of offload LTO being performed.
-  LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
-
   /// Get the CUID option.
   const CUIDOptions &getCUIDOpts() const { return CUIDOpts; }
 
@@ -781,10 +759,6 @@ private:
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
   void setDriverMode(StringRef DriverModeValue);
-
-  /// Parse the \p Args list for LTO options and record the type of LTO
-  /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
-  void setLTOMode(const llvm::opt::ArgList &Args);
 
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///

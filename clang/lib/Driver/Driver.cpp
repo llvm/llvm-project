@@ -181,10 +181,9 @@ Driver::Driver(StringRef DriverExecutable, StringRef TargetTriple,
     : Diags(Diags), VFS(std::move(VFS)), Mode(GCCMode),
       SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       Offload(OffloadHostDevice), CXX20HeaderType(HeaderMode_None),
-      ModulesModeCXX20(false), LTOMode(LTOK_None),
-      DriverExecutable(DriverExecutable), SysRoot(DEFAULT_SYSROOT),
-      DriverTitle(Title), CCCPrintBindings(false), CCPrintOptions(false),
-      CCLogDiagnostics(false), CCGenDiagnostics(false),
+      ModulesModeCXX20(false), DriverExecutable(DriverExecutable),
+      SysRoot(DEFAULT_SYSROOT), DriverTitle(Title), CCCPrintBindings(false),
+      CCPrintOptions(false), CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
       PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
@@ -838,50 +837,6 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   }
 
   return Target;
-}
-
-// Parse the LTO options and record the type of LTO compilation
-// based on which -f(no-)?lto(=.*)? or -f(no-)?offload-lto(=.*)?
-// option occurs last.
-static driver::LTOKind parseLTOMode(Driver &D, const llvm::opt::ArgList &Args,
-                                    OptSpecifier OptEq, OptSpecifier OptNeg) {
-  if (!Args.hasFlag(OptEq, OptNeg, false))
-    return LTOK_None;
-
-  const Arg *A = Args.getLastArg(OptEq);
-  StringRef LTOName = A->getValue();
-
-  driver::LTOKind LTOMode = llvm::StringSwitch<LTOKind>(LTOName)
-                                .Case("full", LTOK_Full)
-                                .Case("thin", LTOK_Thin)
-                                .Default(LTOK_Unknown);
-
-  if (LTOMode == LTOK_Unknown) {
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << A->getSpelling() << A->getValue();
-    return LTOK_None;
-  }
-  return LTOMode;
-}
-
-// Parse the LTO options.
-void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
-  LTOMode =
-      parseLTOMode(*this, Args, options::OPT_flto_EQ, options::OPT_fno_lto);
-
-  OffloadLTOMode = parseLTOMode(*this, Args, options::OPT_foffload_lto_EQ,
-                                options::OPT_fno_offload_lto);
-
-  // Try to enable `-foffload-lto=full` if `-fopenmp-target-jit` is on.
-  if (Args.hasFlag(options::OPT_fopenmp_target_jit,
-                   options::OPT_fno_openmp_target_jit, false)) {
-    if (Arg *A = Args.getLastArg(options::OPT_foffload_lto_EQ,
-                                 options::OPT_fno_offload_lto))
-      if (OffloadLTOMode != LTOK_Full)
-        Diag(diag::err_drv_incompatible_options)
-            << A->getSpelling() << "-fopenmp-target-jit";
-    OffloadLTOMode = LTOK_Full;
-  }
 }
 
 /// Compute the desired OpenMP runtime from the flags provided.
@@ -1676,8 +1631,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     else
       Offload = OffloadHostDevice;
   }
-
-  setLTOMode(Args);
 
   // Process -fembed-bitcode= flags.
   if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
@@ -3648,7 +3601,8 @@ class OffloadingActionBuilder final {
               break;
 
             CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
-                C, Args, Ph, CudaDeviceActions[I], Action::OFK_Cuda);
+                C, Args, Ph, CudaDeviceActions[I], Action::OFK_Cuda,
+                ToolChains[I]->getLTOMode(Args, Action::OFK_Cuda));
 
             if (Ph == phases::Assemble)
               break;
@@ -3799,7 +3753,7 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          if (C.getDriver().isUsingOffloadLTO()) {
+          if (ToolChains[I]->isUsingLTO(Args, AssociatedOffloadKind)) {
             // When LTO is enabled, skip the backend and assemble phases and
             // use lld to link the bitcode.
             ActionList AL;
@@ -3824,10 +3778,13 @@ class OffloadingActionBuilder final {
                                      : types::TY_LLVM_BC;
               BackendAction =
                   C.MakeAction<BackendJobAction>(CudaDeviceActions[I], Output);
-            } else
+            } else {
+              auto DevLTO =
+                  ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind);
               BackendAction = C.getDriver().ConstructPhaseAction(
                   C, Args, phases::Backend, CudaDeviceActions[I],
-                  AssociatedOffloadKind);
+                  AssociatedOffloadKind, DevLTO);
+            }
             auto AssembleAction = C.getDriver().ConstructPhaseAction(
                 C, Args, phases::Assemble, BackendAction,
                 AssociatedOffloadKind);
@@ -3892,9 +3849,10 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : CudaDeviceActions)
-        A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
-                                               AssociatedOffloadKind);
+      for (unsigned I = 0, E = CudaDeviceActions.size(); I != E; ++I)
+        CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
+            C, Args, CurPhase, CudaDeviceActions[I], AssociatedOffloadKind,
+            ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind));
 
       if (CompileDeviceOnly && CurPhase == FinalPhase && BundleOutput &&
           *BundleOutput) {
@@ -4352,7 +4310,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         !C.getDefaultToolChain().getTriple().isSPIRV())
       Diag(clang::diag::err_drv_emit_llvm_link);
     if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
-        LTOMode != LTOK_None &&
+        C.getDefaultToolChain().isUsingLTO(Args) &&
         !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
              .starts_with_insensitive("lld"))
       Diag(clang::diag::err_drv_lto_without_lld);
@@ -4445,8 +4403,10 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         // Build the pipeline for the pch file.
         Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
+        auto HostLTO = C.getDefaultToolChain().getLTOMode(Args);
         for (phases::ID Phase : types::getCompilationPhases(HeaderType))
-          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch,
+                                            Action::OFK_None, HostLTO);
         assert(ClangClPch);
         Actions.push_back(ClangClPch);
         // The driver currently exits after the first failed command.  This
@@ -4586,7 +4546,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       // later actions in the same command line?
 
       // Otherwise construct the appropriate action.
-      Action *NewCurrent = ConstructPhaseAction(C, Args, Phase, Current);
+      Action *NewCurrent =
+          ConstructPhaseAction(C, Args, Phase, Current, Action::OFK_None,
+                               C.getDefaultToolChain().getLTOMode(Args));
 
       // We didn't create a new action, so we will just move to the next phase.
       if (NewCurrent == Current)
@@ -5073,7 +5035,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         // Propagate the ToolChain so we can use it in ConstructPhaseAction.
         A->propagateDeviceOffloadInfo(Kind, TCAndArch->second.data(),
                                       TCAndArch->first);
-        A = ConstructPhaseAction(C, Args, Phase, A, Kind);
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind,
+                                 TCAndArch->first->getLTOMode(Args, Kind));
 
         if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
             Kind == Action::OFK_OpenMP &&
@@ -5226,7 +5189,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
 Action *Driver::ConstructPhaseAction(
     Compilation &C, const ArgList &Args, phases::ID Phase, Action *Input,
-    Action::OffloadKind TargetDeviceOffloadKind) const {
+    Action::OffloadKind TargetDeviceOffloadKind, LTOKind TargetLTOMode) const {
   llvm::PrettyStackTraceString CrashInfo("Constructing phase actions");
 
   // Some types skip the assembler phase (e.g., llvm-bc), but we can't
@@ -5350,18 +5313,19 @@ Action *Driver::ConstructPhaseAction(
         !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm)))
       return Input;
 
-    if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
-      types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
-          !Args.hasArg(options::OPT_emit_llvm))
-        Output = types::TY_PP_Asm;
-      else if (Args.hasArg(options::OPT_S))
-        Output = types::TY_LTO_IR;
-      else
-        Output = types::TY_LTO_BC;
-      return C.MakeAction<BackendJobAction>(Input, Output);
-    }
-    if (isUsingOffloadLTO() && TargetDeviceOffloadKind != Action::OFK_None) {
+    if (TargetLTOMode != LTOK_None) {
+      bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
+      if (!IsDeviceOffload) {
+        types::ID Output;
+        if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+            !Args.hasArg(options::OPT_emit_llvm))
+          Output = types::TY_PP_Asm;
+        else if (Args.hasArg(options::OPT_S))
+          Output = types::TY_LTO_IR;
+        else
+          Output = types::TY_LTO_BC;
+        return C.MakeAction<BackendJobAction>(Input, Output);
+      }
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -6203,7 +6167,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   ActionList CollapsedOffloadActions;
 
   ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !isUsingLTO());
+                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)
