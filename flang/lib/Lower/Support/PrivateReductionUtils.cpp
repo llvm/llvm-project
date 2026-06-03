@@ -520,7 +520,7 @@ bool PopulateInitAndCleanupRegionsHelper::shouldAllocateTempOnStack(
   auto offloadMod =
       llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(*builder.getModule());
   // On the GPU, always allocate on the stack unless the user explicitly
-  // specifies otherwise since heap allocatins are very expensive.
+  // specifies otherwise since heap allocations are very expensive.
   bool isGPU = offloadMod && offloadMod.getIsGPU();
   if (isGPU && forceHeapAllocation)
     return false;
