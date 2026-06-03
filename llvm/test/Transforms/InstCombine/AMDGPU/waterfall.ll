@@ -4,7 +4,7 @@
 define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)* inreg %in, i32 %index, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @test_waterfall_same_index2(
 ; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX:%.*]])
-; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
+; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
@@ -25,7 +25,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index2(<8 x i32> addrspace(4)*
 define amdgpu_ps <4 x float> @test_waterfall_same_index3(<8 x i32> addrspace(4)* inreg %in, i32 %index, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @test_waterfall_same_index3(
 ; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX:%.*]])
-; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
+; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32(token [[WF_TOKEN1]], i32 [[INDEX]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
@@ -48,7 +48,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index_aba(<8 x i32> addrspace(
 ; CHECK-LABEL: @test_waterfall_same_index_aba(
 ; CHECK-NEXT:    [[WF_TOKEN1:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[INDEX1:%.*]])
 ; CHECK-NEXT:    [[WF_TOKEN2:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token [[WF_TOKEN1]], i32 [[INDEX2:%.*]])
-; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token [[WF_TOKEN2]], i32 [[INDEX2]])
+; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32(token [[WF_TOKEN2]], i32 [[INDEX2]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[RSRC:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
