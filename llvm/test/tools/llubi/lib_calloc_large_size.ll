@@ -12,7 +12,7 @@ entry:
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr_1 = call ptr @calloc(i64 2, i64 25) => ptr 0x10 [ptr_1]
-; CHECK-NEXT:   %ptr_2 = call ptr @calloc(i64 4, i64 25) => ptr 0x0 [dangling]
-; CHECK-NEXT:   %ptr_3 = call ptr @calloc(i64 8, i64 25) => ptr 0x0 [dangling]
+; CHECK-NEXT:   %ptr_2 = call ptr @calloc(i64 4, i64 25) => ptr 0x0 [nullary]
+; CHECK-NEXT:   %ptr_3 = call ptr @calloc(i64 8, i64 25) => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

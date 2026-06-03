@@ -198,19 +198,13 @@ exit:
 define void @unprofitable1(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-LABEL: define void @unprofitable1(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP_J_PREHEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER:.*]]
-; CHECK:       [[LOOP_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ], [ 0, %[[LOOP_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[LOOP_J_SPLIT1:.*]]
-; CHECK:       [[LOOP_J_PREHEADER]]:
+; CHECK-NEXT:  [[LOOP_J_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_J:.*]]
 ; CHECK:       [[LOOP_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP_J_SPLIT:.*]] ], [ 0, %[[LOOP_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
-; CHECK:       [[LOOP_J_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[LOOP_J_PREHEADER]] ], [ [[I_INC:%.*]], %[[LOOP_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[LOOP_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[LOOP_J]] ], [ [[TMP0:%.*]], %[[LOOP_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [100 x i8], ptr [[A]], i64 [[I]], i64 [[J]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [100 x i8], ptr [[B]], i64 [[I]], i64 [[J]]
 ; CHECK-NEXT:    [[GEP_C0:%.*]] = getelementptr inbounds [100 x i8], ptr [[C]], i64 [[J]], i64 [[I]]
@@ -224,17 +218,13 @@ define void @unprofitable1(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-NEXT:    [[SUM_1:%.*]] = add i8 [[SUM_0]], [[VAL_C1]]
 ; CHECK-NEXT:    [[SUM_2:%.*]] = add i8 [[SUM_1]], [[VAL_C2]]
 ; CHECK-NEXT:    store i8 [[SUM_2]], ptr [[GEP_A]], align 1
-; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 42
-; CHECK-NEXT:    br label %[[LOOP_I_LATCH]]
-; CHECK:       [[LOOP_J_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 42
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP_J]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_I_LATCH]], label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK:       [[LOOP_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 42
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[LOOP_J_SPLIT]], label %[[LOOP_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[LOOP_J]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

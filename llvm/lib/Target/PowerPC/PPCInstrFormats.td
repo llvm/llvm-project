@@ -2406,11 +2406,13 @@ class PPCCustomInserterPseudo<dag OOL, dag IOL, string asmstr,
 
 // PostRAPseudo will be expanded in expandPostRAPseudo, isPseudo flag in td
 // files is set only for PostRAPseudo
-class PPCPostRAExpPseudo<dag OOL, dag IOL, string asmstr, list<dag> pattern>
+class PPCPostRAExpPseudo<dag OOL, dag IOL, list<dag> pattern = [],
+                         string asmstr = "#" # NAME>
     : PPCEmitTimePseudo<OOL, IOL, asmstr, pattern> {
   let isPseudo = 1;
 }
 
-class PseudoXFormMemOp<dag OOL, dag IOL, string asmstr, list<dag> pattern>
-    : PPCPostRAExpPseudo<OOL, IOL, asmstr, pattern>, XFormMemOp;
+class PseudoXFormMemOp<dag OOL, dag IOL, list<dag> pattern = [],
+                       string asmstr = "#" # NAME>
+    : PPCPostRAExpPseudo<OOL, IOL, pattern, asmstr>, XFormMemOp;
 

@@ -17,6 +17,8 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -1110,6 +1112,33 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
   os << '\n';
 }
 
+// Map a mangled reduction name to a valid Fortran accessibility identifier
+// for module file serialization (e.g., op.+ → operator(+), op.max → max).
+// Non-mangled names (procedure designators) are returned as-is.
+static std::string GetReductionFortranId(const SourceName &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return name.str();
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
+          .Case("AND", ".and.")
+          .Case("OR", ".or.")
+          .Case("EQV", ".eqv.")
+          .Case("NEQV", ".neqv.")
+          .Default("")};
+  if (!logicalOp.empty()) {
+    return ("operator(" + logicalOp + ")").str();
+  }
+  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
+    return ("operator(" + suffix + ")").str();
+  }
+  return suffix.str();
+}
+
 void ModFileWriter::PutUserReduction(
     llvm::raw_ostream &os, const Symbol &symbol) {
   const auto &details{symbol.get<UserReductionDetails>()};
@@ -1118,6 +1147,25 @@ void ModFileWriter::PutUserReduction(
   // Decls are pointers, so do not use a reference.
   for (const auto *decl : details.GetDeclList()) {
     Unparse(os, *decl, context_.langOptions());
+  }
+  // Emit a Fortran accessibility statement for the reduction identifier
+  // so that PRIVATE survives module file round-trips.  Only needed when
+  // there is no corresponding generic interface that already carries
+  // PRIVATE (PutGeneric handles that case).
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    std::string fortranId{GetReductionFortranId(symbol.name())};
+    if (!fortranId.empty()) {
+      bool alreadyEmitted{false};
+      parser::CharBlock cb{fortranId};
+      auto it{symbol.owner().find(cb)};
+      if (it != symbol.owner().end() &&
+          it->second->detailsIf<GenericDetails>()) {
+        alreadyEmitted = it->second->attrs().test(Attr::PRIVATE);
+      }
+      if (!alreadyEmitted) {
+        os << "private::" << fortranId << '\n';
+      }
+    }
   }
 }
 
@@ -1451,8 +1499,19 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     }
     ancestorName = ancestor->GetName().value().ToString();
   }
-  auto requiredHash{context_.moduleDependences().GetRequiredHash(
-      name.ToString(), isIntrinsic.value_or(false))};
+
+  // When offloading modules files are created for the host, but when compiling
+  // device-side code the builtin modules are exchanged with device-specific
+  // versions. They contain matching declarations, but have different checksums.
+  bool ignoreChecksumMismatch{
+      context_.langOptions().OffloadDevice && isIntrinsic.value_or(false)};
+
+  std::optional<size_t> requiredHash;
+  if (!ignoreChecksumMismatch) {
+    requiredHash = context_.moduleDependences().GetRequiredHash(
+        name.ToString(), isIntrinsic.value_or(false));
+  }
+
   if (!isIntrinsic.value_or(false) && !ancestor) {
     // Already present in the symbol table as a usable non-intrinsic module?
     if (Scope * hermeticScope{context_.currentHermeticModuleFileScope()}) {
@@ -1536,7 +1595,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
-    if (!requiredHash) {
+    if (!requiredHash && !ignoreChecksumMismatch) {
       requiredHash =
           context_.moduleDependences().GetRequiredHash(name.ToString(), true);
     }

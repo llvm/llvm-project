@@ -110,6 +110,10 @@ public:
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
 
+  /// Turn an atomic-layout object into an r-value.
+  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                   bool asValue) const;
+
   /// Converts a rvalue to integer value.
   mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
 
@@ -200,6 +204,33 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   }
 
   return castToAtomicIntPointer(addr);
+}
+
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                             bool asValue) const {
+  if (lvalue.isSimple()) {
+    if (evaluationKind == TEK_Aggregate) {
+      cgf.cgm.errorNYI(
+          loc,
+          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
+      return RValue::get(nullptr);
+    }
+
+    // Drill into the padding structure if we have one.
+    if (hasPadding()) {
+      cgf.cgm.errorNYI(loc,
+                       "AtomicInfo::convertAtomicTempToRValue: hasPadding");
+      return RValue::get(nullptr);
+    }
+
+    // Otherwise, just convert the temporary to an r-value using the
+    // normal conversion routine.
+    return cgf.convertTempToRValue(addr, getValueType(), loc);
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertAtomicTempToRValue: lvalue is not simple");
+  return RValue::get(nullptr);
 }
 
 RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
@@ -334,8 +365,20 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
     return RValue::get(nullptr);
   }
 
-  cgf.cgm.errorNYI("convertToValueOrAtomic: convert through temp");
-  return RValue::get(nullptr);
+  // Create a temporary.  This needs to be big enough to hold the
+  // atomic integer.
+  Address temp = Address::invalid();
+  if (asValue && getEvaluationKind() == TEK_Aggregate) {
+    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
+    return RValue::get(nullptr);
+  } else {
+    temp = createTempAlloca();
+  }
+
+  // Slam the integer into the temporary.
+  Address castTemp = castToAtomicIntPointer(temp);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
+  return convertAtomicTempToRValue(temp, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -570,26 +613,9 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   cir::AtomicFetchKindAttr fetchAttr;
   bool fetchFirst = true;
 
-  bool fetchRequiredIntCast = false;
-  mlir::Type pointeeType = ptr.getElementType();
   auto handleFetchOp = [&](cir::AtomicFetchKind kind) {
     opName = cir::AtomicFetchOp::getOperationName();
     fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(), kind);
-
-    // The fetch operation only takes int/float as its element type, so
-    // pointer-to-pointer needs to just be cast to a intptr type. Do the first
-    // part here, and we can cast the rest later. Classic codegen has to do a
-    // bit more to handle floating point types for exchange, but this isn't
-    // really necessary for CIR. This mirrors the logic in CIRGenBuiltin for
-    // binary atomic values. Clang type checking enforces that 'val' is a
-    // PtrDiffT, so we cast to that.
-    if (mlir::isa<cir::PointerType>(pointeeType)) {
-      fetchRequiredIntCast = true;
-      mlir::Type ptrSizeInt =
-          cgf.convertType(cgf.getContext().getPointerDiffType());
-
-      ptr = ptr.withElementType(builder, ptrSizeInt);
-    }
   };
 
   switch (expr->getOp()) {
@@ -825,9 +851,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
 
   mlir::Value result = rmwOp->getResult(0);
-
-  if (fetchRequiredIntCast)
-    result = builder.createIntToPtr(result, pointeeType);
 
   builder.createStore(loc, result, dest);
 }
@@ -1240,6 +1263,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     ptr = atomics.castToAtomicIntPointer(ptr);
     if (val1.isValid())
       val1 = atomics.convertToAtomicIntPointer(val1);
+    if (val2.isValid())
+      val2 = atomics.convertToAtomicIntPointer(val2);
   }
   if (dest.isValid()) {
     if (shouldCastToIntPtrTy)

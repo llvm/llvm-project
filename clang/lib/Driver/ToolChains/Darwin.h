@@ -652,7 +652,9 @@ public:
 
   bool SupportsEmbeddedBitcode() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.

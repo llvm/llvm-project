@@ -106,8 +106,7 @@ static cl::list<RuleTy> Profitabilities(
     cl::Hidden,
     cl::desc("List of profitability heuristics to be used. They are applied in "
              "the given order"),
-    cl::list_init<RuleTy>({RuleTy::PerLoopCacheAnalysis,
-                           RuleTy::PerInstrOrderCost,
+    cl::list_init<RuleTy>({RuleTy::PerInstrOrderCost,
                            RuleTy::ForVectorization}),
     cl::values(clEnumValN(RuleTy::PerLoopCacheAnalysis, "cache",
                           "Prioritize loop cache cost"),
@@ -183,8 +182,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       NumInsts++;
-      if (!isa<Instruction>(I))
-        return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
           return false;
@@ -1477,8 +1474,8 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   for (auto *BB : OuterLoop->blocks())
     for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // readnone functions do not prevent interchanging.
-        if (CI->onlyWritesMemory() || isa<PseudoProbeInst>(CI))
+        // Functions which don't access memory do not prevent interchanging.
+        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "
@@ -1640,17 +1637,17 @@ std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
 }
 
 int LoopInterchangeProfitability::getInstrOrderCost() {
-  unsigned GoodOrder, BadOrder;
-  BadOrder = GoodOrder = 0;
+  SmallPtrSet<const SCEV *, 4> GoodBasePtrs, BadBasePtrs;
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (!isa<LoadInst, StoreInst>(&Ins))
         continue;
-      const SCEV *Ptr = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *Access = SE->getSCEV(getLoadStorePointerOperand(&Ins));
+      const SCEV *BasePtr = SE->getPointerBase(Access);
       std::optional<const SCEV *> OuterCoeff =
-          getAddRecCoefficient(*SE, Ptr, OuterLoop);
+          getAddRecCoefficient(*SE, Access, OuterLoop);
       std::optional<const SCEV *> InnerCoeff =
-          getAddRecCoefficient(*SE, Ptr, InnerLoop);
+          getAddRecCoefficient(*SE, Access, InnerLoop);
 
       if (!OuterCoeff.has_value() || !*OuterCoeff || !InnerCoeff.has_value() ||
           !*InnerCoeff)
@@ -1679,12 +1676,18 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
       //       A[j][i] = A[j-1][i-1]+k;
       //
       // then it is a bad order.
+      //
+      // To avoid counting the same base pointers multiple times, we deduplicate
+      // them by using a set of base pointers.
       if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, InnerStep, OuterStep))
-        GoodOrder++;
+        GoodBasePtrs.insert(BasePtr);
       else if (SE->isKnownPredicate(ICmpInst::ICMP_SLT, OuterStep, InnerStep))
-        BadOrder++;
+        BadBasePtrs.insert(BasePtr);
     }
   }
+
+  int GoodOrder = GoodBasePtrs.size();
+  int BadOrder = BadBasePtrs.size();
   return GoodOrder - BadOrder;
 }
 

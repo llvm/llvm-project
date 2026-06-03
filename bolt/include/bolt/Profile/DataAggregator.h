@@ -51,9 +51,7 @@ class BoltAddressTranslation;
 /// specified by the user.
 class DataAggregator : public DataReader {
 public:
-  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
-    start();
-  }
+  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {}
 
   ~DataAggregator();
 
@@ -68,6 +66,10 @@ public:
   }
 
   Error readProfile(BinaryContext &BC) override;
+
+  /// Add an additional perf.data or pre-aggregated profile input to be merged
+  /// into this aggregation job.
+  void addInputFile(StringRef Filename);
 
   bool mayHaveProfileData(const BinaryFunction &BF) override;
 
@@ -146,6 +148,10 @@ private:
   std::unordered_map<uint64_t, bool> Returns;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
+
+  /// Perf.data or pre-aggregated inputs to aggregate and merge into this
+  /// reader.
+  std::vector<std::string> InputFilenames;
 
   /// Filter pre-aggregated entries belonging to a DSO with this buildid.
   /// Set when processing a shared library, empty implies main binary.
@@ -389,7 +395,16 @@ private:
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
   /// Coordinate reading and parsing of perf.data file
-  void parsePerfData(BinaryContext &BC);
+  void parsePerfData();
+
+  /// Parse this aggregator's input file.
+  void parseInput();
+
+  /// Merge parsed profile data from another aggregation job.
+  void mergeFrom(const DataAggregator &Other);
+
+  /// Mark binary functions covered by parsed profile data.
+  void markFunctionsWithProfile();
 
   /// Coordinate reading and parsing of pre-aggregated file
   ///
@@ -540,8 +555,11 @@ private:
   /// Force all subprocesses to stop and cancel aggregation
   void abort();
 
-  /// Dump data structures into a file readable by llvm-bolt
-  std::error_code writeAggregatedFile(StringRef OutputFilename) const;
+  /// Dump data structures into an fdata file readable by llvm-bolt.
+  std::error_code writeFdataFile(StringRef OutputFilename) const;
+
+  /// Dump TraceMap into a pre-aggregated file readable by perf2bolt -pa.
+  std::error_code writePreAggregatedFile(StringRef OutputFilename) const;
 
   /// Dump translated data structures into YAML
   std::error_code writeBATYAML(BinaryContext &BC,
@@ -637,21 +655,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  switch (T.Branch) {
-  case DataAggregator::Trace::FT_ONLY:
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
-    OS << "X:0 -> ";
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_RETURN:
-    OS << "X:R -> ";
-    break;
-  default:
-    OS << Twine::utohexstr(T.Branch) << " -> ";
-  }
-  OS << Twine::utohexstr(T.From);
-  if (T.To != DataAggregator::Trace::BR_ONLY)
-    OS << " ... " << Twine::utohexstr(T.To);
+  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
   return OS;
 }
 
