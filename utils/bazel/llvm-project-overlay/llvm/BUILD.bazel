@@ -4164,7 +4164,7 @@ cc_library(
 
 cc_library(
     name = "DTLTO",
-    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    srcs = glob(["lib/DTLTO/*.cpp"]),
     hdrs = ["include/llvm/DTLTO/DTLTO.h"],
     copts = llvm_copts,
     deps = [
@@ -5618,6 +5618,7 @@ cc_binary(
         ":BitReader",
         ":CodeGen",
         ":Core",
+        ":DTLTO",
         ":LTO",
         ":Passes",
         ":Plugins",

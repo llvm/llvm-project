@@ -729,23 +729,12 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-// TODO: logic from this function should be moved to L0QueueTy
 Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
-  const bool Ordered =
-      (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
-
-  // Nothing to do if everything is ordered.
-  if (Ordered)
-    return Plugin::success();
-
   auto QueueOrErr = getOrCreateQueue(Async);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
   L0QueueTy *Queue = *QueueOrErr;
-  ze_command_list_handle_t CmdList = Queue->getCmdList();
-  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-
-  return Plugin::success();
+  return Queue->dataFence();
 }
 
 Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
