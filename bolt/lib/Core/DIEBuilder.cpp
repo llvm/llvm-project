@@ -321,15 +321,14 @@ void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
   // Collecting signatures of type units referenced by this unit.
   collectReferencedTypeSignatures(U.getUnitDIE(), ProcessedTU, TUlist);
 
+  getState().Type = U.getVersion() < 5 ? ProcessingType::DWARF4TUs
+                                       : ProcessingType::DWARF5TUs;
   // addressing type units referenced.
   for (unsigned I = 0; I != TUlist.size(); ++I) {
     const uint64_t Signature = TUlist[I];
     DWARFTypeUnit *TU = DwarfContext->getTypeUnitForHash(Signature, true);
     if (!TU)
       continue;
-
-    getState().Type = TU->getVersion() < 5 ? ProcessingType::DWARF4TUs
-                                           : ProcessingType::DWARF5TUs;
     if (!registerUnit(*TU, false))
       continue;
 
@@ -346,7 +345,7 @@ void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
   };
 
   // For Split DWARF, we have either DWARF4 or DWARF5, they cannot be mixed.
-  std::vector<DWARFUnit *> &TUVec = !getState().DWARF4TUVector.empty()
+  std::vector<DWARFUnit *> &TUVec = getState().Type == ProcessingType::DWARF4TUs
                                         ? getState().DWARF4TUVector
                                         : getState().DWARF5TUVector;
   llvm::sort(TUVec, SortByOffset);
