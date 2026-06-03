@@ -9129,6 +9129,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
       attr.setUsedAsTypeAttr();
       break;
+    case ParsedAttr::AT_HLSLRowMajor:
+    case ParsedAttr::AT_HLSLColumnMajor:
+      if (Attr *A =
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
+        type = state.getAttributedType(A, type, type);
+      attr.setUsedAsTypeAttr();
+      break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
       if (!handleObjCPointerTypeAttr(state, attr, type))
         distributeObjCPointerTypeAttr(state, attr, type);

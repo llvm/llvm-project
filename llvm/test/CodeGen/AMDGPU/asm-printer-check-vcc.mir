@@ -16,7 +16,7 @@ frameInfo:
   hasCalls: true
 body: |
   bb.0:
-    BUNDLE implicit-def $vcc, implicit-def $vcc_lo, implicit-def $vcc_lo_lo16, implicit-def $vcc_hi, implicit-def $vcc_hi_lo16, implicit-def $scc {
+    BUNDLE implicit-def $vcc, implicit-def $vcc_lo, implicit-def $vcc_lo_lo16, implicit-def $vcc_lo_hi16, implicit-def $vcc_hi, implicit-def $vcc_hi_lo16, implicit-def $vcc_hi_hi16, implicit-def $scc {
       $vcc = S_GETPC_B64
       $vcc_lo = S_ADD_U32 internal $vcc_lo, target-flags(amdgpu-rel32-lo) @bar + 4, implicit-def $scc
       $vcc_hi = S_ADDC_U32 internal $vcc_hi, target-flags(amdgpu-rel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc

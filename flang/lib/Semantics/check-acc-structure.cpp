@@ -480,8 +480,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  if (!optName) {
+  const auto &names{std::get<std::list<parser::Name>>(x.t)};
+  if (names.empty()) {
     const auto &verbatim{std::get<parser::Verbatim>(x.t)};
     const auto &scope{context_.FindScope(verbatim.source)};
     const Scope &containingScope{GetProgramUnitContaining(scope)};
