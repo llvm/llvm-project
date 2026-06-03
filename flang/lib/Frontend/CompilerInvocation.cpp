@@ -927,16 +927,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   return !diags.hasUncompilableErrorOccurred();
 }
 
-// Generate the path to look for intrinsic modules
-static std::string getIntrinsicDir(const char *argv) {
-  // TODO: Find a system independent API
-  llvm::SmallString<128> driverPath;
-  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(driverPath);
-  driverPath.append("/../include/flang/");
-  return std::string(driverPath);
-}
-
 // Generate the path to look for OpenMP headers
 static std::string getOpenMPHeadersDir(const char *argv) {
   llvm::SmallString<128> includePath;
@@ -1926,10 +1916,6 @@ void CompilerInvocation::setFortranOpts() {
       fortranOptions.intrinsicModuleDirectories.end(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
-
-  //  Add the default intrinsic module directory
-  fortranOptions.intrinsicModuleDirectories.emplace_back(
-      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
