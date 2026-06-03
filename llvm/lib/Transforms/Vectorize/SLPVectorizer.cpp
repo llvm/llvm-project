@@ -25941,7 +25941,6 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
             SLP->isAliased(SrcLoc, SrcInst, DepDest->getInst())))) {
 
         if (!Bundle.NoInternalAlias || !Bundle.findInst(DepDest->getInst())) {
-
           // We increment the counter only if the locations are aliased
           // (instead of counting all alias checks). This gives a better
           // balance between reduced runtime and accurate dependencies.
