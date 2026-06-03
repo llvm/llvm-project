@@ -44,7 +44,7 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/Config/llvm-config.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
@@ -2892,7 +2892,6 @@ public:
     SmallVector<LoadInfo, 4> LoadInfos;   // partial loads only
     LoadInst *FullLoad = nullptr;         // optional full-width load
     StoreInst *InitStore = nullptr;       // optional full-width init store
-    Value *InitValue = nullptr;
 
     // If the new alloca is a fixed vector type, we use its element type as the
     // allocated element type, otherwise we use i8 as the allocated element
@@ -2959,7 +2958,6 @@ public:
           if (InitStore)
             return std::nullopt;
           InitStore = SI;
-          InitValue = SI->getValueOperand();
         } else {
           StoreInfos.emplace_back(SI, S.beginOffset(), S.endOffset(),
                                   SI->getValueOperand());
@@ -3071,8 +3069,8 @@ public:
       LLVM_DEBUG({
         dbgs() << "Tree structured merge rewrite (stores-only):\n";
         dbgs() << "  Load: " << *FullLoad << "\n Ordered stores:\n";
-        for (auto [i, Info] : enumerate(StoreInfos)) {
-          dbgs() << "    [" << i << "] Range[" << Info.BeginOffset << ", "
+        for (auto [I, Info] : enumerate(StoreInfos)) {
+          dbgs() << "    [" << I << "] Range[" << Info.BeginOffset << ", "
                  << Info.EndOffset << ") \tStore: " << *Info.Store
                  << "\tValue: " << *Info.StoredValue << "\n";
         }
@@ -3122,20 +3120,15 @@ public:
     // walk below.
     struct Access {
       Instruction *Inst;
-      uint64_t BeginOffset;
-      uint64_t EndOffset;
+      uint64_t BeginOffset, EndOffset;
       bool IsStore;
-      Access(const LoadInfo &L)
-          : Inst(L.Load), BeginOffset(L.BeginOffset), EndOffset(L.EndOffset),
-            IsStore(false) {}
-      Access(const StoreInfo &S)
-          : Inst(S.Store), BeginOffset(S.BeginOffset), EndOffset(S.EndOffset),
-            IsStore(true) {}
     };
     SmallVector<Access, 16> Accesses;
     Accesses.reserve(LoadInfos.size() + StoreInfos.size());
-    Accesses.append(LoadInfos.begin(), LoadInfos.end());
-    Accesses.append(StoreInfos.begin(), StoreInfos.end());
+    for (const auto &L : LoadInfos)
+      Accesses.push_back({L.Load, L.BeginOffset, L.EndOffset, false});
+    for (const auto &S : StoreInfos)
+      Accesses.push_back({S.Store, S.BeginOffset, S.EndOffset, true});
     llvm::sort(Accesses, [](const Access &A, const Access &B) {
       return A.Inst->comesBefore(B.Inst);
     });
@@ -3149,9 +3142,8 @@ public:
     // Ordering constraint 2: when FullLoad shares the block with the
     // partial accesses, it must come after every one of them — otherwise
     // it could read a stale value. Accesses is sorted, so the last
-    // element is the latest; checking it is enough. If FullLoad is in a
-    // different block the later promotion pass resolves the cross-BB
-    // ordering.
+    // element is the latest; checking it is enough. If FullLoad is in
+    // another block, mem2reg forwards the merged store to it.
     if (FullLoad && FullLoad->getParent() == StoreBB &&
         !Accesses.back().Inst->comesBefore(FullLoad))
       return std::nullopt;
@@ -3166,15 +3158,15 @@ public:
     // stores ends with SliceValues[r] = its last stored value. Both are
     // correct.
     using SliceRange = std::pair<uint64_t, uint64_t>;
-    SmallVector<SliceRange, 8> Partition;
-    Partition.reserve(Accesses.size());
+    SmallVector<SliceRange, 8> SortedRanges;
+    SortedRanges.reserve(Accesses.size());
     for (auto &Acc : Accesses)
-      Partition.emplace_back(Acc.BeginOffset, Acc.EndOffset);
-    llvm::sort(Partition);
-    Partition.erase(llvm::unique(Partition), Partition.end());
+      SortedRanges.emplace_back(Acc.BeginOffset, Acc.EndOffset);
+    llvm::sort(SortedRanges);
+    SortedRanges.erase(llvm::unique(SortedRanges), SortedRanges.end());
     // Disjoint + contiguous tile of the whole alloca.
     uint64_t Expected = NewAllocaBeginOffset;
-    for (auto &Range : Partition) {
+    for (auto &Range : SortedRanges) {
       if (Range.first != Expected)
         return std::nullopt;
       Expected = Range.second;
@@ -3187,8 +3179,8 @@ public:
       dbgs() << "  Init store: " << *InitStore << "\n";
       if (FullLoad)
         dbgs() << "  Final load: " << *FullLoad << "\n";
-      dbgs() << "  Slice ranges (" << Partition.size() << "):\n";
-      for (auto &Range : Partition)
+      dbgs() << "  Slice ranges (" << SortedRanges.size() << "):\n";
+      for (auto &Range : SortedRanges)
         dbgs() << "    [" << Range.first << ", " << Range.second << ")\n";
     });
 
@@ -3198,20 +3190,16 @@ public:
     // bitcasting the init value to the alloca's vector type (if needed)
     // and extracting the slice's sub-range.
     IRB.SetInsertPoint(InitStore->getNextNode());
-    Value *InitVec = InitValue;
+    Value *InitVec = InitStore->getValueOperand();
     if (InitVec->getType() != NewAllocaTy)
       InitVec = IRB.CreateBitCast(InitVec, NewAllocaTy, "init.cast");
     DenseMap<SliceRange, Value *> SliceValues;
-    for (auto &Range : Partition) {
-      // Initialize SliceValues[Range] with the piece of InitVec that
-      // lives at this range — a shufflevector picking the
-      // [BeginIdx, EndIdx) elements out of InitVec. This is the value
-      // any subsequent partial load at this range reads, until a
-      // partial store at this range updates the entry below.
-      auto Mask = llvm::to_vector<8>(
-          llvm::seq<int>(getIndex(Range.first), getIndex(Range.second)));
-      SliceValues[Range] =
-          IRB.CreateShuffleVector(InitVec, Mask, "init.extract");
+    for (auto &Range : SortedRanges) {
+      unsigned BeginIdx = getIndex(Range.first);
+      unsigned EndIdx = getIndex(Range.second);
+      SliceValues[Range] = IRB.CreateShuffleVector(
+          InitVec, createSequentialMask(BeginIdx, EndIdx - BeginIdx, 0),
+          "init.extract");
     }
     // The init store itself becomes dead — its value is consumed via the
     // extracts above.
@@ -3251,7 +3239,7 @@ public:
                             ? cast<Instruction>(FullLoad)
                             : StoreBB->getTerminator());
     SmallVector<Value *, 8> Vals;
-    for (auto &Range : Partition)
+    for (auto &Range : SortedRanges)
       Vals.push_back(SliceValues[Range]);
     Value *Merged = TreeMerge(Vals, Builder);
     Builder.CreateAlignedStore(Merged, &NewAI, getSliceAlign());
