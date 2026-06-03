@@ -727,6 +727,11 @@ enum {
 #undef ELF_RISCV_NONSTANDARD_RELOC
 };
 
+// ELF Relocation types for SuperH
+enum {
+#include "ELFRelocs/SuperH.def"
+};
+
 enum {
   // Symbol may follow different calling convention than the standard calling
   // convention.
