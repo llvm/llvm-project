@@ -29,7 +29,7 @@ bool Context::initGlobalValues() {
       // TODO: Use precise alignment for function pointers if it is necessary.
       auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
                               DL.getProgramAddressSpace(), MemInitKind::Zeroed,
-                              MemAllocKind::Global);
+                              MemAllocKind::Global, /*IsIRGlobalValue=*/true);
       if (!FuncObj)
         return false;
       ValidFuncTargets.try_emplace(FuncObj->getAddress(),
@@ -41,7 +41,7 @@ bool Context::initGlobalValues() {
       if (!BB.hasAddressTaken())
         continue;
       auto BlockObj = allocate(0, 1, BB.getName(), DL.getProgramAddressSpace(),
-                               MemInitKind::Zeroed, MemAllocKind::Global);
+                               MemInitKind::Zeroed, MemAllocKind::BlockAddress);
       if (!BlockObj)
         return false;
       ValidBlockTargets.try_emplace(BlockObj->getAddress(),
@@ -49,11 +49,43 @@ bool Context::initGlobalValues() {
       BlockAddrMap.try_emplace(&BB, deriveFromMemoryObject(BlockObj));
     }
   }
-  // TODO: initialize global variables.
+
+  for (GlobalVariable &GV : M.globals()) {
+    Type *ValueTy = GV.getValueType();
+    const uint64_t Size = getEffectiveTypeAllocSize(ValueTy);
+    Align Alignment = GV.getPointerAlignment(DL);
+    auto InitKind =
+        GV.hasInitializer() ? MemInitKind::Zeroed : MemInitKind::Uninitialized;
+    const auto Obj =
+        allocate(Size, Alignment.value(), GV.getName(), GV.getAddressSpace(),
+                 InitKind, MemAllocKind::Global, /*IsIRGlobalValue=*/true);
+
+    if (!Obj)
+      return false;
+
+    Obj->setIsConstant(GV.isConstant());
+    GlobalAddrMap.try_emplace(&GV, deriveFromMemoryObject(Obj));
+  }
+
+  for (GlobalVariable &GV : M.globals()) {
+    if (!GV.hasInitializer())
+      continue;
+
+    MemoryObject *Obj = GlobalAddrMap.at(&GV).getMemoryObject();
+    assert(Obj && "global pointer should have memory object provenance");
+
+    Constant *Init = GV.getInitializer();
+
+    const AnyValue *InitVal = getConstantValue(Init);
+    if (!InitVal)
+      return false;
+
+    store(*Obj, 0, *InitVal, GV.getValueType());
+  }
   return true;
 }
 
-AnyValue Context::getConstantValueImpl(Constant *C) {
+std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
 
@@ -80,34 +112,49 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
   if (auto *CDS = dyn_cast<ConstantDataSequential>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CDS->getNumElements());
-    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Elts.push_back(getConstantValue(CDS->getElementAsConstant(I)));
+    for (uint32_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
+      const AnyValue *Elt = getConstantValue(CDS->getElementAsConstant(I));
+      if (!Elt)
+        return std::nullopt;
+      Elts.push_back(*Elt);
+    }
     return std::move(Elts);
   }
 
   if (auto *CA = dyn_cast<ConstantAggregate>(C)) {
     std::vector<AnyValue> Elts;
     Elts.reserve(CA->getNumOperands());
-    for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I)
-      Elts.push_back(getConstantValue(CA->getOperand(I)));
+    for (uint32_t I = 0, E = CA->getNumOperands(); I != E; ++I) {
+      const AnyValue *Elt = getConstantValue(CA->getOperand(I));
+      if (!Elt)
+        return std::nullopt;
+      Elts.push_back(*Elt);
+    }
     return std::move(Elts);
   }
 
   if (auto *BA = dyn_cast<BlockAddress>(C))
     return BlockAddrMap.at(BA->getBasicBlock());
 
+  if (auto *GV = dyn_cast<GlobalVariable>(C))
+    return GlobalAddrMap.at(GV);
+
   if (auto *F = dyn_cast<Function>(C))
     return FuncAddrMap.at(F);
 
-  llvm_unreachable("Unrecognized constant");
+  return std::nullopt;
 }
 
-const AnyValue &Context::getConstantValue(Constant *C) {
+const AnyValue *Context::getConstantValue(Constant *C) {
   auto It = ConstCache.find(C);
   if (It != ConstCache.end())
-    return It->second;
+    return &It->second;
 
-  return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
+  std::optional<AnyValue> Val = getConstantValueImpl(C);
+  if (!Val)
+    return nullptr;
+
+  return &ConstCache.emplace(C, std::move(*Val)).first->second;
 }
 
 APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {
@@ -138,10 +185,11 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     NewOffsetInBits = alignTo(NewOffsetInBits, 8);
   bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
   uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
-  uint32_t NumWords = divideCeil(NumBitsToExtract, 8);
-  SmallVector<uint64_t> RawBits(NumWords);
+  uint32_t NumWords = APInt::getNumWords(NumBitsToExtract);
+  constexpr uint32_t WordBits = APInt::APINT_BITS_PER_WORD;
+  SmallVector<APInt::WordType> RawBits(NumWords);
   bool IsTagValid = Ty->isPointerTy();
-  SmallVector<uint64_t> RawTagBits;
+  SmallVector<APInt::WordType> RawTagBits;
   if (Ty->isPointerTy())
     RawTagBits.resize(NumWords);
   for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
@@ -183,12 +231,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
                          Mask;
-    RawBits[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
+    RawBits[I / WordBits] |= static_cast<APInt::WordType>(ActualBits)
+                             << (I % WordBits);
     if (IsTagValid) {
       if ((LogicalByte.TagMask & LogicalByte.ConcreteMask & Mask) == Mask) {
         uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
-        RawTagBits[I / 64] |= static_cast<APInt::WordType>(ActualTagBits)
-                              << (I % 64);
+        RawTagBits[I / WordBits] |= static_cast<APInt::WordType>(ActualTagBits)
+                                    << (I % WordBits);
       } else {
         IsTagValid = false;
       }
@@ -501,11 +550,11 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind,
-                           MemAllocKind AllocKind)
+                           MemAllocKind AllocKind, bool IsIRGlobalValue)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
       State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
                                               : MemoryObjectState::Dead),
-      AllocKind(AllocKind) {
+      AllocKind(AllocKind), IsIRGlobalValue(IsIRGlobalValue) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte::concrete(0));
@@ -521,15 +570,16 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
 
 IntrusiveRefCntPtr<MemoryObject>
 Context::allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
-                  MemInitKind InitKind, MemAllocKind AllocKind) {
+                  MemInitKind InitKind, MemAllocKind AllocKind,
+                  bool IsIRGlobalValue) {
   // Even if the memory object is zero-sized, it still occupies a byte to obtain
   // a unique address.
   uint64_t AllocateSize = std::max(Size, (uint64_t)1);
   if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
-  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS,
-                                                  InitKind, AllocKind);
+  auto MemObj = makeIntrusiveRefCnt<MemoryObject>(
+      AlignedAddr, Size, Name, AS, InitKind, AllocKind, IsIRGlobalValue);
   MemoryObjects[AlignedAddr] = MemObj;
   AllocationBase = AlignedAddr + AllocateSize;
   UsedMem += AllocateSize;
@@ -645,6 +695,7 @@ bool MemoryObject::isStackAllocated() const {
 bool MemoryObject::isHeapAllocated() const {
   switch (AllocKind) {
   case MemAllocKind::Global:
+  case MemAllocKind::BlockAddress:
   case MemAllocKind::Stack:
     return false;
   case MemAllocKind::Malloc:

@@ -216,7 +216,7 @@ public:
   /// This is just a convenience method to make client code smaller for a
   /// common code. It also correctly performs the comparison without the
   /// potential for an assertion from getZExtValue().
-  bool isZero() const { return Val.isZero(); }
+  bool isZero() const { return isNullValue(); }
 
   /// This is just a convenience method to make client code smaller for a
   /// common case. It also correctly performs the comparison without the
@@ -509,7 +509,9 @@ class ConstantAggregateZero final : public ConstantData {
   friend class Constant;
 
   explicit ConstantAggregateZero(Type *Ty)
-      : ConstantData(Ty, ConstantAggregateZeroVal) {}
+      : ConstantData(Ty, ConstantAggregateZeroVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -709,7 +711,9 @@ class ConstantPointerNull final : public ConstantData {
   friend class Constant;
 
   explicit ConstantPointerNull(Type *T)
-      : ConstantData(T, Value::ConstantPointerNullVal) {}
+      : ConstantData(T, Value::ConstantPointerNullVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1026,7 +1030,9 @@ class ConstantTokenNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTokenNone(LLVMContext &Context)
-      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {}
+      : ConstantData(Type::getTokenTy(Context), ConstantTokenNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1047,7 +1053,9 @@ class ConstantTargetNone final : public ConstantData {
   friend class Constant;
 
   explicit ConstantTargetNone(TargetExtType *T)
-      : ConstantData(T, Value::ConstantTargetNoneVal) {}
+      : ConstantData(T, Value::ConstantTargetNoneVal) {
+    SubclassOptionalData = IsNullValue;
+  }
 
   void destroyConstantImpl();
 
@@ -1074,7 +1082,9 @@ public:
 class BlockAddress final : public Constant {
   friend class Constant;
 
-  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{0};
+
+  BasicBlock *Block;
 
   BlockAddress(Type *Ty, BasicBlock *BB);
 
@@ -1106,7 +1116,7 @@ public:
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  BasicBlock *getBasicBlock() const { return cast<BasicBlock>(Op<0>().get()); }
+  BasicBlock *getBasicBlock() const { return Block; }
   Function *getFunction() const { return getBasicBlock()->getParent(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -1117,7 +1127,7 @@ public:
 
 template <>
 struct OperandTraits<BlockAddress>
-    : public FixedNumOperandTraits<BlockAddress, 1> {};
+    : public FixedNumOperandTraits<BlockAddress, 0> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BlockAddress, Value)
 

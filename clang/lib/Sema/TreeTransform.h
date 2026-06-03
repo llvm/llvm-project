@@ -4340,12 +4340,12 @@ public:
   }
 
   ExprResult
-  RebuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl,
-                                      const NonTypeTemplateParmDecl *NTTP,
-                                      SourceLocation Loc, TemplateArgument Arg,
+  RebuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                      QualType ParamType, SourceLocation Loc,
+                                      TemplateArgument Arg,
                                       UnsignedOrNone PackIndex, bool Final) {
     return getSema().BuildSubstNonTypeTemplateParmExpr(
-        AssociatedDecl, NTTP, Loc, Arg, PackIndex, Final);
+        AssociatedDecl, Index, ParamType, Loc, Arg, PackIndex, Final);
   }
 
   OMPClause *RebuildOpenMPTransparentClause(Expr *ImpexType,
@@ -16719,9 +16719,9 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
   TemplateArgument Pack = E->getArgumentPack();
   TemplateArgument Arg = SemaRef.getPackSubstitutedTemplateArgument(Pack);
   return getDerived().RebuildSubstNonTypeTemplateParmExpr(
-      E->getAssociatedDecl(), E->getParameterPack(),
-      E->getParameterPackLocation(), Arg, SemaRef.getPackIndex(Pack),
-      E->getFinal());
+      E->getAssociatedDecl(), E->getParameterPack()->getPosition(),
+      E->getParameterPack()->getType(), E->getParameterPackLocation(), Arg,
+      SemaRef.getPackIndex(Pack), E->getFinal());
 }
 
 template <typename Derived>
@@ -16737,29 +16737,19 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
   if (!AssociatedDecl)
     return true;
 
+  QualType ParamType = TransformType(E->getParameterType());
+  if (ParamType.isNull())
+    return true;
+
   if (Replacement.get() == OrigReplacement &&
-      AssociatedDecl == E->getAssociatedDecl())
+      AssociatedDecl == E->getAssociatedDecl() &&
+      ParamType == E->getParameterType())
     return E;
 
-  auto getParamAndType = [E](Decl *AssociatedDecl)
-      -> std::tuple<NonTypeTemplateParmDecl *, QualType> {
-    auto [PDecl, Arg] =
-        getReplacedTemplateParameter(AssociatedDecl, E->getIndex());
-    auto *Param = cast<NonTypeTemplateParmDecl>(PDecl);
-    if (Arg.isNull())
-      return {Param, Param->getType()};
-    if (UnsignedOrNone PackIndex = E->getPackIndex())
-      Arg = Arg.getPackAsArray()[*PackIndex];
-    return {Param, Arg.getNonTypeTemplateArgumentType()};
-  };
-
-  // If the replacement expression did not change, and the parameter type
-  // did not change, we can skip the semantic action because it would
-  // produce the same result anyway.
-  if (auto [Param, ParamType] = getParamAndType(AssociatedDecl);
-      !SemaRef.Context.hasSameType(
-          ParamType, std::get<1>(getParamAndType(E->getAssociatedDecl()))) ||
-      Replacement.get() != OrigReplacement) {
+  if (Replacement.get() != OrigReplacement ||
+      ParamType != E->getParameterType()) {
+    auto *Param = cast<NonTypeTemplateParmDecl>(std::get<0>(
+        getReplacedTemplateParameter(AssociatedDecl, E->getIndex())));
     // When transforming the replacement expression previously, all Sema
     // specific annotations, such as implicit casts, are discarded. Calling the
     // corresponding sema action is necessary to recover those. Otherwise,
@@ -16777,7 +16767,7 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
   }
 
   return getDerived().RebuildSubstNonTypeTemplateParmExpr(
-      AssociatedDecl, E->getParameter(), E->getNameLoc(),
+      AssociatedDecl, E->getIndex(), ParamType, E->getNameLoc(),
       TemplateArgument(Replacement.get(), /*IsCanonical=*/false),
       E->getPackIndex(), E->getFinal());
 }

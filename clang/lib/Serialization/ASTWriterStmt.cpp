@@ -2303,10 +2303,10 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getAssociatedDecl());
-  CurrentPackingBits.addBit(E->isReferenceParameter());
+  CurrentPackingBits.addBit(E->getFinal());
   CurrentPackingBits.addBits(E->getIndex(), /*Width=*/12);
   Record.writeUnsignedOrNone(E->getPackIndex());
-  CurrentPackingBits.addBit(E->getFinal());
+  Record.AddTypeRef(E->getParameterType());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
