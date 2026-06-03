@@ -706,7 +706,8 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
       continue;
     }
     if (!AssumedSizeArrayAllowed && IsWholeAssumedSizeArray(object)) {
-      context_.Say(source, "A whole assumed-size array is not allowed as a list item on %s clause"_err_en_US,
+      context_.Say(source,
+          "A whole assumed-size array is not allowed as a list item on %s clause"_err_en_US,
           parser::omp::GetUpperName(clauseId, version));
       continue;
     }
