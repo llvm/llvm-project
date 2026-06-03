@@ -79,28 +79,23 @@ exit:
   ret i8 %ret
 }
 
-define void @replicate_zext(ptr nocapture noundef writeonly %A, ptr nocapture noundef readonly %B, i32 noundef signext %n) {
+define void @replicate_zext(ptr %A, i32 %n) {
 ; CHECK-LABEL: 'replicate_zext'
-; CHECK:  Cost of 1 for VF vscale x 1: CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK:  Cost of 1 for VF vscale x 1: CLONE ir<%iv.ext> = zext vp<[[VP4:%[0-9]+]]>
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %indvars.iv = phi i32 [ %n, %entry ], [ %indvars.iv.next, %for.body ]
-  %i.0.in8 = phi i32 [ %n, %entry ], [ %i.0, %for.body ]
-  %i.0 = add nsw i32 %i.0.in8, -1
-  %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
-  %1 = load i32, ptr %arrayidx, align 4
-  %add9 = add i32 %1, 1
-  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
-  store i32 %add9, ptr %arrayidx3, align 4
-  %cmp = icmp ugt i32 %indvars.iv, 1
-  %indvars.iv.next = add nsw i32 %indvars.iv, -1
-  br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = zext i32 %iv to i64
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv.ext
+  store i32 0, ptr %gep.A, align 4
+  %cmp = icmp ne i32 %iv, 1000
+  %iv.next = add nsw i32 %iv, 1
+  br i1 %cmp, label %loop, label %exit, !llvm.loop !0
 
-for.cond.cleanup:
+exit:
   ret void
 }
 
