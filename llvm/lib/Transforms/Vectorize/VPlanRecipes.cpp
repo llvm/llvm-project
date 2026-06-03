@@ -3515,9 +3515,36 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         }))
       break;
 
+    // Model the extract/insert overhead for predicated div/rem as one
+    // extractelement per vector operand plus one insertelement for the result,
+    // rather than VF of each (as getScalarizationOverhead would charge).
+    //
+    // The rationale is that on targets with separate integer and vector/FP
+    // execution units (e.g. all AArch64 subtargets), the extractelement and
+    // insertelement instructions that wrap each scalar div/rem lane execute on
+    // the vector register file ports, while the div/rem itself executes on the
+    // integer divide unit.  These are structurally independent resources, so
+    // the VF extract/insert instructions are fully pipelined and their
+    // throughput cost is hidden behind the divide latency.  Charging VF *
+    // (extract + insert) per operand/result therefore over-estimates the real
+    // bottleneck by a factor of VF.  One extract per vector operand and one
+    // insert for the result is a better amortised approximation of the actual
+    // overhead seen at the register-file boundary.
+    //
+    // VPIRValue operands are loop-invariant scalars that never reside in a
+    // vector register, so they require no extraction at all.
+    Type *ScalarTy = Ctx.Types.inferScalarType(this);
+    auto *VecTy = cast<VectorType>(toVectorTy(ScalarTy, VF));
+    InstructionCost ExtractCost = Ctx.TTI.getVectorInstrCost(
+        Instruction::ExtractElement, VecTy, Ctx.CostKind);
+    InstructionCost InsertCost = Ctx.TTI.getVectorInstrCost(
+        Instruction::InsertElement, VecTy, Ctx.CostKind);
+    unsigned NumVectorOperands =
+        count_if(operands(), [](const VPValue *Op) {
+          return !isa<VPIRValue>(Op);
+        });
     ScalarCost = ScalarCost * VF.getFixedValue() +
-                 Ctx.getScalarizationOverhead(Ctx.Types.inferScalarType(this),
-                                              to_vector(operands()), VF);
+                 InsertCost + NumVectorOperands * ExtractCost;
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
     if (!getRegion()->isReplicator())

@@ -4594,17 +4594,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
             return (4 + DivCost) * VTy->getNumElements();
           }
         }
-        // On AArch64, without SVE, vector divisions are expanded
-        // into scalar divisions of each pair of elements.
-        Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind,
-                                   -1, nullptr, nullptr);
-        Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                                   nullptr, nullptr);
       }
-
-      // TODO: if one of the arguments is scalar, then it's not necessary to
-      // double the cost of handling the vector elements.
-      Cost += Cost;
     }
     return Cost;
   }

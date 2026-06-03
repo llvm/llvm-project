@@ -11,7 +11,7 @@ target triple = "aarch64--linux-gnu"
 ; -force-vector-interleave=1 to disable all interleaving calculations.
 ;
 ; COST-LABEL:  predicated_udiv_scalarized_operand
-; COST:        Cost of 5 for VF 2: REPLICATE ir<%var4> = udiv ir<%var2>, ir<%var3> (S->V)
+; COST:        Cost of 4 for VF 2: REPLICATE ir<%var4> = udiv ir<%var2>, ir<%var3> (S->V)
 ;
 ;
 define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
