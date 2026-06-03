@@ -2224,6 +2224,16 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
 bool RISCVFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
+
+#ifdef EXPENSIVE_CHECKS
+  {
+    [[maybe_unused]] bool hasFPCSI = llvm::any_of(
+        CSI, [](CalleeSavedInfo &CSI) -> bool { return CSI.Reg == FPReg; });
+    assert((!hasFP(*MF) || hasFPCSI) &&
+           "Must have CalleeSavedInfo for FP if hasFP");
+  }
+#endif
+
   if (CSI.empty())
     return true;
 
@@ -2251,6 +2261,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base StackAdj & evaluate Push stack
     unsigned PushedRegNum = RVFI->getRVPushRegs();
+    assert((!hasFP(*MF) || PushedRegNum >= 2) &&
+           "Must push at least two registers if there is a frame pointer");
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
       unsigned Opcode = getPushOpcode(
