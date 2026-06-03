@@ -267,6 +267,7 @@ class SPIRVEmitIntrinsics
                         bool IsPostprocessing);
 
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
+  void lowerExtractvUsers(Value *Aggr, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
   bool insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B,
                                 bool UnknownElemTypeI8);
@@ -1578,28 +1579,20 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
           CI->setCalledFunction(NewF);
         }
       }
-    } else if (auto *Phi = dyn_cast<PHINode>(U)) {
-      if (Phi->getType() != New->getType()) {
-        Phi->mutateType(New->getType());
-        Phi->replaceUsesOfWith(Old, New);
-        // Convert extractvalue users of the mutated PHI to spv_extractv
-        SmallVector<ExtractValueInst *, 4> EVUsers;
-        for (User *PhiUser : Phi->users())
-          if (auto *EV = dyn_cast<ExtractValueInst>(PhiUser))
-            EVUsers.push_back(EV);
-        for (ExtractValueInst *EV : EVUsers) {
-          B.SetInsertPoint(EV);
-          SmallVector<Value *> Args(EV->operand_values());
-          for (unsigned Idx : EV->indices())
-            Args.push_back(B.getInt32(Idx));
-          auto *NewEV =
-              B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
-          EV->replaceAllUsesWith(NewEV);
-          DeletedInstrs.insert(EV);
-          EV->eraseFromParent();
-        }
+    } else if (isa<PHINode>(U) || isa<SelectInst>(U)) {
+      // A PHINode or SelectInst derives its result type from its operands, so
+      // replacing an aggregate operand with its i32 value-id may require
+      // mutating the user to match. Its extractvalue users are then lowered to
+      // spv_extractv. (When the user's type was already settled to i32 by the
+      // early mutation pass, the types match and its extractvalue users are
+      // lowered later by visitExtractValueInst instead.)
+      auto *UI = cast<Instruction>(U);
+      if (UI->getType() != New->getType()) {
+        UI->mutateType(New->getType());
+        UI->replaceUsesOfWith(Old, New);
+        lowerExtractvUsers(UI, B);
       } else {
-        Phi->replaceUsesOfWith(Old, New);
+        UI->replaceUsesOfWith(Old, New);
       }
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
@@ -1607,6 +1600,27 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
   }
   New->copyMetadata(*Old);
   Old->eraseFromParent();
+}
+
+// Lower extractvalue users of an aggregate value that has been rewritten to an
+// i32 value-id (e.g. a PHINode or SelectInst whose type was mutated) into
+// spv_extractv intrinsics.
+void SPIRVEmitIntrinsics::lowerExtractvUsers(Value *Aggr, IRBuilder<> &B) {
+  SmallVector<ExtractValueInst *, 4> EVUsers;
+  for (User *U : Aggr->users())
+    if (auto *EV = dyn_cast<ExtractValueInst>(U))
+      EVUsers.push_back(EV);
+  for (ExtractValueInst *EV : EVUsers) {
+    B.SetInsertPoint(EV);
+    SmallVector<Value *> Args(EV->operand_values());
+    for (unsigned Idx : EV->indices())
+      Args.push_back(B.getInt32(Idx));
+    auto *NewEV =
+        B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
+    EV->replaceAllUsesWith(NewEV);
+    DeletedInstrs.insert(EV);
+    EV->eraseFromParent();
+  }
 }
 
 void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
@@ -3540,15 +3554,14 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
       }
 
   // A SelectInst, like a PHINode, takes its result type from its operands.
-  // preprocessCompositeConstants() rewrites composite constant arms to i32
-  // value-ids, so once both arms are lowered, mutate the select to match. Its
-  // original type is tracked in AggrConstTypes (used to assign the SPIR-V type)
-  // and its extractvalue users are lowered to spv_extractv below.
+  // Aggregate arms are lowered to i32 value-ids (composite constants here,
+  // loads and other producers during the visitor pass below), so mutate an
+  // aggregate select to match, just as the PHI loop above does. Its original
+  // type is tracked in AggrConstTypes (used to assign the SPIR-V type) and its
+  // extractvalue users are lowered to spv_extractv.
   for (Instruction &I : instructions(Func))
     if (auto *Sel = dyn_cast<SelectInst>(&I))
-      if (Sel->getType()->isAggregateType() &&
-          !Sel->getTrueValue()->getType()->isAggregateType() &&
-          !Sel->getFalseValue()->getType()->isAggregateType()) {
+      if (Sel->getType()->isAggregateType()) {
         AggrConstTypes[Sel] = Sel->getType();
         Sel->mutateType(B.getInt32Ty());
       }
