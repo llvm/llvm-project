@@ -5131,20 +5131,27 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   if (StructSize != VectorSize)
     return nullptr;
 
-  for (const Slice &S : P) {
+  auto IsMemIntrinsicOnlySlice = [](const Slice &S) {
     if (S.isDead())
-      continue;
+      return true;
     auto *U = S.getUse();
     if (!U)
-      continue;
+      return true;
 
     User *Usr = U->getUser();
     if (isa<LifetimeIntrinsic>(Usr) || isa<DbgInfoIntrinsic>(Usr))
-      continue;
+      return true;
 
-    if (!isa<MemIntrinsic>(Usr))
+    return isa<MemIntrinsic>(Usr);
+  };
+
+  for (const Slice &S : P)
+    if (!IsMemIntrinsicOnlySlice(S))
       return nullptr;
-  }
+
+  for (const Slice *S : P.splitSliceTails())
+    if (!IsMemIntrinsicOnlySlice(*S))
+      return nullptr;
 
   return VTy;
 }
