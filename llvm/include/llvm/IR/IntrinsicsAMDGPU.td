@@ -3724,6 +3724,7 @@ def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_
 }
 
 // { vdst_new, vsrc_new } llvm.amdgcn.permlane16.swap <vdst_old> <vsrc_old> <fi> <bound_control>
+let TargetFeatures = "permlane16-swap" in
 def int_amdgcn_permlane16_swap :
   Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty,
                                          llvm_i1_ty, llvm_i1_ty],
