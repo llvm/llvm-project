@@ -423,10 +423,16 @@ public:
   Expected<ze_event_handle_t> getEvent() {
     return l0Context.getEventPool().getEvent();
   }
+  Expected<L0EventTy *> getEventObject() {
+    return l0Context.getEventPool().getEventObject();
+  }
 
   /// Release event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return l0Context.getEventPool().releaseEvent(Event, *this);
+    return l0Context.getEventPool().releaseEvent(Event);
+  }
+  Error releaseEventObject(L0EventTy *EventObj) {
+    return l0Context.getEventPool().releaseEventObject(EventObj);
   }
 
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
@@ -518,44 +524,17 @@ public:
                          "enqueueHostCallImpl not implemented yet");
   }
 
-  // Event routines are used to ensure ordering between dataTransfers. Instead
-  // of adding extra events in the queues, we make sure they're ordered by
-  // using the events from the data submission APIs so we don't need to support
-  // these routines.
-  // They still need to report succes to indicate the event are handled
-  // somewhere waitEvent and syncEvent should remain unimplemented.
   Expected<bool> isEventCompleteImpl(void *EventPtr,
-                                     AsyncInfoWrapperTy &) override {
-    return true;
-  }
-
-  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
-    return Plugin::success();
-  }
-  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
-    return Plugin::success();
-  }
+                                     AsyncInfoWrapperTy &) override;
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override;
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override;
   Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
-                        bool EnableProfiling) override {
-    return Plugin::success();
-  }
-
+                        bool EnableProfiling) override;
   Error waitEventImpl(void *EventPtr,
-                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
-  Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error syncEventImpl(void *EventPtr) override;
   Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
-                                          void *EndEventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
+                                          void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }
