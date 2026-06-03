@@ -530,6 +530,15 @@ public:
     return createCast(cir::CastKind::integral, src, newTy);
   }
 
+  mlir::Value createBuiltinIntCast(mlir::Location loc, mlir::Value src,
+                                   mlir::Type newTy) {
+    return cir::BuiltinIntCastOp::create(*this, loc, newTy, src);
+  }
+
+  mlir::Value createBuiltinIntCast(mlir::Value src, mlir::Type newTy) {
+    return createBuiltinIntCast(src.getLoc(), src, newTy);
+  }
+
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::int_to_ptr, src, newTy);
   }
