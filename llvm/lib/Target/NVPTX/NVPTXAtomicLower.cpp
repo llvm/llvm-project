@@ -51,12 +51,10 @@ bool NVPTXAtomicLower::runOnFunction(Function &F) {
       if (RMWI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
         LocalRMWs.push_back(RMWI);
     } else if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (LI->isAtomic() &&
-          LI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
+      if (LI->isAtomic() && LI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
         LocalAtomicLoads.push_back(LI);
     } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-      if (SI->isAtomic() &&
-          SI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
+      if (SI->isAtomic() && SI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
         LocalAtomicStores.push_back(SI);
     }
   }
