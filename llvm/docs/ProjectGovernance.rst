@@ -151,6 +151,7 @@ Project Council
 * **Chair:** Aaron Ballman (@AaronBallman) - representing Clang
 * **Secretary:** Alex Zinenko (@ftynse) - representing MLIR
 * **Members:**
+
   * Nikita Popov (@nikic) - representing LLVM
   * Reid Kleckner (@rnk) - representing Infrastructure
 
@@ -158,20 +159,27 @@ Area Teams
 ----------
 
 * **LLVM Area Team**
+
   * Nikita Popov (**Chair**)
   * Matt Arsenault
   * Florian Hahn
+
 * **Clang Area Team**
+
   * Aaron Ballman (**Chair**)
   * Eli Friedman
   * Erich Keane
   * Corentin Jabot
   * Shafik Yaghmour
+
 * **MLIR Area Team**
+
   * Alex Zinenko (**Chair**)
   * Renato Golin
   * Matthias Springer
+
 * **Infrastructure Area Team**
+
   * Reid Kleckner (**Chair**)
   * Petr Hosek
   * David Blaikie
@@ -189,15 +197,22 @@ Area Teams
 ----------
 
 * **LLVM Area Team**
+
   * **Meetings:** Bi-weekly on Wednesdays at 16:00-17:00 CET.
   * **Contact:** Tag `@llvm-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+
 * **Clang Area Team**
+
   * **Meetings:** Closed administrative meeting bi-weekly on Thursdays at 10:00 AM PT. Open meetings are scheduled flexibly.
   * **Contact:** Tag `@clang-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+
 * **MLIR Area Team**
+
   * **Meetings:** Announced on Discourse (not regularly scheduled at a fixed interval).
   * **Contact:** Tag `@mlir-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
+
 * **Infrastructure Area Team**
+
   * **Meetings:** Bi-weekly on Thursdays at 9:30 AM PT.
   * **Contact:** Tag `@infrastructure-area-team` on `LLVM Discourse <https://discourse.llvm.org/>`_.
 
