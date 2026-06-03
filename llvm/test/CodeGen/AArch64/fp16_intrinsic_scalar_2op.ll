@@ -196,8 +196,7 @@ define dso_local half @test_vcvth_n_f16_s16_1(i16 %a) {
 ; CHECK-GI-LABEL: test_vcvth_n_f16_s16_1:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxth w8, w0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    scvtf h0, h0, #1
+; CHECK-GI-NEXT:    scvtf h0, w8, #1
 ; CHECK-GI-NEXT:    ret
 entry:
   %sext = sext i16 %a to i32
@@ -215,8 +214,7 @@ define dso_local half @test_vcvth_n_f16_s16_16(i16 %a) {
 ; CHECK-GI-LABEL: test_vcvth_n_f16_s16_16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sxth w8, w0
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    scvtf h0, h0, #16
+; CHECK-GI-NEXT:    scvtf h0, w8, #16
 ; CHECK-GI-NEXT:    ret
 entry:
   %sext = sext i16 %a to i32
@@ -227,8 +225,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s32_1(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s32_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    scvtf h0, h0, #1
+; CHECK-NEXT:    scvtf h0, w0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s32 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i32(i32 %a, i32 1)
@@ -238,8 +235,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_s32_16(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_s32_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    scvtf h0, h0, #16
+; CHECK-NEXT:    scvtf h0, w0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s32 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i32(i32 %a, i32 16)
@@ -249,8 +245,7 @@ entry:
 define dso_local i16 @test_vcvth_n_s16_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s16_f16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzs w0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %fcvth_n = tail call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f16(half %a, i32 1)
@@ -261,8 +256,7 @@ entry:
 define dso_local i16 @test_vcvth_n_s16_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s16_f16_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #16
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzs w0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %fcvth_n = tail call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f16(half %a, i32 16)
@@ -273,8 +267,7 @@ entry:
 define dso_local i32 @test_vcvth_n_s32_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s32_f16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzs w0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_s32_f16 = tail call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f16(half %a, i32 1)
@@ -284,8 +277,7 @@ entry:
 define dso_local i32 @test_vcvth_n_s32_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s32_f16_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #16
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzs w0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_s32_f16 = tail call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f16(half %a, i32 16)
@@ -295,8 +287,7 @@ entry:
 define dso_local i64 @test_vcvth_n_s64_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s64_f16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #1
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fcvtzs x0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_s64_f16 = tail call i64 @llvm.aarch64.neon.vcvtfp2fxs.i64.f16(half %a, i32 1)
@@ -306,8 +297,7 @@ entry:
 define dso_local i64 @test_vcvth_n_s64_f16_32(half %a) {
 ; CHECK-LABEL: test_vcvth_n_s64_f16_32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzs h0, h0, #32
-; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fcvtzs x0, h0, #32
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_s64_f16 = tail call i64 @llvm.aarch64.neon.vcvtfp2fxs.i64.f16(half %a, i32 32)
@@ -324,8 +314,7 @@ define dso_local half @test_vcvth_n_f16_u16_1(i16 %a) {
 ; CHECK-GI-LABEL: test_vcvth_n_f16_u16_1:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    ucvtf h0, h0, #1
+; CHECK-GI-NEXT:    ucvtf h0, w8, #1
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -343,8 +332,7 @@ define dso_local half @test_vcvth_n_f16_u16_16(i16 %a) {
 ; CHECK-GI-LABEL: test_vcvth_n_f16_u16_16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    ucvtf h0, h0, #16
+; CHECK-GI-NEXT:    ucvtf h0, w8, #16
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -355,8 +343,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_u32_1(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u32_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ucvtf h0, h0, #1
+; CHECK-NEXT:    ucvtf h0, w0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_u32 = tail call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i32(i32 %a, i32 1)
@@ -366,8 +353,7 @@ entry:
 define dso_local half @test_vcvth_n_f16_u32_16(i32 %a) {
 ; CHECK-LABEL: test_vcvth_n_f16_u32_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    ucvtf h0, h0, #16
+; CHECK-NEXT:    ucvtf h0, w0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_u32 = tail call half @llvm.aarch64.neon.vcvtfxu2fp.f16.i32(i32 %a, i32 16)
@@ -377,8 +363,7 @@ entry:
 define dso_local i16 @test_vcvth_n_u16_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u16_f16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu h0, h0, #1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzu w0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %fcvth_n = tail call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 1)
@@ -389,8 +374,7 @@ entry:
 define dso_local i16 @test_vcvth_n_u16_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u16_f16_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu h0, h0, #16
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzu w0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %fcvth_n = tail call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 16)
@@ -401,8 +385,7 @@ entry:
 define dso_local i32 @test_vcvth_n_u32_f16_1(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u32_f16_1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu h0, h0, #1
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzu w0, h0, #1
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_u32_f16 = tail call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 1)
@@ -412,8 +395,7 @@ entry:
 define dso_local i32 @test_vcvth_n_u32_f16_16(half %a) {
 ; CHECK-LABEL: test_vcvth_n_u32_f16_16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtzu h0, h0, #16
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    fcvtzu w0, h0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_u32_f16 = tail call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f16(half %a, i32 16)
@@ -447,8 +429,7 @@ entry:
 define dso_local half @vcvth_n_f16_s64_test(i64 %a) {
 ; CHECK-LABEL: vcvth_n_f16_s64_test:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    scvtf h0, h0, #16
+; CHECK-NEXT:    scvtf h0, x0, #16
 ; CHECK-NEXT:    ret
 entry:
   %vcvth_n_f16_s64 = tail call half @llvm.aarch64.neon.vcvtfxs2fp.f16.i64(i64 %a, i32 16)

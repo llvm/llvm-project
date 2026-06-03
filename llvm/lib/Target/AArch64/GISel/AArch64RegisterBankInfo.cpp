@@ -1444,17 +1444,28 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::aarch64_neon_vcvtfxs2fp:
-    case Intrinsic::aarch64_neon_vcvtfxu2fp:
-    case Intrinsic::aarch64_neon_vcvtfp2fxs:
-    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp: {
       // Override these intrinsics, because they would have a partial
       // mapping. This is needed for 'half' types, which otherwise don't
       // get legalised correctly.
       OpRegBankIdx[0] = PMI_FirstFPR;
+      OpRegBankIdx[2] = MRI.getType(MI.getOperand(2).getReg()).isVector()
+                            ? PMI_FirstFPR
+                            : PMI_FirstGPR;
+      // OpRegBankIdx[1] is the intrinsic ID.
+      // OpRegBankIdx[3] is an integer immediate.
+      break;
+    }
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu: {
+      OpRegBankIdx[0] = MRI.getType(MI.getOperand(0).getReg()).isVector()
+                            ? PMI_FirstFPR
+                            : PMI_FirstGPR;
       OpRegBankIdx[2] = PMI_FirstFPR;
       // OpRegBankIdx[1] is the intrinsic ID.
       // OpRegBankIdx[3] is an integer immediate.
       break;
+    }
     default: {
       // Check if we know that the intrinsic has any constraints on its register
       // banks. If it does, then update the mapping accordingly.

@@ -9167,10 +9167,23 @@ def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
 def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
 
-// Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
+def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
 
+// Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 (sext_inreg FPR32:$Rn, i16)), vecshiftR16:$imm)),
           (SCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
+let AddedComplexity = 1 in {
+def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 GPR32:$Rn), vecshiftR16:$imm)),
+          (SCVTFSWHri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR16:$imm))>;
+def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i64 GPR64:$Rn), vecshiftR16:$imm)),
+          (SCVTFSXHri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR16:$imm))>;
+}
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i32 FPR32:$Rn), vecshiftR16:$imm)),
           (SCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
@@ -9179,10 +9192,26 @@ def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp
             (and FPR32:$Rn, (i32 65535)),
             vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
+let AddedComplexity = 1 in {
+def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp GPR32:$Rn, vecshiftR16:$imm)),
+          (UCVTFSWHri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR16:$imm))>;
+def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp (i64 GPR64:$Rn), vecshiftR16:$imm)),
+          (UCVTFSXHri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR16:$imm))>;
+}
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR64:$Rn, hsub)), vecshiftR16:$imm)>;
+let AddedComplexity = 1 in {
+def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR32:$imm)),
+          (FCVTZSSWHri FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR64:$imm)),
+          (FCVTZSSXHri FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR32:$imm)),
+          (FCVTZUSWHri FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR64:$imm)),
+          (FCVTZUSXHri FPR16:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+}
 def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR32:$imm)),
           (i32 (INSERT_SUBREG
             (i32 (IMPLICIT_DEF)),
