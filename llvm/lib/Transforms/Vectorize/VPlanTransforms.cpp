@@ -4210,6 +4210,31 @@ struct EarlyExitInfo {
 
 /// Update \p Plan to mask memory operations in the loop based on whether the
 /// early exit is taken or not.
+//
+// We're currently expecting to find a loop with properties similar to the
+// following C code:
+//
+//   #define N 10000
+//   int cond[N];
+//   int src[N];
+//   int dst[N];
+//
+//   void foo(int threshold) {
+//     for (int i=0; i<N; ++i) {
+//       if (cond[i] > threshold)
+//         break;
+//       dst[i] = src[i] + 42;
+//     }
+//   }
+//
+// The loop must have a single unconditional load contributing to the
+// uncountable exit comparison, and the other term must be loop-invariant.
+// There must also be a counted exit. Other memory operations in the loop can
+// take place before or after the uncountable exit, but must also be
+// unconditional. All potential accesses to the memory used for the load for the
+// exit condition must be guaranteed to be dereferenceable. Any stores within
+// the loop must not alias with any other memory operations.
+//
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
@@ -4241,15 +4266,20 @@ static bool handleUncountableExitsWithSideEffects(
     return false;
 
   // Find load contributing to condition.
-  VPRecipeBase *CondLoad = nullptr;
-  for (auto *Recipe : ConditionRecipes) {
-    if (match(Recipe, m_VPInstruction<Instruction::Load>(m_VPValue()))) {
-      // TODO: Support more than one load. Needs legality updates too.
-      assert(CondLoad == nullptr && "Too many condition loads");
-      CondLoad = Recipe;
-    }
-  }
-  assert(CondLoad && "Couldn't find load");
+  // At the moment LoopVectorizationLegality only supports a single
+  // early-exit expression with a compare and a single load that must
+  // be unconditional.
+  // TODO: Support more than one load.
+  auto *Load =
+      find_singleton<VPInstruction>(ConditionRecipes, [](auto *I, bool _) {
+        return match(I, m_VPInstruction<Instruction::Load>(m_VPValue()))
+                   ? I
+                   : nullptr;
+      });
+  assert(Load && "Couldn't find load");
+  // TODO: Support conditional loads for uncountable exits.
+  assert(VPDT.dominates(Load->getParent(), LatchVPBB) &&
+         "Uncountable exit condition load is conditional.");
 
   // Ensure that we are guaranteed to be able to dereference the memory used
   // for determining the uncountable exit for the maximum possible number of
@@ -4259,7 +4289,6 @@ static bool handleUncountableExitsWithSideEffects(
   //       all possible addresses are dereferenceable.
   {
     SmallVector<const SCEVPredicate *, 4> Predicates;
-    VPSingleDefRecipe *Load = cast<VPSingleDefRecipe>(CondLoad);
     VPValue *Ptr = Load->getOperand(0);
     const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
     const DataLayout &DL = Plan.getDataLayout();
@@ -4272,54 +4301,36 @@ static bool handleUncountableExitsWithSideEffects(
       return false;
   }
 
-  // Check GEPs to see if we can link them to a widen IV recipe with a step of
-  // 1; we're only interested in contiguous accesses for the condition load
-  // right now.
-  for (auto *GEP : GEPs) {
-    VPValue *MaybeIV = nullptr;
-    if (!match(GEP, m_VPInstruction<Instruction::GetElementPtr>(
-                        m_LiveIn(), m_VPValue(MaybeIV))))
-      return false;
+  // Check for a single GEP for the condition load to see if we can link it to
+  // a widen IV recipe with a step of 1; we're only interested in contiguous
+  // accesses for the condition load right now.
+  auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
+  if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
+      !match(IV->getStepValue(), m_SpecificInt(1)))
+    return false;
+  if (GEPs.size() != 1)
+    return false;
+  if (!match(GEPs.front(), m_VPInstruction<Instruction::GetElementPtr>(
+                               m_LiveIn(), m_Specific(IV))))
+    return false;
 
-    auto *WIV = dyn_cast<VPWidenInductionRecipe>(MaybeIV);
-    if (!WIV)
-      return false;
-
-    if (!match(WIV->getStartValue(), m_SpecificInt(0)) ||
-        !match(WIV->getStepValue(), m_SpecificInt(1)))
-      return false;
+  // We want to guarantee that the uncountable exit condition (and the mask
+  // we will generate from it) are available for all operations in the loop
+  // that need to be masked. If the condition recipes are not already the first
+  // recipes in the header after the last phi, move them there.
+  auto InsertIt = HeaderVPBB->getFirstNonPhi();
+  while (InsertIt != HeaderVPBB->end() &&
+         is_contained(ConditionRecipes, &*InsertIt)) {
+    erase(ConditionRecipes, &*InsertIt);
+    InsertIt++;
   }
-
-  // Find an insertion point. Default to the end of the header but override
-  // if we find a memory op that needs masking before the condition load.
-  auto InsertIt = HeaderVPBB->end();
-  VPRecipeBase *CondR = (*Cond)->getDefiningRecipe();
-  bool CondMoveNeeded = CondR->getParent() != HeaderVPBB;
-  for (VPRecipeBase &R : *HeaderVPBB) {
-    if (&R == CondLoad)
-      continue;
-
-    if (R.mayReadOrWriteMemory()) {
-      if (!VPDT.properlyDominates(CondR, &R)) {
-        CondMoveNeeded = true;
-        InsertIt = R.getIterator();
-      }
-      break;
-    }
-  }
-
-  // If another memory operation would take place before the comparison to
-  // determine whether to exit early or the comparison doesn't take place in
-  // the header, move the comparison (and supporting recipes).
-  if (CondMoveNeeded)
-    for (auto *Recipe : reverse(ConditionRecipes))
-      Recipe->moveBefore(*HeaderVPBB, InsertIt);
+  for (auto *Recipe : reverse(ConditionRecipes))
+    Recipe->moveBefore(*HeaderVPBB, InsertIt);
 
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
   VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
-  VPValue *IV = cast<VPSingleDefRecipe>(&HeaderVPBB->front());
   Type *IVScalarTy = IV->getScalarType();
   Type *FirstActiveTy = FirstActive->getScalarType();
   VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
@@ -4333,7 +4344,7 @@ static bool handleUncountableExitsWithSideEffects(
   // Convert all other memory operations to use the mask.
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB))
     for (VPRecipeBase &R : *VPBB)
-      if (R.mayReadOrWriteMemory() && &R != CondLoad) {
+      if (R.mayReadOrWriteMemory() && &R != Load) {
         // TODO: Handle conditional memory operations in the loop.
         if (!VPDT.dominates(R.getParent(), LatchVPBB))
           return false;
@@ -4360,6 +4371,11 @@ static bool handleUncountableExitsWithSideEffects(
   if (range_size(Phis) != 1)
     return false;
   VPPhi *ContinueIV = cast<VPPhi>(Phis.begin());
+  // Make sure we're referring to the same IV.
+  assert(
+      match(ContinueIV->getOperand(0),
+            m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
+      "Continuing from different IV");
   ContinueIV->setOperand(0, ExitIV);
   return true;
 }

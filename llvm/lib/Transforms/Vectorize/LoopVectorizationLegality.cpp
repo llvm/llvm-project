@@ -1946,16 +1946,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // TODO: Remove this restriction once we're sure it's safe to do so.
-  //       Handling stores to invariant addresses will be slightly different
-  //       based on the vectorization style chosen. If we bail out to a scalar
-  //       tail before executing any lane that would take the uncountable exit,
-  //       then the store that occurs in the scalar loop would suffice.
-  //
-  //       If we instead handle the lane taking the uncountable exit within the
-  //       vectorized loop, then we will have to ensure that we extract the
-  //       last active lane at that point in the loop instead of the last lane
-  //       of the vector before performing a scalar store.
+  // TODO: Remove this restriction, should be straightforward to support.
   if (UncountableExitType != UncountableExitTrait::None &&
       !LAI->getStoresToInvariantAddresses().empty()) {
     LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
