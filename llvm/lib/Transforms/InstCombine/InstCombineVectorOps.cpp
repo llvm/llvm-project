@@ -2283,16 +2283,26 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
 
   Value *X = Op0IsBinop ? Op1 : Op0;
 
-  // Prevent folding in the case the non-binop operand might have NaN values.
-  // If X can have NaN elements then we have that the floating point math
-  // operation in the transformed code may not preserve the exact NaN
-  // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
-  // This makes the transformation incorrect since the original program would
-  // have preserved the exact NaN bit-pattern.
-  // Avoid the folding if X can have NaN elements.
-  if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, SQ))
-    return nullptr;
+  if (Shuf.getType()->getElementType()->isFloatingPointTy()) {
+    // Prevent folding in the case the non-binop operand might have NaN values.
+    // If X can have NaN elements then we have that the floating point math
+    // operation in the transformed code may not preserve the exact NaN
+    // bit-pattern -- e.g. `fadd sNaN, 0.0 -> qNaN`.
+    // This makes the transformation incorrect since the original program would
+    // have preserved the exact NaN bit-pattern.
+    // Avoid the folding if X can have NaN elements.
+    if (!isKnownNeverNaN(X, SQ))
+      return nullptr;
+
+    // Prevent folding when input can be infinity but noinf fast math flags is
+    // set. If X can have Inf elements and fast math flag noinf is set, the
+    // transformation may generate poison where the original program would
+    // preserve the Inf value.
+    auto Fmf = BO->getFastMathFlags();
+    if (Fmf.noInfs() && !isKnownNeverInfinity(X, SQ)) {
+      return nullptr;
+    }
+  }
 
   // Shuffle identity constants into the lanes that return the original value.
   // Example: shuf (mul X, {-1,-2,-3,-4}), X, {0,5,6,3} --> mul X, {-1,1,1,-4}
