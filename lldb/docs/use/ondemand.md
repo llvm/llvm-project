@@ -1,5 +1,4 @@
-On Demand Symbols
-=================
+# On Demand Symbols
 
 On demand symbols can be enabled in LLDB for projects that generate debug info
 for more than what is required by a normal debug session. Some build systems
@@ -11,8 +10,7 @@ be slow when types from all of the binaries have full debug info as each module
 is queried for very common types, or global name lookups fail due to a mistyped
 expression.
 
-When should I consider enabling this feature?
----------------------------------------------
+## When should I consider enabling this feature?
 
 Anyone that has a build system that produces debug information for many
 binaries that are not all required when you want to focus on debugging a few of
@@ -22,21 +20,18 @@ easy to modify to produce debug info for only a small subset of the files being
 linked. If your debug session startup times are slow because of too much debug
 info, this feature might help you be more productive during daily use.
 
-How do I enable on demand symbols?
-----------------------------------
+## How do I enable on demand symbols?
 
 This feature is enabled using a LLDB setting:
 
-
-::
-
-   (lldb) settings set symbols.load-on-demand true
+```
+(lldb) settings set symbols.load-on-demand true
+```
 
 Users can also put this command into their ~/.lldbinit file so it is always
 enabled.
 
-How does this feature work?
----------------------------
+## How does this feature work?
 
 This feature works by selectively enabling debug information for modules that
 the user focuses on. It is designed to be enabled and work without the user
@@ -47,6 +42,7 @@ lookups. The debug information for line tables are always left enabled to allow
 users to reliably set breakpoints by file and line. As the user debugs their
 target, some simple things can cause module to get its debug information
 enabled (called hydration):
+
 - Setting a file and line breakpoint
 - Any PC from any stack frame that maps to a module
 - Setting a breakpoint by function name
@@ -97,12 +93,12 @@ symbol tables with this features as static variables and other non exported
 globals will not appear in the symbol table and can lead to matches not being
 found.
 
-What other things might fail?
------------------------------
+## What other things might fail?
 
 The on demand symbol loading feature tries to limit expensive name lookups
 within debug information. As such, some lookups by name might fail when they
 wouldn't when this feature is not enabled:
+
 - Setting breakpoints by function name for inlined functions
 - Type lookups when the expression parser requests types by name
 - Global variable lookups by name when the name of the variable is stripped
@@ -135,8 +131,7 @@ parser should have no problem finding your variables. Most global variables
 that are exported will still be in your symbol table if it is stripped, but
 static variables and non exported globals will not be.
 
-Can I troubleshoot issues when I believe this feature is impeding my debugging?
--------------------------------------------------------------------------------
+## Can I troubleshoot issues when I believe this feature is impeding my debugging?
 
 Logging has been added that can be enabled to help notify our engineers when
 something is not producing results when this feature is enabled. This logging
@@ -144,9 +139,9 @@ can be enabled during a debug session and can be sent to the LLDB engineers
 to help troubleshoot these situation. To enable logging, type the following
 command:
 
-::
-
-   (lldb) log enable -f /tmp/ondemand.txt lldb on-demand
+```
+(lldb) log enable -f /tmp/ondemand.txt lldb on-demand
+```
 
 When the logging is enabled, we get full visibility into each query that would
 have produced results if this feature were not enabled and will allow us to

@@ -1916,10 +1916,11 @@ bool SITargetLowering::isLegalFlatAddressingMode(const AddrMode &AM,
     return AM.BaseOffs == 0 && AM.Scale == 0;
   }
 
-  decltype(SIInstrFlags::FLAT) FlatVariant =
-      AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? SIInstrFlags::FlatGlobal
-      : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? SIInstrFlags::FlatScratch
-                                               : SIInstrFlags::FLAT;
+  using AMDGPU::FlatAddrSpace;
+  FlatAddrSpace FlatVariant =
+      AddrSpace == AMDGPUAS::GLOBAL_ADDRESS    ? FlatAddrSpace::FlatGlobal
+      : AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ? FlatAddrSpace::FlatScratch
+                                               : FlatAddrSpace::FLAT;
 
   return AM.Scale == 0 &&
          (AM.BaseOffs == 0 || Subtarget->getInstrInfo()->isLegalFLATOffset(
@@ -4682,10 +4683,14 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
          "Stack grows upwards for AMDGPU");
 
   Chain = BaseAddr.getValue(1);
+  // When using flat-scratch, the stack offset is unscaled.
+  const bool HasFlatScratch = Subtarget->hasFlatScratchEnabled();
+  const unsigned WavefrontSizeLog2 = Subtarget->getWavefrontSizeLog2();
+
   Align StackAlign = TFL->getStackAlign();
   if (Alignment > StackAlign) {
     uint64_t ScaledAlignment = Alignment.value()
-                               << Subtarget->getWavefrontSizeLog2();
+                               << (HasFlatScratch ? 0 : WavefrontSizeLog2);
     uint64_t StackAlignMask = ScaledAlignment - 1;
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
                                   DAG.getConstant(StackAlignMask, dl, VT));
@@ -4696,21 +4701,28 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
   SDValue NewSP;
   if (isa<ConstantSDNode>(Size)) {
-    // For constant sized alloca, scale alloca size by wave-size
-    SDValue ScaledSize = DAG.getNode(
-        ISD::SHL, dl, VT, Size,
-        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    // Increase the stack pointer by the size of the alloca.
+    // If not using flat-scratch, we have to scale the size by the wave-size.
+    SDValue ScaledSize =
+        HasFlatScratch
+            ? Size
+            : DAG.getNode(ISD::SHL, dl, VT, Size,
+                          DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
     NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
   } else {
     // For dynamic sized alloca, perform wave-wide reduction to get max of
-    // alloca size(divergent) and then scale it by wave-size
+    // alloca size(divergent), and then scale it (when not using flat-scratch)
+    // by wave-size.
     SDValue WaveReduction =
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
     Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
                        Size, DAG.getTargetConstant(0, dl, MVT::i32));
-    SDValue ScaledSize = DAG.getNode(
-        ISD::SHL, dl, VT, Size,
-        DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
+    SDValue ScaledSize = Size;
+    if (!HasFlatScratch) {
+      ScaledSize =
+          DAG.getNode(ISD::SHL, dl, VT, Size,
+                      DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
+    }
     NewSP =
         DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
     SDValue ReadFirstLaneID =
@@ -19305,8 +19317,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         }
       }
 
-      // Check for lossy scalar/vector conversions.
-      if (VT.isVector() && VT.getSizeInBits() != 32)
+      // Reject types that do not fit a single 32-bit register: any scalar wider
+      // than 32 bits, or a vector that is not exactly 32 bits.
+      if (VT.SimpleTy != MVT::Other &&
+          (VT.getSizeInBits() > 32 ||
+           (VT.isVector() && VT.getSizeInBits() != 32)))
         return std::pair(0U, nullptr);
       if (RC && Idx < RC->getNumRegs())
         return std::pair(RC->getRegister(Idx), RC);
