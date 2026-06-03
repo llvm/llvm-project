@@ -202,8 +202,8 @@ define void @store_trunc_v32i16i8(ptr %ap, ptr %dest) #0 {
   ret void
 }
 
-define void @store_trunc_v4i64i32(ptr %src, ptr %dest) vscale_range(1,0) #0 {
-; CHECK-LABEL: store_trunc_v4i64i32:
+define void @store_trunc_v4i64i32_min_vscale_one(ptr %src, ptr %dest) vscale_range(1,0) #0 {
+; CHECK-LABEL: store_trunc_v4i64i32_min_vscale_one:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
@@ -215,14 +215,12 @@ define void @store_trunc_v4i64i32(ptr %src, ptr %dest) vscale_range(1,0) #0 {
   ret void
 }
 
-
-define void @store_trunc_v4i64i32_sve_no_neon(ptr %src, ptr %dest) vscale_range(1,0) "target-features"="-neon,+sve" {
-; CHECK-LABEL: store_trunc_v4i64i32_sve_no_neon:
+define void @store_trunc_v4i64i32_min_vscale_two(ptr %src, ptr %dest) vscale_range(2,0) #0 {
+; CHECK-LABEL: store_trunc_v4i64i32_min_vscale_two:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x9, x8, [x0, #16]
-; CHECK-NEXT:    ldp x10, x11, [x0]
-; CHECK-NEXT:    stp w9, w8, [x1, #8]
-; CHECK-NEXT:    stp w10, w11, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i64>, ptr %src, align 4
   %trunc = trunc <4 x i64> %ld to <4 x i32>
