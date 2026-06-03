@@ -76,7 +76,7 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
 
   size_t idx{0}, size{clauses.count()};
   clauses.IterateOverMembers([&](llvm::omp::Clause c) {
-    os << toLower(llvm::omp::getOpenMPClauseName(c, x.version_));
+    os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
     switch (c) {
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
