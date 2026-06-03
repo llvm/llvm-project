@@ -30,11 +30,16 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
 /// Given the name of an identifier, check to see if it matches the name of a
 /// global variable. If so, find the ValueObject for that global variable, and
 /// create and return an IdentifierInfo object containing all the relevant
-/// informatin about it.
+/// information about it.
 lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            std::shared_ptr<StackFrame> frame_sp,
                                            lldb::TargetSP target_sp,
                                            lldb::DynamicValueType use_dynamic);
+
+/// Given the name of an identifier, attempt to find an enumeration value.
+/// If found, return a ValueObject with a const scalar value of the enum.
+lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
+                                    ExecutionContextScope &ctx_scope);
 
 class Interpreter : Visitor {
 public:
@@ -101,11 +106,23 @@ private:
                                                        CompilerType result_type,
                                                        uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                      lldb::ValueObjectSP rhs, uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinaryAddition(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                          uint32_t location);
   llvm::Expected<lldb::ValueObjectSP>
   EvaluateBinarySubtraction(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
                             uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryMultiplication(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                               uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryDivision(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                         uint32_t location);
+  llvm::Expected<lldb::ValueObjectSP>
+  EvaluateBinaryRemainder(lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs,
+                          uint32_t location);
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
@@ -134,10 +151,10 @@ private:
   std::shared_ptr<StackFrame> m_exe_ctx_scope;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
   bool m_check_ptr_vs_member;
   // TODO: Remove 'maybe_unused' when next PR, using this, gets submitted.
   [[maybe_unused]] bool m_allow_var_updates;
+  bool m_allow_globals = true;
 };
 
 } // namespace lldb_private::dil

@@ -94,7 +94,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -360,9 +360,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 
@@ -489,7 +486,7 @@ public:
   /// Helper to emit a symbol for the prefetch target associated with the given
   /// BBID and callsite index. The symbol is emitted as a label and its linkage
   /// is set based on the function's linkage.
-  void emitPrefetchTargetSymbol(unsigned BaseID, unsigned CallsiteIndex);
+  void emitPrefetchTargetSymbol(const UniqueBBID &BBID, unsigned CallsiteIndex);
 
   /// Emit prefetch targets that were not mapped to any basic block. These
   /// targets are emitted at the beginning of the function body.
@@ -570,9 +567,10 @@ public:
   /// Emit an alignment directive to the specified power of two boundary. If a
   /// global value is specified, and if that global has an explicit alignment
   /// requested, it will override the alignment request if required for
-  /// correctness.
-  void emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
-                     unsigned MaxBytesToEmit = 0) const;
+  /// correctness. Returns the effective alignment that was emitted (which may
+  /// exceed \p Alignment when \p GV has a stricter explicit alignment).
+  Align emitAlignment(Align Alignment, const GlobalObject *GV = nullptr,
+                      unsigned MaxBytesToEmit = 0) const;
 
   /// Lower the specified LLVM Constant to an MCExpr.
   /// When BaseCV is present, we are lowering the element at BaseCV plus Offset.
@@ -1012,12 +1010,12 @@ protected:
   }
 };
 
-void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinter &AsmPrinter);
-
-void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
-                                    MachineFunction &MF,
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
                                     AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

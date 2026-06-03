@@ -55,9 +55,14 @@ using namespace __dfsan;
 #define DECLARE_WEAK_INTERCEPTOR_HOOK(f, ...) \
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void f(__VA_ARGS__);
 
+#define PRAGMA(x) _Pragma(#x)
 #define WRAPPER_ALIAS(fun, real)                                          \
+  PRAGMA(clang diagnostic push)                                           \
+  PRAGMA(clang diagnostic ignored "-Wunknown-warning-option")             \
+  PRAGMA(clang diagnostic ignored "-Wattribute-alias")                    \
   SANITIZER_INTERFACE_ATTRIBUTE void __dfsw_##fun() ALIAS(__dfsw_##real); \
-  SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real);
+  SANITIZER_INTERFACE_ATTRIBUTE void __dfso_##fun() ALIAS(__dfso_##real); \
+  PRAGMA(clang diagnostic pop)
 
 // Async-safe, non-reentrant spin lock.
 namespace {

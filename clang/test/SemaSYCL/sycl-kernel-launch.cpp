@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-host -fcxx-exceptions -verify %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -std=c++23 -fsyntax-only -fsycl-is-device -verify %s
 
 // Test overload resolution for implicit calls to sycl_kernel_launch<KN>(...)
 // synthesized for functions declared with the sycl_kernel_entry_point
@@ -324,7 +324,7 @@ namespace bad6 {
 
 // No matching function for call to sycl_kernel_launch; mismatched template parameter kind.
 namespace bad7 {
-  // expected-note@+2 {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  // expected-note@+2 {{candidate template ignored: template argument for non-type template parameter must be an expression}}
   template<int, typename... Ts>
   void sycl_kernel_launch(const char *, Ts...);
   // expected-error@+4 {{no matching function for call to 'sycl_kernel_launch'}}

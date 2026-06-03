@@ -1,6 +1,7 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
+    libc.include.byteswap
     libc.include.complex
     libc.include.cpio
     libc.include.ctype
@@ -20,6 +21,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.malloc
     libc.include.math
     libc.include.netinet_in
+    libc.include.netinet_tcp
+    libc.include.netinet_udp
     libc.include.nl_types
     libc.include.poll
     libc.include.pthread
@@ -41,18 +44,23 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_ioctl
     libc.include.sys_ipc
     libc.include.sys_mman
+    libc.include.sys_param
+    libc.include.sys_personality
     libc.include.sys_prctl
     libc.include.sys_queue
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
     libc.include.sys_sem
+    libc.include.sys_sendfile
     libc.include.sys_socket
     libc.include.sys_stat
     libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_ucontext
+    libc.include.sys_uio
     libc.include.sys_un
     libc.include.sys_utsname
     libc.include.sys_wait
@@ -62,7 +70,12 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.threads
     libc.include.time
     libc.include.uchar
+    libc.include.ucontext
     libc.include.unistd
     libc.include.wchar
     libc.include.wctype
 )
+
+if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+endif()

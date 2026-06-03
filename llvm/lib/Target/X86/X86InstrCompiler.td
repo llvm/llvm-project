@@ -1227,6 +1227,21 @@ def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
 def : Pat<(v2i64 (scalar_to_vector (i64 (atomic_load_64 addr:$src)))),
   (VMOV64toPQIZrm addr:$src)>, Requires<[HasAVX512]>;
 
+// load atomic <2 x i64>
+def : Pat<(v2i64 (atomic_load_128_v2i64 addr:$src)),
+          (MOVAPDrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v2i64 (atomic_load_128_v2i64 addr:$src)),
+          (VMOVAPDrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v2i64 (atomic_load_128_v2i64 addr:$src)),
+          (VMOVAPDZ128rm addr:$src)>, Requires<[HasAVX512]>;
+// load atomic <4 x i32>
+def : Pat<(v4i32 (atomic_load_128_v4i32 addr:$src)),
+          (MOVAPDrm addr:$src)>, Requires<[UseSSE2]>;
+def : Pat<(v4i32 (atomic_load_128_v4i32 addr:$src)),
+          (VMOVAPDrm addr:$src)>, Requires<[UseAVX]>;
+def : Pat<(v4i32 (atomic_load_128_v4i32 addr:$src)),
+          (VMOVAPDZ128rm addr:$src)>, Requires<[HasAVX512]>;
+
 // Floating point loads/stores.
 def : Pat<(atomic_store_32 (i32 (bitconvert (f32 FR32:$src))), addr:$dst),
           (MOVSSmr addr:$dst, FR32:$src)>, Requires<[UseSSE1]>;
@@ -2072,6 +2087,18 @@ defm : OneBitPats<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
+// Flag-producing variants: reuse the BTR/BTS/BTC encodings so CF can replace
+// a separate X86ISD::BT. Emitted by a DAG combine in combineBT. Only i32/i64
+// since getBT promotes <32-bit Src to i32 before creating X86ISD::BT. Unlike
+// the OneBitPats above, the bit index here is already a same-width register
+// (combineBTToBitOpFlag emits it that way), so no GR8 sub-reg insertion.
+def : Pat<(X86btr GR32:$src1, GR32:$src2), (BTR32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86bts GR32:$src1, GR32:$src2), (BTS32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btc GR32:$src1, GR32:$src2), (BTC32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btr GR64:$src1, GR64:$src2), (BTR64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86bts GR64:$src1, GR64:$src2), (BTS64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86btc GR64:$src1, GR64:$src2), (BTC64rr GR64:$src1, GR64:$src2)>;
+
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns
 //===----------------------------------------------------------------------===//
@@ -2284,13 +2311,13 @@ def : Pat<(mul (loadi32 addr:$src1), imm:$src2),
 def : Pat<(mul (loadi64 addr:$src1), i64immSExt32:$src2),
           (IMUL64rmi32 addr:$src1, i64immSExt32:$src2)>;
 
-// Bit scan instruction patterns to match explicit zero-undef behavior.
-def : Pat<(cttz_zero_undef GR16:$src), (BSF16rr (i16 (IMPLICIT_DEF)), GR16:$src)>;
-def : Pat<(cttz_zero_undef GR32:$src), (BSF32rr (i32 (IMPLICIT_DEF)), GR32:$src)>;
-def : Pat<(cttz_zero_undef GR64:$src), (BSF64rr (i64 (IMPLICIT_DEF)), GR64:$src)>;
-def : Pat<(cttz_zero_undef (loadi16 addr:$src)), (BSF16rm (i16 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi32 addr:$src)), (BSF32rm (i32 (IMPLICIT_DEF)), addr:$src)>;
-def : Pat<(cttz_zero_undef (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), addr:$src)>;
+// Bit scan instruction patterns to match explicit zero-poison behavior.
+def : Pat<(cttz_zero_poison GR16:$src), (BSF16rr (i16 (IMPLICIT_DEF)), GR16:$src)>;
+def : Pat<(cttz_zero_poison GR32:$src), (BSF32rr (i32 (IMPLICIT_DEF)), GR32:$src)>;
+def : Pat<(cttz_zero_poison GR64:$src), (BSF64rr (i64 (IMPLICIT_DEF)), GR64:$src)>;
+def : Pat<(cttz_zero_poison (loadi16 addr:$src)), (BSF16rm (i16 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_poison (loadi32 addr:$src)), (BSF32rm (i32 (IMPLICIT_DEF)), addr:$src)>;
+def : Pat<(cttz_zero_poison (loadi64 addr:$src)), (BSF64rm (i64 (IMPLICIT_DEF)), addr:$src)>;
 
 // When HasMOVBE is enabled it is possible to get a non-legalized
 // register-register 16 bit bswap. This maps it to a ROL instruction.

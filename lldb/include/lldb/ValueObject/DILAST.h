@@ -44,6 +44,11 @@ enum class UnaryOpKind {
 enum class BinaryOpKind {
   Add, // "+"
   Sub, // "-"
+  Mul, // "*"
+  Div, // "/"
+  Rem, // "%"
+  Shl, // "<<"
+  Shr, // ">>"
 };
 
 /// Translates DIL tokens to BinaryOpKind.

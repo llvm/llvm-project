@@ -612,7 +612,7 @@ std::error_code rename(const Twine &from, const Twine &to) {
 std::error_code resize_file(int FD, uint64_t Size) {
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
-  if (::ftruncate(FD, Size) == -1)
+  if (sys::RetryAfterSignal(-1, ::ftruncate, FD, Size) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -913,7 +913,7 @@ void mapped_file_region::unmapImpl() {
 }
 
 std::error_code mapped_file_region::sync() const {
-  if (int Res = ::msync(Mapping, Size, MS_SYNC))
+  if (int Res = sys::RetryAfterSignal(-1, ::msync, Mapping, Size, MS_SYNC))
     return std::error_code(Res, std::generic_category());
   return std::error_code();
 }
@@ -941,6 +941,19 @@ void mapped_file_region::willNeedImpl() {
   ::posix_madvise(Mapping, Size, POSIX_MADV_WILLNEED);
 #else
   ::madvise(Mapping, Size, MADV_WILLNEED);
+#endif
+}
+
+void mapped_file_region::randomAccessImpl() {
+  assert(Mode == mapped_file_region::readonly);
+  if (!Mapping)
+    return;
+#if defined(__MVS__) || defined(_AIX)
+  // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
+#elif defined(POSIX_MADV_RANDOM)
+  ::posix_madvise(Mapping, Size, POSIX_MADV_RANDOM);
+#else
+  ::madvise(Mapping, Size, MADV_RANDOM);
 #endif
 }
 
@@ -1340,7 +1353,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLKW, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1351,7 +1364,7 @@ std::error_code unlockFile(int FD) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLK, &Lock) != -1)
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }

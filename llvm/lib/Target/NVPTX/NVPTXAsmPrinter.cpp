@@ -111,6 +111,30 @@ static StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
+/// Emits initial debug location directive.
+static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
+                                            DwarfDebug *DD,
+                                            MCStreamer &OutStreamer) {
+  if (!DD)
+    return;
+
+  assert(OutStreamer.hasRawTextSupport() && "Expected assembly output mode.");
+  // This is NVPTX specific and it's unclear why.
+  // PR51079: If we have code without debug information we need to give up.
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+  assert(SP->getUnit());
+  // NoDebug and DebugDirectivesOnly do not require emitting the initial loc
+  // directive. NoDebug does not require any debug directives and the initial
+  // loc directive is not needed for DebugDirectivesOnly as it is redundant
+  // assuming this is a non-empty function.
+  if (SP->getUnit()->isDebugDirectivesOnly() || SP->getUnit()->isNoDebug())
+    return;
+
+  (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
+}
+
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
 static void
@@ -375,11 +399,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   setAndEmitFunctionVirtualRegisters(*MF);
   encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
-    assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly())
-      emitInitialRawDwarfLocDirective(*MF);
-  }
+  emitInitialRawDwarfLocDirective(*MF, getDwarfDebug(), *OutStreamer);
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -639,6 +659,15 @@ void NVPTXAsmPrinter::emitDeclarations(const Module &M, raw_ostream &O) {
         continue;
       if (F.getIntrinsicID())
         continue;
+      // An unrecognized intrinsic would produce an invalid PTX declaration. Let
+      // the user know that, and skip it.
+      if (F.isIntrinsic()) {
+        LLVMContext &Ctx = F.getContext();
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            F, "unknown intrinsic '" + F.getName() +
+                   "' cannot be lowered by the NVPTX backend"));
+        continue;
+      }
       emitDeclaration(&F, O);
       continue;
     }
@@ -1051,7 +1080,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
-            const unsigned int ptrSize = MAI->getCodePointerSize();
+            const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
                 !aggBuffer.allSymbolsAligned(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
@@ -1123,7 +1152,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
@@ -1165,7 +1194,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
-  unsigned int ptrSize = AP.MAI->getCodePointerSize();
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
@@ -1706,18 +1735,32 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   const DataLayout &DL = getDataLayout();
 
   auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
-    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
-      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
+    unsigned NumBytes = divideCeil(Val.getBitWidth(), 8);
+    for (unsigned I : llvm::seq(NumBytes)) {
+      unsigned NumBits = std::min(8u, Val.getBitWidth() - I * 8);
+      Buffer->addByte(Val.extractBitsAsZExtValue(NumBits, I * 8));
+    }
   };
+
+  // Integer or floating point vector splats.
+  if (isa<ConstantInt, ConstantFP>(CPV)) {
+    if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
+      for (unsigned I : llvm::seq(VTy->getNumElements()))
+        bufferLEByte(CPV->getAggregateElement(I), 0, aggBuffer);
+      return;
+    }
+  }
 
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+    assert(CI->getType()->isIntegerTy() && "Expected integer constant!");
     ExtendBuffer(CI->getValue(), aggBuffer);
     return;
   }
 
   // f128
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+    assert(CFP->getType()->isFloatingPointTy() && "Expected fp constant!");
     if (CFP->getType()->isFP128Ty()) {
       ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
       return;
@@ -1798,8 +1841,8 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
       SubCVElems.push_back(CV->getAggregateElement(I));
 
     // Optionally pad with zeros.
-    for (auto _ : llvm::seq(NumPaddingZeros))
-      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
+    if (NumPaddingZeros)
+      SubCVElems.append(NumPaddingZeros, ConstantInt::getNullValue(ElemTy));
 
     auto SubCV = ConstantVector::get(SubCVElems);
     Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
@@ -1963,7 +2006,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
 }
 
 void NVPTXAsmPrinter::printMCExpr(const MCExpr &Expr, raw_ostream &OS) const {
-  OutContext.getAsmInfo()->printExpr(OS, Expr);
+  OutContext.getAsmInfo().printExpr(OS, Expr);
 }
 
 /// PrintAsmOperand - Print out an operand for an inline asm expression.

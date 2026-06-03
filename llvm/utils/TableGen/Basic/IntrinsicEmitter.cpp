@@ -61,6 +61,8 @@ public:
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
+                                        raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
   void EmitIntrinsicBitTable(
@@ -111,6 +113,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
+
+    // Emit the intrinsic ID -> trivially scalarizable table.
+    EmitIntrinsicToScalarizableTable(Ints, OS);
 
     // Emit the intrinsic declaration generator.
     EmitGenerator(Ints, OS);
@@ -224,6 +229,8 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
     RecsByNumber[Number] = Rec->getName();
   }
   if (IIT_Base.size() > 0) {
+    if (RecsByNumber[0] != "IIT_Done")
+      PrintFatalError("IIT_Done expected to have value 0");
     for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
       if (!RecsByNumber[I].empty())
         OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
@@ -307,6 +314,14 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
       [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
 }
 
+void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+      "Intrinsic ID to trivially scalarizable bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
+}
+
 using TypeSigTy = SmallVector<unsigned char>;
 
 /// Computes type signature of the intrinsic \p Int.
@@ -351,7 +366,11 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
+
+  // Each IIT encoding sequence in the long encoding table is terminated by
+  // IIT_Done(=0) token.
+  constexpr unsigned char IIT_Done = 0;
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(IIT_Done);
 
   FixedEncodings.reserve(Ints.size());
 

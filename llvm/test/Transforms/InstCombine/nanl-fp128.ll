@@ -7,7 +7,7 @@
 
 define fp128 @nanl_empty() {
 ; CHECK-LABEL: define fp128 @nanl_empty() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+; CHECK-NEXT:    ret fp128 +qnan
 ;
   %res = call fp128 @nanl(ptr @empty)
   ret fp128 %res
@@ -15,7 +15,7 @@ define fp128 @nanl_empty() {
 
 define fp128 @nanl_dec() {
 ; CHECK-LABEL: define fp128 @nanl_dec() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000017FFF800000000000
+; CHECK-NEXT:    ret fp128 +nan(0x1)
 ;
   %res = call fp128 @nanl(ptr @dec)
   ret fp128 %res
@@ -23,7 +23,7 @@ define fp128 @nanl_dec() {
 
 define fp128 @nanl_hex() {
 ; CHECK-LABEL: define fp128 @nanl_hex() {
-; CHECK-NEXT:    ret fp128 0xL000000000000000F7FFF800000000000
+; CHECK-NEXT:    ret fp128 +nan(0xF)
 ;
   %res = call fp128 @nanl(ptr @hex)
   ret fp128 %res

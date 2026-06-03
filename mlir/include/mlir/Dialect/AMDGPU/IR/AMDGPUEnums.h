@@ -8,8 +8,9 @@
 #ifndef MLIR_DIALECT_AMDGPU_UTILS_AMDGPU_ENUMS_H_
 #define MLIR_DIALECT_AMDGPU_UTILS_AMDGPU_ENUMS_H_
 
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir::amdgpu {

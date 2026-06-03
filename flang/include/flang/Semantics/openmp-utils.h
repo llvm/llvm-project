@@ -86,15 +86,10 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
@@ -105,6 +100,8 @@ bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
+const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -130,6 +127,26 @@ std::optional<int64_t> GetIntValueFromExpr(
   return std::nullopt;
 }
 
+// There are several clauses that take an optional, compile-time
+// constant bool argument. Those clauses are stored as std::optional, e.g.
+// OmpClause::ReverseOffload -> std::optional<OmpReverseOffloadClause>.
+// Retrieve the logical value if present.
+template <typename ClauseTy>
+std::optional<bool> GetLogicalArgument(
+    const std::optional<ClauseTy> &maybeClause, SemanticsContext &semaCtx) {
+  if (maybeClause) {
+    // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+    auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+      if (auto v{GetLogicalValue(*maybeExpr)}) {
+        return *v;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
@@ -143,6 +160,8 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -157,7 +176,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  const Symbol *iv{nullptr};
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
@@ -213,14 +232,19 @@ WithReason<int64_t> GetHeightWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
 
-// Return the depth of the affected nests:
-//   {affected-depth, reason, must-be-perfect-nest}.
+/// Return the depth of the affected nest(s):
+///   {affected-depth, must-be-perfect-nest}.
 std::pair<WithReason<int64_t>, bool> GetAffectedNestDepthWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
-// Return the range of the affected nests in the sequence:
-//   {first, count, reason}.
-// If the range is "the whole sequence", the return value will be {1, -1, ...}.
+/// Return the depth of the generated nest(s):
+///   {generated-depth, is-perfect-nest}
+std::pair<WithReason<int64_t>, bool> GetGeneratedNestDepthWithReason(
+    const parser::OmpDirectiveSpecification &spec, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
+/// Return the range of the affected nests in the sequence:
+///   {first, count}.
+/// If the range is "the whole sequence", the return value will be {1, -1}.
 WithReason<std::pair<int64_t, int64_t>> GetAffectedLoopRangeWithReason(
     const parser::OmpDirectiveSpecification &spec, unsigned version,
     SemanticsContext *semaCtx = nullptr);
@@ -236,6 +260,15 @@ std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
 std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
+
+/// Collect the set of DO loops present in the source code that are directly
+/// affected by the given loop construct. This does not include any DO loops
+/// that are affected by any construct nested in `x`.
+/// Returns std::nullopt if `x` or code nested in `x` was malformed in a
+/// way that prevented the function from returning an accurate result.
+std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
+    const parser::OpenMPLoopConstruct &x, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,

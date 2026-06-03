@@ -51,11 +51,13 @@ public:
   IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool IsMathErrnoDefault() const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
   std::string ComputeEffectiveClangTriple(
-      const llvm::opt::ArgList &Args,
+      const llvm::opt::ArgList &Args, llvm::StringRef BoundArch = {},
       types::ID InputType = types::TY_INVALID) const override;
   std::string computeSysRoot() const override;
   void

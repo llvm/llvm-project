@@ -104,6 +104,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
+  clang-ssaf-analyzer
   clang-ssaf-format
   clang-ssaf-linker
   clang-sycl-linker
@@ -207,7 +208,7 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   endif()
 endif()
 
-if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS)
+if(CLANG_PLUGIN_SUPPORT AND LLVM_ENABLE_PLUGINS AND NOT WIN32)
   list(APPEND CLANG_TEST_DEPS
     SSAFExamplePlugin
     )
@@ -254,3 +255,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
 endif()
 
 add_subdirectory(Analysis/LifetimeSafety)
+
+if(TARGET check-clang-format)
+  add_dependencies(check-clang-format clang-format-check-format)
+endif()

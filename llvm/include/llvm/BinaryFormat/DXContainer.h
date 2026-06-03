@@ -258,6 +258,10 @@ LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
+bool isDebugProgramPart(PartType PT);
+
+const char *getProgramPartName(bool IsDebug);
+
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
   uint8_t Unused[3];
@@ -562,6 +566,8 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
+  // Offset into the string table, which is stored separately in the PSV0 part.
+  // The entry name string itself is not stored in the RuntimeInfo record.
   uint32_t EntryNameOffset;
 
   void swapBytes() {
@@ -802,6 +808,49 @@ enum class RootSignatureVersion {
   V1_1 = 0x2,
   V1_2 = 0x3,
 };
+
+struct DebugNameHeader {
+  uint16_t Flags;
+  /// Debug file name length, without null terminator.
+  uint16_t NameLength;
+
+  void swapBytes() {
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(NameLength);
+  }
+};
+
+static_assert(sizeof(DebugNameHeader) == 4, "DebugNameHeader size incorrect.");
+
+#define VERSION_INFO_FLAG(Num, Val, Str) Val = Num,
+enum class CompilerVersionFlags : uint32_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Internal)
+};
+
+bool isValidCompilerVersionFlags(uint32_t V);
+
+struct CompilerVersionHeader {
+  uint16_t Major;
+  uint16_t Minor;
+  CompilerVersionFlags Flags;
+  /// The number outputted by `git rev-list --count HEAD` in the compiler repo.
+  uint32_t CommitCount;
+  /// Byte size of CommitSha and CustomVersionString, padding not included.
+  uint32_t ContentSizeInBytes;
+
+  void swapBytes() {
+    sys::swapByteOrder(Major);
+    sys::swapByteOrder(Minor);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(CommitCount);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(CompilerVersionHeader) == 16,
+              "CompilerVersionHeader size incorrect.");
 
 } // namespace dxbc
 } // namespace llvm

@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
@@ -21,6 +22,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
@@ -38,23 +40,14 @@ llvm::cl::opt<bool> supportCrayPointers(
     llvm::cl::init(false));
 
 // Inspect for value-scoped Allocate effects and determine whether
-// 'candidate' is a new allocation. Returns SourceKind::Allocate if a
+// 'result' is a new allocation. Returns SourceKind::Allocate if a
 // MemAlloc effect is attached
 static fir::AliasAnalysis::SourceKind
-classifyAllocateFromEffects(mlir::Operation *op, mlir::Value candidate) {
-  if (!op)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  auto interface = llvm::dyn_cast<mlir::MemoryEffectOpInterface>(op);
-  if (!interface)
-    return fir::AliasAnalysis::SourceKind::Unknown;
-  llvm::SmallVector<mlir::MemoryEffects::EffectInstance, 4> effects;
-  interface.getEffects(effects);
-  for (mlir::MemoryEffects::EffectInstance &e : effects) {
-    if (mlir::isa<mlir::MemoryEffects::Allocate>(e.getEffect()) &&
-        e.getValue() && e.getValue() == candidate)
-      return fir::AliasAnalysis::SourceKind::Allocate;
-  }
-  return fir::AliasAnalysis::SourceKind::Unknown;
+classifyAllocateFromEffects(OpResult result) {
+  std::optional<bool> isNewAllocation = fir::isNewAllocationResult(result);
+  return isNewAllocation.value_or(false)
+             ? fir::AliasAnalysis::SourceKind::Allocate
+             : fir::AliasAnalysis::SourceKind::Unknown;
 }
 
 //===----------------------------------------------------------------------===//
@@ -147,6 +140,154 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
   fir::AliasAnalysis::Source source = getSourceFn(mlir::acc::getVar(accOp));
   source.attributes |= accumulatedAttrs;
   return source;
+}
+
+/// Predecessor SSA values that may define a result of \p branch when control
+/// continues in the parent region (same mapping as
+/// `LocalAliasAnalysis::collectUnderlyingAddressValues2` for
+/// `RegionSuccessor::parent()`).
+static void getRegionBranchPredecessorValuesForParentResult(
+    mlir::RegionBranchOpInterface branch, mlir::OpResult result,
+    llvm::SmallVectorImpl<mlir::Value> &out) {
+  mlir::RegionSuccessor parentSucc = mlir::RegionSuccessor::parent();
+  mlir::Value inputValue = result;
+  unsigned inputIndex = result.getResultNumber();
+  mlir::ValueRange inputs = branch.getSuccessorInputs(parentSucc);
+  if (inputs.empty()) {
+    out.push_back(inputValue);
+    return;
+  }
+  unsigned firstInputIndex, lastInputIndex;
+  if (mlir::isa<mlir::BlockArgument>(inputs[0])) {
+    firstInputIndex = mlir::cast<mlir::BlockArgument>(inputs[0]).getArgNumber();
+    lastInputIndex =
+        mlir::cast<mlir::BlockArgument>(inputs.back()).getArgNumber();
+  } else {
+    firstInputIndex = mlir::cast<mlir::OpResult>(inputs[0]).getResultNumber();
+    lastInputIndex =
+        mlir::cast<mlir::OpResult>(inputs.back()).getResultNumber();
+  }
+  if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
+    out.push_back(inputValue);
+    return;
+  }
+  branch.getPredecessorValues(parentSucc, inputIndex - firstInputIndex, out);
+}
+
+/// True when \p src's tracked origin value is an SSA result of an operation
+/// nested under \p branch's regions.
+static bool originIsInsideRegionBranch(mlir::RegionBranchOpInterface branch,
+                                       const fir::AliasAnalysis::Source &src) {
+  const fir::AliasAnalysis::Source::SourceOrigin &origin = src.origin;
+  if (llvm::isa<mlir::SymbolRefAttr>(origin.u))
+    return false;
+  mlir::Value originVal = llvm::cast<mlir::Value>(origin.u);
+  if (mlir::isa<mlir::BlockArgument>(originVal))
+    return false;
+  mlir::Operation *defOp = originVal.getDefiningOp();
+  if (!defOp)
+    return false;
+  return branch.getOperation()->isProperAncestor(defOp);
+}
+
+/// Conservative join of memory sources from region-branch predecessors.
+static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
+    llvm::ArrayRef<fir::AliasAnalysis::Source> sources,
+    mlir::Value fallbackValue, mlir::Type fallbackType, bool followingData) {
+  assert(!sources.empty() && "expected at least one predecessor source");
+
+  // For kind, origin, attributes, isApproximate/accessPath, valueType, we
+  // capture if all of the sources have exactly the same value.
+  bool allKindsSame =
+      llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+        return s.kind == sources[0].kind;
+      });
+  bool allOriginsSame =
+      llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+        return s.origin == sources[0].origin;
+      });
+  bool allAttrsSame =
+      llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+        return s.attributes == sources[0].attributes;
+      });
+  bool allPathsSame =
+      llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+        return s.accessPath == sources[0].accessPath;
+      });
+  bool allTypesSame =
+      llvm::all_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+        return s.valueType == sources[0].valueType;
+      });
+
+  // For approximateSource and isCapturedInInternalProcedure, we mark them
+  // as true if any of the sources are true.
+  bool mergedApprox =
+      llvm::any_of(sources, [](const fir::AliasAnalysis::Source &s) {
+        return s.approximateSource;
+      });
+  bool mergedCaptured =
+      llvm::any_of(sources, [](const fir::AliasAnalysis::Source &s) {
+        return s.isCapturedInInternalProcedure;
+      });
+
+  fir::AliasAnalysis::SourceKind mergedKind;
+  fir::AliasAnalysis::Source::Attributes mergedAttrs;
+  if (!allKindsSame) {
+    mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
+    mergedAttrs = {};
+  } else if (!allAttrsSame) {
+    mergedKind = fir::AliasAnalysis::SourceKind::Unknown;
+    mergedAttrs = {};
+  } else if (!allOriginsSame) {
+    // Same kind and attributes on every path, but different concrete origins.
+    // Since origins are different, for most cases fall back to Indirect here.
+    // However, for Allocate, we want to keep the information about this being
+    // an Allocate as long as all are defined inside the region's branches
+    // because then they are all unique and thus cannot alias anything outside
+    // the region (this is key here - because this only holds when comparing
+    // region's result only with outside values not the origins themselves).
+    // TODO: An origin list would be better to preserve this information
+    // more accurately instead of a single origin.
+    auto branchOp = mlir::dyn_cast<mlir::RegionBranchOpInterface>(
+        mlir::cast<mlir::OpResult>(fallbackValue).getOwner());
+    assert(branchOp && "merge region-branch sources expects branch op result");
+    bool hasOriginOutsideBranch =
+        llvm::any_of(sources, [&](const fir::AliasAnalysis::Source &s) {
+          return !originIsInsideRegionBranch(branchOp, s);
+        });
+    bool keepAllocate =
+        sources[0].kind == fir::AliasAnalysis::SourceKind::Allocate &&
+        !hasOriginOutsideBranch;
+    mergedKind = keepAllocate ? fir::AliasAnalysis::SourceKind::Allocate
+                              : fir::AliasAnalysis::SourceKind::Indirect;
+    mergedAttrs = sources[0].attributes;
+  } else {
+    mergedKind = sources[0].kind;
+    mergedAttrs = sources[0].attributes;
+  }
+
+  fir::AliasAnalysis::Source::SourceOrigin mergedOrigin;
+  if (allOriginsSame) {
+    mergedOrigin = sources[0].origin;
+  } else {
+    // Set the origin as the fallbackValue provided - which should be the
+    // region-branch result.
+    mergedOrigin = {fallbackValue, nullptr, followingData};
+  }
+
+  fir::AliasAnalysis::Source::AccessPath mergedPath;
+  if (allPathsSame) {
+    mergedPath = sources[0].accessPath;
+    mergedPath.isApproximate |= mergedApprox;
+  } else {
+    mergedPath = {};
+    mergedPath.isApproximate = true;
+  }
+
+  mlir::Type mergedTy = allTypesSame ? sources[0].valueType : fallbackType;
+
+  return {mergedOrigin, mergedKind, mergedTy,      mergedAttrs,
+          mergedApprox, mergedPath, mergedCaptured};
 }
 
 namespace fir {
@@ -373,6 +514,22 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
   return false;
 }
 
+/// Walk backward from \p val through FortranObjectViewOpInterface ops
+/// that have zero offset (i.e. they access the same base address).
+/// Return the root value at the end of the chain.
+static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
+  while (auto *defOp = val.getDefiningOp()) {
+    auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
+    if (!viewOp)
+      break;
+    auto offset = viewOp.getViewOffset(mlir::cast<mlir::OpResult>(val));
+    if (!offset || *offset != 0)
+      break;
+    val = viewOp.getViewSource(mlir::cast<mlir::OpResult>(val));
+  }
+  return val;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -387,6 +544,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
+
+  // If both values trace back to the same root through zero-offset view
+  // operations (e.g. embox without slice, declare, convert), they access
+  // the same underlying memory. This check avoids the case where
+  // getSource() traces through upstream operations (e.g. a sliced embox)
+  // that set approximateSource, conservatively preventing MustAlias.
+  if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
+    return AliasResult::MustAlias;
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -732,8 +898,13 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
-  if (auto call = llvm::dyn_cast<fir::CallOp>(op))
-    return getCallModRef(call, location);
+  if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
+    ModRefResult result = getCallModRef(call, location);
+    if (result != ModRefResult::getModAndRef())
+      return result;
+    // Proceed to MemoryEffectOpInterface analysis in case one
+    // is attached for fir.call.
+  }
 
   // Build a ModRefResult by merging the behavior of the effects of this
   // operation.
@@ -765,6 +936,12 @@ ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
   for (const MemoryEffects::EffectInstance &effect : effects) {
     // MemAlloc and MemFree are not mod-ref effects.
     if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
+
+    // An effect on a non-addressable resource cannot affect
+    // memory pointed to by 'location'.
+    mlir::SideEffects::Resource *resource = effect.getResource();
+    if (!resource->isAddressable())
       continue;
 
     // Check for an alias between the effect and our memory location.
@@ -799,8 +976,35 @@ ModRefResult AliasAnalysis::getModRef(mlir::Region &region,
   return result;
 }
 
+/// Walk through any pass-through block-arg<->operand links the analysis
+/// understands, replacing \p v with the corresponding operand at each step,
+/// and return the resulting value. A "pass-through block argument" is one
+/// that does not introduce a new value relative to its corresponding operand
+/// from the standpoint of memory addressing, so walking past it is safe for
+/// alias analysis.
+///
+/// Currently the only handled pass-through link is the
+/// operand<->block-argument mapping of an acc.compute_region.
+static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
+  while (v) {
+    mlir::Value operand = mlir::acc::getACCOperandForBlockArg(v);
+    if (!operand)
+      break;
+    v = operand;
+  }
+  return v;
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint) {
+  // If v is a pass-through block argument (see walkBlockArgPassThroughs),
+  // continue from the underlying operand so the tracking loop below has a
+  // defining op to chew on. Without this, a recursive query like the one in
+  // the fir.load (box) branch below would immediately return
+  // SourceKind::Unknown (no defining op and not a function dummy argument),
+  // which then forces SourceKind::Indirect for box loads from such block args
+  // and pessimizes alias analysis.
+  v = walkBlockArgPassThroughs(v);
   auto *defOp = v.getDefiningOp();
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
@@ -822,17 +1026,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
   while (defOp && !breakFromLoop) {
-    // Value-scoped allocation detection via effects.
-    if (classifyAllocateFromEffects(defOp, v) == SourceKind::Allocate) {
-      type = SourceKind::Allocate;
-      break;
-    }
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
     auto opResult = mlir::cast<OpResult>(v);
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
+    // Value-scoped allocation detection via effects.
+    if (classifyAllocateFromEffects(opResult) == SourceKind::Allocate) {
+      type = SourceKind::Allocate;
+      break;
+    }
     ty = opResult.getType();
     std::optional<AliasAnalysis::Source> accSourceReturn;
+    std::optional<AliasAnalysis::Source> regionBranchReturn;
     llvm::TypeSwitch<Operation *>(defOp)
         .Case([&](hlfir::AsExprOp op) {
           // TODO: we should probably always report hlfir.as_expr
@@ -865,6 +1070,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getArray();
           defOp = v.getDefiningOp();
           approximateSource = true;
+        })
+        .Case([&](fir::AbsentOp op) {
+          // Although fir.absent is not a local allocation, we treat it
+          // similarly so that it can be disambiguated that it doesn't alias any
+          // other values. Two entities coming from separate fir.absent ops
+          // also do not alias each other.
+          type = SourceKind::Allocate;
+          breakFromLoop = true;
         })
         .Case([&](fir::LoadOp op) {
           // If load is inside target and it points to mapped item,
@@ -926,11 +1139,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             } else {
               auto def = llvm::cast<mlir::Value>(boxSrc.origin.u);
               bool classified = false;
-              if (auto defDefOp = def.getDefiningOp()) {
-                if (classifyAllocateFromEffects(defDefOp, def) ==
+              if (auto defAsOpResult = mlir::dyn_cast<OpResult>(def)) {
+                if (classifyAllocateFromEffects(defAsOpResult) ==
                     SourceKind::Allocate) {
                   v = def;
-                  defOp = defDefOp;
+                  defOp = defAsOpResult.getOwner();
                   type = SourceKind::Allocate;
                   classified = true;
                 }
@@ -1189,12 +1402,53 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
               followingData, attributes);
           breakFromLoop = true;
         })
+        .Case([&](mlir::RegionBranchOpInterface branch) {
+          llvm::SmallVector<mlir::Value, 4> predecessors;
+          getRegionBranchPredecessorValuesForParentResult(branch, opResult,
+                                                          predecessors);
+          if (predecessors.empty() ||
+              llvm::all_of(predecessors,
+                           [&](mlir::Value pred) { return pred == v; })) {
+            regionBranchReturn = {{{v, instantiationPoint, followingData},
+                                   SourceKind::Unknown,
+                                   ty,
+                                   attributes,
+                                   /*approximateSource=*/true,
+                                   /*accessPath=*/{},
+                                   isCapturedInInternalProcedure}};
+            breakFromLoop = true;
+            return;
+          }
+          llvm::SmallVector<AliasAnalysis::Source, 4> predSources;
+          predSources.reserve(predecessors.size());
+          for (mlir::Value pred : predecessors)
+            predSources.push_back(getSource(pred, getLastInstantiationPoint));
+          regionBranchReturn = mergeRegionBranchPredecessorSources(
+              predSources, v, ty, followingData);
+          regionBranchReturn->attributes |= attributes;
+          regionBranchReturn->approximateSource |= approximateSource;
+          regionBranchReturn->isCapturedInInternalProcedure |=
+              isCapturedInInternalProcedure;
+          breakFromLoop = true;
+        })
         .Default([&](auto op) {
           defOp = nullptr;
           breakFromLoop = true;
         });
+    if (regionBranchReturn)
+      return *regionBranchReturn;
     if (accSourceReturn)
       return *accSourceReturn;
+
+    if (!breakFromLoop && v) {
+      // If we have reached a pass-through block argument, walk past it so
+      // the next loop iteration sees the underlying defining op.
+      mlir::Value newV = walkBlockArgPassThroughs(v);
+      if (newV != v) {
+        v = newV;
+        defOp = v.getDefiningOp();
+      }
+    }
   }
   if (!defOp && type == SourceKind::Unknown) {
     // Check if the memory source is coming through a dummy argument.
@@ -1210,14 +1464,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       // hlfir.eval_in_mem block operands is allocated by the operation.
       type = SourceKind::Allocate;
       ty = v.getType();
-    } else if (mlir::Operation *accOp =
-                   mlir::acc::getACCDataClauseOpForBlockArg(v)) {
-      return getSourceForACCMappedValue(
-          v, accOp,
-          [&](mlir::Value x) {
-            return getSource(x, getLastInstantiationPoint);
-          },
-          followingData, attributes);
     }
   }
 

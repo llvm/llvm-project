@@ -59,16 +59,6 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
 CompilerType ResolveTypeByName(const std::string &name,
                                ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
@@ -103,20 +93,10 @@ CompilerType ResolveTypeByName(const std::string &name,
 llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
                                            DILLexer lexer,
                                            std::shared_ptr<StackFrame> frame_sp,
-
                                            lldb::DynamicValueType use_dynamic,
-                                           uint32_t options) {
-  const bool check_ptr_vs_member =
-      (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
-  const bool no_synth_child =
-      (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
-
+                                           lldb::DILMode mode) {
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic,
-                   !no_synth_child, !no_fragile_ivar, check_ptr_vs_member,
-                   error);
+  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, error, mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -129,13 +109,11 @@ llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<StackFrame> frame_sp,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error)
+                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
+                     lldb::DILMode mode)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member) {}
+      m_mode(mode) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -148,21 +126,73 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    cast_expression
+//    shift_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseShiftExpression(); }
+
+// Parse a shift_expression.
+//
+//  shift_expression:
+//    additive_expression {"<<" additive_expression}
+//    additive_expression {">>" additive_expression}
+//
+ASTNodeUP DILParser::ParseShiftExpression() {
+  auto lhs = ParseAdditiveExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  while (CurToken().IsOneOf({Token::lessless, Token::greatergreater})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseAdditiveExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an additive_expression.
 //
 //  additive_expression:
-//    cast_expression {"+" cast_expression}
+//    multiplicative_expression {"+" multiplicative_expression}
+//    multiplicative_expression {"-" multiplicative_expression}
 //
 ASTNodeUP DILParser::ParseAdditiveExpression() {
-  auto lhs = ParseCastExpression();
+  auto lhs = ParseMultiplicativeExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   while (CurToken().IsOneOf({Token::plus, Token::minus})) {
     Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseMultiplicativeExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a multiplicative_expression.
+//
+//  multiplicative_expression:
+//    cast_expression {"*" cast_expression}
+//    cast_expression {"/" cast_expression}
+//    cast_expression {"%" cast_expression}
+//
+ASTNodeUP DILParser::ParseMultiplicativeExpression() {
+  auto lhs = ParseCastExpression();
+
+  while (CurToken().IsOneOf({Token::star, Token::slash, Token::percent})) {
+    Token token = CurToken();
+    if (token.Is(Token::star) && m_mode != lldb::eDILModeFull) {
+      BailOut("binary multiplication (*) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
     assert(rhs && "ASTNodeUP must not contain a nullptr");
@@ -500,7 +530,7 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
 
   if (type_name.size() > 0) {
     lldb::TargetSP target_sp = m_ctx_scope->CalculateTarget();
-    ConstString const_type_name(type_name.c_str());
+    ConstString const_type_name(type_name);
     for (auto type_system_sp : target_sp->GetScratchTypeSystems())
       if (auto compiler_type =
               type_system_sp->GetBuiltinTypeByName(const_type_name))

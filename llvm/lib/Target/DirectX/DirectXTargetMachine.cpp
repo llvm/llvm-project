@@ -50,6 +50,7 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
@@ -81,6 +82,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
   initializeDSELegacyPassPass(*PR);
   initializeDXILCBufferAccessLegacyPass(*PR);
+  initializeStripConvergenceIntrinsicsLegacyPassPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -110,8 +112,13 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
+    CodeGenOptLevel OptLevel = getDirectXTargetMachine().getOptLevel();
+
+    addPass(createStripConvergenceIntrinsicsPass());
     addPass(createDXILFinalizeLinkageLegacyPass());
-    addPass(createGlobalDCEPass());
+    if (OptLevel != CodeGenOptLevel::None) {
+      addPass(createGlobalDCEPass());
+    }
     addPass(createDXILMemIntrinsicsLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
@@ -122,7 +129,9 @@ public:
     addPass(createScalarizerPass(DxilScalarOptions));
     addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
-    addPass(createDeadStoreEliminationPass());
+    if (OptLevel != CodeGenOptLevel::None) {
+      addPass(createDeadStoreEliminationPass());
+    }
     addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILResourceImplicitBindingLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());

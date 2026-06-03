@@ -382,7 +382,7 @@ Outlined resume part of the coroutine will reside in function `f.resume`:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.resume(ptr %frame.ptr.resume) {
+  define internal void @f.resume(ptr %frame.ptr.resume) {
   entry:
     %inc.spill.addr = getelementptr %f.frame, ptr %frame.ptr.resume, i64 0, i32 2
     %inc.spill = load i32, ptr %inc.spill.addr, align 4
@@ -396,7 +396,7 @@ Whereas function `f.destroy` will contain the cleanup code for the coroutine:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.destroy(ptr %frame.ptr.destroy) {
+  define internal void @f.destroy(ptr %frame.ptr.destroy) {
   entry:
     tail call void @free(ptr %frame.ptr.destroy)
     ret void
@@ -506,7 +506,7 @@ as follows:
 
 .. code-block:: llvm
 
-  define internal fastcc void @f.Resume(ptr %FramePtr) {
+  define internal void @f.Resume(ptr %FramePtr) {
   entry.Resume:
     %index.addr = getelementptr inbounds %f.Frame, ptr %FramePtr, i64 0, i32 2
     %index = load i8, ptr %index.addr, align 1
@@ -1493,9 +1493,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 Overview:
 """""""""
 
-The '``llvm.coro.end``' marks the point where execution of the resume part of
-the coroutine should end and control should return to the caller.
-
+The '``llvm.coro.end``' marks the point where access to the coroutine frame ends.
 
 Arguments:
 """"""""""
@@ -1517,9 +1515,14 @@ Only none token is allowed for coro.end calls in unwind sections
 
 Semantics:
 """"""""""
-The purpose of this intrinsic is to allow frontends to mark the cleanup and
-other code that is only relevant during the initial invocation of the coroutine
-and should not be present in resume and destroy parts.
+The purposes of `coro.end` are:
+
+- Allow frontends to mark the cleanup and other code that is only relevant during
+  the initial invocation of the coroutine and should not be present in resume and
+  destroy parts.
+
+- Coroutine frame typically escapes. The call to `coro.end` prevents other
+  optimizations from erasing stores to frame before returning.
 
 In returned-continuation lowering, ``llvm.coro.end`` fully destroys the
 coroutine frame.  If the second argument is `false`, it also returns from
@@ -2193,8 +2196,7 @@ CoroEarly
 The CoroEarly pass ensures later middle end passes correctly interpret coroutine 
 semantics and lowers coroutine intrinsics that not needed to be preserved to 
 help later coroutine passes. This pass lowers `coro.promise`_, `coro.frame`_ and 
-`coro.done`_ intrinsics. Afterwards, it replaces uses of promise alloca with 
-`coro.promise`_ intrinsic.
+`coro.done`_ intrinsics.
 
 .. _CoroSplit:
 

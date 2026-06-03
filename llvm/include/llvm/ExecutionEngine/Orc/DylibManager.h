@@ -19,8 +19,6 @@
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
 #include <future>
-#include <mutex>
-#include <vector>
 
 namespace llvm::orc {
 
@@ -28,14 +26,6 @@ class SymbolLookupSet;
 
 class LLVM_ABI DylibManager {
 public:
-  /// A pair of a dylib and a set of symbols to be looked up.
-  struct LookupRequest {
-    LookupRequest(tpctypes::DylibHandle Handle, const SymbolLookupSet &Symbols)
-        : Handle(Handle), Symbols(Symbols) {}
-    tpctypes::DylibHandle Handle;
-    const SymbolLookupSet &Symbols;
-  };
-
   virtual ~DylibManager();
 
   /// Load the dynamic library at the given path and return a handle to it.
@@ -45,29 +35,30 @@ public:
 
   /// Search for symbols in the target process.
   ///
-  /// The result of the lookup is a 2-dimensional array of target addresses
-  /// that correspond to the lookup order. If a required symbol is not
-  /// found then this method will return an error. If a weakly referenced
-  /// symbol is not found then it be assigned a '0' value.
-  Expected<std::vector<tpctypes::LookupResult>>
-  lookupSymbols(ArrayRef<LookupRequest> Request) {
-    std::promise<MSVCPExpected<std::vector<tpctypes::LookupResult>>> RP;
+  /// The result of the lookup is an array of target addresses that correspond
+  /// to the lookup order. If a required symbol is not found then this method
+  /// will return an error. If a weakly referenced symbol is not found then it
+  /// will be assigned a '0' value.
+  Expected<tpctypes::LookupResult>
+  lookupSymbols(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols) {
+    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
     auto RF = RP.get_future();
-    lookupSymbolsAsync(Request,
+    lookupSymbolsAsync(H, Symbols,
                        [&RP](auto Result) { RP.set_value(std::move(Result)); });
     return RF.get();
   }
 
   using SymbolLookupCompleteFn =
-      unique_function<void(Expected<std::vector<tpctypes::LookupResult>>)>;
+      unique_function<void(Expected<tpctypes::LookupResult>)>;
 
   /// Search for symbols in the target process.
   ///
-  /// The result of the lookup is a 2-dimensional array of target addresses
-  /// that correspond to the lookup order. If a required symbol is not
-  /// found then this method will return an error. If a weakly referenced
-  /// symbol is not found then it be assigned a '0' value.
-  virtual void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+  /// The result of the lookup is an array of target addresses that correspond
+  /// to the lookup order. If a required symbol is not found then this method
+  /// will return an error. If a weakly referenced symbol is not found then it
+  /// will be assigned a '0' value.
+  virtual void lookupSymbolsAsync(tpctypes::DylibHandle H,
+                                  const SymbolLookupSet &Symbols,
                                   SymbolLookupCompleteFn F) = 0;
 };
 
