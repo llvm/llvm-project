@@ -1779,6 +1779,16 @@ public:
     return Insert(BinOp, Name);
   }
 
+  Value *CreateExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                          bool IsExact, const Twine &Name = "") {
+    if (Value *V = Folder.FoldExactBinOp(Opc, LHS, RHS, IsExact))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsExact)
+      BinOp->setIsExact(IsExact);
+    return Insert(BinOp, Name);
+  }
+
   Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "",
                           Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
