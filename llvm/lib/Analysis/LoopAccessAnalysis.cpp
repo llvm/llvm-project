@@ -781,6 +781,11 @@ static std::optional<StencilDecomposition>
 decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
   StencilDecomposition D;
 
+  // The only caller passes a difference of two pointer Starts, and a Start is
+  // always loop-invariant (getStartAndEndForAccess asserts it). So Expr is
+  // loop-invariant and every term below is loop-invariant too.
+  assert(SE.isLoopInvariant(Expr, &L) && "expected a loop-invariant offset");
+
   // Collect top-level additive terms.
   SmallVector<const SCEV *, 4> Terms;
   if (auto *Add = dyn_cast<SCEVAddExpr>(Expr))
@@ -797,17 +802,14 @@ decomposeStencilOffset(const SCEV *Expr, ScalarEvolution &SE, const Loop &L) {
         return std::nullopt;
       D.Constant += *V;
     } else if (match(Term, m_scev_Mul(m_SCEVConstant(C), m_SCEV(Stride)))) {
-      // Canonical 2-operand pattern (constant * loop-invariant).
-      if (!SE.isLoopInvariant(Stride, &L))
-        return std::nullopt;
+      assert(SE.isLoopInvariant(Stride, &L) && "stride must be loop-invariant");
       auto V = C->getAPInt().trySExtValue();
       if (!V)
         return std::nullopt;
       D.Coefficients[Stride] += *V;
-    } else if (SE.isLoopInvariant(Term, &L)) {
-      D.Coefficients[Term] += 1;
     } else {
-      return std::nullopt;
+      assert(SE.isLoopInvariant(Term, &L) && "term must be loop-invariant");
+      D.Coefficients[Term] += 1;
     }
   }
   return D;
@@ -889,15 +891,26 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
       continue;
     }
 
-    // Skip groups with predicated accesses. For conditional loads/stores
-    // (blocks that do not dominate the loop latch), the SCEV-derived bounds
-    // overapproximate the actually-accessed range. Merging such bounds would
-    // widen the range further and can cause false runtime overlap detection.
+    // We do not allow predicated accesses. They may result in overestimation
+    // of the boundaries. Imagine a stencil access where we must skip some first
+    // or last iterations because the stencil does not fit the array and has to
+    // go from 1..N-2 although the array is [0..N-1] (for example the dilate
+    // kernel from llvm-test-suite ImageProcessing/Dilate, which reads the
+    // neighbours of every pixel and guards the borders with conditions).
+    // Merging such bounds would widen the already overestimated range further.
+    // This is not necessary in StencilMergePolicy::Auto mode, but skipping it
+    // in StencilMergePolicy::Force mode causes a regression on that benchmark.
+    //
+    // Look at the block of the actual load/store, not of the pointer: a
+    // loop-invariant address is computed in the preheader, outside the loop.
     if (any_of(AllMembers, [&](unsigned Idx) {
-          Value *PtrVal = Pointers[Idx].PointerValue;
-          auto *I = dyn_cast<Instruction>(PtrVal);
-          return I && LoopAccessInfo::blockNeedsPredication(I->getParent(), &L,
-                                                            DC.getDT());
+          const PointerInfo &P = Pointers[Idx];
+          return any_of(
+              DC.getInstructionsForAccess(P.PointerValue, P.IsWritePtr),
+              [&](Instruction *I) {
+                return LoopAccessInfo::blockNeedsPredication(I->getParent(), &L,
+                                                             DC.getDT());
+              });
         })) {
       LLVM_DEBUG(dbgs() << "LAA: Skipping DepSet(" << DepId << "," << ASId
                         << ") with predicated access\n");
@@ -939,10 +952,13 @@ void RuntimePointerChecking::mergeStencilGroups(PredicatedScalarEvolution &PSE,
       continue;
     }
 
-    // Verify all members have the same recurrence step w.r.t. the analyzed
-    // loop. MergedHigh is computed as BaseHigh + max_offsets, which is only
-    // correct when every member's High-Low range equals BaseHigh - BaseLow.
-    // Different steps (e.g., 8 vs 16) produce different ranges.
+    // Require all members to have the same recurrence step. Equal ranges
+    // (checked above) are what the merged bounds actually need, and a different
+    // step usually means a different range. But ranges can be equal by accident
+    // - e.g. an invariant access whose range matches the stride, or a loop with
+    // a single iteration. The base member is picked arbitrarily, so together
+    // with the BaseStep check above this keeps the decision the same no matter
+    // which member comes first: we only merge recurrences with one common step.
     if (any_of(AllMembers, [&](unsigned Idx) {
           const SCEV *Step = nullptr;
           if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Pointers[Idx].Expr))
