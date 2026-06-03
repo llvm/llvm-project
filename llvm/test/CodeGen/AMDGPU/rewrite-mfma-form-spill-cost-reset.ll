@@ -529,7 +529,7 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_MOV_B32_]], 1, implicit-def dead $scc
   ; CHECK-NEXT:   S_CMP_LT_I32 [[S_MOV_B32_]], [[S_LOAD_DWORD_IMM]], implicit-def $scc
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[V_MOV_B32_e32_]], 8, [[V_MOV_B32_e32_]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit killed $scc
+  ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.1, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.epilogue:
