@@ -12,15 +12,15 @@
 module {
   cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: !cir.float, %arg3: !cir.double) -> !s32i {
   // CHECK: llvm.func @cStyleCasts
-    %0 = cir.alloca "x1" align(4) init !u32i -> !cir.ptr<!u32i>
-    %1 = cir.alloca "x2" align(4) init !s32i -> !cir.ptr<!s32i>
-    %20 = cir.alloca "x4" align(2) init !s16i -> !cir.ptr<!s16i>
-    %2 = cir.alloca "__retval" align(4) !s32i -> !cir.ptr<!s32i>
-    %3 = cir.alloca "a" align(1) init !s8i -> !cir.ptr<!s8i>
-    %4 = cir.alloca "b" align(2) init !s16i -> !cir.ptr<!s16i>
-    %5 = cir.alloca "c" align(8) init !s64i -> !cir.ptr<!s64i>
-    %6 = cir.alloca "d" align(8) init !s64i -> !cir.ptr<!s64i>
-    %8 = cir.alloca "e" align(8) init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+    %0 = cir.alloca "x1" align(4) init : !cir.ptr<!u32i>
+    %1 = cir.alloca "x2" align(4) init : !cir.ptr<!s32i>
+    %20 = cir.alloca "x4" align(2) init : !cir.ptr<!s16i>
+    %2 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    %3 = cir.alloca "a" align(1) init : !cir.ptr<!s8i>
+    %4 = cir.alloca "b" align(2) init : !cir.ptr<!s16i>
+    %5 = cir.alloca "c" align(8) init : !cir.ptr<!s64i>
+    %6 = cir.alloca "d" align(8) init : !cir.ptr<!s64i>
+    %8 = cir.alloca "e" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
     cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
     cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
 
@@ -79,8 +79,8 @@ module {
 
   cir.func @testBoolToIntCast(%arg0: !cir.bool)  {
   // CHECK: llvm.func @testBoolToIntCast
-    %0 = cir.alloca "bl" align(1) init !cir.bool -> !cir.ptr<!cir.bool>
-    %1 = cir.alloca "y" align(1) init !u8i -> !cir.ptr<!u8i>
+    %0 = cir.alloca "bl" align(1) init : !cir.ptr<!cir.bool>
+    %1 = cir.alloca "y" align(1) init : !cir.ptr<!u8i>
     cir.store %arg0, %0 : !cir.bool, !cir.ptr<!cir.bool>
 
     %2 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool

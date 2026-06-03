@@ -16,8 +16,8 @@ extern "C" void use() {
   int g = getStruct(0).member;
 
   // CIR-LABEL: @use()
-  // CIR: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init !s32i -> !cir.ptr<!s32i>
-  // CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca {{.*}} !rec_Struct -> !cir.ptr<!rec_Struct>
+  // CIR: %[[G_ALLOCA:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_Struct>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
   // CIR: %[[GET_STRUCT_CALL:.*]] = cir.call @getStruct(%[[ZERO]])
   // CIR: cir.store{{.*}} %[[GET_STRUCT_CALL]], %[[TEMP_ALLOCA]]

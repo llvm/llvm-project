@@ -26,7 +26,7 @@ void f() {
 }
 
 // CIR: cir.func {{.*}} @_Z1fv()
-// CIR:   %[[D:.*]] = cir.alloca "d" {{.*}} init !rec_Derived -> !cir.ptr<!rec_Derived>
+// CIR:   %[[D:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!rec_Derived>
 // CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) : (!cir.ptr<!rec_Derived> {{.*}}) -> ()
 // CIR:   %[[D_BASE:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4Base1fEv(%[[D_BASE]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
@@ -48,7 +48,7 @@ void callBaseUsingDerived(Derived *derived) {
 
 
 // CIR: cir.func {{.*}} @_Z20callBaseUsingDerivedP7Derived(%[[DERIVED_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}})
-// CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca "derived" {{.*}} init !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.ptr<!rec_Derived>>
+// CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca "derived" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED:.*]] = cir.load{{.*}} %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr %[[DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
@@ -71,8 +71,8 @@ Base *returnBaseFromDerived(Derived* derived) {
 }
 
 // CIR: cir.func {{.*}} @_Z21returnBaseFromDerivedP7Derived(%[[DERIVED_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}}) -> (!cir.ptr<!rec_Base>{{.*}})
-// CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca "derived" {{.*}} init !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.ptr<!rec_Derived>>
-// CIR:   %[[BASE_ADDR:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!rec_Base> -> !cir.ptr<!cir.ptr<!rec_Base>>
+// CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca "derived" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
+// CIR:   %[[BASE_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_Base>>
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED:.*]] = cir.load{{.*}} %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr %[[DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>

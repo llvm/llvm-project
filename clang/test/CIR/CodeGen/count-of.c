@@ -10,8 +10,8 @@ unsigned long vla_with_array_element_type_with_const_size() {
   return _Countof(int[5][size]);
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} !s64i -> !cir.ptr<!s64i>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!u64i>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} : !cir.ptr<!s64i>
 // CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !u64i
 // CIR: cir.store %[[CONST_5]], %[[RET_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[RET_VAL:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!u64i>, !u64i
@@ -31,8 +31,8 @@ unsigned long vla_with_array_element_type_non_const_size() {
   return _Countof(int[size][size]);
 }
 
-// CIR: %[[REET_ADDR:.*]] = cir.alloca "__retval" {{.*}} !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} !s64i -> !cir.ptr<!s64i>
+// CIR: %[[REET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!u64i>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} : !cir.ptr<!s64i>
 // CIR: %[[TMP_SIZE:.*]] = cir.load {{.*}} %[[SIZE_ADDR]] : !cir.ptr<!s64i>, !s64i
 // CIR: %[[TMP_SIZE_U64:.*]] = cir.cast integral %[[TMP_SIZE]] : !s64i -> !u64i
 // CIR: cir.store %[[TMP_SIZE_U64]], %[[RET_ADDR]] : !u64i, !cir.ptr<!u64i>

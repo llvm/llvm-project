@@ -8,8 +8,8 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func{{.*}} @_Z15cxxstaticcast_0j
-// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init !u32i -> !cir.ptr<!u32i>
-// CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) !u8i -> !cir.ptr<!u8i>
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
+// CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) : !cir.ptr<!u8i>
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
 // CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast integral %[[XVAL]] : !u32i -> !u8i
@@ -90,7 +90,7 @@ bool cptr(void *d) {
 }
 
 // CIR: cir.func{{.*}} @_Z4cptrPv(%arg0: !cir.ptr<!void>
-// CIR:   %[[DPTR:[0-9]+]] = cir.alloca "d" align(8) init !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:   %[[DPTR:[0-9]+]] = cir.alloca "d" align(8) init : !cir.ptr<!cir.ptr<!void>>
 
 // CIR:   %[[DVAL:[0-9]+]] = cir.load{{.*}} %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool

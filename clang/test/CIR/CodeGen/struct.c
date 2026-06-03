@@ -167,7 +167,7 @@ void f(void) {
 }
 
 // CIR:      cir.func{{.*}} @f()
-// CIR-NEXT:   cir.alloca "p" align(8) !cir.ptr<!rec_IncompleteS> -> !cir.ptr<!cir.ptr<!rec_IncompleteS>>
+// CIR-NEXT:   cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!rec_IncompleteS>>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f()
@@ -184,7 +184,7 @@ void f2(void) {
 }
 
 // CIR:      cir.func{{.*}} @f2()
-// CIR-NEXT:   cir.alloca "s" align(4) !rec_CompleteS -> !cir.ptr<!rec_CompleteS>
+// CIR-NEXT:   cir.alloca "s" align(4) : !cir.ptr<!rec_CompleteS>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f2()

@@ -22,10 +22,10 @@ B makeB();
 A *deact_simple() { return new A(makeB()); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12deact_simplev() -> !cir.ptr<!rec_A>{{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
-// CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
-// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_B -> !cir.ptr<!rec_B>
-// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
@@ -106,7 +106,7 @@ A *deact_if(bool cond) {
 
 // CIR-LABEL: cir.func {{.*}} @_Z8deact_ifb
 // CIR:   cir.if {{.*}} {
-// CIR:     %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:     %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
 // CIR:     cir.cleanup.scope {
 // CIR:       %[[TRUE:.*]] = cir.const #true
@@ -162,7 +162,7 @@ A *deact_if(bool cond) {
 A *deact_ternary(bool cond) { return (new A(makeB()), cond) ? nullptr : nullptr; }
 
 // CIR-LABEL: cir.func {{.*}} @_Z13deact_ternaryb
-// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[TRUE:.*]] = cir.const #true
@@ -218,7 +218,7 @@ A *deact_while_cond(int n) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z16deact_while_condi
-// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.while {
 // CIR:     %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}
 // CIR:     cir.cleanup.scope {
@@ -297,7 +297,7 @@ A *deact_switch(int kind) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12deact_switchi
-// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.switch({{.*}}) {
 // CIR:     cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:       %[[PTR:.*]] = cir.call @_Znwm({{.*}}) {{{.*}}builtin}

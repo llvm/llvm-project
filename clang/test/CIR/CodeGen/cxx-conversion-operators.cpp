@@ -28,8 +28,8 @@ void test() {
 }
 
 // CIR: cir.func {{.*}} @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> (!s32i{{.*}})
-// CIR:   %[[THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_out_of_line_operator> -> !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]] : !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
 // CIR:   %[[THIS_LOAD:.+]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>, !cir.ptr<!rec_out_of_line_operator>
 // CIR:   %[[CONST_123:.+]] = cir.const #cir.int<123> : !s32i
@@ -39,8 +39,8 @@ void test() {
 // CIR: }
 
 // CIR: cir.func no_inline comdat linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> (!s32i{{.*}})
-// CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_inline_operator> -> !cir.ptr<!cir.ptr<!rec_inline_operator>>
-// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_inline_operator>>
+// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
 // CIR:   %[[INLINE_THIS_LOAD:.+]] = cir.load %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_inline_operator>>, !cir.ptr<!rec_inline_operator>
 // CIR:   %[[CONST_987:.+]] = cir.const #cir.int<987> : !s32i
@@ -50,7 +50,7 @@ void test() {
 // CIR: }
 
 // CIR: cir.func {{.*}} @_Z4testv()
-// CIR:   %[[X_ALLOCA:.+]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[X_ALLOCA:.+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[I_ALLOCA:.+]] = cir.alloca "i" {{.*}}
 // CIR:   %[[O_ALLOCA:.+]] = cir.alloca "o" {{.*}}
 // CIR:   %[[CONST_42:.+]] = cir.const #cir.int<42> : !s32i

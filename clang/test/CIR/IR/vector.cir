@@ -20,33 +20,33 @@ cir.global external @vec_d = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2>
 // CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 
 cir.func @vec_int_test() {
-  %0 = cir.alloca "a" align(16) !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-  %1 = cir.alloca "b" align(16) !cir.vector<3 x !s32i> -> !cir.ptr<!cir.vector<3 x !s32i>>
-  %2 = cir.alloca "c" align(8) !cir.vector<2 x !s32i> -> !cir.ptr<!cir.vector<2 x !s32i>>
-  %3 = cir.alloca "d" align(4) !cir.vector<[1] x !s32i> -> !cir.ptr<!cir.vector<[1] x !s32i>>
+  %0 = cir.alloca "a" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
+  %1 = cir.alloca "b" align(16) : !cir.ptr<!cir.vector<3 x !s32i>>
+  %2 = cir.alloca "c" align(8) : !cir.ptr<!cir.vector<2 x !s32i>>
+  %3 = cir.alloca "d" align(4) : !cir.ptr<!cir.vector<[1] x !s32i>>
   cir.return
 }
 
 // CHECK: cir.func{{.*}} @vec_int_test() {
-// CHECK:  %0 = cir.alloca "a" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:  %1 = cir.alloca "b" {{.*}} !cir.vector<3 x !s32i> -> !cir.ptr<!cir.vector<3 x !s32i>>
-// CHECK:  %2 = cir.alloca "c" {{.*}} !cir.vector<2 x !s32i> -> !cir.ptr<!cir.vector<2 x !s32i>>
-// CHECK:  %3 = cir.alloca "d" {{.*}} !cir.vector<[1] x !s32i> -> !cir.ptr<!cir.vector<[1] x !s32i>>
+// CHECK:  %0 = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:  %1 = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<3 x !s32i>>
+// CHECK:  %2 = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<2 x !s32i>>
+// CHECK:  %3 = cir.alloca "d" {{.*}} : !cir.ptr<!cir.vector<[1] x !s32i>>
 // CHECK:  cir.return
 // CHECK: }
 
 cir.func @vec_double_test() {
-  %0 = cir.alloca "a" align(16) !cir.vector<2 x !cir.double> -> !cir.ptr<!cir.vector<2 x !cir.double>>
+  %0 = cir.alloca "a" align(16) : !cir.ptr<!cir.vector<2 x !cir.double>>
   cir.return
 }
 
 // CHECK: cir.func{{.*}} @vec_double_test() {
-// CHECK:  %0 = cir.alloca "a" {{.*}} !cir.vector<2 x !cir.double> -> !cir.ptr<!cir.vector<2 x !cir.double>>
+// CHECK:  %0 = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CHECK:  cir.return
 // CHECK: }
 
 cir.func @local_vector_create_test() {
-    %0 = cir.alloca "a" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+    %0 = cir.alloca "a" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
     %1 = cir.const #cir.int<1> : !s32i
     %2 = cir.const #cir.int<2> : !s32i
     %3 = cir.const #cir.int<3> : !s32i
@@ -57,7 +57,7 @@ cir.func @local_vector_create_test() {
 }
 
 // CHECK: cir.func{{.*}} @local_vector_create_test() {
-// CHECK:   %0 = cir.alloca "a" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:   %0 = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:   %1 = cir.const #cir.int<1> : !s32i
 // CHECK:   %2 = cir.const #cir.int<2> : !s32i
 // CHECK:   %3 = cir.const #cir.int<3> : !s32i
@@ -68,8 +68,8 @@ cir.func @local_vector_create_test() {
 // CHECK: }
 
 cir.func @vector_extract_element_test() {
-    %0 = cir.alloca "d" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %1 = cir.alloca "e" align(4) init !s32i -> !cir.ptr<!s32i>
+    %0 = cir.alloca "d" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
+    %1 = cir.alloca "e" align(4) init : !cir.ptr<!s32i>
     %2 = cir.const #cir.int<1> : !s32i
     %3 = cir.const #cir.int<2> : !s32i
     %4 = cir.const #cir.int<3> : !s32i
@@ -84,8 +84,8 @@ cir.func @vector_extract_element_test() {
 }
 
 // CHECK: cir.func{{.*}} @vector_extract_element_test() {
-// CHECK:    %0 = cir.alloca "d" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:    %1 = cir.alloca "e" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CHECK:    %0 = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %1 = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CHECK:    %2 = cir.const #cir.int<1> : !s32i
 // CHECK:    %3 = cir.const #cir.int<2> : !s32i
 // CHECK:    %4 = cir.const #cir.int<3> : !s32i
@@ -100,7 +100,7 @@ cir.func @vector_extract_element_test() {
 // CHECK: }
 
 cir.func @vector_insert_element_test() {
-    %0 = cir.alloca "a" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+    %0 = cir.alloca "a" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
     %1 = cir.const #cir.int<1> : !s32i
     %2 = cir.const #cir.int<2> : !s32i
     %3 = cir.const #cir.int<3> : !s32i
@@ -119,7 +119,7 @@ cir.func @vector_insert_element_test() {
 }
 
 // CHECK: cir.func{{.*}} @vector_insert_element_test() {
-// CHECK:    %0 = cir.alloca "a" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %0 = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:    %1 = cir.const #cir.int<1> : !s32i
 // CHECK:    %2 = cir.const #cir.int<2> : !s32i
 // CHECK:    %3 = cir.const #cir.int<3> : !s32i
@@ -138,9 +138,9 @@ cir.func @vector_insert_element_test() {
 // CHECK:  }
 
 cir.func @vector_compare_test() {
-    %0 = cir.alloca "a" align(16) !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %1 = cir.alloca "b" align(16) !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %2 = cir.alloca "o" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+    %0 = cir.alloca "a" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
+    %1 = cir.alloca "b" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
+    %2 = cir.alloca "o" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
     %3 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
     cir.store %3, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
     %4 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
@@ -153,9 +153,9 @@ cir.func @vector_compare_test() {
 }
 
 // CHECK: cir.func{{.*}} @vector_compare_test() {
-// CHECK:    %[[VEC_A:.*]] = cir.alloca "a" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:    %[[VEC_B:.*]] = cir.alloca "b" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:    %[[INIT:.*]] = cir.alloca "o" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[VEC_B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[INIT:.*]] = cir.alloca "o" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:    %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CHECK:    cir.store %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:    %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
@@ -168,9 +168,9 @@ cir.func @vector_compare_test() {
 // CHECK: }
 
 cir.func @vector_shuffle_dynamic_test() {
-    %0 = cir.alloca "a" align(16) !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %1 = cir.alloca "b" align(16) !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %2 = cir.alloca "r" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+    %0 = cir.alloca "a" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
+    %1 = cir.alloca "b" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
+    %2 = cir.alloca "r" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
     %3 = cir.load align(16) %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
     %4 = cir.load align(16) %1 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
     %5 = cir.vec.shuffle.dynamic %3 : !cir.vector<4 x !s32i>, %4 : !cir.vector<4 x !s32i>
@@ -179,9 +179,9 @@ cir.func @vector_shuffle_dynamic_test() {
 }
 
 // CHECK: cir.func{{.*}} @vector_shuffle_dynamic_test() {
-// CHECK:    %[[VEC_A:.*]] = cir.alloca "a" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:    %[[VEC_B:.*]] = cir.alloca "b" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK:    %[[RES:.*]] = cir.alloca "r" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[VEC_B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK:    %[[RES:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:    %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CHECK:    %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CHECK:    %[[VEC_SHUF:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<4 x !s32i>, %[[TMP_B]] : !cir.vector<4 x !s32i>
@@ -190,8 +190,8 @@ cir.func @vector_shuffle_dynamic_test() {
 // CHECK: }
 
 cir.func @vector_splat_test() {
-    %0 = cir.alloca "a" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-    %1 = cir.alloca "shl" align(16) init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+    %0 = cir.alloca "a" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
+    %1 = cir.alloca "shl" align(16) init : !cir.ptr<!cir.vector<4 x !s32i>>
     %2 = cir.const #cir.int<1> : !s32i
     %3 = cir.const #cir.int<2> : !s32i
     %4 = cir.const #cir.int<3> : !s32i
@@ -207,8 +207,8 @@ cir.func @vector_splat_test() {
 }
 
 // CHECK: cir.func{{.*}} @vector_splat_test() {
-// CHECK-NEXT: %[[VEC:.*]] = cir.alloca "a" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CHECK-NEXT: %[[SHL_RES:.*]] = cir.alloca "shl" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK-NEXT: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CHECK-NEXT: %[[SHL_RES:.*]] = cir.alloca "shl" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK-NEXT: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
 // CHECK-NEXT: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i

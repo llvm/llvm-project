@@ -6,7 +6,7 @@
 module {
   cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
   cir.func dso_local @_Z3foov() {
-    %0 = cir.alloca "s" align(16) init !cir.array<!rec_S x 42> -> !cir.ptr<!cir.array<!rec_S x 42>>
+    %0 = cir.alloca "s" align(16) init : !cir.ptr<!cir.array<!rec_S x 42>>
     cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
     ^bb0(%arg0: !cir.ptr<!rec_S>):
       cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()
@@ -16,7 +16,7 @@ module {
 
   // CHECK: cir.func private @_ZN1SD1Ev(!cir.ptr<!rec_S>)
   // CHECK: cir.func dso_local @_Z3foov() {
-  // CHECK:   %0 = cir.alloca "s" align(16) init !cir.array<!rec_S x 42> -> !cir.ptr<!cir.array<!rec_S x 42>>
+  // CHECK:   %0 = cir.alloca "s" align(16) init : !cir.ptr<!cir.array<!rec_S x 42>>
   // CHECK:   cir.array.dtor %0 : !cir.ptr<!cir.array<!rec_S x 42>> {
   // CHECK:   ^bb0(%arg0: !cir.ptr<!rec_S>):
   // CHECK:     cir.call @_ZN1SD1Ev(%arg0) : (!cir.ptr<!rec_S>) -> ()

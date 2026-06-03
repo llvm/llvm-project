@@ -32,8 +32,8 @@ void test_ternary_temporary(bool c, int x) {
   int result = c ? S().get() : x;
 }
 // CIR-LABEL: @_Z22test_ternary_temporarybi
-// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_S -> !cir.ptr<!rec_S>
-// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE:.*]] = cir.const #false
@@ -135,10 +135,10 @@ void test_ternary_both_branches(bool c) {
   int result = c ? A().get() : B().get();
 }
 // CIR-LABEL: @_Z26test_ternary_both_branchesb
-// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_A -> !cir.ptr<!rec_A>
-// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
-// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} !rec_B -> !cir.ptr<!rec_B>
-// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
@@ -277,10 +277,10 @@ int test_return_ternary(bool c) {
   return c ? A().get() : B().get();
 }
 // CIR-LABEL: @_Z19test_return_ternaryb
-// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_A -> !cir.ptr<!rec_A>
-// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
-// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} !rec_B -> !cir.ptr<!rec_B>
-// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
@@ -430,7 +430,7 @@ int test_false_positive_conditional(bool c) {
 }
 // CIR-LABEL: @_Z31test_false_positive_conditionalb
 // CIR-NOT:   cir.alloca "cleanup.cond"
-// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_S -> !cir.ptr<!rec_S>
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.call @_ZN1SC1Ev(%[[TMP]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[VAL:.*]] = cir.call @_ZN1S3getEv(%[[TMP]])
@@ -514,11 +514,11 @@ void test_nested_ewc(bool c1, bool c2) {
 }
 
 // CIR-LABEL: @_Z15test_nested_ewcbb
-// CIR:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init !rec_T -> !cir.ptr<!rec_T>
-// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_T -> !cir.ptr<!rec_T>
+// CIR:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init : !cir.ptr<!rec_T>
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_T>
 // Inner cir.scope for the statement expression.
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_T -> !cir.ptr<!rec_T>
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_T>
 // Inner ternary: c1 ? T(1) : T(2) — no cleanup scope needed.
 // CIR:     %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     cir.if %[[C1]] {

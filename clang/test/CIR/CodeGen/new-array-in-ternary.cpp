@@ -51,12 +51,12 @@ DoubleAPFloat::DoubleAPFloat()
 // LLVM:         ret void
 
 // CIR-EH-LABEL: cir.func {{.*}} @_ZN13DoubleAPFloatC2Ev
-// CIR-EH:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR-EH:         %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR-EH:         %[[FALSE_INIT:.*]] = cir.const #false
 // CIR-EH:         cir.store %[[FALSE_INIT]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR-EH:         %[[RESULT:.*]] = cir.ternary({{.*}}, true {
-// CIR-EH:           %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} !cir.ptr<!rec_APFloat> -> !cir.ptr<!cir.ptr<!rec_APFloat>>
-// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} !cir.ptr<!rec_APFloat> -> !cir.ptr<!cir.ptr<!rec_APFloat>>
+// CIR-EH:           %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_APFloat>>
+// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_APFloat>>
 // CIR-EH:           cir.call @_Znam
 // CIR-EH:           cir.cleanup.scope {
 // CIR-EH:             %[[TRUE:.*]] = cir.const #true
@@ -138,7 +138,7 @@ T &pickRef(bool b) {
 
 // CIR-EH-LABEL: cir.func {{.*}} @_Z7pickRefb
 // CIR-EH:         %[[RES:.*]] = cir.ternary({{.*}}, true {
-// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} !cir.ptr<!rec_T> -> !cir.ptr<!cir.ptr<!rec_T>>
+// CIR-EH:           %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_T>>
 // CIR-EH:           cir.call @_Znam
 // CIR-EH:           cir.cleanup.scope {
 // CIR-EH:             cir.cleanup.scope {

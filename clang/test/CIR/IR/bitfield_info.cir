@@ -11,7 +11,7 @@
 
 // Use bitfield to enforce printing the attribute
 cir.func dso_local @init(%arg0: !cir.ptr<!rec_S> ){
-  %0 = cir.alloca "s" align(8) init !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!rec_S>>
+  %0 = cir.alloca "s" align(8) init : !cir.ptr<!cir.ptr<!rec_S>>
   cir.store %arg0, %0 : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
   %1 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
   %2 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>

@@ -23,14 +23,14 @@ struct S f1() {
 }
 
 // CIR:      cir.func{{.*}} @_Z2f1v() -> !rec_S
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_S>
 // CIR-NEXT:   cir.call @_ZN1SC1Ev(%[[RETVAL]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_S>, !rec_S
 // CIR-NEXT:   cir.return %[[RET]]
 
 // CIR-NOELIDE:      cir.func{{.*}} @_Z2f1v() -> !rec_S
-// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} !rec_S -> !cir.ptr<!rec_S>
-// CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
+// CIR-NOELIDE-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_S>
+// CIR-NOELIDE-NEXT:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   cir.call @_ZN1SC1Ev(%[[S]]) : (!cir.ptr<!rec_S> {{.*}}) -> ()
 // CIR-NOELIDE-NEXT:   cir.copy %[[S]] to %[[RETVAL]] : !cir.ptr<!rec_S>
 // CIR-NOELIDE-NEXT:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!rec_S>, !rec_S
@@ -65,8 +65,8 @@ NonTrivial test_nrvo() {
 // TODO(cir): Handle normal cleanup properly.
 
 // CIR: cir.func {{.*}} @_Z9test_nrvov()
-// CIR:   %[[RESULT:.*]] = cir.alloca "__retval" {{.*}} !rec_NonTrivial -> !cir.ptr<!rec_NonTrivial>
-// CIR:   %[[NRVO_FLAG:.*]] = cir.alloca "nrvo" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[RESULT:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_NonTrivial>
+// CIR:   %[[NRVO_FLAG:.*]] = cir.alloca "nrvo" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   %[[FALSE:.*]] = cir.const #false
 // CIR:   cir.store{{.*}} %[[FALSE]], %[[NRVO_FLAG]]
 // CIR:   cir.cleanup.scope {

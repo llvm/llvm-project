@@ -10,8 +10,8 @@ void foo() {
   int b = 1 ?: a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_1]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 
@@ -29,9 +29,9 @@ void foo2() {
   float _Complex c = a ?: b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !cir.complex<!cir.float> -> !cir.ptr<!cir.complex<!cir.float>>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} !cir.complex<!cir.float> -> !cir.ptr<!cir.complex<!cir.float>>
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.complex<!cir.float> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
@@ -107,9 +107,9 @@ void foo3() {
   int c = a ?: b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} !s32i -> !cir.ptr<!s32i>
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[A_BOOL:.*]] = cir.cast int_to_bool %[[TMP_A]] : !s32i -> !cir.bool
 // CIR: %[[RESULT:.*]] = cir.ternary(%[[A_BOOL]], true {
@@ -162,8 +162,8 @@ void test_gnu_binary_lvalue_assign() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z29test_gnu_binary_lvalue_assignv(
-// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[A_VAL:.*]] = cir.load{{.*}} %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[A_BOOL:.*]] = cir.cast int_to_bool %[[A_VAL]] : !s32i -> !cir.bool
 // CIR: %[[TERNARY_PTR:.*]] = cir.ternary(%[[A_BOOL]], true {
@@ -210,8 +210,8 @@ void test_gnu_binary_lvalue_compound() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z31test_gnu_binary_lvalue_compoundv(
-// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[A_VAL:.*]] = cir.load{{.*}} %[[A]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[A_BOOL:.*]] = cir.cast int_to_bool %[[A_VAL]] : !s32i -> !cir.bool
 // CIR: %[[LVAL_PTR:.*]] = cir.ternary(%[[A_BOOL]], true {
@@ -265,10 +265,10 @@ void test_gnu_binary_lvalue_ptr() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z26test_gnu_binary_lvalue_ptrv(
-// CIR: %[[X:.*]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[Y:.*]] = cir.alloca "y" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[P:.*]] = cir.alloca "p" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
-// CIR: %[[Q:.*]] = cir.alloca "q" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[X:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[Y:.*]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[P:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[Q:.*]] = cir.alloca "q" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[P_VAL:.*]] = cir.load{{.*}} %[[P]]
 // CIR: %[[P_BOOL:.*]] = cir.cast ptr_to_bool %[[P_VAL]]
 // CIR: %[[PTR_RESULT:.*]] = cir.ternary(%[[P_BOOL]], true {

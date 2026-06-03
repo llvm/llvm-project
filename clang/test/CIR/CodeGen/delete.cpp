@@ -142,7 +142,7 @@ void destroy(StructWithVirtualDestructor *x) {
 }
 
 // CIR: cir.func {{.*}} @_Z7destroyP27StructWithVirtualDestructor(%[[X_ARG:.*]]: !cir.ptr<!rec_StructWithVirtualDestructor> {{.*}})
-// CIR:   %[[X_ADDR:.*]] = cir.alloca {{.*}} !cir.ptr<!rec_StructWithVirtualDestructor>
+// CIR:   %[[X_ADDR:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_StructWithVirtualDestructor>>
 // CIR:   cir.store %[[X_ARG]], %[[X_ADDR]]
 // CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_StructWithVirtualDestructor>

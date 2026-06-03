@@ -17,10 +17,10 @@ void comma(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @comma()
-// CIR:         %[[B:.*]] = cir.alloca "b" {{.*}} !cir.bool -> !cir.ptr<!cir.bool>
-// CIR:         %[[C:.*]] = cir.alloca "c" {{.*}} !s8i -> !cir.ptr<!s8i>
-// CIR:         %[[F:.*]] = cir.alloca "f" {{.*}} !cir.float -> !cir.ptr<!cir.float>
-// CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:         %[[B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s8i>
+// CIR:         %[[F:.*]] = cir.alloca "f" {{.*}} : !cir.ptr<!cir.float>
+// CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i

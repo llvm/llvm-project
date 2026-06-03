@@ -7,7 +7,7 @@
 // Test basic cleanup scope flattening with normal cleanup.
 // The body yields to cleanup, cleanup yields to continue.
 cir.func @test_normal_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -20,7 +20,7 @@ cir.func @test_normal_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_normal_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -34,7 +34,7 @@ cir.func @test_normal_cleanup() {
 
 // Test that a single return from the cleanup body branches through the cleanup.
 cir.func @test_return_from_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -47,7 +47,7 @@ cir.func @test_return_from_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_return_from_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -63,7 +63,7 @@ cir.func @test_return_from_cleanup() {
 
 // Test that a single return from the cleanup body branches through the cleanup.
 cir.func @test_return_from_cleanup_with_operand() -> !s32i {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -78,7 +78,7 @@ cir.func @test_return_from_cleanup_with_operand() -> !s32i {
 }
 
 // CHECK-LABEL: cir.func @test_return_from_cleanup_with_operand()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -97,7 +97,7 @@ cir.func @test_return_from_cleanup_with_operand() -> !s32i {
 // Test that a continue statement in a cleanup scope branches through the
 // cleanup block before continuing the loop.
 cir.func @test_continue_in_cleanup_in_loop() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %cond = cir.call @shouldContinue() : () -> !cir.bool
     cir.condition(%cond)
@@ -120,7 +120,7 @@ cir.func @test_continue_in_cleanup_in_loop() {
 }
 
 // CHECK-LABEL: cir.func @test_continue_in_cleanup_in_loop()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[COND1:.*]] = cir.call @shouldContinue() : () -> !cir.bool
@@ -146,7 +146,7 @@ cir.func @test_continue_in_cleanup_in_loop() {
 // Test that a break statement in a cleanup scope branches through the
 // cleanup block before breaking out of the loop.
 cir.func @test_break_in_cleanup_in_loop() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.while {
     %cond = cir.call @shouldContinue() : () -> !cir.bool
     cir.condition(%cond)
@@ -169,7 +169,7 @@ cir.func @test_break_in_cleanup_in_loop() {
 }
 
 // CHECK-LABEL: cir.func @test_break_in_cleanup_in_loop()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.br ^[[LOOP_COND:bb[0-9]+]]
 // CHECK:       ^[[LOOP_COND]]:
 // CHECK:         %[[COND1:.*]] = cir.call @shouldContinue() : () -> !cir.bool
@@ -194,8 +194,8 @@ cir.func @test_break_in_cleanup_in_loop() {
 
 // Test nested cleanup scopes.
 cir.func @test_nested_cleanup() {
-  %0 = cir.alloca "c1" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -215,8 +215,8 @@ cir.func @test_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_cleanup()
-// CHECK:         %[[ALLOCA1:.*]] = cir.alloca {{.*}} !rec_SomeClass
-// CHECK:         %[[ALLOCA2:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA1:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA2:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -239,7 +239,7 @@ cir.func @test_nested_cleanup() {
 // Test a switch within a cleanup scope where the switch does not branch
 // through the cleanup.
 cir.func @test_normal_cleanup_with_switch() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %1 = cir.call @get() : () -> !s32i
@@ -262,7 +262,7 @@ cir.func @test_normal_cleanup_with_switch() {
 }
 
 // CHECK-LABEL: cir.func @test_normal_cleanup_with_switch()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -292,7 +292,7 @@ cir.func @test_normal_cleanup_with_switch() {
 // handled by the loop itself, so only the yield after the loop exits through
 // the cleanup.
 cir.func @test_loop_in_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.while {
@@ -315,7 +315,7 @@ cir.func @test_loop_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_loop_in_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[LOOP_BEGIN:bb[0-9]+]]
 // CHECK:       ^[[LOOP_BEGIN]]:
@@ -342,7 +342,7 @@ cir.func @test_loop_in_cleanup() {
 // handled by the switch, the loop's break/continue are handled by the loop,
 // so only the yield exits through cleanup.
 cir.func @test_switch_in_loop_in_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.while {
@@ -370,7 +370,7 @@ cir.func @test_switch_in_loop_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_switch_in_loop_in_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[LOOP_BEGIN:bb[0-9]+]]
 // CHECK:       ^[[LOOP_BEGIN]]:
@@ -404,7 +404,7 @@ cir.func @test_switch_in_loop_in_cleanup() {
 // are handled by the loop, the switch's break exits the switch, so only the
 // yield exits through cleanup.
 cir.func @test_loop_in_switch_in_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %x = cir.call @get() : () -> !s32i
@@ -434,7 +434,7 @@ cir.func @test_loop_in_switch_in_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_loop_in_switch_in_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -472,8 +472,8 @@ cir.func @test_loop_in_switch_in_cleanup() {
 // scope with a break. The break is handled by the switch, so the outer cleanup
 // has only one exit (yield) and should flatten successfully.
 cir.func @test_nested_cleanup_break_in_switch() {
-  %0 = cir.alloca "c1" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %x = cir.call @get() : () -> !s32i
@@ -500,8 +500,8 @@ cir.func @test_nested_cleanup_break_in_switch() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_cleanup_break_in_switch()
-// CHECK:         %[[ALLOCA1:.*]] = cir.alloca {{.*}} !rec_SomeClass
-// CHECK:         %[[ALLOCA2:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA1:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA2:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA1]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -537,7 +537,7 @@ cir.func @test_nested_cleanup_break_in_switch() {
 // the yield at the end of the body, so the cleanup runs once after the goto's
 // destination is reached.
 cir.func @test_goto_within_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %cond = cir.call @shouldGoto() : () -> !cir.bool
@@ -558,7 +558,7 @@ cir.func @test_goto_within_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_goto_within_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -583,8 +583,8 @@ cir.func @test_goto_within_cleanup() {
 // exit; the inner cleanup runs once after the goto's destination is reached
 // and the outer cleanup runs once on normal exit from the inner cleanup.
 cir.func @test_goto_within_nested_cleanup() {
-  %0 = cir.alloca "c1" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c1" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -612,8 +612,8 @@ cir.func @test_goto_within_nested_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_goto_within_nested_cleanup()
-// CHECK:         %[[A1:.*]] = cir.alloca "c1" {{.*}} !rec_SomeClass
-// CHECK:         %[[A2:.*]] = cir.alloca "c2" {{.*}} !rec_SomeClass
+// CHECK:         %[[A1:.*]] = cir.alloca "c1" {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[A2:.*]] = cir.alloca "c2" {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[A1]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 // CHECK:       ^[[OUTER_BODY]]:
@@ -646,7 +646,7 @@ cir.func @test_goto_within_nested_cleanup() {
 // body branches to cleanup entry, the cleanup runs and then a goto with the
 // same target label is emitted in the cleanup continuation block.
 cir.func @test_goto_out_of_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -662,7 +662,7 @@ cir.func @test_goto_out_of_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_goto_out_of_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:

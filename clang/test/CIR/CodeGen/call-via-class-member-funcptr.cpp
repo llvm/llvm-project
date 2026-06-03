@@ -50,8 +50,8 @@ public:
 void fn2() { C c1; c1.call_indirect(2); }
 
 // CIR: cir.func {{.*}} @_ZN1C13call_indirectEi(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[V_ARG:.*]]: !s32i {{.*}}) -> (!s32i {{.*}})
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
-// CIR:   %[[V_ADDR:.*]] = cir.alloca "v" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   %[[V_ADDR:.*]] = cir.alloca "v" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store %[[V_ARG]], %[[V_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]

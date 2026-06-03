@@ -5,10 +5,10 @@
 #true = #cir.bool<true> : !cir.bool
 module {
   cir.func @binary_assign() {
-    %0 = cir.alloca "b" align(1) !cir.bool -> !cir.ptr<!cir.bool>
-    %1 = cir.alloca "c" align(1) !s8i -> !cir.ptr<!s8i>
-    %2 = cir.alloca "f" align(4) !cir.float -> !cir.ptr<!cir.float>
-    %3 = cir.alloca "i" align(4) !s32i -> !cir.ptr<!s32i>
+    %0 = cir.alloca "b" align(1) : !cir.ptr<!cir.bool>
+    %1 = cir.alloca "c" align(1) : !cir.ptr<!s8i>
+    %2 = cir.alloca "f" align(4) : !cir.ptr<!cir.float>
+    %3 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
     %4 = cir.const #true
     cir.store %4, %0 : !cir.bool, !cir.ptr<!cir.bool>
     %5 = cir.const #cir.int<65> : !s32i
@@ -27,10 +27,10 @@ module {
 // CHECK: #true = #cir.bool<true> : !cir.bool
 // CHECK: module {
 // CHECK:   cir.func{{.*}} @binary_assign() {
-// CHECK:     %0 = cir.alloca "b" align(1) !cir.bool -> !cir.ptr<!cir.bool>
-// CHECK:     %1 = cir.alloca "c" align(1) !s8i -> !cir.ptr<!s8i>
-// CHECK:     %2 = cir.alloca "f" align(4) !cir.float -> !cir.ptr<!cir.float>
-// CHECK:     %3 = cir.alloca "i" align(4) !s32i -> !cir.ptr<!s32i>
+// CHECK:     %0 = cir.alloca "b" align(1) : !cir.ptr<!cir.bool>
+// CHECK:     %1 = cir.alloca "c" align(1) : !cir.ptr<!s8i>
+// CHECK:     %2 = cir.alloca "f" align(4) : !cir.ptr<!cir.float>
+// CHECK:     %3 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
 // CHECK:     %4 = cir.const #true
 // CHECK:     cir.store %4, %0 : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK:     %5 = cir.const #cir.int<65> : !s32i

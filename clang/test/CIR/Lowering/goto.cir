@@ -5,8 +5,8 @@
 module {
 
   cir.func @gotoFromIf(%arg0: !s32i) -> !s32i {
-    %0 = cir.alloca "x" align(4) init !s32i -> !cir.ptr<!s32i>
-    %1 = cir.alloca "__retval" align(4) !s32i -> !cir.ptr<!s32i>
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       %6 = cir.load %0 : !cir.ptr<!s32i>, !s32i

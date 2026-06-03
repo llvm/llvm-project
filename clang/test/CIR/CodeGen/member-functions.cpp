@@ -11,7 +11,7 @@ struct C {
 void C::f() {}
 
 // CIR: cir.func{{.*}} @_ZN1C1fEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]] : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
 // CIR:   cir.return
@@ -20,9 +20,9 @@ void C::f() {}
 void C::f2(int a, int b) {}
 
 // CIR:      cir.func{{.*}} @_ZN1C2f2Eii(%[[THIS_ARG:.*]]: !cir.ptr<!rec_C> {{.*}}, %[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}})
-// CIR-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_C> -> !cir.ptr<!cir.ptr<!rec_C>>
-// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_C>>
+// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]] : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
 // CIR-NEXT:   cir.store %[[A_ARG]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store %[[B_ARG]], %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
@@ -37,7 +37,7 @@ void test1() {
 }
 
 // CIR: cir.func{{.*}} @_Z5test1v()
-// CIR-NEXT:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} !rec_C -> !cir.ptr<!rec_C>
+// CIR-NEXT:   %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_C>
 // CIR-NEXT:   cir.call @_ZN1C1fEv(%[[C_ADDR]]) : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i

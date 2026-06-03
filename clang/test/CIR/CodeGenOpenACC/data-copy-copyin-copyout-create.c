@@ -2,9 +2,9 @@
 
 void acc_data(int parmVar) {
   // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
   int localVar1;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca "localVar1" {{.*}} !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca "localVar1" {{.*}} : !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]]
 
 #pragma acc data copy(parmVar)

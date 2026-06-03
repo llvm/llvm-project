@@ -9,7 +9,7 @@ void expression_trait_expr() {
   bool a = __is_lvalue_expr(0);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR: cir.store {{.*}} %[[CONST_FALSE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
@@ -27,10 +27,10 @@ void type_trait_expr() {
   bool d = __is_array(int);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
-// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: %[[CONST_FALSE:.*]] = cir.const #false
@@ -63,8 +63,8 @@ void array_type_trait_expr() {
   unsigned long b = __array_extent(int[10][20], 1);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !u64i -> !cir.ptr<!u64i>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_2]], %[[A_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u64i

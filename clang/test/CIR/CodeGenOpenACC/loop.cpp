@@ -2,10 +2,10 @@
 
 extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK: cir.func{{.*}} @acc_loop(%[[ARG_A:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_B:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_C:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_N:.*]]: !s32i {{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[ALLOCA_A:.*]] = cir.alloca "A" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
-  // CHECK-NEXT: %[[ALLOCA_B:.*]] = cir.alloca "B" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
-  // CHECK-NEXT: %[[ALLOCA_C:.*]] = cir.alloca "C" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
-  // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca "N" {{.*}} init !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[ALLOCA_A:.*]] = cir.alloca "A" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ALLOCA_B:.*]] = cir.alloca "B" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ALLOCA_C:.*]] = cir.alloca "C" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca "N" {{.*}} init : !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG_A]], %[[ALLOCA_A]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG_B]], %[[ALLOCA_B]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG_C]], %[[ALLOCA_C]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

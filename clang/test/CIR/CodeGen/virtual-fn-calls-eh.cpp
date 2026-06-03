@@ -18,7 +18,7 @@ void call_virtual_fn_in_cleanup_scope() {
 }
 
 // CIR: cir.func {{.*}} @_Z32call_virtual_fn_in_cleanup_scopev()
-// CIR:   %[[B:.*]] = cir.alloca "b" {{.*}} init !rec_B -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BC2Ev(%[[B]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
@@ -30,7 +30,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // CIR:   }
 
 // CIR-FLAT: cir.func {{.*}} @_Z32call_virtual_fn_in_cleanup_scopev()
-// CIR-FLAT:   %[[B:.*]] = cir.alloca "b" {{.*}} init !rec_B -> !cir.ptr<!rec_B>
+// CIR-FLAT:   %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_B>
 // CIR-FLAT:   cir.call @_ZN1BC2Ev(%[[B]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
 // CIR-FLAT:   cir.br ^[[CLEANUP_SCOPE:bb[0-9]+]]
 // CIR-FLAT: ^[[CLEANUP_SCOPE]]:

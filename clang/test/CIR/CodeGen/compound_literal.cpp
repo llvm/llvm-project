@@ -13,9 +13,9 @@ int foo() {
 // CIR-DAG: cir.global "private" constant cir_private @[[FOO4_P:.*]] = #cir.const_record<{#cir.int<5> : !s32i, #cir.int<10> : !s32i}> : !rec_Point
 // LLVM-DAG: @[[FOO4_P:.*]] = private constant %struct.Point { i32 5, i32 10 }
 
-// CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} !s32i -> !cir.ptr<!s32i>
-// CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[COMPOUND:.*]] = cir.alloca ".compoundliteral" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[COMPOUND:.*]] = cir.alloca ".compoundliteral" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[VALUE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[VALUE]], %[[COMPOUND]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPOUND]] : !cir.ptr<!s32i>, !s32i
@@ -48,8 +48,8 @@ void foo2() {
   int _Complex a = (int _Complex) { 1, 2};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
-// CIR: %[[CL_ADDR:.*]] = cir.alloca ".compoundliteral" {{.*}} !cir.complex<!s32i> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[CL_ADDR:.*]] = cir.alloca ".compoundliteral" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[CL_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[CL_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
@@ -81,7 +81,7 @@ void foo3() {
   auto a = (vi4){10, 20, 30, 40};
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[VEC:.*]] = cir.const #cir.const_vector<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC]], %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
@@ -109,7 +109,7 @@ void foo4() {
 }
 
 // CIR-LABEL: @_Z4foo4v
-// CIR:   %[[P:.*]] = cir.alloca "p" {{.*}} init !rec_Point -> !cir.ptr<!rec_Point>
+// CIR:   %[[P:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_Point>
 // CIR:   %[[CONST:.*]] = cir.get_global @[[FOO4_P]] : !cir.ptr<!rec_Point>
 // CIR:   cir.copy %[[CONST]] to %[[P]] : !cir.ptr<!rec_Point>
 

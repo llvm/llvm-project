@@ -23,7 +23,7 @@ end:;
 // CIR-LABEL: cir.func {{.*}} @_Z19test_goto_only_exitb
 // CIR:         cir.scope {
 // CIR:           cir.if {{.*}} {
-// CIR:             %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:             %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
 // CIR:               cir.goto "end"
@@ -82,7 +82,7 @@ end:;
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_goto_among_other_exitsb
 // CIR:         cir.scope {
-// CIR:           %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:           %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:           cir.cleanup.scope {
 // CIR:             cir.scope {
 // CIR:               cir.if {{.*}} {
@@ -158,10 +158,10 @@ skip:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z24test_goto_inner_to_outerb
-// CIR:         %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:         %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
-// CIR:             %[[INNER_ADDR:.*]] = cir.alloca "inner" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:             %[[INNER_ADDR:.*]] = cir.alloca "inner" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.scope {
 // CIR:                 cir.if {{.*}} {
@@ -256,10 +256,10 @@ end:;
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_goto_out_of_two_nestedb
 // CIR:         cir.scope {
-// CIR:           %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:           %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:           cir.cleanup.scope {
 // CIR:             cir.scope {
-// CIR:               %[[INNER_ADDR:.*]] = cir.alloca "inner" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR:               %[[INNER_ADDR:.*]] = cir.alloca "inner" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:               cir.cleanup.scope {
 // CIR:                 cir.scope {
 // CIR:                   cir.if {{.*}} {

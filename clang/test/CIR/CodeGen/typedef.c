@@ -11,7 +11,7 @@ void local_typedef(void) {
 }
 
 // CIR:      cir.func{{.*}} @local_typedef()
-// CIR:        cir.alloca "s" align(4) !rec_Struct -> !cir.ptr<!rec_Struct>
+// CIR:        cir.alloca "s" align(4) : !cir.ptr<!rec_Struct>
 // CIR:        cir.return
 
 // LLVM: %struct.Struct = type { i32 }

@@ -252,7 +252,7 @@ void C::f(int x, ...) {}
 
 // CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<
 // CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
-// CIR:   %[[T5_RETVAL:.*]] = cir.alloca "__retval" {{.*}} !rec_Test5{{.*}}NonTrivial
+// CIR:   %[[T5_RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Test53A3ANonTrivial>
 // CIR:   cir.store %arg0, %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_THIS:.*]] = cir.load %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_CAST:.*]] = cir.cast bitcast %[[T5_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>

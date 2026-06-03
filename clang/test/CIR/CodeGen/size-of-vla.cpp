@@ -10,8 +10,8 @@ void vla_type_with_element_type_of_size_1() {
   unsigned long size = sizeof(bool[n]);
 }
 
-// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
@@ -34,8 +34,8 @@ void vla_type_with_element_type_int() {
   unsigned long size = sizeof(int[n]);
 }
 
-// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
@@ -63,16 +63,16 @@ void vla_expr_element_type_of_size_1() {
   unsigned long size = sizeof(arr);
 }
 
-// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SAVED_STACK_ADDR:.*]] = cir.alloca "saved_stack" {{.*}} !cir.ptr<!u8i> -> !cir.ptr<!cir.ptr<!u8i>>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[SAVED_STACK_ADDR:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[STACK_SAVE:.*]] = cir.stacksave : !cir.ptr<!u8i>
 // CIR: cir.store {{.*}} %[[STACK_SAVE]], %[[SAVED_STACK_ADDR]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR: cir.cleanup.scope {
-// CIR:   %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} %[[TMP_N]] : !u64i, !cir.bool -> !cir.ptr<!cir.bool>
+// CIR:   %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} size(%[[TMP_N]]) : !cir.ptr<!cir.bool>
 // CIR:   cir.store {{.*}} %[[TMP_N]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR:   cir.yield
 // CIR: } cleanup normal {
@@ -115,16 +115,16 @@ void vla_expr_element_type_int() {
   unsigned long size = sizeof(arr);
 }
 
-// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init !u64i -> !cir.ptr<!u64i>
-// CIR: %[[SAVED_STACK_ADDR:.*]] = cir.alloca "saved_stack" {{.*}} !cir.ptr<!u8i> -> !cir.ptr<!cir.ptr<!u8i>>
-// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init !u64i -> !cir.ptr<!u64i>
+// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[SAVED_STACK_ADDR:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
+// CIR: %[[SIZE_ADDR:.*]] = cir.alloca "size" {{.*}} init : !cir.ptr<!u64i>
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: %[[STACK_SAVE:.*]] = cir.stacksave : !cir.ptr<!u8i>
 // CIR: cir.store {{.*}} %[[STACK_SAVE]], %[[SAVED_STACK_ADDR]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR: cir.cleanup.scope {
-// CIR:   %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} %[[TMP_N]] : !u64i, !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[ARR_ADDR:.*]] = cir.alloca "arr" {{.*}} size(%[[TMP_N]]) : !cir.ptr<!s32i>
 // CIR:   %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   %[[SIZE:.*]] = cir.mul nuw %[[CONST_4]], %[[TMP_N]] : !u64i
 // CIR:   cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>

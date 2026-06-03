@@ -14,10 +14,10 @@ int4 vec_ternary(int4 c, int4 a, int4 b) {
   return c ? a : c;
 }
 
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
@@ -44,10 +44,10 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
   return c ? a : b;
 }
 
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.vector<4 x !s32i> -> !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.vector<4 x !cir.float> -> !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.vector<4 x !cir.float> -> !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} !cir.vector<4 x !cir.float> -> !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: cir.store %{{.*}}, %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: cir.store %{{.*}}, %[[B_ADDR]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>

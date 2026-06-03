@@ -27,8 +27,8 @@ void test_member_in_array(void) {
 // LLVM-DAG: @[[MATRIX_CONST:.*]] = private constant [2 x [6 x i8]] {{.*}}
 
 // CIR-LABEL: cir.func{{.*}} @test_member_in_array
-// CIR:   %[[LINE:.*]] = cir.alloca "line" {{.*}} init !rec_Line
-// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init !cir.array<!rec_Point x 1>
+// CIR:   %[[LINE:.*]] = cir.alloca "line" {{.*}} init : !cir.ptr<!rec_Line>
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!rec_Point x 1>>
 // CIR:   cir.get_global @[[LINE_CONST]]
 // CIR:   cir.copy
 // CIR:   %[[MEMBER:.*]] = cir.get_member %[[LINE]][0] {name = "start"}
@@ -55,8 +55,8 @@ void test_member_arrow_in_array(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @test_member_arrow_in_array
-// CIR:   %[[PTR:.*]] = cir.alloca "line_ptr" {{.*}} !cir.ptr<!rec_Line>
-// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init !cir.array<!rec_Point x 1>
+// CIR:   %[[PTR:.*]] = cir.alloca "line_ptr" {{.*}} : !cir.ptr<!cir.ptr<!rec_Line>>
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!rec_Point x 1>>
 // CIR:   %[[LOADED:.*]] = cir.load{{.*}}%[[PTR]]
 // CIR:   %[[MEMBER:.*]] = cir.get_member %[[LOADED]][0] {name = "start"}
 // CIR:   cir.copy
@@ -82,8 +82,8 @@ void test_deref_in_array(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @test_deref_in_array
-// CIR:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} !cir.ptr<!rec_Point>
-// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init !cir.array<!rec_Point x 1>
+// CIR:   %[[PTR:.*]] = cir.alloca "ptr" {{.*}} : !cir.ptr<!cir.ptr<!rec_Point>>
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!rec_Point x 1>>
 // CIR:   %[[LOADED:.*]] = cir.load{{.*}}%[[PTR]]
 // CIR:   cir.copy
 
@@ -105,7 +105,7 @@ void test_string_array_in_array(void) {
 }
   
 // CIR-LABEL: cir.func{{.*}} @test_string_array_in_array
-// CIR:   %[[MATRIX:.*]] = cir.alloca "matrix" {{.*}} init !cir.array<!cir.array<!s8i x 6> x 2>
+// CIR:   %[[MATRIX:.*]] = cir.alloca "matrix" {{.*}} init : !cir.ptr<!cir.array<!cir.array<!s8i x 6> x 2>>
 // CIR:   %[[CONST:.*]] = cir.get_global @[[MATRIX_CONST]] : !cir.ptr<!cir.array<!cir.array<!s8i x 6> x 2>>
 // CIR:   cir.copy %[[CONST]] to %[[MATRIX]]
 

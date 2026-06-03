@@ -15,9 +15,9 @@ void cxx_rewritten_binary_operator_scalar_expr() {
   bool neq = a != b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_HasOpEq -> !cir.ptr<!rec_HasOpEq>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} !rec_HasOpEq -> !cir.ptr<!rec_HasOpEq>
-// CIR: %[[NEQ_ADDR:.*]] = cir.alloca "neq" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_HasOpEq>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_HasOpEq>
+// CIR: %[[NEQ_ADDR:.*]] = cir.alloca "neq" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[EQ:.*]] = cir.call @_ZNK7HasOpEqeqERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_HasOpEq> {{.*}}, !cir.ptr<!rec_HasOpEq> {{.*}}) -> (!cir.bool{{.*}})
 // CIR: %[[NEQ:.*]] = cir.not %[[EQ]] : !cir.bool
 // CIR: cir.store{{.*}} %[[NEQ]], %[[NEQ_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>

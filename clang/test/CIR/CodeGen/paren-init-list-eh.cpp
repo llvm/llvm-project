@@ -22,7 +22,7 @@ void test_init_list_with_dtor() {
 }
 
 // CIR: cir.func {{.*}} @_Z24test_init_list_with_dtorv
-// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} init !rec_Outer -> !cir.ptr<!rec_Outer>
+// CIR:   %[[O:.*]] = cir.alloca "o" {{.*}} init : !cir.ptr<!rec_Outer>
 // CIR:   %[[S1:.*]] = cir.get_member %[[O]][0] {name = "s1"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Struk>
 // CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:   cir.call @_ZN5StrukC1Ei(%[[S1]], %[[ONE]])

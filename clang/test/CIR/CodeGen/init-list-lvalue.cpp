@@ -14,8 +14,8 @@ void test1(int i) {
   // CIR: cir.func {{.*}}@_Z5test1i(%[[I_ARG:.*]]: {{.*}})
   // LLVM: define {{.*}}void @_Z5test1i(i32 {{.*}}%[[I_ARG:.*]])
   int &refI = {i};
-  // CIR: %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init !s32i -> !cir.ptr<!s32i>
-  // CIR: %[[REFI_ALLOCA:.*]] = cir.alloca "refI" {{.*}} init const !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+  // CIR: %[[I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[REFI_ALLOCA:.*]] = cir.alloca "refI" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
   // CIR: cir.store %[[I_ARG]], %[[I_ALLOCA]] : !s32i, !cir.ptr<!s32i>
   // CIR: cir.store {{.*}}%[[I_ALLOCA]], %[[REFI_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // LLVM: %[[I_ALLOCA:.*]] = alloca i32
@@ -29,8 +29,8 @@ void test2() {
   // LLVM-LABEL: define {{.*}}void @_Z5test2v()
   Struct s {1, "asdf"};
   Struct &refS = {s};
-  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" {{.*}} init !rec_Struct -> !cir.ptr<!rec_Struct>
-  // CIR: %[[REFS_ALLOCA:.*]] = cir.alloca "refS" {{.*}} init const !cir.ptr<!rec_Struct> -> !cir.ptr<!cir.ptr<!rec_Struct>>
+  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_Struct>
+  // CIR: %[[REFS_ALLOCA:.*]] = cir.alloca "refS" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Struct>>
   // CIR: %[[GET_S_INIT:.*]] = cir.get_global @__const._Z5test2v.s : !cir.ptr<!rec_Struct>
   // CIR: cir.copy %[[GET_S_INIT]] to %[[S_ALLOCA]] : !cir.ptr<!rec_Struct> loc(#loc33)
   // CIR: cir.store {{.*}}%[[S_ALLOCA]], %[[REFS_ALLOCA]] : !cir.ptr<!rec_Struct>, !cir.ptr<!cir.ptr<!rec_Struct>>
@@ -47,8 +47,8 @@ void test3(Struct &s) {
   // LLVM: define dso_local void @_Z5test3R6Struct(ptr{{.*}}%[[S_ARG:.*]])
   using refSTy = Struct &;
   Struct &refS = refSTy{s};
-  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" {{.*}} init const !cir.ptr<!rec_Struct> -> !cir.ptr<!cir.ptr<!rec_Struct>>
-  // CIR: %[[REFS_ALLOCA:.*]] = cir.alloca "refS" {{.*}} init const !cir.ptr<!rec_Struct> -> !cir.ptr<!cir.ptr<!rec_Struct>>
+  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Struct>>
+  // CIR: %[[REFS_ALLOCA:.*]] = cir.alloca "refS" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Struct>>
   // CIR: cir.store %[[S_ARG]], %[[S_ALLOCA]] : !cir.ptr<!rec_Struct>, !cir.ptr<!cir.ptr<!rec_Struct>>
   // CIR: %[[S_LOAD:.*]] = cir.load %[[S_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Struct>>, !cir.ptr<!rec_Struct>
   // CIR: cir.store {{.*}}%[[S_LOAD]], %[[REFS_ALLOCA]] : !cir.ptr<!rec_Struct>, !cir.ptr<!cir.ptr<!rec_Struct>>
@@ -65,8 +65,8 @@ void test4() {
   Struct s;
   auto& [sb1, sb2] {s};
 
-  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" align(8) !rec_Struct -> !cir.ptr<!rec_Struct>
-  // CIR: %[[SB_ALLOCA:.*]] = cir.alloca "" {{.*}} init const !cir.ptr<!rec_Struct> -> !cir.ptr<!cir.ptr<!rec_Struct>>
+  // CIR: %[[S_ALLOCA:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_Struct>
+  // CIR: %[[SB_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Struct>>
   // CIR: cir.store {{.*}}%[[S_ALLOCA]], %[[SB_ALLOCA]] : !cir.ptr<!rec_Struct>, !cir.ptr<!cir.ptr<!rec_Struct>>
   // LLVM: %[[S_ALLOCA:.*]] = alloca %struct.Struct
   // LLVM: %[[SB_ALLOCA:.*]] = alloca ptr

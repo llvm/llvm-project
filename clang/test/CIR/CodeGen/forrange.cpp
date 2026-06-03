@@ -17,12 +17,12 @@ void for_range() {
 // CIR: cir.func{{.*}} @_Z3endR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element{{.*}})
 
 // CIR: cir.func{{.*}} @_Z9for_rangev()
-// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} !rec_Container
+// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_Container>
 // CIR:    cir.scope {
-// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const !cir.ptr<!rec_Container>
-// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init !cir.ptr<!rec_Element>
-// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init !cir.ptr<!rec_Element>
-// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const !cir.ptr<!rec_Element>
+// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Container>>
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Element>>
+// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Element>>
+// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Element>>
 // CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
 // CIR:      %[[C_REF:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:      %[[BEGIN:.*]] = cir.call @_Z5beginR9Container(%[[C_REF]])
@@ -60,12 +60,12 @@ void for_range2() {
 }
 
 // CIR: cir.func{{.*}} @_Z10for_range2v()
-// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} !rec_C2
+// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} !cir.ptr<!rec_C2>
 // CIR:    cir.scope {
-// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const !cir.ptr<!rec_C2>
-// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init !cir.ptr<!rec_Element>
-// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init !cir.ptr<!rec_Element>
-// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const !cir.ptr<!rec_Element>
+// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C2>>
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Element>>
+// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Element>>
+// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Element>>
 // CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
 // CIR:      %[[C_REF:.*]] = cir.load{{.*}} %[[RANGE_ADDR]]
 // CIR:      %[[BEGIN:.*]] = cir.call @_ZN2C25beginEv(%[[C_REF]])
@@ -112,12 +112,12 @@ void for_range3() {
 }
 
 // CIR: cir.func{{.*}} @_Z10for_range3v()
-// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} !rec_C3
+// CIR:    %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_C3>
 // CIR:    cir.scope {
-// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const !cir.ptr<!rec_C3>
-// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init !rec_Iterator -> !cir.ptr<!rec_Iterator>
-// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init !rec_Iterator -> !cir.ptr<!rec_Iterator>
-// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const !cir.ptr<!rec_Element>
+// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C3>>
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init : !cir.ptr<!rec_Iterator>
+// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init : !cir.ptr<!rec_Iterator>
+// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Element>>
 // CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
 // CIR:      cir.for : cond {
 // CIR:        %[[ITER_NE:.*]] = cir.call @_ZNK8IteratorneERKS_(%[[BEGIN_ADDR]], %[[END_ADDR]])
@@ -143,11 +143,11 @@ void for_range4() {
 
 // CIR: cir.func{{.*}} @_Z10for_range4v()
 // CIR:    cir.scope {
-// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const !cir.ptr<!rec_C3>
-// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init !rec_Iterator -> !cir.ptr<!rec_Iterator>
-// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init !rec_Iterator -> !cir.ptr<!rec_Iterator>
-// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const !cir.ptr<!rec_Element>
-// CIR:      %[[HD:.*]] = cir.alloca "hd" {{.*}} !rec_HasDtor -> !cir.ptr<!rec_HasDtor>
+// CIR:      %[[RANGE_ADDR:.*]] = cir.alloca "__range1" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C3>>
+// CIR:      %[[BEGIN_ADDR:.*]] = cir.alloca "__begin1" {{.*}} init : !cir.ptr<!rec_Iterator>
+// CIR:      %[[END_ADDR:.*]] = cir.alloca "__end1" {{.*}} init : !cir.ptr<!rec_Iterator>
+// CIR:      %[[E_ADDR:.*]] = cir.alloca "e" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Element>>
+// CIR:      %[[HD:.*]] = cir.alloca "hd" {{.*}} : !cir.ptr<!rec_HasDtor>
 // CIR:      cir.store{{.*}} %[[C_ADDR]], %[[RANGE_ADDR]]
 // CIR:      cir.for : cond {
 // CIR:        %[[ITER_NE:.*]] = cir.call @_ZNK8IteratorneERKS_(%[[BEGIN_ADDR]], %[[END_ADDR]])

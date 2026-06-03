@@ -2,8 +2,8 @@
 
 void acc_update(int parmVar, int *ptrParmVar) {
   // CHECK: cir.func{{.*}} @acc_update(%[[ARG:.*]]: !s32i{{.*}}, %[[PTRARG:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init !s32i -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[PTRPARM:.*]] = cir.alloca "ptrParmVar" {{.*}} init !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PTRPARM:.*]] = cir.alloca "ptrParmVar" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[PTRARG]], %[[PTRPARM]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 

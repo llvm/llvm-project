@@ -69,8 +69,8 @@ void line_column() {
   unsigned int b = __builtin_COLUMN();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !u32i -> !cir.ptr<!u32i>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !u32i -> !cir.ptr<!u32i>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u32i>
 // CIR: %[[CONST_9:.*]] = cir.const #cir.int<68> : !u32i
 // CIR: cir.store {{.*}} %[[CONST_9]], %[[A_ADDR]] : !u32i, !cir.ptr<!u32i>
 // CIR: %[[CONST_20:.*]] = cir.const #cir.int<20> : !u32i
@@ -92,9 +92,9 @@ void function_file() {
   const char *c = __builtin_FILE_NAME();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!s8i>>
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!s8i>>
-// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init !cir.ptr<!s8i> -> !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.ptr<!s8i>>
 // CIR: %[[FUNC__GV:.*]] = cir.const #cir.global_view<@".str.3"> : !cir.ptr<!s8i>
 // CIR: cir.store {{.*}} %[[FUNC__GV]], %[[A_ADDR]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
 // CIR: %[[FILE_PATH_GV:.*]] = cir.const #cir.global_view<@".str"> : !cir.ptr<!s8i>

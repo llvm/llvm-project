@@ -31,7 +31,7 @@ void use() {
 // CIR:   cir.store %[[ONE]], %[[RET_ADDR:.*]]
 
 // CIR: cir.func{{.*}} @_ZN1S12inlineCalledEv
-// CIR:   %[[THIS:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_S> -> !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:   %[[THIS:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[THREE:.*]] = cir.const #cir.int<3>
 // CIR:   cir.store %[[THREE]], %[[RET_ADDR:.*]]
 

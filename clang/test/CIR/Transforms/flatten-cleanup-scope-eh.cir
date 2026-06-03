@@ -12,7 +12,7 @@
 // exception-throwing calls are replaced with try_call and unwind to an
 // EH cleanup block that performs the cleanup and resumes unwinding.
 cir.func @test_eh_only_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -25,7 +25,7 @@ cir.func @test_eh_only_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_eh_only_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
@@ -53,7 +53,7 @@ cir.func @test_eh_only_cleanup() {
 // Test cleanup kind "all" flattening. Normal exits go through the normal
 // cleanup path, and exception-throwing calls unwind to an EH cleanup block.
 cir.func @test_all_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -66,7 +66,7 @@ cir.func @test_all_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_all_cleanup()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
@@ -101,7 +101,7 @@ cir.func @test_all_cleanup() {
 // Test EH cleanup with multiple calls that may throw. Each call becomes a
 // try_call, and all unwind to the same shared unwind block.
 cir.func @test_eh_cleanup_multiple_calls() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -115,7 +115,7 @@ cir.func @test_eh_cleanup_multiple_calls() {
 }
 
 // CHECK-LABEL: cir.func @test_eh_cleanup_multiple_calls()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
@@ -147,7 +147,7 @@ cir.func @test_eh_cleanup_multiple_calls() {
 
 // Test that nothrow calls are NOT replaced with try_call.
 cir.func @test_eh_cleanup_nothrow_call() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -161,7 +161,7 @@ cir.func @test_eh_cleanup_nothrow_call() {
 }
 
 // CHECK-LABEL: cir.func @test_eh_cleanup_nothrow_call()
-// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} !rec_SomeClass
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[ALLOCA]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
@@ -189,8 +189,8 @@ cir.func @test_eh_cleanup_nothrow_call() {
 
 // Test EH cleanup with a call that returns a value.
 cir.func @test_eh_cleanup_call_with_result() -> !s32i {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "__retval" align(4) !s32i -> !cir.ptr<!s32i>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %2 = cir.call @get() : () -> !s32i
@@ -205,8 +205,8 @@ cir.func @test_eh_cleanup_call_with_result() -> !s32i {
 }
 
 // CHECK-LABEL: cir.func @test_eh_cleanup_call_with_result()
-// CHECK:         %[[ALLOCA_CLASS:.*]] = cir.alloca {{.*}} !rec_SomeClass
-// CHECK:         %[[ALLOCA_RET:.*]] = cir.alloca {{.*}} !s32i
+// CHECK:         %[[ALLOCA_CLASS:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[ALLOCA_RET:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CHECK:         cir.call @ctor(%[[ALLOCA_CLASS]])
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
@@ -236,8 +236,8 @@ cir.func @test_eh_cleanup_call_with_result() -> !s32i {
 // Then the cleanup scope flattening must handle cloning the multi-block
 // cleanup region for the EH path.
 cir.func @test_nrvo() -> !rec_NonTrivial {
-  %0 = cir.alloca "__retval" align(1) !rec_NonTrivial -> !cir.ptr<!rec_NonTrivial>
-  %1 = cir.alloca "nrvo" align(1) !cir.bool -> !cir.ptr<!cir.bool>
+  %0 = cir.alloca "__retval" align(1) : !cir.ptr<!rec_NonTrivial>
+  %1 = cir.alloca "nrvo" align(1) : !cir.ptr<!cir.bool>
   cir.cleanup.scope {
     %2 = cir.const #false
     cir.store align(1) %2, %1 : !cir.bool, !cir.ptr<!cir.bool>
@@ -258,8 +258,8 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
 }
 
 // CHECK-LABEL: cir.func @test_nrvo()
-// CHECK:         %[[RETVAL:.*]] = cir.alloca {{.*}} !rec_NonTrivial
-// CHECK:         %[[NRVO:.*]] = cir.alloca {{.*}} !cir.bool
+// CHECK:         %[[RETVAL:.*]] = cir.alloca {{.*}} : !cir.ptr<!rec_NonTrivial>
+// CHECK:         %[[NRVO:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.bool>
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 //
 // Body: store false to nrvo flag, try_call maybeThrow.
@@ -321,7 +321,7 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
 // In this case, the unwind from the EH cleanup can be left to unwind to
 // callers.
 cir.func @test_eh_cleanup_in_try() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.try {
     cir.cleanup.scope {
@@ -337,7 +337,7 @@ cir.func @test_eh_cleanup_in_try() {
 }
 
 // CHECK: cir.func @test_eh_cleanup_in_try()
-// CHECK:   %[[C:.*]] = cir.alloca "c" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+// CHECK:   %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:   cir.call @ctor(%[[C]])
 // CHECK:   cir.br ^[[TRY_BODY:bb[0-9]+]]
 //
@@ -383,8 +383,8 @@ cir.func @test_eh_cleanup_in_try() {
 //     doSomething(&c);
 //   }
 cir.func @test_nested_eh_cleanup() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -404,8 +404,8 @@ cir.func @test_nested_eh_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_eh_cleanup()
-// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-// CHECK:         %[[C2:.*]] = cir.alloca "c2" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[C]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 //
@@ -488,8 +488,8 @@ cir.func @test_nested_eh_cleanup() {
 //     }
 //   };
 cir.func @test_nested_eh_only_cleanup() {
-  %0 = cir.alloca "base" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "base" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -509,8 +509,8 @@ cir.func @test_nested_eh_only_cleanup() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_eh_only_cleanup()
-// CHECK:         %[[BASE:.*]] = cir.alloca "base" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[BASE:.*]] = cir.alloca "base" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[BASE]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 //
@@ -586,8 +586,8 @@ cir.func @test_nested_eh_only_cleanup() {
 //     doSomethingElse(&c);
 //   }
 cir.func @test_nested_eh_both_throwing() {
-  %0 = cir.alloca "c" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "c2" align(4) init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "c2" align(4) init : !cir.ptr<!rec_SomeClass>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -608,8 +608,8 @@ cir.func @test_nested_eh_both_throwing() {
 }
 
 // CHECK-LABEL: cir.func @test_nested_eh_both_throwing()
-// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
-// CHECK:         %[[C2:.*]] = cir.alloca "c2" {{.*}} init !rec_SomeClass -> !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_SomeClass>
+// CHECK:         %[[C2:.*]] = cir.alloca "c2" {{.*}} init : !cir.ptr<!rec_SomeClass>
 // CHECK:         cir.call @ctor(%[[C]])
 // CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
 //

@@ -79,8 +79,8 @@ void init() {
 }
 
 // CIR: cir.func{{.*}} @_Z4initv()
-// CIR:   %[[S1:.*]] = cir.alloca "s1" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
-// CIR:   %[[S2:.*]] = cir.alloca "s2" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
+// CIR:   %[[S1:.*]] = cir.alloca "s1" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:   %[[S2:.*]] = cir.alloca "s2" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   %[[CONST_1:.*]] = cir.get_global @[[INIT_S1]] : !cir.ptr<!rec_S>
 // CIR:   cir.copy %[[CONST_1]] to %[[S1]] : !cir.ptr<!rec_S>
 // CIR:   %[[CONST_2:.*]] = cir.get_global @[[INIT_S2]] : !cir.ptr<!rec_S>
@@ -106,9 +106,9 @@ void init_var(int a, int b) {
 }
 
 // CIR: cir.func{{.*}} @_Z8init_varii(%[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
+// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[A_ARG]], %[[A_PTR]]
 // CIR:   cir.store{{.*}} %[[B_ARG]], %[[B_PTR]]
 // CIR:   %[[S_A:.*]] = cir.get_member %[[S]][0] {name = "a"}
@@ -154,10 +154,10 @@ void init_expr(int a, int b, int c) {
 }
 
 // CIR: cir.func{{.*}} @_Z9init_expriii(%[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}}, %[[C_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[C_PTR:.*]] = cir.alloca "c" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init !rec_S -> !cir.ptr<!rec_S>
+// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[C_PTR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[A_ARG]], %[[A_PTR]]
 // CIR:   cir.store{{.*}} %[[B_ARG]], %[[B_PTR]]
 // CIR:   cir.store{{.*}} %[[C_ARG]], %[[C_PTR]]
@@ -230,7 +230,7 @@ void cxx_default_init_with_struct_field() {
   Parent p = Parent{};
 }
 
-// CIR: %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init !rec_Parent -> !cir.ptr<!rec_Parent>
+// CIR: %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_Parent>
 // CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "a"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!s32i>
 // CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>{{.*}}) -> (!s32i {llvm.noundef})
 // CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>

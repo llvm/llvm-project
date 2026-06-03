@@ -3,10 +3,10 @@
 !void = !cir.void
 
 cir.func @E() {
-  %0 = cir.alloca "ptr" align(8) init !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-  %1 = cir.alloca "ptr2" align(8) init !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-  %2 = cir.alloca "ptr3" align(8) init !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-  %3 = cir.alloca "ptr4" align(8) init !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
+  %0 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
+  %1 = cir.alloca "ptr2" align(8) init : !cir.ptr<!cir.ptr<!void>>
+  %2 = cir.alloca "ptr3" align(8) init : !cir.ptr<!cir.ptr<!void>>
+  %3 = cir.alloca "ptr4" align(8) init : !cir.ptr<!cir.ptr<!void>>
   %4 = cir.block_address <@E, "D"> : !cir.ptr<!void>
   cir.store align(8) %4, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   %5 = cir.block_address <@E, "C"> : !cir.ptr<!void>

@@ -207,7 +207,7 @@ void test_delete_array_destructed(Destructed *ptr) {
 // CIR:       %[[END:.*]] = cir.ptr_stride %[[PTR]], %[[NUM_ELEM]] : (!cir.ptr<!rec_Destructed>, !u64i) -> !cir.ptr<!rec_Destructed>
 // CIR:       %[[NOT_EMPTY:.*]] = cir.cmp ne %[[END]], %[[PTR]] : !cir.ptr<!rec_Destructed>
 // CIR:       cir.if %[[NOT_EMPTY]] {
-// CIR:         %[[ARR_IDX:.*]] = cir.alloca "__array_idx" align(1) !cir.ptr<!rec_Destructed> -> !cir.ptr<!cir.ptr<!rec_Destructed>>
+// CIR:         %[[ARR_IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_Destructed>>
 // CIR:         cir.store %[[END]], %[[ARR_IDX]] : !cir.ptr<!rec_Destructed>, !cir.ptr<!cir.ptr<!rec_Destructed>>
 // CIR:         cir.do {
 // CIR:           %[[ARR_CUR:.*]] = cir.load{{.*}} %[[ARR_IDX]] : !cir.ptr<!cir.ptr<!rec_Destructed>>, !cir.ptr<!rec_Destructed>

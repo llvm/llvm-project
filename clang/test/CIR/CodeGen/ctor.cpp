@@ -17,20 +17,20 @@ void baz() {
 //       NYI, but when it is added this test should be updated to add a RUN
 //       line that passes '-mconstructor-aliases' to clang_cc1.
 // CHECK:   cir.func{{.*}} @_ZN5StrukC2Ev(%arg0: !cir.ptr<!rec_Struk>
-// CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca "this" align(8) init !cir.ptr<!rec_Struk> -> !cir.ptr<!cir.ptr<!rec_Struk>>
+// CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_Struk>>, !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     cir.return
 
 // CHECK:   cir.func{{.*}} @_ZN5StrukC1Ev(%arg0: !cir.ptr<!rec_Struk>
-// CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca "this" align(8) init !cir.ptr<!rec_Struk> -> !cir.ptr<!cir.ptr<!rec_Struk>>
+// CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_Struk>>, !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     cir.call @_ZN5StrukC2Ev(%[[THIS]]) : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK-NEXT:     cir.return
 
 // CHECK:   cir.func{{.*}} @_Z3bazv()
-// CHECK-NEXT:     %[[S_ADDR:.*]] = cir.alloca "s" align(4) init !rec_Struk -> !cir.ptr<!rec_Struk>
+// CHECK-NEXT:     %[[S_ADDR:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     cir.call @_ZN5StrukC1Ev(%[[S_ADDR]]) : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK-NEXT:     cir.return
 
@@ -61,7 +61,7 @@ void bar() {
 // CHECK-NEXT:   cir.return
 
 // CHECK:  cir.func{{.*}} @_Z3barv
-// CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init !rec_VariadicStruk -> !cir.ptr<!rec_VariadicStruk>
+// CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_VariadicStruk>
 // CHECK-NEXT:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CHECK-NEXT:    %[[THREE:.*]] = cir.const #cir.int<3> : !s32i

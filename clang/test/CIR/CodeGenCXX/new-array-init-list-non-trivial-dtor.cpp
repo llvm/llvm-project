@@ -27,7 +27,7 @@ void cleanup_const_exact() { new Throws[3]{1, 2, 3}; }
 // call we update arrayinit.endOfInit so the EH cleanup destroys only the
 // elements that were actually constructed before the throw.
 // CIR-LABEL: cir.func{{.*}} @_Z19cleanup_const_exactv(
-// CIR:   %[[INIT_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} {{.*}} -> !cir.ptr<!cir.ptr<!rec_Throws>>
+// CIR:   %[[INIT_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_Throws>>
 // CIR:   %[[ELT0:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_Throws>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.store align(8) %[[ELT0]], %[[INIT_END]]
@@ -130,7 +130,7 @@ void cleanup_const_exact() { new Throws[3]{1, 2, 3}; }
 void cleanup_const_partial() { new Throws[5]{1, 2, 3}; }
 
 // CIR-LABEL: cir.func{{.*}} @_Z21cleanup_const_partialv(
-// CIR:   %[[INIT_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} {{.*}} -> !cir.ptr<!cir.ptr<!rec_Throws>>
+// CIR:   %[[INIT_END:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_Throws>>
 // CIR:   %[[ELT0:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_Throws>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.store align(8) %[[ELT0]], %[[INIT_END]]

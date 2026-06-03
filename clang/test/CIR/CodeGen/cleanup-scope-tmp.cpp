@@ -8,7 +8,7 @@ struct StructWithDestructor {
 
 void cleanup_scope_with_without_body() { StructWithDestructor a; }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
 // CIR: } cleanup normal {
@@ -21,7 +21,7 @@ void cleanup_scope_with_body_and_cleanup() {
   a.procedure();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !rec_StructWithDestructor -> !cir.ptr<!rec_StructWithDestructor>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR: cir.cleanup.scope {
 // CIR:   cir.call @_ZN20StructWithDestructor9procedureEv(%[[A_ADDR]]) : (!cir.ptr<!rec_StructWithDestructor> {{.*}}) -> ()
 // CIR:   cir.yield

@@ -55,7 +55,7 @@ void f1(void) {
 }
 
 // CIR:      cir.func{{.*}} @f1()
-// CIR-NEXT:   cir.alloca "p" {{.*}} !cir.ptr<!rec_IncompleteU> -> !cir.ptr<!cir.ptr<!rec_IncompleteU>>
+// CIR-NEXT:   cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!rec_IncompleteU>>
 // CIR-NEXT:   cir.return
 
 // LLVM:      define{{.*}} void @f1()
@@ -74,8 +74,8 @@ int f2(void) {
 }
 
 // CIR:      cir.func{{.*}} @f2() -> !s32i
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(4) !s32i -> !cir.ptr<!s32i>
-// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) !rec_U1 -> !cir.ptr<!rec_U1>
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_U1>
 // CIR-NEXT:   %[[I:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:   %[[N:.*]] = cir.get_member %[[U]][0] {name = "n"} : !cir.ptr<!rec_U1> -> !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store{{.*}} %[[I]], %[[N]] : !s32i, !cir.ptr<!s32i>
@@ -113,7 +113,7 @@ void shouldGenerateUnionAccess(union U2 u) {
 }
 
 // CIR:      cir.func{{.*}} @shouldGenerateUnionAccess(%[[ARG:.*]]: !rec_U2
-// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init !rec_U2 -> !cir.ptr<!rec_U2>
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(8) init : !cir.ptr<!rec_U2>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U2, !cir.ptr<!rec_U2>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[B_PTR:.*]] = cir.get_member %[[U]][0] {name = "b"} : !cir.ptr<!rec_U2> -> !cir.ptr<!s8i>
@@ -170,7 +170,7 @@ void f3(union U3 u) {
 }
 
 // CIR:      cir.func{{.*}} @f3(%[[ARG:.*]]: !rec_U3
-// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(1) init !rec_U3 -> !cir.ptr<!rec_U3>
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(1) init : !cir.ptr<!rec_U3>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U3, !cir.ptr<!rec_U3>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s8i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
@@ -199,7 +199,7 @@ void f5(union U4 u) {
 }
 
 // CIR:      cir.func{{.*}} @f5(%[[ARG:.*]]: !rec_U4
-// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) init !rec_U4 -> !cir.ptr<!rec_U4>
+// CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) init : !cir.ptr<!rec_U4>
 // CIR-NEXT:   cir.store{{.*}} %[[ARG]], %[[U]] : !rec_U4, !cir.ptr<!rec_U4>
 // CIR-NEXT:   %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
 // CIR-NEXT:   %[[IDX:.*]] = cir.const #cir.int<4> : !s64i

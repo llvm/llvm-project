@@ -2,12 +2,12 @@
 
 void acc_compute(int parmVar) {
   // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
 
   int localVar1;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca "localVar1" {{.*}} !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca "localVar1" {{.*}} : !cir.ptr<!s32i>
   float localVar2;
-  // CHECK-NEXT: %[[LV2:.*]] = cir.alloca "localVar2" {{.*}} !cir.float -> !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[LV2:.*]] = cir.alloca "localVar2" {{.*}} : !cir.ptr<!cir.float>
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]]
 
 #pragma acc parallel copyin(parmVar) copyout(localVar1) create(localVar2)

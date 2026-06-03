@@ -3,17 +3,17 @@
 int global;
 void acc_compute(int parmVar) {
   // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}})
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
   int localVar1;
   short localVar2;
   float localVar3;
-  // CHECK-NEXT: %[[LOCAL1:.*]] = cir.alloca "localVar1" {{.*}} !s32i -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[LOCAL2:.*]] = cir.alloca "localVar2" {{.*}} !s16i -> !cir.ptr<!s16i>
-  // CHECK-NEXT: %[[LOCAL3:.*]] = cir.alloca "localVar3" {{.*}} !cir.float -> !cir.ptr<!cir.float> 
-  // CHECK-NEXT: %[[LOCALPTR:.*]] = cir.alloca "localPointer" {{.*}} !cir.ptr<!s16i> -> !cir.ptr<!cir.ptr<!s16i>>
-  // CHECK-NEXT: %[[LOCALARRAY:.*]] = cir.alloca "localArray" {{.*}} !cir.array<!cir.float x 5> -> !cir.ptr<!cir.array<!cir.float x 5>>
-  // CHECK-NEXT: %[[LOCALARRAYOFPTRS:.*]] = cir.alloca "localArrayOfPtrs" {{.*}} !cir.array<!cir.ptr<!cir.float> x 5> -> !cir.ptr<!cir.array<!cir.ptr<!cir.float> x 5>>
-  // CHECK-NEXT: %[[THREEDARRAY:.*]] = cir.alloca "threeDArray" {{.*}} !cir.array<!cir.array<!cir.array<!cir.double x 7> x 6> x 5> -> !cir.ptr<!cir.array<!cir.array<!cir.array<!cir.double x 7> x 6> x 5>>
+  // CHECK-NEXT: %[[LOCAL1:.*]] = cir.alloca "localVar1" {{.*}} : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[LOCAL2:.*]] = cir.alloca "localVar2" {{.*}} : !cir.ptr<!s16i>
+  // CHECK-NEXT: %[[LOCAL3:.*]] = cir.alloca "localVar3" {{.*}} : !cir.ptr<!cir.float> 
+  // CHECK-NEXT: %[[LOCALPTR:.*]] = cir.alloca "localPointer" {{.*}} : !cir.ptr<!cir.ptr<!s16i>>
+  // CHECK-NEXT: %[[LOCALARRAY:.*]] = cir.alloca "localArray" {{.*}} : !cir.ptr<!cir.array<!cir.float x 5>>
+  // CHECK-NEXT: %[[LOCALARRAYOFPTRS:.*]] = cir.alloca "localArrayOfPtrs" {{.*}} : !cir.ptr<!cir.array<!cir.ptr<!cir.float> x 5>>
+  // CHECK-NEXT: %[[THREEDARRAY:.*]] = cir.alloca "threeDArray" {{.*}} : !cir.ptr<!cir.array<!cir.array<!cir.array<!cir.double x 7> x 6> x 5>>
 
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]] : !s32i, !cir.ptr<!s32i>
 
@@ -646,7 +646,7 @@ typedef struct StructTy {
 void acc_compute_members() {
   // CHECK: cir.func{{.*}} @acc_compute_members()
   Struct localStruct;
-  // CHECK-NEXT: %[[LOCALSTRUCT:.*]] = cir.alloca "localStruct" {{.*}} !rec_StructTy -> !cir.ptr<!rec_StructTy>
+  // CHECK-NEXT: %[[LOCALSTRUCT:.*]] = cir.alloca "localStruct" {{.*}} : !cir.ptr<!rec_StructTy>
 
 #pragma acc parallel copy(localStruct)
   ;
@@ -899,7 +899,7 @@ void acc_compute_members() {
 void modifier_list() {
   // CHECK: cir.func{{.*}} @modifier_list()
   int localVar;
-  // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca "localVar" {{.*}} !s32i -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca "localVar" {{.*}} : !cir.ptr<!s32i>
 
 #pragma acc parallel copy(always:localVar)
   ;

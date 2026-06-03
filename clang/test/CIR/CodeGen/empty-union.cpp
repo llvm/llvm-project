@@ -40,7 +40,7 @@ void useEmpty() {
   Empty e;
 }
 // CIR: cir.func {{.*}}@_Z8useEmptyv()
-// CIR:   cir.alloca "e" align(1) !rec_Empty -> !cir.ptr<!rec_Empty>
+// CIR:   cir.alloca "e" align(1) : !cir.ptr<!rec_Empty>
 // LLVM: define {{.*}} void @_Z8useEmptyv()
 // LLVM:   alloca %union.Empty, i64 1, align 1
 // OGCG: define {{.*}} void @_Z8useEmptyv()
@@ -50,7 +50,7 @@ void useEmptyAligned() {
   EmptyAligned e;
 }
 // CIR: cir.func {{.*}}@_Z15useEmptyAlignedv()
-// CIR:   cir.alloca "e" align(16) !rec_EmptyAligned -> !cir.ptr<!rec_EmptyAligned>
+// CIR:   cir.alloca "e" align(16) : !cir.ptr<!rec_EmptyAligned>
 // LLVM: define {{.*}} void @_Z15useEmptyAlignedv()
 // LLVM:   alloca %union.EmptyAligned, i64 1, align 16
 // OGCG: define {{.*}} void @_Z15useEmptyAlignedv()

@@ -15,7 +15,7 @@ struct Delegating {
 Delegating::Delegating() : Delegating(0) {}
 
 // CIR: cir.func {{.*}} @_ZN10DelegatingC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Delegating> {{.*}})
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_Delegating> -> !cir.ptr<!cir.ptr<!rec_Delegating>>
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Delegating>>
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -45,8 +45,8 @@ struct DelegatingWithZeroing {
 DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 
 // CIR: cir.func {{.*}} @_ZN21DelegatingWithZeroingC2Ei(%[[THIS_ARG:.*]]: !cir.ptr<!rec_DelegatingWithZeroing> {{.*}}, %[[I_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_DelegatingWithZeroing> -> !cir.ptr<!cir.ptr<!rec_DelegatingWithZeroing>>
-// CIR:   %[[I_ADDR:.*]] = cir.alloca "" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_DelegatingWithZeroing>>
+// CIR:   %[[I_ADDR:.*]] = cir.alloca "" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]

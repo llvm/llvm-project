@@ -10,7 +10,7 @@ concept C = sizeof(T) % 2 == 0;
 
 void concept_specialization() { bool a = C<int>; }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[CONST_TRUE:.*]] = cir.const #true
 // CIR: cir.store {{.*}} %[[CONST_TRUE]], %[[A_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 

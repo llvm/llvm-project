@@ -39,8 +39,8 @@ void test_int(int param) {
   thread_local int init = param + local + get_i();
 
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z8test_inti(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local @_ZZ8test_intiE10const_init : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_TLS:.*]] = cir.get_global thread_local static_local @_ZZ8test_intiE4init : !cir.ptr<!s32i>
 //
@@ -103,8 +103,8 @@ void test_ctor(int param) {
   thread_local Ctor const_init = 5;
   thread_local Ctor init = param + local + get_i();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z9test_ctori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local static_local @_ZZ9test_ctoriE10const_init : !cir.ptr<!rec_Ctor>
 //
 // CIR-BEFORE-LPP: cir.local_init thread_local @_ZZ9test_ctoriE10const_init ctor {
@@ -193,8 +193,8 @@ void test_dtor(int param) {
   int local;
   thread_local Dtor const_init;
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z9test_dtori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_TLS:.*]] = cir.get_global thread_local static_local @_ZZ9test_dtoriE10const_init : !cir.ptr<!rec_Dtor>
 //
 // CIR-BEFORE-LPP: cir.local_init thread_local @_ZZ9test_dtoriE10const_init dtor {
@@ -246,8 +246,8 @@ void test_ctordtor(int param) {
   thread_local CtorDtor const_init = 5;
   thread_local CtorDtor init = param + local + get_i();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z13test_ctordtori(
-// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR-BOTH: %[[PARAM_ALLOCA:.*]] = cir.alloca "param" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BOTH: [[LOCAL_ALLOCA:.*]] = cir.alloca "local" {{.*}} : !cir.ptr<!s32i>
 // CIR-BOTH: %[[GET_CONST_TLS:.*]] = cir.get_global thread_local static_local @_ZZ13test_ctordtoriE10const_init : !cir.ptr<!rec_CtorDtor>
 // CIR-BEFORE-LLP: cir.local_init thread_local @_ZZ13test_ctordtoriE10const_init ctor {
 // CIR-BEFORE-LPP:   %[[GET_CONST_TLS_INIT:.*]] = cir.get_global thread_local static_local @_ZZ13test_ctordtoriE10const_init : !cir.ptr<!rec_CtorDtor>

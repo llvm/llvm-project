@@ -55,7 +55,7 @@ void l1() {
 
 // CIR:      cir.func{{.*}} @_Z2l1v
 // CIR-NEXT:   cir.scope {
-// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init !s32i -> !cir.ptr<!s32i>
+// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:     cir.for : cond {
@@ -108,7 +108,7 @@ void l2() {
 // CIR-NEXT:       cir.condition(%[[TRUE]])
 // CIR-NEXT:     } body {
 // CIR-NEXT:       cir.scope {
-// CIR-NEXT:         %[[I:.*]] = cir.alloca "i" align(4) init !s32i -> !cir.ptr<!s32i>
+// CIR-NEXT:         %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:         cir.store{{.*}} %[[ZERO]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:       }
@@ -153,7 +153,7 @@ void l3() {
 
 // CIR:      cir.func{{.*}} @_Z2l3v
 // CIR-NEXT:   cir.scope {
-// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init !s32i -> !cir.ptr<!s32i>
+// CIR-NEXT:     %[[I:.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:     cir.for : cond {
 // CIR-NEXT:       %[[TRUE:.*]] = cir.const #true
 // CIR-NEXT:       cir.condition(%[[TRUE]])
@@ -507,7 +507,7 @@ void unreachable_after_continue() {
 // CIR:       cir.condition(%[[TRUE]])
 // CIR:     } body {
 // CIR:       cir.scope {
-// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init !s32i -> !cir.ptr<!s32i>
+// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR:         cir.continue
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -567,7 +567,7 @@ void unreachable_after_break() {
 // CIR:       cir.condition(%[[TRUE]])
 // CIR:     } body {
 // CIR:       cir.scope {
-// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init !s32i -> !cir.ptr<!s32i>
+// CIR:         %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR:         cir.break
 // CIR:       ^bb1:  // no predecessors
 // CIR:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i

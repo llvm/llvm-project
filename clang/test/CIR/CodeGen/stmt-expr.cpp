@@ -21,10 +21,10 @@ void test1() {
 }
 
 // CIR: cir.func {{.*}} @_Z5test1v()
-// CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} !rec_A -> !cir.ptr<!rec_A>
-// CIR:   %[[TMP:.+]]      = cir.alloca "tmp" {{.*}} !rec_A -> !cir.ptr<!rec_A>
+// CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[TMP:.+]]      = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_A>
 // CIR:   cir.scope {
-// CIR:     %[[A:.+]] = cir.alloca "a" {{.*}} init !rec_A -> !cir.ptr<!rec_A>
+// CIR:     %[[A:.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_A>
 // CIR:     cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:     cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   }
@@ -63,7 +63,7 @@ void cleanup() {
 
 // CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
-// CIR:     %[[WD:.+]] = cir.alloca "wd" {{.*}} !rec_with_dtor -> !cir.ptr<!rec_with_dtor>
+// CIR:     %[[WD:.+]] = cir.alloca "wd" {{.*}} : !cir.ptr<!rec_with_dtor>
 // CIR:     cir.cleanup.scope {
 // CIR:       cir.yield
 // CIR:     } cleanup normal {
@@ -92,10 +92,10 @@ void gnu_statement_extension() {
   float b = __real__ ({float _Complex a; a;});
 }
 
-// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init !cir.float -> !cir.ptr<!cir.float>
-// CIR: %[[TMP_ADDR:.*]] = cir.alloca "tmp" {{.*}} !cir.complex<!cir.float> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[TMP_ADDR:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.scope {
-// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} !cir.complex<!cir.float> -> !cir.ptr<!cir.complex<!cir.float>>
+// CIR:   %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR:   cir.store {{.*}} %[[TMP_A]], %[[TMP_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: }

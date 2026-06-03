@@ -16,7 +16,7 @@ void test_constant() {
 }
 
 // CIR: cir.func {{.*}} @test_constant()
-// CIR:   %[[ALLOCA:.*]] = cir.alloca {{.*}} !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   cir.call @b(%[[CAST]], %[[SIZE]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()
@@ -42,7 +42,7 @@ void test_vla(int n) {
 }
 
 // CIR: cir.func {{.*}} @test_vla
-// CIR:   %[[VLA:.*]] = cir.alloca "d" align(16) %{{.*}} : !u64i, !s32i -> !cir.ptr<!s32i>
+// CIR:   %[[VLA:.*]] = cir.alloca "d" align(16) size(%{{.*}}) : !cir.ptr<!s32i>
 // CIR:   %[[CAST1:.*]] = cir.cast bitcast %[[VLA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR:   %[[SIZE1:.*]] = cir.objsize max nullunknown %[[CAST1]] : !cir.ptr<!void> -> !u64i
 // CIR:   cir.call @b(%[[CAST1]], %[[SIZE1]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()

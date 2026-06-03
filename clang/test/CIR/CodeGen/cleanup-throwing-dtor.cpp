@@ -25,7 +25,7 @@ void test_throwing_dtor_cleanup() {
 // High-level: the cleanup region's dtor call does NOT have nothrow.
 //
 // CIR: cir.func{{.*}} @_Z26test_throwing_dtor_cleanupv()
-// CIR:   %[[C:.*]] = cir.alloca "c" {{.*}} !rec_ThrowingDtor -> !cir.ptr<!rec_ThrowingDtor>
+// CIR:   %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_ThrowingDtor>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.call @_ZN12ThrowingDtor11doSomethingEv(%[[C]])
 // CIR:     cir.yield
@@ -38,7 +38,7 @@ void test_throwing_dtor_cleanup() {
 // becomes a try_call that unwinds to a terminate block.
 //
 // CIR-FLAT: cir.func{{.*}} @_Z26test_throwing_dtor_cleanupv()
-// CIR-FLAT:   %[[C:.*]] = cir.alloca "c" {{.*}} !rec_ThrowingDtor -> !cir.ptr<!rec_ThrowingDtor>
+// CIR-FLAT:   %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!rec_ThrowingDtor>
 // CIR-FLAT:   cir.br ^[[BODY:bb[0-9]+]]
 //
 // Body: doSomething becomes a try_call.

@@ -206,9 +206,9 @@ void signed_shift(int a, int b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z12signed_shiftii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s32i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -272,9 +272,9 @@ void unsigned_shift(unsigned a, unsigned b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z14unsigned_shiftjj(
 // CIR-SAME: %[[ARG0:.*]]: !u32i{{.*}}, %[[ARG1:.*]]: !u32i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !u32i -> !cir.ptr<!u32i>
-// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !u32i -> !cir.ptr<!u32i>
-// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init !u32i -> !cir.ptr<!u32i>
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!u32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
@@ -338,9 +338,9 @@ void zext_shift_example(int a, unsigned char b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18zext_shift_exampleih(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !u8i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !u8i -> !cir.ptr<!u8i>
-// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u8i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
@@ -410,9 +410,9 @@ void sext_shift_example(int a, signed char b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18sext_shift_exampleia(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s8i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !s8i -> !cir.ptr<!s8i>
-// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init !s32i -> !cir.ptr<!s32i>
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s8i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
@@ -482,9 +482,9 @@ void long_shift_example(long long a, short b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18long_shift_examplexs(
 // CIR-SAME: %[[ARG0:.*]]: !s64i{{.*}}, %[[ARG1:.*]]: !s16i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init !s64i -> !cir.ptr<!s64i>
-// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init !s16i -> !cir.ptr<!s16i>
-// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init !s64i -> !cir.ptr<!s64i>
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s64i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s16i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s64i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
@@ -558,9 +558,9 @@ void b1(bool a, bool b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b1bb(
 // CIR-SAME: %[[ARG0:.*]]: !cir.bool {{.*}}, %[[ARG1:.*]]: !cir.bool {{.*}})
-// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
-// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
-// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG0]], [[A]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG1]], [[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[AVAL:%[0-9]+]] = cir.load align(1) [[A]] : !cir.ptr<!cir.bool>, !cir.bool
@@ -662,11 +662,11 @@ void b3(int a, int b, int c, int d) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b3iiii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}, %[[ARG2:.*]]: !s32i {{.*}}, %[[ARG3:.*]]: !s32i {{.*}})
-// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: [[C:%[0-9]+]] = cir.alloca "c" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: [[D:%[0-9]+]] = cir.alloca "d" {{.*}} init !s32i -> !cir.ptr<!s32i>
-// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init !cir.bool -> !cir.ptr<!cir.bool>
+// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[C:%[0-9]+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[D:%[0-9]+]] = cir.alloca "d" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG2]], [[C]] : !s32i, !cir.ptr<!s32i>

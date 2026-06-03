@@ -567,21 +567,7 @@ def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-class CIR_AllocaTypesMatchWith<
-  string summary, string lhsArg, string rhsArg, string transform,
-  string comparator = "std::equal_to<>()"
-> : PredOpTrait<summary, CPred<comparator # "(" #
-      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
-             ", $" # rhsArg # ")">
-> {
-  string lhs = lhsArg;
-  string rhs = rhsArg;
-  string transformer = transform;
-}
-
 def CIR_AllocaOp : CIR_Op<"alloca", [
-  CIR_AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
-    "addr", "allocaType", "mlir::cast<cir::PointerType>($_self).getPointee()">,
   DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
 ]> {
   let summary = "Defines a scope-local variable";
@@ -614,8 +600,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
-    Optional<CIR_AnyFundamentalIntType>:$dynAllocSize,
-    TypeAttr:$allocaType,
+    Optional<CIR_UInt64>:$dynAllocSize,
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
@@ -630,23 +615,24 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Type":$addr,
-                   "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
                    "mlir::IntegerAttr":$alignment)>,
 
     OpBuilder<(ins "mlir::Type":$addr,
-                   "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
                    "mlir::IntegerAttr":$alignment,
                    "mlir::Value":$dynAllocSize),
     [{
       if (dynAllocSize)
         $_state.addOperands(dynAllocSize);
-      build($_builder, $_state, addr, allocaType, name, alignment);
+      build($_builder, $_state, addr, name, alignment);
     }]>
   ];
 
   let extraClassDeclaration = [{
+    mlir::Type getAllocaType() {
+      return mlir::cast<cir::PointerType>(getAddr().getType()).getPointee();
+    }
     // Whether the alloca input type is a pointer.
     bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
     bool isDynamic() { return (bool)getDynAllocSize(); }
@@ -658,8 +644,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     oilist( `init`              $init
           | `const`             $constant
           | `cleanup_dest_slot` $cleanup_dest_slot)
-    ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
-    $allocaType `->` qualified(type($addr))
+    (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
     ($annotations^)? attr-dict
   }];
 

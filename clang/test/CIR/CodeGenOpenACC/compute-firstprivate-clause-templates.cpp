@@ -18,7 +18,7 @@ struct HasDtor {
 
 // CHECK: acc.firstprivate.recipe @firstprivatization__ZTS13CopyConstruct : !cir.ptr<!rec_CopyConstruct> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
-// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !rec_CopyConstruct -> !cir.ptr<!rec_CopyConstruct>
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} : !cir.ptr<!rec_CopyConstruct>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}):
@@ -28,7 +28,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.firstprivate.init" {{.*}} !rec_NonDefaultCtor -> !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.firstprivate.init" {{.*}} : !cir.ptr<!rec_NonDefaultCtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
@@ -38,7 +38,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTS7HasDtor : !cir.ptr<!rec_HasDtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
-// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !rec_HasDtor -> !cir.ptr<!rec_HasDtor>
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} : !cir.ptr<!rec_HasDtor>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}):
@@ -52,7 +52,7 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.firstprivate.recipe @firstprivatization__ZTSi : !cir.ptr<!s32i> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!s32i> {{.*}}):
-// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} !s32i -> !cir.ptr<!s32i>
+// CHECK-NEXT: cir.alloca "openacc.firstprivate.init" {{.*}} : !cir.ptr<!s32i>
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } copy {
 // CHECK-NEXT: ^bb0(%[[ARG_FROM:.*]]: !cir.ptr<!s32i> {{.*}}, %[[ARG_TO:.*]]: !cir.ptr<!s32i> {{.*}}):
@@ -64,10 +64,10 @@ struct HasDtor {
 template<typename T, typename U, typename V, typename W>
 void dependent_version(const T &cc, const U &ndc, const V &dtor, const W &someInt) {
   // CHECK: cir.func {{.*}}@_Z17dependent_versionI13CopyConstruct14NonDefaultCtor7HasDtoriEvRKT_RKT0_RKT1_RKT2_(%[[ARG0:.*]]: !cir.ptr<!rec_CopyConstruct> {{.*}}, %[[ARG1:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}, %[[ARG2:.*]]: !cir.ptr<!rec_HasDtor> {{.*}}, %[[ARG3:.*]]: !cir.ptr<!s32i> {{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[CC:.*]] = cir.alloca "cc" {{.*}} init const !cir.ptr<!rec_CopyConstruct> -> !cir.ptr<!cir.ptr<!rec_CopyConstruct>>
-  // CHECK-NEXT: %[[NDC:.*]] = cir.alloca "ndc" {{.*}} init const !cir.ptr<!rec_NonDefaultCtor> -> !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>
-  // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca "dtor" {{.*}} init const !cir.ptr<!rec_HasDtor> -> !cir.ptr<!cir.ptr<!rec_HasDtor>>
-  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca "someInt" {{.*}} init const !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[CC:.*]] = cir.alloca "cc" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_CopyConstruct>>
+  // CHECK-NEXT: %[[NDC:.*]] = cir.alloca "ndc" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>
+  // CHECK-NEXT: %[[DTOR:.*]] = cir.alloca "dtor" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasDtor>>
+  // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca "someInt" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 
 #pragma acc parallel firstprivate(cc, ndc, dtor, someInt)
   ;

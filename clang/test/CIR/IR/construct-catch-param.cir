@@ -29,7 +29,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
 // enclosing scope) followed by `cir.begin_catch`.
 cir.func @construct_catch_param_basic() {
   cir.scope {
-    %param = cir.alloca "e" align(1) !rec_E -> !cir.ptr<!rec_E>
+    %param = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -51,7 +51,7 @@ cir.func @construct_catch_param_basic() {
 }
 
 // CHECK-LABEL: cir.func @construct_catch_param_basic()
-// CHECK:         %[[E:.*]] = cir.alloca "e" {{.*}} !rec_E -> !cir.ptr<!rec_E>
+// CHECK:         %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!rec_E>
 // CHECK:         cir.try {
 // CHECK:           cir.yield
 // CHECK:         } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]

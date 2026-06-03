@@ -18,7 +18,7 @@ void test_empty_base_null_init() {
 }
 
 // CIR: cir.func {{.*}} @_Z25test_empty_base_null_initv()
-// CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_B -> !cir.ptr<!rec_B>
+// CIR-NEXT:   %[[B_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_B>
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.base_class_addr %[[B_ADDR]] : !cir.ptr<!rec_B> nonnull [0] -> !cir.ptr<!rec_A>
 
 // LLVM: define{{.*}} @_Z25test_empty_base_null_initv()
@@ -45,7 +45,7 @@ void test_non_empty_base_null_init() {
 }
 
 // CIR: cir.func {{.*}} @_Z29test_non_empty_base_null_initv()
-// CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_D -> !cir.ptr<!rec_D>
+// CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_D>
 // CIR:   %[[BASE:.*]] = cir.base_class_addr %[[TMP]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_C>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.const_record<{#cir.int<0> : !s32i}> : !rec_C
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[BASE]]
@@ -76,7 +76,7 @@ void test_base_chain_null_init() {
 }
 
 // CIR: cir.func {{.*}} @_Z25test_base_chain_null_initv()
-// CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} !rec_G -> !cir.ptr<!rec_G>
+// CIR:   %[[TMP:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_G>
 // CIR:   %[[BASE:.*]] = cir.base_class_addr %[[TMP]] : !cir.ptr<!rec_G> nonnull [0] -> !cir.ptr<!rec_F>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.const_record<{#cir.zero : !rec_E}> : !rec_F
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[BASE]]

@@ -17,7 +17,7 @@ __device__ void print_int() {
 }
 
 // CIR: cir.func no_inline dso_local @_Z9print_intv()
-// CIR:   %[[#ALLOCA:]] = cir.alloca {{.*}} !rec_anon_struct
+// CIR:   %[[#ALLOCA:]] = cir.alloca {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR:   %[[#VAL:]] = cir.const #cir.int<42> : !s32i
 // CIR:   %[[#FIELD:]] = cir.get_member %[[#ALLOCA]][0]
 // CIR:   cir.store align(4) %[[#VAL]], %[[#FIELD]]

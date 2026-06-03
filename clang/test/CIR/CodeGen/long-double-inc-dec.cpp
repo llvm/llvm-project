@@ -21,8 +21,8 @@
 
 extern "C" long double do_pre_inc(long double d) {
   // CIR-LABEL: @do_pre_inc(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_inc(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -48,8 +48,8 @@ extern "C" long double do_pre_inc(long double d) {
 }
 extern "C" long double do_post_inc(long double d) {
   // CIR-LABEL: @do_post_inc(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_inc(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -76,8 +76,8 @@ extern "C" long double do_post_inc(long double d) {
 
 extern "C" long double do_pre_dec(long double d) {
   // CIR-LABEL: @do_pre_dec(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_dec(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
@@ -103,8 +103,8 @@ extern "C" long double do_pre_dec(long double d) {
 }
 extern "C" long double do_post_dec(long double d) {
   // CIR-LABEL: @do_post_dec(
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} !cir.long_double<![[LDTY]]> -> !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_dec(
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]

@@ -12,8 +12,8 @@ struct WithStaticMem {
 extern "C" void use(WithStaticMem m) {
   // CIR-LABEL: use(
    auto x = m.StaticMem;
-  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "m" {{.*}} init !rec_WithStaticMem -> !cir.ptr<!rec_WithStaticMem>
-  // CIR: %[[X_ALLOCA:.*]] = cir.alloca "x" {{.*}} init !cir.ptr<!cir.func<()>> -> !cir.ptr<!cir.ptr<!cir.func<()>>>
+  // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "m" {{.*}} init : !cir.ptr<!rec_WithStaticMem>
+  // CIR: %[[X_ALLOCA:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<()>>>
   // CIR: cir.store %{{.*}}, %[[ARG_ALLOCA]] : !rec_WithStaticMem, !cir.ptr<!rec_WithStaticMem>
   // CIR: %[[GET_STATIC_FUNC:.*]] = cir.get_global @_ZN13WithStaticMem9StaticMemEv : !cir.ptr<!cir.func<()>> 
   // CIR: cir.store {{.*}}%[[GET_STATIC_FUNC]], %[[X_ALLOCA]] : !cir.ptr<!cir.func<()>>, !cir.ptr<!cir.ptr<!cir.func<()>>>

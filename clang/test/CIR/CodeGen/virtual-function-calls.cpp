@@ -23,7 +23,7 @@ A::A() {}
 // OGCG: @_ZTV1A = external constant { [3 x ptr] }
 
 // CIR: cir.func{{.*}} @_ZN1AC2Ev(%arg0: !cir.ptr<!rec_A> {{.*}})
-// CIR:    %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init !cir.ptr<!rec_A> -> !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:    %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:    cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:    %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
 // CIR:    %[[VPTR:.*]] = cir.vtable.address_point(@_ZTV1A, address_point = <index = 0, offset = 2>) : !cir.vptr
@@ -52,7 +52,7 @@ void f1(A *a) {
 }
 
 // CIR: cir.func{{.*}} @_Z2f1P1A(%arg0: !cir.ptr<!rec_A> {{.*}})
-// CIR:   %[[A_ADDR:.*]] = cir.alloca {{.*}} !cir.ptr<!rec_A>
+// CIR:   %[[A_ADDR:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   cir.store %arg0, %[[A_ADDR]]
 // CIR:   %[[A:.*]] = cir.load{{.*}} %[[A_ADDR]]
 // CIR:   %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
@@ -91,7 +91,7 @@ void call_virtual_fn_in_cleanup_scope() {
 }
 
 // CIR: cir.func {{.*}} @_Z32call_virtual_fn_in_cleanup_scopev()
-// CIR:   %[[B:.*]] = cir.alloca "b" {{.*}} init !rec_B -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BC2Ev(%[[B]])
 // CIR:   cir.cleanup.scope {
 // CIR:    %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i

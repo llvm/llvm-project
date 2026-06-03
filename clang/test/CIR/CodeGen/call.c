@@ -90,7 +90,7 @@ void f9(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @f9(){{.*}} {
-// CIR:         %[[SLOT:.+]] = cir.alloca "agg.tmp0" align(4) !rec_S -> !cir.ptr<!rec_S>
+// CIR:         %[[SLOT:.+]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[RET:.+]] = cir.call @f3() : () -> !rec_S
 // CIR-NEXT:    cir.store align(4) %[[RET]], %[[SLOT]] : !rec_S, !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[ARG:.+]] = cir.load align(4) %[[SLOT]] : !cir.ptr<!rec_S>, !rec_S
@@ -135,7 +135,7 @@ void f13(void) {
   fp();
 }
 // CIR-LABEL: cir.func{{.*}} @f13()
-// CIR: %[[FP_ALLOCA:.*]] = cir.alloca "fp" {{.*}} !cir.ptr<!cir.func<()>> -> !cir.ptr<!cir.ptr<!cir.func<()>>>
+// CIR: %[[FP_ALLOCA:.*]] = cir.alloca "fp" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>
 // CIR: %[[LOAD_FP:.*]] = cir.load align(8) atomic(seq_cst) %[[FP_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<()>>>, !cir.ptr<!cir.func<()>>
 // CIR: cir.call %[[LOAD_FP]]() : (!cir.ptr<!cir.func<()>>) -> ()
 

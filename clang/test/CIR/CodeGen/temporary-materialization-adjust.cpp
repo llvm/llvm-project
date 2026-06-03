@@ -11,8 +11,8 @@ void Field() {
   const int &r = Base().x;
 }
 // CIR-LABEL: cir.func {{.*}}@_Z5Fieldv() 
-// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" {{.*}} !rec_Base -> !cir.ptr<!rec_Base>
-// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" {{.*}} init const !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Base>
+// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:  %[[GET_MEM:.*]] = cir.get_member %[[TEMP_ALLOCA]][0] {name = "x"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR:  cir.store align(8) %[[GET_MEM]], %[[R_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
@@ -26,9 +26,9 @@ void MemPtr(int Base::*mp) {
   const int &r = Base().*mp;
 }
 // CIR-LABEL: cir.func {{.*}}@_Z6MemPtrM4Basei
-// CIR: %[[MP_ALLOCA:.*]] = cir.alloca "mp" align(8) init !s64i -> !cir.ptr<!s64i>
-// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" align(4) !rec_Base -> !cir.ptr<!rec_Base>
-// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" align(8) init const !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[MP_ALLOCA:.*]] = cir.alloca "mp" align(8) init : !cir.ptr<!s64i>
+// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!rec_Base>
+// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" align(8) init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[ARG_LOAD:.*]] = cir.load align(8) %[[MP_ALLOCA]] : !cir.ptr<!s64i>, !s64i
 // CIR: %[[TEMP_LOAD:.*]] = cir.cast bitcast %[[TEMP_ALLOCA]] : !cir.ptr<!rec_Base> -> !cir.ptr<!s8i>
 // CIR: %[[STRIDE:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ARG_LOAD]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
@@ -48,8 +48,8 @@ void DerivedToBase() {
   const int &r = Derived().x;
 }
 // CIR-LABEL: cir.func {{.*}}@_Z13DerivedToBasev()
-// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" align(4) !rec_Derived -> !cir.ptr<!rec_Derived>
-// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" align(8) init const !cir.ptr<!s32i> -> !cir.ptr<!cir.ptr<!s32i>>
+// CIR: %[[TEMP_ALLOCA:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!rec_Derived>
+// CIR: %[[R_ALLOCA:.*]] = cir.alloca "r" align(8) init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[BASE:.*]] = cir.base_class_addr %[[TEMP_ALLOCA]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR: %[[GET_MEM:.*]] = cir.get_member %[[BASE]][0] {name = "x"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR: cir.store align(8) %[[GET_MEM]], %[[R_ALLOCA]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
