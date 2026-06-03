@@ -8165,7 +8165,6 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 //  https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
 // clang-format on
 
-
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
   // atomicrmw and cmpxchg instructions not efficiently supported by PTX
@@ -8249,6 +8248,7 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
+<<<<<<< HEAD
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
            RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
@@ -8260,6 +8260,13 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
   }
   if (auto *LI = dyn_cast<LoadInst>(I);
            LI && STI.hasMemoryOrdering())
+=======
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+      RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+      shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+    return AtomicOrdering::Acquire;
+  if (auto *LI = dyn_cast<LoadInst>(I); LI && STI.hasMemoryOrdering())
+>>>>>>> fe883a4cd0679 (clang-format)
     return AtomicOrdering::Acquire;
 
   return AtomicOrdering::Monotonic;
@@ -8292,12 +8299,15 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                  SSID.value());
   } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
     // volatile operations have sys scope by default
-    SSID = LI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("") : SSID;
+    SSID = LI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("")
+                            : SSID;
     if (Ord == AtomicOrdering::SequentiallyConsistent)
-      return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent, SSID.value());
+      return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent,
+                                 SSID.value());
   } else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
     // volatile operations have sys scope by default
-    SSID = SI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("") : SSID;
+    SSID = SI->isVolatile() ? Builder.getContext().getOrInsertSyncScopeID("")
+                            : SSID;
     if (isReleaseOrStronger(Ord))
       return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
                                      ? AtomicOrdering::SequentiallyConsistent
@@ -8351,7 +8361,7 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
       return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   } else if (isa<LoadInst>(Inst) && !STI.hasMemoryOrdering()) {
-      return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
   }
   return nullptr;
 }

@@ -746,8 +746,8 @@ NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
 
 namespace {
 
-static NVPTX::Ordering
-getInstructionOrdering(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
+static NVPTX::Ordering getInstructionOrdering(MemSDNode *N,
+                                              const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
@@ -1078,8 +1078,7 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
 // Returns Memory Order and Scope of a memory instruction.
 std::pair<NVPTX::Ordering, NVPTX::Scope>
 NVPTXDAGToDAGISel::getMemInstOrderingScope(MemSDNode *N) {
-  auto InstructionOrdering =
-      getInstructionOrdering(N, Subtarget);
+  auto InstructionOrdering = getInstructionOrdering(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
 
   // Singlethread scope has no inter-thread synchronization requirements, so
