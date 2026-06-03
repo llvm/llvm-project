@@ -56,7 +56,6 @@ enum UniformityLLTOpPredicateID {
   DivS16,
   DivS32,
   DivS64,
-  DivS96,
   DivS128,
 
   // any LLT, divergent-check only predicate
@@ -205,7 +204,6 @@ enum RegBankLLTMappingApplyID {
   Vgpr16,
   Vgpr32,
   Vgpr64,
-  Vgpr96,
   Vgpr128,
   VgprP0,
   VgprP1,
