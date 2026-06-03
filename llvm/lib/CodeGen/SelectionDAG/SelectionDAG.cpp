@@ -5746,16 +5746,11 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::SPLAT_VECTOR:
     return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1);
 
-  case ISD::SELECT:
-  case ISD::VSELECT: {
+  case ISD::SELECT: {
     SDValue Cond = Op.getOperand(0);
-    bool CondIsVector = Cond.getValueType().isVector();
     return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
-           (CondIsVector
-                ? isGuaranteedNotToBeUndefOrPoison(Cond, DemandedElts, Kind,
-                                                   Depth + 1)
-                : isGuaranteedNotToBeUndefOrPoison(Cond, Kind, Depth + 1)) &&
+           isGuaranteedNotToBeUndefOrPoison(Cond, Kind, Depth + 1) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedElts,
                                             Kind, Depth + 1) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(2), DemandedElts,
@@ -5812,7 +5807,8 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
-  case ISD::TRUNCATE: {
+  case ISD::TRUNCATE:
+  case ISD::VSELECT: {
     // If Op can't create undef/poison and none of its operands are undef/poison
     // then Op is never undef/poison. A difference from the more common check
     // below, outside the switch, is that we handle elementwise operations for
