@@ -22,6 +22,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#include "lldb/lldb-enumerations.h"
+#endif
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -41,6 +46,21 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::Error error = SystemInitializerCommon::Initialize();
   if (error)
     return error;
+
+#if LLDB_ENABLE_PYTHON
+  // Map libpython into the process before any code that might reference it
+  // runs. This is required by both the static script interpreter (whose
+  // Initialize() invokes Python via the LLDB_PLUGIN_INITIALIZE loop below)
+  // and the dynamic plugin (whose dlopen needs Python's symbols visible in
+  // the process). The loader is once_flag-cached and a no-op when libpython
+  // is already in the process (e.g. `import lldb` from Python).
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (!python_loader)
+    return python_loader.takeError();
+  if (llvm::Error err = python_loader->Load())
+    return err;
+#endif
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();

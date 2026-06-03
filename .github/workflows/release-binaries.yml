@@ -71,11 +71,11 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-      - name: Validate Release Version
-        if: inputs.release-version != ''
-        uses: ./.github/workflows/validate-release-version
-        with:
-          release-version: ${{ inputs.release-version }}
+    - name: Validate Release Version
+      if: inputs.release-version != ''
+      uses: ./.github/workflows/validate-release-version
+      with:
+        release-version: ${{ inputs.release-version }}
 
     - name: Checkout LLVM
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -315,6 +315,11 @@ jobs:
           fi
           echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
+    - name: Install LLDB test Python dependencies
+      if: runner.os == 'Linux'
+      run: |
+        python -m pip install -r lldb/test/requirements.txt
+
     - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       id: artifact-upload
       with:
@@ -367,4 +372,5 @@ jobs:
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
-          user-token: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

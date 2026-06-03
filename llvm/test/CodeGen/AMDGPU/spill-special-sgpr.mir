@@ -8,7 +8,7 @@
     ret void
   }
 
-  attributes #0 = {  "frame-pointer"="all" }
+  attributes #0 = { "frame-pointer"="all" nounwind }
 ...
 ---
 name:            check_vcc
