@@ -1,10 +1,6 @@
 // UNSUPPORTED: system-windows
 //   Windows is unsupported because we use the Unix path separator `\`.
 
-// Determine the resource directory used by the compiler so we do not have to guess at it
-// RUN: rm -rf %t && mkdir %t
-// RUN: %clang -print-resource-dir | tr -d '\n' > %t/resource-dir
-
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -mlinker-version=0 \
 // RUN:   -isysroot %S/Inputs/DriverKit19.0.sdk -### 2>&1               \
 // RUN: | FileCheck %s --check-prefix=LD64-OLD
@@ -29,11 +25,11 @@ int main() { return 0; }
 
 
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -isysroot %S/Inputs/DriverKit19.0.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk -DRESOURCE_DIR="%{readfile:%t/resource-dir}" --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 // RUN: %clang %s -target x86_64-apple-driverkit21.0.1 -isysroot %S/Inputs/DriverKit21.0.1.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk -DRESOURCE_DIR="%{readfile:%t/resource-dir}" --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 // RUN: %clang %s -target x86_64-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
-// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR="%{readfile:%t/resource-dir}" --check-prefix=INC
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk -DRESOURCE_DIR=%clang-resource-dir --check-prefix=INC
 //
 // INC: "-isysroot" "[[SDKROOT]]"
 // INC: "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"
