@@ -6356,12 +6356,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-crash-diagnostics-dir=" + Dir));
   }
 
-  bool UseSeparateSections = isUseSeparateSections(Triple);
-
-  if (Args.hasFlag(options::OPT_ffunction_sections,
-                   options::OPT_fno_function_sections, UseSeparateSections)) {
-    CmdArgs.push_back("-ffunction-sections");
-  }
+  addSeparateSectionFlags(Triple, Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
@@ -6405,12 +6400,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     }
-  }
-
-  bool HasDefaultDataSections = Triple.isOSBinFormatXCOFF();
-  if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
-                   UseSeparateSections || HasDefaultDataSections)) {
-    CmdArgs.push_back("-fdata-sections");
   }
 
   Args.addOptOutFlag(CmdArgs, options::OPT_funique_section_names,
@@ -9830,6 +9819,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
          JA.getType() == types::TY_Image);
   if (JA.getType() == types::TY_HIP_FATBIN) {
     CmdArgs.push_back("--emit-fatbin-only");
+    // Non-RDC HIP uses the conventional non-LTO pipeline unless the user opts
+    // into offload LTO. The device backend then runs in the linker wrapper's
+    // parallel device-link step rather than being deferred to the LTO link.
+    // Profile generation still needs LTO so the device profile runtime is
+    // linked and optimized together with the device code.
+    bool UsesProfileGenerate = Args.hasArg(
+        options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
+        options::OPT_fprofile_instr_generate,
+        options::OPT_fprofile_instr_generate_EQ);
+    if (C.getDriver().getOffloadLTOMode() == LTOK_None && !UsesProfileGenerate)
+      CmdArgs.push_back("--no-lto");
     CmdArgs.append({"-o", Output.getFilename()});
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());

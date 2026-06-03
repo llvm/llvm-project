@@ -177,6 +177,12 @@ public:
       attachResourcePrinter(std::move(printer));
   }
 
+  /// Set a boolean flag to skip emission of unique locations into the bytecode
+  /// file. When enabled, all locations are mapped to UnknownLoc during
+  /// numbering.
+  void setElideLocations(bool shouldElideLocations = true);
+  bool shouldElideLocations() const;
+
 private:
   /// A pointer to allocated storage for the impl state.
   std::unique_ptr<Impl> impl;

@@ -25,3 +25,15 @@ module {
     cir.return %0 : !cir.bool
   }
 }
+
+// -----
+
+!s8i = !cir.int<s, 8>
+
+module {
+  cir.func @int_to_float(%in: !cir.vector<8 x !s8i>) {
+    // expected-error@+1 {{vector float-to-int and int-to-float casts require source and destination vectors to have the same number of elements}}
+    cir.cast int_to_float %in : !cir.vector<8 x !s8i> -> !cir.vector<2 x !cir.float>
+    cir.return
+  }
+}
