@@ -36,25 +36,6 @@ AsanThreadIdAndName::AsanThreadIdAndName(u32 tid)
   asanThreadRegistry().CheckLocked();
 }
 
-// Writes a color-free, single-line description of a heap allocation or
-// deallocation stack, e.g. "freed by thread T1 here:".
-static void DescribeAllocStack(const char* verb, AsanThreadContext* thread,
-                               InternalScopedString* s) {
-  s->AppendF("%s by thread %s here:", verb,
-             AsanThreadIdAndName(thread).c_str());
-}
-
-// Prints the description produced by DescribeAllocStack (decorated and followed
-// by a newline) and then the given stack trace.
-static void PrintAllocStack(const char* verb, AsanThreadContext* thread,
-                            const StackTrace& stack) {
-  Decorator d;
-  InternalScopedString s;
-  DescribeAllocStack(verb, thread, &s);
-  Printf("%s%s%s\n", d.Allocation(), s.data(), d.Default());
-  stack.Print();
-}
-
 // Prints this thread and, if flags()->print_full_thread_history, its ancestors
 void DescribeThread(AsanThreadContext *context) {
   while (true) {
@@ -443,14 +424,21 @@ void HeapAddressDescription::Print() const {
   AsanThreadContext *alloc_thread = GetThreadContextByTidLocked(alloc_tid);
   StackTrace alloc_stack = GetStackTraceFromId(alloc_stack_id);
 
+  Decorator d;
   AsanThreadContext *free_thread = nullptr;
   if (free_tid != kInvalidTid) {
     free_thread = GetThreadContextByTidLocked(free_tid);
-    PrintAllocStack("freed", free_thread, GetStackTraceFromId(free_stack_id));
-    PrintAllocStack("previously allocated", alloc_thread, alloc_stack);
+    Printf("%sfreed by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(free_thread).c_str(), d.Default());
+    StackTrace free_stack = GetStackTraceFromId(free_stack_id);
+    free_stack.Print();
+    Printf("%spreviously allocated by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   } else {
-    PrintAllocStack("allocated", alloc_thread, alloc_stack);
+    Printf("%sallocated by thread %s here:%s\n", d.Allocation(),
+           AsanThreadIdAndName(alloc_thread).c_str(), d.Default());
   }
+  alloc_stack.Print();
   DescribeThread(GetCurrentThread());
   if (free_thread) DescribeThread(free_thread);
   DescribeThread(alloc_thread);
