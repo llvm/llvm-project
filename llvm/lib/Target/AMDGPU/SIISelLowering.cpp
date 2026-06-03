@@ -2354,11 +2354,15 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool SITargetLowering::shouldNarrowExtractedVectorBinOp(EVT SrcVT, EVT SubVT,
-                                                        unsigned Index) const {
-  unsigned ScalarBits = SubVT.getScalarSizeInBits();
+bool SITargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                             EVT DestVT) const {
+  if (N->getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return AMDGPUTargetLowering::isNarrowingProfitable(N, SrcVT, DestVT);
+                                                
+  unsigned Index = N->getConstantOperandVal(1);
+  unsigned ScalarBits = DestVT.getScalarSizeInBits();
   unsigned OffsetBits = Index * ScalarBits;
-  unsigned SubvectorBits = SubVT.getSizeInBits();
+  unsigned SubvectorBits = DestVT.getSizeInBits();
 
   // If the extracted subvector starts on a dword boundary and has a dword
   // sized payload, keeping the original wide result is preferable because the

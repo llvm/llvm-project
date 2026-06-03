@@ -3527,13 +3527,6 @@ public:
     return false;
   }
 
-  /// Return true if it is profitable to narrow a vector binop feeding an
-  /// extract_subvector into a binop of the extracted vector type.
-  virtual bool shouldNarrowExtractedVectorBinOp(EVT SrcVT, EVT SubVT,
-                                                unsigned Index) const {
-    return true;
-  }
-
   /// Return true if extraction of a scalar element from the given vector type
   /// at the given index is cheap. For example, if scalar operations occur on
   /// the same register file as vector operations, then an extract element may
