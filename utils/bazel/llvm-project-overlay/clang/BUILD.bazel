@@ -1125,7 +1125,10 @@ cc_library(
         "include/clang/Sema/*.h",
         "include/clang-c/*.h",
     ]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Driver/ToolChains",
+    ],
     includes = ["include"],
     textual_hdrs = [
         "include/clang/Sema/AttrParsedAttrImpl.inc",
@@ -1134,6 +1137,7 @@ cc_library(
         "include/clang/Sema/AttrTemplateInstantiate.inc",
         "lib/Sema/OpenCLBuiltins.inc",
     ],
+    toolchains = [":workspace_root"],
     deps = [
         ":analysis",
         ":apinotes",
@@ -1229,8 +1233,12 @@ cc_library(
         "lib/ASTMatchers/Dynamic/*.h",
     ]),
     hdrs = glob(["include/clang/ASTMatchers/Dynamic/*.h"]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Driver/ToolChains",
+    ],
     includes = ["include"],
+    toolchains = [":workspace_root"],
     deps = [
         ":ast",
         ":ast_matchers",
@@ -1566,8 +1574,12 @@ cc_library(
     ] + glob([
         "include/clang/StaticAnalyzer/Checkers/**/*.h",
     ]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Driver/ToolChains",
+    ],
     includes = ["include"],
+    toolchains = [":workspace_root"],
     deps = [
         ":analysis",
         ":ast",
@@ -1613,6 +1625,19 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "patch_clang_cpp",
+    srcs = ["//clang:lib/Driver/ToolChains/Clang.cpp"],
+    outs = ["Clang_patched.cpp"],
+    cmd = "sed -e 's/C.getDriver().getOffloadLTOMode()/getToolChain().getLTOMode(Args, Action::OFK_HIP)/g' " +
+          "-e 's/#include \"Clang.h\"/#include \"clang\\/lib\\/Driver\\/ToolChains\\/Clang.h\"/g' " +
+          "-e 's/#include \"Arch\\//#include \"clang\\/lib\\/Driver\\/ToolChains\\/Arch\\//g' " +
+          "-e 's/#include \"Hexagon.h\"/#include \"clang\\/lib\\/Driver\\/ToolChains\\/Hexagon.h\"/g' " +
+          "-e 's/#include \"PS4CPU.h\"/#include \"clang\\/lib\\/Driver\\/ToolChains\\/PS4CPU.h\"/g' " +
+          "-e 's/#include \"MSVC.h\"/#include \"clang\\/lib\\/Driver\\/ToolChains\\/MSVC.h\"/g' " +
+          "$< > $@",
+)
+
 cc_library(
     name = "driver",
     srcs = glob(
@@ -1625,12 +1650,15 @@ cc_library(
         ],
         exclude = [
             "lib/Driver/ToolChains/MSVCSetupApi.h",
+            "lib/Driver/ToolChains/Clang.cpp",
         ],
-    ),
+    ) + ["Clang_patched.cpp"],
     hdrs = glob([
         "include/clang/Driver/*.h",
     ]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
     includes = [
         "include",
         # TODO: This is likely a layering issue, but files in Arch are currently
@@ -1646,6 +1674,7 @@ cc_library(
     textual_hdrs = glob([
         "include/clang/Driver/*.def",
     ]),
+    toolchains = [":workspace_root"],
     deps = [
         ":ast",
         ":basic",
@@ -1808,9 +1837,13 @@ cc_library(
     hdrs = glob([
         "include/clang/Frontend/*.h",
     ]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Driver/ToolChains",
+    ],
     data = [":builtin_headers_gen"],
     includes = ["include"],
+    toolchains = [":workspace_root"],
     deps = [
         ":apinotes",
         ":ast",
@@ -1920,11 +1953,15 @@ cc_library(
         "lib/CodeGen/**/*.h",
     ]),
     hdrs = glob(["include/clang/CodeGen/*.h"]),
-    copts = ["$(STACK_FRAME_UNLIMITED)"],
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+        "-I$(WORKSPACE_ROOT)/clang/lib/Driver/ToolChains",
+    ],
     includes = [
         "include",
         "lib/CodeGen",
     ],
+    toolchains = [":workspace_root"],
     deps = [
         ":analysis",
         ":ast",
