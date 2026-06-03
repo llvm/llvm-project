@@ -62,6 +62,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocChecker.cpp
   MallocSizeofChecker.cpp
   MismatchedIteratorChecker.cpp
+  MissingTerminatingZeroChecker.cpp
   MmapWriteExecChecker.cpp
   MIGChecker.cpp
   MoveChecker.cpp
