@@ -46,8 +46,7 @@ int main() {
 #if (__APPLE__)
 __attribute__((weak))
 #endif
-__attribute__((disable_sanitizer_instrumentation))
-extern "C" void
+__attribute__((disable_sanitizer_instrumentation)) extern "C" void
 __tsan_on_report(void *report) {
   const char *description;
   int count, stack_count, mop_count, loc_count, mutex_count, thread_count,

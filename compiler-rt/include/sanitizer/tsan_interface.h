@@ -310,7 +310,8 @@ int SANITIZER_CDECL __tsan_get_report_unique_tid(void *report,
 void *SANITIZER_CDECL __tsan_get_current_report();
 
 /// Writes a single-line, uncolored description of a memory operation in the
-/// report into <c>out</c> (e.g. <c>"  Write of size 4 at 0x... by thread T1"</c>).
+/// report into <c>out</c> (e.g. <c>"  Write of size 4 at 0x... by thread
+/// T1"</c>).
 ///
 /// The output is null-terminated and truncated to fit <c>outlen</c> bytes
 /// (including the terminator).

@@ -191,8 +191,9 @@ int __tsan_get_report_unique_tid(void *report, uptr idx, int *tid) {
 namespace {
 // Copy `s` (null-terminated) to `out`, truncating to `outlen-1` bytes plus
 // a null terminator. No-op when outlen is zero.
-void CopyDescription(const InternalScopedString &s, char *out, uptr outlen) {
-  if (!out || !outlen) return;
+void CopyDescription(const InternalScopedString& s, char* out, uptr outlen) {
+  if (!out || !outlen)
+    return;
   uptr n = Min(s.length(), outlen - 1);
   internal_memcpy(out, s.data(), n);
   out[n] = '\0';
@@ -200,9 +201,9 @@ void CopyDescription(const InternalScopedString &s, char *out, uptr outlen) {
 }  // namespace
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_describe_mop(void *report, uptr idx, int first, char *out,
+int __tsan_describe_mop(void* report, uptr idx, int first, char* out,
                         uptr outlen) {
-  const ReportDesc *rep = (ReportDesc *)report;
+  const ReportDesc* rep = (ReportDesc*)report;
   CHECK_LT(idx, rep->mops.Size());
   InternalScopedString s;
   DescribeMop(rep->mops[idx], first != 0, s);
@@ -211,8 +212,8 @@ int __tsan_describe_mop(void *report, uptr idx, int first, char *out,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_describe_loc(void *report, uptr idx, char *out, uptr outlen) {
-  const ReportDesc *rep = (ReportDesc *)report;
+int __tsan_describe_loc(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
   CHECK_LT(idx, rep->locs.Size());
   InternalScopedString s;
   bool stack_follows = DescribeLocation(rep->locs[idx], s);
@@ -221,8 +222,8 @@ int __tsan_describe_loc(void *report, uptr idx, char *out, uptr outlen) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_describe_mutex(void *report, uptr idx, char *out, uptr outlen) {
-  const ReportDesc *rep = (ReportDesc *)report;
+int __tsan_describe_mutex(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
   CHECK_LT(idx, rep->mutexes.Size());
   InternalScopedString s;
   DescribeMutex(rep->mutexes[idx], s);
@@ -231,8 +232,8 @@ int __tsan_describe_mutex(void *report, uptr idx, char *out, uptr outlen) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_describe_thread(void *report, uptr idx, char *out, uptr outlen) {
-  const ReportDesc *rep = (ReportDesc *)report;
+int __tsan_describe_thread(void* report, uptr idx, char* out, uptr outlen) {
+  const ReportDesc* rep = (ReportDesc*)report;
   CHECK_LT(idx, rep->threads.Size());
   InternalScopedString s;
   bool stack_follows = DescribeThread(rep->threads[idx], s);
