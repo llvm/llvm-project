@@ -1206,7 +1206,7 @@ def LLVM_masked_expandload
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0,1],
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0, 1],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
