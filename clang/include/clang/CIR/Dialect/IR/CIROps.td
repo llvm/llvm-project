@@ -820,6 +820,16 @@ def CIR_StoreOp : CIR_Op<"store", [
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
+  let builders = [
+    // Non-volatile, non-atomic store with default alignment.
+    OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
+      build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*alignment=*/mlir::IntegerAttr(),
+            /*sync_scope=*/cir::SyncScopeKindAttr(),
+            /*mem_order=*/cir::MemOrderAttr());
+    }]>
+  ];
+
   // FIXME: add verifier.
 }
 
