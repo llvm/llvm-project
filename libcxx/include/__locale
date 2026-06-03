@@ -1029,16 +1029,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -1192,16 +1192,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
