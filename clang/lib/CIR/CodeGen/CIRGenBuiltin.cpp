@@ -1701,29 +1701,26 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_masked_compress_store:
   case Builtin::BI__builtin_masked_scatter:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_reduce_xor:
-  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_xor: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "vector.reduce.xor", vecTy.getElementType(),
+        mlir::ValueRange{arg}));
+  }
+  case Builtin::BI__builtin_reduce_or: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "vector.reduce.or", vecTy.getElementType(),
+        mlir::ValueRange{arg}));
+  }
   case Builtin::BI__builtin_reduce_and: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
     cir::VectorType vecTy = cast<cir::VectorType>(arg.getType());
-    llvm::StringRef intrinsicName;
-    switch (builtinID) {
-    default:
-      llvm_unreachable("unexpected vector reduce bitwise builtin");
-    case Builtin::BI__builtin_reduce_xor:
-      intrinsicName = "vector.reduce.xor";
-      break;
-    case Builtin::BI__builtin_reduce_or:
-      intrinsicName = "vector.reduce.or";
-      break;
-    case Builtin::BI__builtin_reduce_and:
-      intrinsicName = "vector.reduce.and";
-      break;
-    }
-    mlir::Value result = builder.emitIntrinsicCallOp(
-        getLoc(e->getExprLoc()), intrinsicName, vecTy.getElementType(),
-        mlir::ValueRange{arg});
-    return RValue::get(result);
+    return RValue::get(builder.emitIntrinsicCallOp(
+        getLoc(e->getExprLoc()), "vector.reduce.and", vecTy.getElementType(),
+        mlir::ValueRange{arg}));
   }
   case Builtin::BI__builtin_isinf_sign: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
