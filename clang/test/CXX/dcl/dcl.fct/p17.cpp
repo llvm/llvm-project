@@ -130,6 +130,14 @@ namespace unconstrained {
   static_assert(S<int>{}.f2<double>(1, '2', '\x00') == 42);
 }
 
+namespace not_a_concept {
+void undefined(Foo auto); // expected-error {{unknown type name 'Foo'}}
+
+struct AStruct {};
+
+void a_struct(AStruct auto); // expected-error {{cannot combine with previous 'type-name' declaration specifier}}
+}
+
 #if __cplusplus >= 202002L
 namespace constrained {
   template<typename T>
