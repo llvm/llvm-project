@@ -27580,7 +27580,8 @@ static SDValue foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
   // concat operand. Example:
   //   v2i8 extract_subvec (v16i8 concat (v8i8 X), (v8i8 Y)), 14 -->
   //   v2i8 extract_subvec v8i8 Y, 6
-  if (ConcatSrcNumElts.isKnownMultipleOf(ExtNumElts)) {
+  if (ConcatSrcNumElts.isKnownMultipleOf(ExtNumElts) &&
+      ConcatSrcNumElts.isFixed() == ExtNumElts.isFixed()) {
     uint64_t NewExtIdx =
         ExtIdx - ConcatOpIdx * ConcatSrcNumElts.getKnownMinValue();
     if (NewExtIdx + ExtNumElts.getKnownMinValue() >
@@ -27596,7 +27597,8 @@ static SDValue foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
       !LegalOperations || DAG.getTargetLoweringInfo().isOperationLegalOrCustom(
                               ISD::CONCAT_VECTORS, VT);
   if (ExtNumElts.isKnownMultipleOf(ConcatSrcNumElts) &&
-      ExtIdx % ConcatSrcNumElts.getKnownMinValue() == 0 && IsPermittedConcat) {
+      ExtIdx % ConcatSrcNumElts.getKnownMinValue() == 0 &&
+      ExtNumElts.isFixed() == ConcatSrcNumElts.isFixed() && IsPermittedConcat) {
     unsigned NumConcatOps =
         ExtNumElts.getKnownMinValue() / ConcatSrcNumElts.getKnownMinValue();
     if (ConcatOpIdx + NumConcatOps > V.getNumOperands())
