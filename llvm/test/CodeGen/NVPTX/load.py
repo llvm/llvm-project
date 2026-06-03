@@ -48,11 +48,25 @@ SCOPE_LLVM_TO_PTX = {"": "sys", "block": "cta", "cluster": "cluster", "device": 
 
 ORDERINGS = ["notatomic", "unordered", "monotonic", "acquire", "seq_cst"]
 
-ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared", 4: "const", 5: "local", 101: "param"}
+ADDRSPACE_NUM_TO_ADDRSPACE = {
+    0: "generic",
+    1: "global",
+    3: "shared",
+    4: "const",
+    5: "local",
+    101: "param",
+}
 
 DATATYPE_SIZE_BITS = {
-    "i8": 8, "i16": 16, "i32": 32, "i64": 64, "i128": 128,
-    "half": 16, "bfloat": 16, "float": 32, "double": 64,
+    "i8": 8,
+    "i16": 16,
+    "i32": 32,
+    "i64": 64,
+    "i128": 128,
+    "half": 16,
+    "bfloat": 16,
+    "float": 32,
+    "double": 64,
 }
 DATATYPES = list(DATATYPE_SIZE_BITS.keys())
 
@@ -178,7 +192,10 @@ if __name__ == "__main__":
             # sm_70+/PTX 8.3+; neither holds at sm_60/70 with our test matrix.
             # For notatomic, syncscope is illegal -- emit only at scope="".
             for ordering, addrspace, datatype, volatile, scope in product(
-                ORDERINGS, ADDRSPACE_NUM_TO_ADDRSPACE, DATATYPES, VOLATILES,
+                ORDERINGS,
+                ADDRSPACE_NUM_TO_ADDRSPACE,
+                DATATYPES,
+                VOLATILES,
                 SCOPE_LLVM_TO_PTX,
             ):
                 if datatype == "i128" and sm < 90:
