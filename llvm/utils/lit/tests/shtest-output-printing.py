@@ -10,10 +10,6 @@
 #
 # END.
 
-## AIX needs the regex because alternative versions of wc generate different
-## formats of error message. %errc_ENOENT can't be used here because [[...]]
-## inside {{...}} is not supported.
-
 #       CHECK: -- Testing: {{.*}}
 #       CHECK: FAIL: shtest-output-printing :: basic.txt {{.*}}
 #  CHECK-NEXT: ***{{\**}} TEST 'shtest-output-printing :: basic.txt' FAILED ***{{\**}}
@@ -34,6 +30,9 @@
 #  CHECK-NEXT: not not wc missing-file &> [[FILE:.*]] || true
 #  CHECK-NEXT: # executed command: not not wc missing-file
 #  CHECK-NEXT: # .---redirected output from '[[FILE]]'
+## AIX needs the regex because alternative versions of wc generate different
+## formats of error message. %errc_ENOENT can't be used here because [[...]]
+## inside {{...}} is not supported.
 #  AIX-NEXT:   # | {{.*}}wc: {{cannot open missing-file|missing-file.* No such file or directory}}
 #  NON-AIX-NEXT: # | {{.*}}wc: {{.*missing-file.*}}: [[ERROR_MSG]]
 #  CHECK-NEXT: # `-----------------------------
