@@ -184,7 +184,7 @@ bool Constant::isNotMinSignedValue() const {
 
   // Check that vectors don't contain INT_MIN
   if (isa<FixedVectorType>(getType())) {
-    return !containsVectorElement(
+    return !containsMatchingVectorElement(
         [&](const auto *E) { return !E->isNotMinSignedValue(); });
   }
 
@@ -305,7 +305,7 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
-bool Constant::containsVectorElement(
+bool Constant::containsMatchingVectorElement(
     function_ref<bool(Constant *)> PredFn) const {
   if (!getType()->isVectorTy())
     return false;

@@ -116,7 +116,7 @@ public:
   /// satisfies the given predicate. For scalable vectors, the predicate is
   /// only tested on the splat value.
   LLVM_ABI bool
-  containsVectorElement(function_ref<bool(Constant *)> PredFn) const;
+  containsMatchingVectorElement(function_ref<bool(Constant *)> PredFn) const;
 
   /// Return true if the value can vary between threads.
   LLVM_ABI bool isThreadDependent() const;

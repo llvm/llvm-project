@@ -1564,7 +1564,7 @@ static bool CanShareConstantPoolEntry(const Constant *A, const Constant *B,
     return false;
 
   bool ContainsUndefOrPoisonA =
-      match(A, m_ContainsVectorElement(m_UndefValue()));
+      match(A, m_ContainsMatchingVectorElement(m_UndefValue()));
 
   Type *IntTy = IntegerType::get(A->getContext(), StoreSize*8);
 

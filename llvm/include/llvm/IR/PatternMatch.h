@@ -187,7 +187,7 @@ template <typename SPTy> struct containsvectorelement_match {
 
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
-    return C && C->containsVectorElement(
+    return C && C->containsMatchingVectorElement(
                     [&](Constant *E) { return SubPattern.match(E); });
   }
 };
@@ -196,7 +196,7 @@ template <typename SPTy> struct containsvectorelement_match {
 /// subpattern. Any bindings in the subpattern will be bound to the first match.
 template <typename SPTy>
 inline containsvectorelement_match<SPTy>
-m_ContainsVectorElement(const SPTy &SubPattern) {
+m_ContainsMatchingVectorElement(const SPTy &SubPattern) {
   return SubPattern;
 }
 
@@ -204,7 +204,7 @@ m_ContainsVectorElement(const SPTy &SubPattern) {
 /// expression.
 inline auto m_ConstantExpr() {
   return m_CombineOr(m_Isa<ConstantExpr>(),
-                     m_ContainsVectorElement(m_Isa<ConstantExpr>()));
+                     m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
 }
 
 template <typename SubPattern_t> struct Splat_match {
