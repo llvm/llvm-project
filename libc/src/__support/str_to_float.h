@@ -1146,9 +1146,7 @@ strtofloatingpoint(const CharType *__restrict src) {
     }
 
     RoundDirection round_direction = RoundDirection::Nearest;
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
-    round_direction = RoundDirection::Nearest;
-#else
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
       round_direction = RoundDirection::Nearest;
