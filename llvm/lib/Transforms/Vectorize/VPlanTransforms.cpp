@@ -3992,14 +3992,13 @@ void VPlanTransforms::expandBranchOnTwoConds(VPlan &Plan) {
     // If the successor block for both conditions is the same, then combine the
     // two conditions and plant a single conditional branch.
     if (Succ0 == Succ1) {
-      DebugLoc BrDL = Br->getDebugLoc();
       VPBuilder Builder(Br);
-      VPValue *Combined = Builder.createOr(Cond0, Cond1, BrDL);
-      Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined}, BrDL);
+      VPValue *Combined = Builder.createOr(Cond0, Cond1, DL);
+      Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined}, DL);
       VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ0);
       VPBlockUtils::connectBlocks(BrOnTwoCondsBB, Succ2);
       Br->eraseFromParent();
-      return;
+      continue;
     }
 
     assert(!Succ0->getParent() && !Succ1->getParent() && !Succ2->getParent() &&
@@ -4264,10 +4263,8 @@ static bool handleUncountableExitsWithSideEffects(
     VPValue *Ptr = Load->getOperand(0);
     const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
     const DataLayout &DL = Plan.getDataLayout();
-    VPTypeAnalysis TypeInfo(Plan);
-    APInt EltSize(
-        DL.getIndexTypeSizeInBits(TypeInfo.inferScalarType(Ptr)),
-        DL.getTypeStoreSize(TypeInfo.inferScalarType(Load)).getFixedValue());
+    APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getScalarType()),
+                  DL.getTypeStoreSize(Load->getScalarType()).getFixedValue());
     if (!isDereferenceableAndAlignedInLoop(
             PtrSCEV, cast<LoadInst>(Load->getUnderlyingInstr())->getAlign(),
             PSE.getSE()->getConstant(EltSize), TheLoop, *PSE.getSE(), DT, AC,
@@ -4314,21 +4311,17 @@ static bool handleUncountableExitsWithSideEffects(
   // If another memory operation would take place before the comparison to
   // determine whether to exit early or the comparison doesn't take place in
   // the header, move the comparison (and supporting recipes).
-  if (CondMoveNeeded) {
+  if (CondMoveNeeded)
     for (auto *Recipe : reverse(ConditionRecipes))
       Recipe->moveBefore(*HeaderVPBB, InsertIt);
-
-    CondR->moveBefore(*HeaderVPBB, InsertIt);
-  }
 
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
   VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
-  VPTypeAnalysis TypeInfo(Plan);
   VPValue *IV = cast<VPSingleDefRecipe>(&HeaderVPBB->front());
-  Type *IVScalarTy = TypeInfo.inferScalarType(IV);
-  Type *FirstActiveTy = TypeInfo.inferScalarType(FirstActive);
+  Type *IVScalarTy = IV->getScalarType();
+  Type *FirstActiveTy = FirstActive->getScalarType();
   VPValue *ALMMultiplier = Plan.getConstantInt(IVScalarTy, 1);
   VPValue *Zero = Plan.getZero(IVScalarTy);
   FirstActive = MaskBuilder.createScalarZExtOrTrunc(FirstActive, IVScalarTy,
