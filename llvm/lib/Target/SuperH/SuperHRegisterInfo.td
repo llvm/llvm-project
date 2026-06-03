@@ -144,7 +144,7 @@ let Namespace = "SH" in {
   
   // 512-bit matrix register (shadows XF registers)
   // TODO: Add proper subregisters here.
-  def MtrxReg : MTRXReg<0, "xmtrx">;
+  def XMTRX : MTRXReg<0, "xmtrx">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -180,7 +180,7 @@ def FR64 : RegisterClass<"SH", [f64], 64, (add
 def VEC128 : RegisterClass<"SH", [v4f32], 128, (add FV0, FV4, FV8, FV12)>;
 
 // Matrix register
-def MTRX512 : RegisterClass<"SH", [v16f32], 512, (add (sequence "FR%u", 0, 15), (sequence "XF%u", 0, 15))>;
+def XMTRX512 : RegisterClass<"SH", [v16f32], 512, (add (sequence "FR%u", 0, 15), (sequence "XF%u", 0, 15))>;
 
 // Control registers
 def CTRL : RegisterClass<"SH", [ i32 ], 32, 

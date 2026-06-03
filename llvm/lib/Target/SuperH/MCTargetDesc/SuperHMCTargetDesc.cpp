@@ -31,6 +31,10 @@
 
 using namespace llvm;
 
+#define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
+#include "SuperHGenInstrInfo.inc"
+
 #define GET_REGINFO_MC_DESC
 #include "SuperHGenRegisterInfo.inc"
 
@@ -39,13 +43,13 @@ using namespace llvm;
 
 static MCInstrInfo *createSuperHMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
-  // InitSuperHMCInstrInfo(X);
+  InitSuperHMCInstrInfo(X);
   return X;
 }
 
 static MCRegisterInfo *createSuperHMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  // InitSuperHRegisterInfo(X);
+  InitSuperHMCRegisterInfo(X, SH::R0);
   return X;
 }
 
@@ -71,11 +75,7 @@ static MCAsmInfo *createSuperHMCAsmInfo(const MCRegisterInfo &MRI,
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSuperHTargetMC() {
-
-  // SuperH (big-endian)
-  for (Target *T : {&getTheSuperHTarget()}) {
-    // Register the MC asm info.
-    TargetRegistry::RegisterMCAsmInfo(*T, createSuperHMCAsmInfo);
+  for (Target *T : {&getTheSuperHTarget(), &getTheSuperHLETarget()}) {
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createSuperHMCInstrInfo);
@@ -85,26 +85,14 @@ LLVMInitializeSuperHTargetMC() {
 
     // Register the MC subtarget info.
     TargetRegistry::RegisterMCSubtargetInfo(*T, createSuperHMCSubtargetInfo);
-
-    // Register the MCInstPrinter.
-    TargetRegistry::RegisterMCInstPrinter(*T, createSuperHMCInstPrinter);
-  }
-
-  // SuperH (little-endian)
-  for (Target *T : {&getTheSuperHLETarget()}) {
+    
     // Register the MC asm info.
     TargetRegistry::RegisterMCAsmInfo(*T, createSuperHMCAsmInfo);
 
-    // Register the MC instruction info.
-    TargetRegistry::RegisterMCInstrInfo(*T, createSuperHMCInstrInfo);
-
-    // Register the MC register info.
-    TargetRegistry::RegisterMCRegInfo(*T, createSuperHMCRegisterInfo);
-
-    // Register the MC subtarget info.
-    TargetRegistry::RegisterMCSubtargetInfo(*T, createSuperHMCSubtargetInfo);
-
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createSuperHMCInstPrinter);
+
+    // Register the AsmBackend
+    TargetRegistry::RegisterMCAsmBackend(*T, createSuperHAsmBackend);
   }
 }
