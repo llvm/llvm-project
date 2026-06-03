@@ -6848,15 +6848,15 @@ public:
     uint8_t IsCounter : 1;
 
     LLVM_PREFERRED_TYPE(bool)
-    uint8_t IsArray : 1;
+    uint8_t IsArrayed : 1;
 
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
-               bool IsCounter = false, bool IsArray = false)
+               bool IsCounter = false, bool IsArrayed = false)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
           IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
-          IsArray(IsArray) {}
+          IsArrayed(IsArrayed) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
@@ -6868,9 +6868,9 @@ public:
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
-                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray) ==
+                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArrayed) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
-                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray);
+                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArrayed);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6915,7 +6915,7 @@ public:
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
-    ID.AddBoolean(Attrs.IsArray);
+    ID.AddBoolean(Attrs.IsArrayed);
   }
 
   static bool classof(const Type *T) {

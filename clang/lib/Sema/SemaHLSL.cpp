@@ -2141,12 +2141,12 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.RawBuffer = true;
       break;
-    case attr::HLSLArrayed:
-      if (ResAttrs.IsArray) {
+    case attr::HLSLIsArrayed:
+      if (ResAttrs.IsArrayed) {
         S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
         return false;
       }
-      ResAttrs.IsArray = true;
+      ResAttrs.IsArrayed = true;
       break;
     case attr::HLSLIsCounter:
       if (ResAttrs.IsCounter) {
@@ -3601,7 +3601,7 @@ static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
   unsigned int ExpectedDim = 1;
   if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
     ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension) +
-                  (ResAttrs.IsArray ? 1 : 0);
+                  (ResAttrs.IsArrayed ? 1 : 0);
 
   if (ActualDim != ExpectedDim) {
     S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
@@ -3680,7 +3680,7 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
   // Check the location.
   unsigned ExpectedDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension) +
-      (IncludeArraySlice && ResourceTy->getAttrs().IsArray ? 1 : 0);
+      (IncludeArraySlice && ResourceTy->getAttrs().IsArrayed ? 1 : 0);
   if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
                               S.Context.FloatTy, ExpectedDim,
                               TheCall->getBeginLoc()))
@@ -3804,7 +3804,8 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   // Check the location + lod (int3 for Texture2D, int4 for Texture2DArray).
   unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
-  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
+  unsigned LocationDim =
+      ResourceDim + (ResourceTy->getAttrs().IsArrayed ? 1 : 0);
   QualType CoordLODTy = TheCall->getArg(1)->getType();
   if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim + 1,
                               TheCall->getArg(1)->getBeginLoc()))

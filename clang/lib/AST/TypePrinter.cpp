@@ -1990,7 +1990,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
-  case attr::HLSLArrayed:
+  case attr::HLSLIsArrayed:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2163,7 +2163,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::raw_buffer]]";
   if (Attrs.IsCounter)
     OS << " [[hlsl::is_counter]]";
-  if (Attrs.IsArray)
+  if (Attrs.IsArrayed)
     OS << " [[hlsl::is_arrayed]]";
 
   QualType ContainedTy = T->getContainedType();

@@ -5172,7 +5172,7 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
-def HLSLArrayed : TypeAttr {
+def HLSLIsArrayed : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_arrayed">];
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];

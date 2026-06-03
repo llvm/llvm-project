@@ -234,7 +234,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
                                               bool RawBuffer, bool HasCounter) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addBufferHandles(RC, IsROV, RawBuffer, HasCounter, /*IsArray=*/false)
+      .addBufferHandles(RC, IsROV, RawBuffer, HasCounter, /*IsArrayed=*/false)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
@@ -254,27 +254,27 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
 /// Set up common members and attributes for texture types
 static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceClass RC, bool IsROV,
-                                               bool IsArray,
+                                               bool IsArrayed,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(RC, IsROV, IsArray, Dim)
-      .addTextureLoadMethods(Dim, IsArray)
-      .addArraySubscriptOperators(Dim, IsArray)
+      .addTextureHandle(RC, IsROV, IsArrayed, Dim)
+      .addTextureLoadMethods(Dim, IsArrayed)
+      .addArraySubscriptOperators(Dim, IsArrayed)
       .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim, IsArray)
-      .addSampleBiasMethods(Dim, IsArray)
-      .addSampleGradMethods(Dim, IsArray)
-      .addSampleLevelMethods(Dim, IsArray)
-      .addSampleCmpMethods(Dim, IsArray)
-      .addSampleCmpLevelZeroMethods(Dim, IsArray)
+      .addSampleMethods(Dim, IsArrayed)
+      .addSampleBiasMethods(Dim, IsArrayed)
+      .addSampleGradMethods(Dim, IsArrayed)
+      .addSampleLevelMethods(Dim, IsArrayed)
+      .addSampleCmpMethods(Dim, IsArrayed)
+      .addSampleCmpLevelZeroMethods(Dim, IsArrayed)
       .addCalculateLodMethods(Dim)
       .addGetDimensionsMethods(Dim)
-      .addGatherMethods(Dim, IsArray)
-      .addGatherCmpMethods(Dim, IsArray);
+      .addGatherMethods(Dim, IsArrayed)
+      .addGatherCmpMethods(Dim, IsArrayed);
 }
 
 // Add a partial specialization for a template. The `TextureTemplate` is
@@ -674,7 +674,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Dim2D)
+                     /*IsArrayed=*/false, ResourceDimension::Dim2D)
         .completeDefinition();
   });
 
@@ -682,7 +682,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArray=*/false, ResourceDimension::Dim2D)
+                     /*IsArrayed=*/false, ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }

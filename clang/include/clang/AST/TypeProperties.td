@@ -681,14 +681,14 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"containedTy", QualType> {
     let Read = [{ node->getContainedType() }];
   }
-  def : Property<"isArray", Bool> {
-    let Read = [{ node->getAttrs().IsArray }];
+  def : Property<"isArrayed", Bool> {
+    let Read = [{ node->getAttrs().IsArrayed }];
   }
   def : Creator<[{
     HLSLAttributedResourceType::Attributes attrs(
         static_cast<llvm::dxil::ResourceClass>(resClass),
         static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
-        rawBuffer, isCounter, isArray);
+        rawBuffer, isCounter, isArrayed);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

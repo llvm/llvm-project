@@ -4677,7 +4677,7 @@ void CXXNameMangler::mangleType(const HLSLAttributedResourceType *T) {
     Str += "_Raw";
   if (Attrs.IsCounter)
     Str += "_Counter";
-  if (Attrs.IsArray)
+  if (Attrs.IsArrayed)
     Str += "_Array";
   if (T->hasContainedType())
     Str += "_CT";
