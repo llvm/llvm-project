@@ -2177,6 +2177,31 @@ ParallelOp::getNumGangsValues(mlir::acc::DeviceType deviceType) {
                                getNumGangsSegments(), deviceType);
 }
 
+static bool hasAnyGangWorkerVectorForDeviceType(
+    std::optional<mlir::ArrayAttr> numGangsDeviceType,
+    mlir::Operation::operand_range numGangs,
+    std::optional<llvm::ArrayRef<int32_t>> numGangsSegments,
+    std::optional<mlir::ArrayAttr> numWorkersDeviceType,
+    mlir::Operation::operand_range numWorkers,
+    std::optional<mlir::ArrayAttr> vectorLengthDeviceType,
+    mlir::Operation::operand_range vectorLength,
+    mlir::acc::DeviceType deviceType) {
+  return !getValuesFromSegments(numGangsDeviceType, numGangs, numGangsSegments,
+                                deviceType)
+              .empty() ||
+         getValueInDeviceTypeSegment(numWorkersDeviceType, numWorkers,
+                                     deviceType) ||
+         getValueInDeviceTypeSegment(vectorLengthDeviceType, vectorLength,
+                                     deviceType);
+}
+
+bool acc::ParallelOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
+  return hasAnyGangWorkerVectorForDeviceType(
+      getNumGangsDeviceType(), getNumGangs(), getNumGangsSegments(),
+      getNumWorkersDeviceType(), getNumWorkers(), getVectorLengthDeviceType(),
+      getVectorLength(), deviceType);
+}
+
 bool acc::ParallelOp::hasWaitOnly() {
   return hasWaitOnly(mlir::acc::DeviceType::None);
 }
@@ -3041,6 +3066,13 @@ mlir::Operation::operand_range
 KernelsOp::getNumGangsValues(mlir::acc::DeviceType deviceType) {
   return getValuesFromSegments(getNumGangsDeviceType(), getNumGangs(),
                                getNumGangsSegments(), deviceType);
+}
+
+bool acc::KernelsOp::hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType) {
+  return hasAnyGangWorkerVectorForDeviceType(
+      getNumGangsDeviceType(), getNumGangs(), getNumGangsSegments(),
+      getNumWorkersDeviceType(), getNumWorkers(), getVectorLengthDeviceType(),
+      getVectorLength(), deviceType);
 }
 
 bool acc::KernelsOp::hasWaitOnly() {
@@ -3972,9 +4004,15 @@ bool acc::LoopOp::hasParallelismFlag(DeviceType dt) {
 }
 
 bool acc::LoopOp::hasDefaultGangWorkerVector() {
-  return hasVector() || getVectorValue() || hasWorker() || getWorkerValue() ||
-         hasGang() || getGangValue(GangArgType::Num) ||
-         getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
+  return hasAnyGangWorkerVector(DeviceType::None);
+}
+
+bool acc::LoopOp::hasAnyGangWorkerVector(DeviceType deviceType) {
+  return hasVector(deviceType) || getVectorValue(deviceType) ||
+         hasWorker(deviceType) || getWorkerValue(deviceType) ||
+         hasGang(deviceType) || getGangValue(GangArgType::Num, deviceType) ||
+         getGangValue(GangArgType::Dim, deviceType) ||
+         getGangValue(GangArgType::Static, deviceType);
 }
 
 acc::LoopParMode

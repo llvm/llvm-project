@@ -185,11 +185,32 @@ static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
     parDims.insert(lb, parDim);
 }
 
+/// Return the device type from which gang/worker/vector clauses should be read.
+/// If the requested device type has any such clauses, use that exclusively;
+/// otherwise fall back to the default (DeviceType::None).
+static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
+                                                DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      loopOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
+template <typename ComputeConstructT>
+static DeviceType getParDimsDeviceType(ComputeConstructT computeOp,
+                                       DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      computeOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
 /// Map loop parallelism clauses (gang/worker/vector) to GPU parallel
 /// dimensions using the given mapping policy.
 static SmallVector<GPUParallelDimAttr>
 getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
                       DeviceType deviceType) {
+  deviceType = getGangWorkerVectorDeviceType(loopOp, deviceType);
   SmallVector<GPUParallelDimAttr> parDims;
   auto *ctx = loopOp->getContext();
 
@@ -229,12 +250,12 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     if (isEffectivelySerial(computeOp))
       return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
 
+    deviceType = getParDimsDeviceType(computeOp, deviceType);
+
     SmallVector<Value> values;
     auto indexTy = rewriter.getIndexType();
 
     auto numGangs = computeOp.getNumGangsValues(deviceType);
-    if (numGangs.empty())
-      numGangs = computeOp.getNumGangsValues();
     for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
       auto gangLevel = getGangParLevel(gangDimIdx + 1);
       values.push_back(ParWidthOp::create(
@@ -245,8 +266,6 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     }
 
     Value numWorkers = computeOp.getNumWorkersValue(deviceType);
-    if (!numWorkers)
-      numWorkers = computeOp.getNumWorkersValue();
     if (numWorkers) {
       values.push_back(ParWidthOp::create(
           rewriter, loc,
@@ -256,8 +275,6 @@ assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
     }
 
     Value vectorLength = computeOp.getVectorLengthValue(deviceType);
-    if (!vectorLength)
-      vectorLength = computeOp.getVectorLengthValue();
     if (vectorLength) {
       values.push_back(ParWidthOp::create(
           rewriter, loc,
