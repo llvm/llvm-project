@@ -1070,6 +1070,7 @@ getReductionOperator(const Fortran::parser::ReductionOperator &op,
       converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
+  case Fortran::parser::ReductionOperator::Operator::Minus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
