@@ -3154,10 +3154,15 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
               Ty = types::TY_Object;
           }
 
+          // -fsycl requires C++ source; error if a C file is detected.
+          if (IsSYCL && (Ty == types::TY_C || Ty == types::TY_PP_C ||
+                         Ty == types::TY_CHeader || Ty == types::TY_PP_CHeader))
+            Diag(clang::diag::err_drv_argument_not_allowed_with)
+                << Value << "-fsycl";
+
           // If the driver is invoked as C++ compiler (like clang++ or c++) it
           // should autodetect some input files as C++ for g++ compatibility.
-          // -fsycl also requires C++ sources, so apply the same promotion.
-          if (CCCIsCXX() || IsSYCL) {
+          if (CCCIsCXX()) {
             types::ID OldTy = Ty;
             Ty = types::lookupCXXTypeForCType(Ty);
 
