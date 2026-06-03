@@ -287,7 +287,7 @@ RValue CodeGenFunction::EmitAnyExpr(const Expr *E,
     return RValue::getComplex(EmitComplexExpr(E, ignoreResult, ignoreResult));
   case TEK_Aggregate:
     if (!ignoreResult && aggSlot.isIgnored())
-      aggSlot = CreateAggTemp(E->getType(), "agg-temp");
+      aggSlot = CreateAggTemp(E->getType().getUnqualifiedType(), "agg-temp");
     EmitAggExpr(E, aggSlot);
     return aggSlot.asRValue();
   }
@@ -493,11 +493,11 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         CharUnits alignment = CGF.getContext().getTypeAlignInChars(Ty);
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
-        if (AS != LangAS::Default)
+        if (AS != Ty.getAddressSpace())
           C = CGF.CGM.performAddrSpaceCast(
-              GV, llvm::PointerType::get(
-                      CGF.getLLVMContext(),
-                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+              GV, llvm::PointerType::get(CGF.getLLVMContext(),
+                                         CGF.getContext().getTargetAddressSpace(
+                                             Ty.getAddressSpace())));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
@@ -5975,7 +5975,7 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
-  Address DeclPtr = CreateMemTemp(E->getType(), ".compoundliteral");
+  Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 

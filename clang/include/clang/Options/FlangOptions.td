@@ -192,6 +192,9 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 defm acc_allow_default_none_scalars : OptInFC1FFlag<"acc-allow-default-none-scalars",
   "Allow scalar variables in OpenACC default(none) regions without explicit data clauses (pre-OpenACC-3.2 behavior)">;
+defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
+  "Accept multiple names in OpenACC ROUTINE directive (extension)",
+  "Do not accept multiple names in OpenACC ROUTINE directive">;
 
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
