@@ -111,14 +111,7 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "SeparateAllocatableAssign: splitting realloc "
                                "from assign\n");
 
-    // Reuse the evaluate_in_memory shape operand instead of emitting a
-    // shape_of, which would add an extra use and block in-place bufferization.
-    mlir::Value rhsShape;
-    if (auto evalInMem =
-            assign.getRhs().getDefiningOp<hlfir::EvaluateInMemoryOp>())
-      rhsShape = evalInMem.getShape();
-    if (!rhsShape)
-      rhsShape = hlfir::genShape(loc, builder, rhs);
+    mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
     llvm::SmallVector<mlir::Value> rhsExtents =
         hlfir::getIndexExtents(loc, builder, rhsShape);
 

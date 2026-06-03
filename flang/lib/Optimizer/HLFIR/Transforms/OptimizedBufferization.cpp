@@ -638,15 +638,25 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   mlir::Location loc = evalInMem.getLoc();
   hlfir::DestroyOp destroy;
   hlfir::AssignOp assign;
-  for (auto user : llvm::enumerate(evalInMem->getUsers())) {
-    if (user.index() > 2)
+  // A hlfir.shape_of of the result only needs the shape, which the
+  // eval_in_mem already carries as an operand, so it can be redirected to that
+  // operand and does not prevent the in-place rewrite below. Any other user
+  // would dangle when the eval_in_mem is erased, so bail out on it.
+  llvm::SmallVector<hlfir::ShapeOfOp> shapeOfs;
+  for (mlir::Operation *user : evalInMem->getUsers()) {
+    if (auto op = mlir::dyn_cast<hlfir::AssignOp>(user))
+      assign = op;
+    else if (auto op = mlir::dyn_cast<hlfir::DestroyOp>(user))
+      destroy = op;
+    else if (auto op = mlir::dyn_cast<hlfir::ShapeOfOp>(user))
+      shapeOfs.push_back(op);
+    else
       return mlir::failure();
-    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
-        .Case([&](hlfir::AssignOp op) { assign = op; })
-        .Case([&](hlfir::DestroyOp op) { destroy = op; });
   }
   if (!assign || !destroy || destroy.mustFinalizeExpr() ||
       assign.isAllocatableAssignment())
+    return mlir::failure();
+  if (!shapeOfs.empty() && !evalInMem.getShape())
     return mlir::failure();
 
   hlfir::Entity lhs{assign.getLhs()};
@@ -690,6 +700,10 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
   mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
   hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
+  // Redirect shape_of users to the shape operand so the eval_in_mem can be
+  // erased without leaving dangling uses.
+  for (hlfir::ShapeOfOp shapeOf : shapeOfs)
+    rewriter.replaceOp(shapeOf, evalInMem.getShape());
   rewriter.eraseOp(assign);
   rewriter.eraseOp(destroy);
   rewriter.eraseOp(evalInMem);
