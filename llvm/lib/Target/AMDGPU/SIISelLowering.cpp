@@ -4700,9 +4700,11 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   if (isa<ConstantSDNode>(Size)) {
     // Increase the stack pointer by the size of the alloca.
     // If not using flat-scratch, we have to scale the size by the wave-size.
-    SDValue ScaledSize = HasFlatScratch ? Size : 
-          DAG.getNode(ISD::SHL, dl, VT, Size,
-                      DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
+    SDValue ScaledSize =
+        HasFlatScratch
+            ? Size
+            : DAG.getNode(ISD::SHL, dl, VT, Size,
+                          DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
     NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value
   } else {
     // For dynamic sized alloca, perform wave-wide reduction to get max of
