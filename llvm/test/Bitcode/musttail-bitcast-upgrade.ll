@@ -18,3 +18,15 @@ define ptr @caller(ptr %a) {
   %b = bitcast ptr %c to ptr
   ret ptr %b
 }
+
+; CHECK-LABEL: define i32 @caller_i32(ptr %a)
+; CHECK-NEXT:    %c = musttail call i32 @callee_i32(ptr %a)
+; CHECK-NEXT:    ret i32 %c
+
+declare i32 @callee_i32(ptr %a)
+
+define i32 @caller_i32(ptr %a) {
+  %c = musttail call i32 @callee_i32(ptr %a)
+  %b = bitcast i32 %c to i32
+  ret i32 %b
+}
