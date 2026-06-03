@@ -12,27 +12,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHInstPrinter.h"
-// #include "SuperHInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
-#include <llvm/MC/MCInst.h>
+#include "llvm/MC/MCInst.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sh-isel"
+#define DEBUG_TYPE "sh-asmprinter"
 
+// The generated AsmMatcher SparcGenAsmWriter uses "SuperH" as the target
+// namespace. But SuperH backend uses "SH" as its namespace.
+namespace llvm {
+	namespace SuperH {
+	  using namespace SH;
+	}
+}
+
+#define GET_INSTRUCTION_NAME
 #define PRINT_ALIAS_INSTR
-// #include "SuperHGenAsmWriter.inc"
+#include "SuperHGenAsmWriter.inc"
 
 SuperHInstPrinter::SuperHInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
                     const MCRegisterInfo &MRI) : MCInstPrinter(MAI, MII, MRI) {}
 
 void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
 	OS << StringRef(getRegisterName(Reg)).lower();
-}
-
-void SuperHInstPrinter::printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
-                 const MCSubtargetInfo &STI, raw_ostream &OS) {
-	printInstruction(MI, Address, OS);
 }
 
 void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
@@ -52,18 +56,7 @@ void SuperHInstPrinter::printOperand(const MCInst *MI, unsigned OpNo, raw_ostrea
 	}
 }
 
-// TODO: Delete this placeholder.
-void SuperHInstPrinter::printInstruction(const MCInst *MI, uint64_t Address, raw_ostream &O) {
-
-}
-
-// TODO: Delete this placeholder.
-const char *SuperHInstPrinter::getRegisterName(MCRegister Reg) {
-	return "r";
-}
-
-std::pair<const char *, uint64_t> SuperHInstPrinter::getMnemonic(const MCInst &MI) const {
-	std::pair<const char *, uint64_t> Ret;
-
-	return Ret;
+void SuperHInstPrinter::printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
+                 const MCSubtargetInfo &STI, raw_ostream &OS) {
+	printInstruction(MI, Address, OS);
 }

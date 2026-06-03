@@ -18,12 +18,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/DataTypes.h"
 
-#define GET_REGINFO_ENUM
-#include "SuperHGenRegisterInfo.inc"
-
-#define GET_SUBTARGETINFO_ENUM
-#include "SuperHGenSubtargetInfo.inc"
-
 namespace llvm {
 class MCAsmBackend;
 class MCCodeEmitter;
@@ -39,6 +33,22 @@ class StringRef;
 class raw_ostream;
 class raw_pwrite_stream;
 
+MCAsmBackend *createSuperHAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                                    const MCRegisterInfo &MRI,
+                                    const MCTargetOptions &Options);
+std::unique_ptr<MCObjectTargetWriter>
+createSuperHELFObjectWriter(uint8_t OSABI);
+
 }
+
+#define GET_REGINFO_ENUM
+#include "SuperHGenRegisterInfo.inc"
+
+#define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
+#include "SuperHGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "SuperHGenSubtargetInfo.inc"
 
 #endif // LLVM_LIB_TARGET_SUPERH_MCTARGETDESC_SUPERHMCTARGETDESC_H
