@@ -20,3 +20,9 @@
 ; PTX64-NEXT: .visible .global .align 8 .u64 b2[2] = {b, b};
 @b2 = addrspace(1) global [2 x ptr addrspace(1)] [ptr addrspace(1) @b, ptr addrspace(1) @b]
 @b = addrspace(1) global i8 1
+
+
+; Self-references do not require a separate emission ordering edge.
+; PTX32: .visible .global .align 4 .u32 self = self;
+; PTX64: .visible .global .align 8 .u64 self = self;
+@self = addrspace(1) global ptr addrspace(1) @self

@@ -171,6 +171,10 @@ VisitGlobalVariableForEmission(const GlobalVariable *GV,
   for (const auto &O : GV->operands())
     discoverDependentGlobals(O, Others);
 
+  // PTX can represent self-referential initializers as relocations, so they do
+  // not require a separate emission ordering edge.
+  Others.erase(GV);
+
   for (const GlobalVariable *GV : Others)
     VisitGlobalVariableForEmission(GV, Order, Visited, Visiting);
 

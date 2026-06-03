@@ -93,3 +93,16 @@ declare void @func()
 ; CHECK64-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func),
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
 ; CHECK64-SAME: 9, 0};
+
+;; Test that self-referential packed aggregates also use masked relocations
+;; when the aggregate size is not a multiple of the pointer size.
+
+%t6 = type <{ ptr, i8 }>
+@self_packed = addrspace(1) global %t6 <{
+; CHECK32: .global .align 1 .u8 self_packed[5] = {
+; CHECK32-SAME: 0xFF(generic(self_packed)+3), 0xFF00(generic(self_packed)+3), 0xFF0000(generic(self_packed)+3), 0xFF000000(generic(self_packed)+3), 7};
+; CHECK64: .global .align 1 .u8 self_packed[9] = {
+; CHECK64-SAME: 0xFF(generic(self_packed)+3), 0xFF00(generic(self_packed)+3), 0xFF0000(generic(self_packed)+3), 0xFF000000(generic(self_packed)+3),
+; CHECK64-SAME: 0xFF00000000(generic(self_packed)+3), 0xFF0000000000(generic(self_packed)+3), 0xFF000000000000(generic(self_packed)+3), 0xFF00000000000000(generic(self_packed)+3), 7};
+  ptr addrspacecast (ptr addrspace(1) getelementptr (i8, ptr addrspace(1) @self_packed, i32 3) to ptr),
+  i8 7 }>, align 1
