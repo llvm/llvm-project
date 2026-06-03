@@ -450,6 +450,20 @@ static FailureOr<LinalgOp> specializeLinalgMmt4D(RewriterBase &rewriter,
                                            namedOpMaps);
 }
 
+static bool isSupportedContractionPair(Operation *first, Operation *second) {
+  if (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second))
+    return true;
+  if (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second))
+    return true;
+  if (isa<complex::MulOp>(first) && isa<complex::AddOp>(second))
+    return true;
+  if (isa<arith::AndIOp>(first) && isa<arith::OrIOp>(second) &&
+      first->getResult(0).getType().isInteger(1))
+    return true;
+
+  return false;
+}
+
 // Converts linalg.generic to named linalg.*matmul* where possible.
 static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                                                         GenericOp genericOp,
@@ -463,15 +477,12 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return failure();
 
-  // Only mul+add contraction is supported.
-  // Currently, there is no way to control the contraction body type in named
-  // and category ops which all default to mul+add only.
-  if (!mlir::linalg::detail::isContractionBody(
-          *genericOp.getBlock(), [](Operation *first, Operation *second) {
-            return (isa<arith::MulFOp>(first) && isa<arith::AddFOp>(second)) ||
-                   (isa<arith::MulIOp>(first) && isa<arith::AddIOp>(second)) ||
-                   (isa<complex::MulOp>(first) && isa<complex::AddOp>(second));
-          }))
+  // Only contractions that can be represented by named linalg ops are
+  // eligible for specialization:
+  //   - mul + add    (floating-point, integer, complex)
+  //   - and + or     (i1)
+  if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
+                                               isSupportedContractionPair))
     return failure();
 
   // Determine the cast type for the named matmul op, or bail out if casts
