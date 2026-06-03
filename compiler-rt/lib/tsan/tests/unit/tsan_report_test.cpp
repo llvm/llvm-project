@@ -20,8 +20,18 @@
 #include "tsan_report.h"
 
 #include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_libc.h"
 
 namespace __tsan {
+
+// Format a pointer using the same `%p` formatter the Describe* helpers use,
+// so the expected strings here track whatever zero-padding the platform's
+// printf applies (e.g. glibc and Darwin both pad to 12 hex digits while
+// some libcs print minimal width).
+static void FormatPtr(char *out, uptr size, uptr addr) {
+  __sanitizer::internal_snprintf(out, size, "%p", (void *)addr);
+}
 
 TEST(Report, DescribeMop) {
   ReportMop mop;
@@ -32,21 +42,34 @@ TEST(Report, DescribeMop) {
   mop.atomic = false;
   mop.external_tag = kExternalTagNone;
 
+  char addr_str[32];
+  FormatPtr(addr_str, sizeof(addr_str), mop.addr);
+  char expected[128];
+
   InternalScopedString s;
   DescribeMop(&mop, /*first=*/true, s);
-  EXPECT_STREQ("  Write of size 4 at 0x1234 by thread T1", s.data());
+  __sanitizer::internal_snprintf(expected, sizeof(expected),
+                                 "  Write of size 4 at %s by thread T1",
+                                 addr_str);
+  EXPECT_STREQ(expected, s.data());
 
   s.clear();
   mop.write = false;
   DescribeMop(&mop, /*first=*/false, s);
-  EXPECT_STREQ("  Previous read of size 4 at 0x1234 by thread T1", s.data());
+  __sanitizer::internal_snprintf(
+      expected, sizeof(expected),
+      "  Previous read of size 4 at %s by thread T1", addr_str);
+  EXPECT_STREQ(expected, s.data());
 
   s.clear();
   mop.write = true;
   mop.atomic = true;
   mop.tid = kMainTid;
   DescribeMop(&mop, /*first=*/true, s);
-  EXPECT_STREQ("  Atomic write of size 4 at 0x1234 by main thread", s.data());
+  __sanitizer::internal_snprintf(
+      expected, sizeof(expected),
+      "  Atomic write of size 4 at %s by main thread", addr_str);
+  EXPECT_STREQ(expected, s.data());
 }
 
 TEST(Report, DescribeLocationStackAndTls) {
@@ -73,12 +96,18 @@ TEST(Report, DescribeLocationHeap) {
   loc.heap_chunk_size = 16;
   loc.external_tag = kExternalTagNone;
 
+  char addr_str[32];
+  FormatPtr(addr_str, sizeof(addr_str), loc.heap_chunk_start);
+  char expected[128];
+  __sanitizer::internal_snprintf(
+      expected, sizeof(expected),
+      "  Location is heap block of size 16 at %s allocated by thread T3:",
+      addr_str);
+
   InternalScopedString s;
   // Heap locations are followed by the allocation stack.
   EXPECT_TRUE(DescribeLocation(&loc, s));
-  EXPECT_STREQ(
-      "  Location is heap block of size 16 at 0x4000 allocated by thread T3:",
-      s.data());
+  EXPECT_STREQ(expected, s.data());
 }
 
 TEST(Report, DescribeLocationFD) {
@@ -105,9 +134,15 @@ TEST(Report, DescribeMutex) {
   rm.id = 5;
   rm.addr = 0xdead;
 
+  char addr_str[32];
+  FormatPtr(addr_str, sizeof(addr_str), rm.addr);
+  char expected[128];
+  __sanitizer::internal_snprintf(expected, sizeof(expected),
+                                 "  Mutex M5 (%s) created at:", addr_str);
+
   InternalScopedString s;
   DescribeMutex(&rm, s);
-  EXPECT_STREQ("  Mutex M5 (0xdead) created at:", s.data());
+  EXPECT_STREQ(expected, s.data());
 }
 
 TEST(Report, DescribeThread) {
