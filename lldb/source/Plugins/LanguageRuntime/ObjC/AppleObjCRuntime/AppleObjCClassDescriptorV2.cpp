@@ -383,13 +383,20 @@ ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   result.m_alignment = extractor.GetU32_unchecked(&cursor);
   result.m_size = extractor.GetU32_unchecked(&cursor);
 
-  process->ReadCStringFromMemory(result.m_name_ptr, result.m_name, error);
-  if (error.Fail())
-    return error.takeError();
+  llvm::SmallVector<std::optional<std::string>> strs =
+      process->ReadCStringsFromMemory({result.m_name_ptr, result.m_type_ptr});
 
-  process->ReadCStringFromMemory(result.m_type_ptr, result.m_type, error);
-  if (error.Fail())
-    return error.takeError();
+  if (!strs[0])
+    return llvm::createStringErrorV(
+        "Failed to read ivar_t::m_name_str at address {0:x}",
+        result.m_name_ptr);
+  if (!strs[1])
+    return llvm::createStringErrorV(
+        "Failed to read ivar_t::m_type_str at address {0:x}",
+        result.m_type_ptr);
+
+  result.m_name = std::move(*strs[0]);
+  result.m_type = std::move(*strs[1]);
   return result;
 }
 
