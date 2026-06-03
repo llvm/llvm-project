@@ -34,15 +34,14 @@ enum class NodeKind {
 
 /// The Unary operators recognized by DIL.
 enum class UnaryOpKind {
-  AddrOf, // "&"
-  Deref,  // "*"
-  Minus,  // "-"
-  Plus,   // "+"
+  AddrOf, ///< "&"
+  Deref,  ///< "*"
+  Minus,  ///< "-"
+  Plus,   ///< "+"
 };
 
 /// The binary operators recognized by DIL.
 enum class BinaryOpKind {
-
   Add,       ///< "+"
   AddAssign, ///< "+="
   Assign,    ///< "="
@@ -53,8 +52,6 @@ enum class BinaryOpKind {
   Shr,       ///< ">>"
   Sub,       ///< "-"
   SubAssign, ///< "-="
-=======
->>>>>>> origin/main
 };
 
 /// Translates DIL tokens to BinaryOpKind.
