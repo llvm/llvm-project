@@ -68,13 +68,13 @@ class SHInstOP_N4_I8 <bits<16> opcode, dag outs, dag ins, string asmstr>
 
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = Opcode{3-0};
+  let Inst{15-12} = Opcode{15-12};
 
   // Operands
   bits<4> n;
   bits<8> imm;
-  let Inst{7-4} = n;
-  let Inst{15-8} = imm;
+  let Inst{11-8} = n;
+  let Inst{7-0} = imm;
 }
 
 class SHInstOP_N4_D8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -83,13 +83,13 @@ class SHInstOP_N4_D8 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = Opcode{3-0};
+  let Inst{15-12} = Opcode{15-12};
 
   // Operands
   bits<4> n;
   bits<8> disp;
-  let Inst{7-4} = n;
-  let Inst{15-8} = disp;
+  let Inst{11-8} = n;
+  let Inst{7-0} = disp;
 }
 
 class SHInstOP_N4_M4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -97,14 +97,14 @@ class SHInstOP_N4_M4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = Opcode{3-0};
   let Inst{15-11} = Opcode{15-11};
+  let Inst{3-0} = Opcode{3-0};
 
   // Operands
   bits<4> n;
   bits<4> m;
-  let Inst{7-4} = n;
-  let Inst{11-8} = m;
+  let Inst{11-8} = n;
+  let Inst{7-4} = m;
 }
 
 class SHInstOP_N4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -112,13 +112,13 @@ class SHInstOP_N4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{7-0} = Opcode{7-0};
+  let Inst{15-8} = Opcode{15-8};
 
   // Operands
   bits<4> n;
   bits<4> disp;
-  let Inst{11-8} = n;
-  let Inst{15-12} = disp;
+  let Inst{11-8} = disp;
+  let Inst{15-12} = n;
 }
 
 class SHInstOP_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -126,13 +126,13 @@ class SHInstOP_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{7-0} = Opcode{7-0};
+  let Inst{15-8} = Opcode{15-8};
 
   // Operands
   bits<4> m;
   bits<4> disp;
-  let Inst{11-8} = m;
-  let Inst{15-12} = disp;
+  let Inst{11-8} = disp;
+  let Inst{15-12} = m;
 }
 
 class SHInstOP_N4_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -140,15 +140,15 @@ class SHInstOP_N4_M4_D4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = opcode{3-0};
+  let Inst{15-12} = Opcode{15-12};
 
   // Operands
   bits<4> n;
   bits<4> m;
   bits<4> disp;
-  let Inst{7-4} = n;
-  let Inst{11-8} = m;
-  let Inst{15-12} = disp;
+  let Inst{11-8} = n;
+  let Inst{7-4} = m;
+  let Inst{0-3} = disp;
 }
 
 class SHInstOP_D8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -156,11 +156,11 @@ class SHInstOP_D8 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{7-0} = Opcode{7-0};
+  let Inst{15-8} = Opcode{15-8};
 
   // Operands
   bits<8> disp;
-  let Inst{15-8} = disp;
+  let Inst{7-0} = disp;
 }
 
 class SHInstOP_I8 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -168,11 +168,11 @@ class SHInstOP_I8 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{7-0} = Opcode{7-0};
+  let Inst{15-8} = Opcode{15-8};
 
   // Operands
   bits<8> imm;
-  let Inst{15-8} = imm;
+  let Inst{7-0} = imm;
 }
 
 class SHInstOP_N4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -180,12 +180,12 @@ class SHInstOP_N4 <bits<16> opcode, dag outs, dag ins, string asmstr>
   
   // Opcode
   let Opcode = opcode;
-  let Inst{3-0} = Opcode{3-0};
   let Inst{15-8} = Opcode{15-8};
+  let Inst{3-0} = Opcode{3-0};
 
   // Operands
   bits<4> n;
-  let Inst{7-4} = n;
+  let Inst{11-8} = n;
 }
 
 class SHInstOP_M4 <bits<16> opcode, dag outs, dag ins, string asmstr> 
@@ -198,7 +198,7 @@ class SHInstOP_M4 <bits<16> opcode, dag outs, dag ins, string asmstr>
 
   // Operands
   bits<4> m;
-  let Inst{7-4} = m;
+  let Inst{11-8} = m;
 }
 
 class SHInstOP <bits<16> opcode, dag outs, dag ins, string asmstr> 
