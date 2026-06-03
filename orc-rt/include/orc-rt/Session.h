@@ -31,6 +31,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <type_traits>
 #include <vector>
 

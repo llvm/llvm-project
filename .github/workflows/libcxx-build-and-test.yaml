@@ -198,13 +198,13 @@ jobs:
       matrix:
         include:
         - config: generic-cxx03
-          os: macos-15
+          os: macos-26
         - config: generic-cxx23
-          os: macos-15
+          os: macos-26
         - config: generic-modules
-          os: macos-15
+          os: macos-26
         - config: apple-configuration
-          os: macos-15
+          os: macos-26
         # TODO: These jobs are intended to test back-deployment (building against ToT libc++ but running against an
         #       older system-provided libc++.dylib). Doing this properly would require building the test suite on a
         #       recent macOS using a recent Clang (hence recent Xcode), and then running the actual test suite on an
@@ -216,9 +216,9 @@ jobs:
         #       macOS versions as a way to avoid rotting that configuration, but it doesn't provide a lot of additional
         #       coverage.
         - config: apple-system
-          os: macos-15
+          os: macos-26
         - config: apple-system-hardened
-          os: macos-15
+          os: macos-26
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -226,8 +226,8 @@ jobs:
           persist-credentials: false
       - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
-          # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
-          xcode-version: '26.0'
+          # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-Readme.md
+          xcode-version: '26.4'
       - name: Build and test
         run: |
           python3 -m venv .venv

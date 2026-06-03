@@ -40,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -359,6 +360,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
 
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -601,8 +610,6 @@ static std::optional<const char *> parseConvertArg(const char *s) {
 
 static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // By default the frontend driver creates a ParseSyntaxOnly action.
   opts.programAction = ParseSyntaxOnly;
 
@@ -869,6 +876,18 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -frelaxed-c-loc-checks
+  if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+  }
+
+  // -f{no-}acc-allow-default-none-scalars
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
+      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
+                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+                   false));
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
@@ -905,7 +924,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   setUpFrontendBasedOnAction(opts);
   opts.dashX = dashX;
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 // Generate the path to look for intrinsic modules
@@ -978,8 +997,6 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 /// options accordingly. Returns false if new errors are generated.
 static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // -J/module-dir option
   std::vector<std::string> moduleDirList =
       args.getAllArgValues(clang::options::OPT_module_dir);
@@ -1021,7 +1038,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       args.hasFlag(clang::options::OPT_fanalyzed_objects_for_unparse,
                    clang::options::OPT_fno_analyzed_objects_for_unparse, true));
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all diagnostics related arguments and populates the variables
@@ -1029,8 +1046,6 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// FC1 driver entry point for parsing diagnostic arguments.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   auto &features{res.getFrontendOpts().features};
   // The order of these flags (-pedantic -W<feature> -w) is important and is
   // chosen to match clang's behavior.
@@ -1087,15 +1102,13 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   diags.getDiagnosticOptions().ShowColors = showColors;
   res.getDiagnosticOpts().ShowColors = showColors;
   res.getFrontendOpts().showColors = showColors;
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all Dialect related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
 static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // -fd-lines-as-code
   if (args.hasArg(clang::options::OPT_fd_lines_as_code)) {
     if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
@@ -1208,7 +1221,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     diags.Report(diagID);
   }
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all OpenMP related arguments if the -fopenmp option is present,
@@ -1227,7 +1240,6 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.getLangOpts().OpenMPSimd = 1;
   }
 
-  unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
@@ -1253,27 +1265,15 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
     };
 
-    auto reportFutureVersion = [&](llvm::StringRef value) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "The specification for OpenMP version %0 is still under development; "
-          "the syntax and semantics of new features may be subject to change");
-      std::string buffer;
-      llvm::raw_string_ostream versions(buffer);
-      llvm::interleaveComma(ompVersions, versions);
-
-      diags.Report(diagID) << value;
-    };
-
     llvm::StringRef value = arg->getValue();
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
 
         if (version > latestFinalized)
-          reportFutureVersion(value);
+          diags.Report(clang::diag::warn_openmp_spec_incomplete) << version;
         else if (version > newestFullySupported)
-          diags.Report(clang::diag::warn_openmp_incomplete) << version;
+          diags.Report(clang::diag::warn_openmp_impl_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
             diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
@@ -1377,7 +1377,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         res.getLangOpts().OMPTargetTriples.push_back(tt);
     }
   }
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses signed integer overflow options and populates the
@@ -1583,11 +1583,35 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
   return success;
 }
 
+// Copied from clang/lib/Frontend/CompilerInvocation.cpp.
+static void addDiagnosticArgs(llvm::opt::ArgList &args,
+                              llvm::opt::OptSpecifier group,
+                              llvm::opt::OptSpecifier groupWithValue,
+                              std::vector<std::string> &diagnostics) {
+  for (auto *a : args.filtered(group)) {
+    if (a->getOption().getKind() == llvm::opt::Option::FlagClass) {
+      // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
+      // its name (minus the "W" or "R" at the beginning) to the diagnostics.
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1)));
+    } else if (a->getOption().matches(groupWithValue)) {
+      // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic
+      // group. Add only the group name to the diagnostics.
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
+    } else {
+      // Otherwise, add its value (for OPT_W_Joined and similar).
+      diagnostics.push_back(a->getValue());
+    }
+  }
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
 
   bool success = true;
+  clang::DiagnosticOptions &diagOpts = diags.getDiagnosticOptions();
 
   // Set the default triple for this CompilerInvocation. This might be
   // overridden by users with `-triple` (see the call to `ParseTargetArgs`
@@ -1624,24 +1648,11 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // -flang-experimental-hlfir
-  if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
-      args.hasArg(clang::options::OPT_emit_hlfir)) {
-    invoc.loweringOpts.setLowerToHighLevelFIR(true);
-  }
-
-  // -flang-deprecated-no-hlfir
-  if (args.hasArg(clang::options::OPT_flang_deprecated_no_hlfir) &&
-      !args.hasArg(clang::options::OPT_emit_hlfir)) {
-    if (args.hasArg(clang::options::OPT_flang_experimental_hlfir)) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Error,
-          "Options '-flang-experimental-hlfir' and "
-          "'-flang-deprecated-no-hlfir' cannot be both specified");
-      diags.Report(diagID);
-    }
-    invoc.loweringOpts.setLowerToHighLevelFIR(false);
-  }
+  // Handle -Wno-<warning> flags.
+  addDiagnosticArgs(args, clang::options::OPT_W_Group,
+                    clang::options::OPT_W_value_Group, diagOpts.Warnings);
+  auto vfs = llvm::vfs::getRealFileSystem();
+  clang::ProcessWarningOptions(diags, diagOpts, *vfs, /*ReportDiags=*/false);
 
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::options::OPT_fno_ppc_native_vec_elem_order)) {
@@ -1724,6 +1735,9 @@ bool CompilerInvocation::createFromArgs(
   //    * `-mmlir <your-mlir-option>`.
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
+
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
 
   success &= parseLangOptionsArgs(invoc, args, diags);
 
@@ -1904,6 +1918,12 @@ void CompilerInvocation::setFortranOpts() {
   // Add the ordered list of -intrinsic-modules-path
   fortranOptions.searchDirectories.insert(
       fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 

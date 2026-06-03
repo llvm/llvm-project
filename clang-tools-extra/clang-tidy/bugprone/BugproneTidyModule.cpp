@@ -52,6 +52,7 @@
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
 #include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
+#include "MissingEndComparisonCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultiLevelImplicitPointerConversionCheck.h"
 #include "MultipleNewInOneExpressionCheck.h"
@@ -104,6 +105,7 @@
 #include "UncheckedStringToNumberConversionCheck.h"
 #include "UndefinedMemoryManipulationCheck.h"
 #include "UndelegatedConstructorCheck.h"
+#include "UnhandledCodePathsCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
@@ -213,6 +215,8 @@ public:
         "bugprone-misplaced-pointer-arithmetic-in-alloc");
     CheckFactories.registerCheck<MisplacedWideningCastCheck>(
         "bugprone-misplaced-widening-cast");
+    CheckFactories.registerCheck<MissingEndComparisonCheck>(
+        "bugprone-missing-end-comparison");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
         "bugprone-move-forwarding-reference");
     CheckFactories.registerCheck<MultiLevelImplicitPointerConversionCheck>(
@@ -307,6 +311,8 @@ public:
         "bugprone-undefined-memory-manipulation");
     CheckFactories.registerCheck<UndelegatedConstructorCheck>(
         "bugprone-undelegated-constructor");
+    CheckFactories.registerCheck<UnhandledCodePathsCheck>(
+        "bugprone-unhandled-code-paths");
     CheckFactories.registerCheck<UnhandledSelfAssignmentCheck>(
         "bugprone-unhandled-self-assignment");
     CheckFactories.registerCheck<UnhandledExceptionAtNewCheck>(

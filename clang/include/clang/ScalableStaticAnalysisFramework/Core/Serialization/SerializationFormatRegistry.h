@@ -13,10 +13,7 @@
 //
 // Insert this code to the header file:
 //
-//   namespace llvm {
-//   extern template class CLANG_TEMPLATE_ABI
-//     Registry<clang::ssaf::MyFormat::FormatInfo>;
-//   } // namespace llvm
+//   LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 // Insert this declaration to the MyFormat class:
 //
@@ -24,11 +21,13 @@
 //
 // Insert this code to the cpp file:
 //
+//   namespace clang::ssaf {
 //   // NOLINTNEXTLINE(misc-use-internal-linkage)
-//   volatile int SSAFMyFormatAnchorSource = 0;
+//   volatile int MyFormatAnchorSource = 0;
+//   } // namespace clang::ssaf
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
-//   LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+//   LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 // Then implement the formatter for the specific analysis and register the
 // format info for it:
@@ -50,14 +49,10 @@
 //         "The MyFormat format info implementation for MyAnalysis"
 //       );
 //
-// Finally, insert a use of the new anchor symbol into the force-linker header:
+// Finally, extend the `AnchorSources` list in the force-linker header:
 // clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h:
 //
 // This anchor is used to force the linker to link the MyFormat registration.
-//
-//   extern volatile int SSAFMyFormatAnchorSource;
-//   [[maybe_unused]] static int SSAFMyFormatAnchorDestination =
-//       SSAFMyFormatAnchorSource;
 //
 //===----------------------------------------------------------------------===//
 
@@ -89,9 +84,6 @@ using SerializationFormatRegistry = llvm::Registry<SerializationFormat>;
 
 } // namespace clang::ssaf
 
-namespace llvm {
-extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::SerializationFormat>;
-} // namespace llvm
+LLVM_DECLARE_REGISTRY(clang::ssaf::SerializationFormatRegistry)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SERIALIZATION_SERIALIZATIONFORMATREGISTRY_H

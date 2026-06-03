@@ -42,6 +42,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Tp>
 struct __can_convert_char {
@@ -899,6 +900,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(path& __lhs, path& __rhs) noexcept { __lh
 
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_t hash_value(const path& __p) noexcept;
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 _LIBCPP_BEGIN_NAMESPACE_STD

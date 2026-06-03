@@ -19,6 +19,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  memfd_create
+  SRCS
+    memfd_create.cpp
+  HDRS
+    ../memfd_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.memfd_create
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mmap
   SRCS
     mmap.cpp
@@ -39,7 +50,8 @@ add_entrypoint_object(
   HDRS
     ../mremap.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -76,7 +88,8 @@ add_entrypoint_object(
   HDRS
     ../posix_madvise.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
 )

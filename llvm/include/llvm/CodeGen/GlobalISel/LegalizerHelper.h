@@ -209,7 +209,8 @@ public:
                                             Type *FromType,
                                             LostDebugLocObserver &LocObserver,
                                             bool IsSigned = false) const;
-  LegalizerHelper::LegalizeResult createAtomicLibcall(MachineInstr &MI) const;
+  LLVM_ABI LegalizerHelper::LegalizeResult
+  createAtomicLibcall(MachineInstr &MI) const;
 
   /// Create a libcall to memcpy et al.
   LLVM_ABI LegalizeResult
@@ -523,6 +524,7 @@ public:
   LLVM_ABI LegalizeResult lowerFPTOSI(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTOINT_SAT(MachineInstr &MI);
 
+  LLVM_ABI LegalizeResult lowerFPExtAndTruncMem(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC_F32_TO_BF16(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFPTRUNC(MachineInstr &MI);
@@ -575,6 +577,7 @@ public:
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,
                                             unsigned MaxLen = 0);
   LLVM_ABI LegalizeResult lowerVAArg(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerMulfix(MachineInstr &MI);
 };
 
 } // End namespace llvm.

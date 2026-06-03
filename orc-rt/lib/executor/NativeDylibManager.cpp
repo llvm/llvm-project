@@ -13,7 +13,7 @@
 #include "orc-rt/NativeDylibManager.h"
 #include "orc-rt/Session.h"
 
-#include <sstream>
+#include <sstream> // For NativeDylibAPIs.inc.
 
 #if defined(__APPLE__) || defined(__linux__)
 #include "Unix/NativeDylibAPIs.inc"
@@ -45,73 +45,46 @@ NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
 }
 
 void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
+  auto H = hostOSLoadLibrary(Path);
+  if (!H)
+    return OnComplete(H.takeError());
 
-  if (auto H = hostOSLoadLibrary(Path)) {
-    {
-      std::scoped_lock<std::mutex> Lock(M);
-      auto &LI = LoadInfos[*H];
-      if (LI.Ordinal == 0) // new entry.
-        LI.Ordinal = LoadInfos.size();
-      ++LI.RefCount;
-    }
-    OnComplete(std::move(H));
-  } else
-    OnComplete(H.takeError());
-}
-
-void NativeDylibManager::unload(OnUnloadCompleteFn &&OnComplete, void *Handle) {
-  std::unique_lock<std::mutex> Lock(M);
-
-  auto LIItr = LoadInfos.find(Handle);
-  if (LIItr == LoadInfos.end()) {
-    Lock.unlock();
-    std::ostringstream ErrMsg;
-    ErrMsg << "error: attempt to unload unrecognized handle " << Handle;
-    OnComplete(make_error<StringError>(ErrMsg.str()));
-    return;
-  }
-
-  auto &LI = LIItr->second;
-
-  if (LI.RefCount == 0) {
-    Lock.unlock();
-    std::ostringstream ErrMsg;
-    ErrMsg << "error: cannot close handle " << Handle
-           << ", refcount is already zero";
-    OnComplete(make_error<StringError>(ErrMsg.str()));
-    return;
-  }
-
-  --LI.RefCount;
-
-  Lock.unlock();
-  OnComplete(hostOSUnloadLibrary(Handle));
+  // Capture S by reference, rather than this, so that the callback remains
+  // valid even if the NativeDylibManager is destroyed prior to shutdown.
+  S.addOnShutdown([&S = this->S, Handle = *H]() {
+    if (auto Err = hostOSUnloadLibrary(Handle))
+      S.reportError(std::move(Err));
+  });
+  OnComplete(std::move(H));
 }
 
 void NativeDylibManager::lookup(OnLookupCompleteFn &&OnLookupComplete,
-                                void *Handle, std::vector<std::string> Names) {
-  {
-    std::unique_lock<std::mutex> Lock(M);
-    auto LIItr = LoadInfos.find(Handle);
-    if (LIItr == LoadInfos.end()) {
-      Lock.unlock();
-      std::ostringstream ErrMsg;
-      ErrMsg << "error: cannot perform lookup on unrecognized handle "
-             << Handle;
-      OnLookupComplete(make_error<StringError>(ErrMsg.str()));
-      return;
-    }
+                                void *Handle, SymbolLookupSet Symbols) {
+  std::vector<std::string> Names;
+  Names.reserve(Symbols.size());
+  for (auto &S : Symbols)
+    Names.push_back(std::move(S.first));
 
-    if (LIItr->second.RefCount == 0) {
-      Lock.unlock();
-      std::ostringstream ErrMsg;
-      ErrMsg << "error: cannot perform lookup on closed handle " << Handle;
-      OnLookupComplete(make_error<StringError>(ErrMsg.str()));
-      return;
+  auto Addrs = hostOSLibraryLookup(Handle, Names);
+
+  bool HasMissing = false;
+  std::ostringstream ErrMsg;
+  for (size_t I = 0, E = Symbols.size(); I != E; ++I) {
+    if (Addrs[I] == nullptr && Symbols[I].second == RequiredSymbol) {
+      if (!HasMissing) {
+        ErrMsg << "Required symbols {";
+        HasMissing = true;
+      }
+      ErrMsg << " \"" << Names[I] << "\"";
     }
   }
+  if (HasMissing) {
+    ErrMsg << " } not found";
+    OnLookupComplete(make_error<StringError>(ErrMsg.str()));
+    return;
+  }
 
-  OnLookupComplete(hostOSLibraryLookup(Handle, Names));
+  OnLookupComplete(std::move(Addrs));
 }
 
 void NativeDylibManager::onDetach(Service::OnCompleteFn OnComplete,
@@ -122,29 +95,7 @@ void NativeDylibManager::onDetach(Service::OnCompleteFn OnComplete,
 }
 
 void NativeDylibManager::onShutdown(Service::OnCompleteFn OnComplete) {
-
-  // Unload in reverse load order (LIFO).
-  std::vector<void *> ToUnload;
-  ToUnload.reserve(LoadInfos.size());
-
-  for (auto &[Handle, Info] : LoadInfos)
-    ToUnload.push_back(Handle);
-
-  std::sort(ToUnload.begin(), ToUnload.end(), [this](void *LHS, void *RHS) {
-    assert(LoadInfos.count(LHS));
-    assert(LoadInfos.count(RHS));
-    return LoadInfos[LHS].Ordinal < LoadInfos[RHS].Ordinal;
-  });
-
-  while (!ToUnload.empty()) {
-    void *H = ToUnload.back();
-    ToUnload.pop_back();
-    size_t UnloadCount = LoadInfos[H].RefCount;
-    for (size_t I = 0; I != UnloadCount; ++I)
-      if (auto Err = hostOSUnloadLibrary(H))
-        S.reportError(std::move(Err));
-  }
-
+  // Unloads happen via Session shutdown callbacks registered in load().
   OnComplete();
 }
 

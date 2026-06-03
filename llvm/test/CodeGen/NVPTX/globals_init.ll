@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
-; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -use-constant-int-for-fixed-length-splat | FileCheck %s
 
 ; Make sure the globals constant initializers are not prone to host endianess 
 ; issues.
@@ -36,3 +36,11 @@
 
 ; CHECK-DAG: .b8 Gblv4f32[16] = {0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63, 0, 0, 128, 63};
 @Gblv4f32 = global <4 x float> splat(float 1.0)
+
+; Large-integer globals whose bit width is not a multiple of 8 must emit
+; their full ceil(bitWidth/8) bytes, including the top partial byte.
+; CHECK-DAG: .b8 globalint_Gbli65[9] = {255, 255, 255, 255, 255, 255, 255, 255, 1};
+@globalint_Gbli65 = global i65 u0x1FFFFFFFFFFFFFFFF
+
+; CHECK-DAG: .b8 globalint_Gbli100[13] = {186, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15};
+@globalint_Gbli100 = global i100 u0xF000000000000000000000ABA

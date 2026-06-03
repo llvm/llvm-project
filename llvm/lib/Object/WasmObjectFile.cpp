@@ -600,7 +600,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
-          if (Index > DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
@@ -833,7 +833,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
         if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (static_cast<size_t>(Index) >= DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>(
                 "invalid data segment index: " + Twine(Index),
                 object_error::parse_failed);

@@ -12,14 +12,16 @@
 
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 
-llvm::Constant *
-mlir::LLVM::createSourceLocStrFromLocation(Location loc,
-                                           llvm::OpenMPIRBuilder &builder,
-                                           StringRef name, uint32_t &strLen) {
+llvm::Constant *mlir::LLVM::createSourceLocStrFromLocation(
+    Location loc, llvm::OpenMPIRBuilder &builder, StringRef name,
+    uint32_t &strLen, bool forOffloadMap) {
   if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
     StringRef fileName = fileLoc.getFilename();
     unsigned lineNo = fileLoc.getLine();
     unsigned colNo = fileLoc.getColumn();
+    if (forOffloadMap)
+      return builder.getOrCreateSrcLocStr(fileName, name, lineNo, colNo,
+                                          strLen);
     return builder.getOrCreateSrcLocStr(name, fileName, lineNo, colNo, strLen);
   }
   std::string locStr;
@@ -35,7 +37,8 @@ mlir::LLVM::createMappingInformation(Location loc,
   if (auto nameLoc = dyn_cast<NameLoc>(loc)) {
     StringRef name = nameLoc.getName();
     return createSourceLocStrFromLocation(nameLoc.getChildLoc(), builder, name,
-                                          strLen);
+                                          strLen, /*forOffloadMap=*/true);
   }
-  return createSourceLocStrFromLocation(loc, builder, "unknown", strLen);
+  return createSourceLocStrFromLocation(loc, builder, "unknown", strLen,
+                                        /*forOffloadMap=*/true);
 }

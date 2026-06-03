@@ -50,56 +50,60 @@ functions:
       - type: cpu_set_t *
   - name: getcpu
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: unsigned int *
       - type: unsigned int *
   - name: sched_get_priority_max
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: sched_get_priority_min
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: sched_getaffinity
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: pid_t
       - type: size_t
       - type: cpu_set_t *
+  - name: sched_getcpu
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: void
   - name: sched_getparam
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
       - type: struct sched_param *
   - name: sched_getscheduler
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
-      - type: int
-      - type: const struct sched_param *
   - name: sched_rr_get_interval
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
       - type: struct timespec *
   - name: sched_setaffinity
     standards:
-      - GNUExtensions
+      - gnu
     return_type: int
     arguments:
       - type: pid_t
@@ -107,20 +111,22 @@ functions:
       - type: const cpu_set_t *
   - name: sched_setparam
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
       - type: const struct sched_param *
   - name: sched_setscheduler
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: pid_t
+      - type: int
+      - type: const struct sched_param *
   - name: sched_yield
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: void

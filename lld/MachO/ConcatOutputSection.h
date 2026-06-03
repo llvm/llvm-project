@@ -62,6 +62,25 @@ private:
   void finalizeFlags(InputSection *input);
 };
 
+// We maintain one ThunkInfo per real function.
+//
+// The "active thunk" is represented by the sym/isec pair that
+// turns-over during finalize(): as the call-site address advances,
+// the active thunk goes out of branch-range, and we create a new
+// thunk to take its place.
+//
+// The remaining members -- bools and counters -- apply to the
+// collection of thunks associated with the real function.
+
+struct ThunkInfo {
+  // These denote the active thunk:
+  Defined *sym = nullptr;             // private-extern symbol for active thunk
+  ConcatInputSection *isec = nullptr; // input section for active thunk
+
+  // The following value is cumulative across all thunks on this function
+  uint8_t sequence = 0; // how many thunks created so-far?
+};
+
 // ConcatOutputSections that contain code (text) require special handling to
 // support thunk insertion.
 class TextOutputSection : public ConcatOutputSection {
@@ -79,31 +98,28 @@ public:
   }
 
 private:
-  uint64_t estimateBranchTargetThresholdVA(size_t callIdx) const;
-
   std::vector<ConcatInputSection *> thunks;
-};
-
-// We maintain one ThunkInfo per real function.
-//
-// The "active thunk" is represented by the sym/isec pair that
-// turns-over during finalize(): as the call-site address advances,
-// the active thunk goes out of branch-range, and we create a new
-// thunk to take its place.
-//
-// The remaining members -- bools and counters -- apply to the
-// collection of thunks associated with the real function.
-
-struct ThunkInfo {
-  // These denote the active thunk:
-  Defined *sym = nullptr;             // private-extern symbol for active thunk
-  ConcatInputSection *isec = nullptr; // input section for active thunk
-
-  // The following values are cumulative across all thunks on this function
-  uint32_t callSiteCount = 0;  // how many calls to the real function?
-  uint32_t callSitesUsed = 0;  // how many call sites processed so-far?
-  uint32_t thunkCallCount = 0; // how many call sites went to thunk?
-  uint8_t sequence = 0;        // how many thunks created so-far?
+  /// \return true if the target in \p r is in range from the location in \p
+  /// isec. If the target isec is not finalized, \return false.
+  bool isTargetKnownInRange(const ConcatInputSection &isec,
+                            const Relocation &r) const;
+  /// If there exists a thunk in range of the target in \p r, \return that
+  /// thunk.
+  Defined *getThunkInRange(const ConcatInputSection &isec, const Relocation &r,
+                           const ThunkInfo &thunkInfo) const;
+  /// Update \p r to target \p thunk which is guaranteed to be in range.
+  void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
+  /// Create a new thunk and update \p r to target the new thunk.
+  void createThunk(const ConcatInputSection &isec, Relocation &r,
+                   ThunkInfo &thunkInfo);
+  /// \return true if the target in \p r is in __stubs or __objc_stubs and in
+  /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
+  /// VA of the end of the last stubs section.
+  bool isTargetStubsAndInRange(const ConcatInputSection &isec,
+                               const Relocation &r,
+                               uint64_t estimatedStubsEnd) const;
+  /// The number of relocations updated to point to thunks.
+  size_t thunkCallCount = 0;
 };
 
 NamePair maybeRenameSection(NamePair key);
@@ -125,15 +141,14 @@ struct ThunkKey {
   Symbol *sym;
   int64_t addend;
 
+  ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
+  ThunkKey(Relocation &r) : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
+
   static ThunkKey getEmptyKey() {
     return {llvm::DenseMapInfo<Symbol *>::getEmptyKey(), 0};
   }
-  static ThunkKey getTombstoneKey() {
-    return {llvm::DenseMapInfo<Symbol *>::getTombstoneKey(), 0};
-  }
   bool isSentinel() const {
-    return sym == llvm::DenseMapInfo<Symbol *>::getEmptyKey() ||
-           sym == llvm::DenseMapInfo<Symbol *>::getTombstoneKey();
+    return sym == llvm::DenseMapInfo<Symbol *>::getEmptyKey();
   }
   bool operator==(const ThunkKey &other) const {
     if (addend != other.addend)
@@ -152,7 +167,6 @@ struct ThunkKey {
 
 struct ThunkMapKeyInfo {
   static ThunkKey getEmptyKey() { return ThunkKey::getEmptyKey(); }
-  static ThunkKey getTombstoneKey() { return ThunkKey::getTombstoneKey(); }
   static unsigned getHashValue(const ThunkKey &k) {
     if (k.isSentinel())
       return llvm::hash_value(k.sym);

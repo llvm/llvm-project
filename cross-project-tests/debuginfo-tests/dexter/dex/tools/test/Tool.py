@@ -17,8 +17,12 @@ from dex.command.ParseCommand import get_command_infos
 from dex.debugger.Debuggers import run_debugger_subprocess
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
 from dex.debugger.DebuggerControllers.ConditionalController import ConditionalController
+from dex.debugger.DebuggerControllers.ScriptDebuggerController import (
+    ScriptDebuggerController,
+)
 from dex.dextIR.DextIR import DextIR
 from dex.heuristic import Heuristic
+from dex.test_script.Script import get_dexter_script
 from dex.tools import TestToolBase
 from dex.utils.Exceptions import DebuggerException
 from dex.utils.Exceptions import BuildScriptException, HeuristicException
@@ -106,6 +110,16 @@ class Tool(TestToolBase):
             action="store_true",
             help="calculate the average score of every test run",
         )
+        parser.add_argument(
+            "--skip-run",
+            action="store_true",
+            help="if true, skip running the debugger and produce no output; used for testing purposes",
+        )
+        parser.add_argument(
+            "--skip-evaluate",
+            action="store_true",
+            help="if true, skip evaluating the ouput from the debugger and just print the seen steps; used for testing purposes",
+        )
         super(Tool, self).add_tool_arguments(parser, defaults)
 
     def _init_debugger_controller(self):
@@ -115,23 +129,45 @@ class Tool(TestToolBase):
             dexter_version=self.context.version,
         )
 
-        step_collection.commands, new_source_files = get_command_infos(
-            self.context.options.test_files, self.context.options.source_root_dir
-        )
+        if self.context.options.use_script:
+            step_collection.script, new_source_files = get_dexter_script(
+                self.context,
+                self.context.options.test_files[0],
+                self.context.options.source_root_dir,
+            )
+        else:
+            step_collection.commands, new_source_files = get_command_infos(
+                self.context.options.test_files, self.context.options.source_root_dir
+            )
 
         self.context.options.source_files.extend(list(new_source_files))
 
-        cond_controller_cmds = ["DexLimitSteps", "DexStepFunction", "DexContinue"]
-        if any(c in step_collection.commands for c in cond_controller_cmds):
-            debugger_controller = ConditionalController(self.context, step_collection)
+        # If we are not running a debugger, return the DextIR instead of a DebuggerController.
+        if self.context.options.skip_run:
+            return step_collection
+
+        if self.context.options.use_script:
+            debugger_controller = ScriptDebuggerController(
+                self.context, step_collection
+            )
         else:
-            debugger_controller = DefaultController(self.context, step_collection)
+            cond_controller_cmds = ["DexLimitSteps", "DexStepFunction", "DexContinue"]
+            if any(c in step_collection.commands for c in cond_controller_cmds):
+                debugger_controller = ConditionalController(
+                    self.context, step_collection
+                )
+            else:
+                debugger_controller = DefaultController(self.context, step_collection)
 
         return debugger_controller
 
     def _get_steps(self):
         """Generate a list of debugger steps from a test case."""
         debugger_controller = self._init_debugger_controller()
+
+        if self.context.options.skip_run:
+            self.context.logger.warning("Skipping run...")
+            return debugger_controller
         debugger_controller = run_debugger_subprocess(
             debugger_controller, self.context.working_directory.path
         )
@@ -227,6 +263,18 @@ class Tool(TestToolBase):
                     self.context.options.binary, self.context.options.executable
                 )
             steps = self._get_steps()
+            if self.context.options.skip_run:
+                if steps.script is not None:
+                    print(steps.script.dump())
+                return
+            if self.context.options.skip_evaluate:
+                self.context.logger.warning("Skipping evaluation...")
+                for step in steps.steps:
+                    print("\n".join(step.detailed_print()))
+                return
+            assert (
+                not self.context.options.use_script
+            ), "Evaluation not yet supported with --use-script"
             self._record_steps(test_name, steps)
             heuristic_score = Heuristic(self.context, steps)
             self._record_score(test_name, heuristic_score)

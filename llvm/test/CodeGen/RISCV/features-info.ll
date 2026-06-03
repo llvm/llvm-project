@@ -26,7 +26,7 @@
 ; CHECK-NEXT:   experimental-rvm23u32            - RISC-V experimental-rvm23u32 profile.
 ; CHECK-NEXT:   experimental-smpmpmt             - 'Smpmpmt' (PMP-based Memory Types Extension).
 ; CHECK-NEXT:   experimental-svukte              - 'Svukte' (Address-Independent Latency of User-Mode Faults to Supervisor Addresses).
-; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
+; CHECK-NEXT:   experimental-xqccmt              - 'Xqccmt' (Qualcomm 16-bit Table Jump).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
 ; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
@@ -36,10 +36,17 @@
 ; CHECK-NEXT:   experimental-zvabd               - 'Zvabd' (Vector Absolute Difference).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
 ; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers).
+; CHECK-NEXT:   experimental-zvfbdota32f         - 'Zvfbdota32f' (FP32 batched dot-product extension).
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
+; CHECK-NEXT:   experimental-zvfqwbdota8f        - 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfwbdota16bf       - 'Zvfwbdota16bf' (BF16 batched dot-product extension).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
-; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data). 
+; CHECK-NEXT:   experimental-zvqwbdota16i        - 'Zvqwbdota16i' (16-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwbdota8i         - 'Zvqwbdota8i' (8-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   fusion-add-load                  - Enable ADD(.UW) + load macrofusion.
@@ -304,6 +311,7 @@
 ; CHECK-NEXT:   zicboz                           - 'Zicboz' (Cache-Block Zero Instructions).
 ; CHECK-NEXT:   ziccamoa                         - 'Ziccamoa' (Main Memory Supports All Atomics in A).
 ; CHECK-NEXT:   ziccamoc                         - 'Ziccamoc' (Main Memory Supports Atomics in Zacas).
+; CHECK-NEXT:   ziccid                           - 'Ziccid' (Instruction/Data Coherence and Consistency).
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).

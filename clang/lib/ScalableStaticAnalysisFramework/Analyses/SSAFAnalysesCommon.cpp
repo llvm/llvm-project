@@ -11,9 +11,22 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include <set>
 
 using namespace clang;
+
+std::string ssaf::describeJSONValue(const llvm::json::Value &V) {
+  return llvm::formatv("{0:2}", V).str();
+}
+
+std::string ssaf::describeJSONValue(const llvm::json::Array &A) {
+  return llvm::formatv("array of size {0}", A.size()).str();
+}
+
+std::string ssaf::describeJSONValue(const llvm::json::Object &O) {
+  return llvm::formatv("an object of {0} key(s)", O.size()).str();
+}
 
 namespace {
 // Traverses the AST and finds contributors.
@@ -34,8 +47,16 @@ public:
   bool VisitVarDecl(VarDecl *D) override {
     DeclContext *DC = D->getDeclContext();
 
-    if (DC->isFileContext() || DC->isNamespace())
+    // Collects Decl for global variables or static data members:
+    if (DC->isFileContext() || D->isStaticDataMember())
       Contributors.insert(D);
+    return true;
+  }
+
+  bool VisitLambdaExpr(LambdaExpr *L) override {
+    // TraverseLambdaExpr directly visits the body stmt, skipping the
+    // CXXMethodDecl, which is a contributor that needs to be collected.
+    VisitFunctionDecl(L->getCallOperator());
     return true;
   }
 };
@@ -98,15 +119,15 @@ public:
 };
 } // namespace
 
-void clang::ssaf::findContributors(
-    ASTContext &Ctx, std::vector<const NamedDecl *> &Contributors) {
+void ssaf::findContributors(ASTContext &Ctx,
+                            std::vector<const NamedDecl *> &Contributors) {
   ContributorFinder Finder;
   Finder.TraverseAST(Ctx);
   Contributors.insert(Contributors.end(), Finder.Contributors.begin(),
                       Finder.Contributors.end());
 }
 
-void clang::ssaf::findMatchesIn(
+void ssaf::findMatchesIn(
     const NamedDecl *Contributor,
     llvm::function_ref<void(const DynTypedNode &)> MatchActionRef) {
   ContributorFactFinder{MatchActionRef}.findMatches(Contributor);

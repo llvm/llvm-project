@@ -66,7 +66,7 @@ ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
 ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture,
-    Unified, Value)
+    Unified, UseDevice, Value)
 
 // OpenACC device types
 ENUM_CLASS(
@@ -102,6 +102,10 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
     std::optional<CUDADataAttr>, IgnoreTKRSet, bool allowUnifiedMatchingRule,
     bool isHostDeviceProcedure,
     const LanguageFeatureControl *features = nullptr);
+
+// Format vector type as Fortran string
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 

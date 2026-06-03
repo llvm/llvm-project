@@ -9,7 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Module.h"
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
@@ -58,54 +58,56 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   for (auto &BB : F) {
     SeedCollector SC(&BB, A.getScalarEvolution(), CollectStores, CollectLoads,
                      AllowDiffTypes);
-    for (SeedBundle &Seeds : SC.getStoreSeeds()) {
-      unsigned ElmBits =
-          Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
-                                Seeds[Seeds.getFirstUnusedElementIdx()])),
-                            DL);
-      unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
-      unsigned VecRegBits = OverrideVecRegBits != 0
-                                ? OverrideVecRegBits
-                                : A.getTTI().getLoadStoreVecRegBitWidth(AS);
+    for (auto &SeedRange : {SC.getStoreSeeds(), SC.getLoadSeeds()}) {
+      for (SeedBundle &Seeds : SeedRange) {
+        unsigned ElmBits =
+            Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
+                                  Seeds[Seeds.getFirstUnusedElementIdx()])),
+                              DL);
+        unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
+        unsigned VecRegBits = OverrideVecRegBits != 0
+                                  ? OverrideVecRegBits
+                                  : A.getTTI().getLoadStoreVecRegBitWidth(AS);
 
-      auto DivideBy2 = [](unsigned Num) {
-        auto Floor = VecUtils::getFloorPowerOf2(Num);
-        if (Floor == Num)
-          return Floor / 2;
-        return Floor;
-      };
-      // Try to create the largest vector supported by the target. If it fails
-      // reduce the vector size by half.
-      for (unsigned SliceElms = std::min(VecRegBits / ElmBits,
-                                         Seeds.getNumUnusedBits() / ElmBits);
-           SliceElms >= 2u; SliceElms = DivideBy2(SliceElms)) {
-        if (Seeds.allUsed())
-          break;
-        // Keep trying offsets after FirstUnusedElementIdx, until we vectorize
-        // the slice. This could be quite expensive, so we enforce a limit.
-        for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
-                      OE = Seeds.size();
-             Offset + 1 < OE; Offset += 1) {
-          // Seeds are getting used as we vectorize, so skip them.
-          if (Seeds.isUsed(Offset))
-            continue;
+        auto DivideBy2 = [](unsigned Num) {
+          auto Floor = VecUtils::getFloorPowerOf2(Num);
+          if (Floor == Num)
+            return Floor / 2;
+          return Floor;
+        };
+        // Try to create the largest vector supported by the target. If it fails
+        // reduce the vector size by half.
+        for (unsigned SliceElms = std::min(VecRegBits / ElmBits,
+                                           Seeds.getNumUnusedBits() / ElmBits);
+             SliceElms >= 2u; SliceElms = DivideBy2(SliceElms)) {
           if (Seeds.allUsed())
             break;
+          // Keep trying offsets after FirstUnusedElementIdx, until we vectorize
+          // the slice. This could be quite expensive, so we enforce a limit.
+          for (unsigned Offset = Seeds.getFirstUnusedElementIdx(),
+                        OE = Seeds.size();
+               Offset + 1 < OE; Offset += 1) {
+            // Seeds are getting used as we vectorize, so skip them.
+            if (Seeds.isUsed(Offset))
+              continue;
+            if (Seeds.allUsed())
+              break;
 
-          auto SeedSlice =
-              Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
-          if (SeedSlice.empty())
-            continue;
+            auto SeedSlice =
+                Seeds.getSlice(Offset, SliceElms * ElmBits, !AllowNonPow2);
+            if (SeedSlice.empty())
+              continue;
 
-          assert(SeedSlice.size() >= 2 && "Should have been rejected!");
+            assert(SeedSlice.size() >= 2 && "Should have been rejected!");
 
-          // Create a region containing the seed slice.
-          auto &Ctx = F.getContext();
-          Region Rgn(Ctx, A.getTTI());
-          Rgn.setAux(SeedSlice);
-          // Run the region pass pipeline.
-          Change |= RPM.runOnRegion(Rgn, A);
-          Rgn.clearAux();
+            // Create a region containing the seed slice.
+            auto &Ctx = F.getContext();
+            RegionWithScore Rgn(Ctx, A.getTTI());
+            Rgn.setAux(SeedSlice);
+            // Run the region pass pipeline.
+            Change |= RPM.runOnRegion(Rgn, A);
+            Rgn.clearAux();
+          }
         }
       }
     }

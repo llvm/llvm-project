@@ -222,7 +222,18 @@ def _skipForVariant(variant_name, expected_fn, bugnumber=None):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
         skip_dict = getattr(func, "__variant_skip__", {})
-        skip_dict[variant_name] = expected_fn
+        existing_fn = skip_dict.get(variant_name)
+        if existing_fn:
+            # Chain the decorator with the existing one.
+            def chained_fn(**kwargs):
+                reason = expected_fn(**kwargs)
+                if reason:
+                    return reason
+                return existing_fn(**kwargs)
+
+            skip_dict[variant_name] = chained_fn
+        else:
+            skip_dict[variant_name] = expected_fn
         func.__variant_skip__ = skip_dict
         return func
 
@@ -551,6 +562,9 @@ def apple_simulator_test(platform):
     def should_skip_simulator_test():
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
+
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
 
         # Make sure we recognize the platform.
         mapping = {
@@ -1121,11 +1135,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None
@@ -1422,3 +1439,18 @@ def skipUnlessPackageAvailable(name):
         available = False
 
     return unittest.skipUnless(available, f"requires the '{name}' package")
+
+
+def skipUnlessTargetIsHost(func):
+    """Skip the test case if the test binary architecture does not match LLDB.framework."""
+
+    def check_arch_match():
+        # The lldb executable is built the same as the framework.
+        lldb_arch = lldbplatformutil.getLLDBArchitecture()
+        test_arch = lldbplatformutil.getArchitecture()
+
+        if lldb_arch != test_arch:
+            return "Test binary architecture differs from host architecture"
+        return None
+
+    return skipTestIfFn(check_arch_match)(func)

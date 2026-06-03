@@ -177,12 +177,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
     // Mark any GPRs requested to be reserved as such
-    if (Subtarget.isRegisterReservedByUser(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (Subtarget.isRegisterReservedByUser(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
 
     // Mark all the registers defined as constant in TableGen as reserved.
-    if (isConstantPhysReg(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (isConstantPhysReg(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved

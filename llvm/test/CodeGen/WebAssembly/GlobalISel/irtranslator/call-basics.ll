@@ -26,8 +26,8 @@ define i32 @call_ret_i32_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_i32_args_none, def %0(i32), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(i32), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:i32(i32) = CALL @ret_i32_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](i32), implicit-def $arguments
   %ret = call i32 @ret_i32_args_none()
   ret i32 %ret
 }
@@ -38,8 +38,8 @@ define i64 @call_ret_i64_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_i64_args_none, def %0(i64), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(i64), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:i64(i64) = CALL @ret_i64_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](i64), implicit-def $arguments
   %ret = call i64 @ret_i64_args_none()
   ret i64 %ret
 }
@@ -50,8 +50,8 @@ define float @call_ret_f32_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_f32_args_none, def %0(f32), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(f32), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:f32(f32) = CALL @ret_f32_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](f32), implicit-def $arguments
   %ret = call float @ret_f32_args_none()
   ret float %ret
 }
@@ -62,20 +62,27 @@ define double @call_ret_f64_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_f64_args_none, def %0(f64), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(f64), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:f64(f64) = CALL @ret_f64_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](f64), implicit-def $arguments
   %ret = call double @ret_f64_args_none()
   ret double %ret
 }
 
 declare ptr @ret_ptr_args_none()
 define ptr @call_ret_ptr_args_none() {
-  ; CHECK-LABEL: name: call_ret_ptr_args_none
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $arguments
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_ptr_args_none, def %0(p0), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(p0), implicit-def $arguments
+  ; WASM32-LABEL: name: call_ret_ptr_args_none
+  ; WASM32: bb.1 (%ir-block.0):
+  ; WASM32-NEXT:   liveins: $arguments
+  ; WASM32-NEXT: {{  $}}
+  ; WASM32-NEXT:   [[CALL:%[0-9]+]]:i32(p0) = CALL @ret_ptr_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; WASM32-NEXT:   RETURN [[CALL]](p0), implicit-def $arguments
+  ;
+  ; WASM64-LABEL: name: call_ret_ptr_args_none
+  ; WASM64: bb.1 (%ir-block.0):
+  ; WASM64-NEXT:   liveins: $arguments
+  ; WASM64-NEXT: {{  $}}
+  ; WASM64-NEXT:   [[CALL:%[0-9]+]]:i64(p0) = CALL @ret_ptr_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; WASM64-NEXT:   RETURN [[CALL]](p0), implicit-def $arguments
   %ret = call ptr @ret_ptr_args_none()
   ret ptr %ret
 }
@@ -86,8 +93,8 @@ define %externref @call_ret_externref_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_externref_args_none, def %0(p10), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(p10), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:externref(p10) = CALL @ret_externref_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](p10), implicit-def $arguments
   %ret = call %externref @ret_externref_args_none()
   ret %externref %ret
 }
@@ -98,8 +105,8 @@ define %funcref @call_ret_funcref_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_funcref_args_none, def %0(p20), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   RETURN %0(p20), implicit-def $arguments
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:funcref(p20) = CALL @ret_funcref_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   RETURN [[CALL]](p20), implicit-def $arguments
   %ret = call %funcref @ret_funcref_args_none()
   ret %funcref %ret
 }
@@ -132,8 +139,8 @@ define i128 @call_ret_i128_args_none() {
   ; MULTIVAL-SIMD: bb.1 (%ir-block.0):
   ; MULTIVAL-SIMD-NEXT:   liveins: $arguments
   ; MULTIVAL-SIMD-NEXT: {{  $}}
-  ; MULTIVAL-SIMD-NEXT:   CALL @ret_i128_args_none, def %1(i64), def %2(i64), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; MULTIVAL-SIMD-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES %1(i64), %2(i64)
+  ; MULTIVAL-SIMD-NEXT:   [[CALL:%[0-9]+]]:i64(i64), [[CALL1:%[0-9]+]]:i64(i64) = CALL @ret_i128_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; MULTIVAL-SIMD-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[CALL]](i64), [[CALL1]](i64)
   ; MULTIVAL-SIMD-NEXT:   [[UV:%[0-9]+]]:i64(i64), [[UV1:%[0-9]+]]:i64(i64) = G_UNMERGE_VALUES [[MV]](i128)
   ; MULTIVAL-SIMD-NEXT:   RETURN [[UV]](i64), [[UV1]](i64), implicit-def $arguments
   %ret = call i128 @ret_i128_args_none()
@@ -146,8 +153,8 @@ define half @call_ret_f16_args_none() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CALL @ret_f16_args_none, def %1(i32), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC %1(i32)
+  ; CHECK-NEXT:   [[CALL:%[0-9]+]]:i32(i32) = CALL @ret_f16_args_none, implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[CALL]](i32)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[TRUNC]](f16)
   ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   %ret = call half @ret_f16_args_none()
@@ -394,8 +401,8 @@ define %complexret @call_complex(<8 x i16> %a, [3 x ptr] %b, i1 %c) {
   ; WASM32-MULTIVAL-SIMD-NEXT:   [[ARGUMENT_i32_3:%[0-9]+]]:i32(i32) = ARGUMENT_i32 4, implicit $arguments
   ; WASM32-MULTIVAL-SIMD-NEXT:   [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[ARGUMENT_i32_3]](i32)
   ; WASM32-MULTIVAL-SIMD-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[TRUNC]](i1)
-  ; WASM32-MULTIVAL-SIMD-NEXT:   CALL @complex, [[ARGUMENT_v8i16_]](<8 x i16>), [[ARGUMENT_i32_]](p0), [[ARGUMENT_i32_1]](p0), [[ARGUMENT_i32_2]](p0), [[ANYEXT]](i32), def %6(i32), def %7(p0), def %8(<4 x f32>), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; WASM32-MULTIVAL-SIMD-NEXT:   RETURN %6(i32), %7(p0), %8(<4 x f32>), implicit-def $arguments
+  ; WASM32-MULTIVAL-SIMD-NEXT:   [[CALL:%[0-9]+]]:i32(i32), [[CALL1:%[0-9]+]]:i32(p0), [[CALL2:%[0-9]+]]:v128(<4 x f32>) = CALL @complex, [[ARGUMENT_v8i16_]](<8 x i16>), [[ARGUMENT_i32_]](p0), [[ARGUMENT_i32_1]](p0), [[ARGUMENT_i32_2]](p0), [[ANYEXT]](i32), implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; WASM32-MULTIVAL-SIMD-NEXT:   RETURN [[CALL]](i32), [[CALL1]](p0), [[CALL2]](<4 x f32>), implicit-def $arguments
   ;
   ; WASM64-MULTIVAL-SIMD-LABEL: name: call_complex
   ; WASM64-MULTIVAL-SIMD: bb.1 (%ir-block.0):
@@ -408,8 +415,8 @@ define %complexret @call_complex(<8 x i16> %a, [3 x ptr] %b, i1 %c) {
   ; WASM64-MULTIVAL-SIMD-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(i32) = ARGUMENT_i32 4, implicit $arguments
   ; WASM64-MULTIVAL-SIMD-NEXT:   [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[ARGUMENT_i32_]](i32)
   ; WASM64-MULTIVAL-SIMD-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[TRUNC]](i1)
-  ; WASM64-MULTIVAL-SIMD-NEXT:   CALL @complex, [[ARGUMENT_v8i16_]](<8 x i16>), [[ARGUMENT_i64_]](p0), [[ARGUMENT_i64_1]](p0), [[ARGUMENT_i64_2]](p0), [[ANYEXT]](i32), def %6(i32), def %7(p0), def %8(<4 x f32>), implicit-def $arguments, implicit $sp32, implicit $sp64
-  ; WASM64-MULTIVAL-SIMD-NEXT:   RETURN %6(i32), %7(p0), %8(<4 x f32>), implicit-def $arguments
+  ; WASM64-MULTIVAL-SIMD-NEXT:   [[CALL:%[0-9]+]]:i32(i32), [[CALL1:%[0-9]+]]:i64(p0), [[CALL2:%[0-9]+]]:v128(<4 x f32>) = CALL @complex, [[ARGUMENT_v8i16_]](<8 x i16>), [[ARGUMENT_i64_]](p0), [[ARGUMENT_i64_1]](p0), [[ARGUMENT_i64_2]](p0), [[ANYEXT]](i32), implicit-def $arguments, implicit $sp32, implicit $sp64
+  ; WASM64-MULTIVAL-SIMD-NEXT:   RETURN [[CALL]](i32), [[CALL1]](p0), [[CALL2]](<4 x f32>), implicit-def $arguments
   %ret = call %complexret @complex(<8 x i16> %a, [3 x ptr] %b, i1 %c)
   ret %complexret %ret
 }

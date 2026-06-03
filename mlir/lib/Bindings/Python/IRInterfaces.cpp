@@ -338,6 +338,74 @@ public:
   }
 };
 
+/// Wrapper around the ConditionallySpeculatable interface.
+class PyConditionallySpeculatableOpInterface
+    : public PyConcreteOpInterface<PyConditionallySpeculatableOpInterface> {
+public:
+  using PyConcreteOpInterface<
+      PyConditionallySpeculatableOpInterface>::PyConcreteOpInterface;
+
+  constexpr static const char *pyClassName = "ConditionallySpeculatable";
+  constexpr static GetTypeIDFunctionTy getInterfaceID =
+      &mlirConditionallySpeculatableOpInterfaceTypeID;
+
+  /// Attach a new ConditionallySpeculatable FallbackModel to the named
+  /// operation. The FallbackModel acts as a trampoline for callbacks on the
+  /// Python class.
+  static void attach(nb::object &target, const std::string &opName,
+                     DefaultingPyMlirContext ctx) {
+    MlirConditionallySpeculatableOpInterfaceCallbacks callbacks;
+    callbacks.userData = target.ptr();
+    nb::handle(static_cast<PyObject *>(callbacks.userData)).inc_ref();
+    callbacks.construct = nullptr;
+    callbacks.destruct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+    };
+    callbacks.getSpeculatability = [](MlirOperation op, void *userData) {
+      nb::handle pyClass(static_cast<PyObject *>(userData));
+
+      auto pyGetSpeculatability =
+          nb::cast<nb::callable>(nb::getattr(pyClass, "get_speculatability"));
+
+      PyMlirContextRef context =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      auto opview = PyOperation::forOperation(context, op)->createOpView();
+
+      return nb::cast<MlirSpeculatability>(pyGetSpeculatability(opview));
+    };
+
+    mlirConditionallySpeculatableOpInterfaceAttachFallbackModel(
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
+  }
+
+  static void bindDerived(ClassTy &cls) {
+    cls.def(
+        "getSpeculatability",
+        [](PyConditionallySpeculatableOpInterface &self) {
+          if (self.isStatic())
+            throw nb::type_error(
+                "Cannot query speculatability on a static interface");
+          auto operation = self.getOperationObject();
+          auto *pyOperation = nb::cast<PyOperation *>(operation);
+          return mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
+              pyOperation->get());
+        },
+        "Returns the speculatability of the given operation.");
+    cls.attr("attach") = classmethod(
+        [](const nb::object &cls, const nb::object &opName, nb::object target,
+           DefaultingPyMlirContext context) {
+          if (target.is_none())
+            target = cls;
+          return attach(target, nb::cast<std::string>(opName), context);
+        },
+        nb::arg("cls"), nb::arg("op_name"), nb::kw_only(),
+        nb::arg("target").none() = nb::none(),
+        nb::arg("context").none() = nb::none(),
+        "Attach the interface subclass to the given operation name.");
+  }
+};
+
 /// Wrapper around the MemoryEffectsOpInterface.
 class PyMemoryEffectsOpInterface
     : public PyConcreteOpInterface<PyMemoryEffectsOpInterface> {
@@ -401,8 +469,16 @@ public:
 };
 
 void populateIRInterfaces(nb::module_ &m) {
-  nb::class_<PyMemoryEffectsInstanceList>(m, "MemoryEffectInstancesList");
+  nb::enum_<MlirSpeculatability>(m, "Speculatability")
+      .value("NotSpeculatable", MlirSpeculatabilityNotSpeculatable)
+      .value("Speculatable", MlirSpeculatabilitySpeculatable)
+      .value("RecursivelySpeculatable",
+             MlirSpeculatabilityRecursivelySpeculatable);
+  auto memoryEffectsInstanceListClass =
+      nb::class_<PyMemoryEffectsInstanceList>(m, "MemoryEffectInstancesList");
+  (void)memoryEffectsInstanceListClass;
 
+  PyConditionallySpeculatableOpInterface::bind(m);
   PyInferShapedTypeOpInterface::bind(m);
   PyInferTypeOpInterface::bind(m);
   PyMemoryEffectsOpInterface::bind(m);

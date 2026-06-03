@@ -20,7 +20,7 @@ struct IRNormalizerOptions {
 };
 
 /// IRNormalizer aims to transform LLVM IR into normal form.
-struct IRNormalizerPass : public PassInfoMixin<IRNormalizerPass> {
+struct IRNormalizerPass : public OptionalPassInfoMixin<IRNormalizerPass> {
 private:
   const IRNormalizerOptions Options;
 
@@ -28,7 +28,8 @@ public:
   IRNormalizerPass(IRNormalizerOptions Options = IRNormalizerOptions())
       : Options(Options) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) const;
+  LLVM_ABI PreservedAnalyses run(Function &F,
+                                 FunctionAnalysisManager &AM) const;
 };
 
 } // namespace llvm

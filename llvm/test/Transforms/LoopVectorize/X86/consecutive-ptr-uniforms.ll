@@ -209,7 +209,7 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; FORCE:       [[PRED_STORE_CONTINUE2]]:
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
+; FORCE-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i8> [[VEC_IND]], splat (i8 2)
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:

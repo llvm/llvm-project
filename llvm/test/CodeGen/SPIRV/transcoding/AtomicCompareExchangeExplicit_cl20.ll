@@ -29,16 +29,20 @@
 
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32 0
 ;; Constants below correspond to the SPIR-V spec
+; CHECK-SPIRV: %[[#RelaxedMemSem:]] = OpConstantNull %[[#int]]
+; CHECK-SPIRV: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
 ; CHECK-SPIRV-DAG: %[[#DeviceScope:]] = OpConstant %[[#int]] 1{{$}}
-; CHECK-SPIRV-DAG: %[[#WorkgroupScope:]] = OpConstant %[[#int]] 2{{$}}
 ; CHECK-SPIRV-DAG: %[[#ReleaseMemSem:]] = OpConstant %[[#int]] 4{{$}}
-; CHECK-SPIRV-DAG: %[[#RelaxedMemSem:]] = OpConstantNull %[[#int]]
 ; CHECK-SPIRV-DAG: %[[#AcqRelMemSem:]] = OpConstant %[[#int]] 8{{$}}
 
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#RelaxedMemSem]]
 ; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#AcqRelMemSem]] %[[#RelaxedMemSem]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#DeviceScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchange %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
+; CHECK-SPIRV: %[[#]] = OpAtomicCompareExchangeWeak %[[#]] %[[#]] %[[#WorkgroupScope]] %[[#ReleaseMemSem]] %[[#WorkgroupScope]]
 
 define dso_local spir_kernel void @testAtomicCompareExchangeExplicit_cl20(ptr addrspace(1) noundef %object, ptr addrspace(1) noundef %expected, i32 noundef %desired) local_unnamed_addr {
 entry:
@@ -48,6 +52,10 @@ entry:
   %call1 = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
   %call2 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 0)
   %call3 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 4, i32 noundef 0, i32 noundef 1)
+  %call4 = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 2)
+  %call5 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 2)
+  %call6 = call spir_func zeroext i1 @_Z39atomic_compare_exchange_strong_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 2, i32 noundef 1)
+  %call7 = call spir_func zeroext i1 @_Z37atomic_compare_exchange_weak_explicitPU3AS4VU7_AtomiciPU3AS4ii12memory_orderS4_12memory_scope(ptr addrspace(4) noundef %0, ptr addrspace(4) noundef %1, i32 noundef %desired, i32 noundef 3, i32 noundef 2, i32 noundef 1)
   ret void
 }
 
