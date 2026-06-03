@@ -1,0 +1,38 @@
+
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+// IDs are taken from the Renesas C ABI Specification.
+// See: https://www.renesas.com/en/document/mat/superh-cc-compiler-package-v904-users-manual?r=1169516
+
+ELF_RELOC(R_SH_NONE,                  0)
+ELF_RELOC(R_SH_GOT32,               160)
+ELF_RELOC(R_SH_GOT_LOW16,           169)
+ELF_RELOC(R_SH_GOT_MEDLOW16,        170)
+ELF_RELOC(R_SH_GOT_MEDHI16,         171)
+ELF_RELOC(R_SH_GOT_HI16,            172)
+ELF_RELOC(R_SH_GOT10BY4,            189)
+ELF_RELOC(R_SH_GOT10BY8,            191)
+ELF_RELOC(R_SH_PLT32,               161)
+ELF_RELOC(R_SH_PLT_LOW16,           177)
+ELF_RELOC(R_SH_PLT_MEWLOW16,        178)
+ELF_RELOC(R_SH_PLT_MEDHI16,         179)
+ELF_RELOC(R_SH_PLT_HI16,            180)
+ELF_RELOC(R_SH_GOTPLT32,            168)
+ELF_RELOC(R_SH_GOTPLT_LOW16,        169)
+ELF_RELOC(R_SH_GOTPLT_MEDLOW16,     170)
+ELF_RELOC(R_SH_GOTPLT_MEDHI16,      171)
+ELF_RELOC(R_SH_GOTPLT_HI16,         172)
+ELF_RELOC(R_SH_GOTPLT10BY4,         189)
+ELF_RELOC(R_SH_GOTPLT10BY8,         191)
+ELF_RELOC(R_SH_GOTOFF,              166)
+ELF_RELOC(R_SH_GOTOFF_LOW16,        181)
+ELF_RELOC(R_SH_GOTOFF_MEWLOW16,     182)
+ELF_RELOC(R_SH_GOTOFF_MEDHI16,      183)
+ELF_RELOC(R_SH_GOTOFF_HI16,         184)
+ELF_RELOC(R_SH_GOTPC,               167)
+ELF_RELOC(R_SH_GOTPC_LOW16,         185)
+ELF_RELOC(R_SH_GOTPC_MEDLOW16,      186)
+ELF_RELOC(R_SH_GOTPC_MEDHI16,       187)
+ELF_RELOC(R_SH_GOTPC_HI16,          188)
