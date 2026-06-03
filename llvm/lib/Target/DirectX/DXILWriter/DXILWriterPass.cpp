@@ -187,6 +187,13 @@ class EmbedDXILPass : public llvm::ModulePass {
           if (NMD.getName().starts_with("dx.source"))
             NMD.eraseFromParent();
       }
+    } else {
+#ifdef EXPENSIVE_CHECKS
+      assert(
+          StripDebugInfo(M) == false &&
+          "The module must not contain any debug info here."
+          "Shader modules with debug info must have !DICompileUnit metadata.");
+#endif
     }
     const auto DIMap = DXILDebugInfoPass::run(M);
     WriteDXILToFile(M, OS, DIMap);
