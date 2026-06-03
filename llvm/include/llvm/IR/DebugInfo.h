@@ -126,6 +126,7 @@ private:
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
+  void processVariable(DIVariable *DV);
   void processImportedEntity(const DIImportedEntity *Import);
   void processMacroNode(DIMacroNode *Macro, DIMacroFile *CurrentMacroFile);
   bool addCompileUnit(DICompileUnit *CU);
@@ -262,11 +263,6 @@ template <> struct DenseMapInfo<at::VarRecord> {
   static inline at::VarRecord getEmptyKey() {
     return at::VarRecord(DenseMapInfo<DILocalVariable *>::getEmptyKey(),
                          DenseMapInfo<DILocation *>::getEmptyKey());
-  }
-
-  static inline at::VarRecord getTombstoneKey() {
-    return at::VarRecord(DenseMapInfo<DILocalVariable *>::getTombstoneKey(),
-                         DenseMapInfo<DILocation *>::getTombstoneKey());
   }
 
   static unsigned getHashValue(const at::VarRecord &Var) {

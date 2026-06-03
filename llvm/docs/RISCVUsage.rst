@@ -369,6 +369,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvvmm``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/integrated-matrix-extension/releases/tag/riscv-isa-release-fa55752-2026-05-04>`__.
 
+``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
+  LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -546,9 +549,6 @@ The current vendor extensions supported are:
 
 ``Xmipslsp``
   LLVM implements load/store pair instructions for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
-
-``experimental-XRivosVizip``
-  LLVM implements `version 0.1 of the Rivos Vector Register Zips extension specification <https://github.com/rivosinc/rivos-custom-extensions>`__.
 
 ``XAndesPerf``
   LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
