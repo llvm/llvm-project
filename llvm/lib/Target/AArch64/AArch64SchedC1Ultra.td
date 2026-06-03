@@ -12,7 +12,7 @@
 // Base scheduling model documentation
 // https://developer.arm.com/documentation/111079/3-0
 //
-// SME2 scheduling model documenation
+// SME2 scheduling model documentation
 // https://developer.arm.com/documentation/111048/0103
 //
 //===----------------------------------------------------------------------===//
@@ -120,7 +120,7 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // The approach for modelling SME instructions should not be taken as accurate.
 // This is largely due to the limitations of tablegen and the way that SME
 // works. Fundamentally, modelling SME instructions accurately requires
-// knowledge of target state that isn't available to us at compile time, namely,
+// knowledge of target state that isn't available to us for llvm-mca, namely,
 // whether the core is in streaming SVE mode. Due to this limitation the
 // modelling of SME instructions is dependent on the type of SME instruction
 // which we have. These are enumerated below:
@@ -135,9 +135,9 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // scheduling information. To model these we use a predicate on these instructions
 // which checks if the target supports SME (SMESchedPred).
 //
-// To model instructions of type (3) we recognise that compile time knowledge
-// doesn't include information of whether we are in streaming SVE mode. However,
-// for the sake of completeness we model this class of instructions by adding
+// To model instructions of type (3) we recognise that llvm-mca doesn't include
+// information of whether we are in streaming SVE mode. However, for the sake of
+// completeness we model this class of instructions by adding
 // an llvm-mca attribute (mca-streaming-sched) which is interpreted as the core
 // being in streaming SVE mode. This allows us to at least have some data on how
 // these instructions may be scheduled when in streaming SVE mode using llvm-mca
@@ -148,7 +148,9 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // to add definitions for this class of instructions which are "gated" via the
 // SMESchedPred predicate and mca-streaming-sched attribute. The purpose of
 // having these definitions is that information on how these instructions are
-// scheduled on the CME coprocessor is useful for analysis.
+// scheduled on the CME coprocessor is useful for analysis. However, information
+// shouldn't be taken as wholly accurate as we don't model how the core and the
+// CME block interact.
 
 // SME2 related read write types
 // Define generic 0 micro-op types.
