@@ -2438,7 +2438,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     // If the call is not contained in a function, assume as if it was in
     // a StrictFP function, because this is more restrictive.
-    bool IsStrictFP = isCalledFromStrictFPFunction(Call).value_or(true);
+    bool IsStrictFP = isCalledFromStrictFPFunction(Call);
 
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
         IntrinsicID == Intrinsic::wasm_trunc_unsigned) {
@@ -3330,7 +3330,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
   if (const auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
     const APFloat &Op1V = Op1->getValueAPF();
 
-    bool IsStrictFP = isCalledFromStrictFPFunction(Call).value_or(true);
+    bool IsStrictFP = isCalledFromStrictFPFunction(Call);
 
     if (const auto *Op2 = dyn_cast<ConstantFP>(Operands[1])) {
       if (Op2->getType() != Op1->getType())
@@ -3996,7 +3996,7 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
         }
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
-          if (isCalledFromStrictFPFunction(Call).value_or(true))
+          if (isCalledFromStrictFPFunction(Call))
             return nullptr;
           APFloat V = C1;
           V.fusedMultiplyAdd(C2, C3, APFloat::rmNearestTiesToEven);

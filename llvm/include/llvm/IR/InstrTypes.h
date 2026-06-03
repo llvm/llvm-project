@@ -2353,12 +2353,14 @@ private:
 };
 
 /// Check if the provided call is inside a function with attribute StrictFP.
-inline std::optional<bool> isCalledFromStrictFPFunction(const CallBase *Call) {
+inline bool isCalledFromStrictFPFunction(const CallBase *Call) {
   if (Call)
     if (const BasicBlock *BB = Call->getParent())
       if (const Function *F = BB->getParent())
         return F->getAttributes().hasFnAttr(Attribute::StrictFP);
-  return std::nullopt;
+  // If the containing function cannot be determined, conservatively return
+  // true.
+  return true;
 }
 
 template <>
