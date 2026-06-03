@@ -107,11 +107,6 @@ template <> struct llvm::DenseMapInfo<FrozenIndPHIInfo> {
                             DenseMapInfo<BinaryOperator *>::getEmptyKey());
   }
 
-  static inline FrozenIndPHIInfo getTombstoneKey() {
-    return FrozenIndPHIInfo(DenseMapInfo<PHINode *>::getTombstoneKey(),
-                            DenseMapInfo<BinaryOperator *>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const FrozenIndPHIInfo &Val) {
     return DenseMapInfo<FreezeInst *>::getHashValue(Val.FI);
   };
