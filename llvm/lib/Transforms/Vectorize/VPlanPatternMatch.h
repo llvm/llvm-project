@@ -555,6 +555,10 @@ template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
   return m_Isa<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
+template <typename Op0_t> inline auto m_AnyNeg(const Op0_t &Op0) {
+  return m_CombineOr(m_Sub(m_ZeroInt(), Op0), m_FNeg(Op0));
+}
+
 template <typename Op0_t>
 inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>, Op0_t>
 m_ZExtOrSelf(const Op0_t &Op0) {

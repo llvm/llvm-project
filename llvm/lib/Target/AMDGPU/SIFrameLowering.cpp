@@ -2232,7 +2232,7 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   // on frames with alignment requirements.
   if (ST.hasFlatScratchEnabled()) {
     if (TII->isLegalFLATOffset(MaxOffset, AMDGPUAS::PRIVATE_ADDRESS,
-                               SIInstrFlags::FlatScratch))
+                               AMDGPU::FlatAddrSpace::FlatScratch))
       return false;
   } else {
     if (TII->isLegalMUBUFImmOffset(MaxOffset))

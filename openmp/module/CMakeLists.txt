@@ -9,7 +9,7 @@
 # Build the module files if a Fortran compiler is available.
 
 configure_file(omp_lib.F90.var "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90" @ONLY)
-configure_file(omp_lib.h.var "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h" @ONLY)
+configure_file(omp_lib.h.var "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h" @ONLY)
 
 # One compilation step creates both, omp_lib.mod and omp_lib_kinds.mod. Only
 # these files are used, the object file itself can be discarded.
@@ -30,8 +30,8 @@ flang_module_target(libomp-mod PUBLIC)
 add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
 
 install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.h"
-  DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+  "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"
+  DESTINATION "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}"
     COMPONENT openmp
 )
 
