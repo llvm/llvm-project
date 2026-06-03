@@ -186,7 +186,7 @@ define <2 x i32> @test_and(i32 %arg) {
 define <2 x i32> @test_or(i32 %arg) {
 ; CHECK-LABEL: define <2 x i32> @test_or(
 ; CHECK-SAME: i32 [[Arg:%.*]]) {
-; CHECK-NEXT:  [[ScalarOr:%.*]] = or i32 [[Arg]], 3
+; CHECK-NEXT:  [[ScalarOr:%.*]] = or disjoint i32 [[Arg]], 3
 ; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarOr]], i64 0
 ; CHECK-NEXT:  ret <2 x i32> [[Insert]]
   %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
