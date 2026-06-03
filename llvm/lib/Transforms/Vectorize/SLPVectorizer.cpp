@@ -6116,6 +6116,36 @@ private:
                              Bundle->getTreeEntry()->Scalars.end(), In);
             } while (It != Bundle->getTreeEntry()->Scalars.end());
           }
+          // Vector intrinsics may keep some arguments scalar (e.g. the
+          // exponent of llvm.powi). Such scalar arguments are not modeled as
+          // tree-entry operands, so the per-lane loop above never releases the
+          // dependency that calculateDependencies() registered for the
+          // definition feeding such an argument. Release it here to keep the
+          // unscheduled-deps counters balanced; otherwise the operand's bundle
+          // may never become ready and scheduling would assert.
+          if (TotalOpCount > 0) {
+            if (auto *CI = dyn_cast<CallInst>(In)) {
+              Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, R.TLI);
+              for (unsigned ArgIdx : seq<unsigned>(CI->arg_size())) {
+                if (!isVectorIntrinsicWithScalarOpAtArg(ID, ArgIdx, R.TTI))
+                  continue;
+                auto *OpI = dyn_cast<Instruction>(CI->getArgOperand(ArgIdx));
+                if (!OpI)
+                  continue;
+                auto UseIt = OperandsUses.find(OpI);
+                if (UseIt == OperandsUses.end() || UseIt->second == 0)
+                  continue;
+                --UseIt->getSecond();
+                --TotalOpCount;
+                if (ScheduleData *OpSD = getScheduleData(OpI)) {
+                  LLVM_DEBUG(dbgs()
+                             << "SLP:   check for readiness (scalar arg): "
+                             << *OpI << "\n");
+                  DecrUnsched(OpSD, /*IsControl=*/false);
+                }
+              }
+            }
+          }
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
           // has taken place, so we directly access its operands.
@@ -10657,9 +10687,22 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, TargetTransformInfo *TTI,
                                     LibCost.isValid() ? LibCost : ScalarLimit);
   auto IntrinsicCost =
       TTI->getIntrinsicInstrCost(CostAttrs, TTI::TCK_RecipThroughput);
-  if ((LibCost.isValid() && IntrinsicCost > LibCost) ||
-      (!LibCost.isValid() && IntrinsicCost > ScalarLimit))
-    IntrinsicCost = InstructionCost::getInvalid();
+  if (LibCost.isValid()) {
+    if (IntrinsicCost > LibCost)
+      IntrinsicCost = InstructionCost::getInvalid();
+  } else if (IntrinsicCost > ScalarLimit) {
+    // A type-based query always scalarizes struct-returning intrinsics (e.g.
+    // llvm.sincos), which do nto have a VFDatabase name mapping. Retry with an
+    // argument-aware query (as the loop vectorizer does) so such lowerings are
+    // taken into account.
+    SmallVector<const Value *> Args(CI->args());
+    IntrinsicCostAttributes ArgAwareAttrs(
+        ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
+    IntrinsicCost =
+        TTI->getIntrinsicInstrCost(ArgAwareAttrs, TTI::TCK_RecipThroughput);
+    if (IntrinsicCost > ScalarLimit)
+      IntrinsicCost = InstructionCost::getInvalid();
+  }
 
   return {IntrinsicCost, LibCost};
 }
