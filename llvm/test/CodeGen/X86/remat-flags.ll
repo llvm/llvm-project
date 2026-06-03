@@ -5,20 +5,14 @@
 ; modified.
 
 ; Instruction popcnt can be rematerialized.
-define void @test1(i32 %v1, i32 %v2, i32* %ptr) {
+define void @test1(i32 %v1, i32 %v2, ptr %ptr) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_offset %esi, -20
-; CHECK-NEXT:    .cfi_offset %edi, -16
-; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    movl 16(%ebp), %eax
 ; CHECK-NEXT:    movl 12(%ebp), %edi
 ; CHECK-NEXT:    movl 8(%ebp), %esi
@@ -46,34 +40,33 @@ define void @test1(i32 %v1, i32 %v2, i32* %ptr) {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
   %v3 = add i32 %v1, %v2
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %v1)
-  %p1 = getelementptr i32, i32* %ptr, i32 1
-  store volatile i32 %v3, i32* %p1, align 8
-  store volatile i32 %cnt, i32* %p1, align 8
+  %p1 = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %v3, ptr %p1, align 8
+  store volatile i32 %cnt, ptr %p1, align 8
 
-  %p2 = getelementptr i32, i32* %ptr, i32 2
-  %v4 = load volatile i32, i32* %p2, align 8
+  %p2 = getelementptr i32, ptr %ptr, i32 2
+  %v4 = load volatile i32, ptr %p2, align 8
   %v5 = add i32 %v1, %v4
   %v6 = sub i32 %v2, %v5
-  store volatile i32 %v6, i32* %p2, align 8
+  store volatile i32 %v6, ptr %p2, align 8
 
-  %p64 = getelementptr i64, i64* %ptr, i32 6
-  %v7  = load volatile i64, i64* %p64, align 8
-  store volatile i64 %v7, i64* %p64, align 8
+  %p64 = getelementptr i64, ptr %ptr, i32 6
+  %v7  = load volatile i64, ptr %p64, align 8
+  store volatile i64 %v7, ptr %p64, align 8
 
-  store volatile i32 %v6, i32* %p2, align 8
-  store volatile i32 %cnt, i32* %p2, align 8
+  store volatile i32 %v6, ptr %p2, align 8
+  store volatile i32 %cnt, ptr %p2, align 8
 
-  %p4 = getelementptr i32, i32* %ptr, i32 4
-  store volatile i32 %v1, i32* %p4, align 8
-  %p5 = getelementptr i32, i32* %ptr, i32 5
-  store volatile i32 %v2, i32* %p5, align 8
+  %p4 = getelementptr i32, ptr %ptr, i32 4
+  store volatile i32 %v1, ptr %p4, align 8
+  %p5 = getelementptr i32, ptr %ptr, i32 5
+  store volatile i32 %v2, ptr %p5, align 8
 
-  %p3 = getelementptr i32, i32* %ptr, i32 3
-  store volatile i32 %v3, i32* %p3, align 8
+  %p3 = getelementptr i32, ptr %ptr, i32 3
+  store volatile i32 %v3, ptr %p3, align 8
 
   ret void
 }
@@ -81,20 +74,14 @@ define void @test1(i32 %v1, i32 %v2, i32* %ptr) {
 ; Instruction popcnt can't be rematerialized in this test case. Because this
 ; instruction modifies flags register, but the flags register is not dead at the
 ; use site.
-define void @test2(i32 %v1, i32 %v2, i32* %ptr) {
+define void @test2(i32 %v1, i32 %v2, ptr %ptr) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-NEXT:    movl %esp, %ebp
-; CHECK-NEXT:    .cfi_def_cfa_register %ebp
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_offset %esi, -20
-; CHECK-NEXT:    .cfi_offset %edi, -16
-; CHECK-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-NEXT:    movl 16(%ebp), %eax
 ; CHECK-NEXT:    movl 12(%ebp), %ecx
 ; CHECK-NEXT:    movl 8(%ebp), %esi
@@ -123,41 +110,40 @@ define void @test2(i32 %v1, i32 %v2, i32* %ptr) {
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
   %v3 = add i32 %v1, %v2
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %v1)
-  %p1 = getelementptr i32, i32* %ptr, i32 1
-  store volatile i32 %v3, i32* %p1, align 8
-  store volatile i32 %cnt, i32* %p1, align 8
+  %p1 = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %v3, ptr %p1, align 8
+  store volatile i32 %cnt, ptr %p1, align 8
 
-  %p2 = getelementptr i32, i32* %ptr, i32 2
-  %v4 = load volatile i32, i32* %p2, align 8
+  %p2 = getelementptr i32, ptr %ptr, i32 2
+  %v4 = load volatile i32, ptr %p2, align 8
   %v5 = add i32 %v1, %v4
   %v6 = sub i32 %v2, %v5
-  store volatile i32 %v6, i32* %p2, align 8
+  store volatile i32 %v6, ptr %p2, align 8
 
-  %p64 = getelementptr i64, i64* %ptr, i32 6
-  %v7  = load volatile i64, i64* %p64, align 8
-  store volatile i64 %v7, i64* %p64, align 8
+  %p64 = getelementptr i64, ptr %ptr, i32 6
+  %v7  = load volatile i64, ptr %p64, align 8
+  store volatile i64 %v7, ptr %p64, align 8
 
   ; flag register is defined here.
   %b = icmp eq i32 %v6, 0
   %v8 = select i1 %b, i32 %v3, i32 %v2
-  store volatile i32 %v8, i32* %p2, align 8
+  store volatile i32 %v8, ptr %p2, align 8
 
   ; %cnt can't be rematerialized because flag register is not dead.
-  store volatile i32 %cnt, i32* %p2, align 8
+  store volatile i32 %cnt, ptr %p2, align 8
 
   ; flag register is used and killed here.
   %v9 = select i1 %b, i32 %v1, i32 %v3
-  %p4 = getelementptr i32, i32* %ptr, i32 4
-  store volatile i32 %v9, i32* %p4, align 8
-  %p5 = getelementptr i32, i32* %ptr, i32 5
-  store volatile i32 %v2, i32* %p5, align 8
+  %p4 = getelementptr i32, ptr %ptr, i32 4
+  store volatile i32 %v9, ptr %p4, align 8
+  %p5 = getelementptr i32, ptr %ptr, i32 5
+  store volatile i32 %v2, ptr %p5, align 8
 
-  %p3 = getelementptr i32, i32* %ptr, i32 3
-  store volatile i32 %v3, i32* %p3, align 8
+  %p3 = getelementptr i32, ptr %ptr, i32 3
+  store volatile i32 %v3, ptr %p3, align 8
 
   ret void
 }

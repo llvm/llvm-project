@@ -193,6 +193,17 @@ public:
 
   /// Return true if an instruction can be rematerialized as a different
   /// instruction without clobbering the physical register.
+  ///
+  /// For example in x86 we can rematerialize
+  ///     %100 = MOV32r0
+  /// it is actually translated to
+  ///     xor  %100, %100
+  /// Instruction xor clobbers $eflags, if $eflags is not dead at the use site,
+  /// we can't simply clone the MOV32r0(xor) instruction, instead it can be
+  /// rematerialized as
+  ///     mov  %100, 0
+  /// The mov instructions doesn't clobber $eflags, so it is safe to insert the
+  /// mov instruction at the use site.
   virtual bool
   canRematerializeIgnorePhysRegDef(const MachineInstr &MI,
                                    const MachineOperand &MO) const {
