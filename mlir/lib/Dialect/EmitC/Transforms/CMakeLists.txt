@@ -12,11 +12,14 @@ add_mlir_dialect_library(MLIREmitCTransforms
   MLIREmitCTransformsIncGen
 
   LINK_LIBS PUBLIC
+  # MLGO related
   MLIRArithDialect
+  # MLGO related
   MLIRFuncDialect
   MLIRIR
   MLIRPass
   MLIREmitCDialect
+  # MLGO related
   MLIRTensorDialect
   MLIRTransforms
 )

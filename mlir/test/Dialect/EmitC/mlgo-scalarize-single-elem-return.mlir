@@ -1,6 +1,6 @@
 // RUN: mlir-opt -mlgo-scalarize-single-element-tensor-return -split-input-file %s | FileCheck %s
 
-/// Positive tests: both caller and callee updated.
+/// Positive tests: functions with no users updated.
 
 func.func private @rank0() -> tensor<i64> {
   %0 = arith.constant dense<-1> : tensor<i64>
@@ -57,6 +57,8 @@ func.func private @non_return_terminator(%arg0: tensor<1xi64>, %cond: i1)
 // CHECK:           %[[EXT:.*]] = tensor.extract %[[VAL_0]][%[[C0]]]
 // CHECK-SAME:        : tensor<1xi64>
 // CHECK:           return %[[EXT]] : i64
+
+/// Positive tests: both caller and callee updated.
 
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
@@ -248,6 +250,28 @@ func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
+
+// -----
+
+/// Callee blocked by a symbol user that is not enclosed by a func.func.
+
+func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  return %arg0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func private @callee
+// CHECK-SAME:      %[[SRC:.*]]: tensor<1xi64>) -> tensor<1xi64>
+//   CHECK-NOT:   tensor.extract
+//       CHECK:   return %[[SRC]] : tensor<1xi64>
+
+%0 = tensor.empty() : tensor<1xi64>
+%1 = func.call @callee(%0) : (tensor<1xi64>) -> tensor<1xi64>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1xi64>
+// CHECK: %[[CALL:.*]] = func.call @callee(%[[EMPTY]]) : (tensor<1xi64>) -> tensor<1xi64>
+
+// -----
+
+/// Recursive cycle - the DFS marks the cycle conservatively as blocked,
+/// so neither function is scalarized.
 
 func.func private @recursive_a(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   %0 = call @recursive_b(%arg0) : (tensor<1xi64>) -> tensor<1xi64>

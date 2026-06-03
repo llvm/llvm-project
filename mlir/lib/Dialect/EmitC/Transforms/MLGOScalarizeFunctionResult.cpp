@@ -63,16 +63,16 @@ getScalarizableFunctionInfoIfEligible(func::FuncOp func) {
       tensorType.getNumElements() != 1)
     return failure();
 
-  ScalarizableFunctionInfo info{tensorType, {}};
+  ScalarizableFunctionInfo sfi{tensorType, {}};
   for (Block &block : func.getBody()) {
     auto returnOp = dyn_cast<func::ReturnOp>(block.getTerminator());
     if (returnOp)
-      info.returnOps.push_back(returnOp);
+      sfi.returnOps.push_back(returnOp);
   }
 
-  if (info.returnOps.empty())
+  if (sfi.returnOps.empty())
     return failure();
-  return info;
+  return sfi;
 }
 
 struct ScalarizationAnalysis {
@@ -87,13 +87,6 @@ struct ScalarizationAnalysis {
   // this list in reverse so callees are rewritten before their call sites.
   SmallVector<func::FuncOp> rewriteOrder;
 };
-
-// Returns whether `func` is one of the direct function definitions in the
-// current module-level analysis scope.
-static bool isDirectFunctionInModule(func::FuncOp func,
-                                     const ScalarizationAnalysis &analysis) {
-  return analysis.moduleFunctions.contains(func);
-}
 
 // Runs the memoized DFS that classifies one candidate function by walking its
 // transitive private call users.
@@ -126,30 +119,31 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
     return setBlocked();
   analysis.states[func] = ScalarizationState::visiting;
 
-  SmallVector<func::CallOp> callUsers;
+  SmallVector<func::CallOp> directCallUsers;
   for (Operation *user : analysis.userMap.getUsers(func.getOperation())) {
-    auto callOp = dyn_cast<func::CallOp>(user);
+    auto directCall = dyn_cast<func::CallOp>(user);
     // Non-call symbol uses, such as func.constant, prevent updating all users
     // consistently, so the current function stays blocked.
-    if (!callOp)
+    if (!directCall)
       return setBlocked();
-    callUsers.push_back(callOp);
+    directCallUsers.push_back(directCall);
 
-    func::FuncOp caller = callOp->getParentOfType<func::FuncOp>();
-    // Only direct callers in the same module participate in this analysis.
+    func::FuncOp caller = directCall->getParentOfType<func::FuncOp>();
+    // The symbol user must be enclosed by a func.func.
     if (!caller)
       return setBlocked();
-    // `computeScalarizationState` assumes `getScalarizableFunctionInfo` has
-    // already categorized every direct func.func in the current module, so any
-    // direct caller in this module must already appear in the analysis tables.
-    if (!isDirectFunctionInModule(caller, analysis))
-      return setBlocked();
+    // Since `getScalarizableFunctionInfoIfEligible` has already categorized
+    // every direct func.func in the current module, any direct caller must
+    // already appear in the analysis tables.
+    assert(analysis.moduleFunctions.contains(caller) &&
+           "Caller of private function is not a direct function in the module");
+
     // Public and external callers keep the current function blocked because the
     // pass cannot rewrite every visible call boundary.
     if (caller.isPublic())
       return setBlocked();
-    if (caller.isExternal())
-      return setBlocked();
+
+    assert(!caller.isExternal() && "Caller of private function is external.");
 
     // A private non-candidate caller can absorb the scalarized call by
     // reboxing the scalar result back into a single-element tensor.
@@ -161,7 +155,7 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
       return setBlocked();
   }
 
-  analysis.callUsers.try_emplace(func, std::move(callUsers));
+  analysis.callUsers.try_emplace(func, std::move(directCallUsers));
   return setRewritable();
 }
 
@@ -172,10 +166,10 @@ static void computeScalarizationAnalysis(ModuleOp module,
   // eligible.
   for (func::FuncOp func : module.getOps<func::FuncOp>()) {
     analysis.moduleFunctions.insert(func);
-    FailureOr<ScalarizableFunctionInfo> info =
+    FailureOr<ScalarizableFunctionInfo> sfi =
         getScalarizableFunctionInfoIfEligible(func);
-    if (succeeded(info))
-      analysis.candidateInfos.try_emplace(func, std::move(*info));
+    if (succeeded(sfi))
+      analysis.candidateInfos.try_emplace(func, std::move(*sfi));
   }
   // Then run the memoized DFS for candidate roots.
   for (func::FuncOp func : module.getOps<func::FuncOp>())
@@ -186,12 +180,11 @@ static void computeScalarizationAnalysis(ModuleOp module,
 // Rewrites one function that has already been proven rewritable and updates
 // the direct call users cached before any IR mutation started.
 static void rewriteScalarizableFunction(func::FuncOp func,
-                                        const ScalarizableFunctionInfo &info,
-                                        ArrayRef<func::CallOp> callOps,
+                                        const ScalarizableFunctionInfo &sfi,
+                                        ArrayRef<func::CallOp> directCalls,
                                         RewriterBase &rewriter) {
-  // Extract the unique element before each return, update the function type,
-  // and fix direct call users that were recorded during analysis.
-  RankedTensorType tensorType = info.tensorType;
+  // Scalarize the unique element before each return.
+  RankedTensorType tensorType = sfi.tensorType;
   SmallVector<Value> zeroIndices;
   if (tensorType.getRank() != 0) {
     rewriter.setInsertionPointToStart(&func.getBody().front());
@@ -200,37 +193,39 @@ static void rewriteScalarizableFunction(func::FuncOp func,
   }
 
   Type scalarType = tensorType.getElementType();
-  for (func::ReturnOp returnOp : info.returnOps) {
-    assert(returnOp.getNumOperands() == 1 &&
+  for (func::ReturnOp funcReturn : sfi.returnOps) {
+    assert(funcReturn.getNumOperands() == 1 &&
            "func.return must have exactly one operand");
-    assert(returnOp.getOperand(0).getType() == tensorType &&
+    assert(funcReturn.getOperand(0).getType() == tensorType &&
            "func.return operand type must match the function result type");
-    rewriter.setInsertionPoint(returnOp);
+    rewriter.setInsertionPoint(funcReturn);
     Value scalar = rewriter.createOrFold<tensor::ExtractOp>(
-        returnOp.getLoc(), returnOp.getOperand(0), zeroIndices);
-    rewriter.replaceOpWithNewOp<func::ReturnOp>(returnOp, scalar);
+        funcReturn.getLoc(), funcReturn.getOperand(0), zeroIndices);
+    rewriter.replaceOpWithNewOp<func::ReturnOp>(funcReturn, scalar);
   }
 
   FunctionType functionType = func.getFunctionType();
+  // Update the function type:
   // This is a 1-result to 1-result type replacement, so the existing result
   // attribute dictionary remains attached to result #0 without reordering,
   // hence the rewrite is done directly without function_interface methods.
   func.setType(FunctionType::get(func.getContext(), functionType.getInputs(),
                                  TypeRange{scalarType}));
+  // Fix direct call users that were recorded during analysis.
+  for (func::CallOp directCall : directCalls) {
+    rewriter.setInsertionPoint(directCall);
+    OpBuilder::InsertionGuard guard(rewriter);
+    func::CallOp newDirectCall = func::CallOp::create(
+        rewriter, directCall.getLoc(), func, directCall.getOperands());
+    newDirectCall->setAttrs(directCall->getAttrs());
 
-  for (func::CallOp callOp : callOps) {
-    rewriter.setInsertionPoint(callOp);
-    func::CallOp newCallOp = func::CallOp::create(rewriter, callOp.getLoc(),
-                                                  func, callOp.getOperands());
-    newCallOp->setAttrs(callOp->getAttrs());
-
-    if (!callOp.getResult(0).use_empty()) {
-      Value wrappedResult =
-          tensor::FromElementsOp::create(rewriter, callOp.getLoc(), tensorType,
-                                         ValueRange{newCallOp.getResult(0)});
-      rewriter.replaceOp(callOp, wrappedResult);
+    if (!directCall.getResult(0).use_empty()) {
+      Value wrappedResult = tensor::FromElementsOp::create(
+          rewriter, directCall.getLoc(), tensorType,
+          ValueRange{newDirectCall.getResult(0)});
+      rewriter.replaceOp(directCall, wrappedResult);
     } else {
-      rewriter.eraseOp(callOp);
+      rewriter.eraseOp(directCall);
     }
   }
 }
@@ -289,10 +284,10 @@ MLGOScalarizeSingleElementTensorReturns(ModuleOp module,
   computeScalarizationAnalysis(module, analysis);
 
   for (func::FuncOp func : llvm::reverse(analysis.rewriteOrder)) {
-    const ScalarizableFunctionInfo &info =
+    const ScalarizableFunctionInfo &sfi =
         analysis.candidateInfos.find(func)->second;
-    ArrayRef<func::CallOp> callOps = analysis.callUsers.find(func)->second;
-    rewriteScalarizableFunction(func, info, callOps, rewriter);
+    ArrayRef<func::CallOp> directCalls = analysis.callUsers.find(func)->second;
+    rewriteScalarizableFunction(func, sfi, directCalls, rewriter);
   }
 
   return success();
