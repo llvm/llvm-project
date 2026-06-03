@@ -171,15 +171,16 @@ ldexp(T x, U exp) {
   // Make sure that we can safely cast exp to int when not returning early.
   static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
 
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+    int rounding_mode = quick_get_round();
 
     if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_UPWARD) ||
         (rounding_mode == FE_TOWARDZERO))
       return FPBits<T>::max_normal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_OVERFLOW);
@@ -188,18 +189,18 @@ ldexp(T x, U exp) {
 
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
-    int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
-
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+    int rounding_mode = quick_get_round();
     if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))
       return FPBits<T>::min_subnormal(sign).get_val();
+#endif
 
     set_errno_if_required(ERANGE);
     raise_except_if_required(FE_UNDERFLOW);
     return FPBits<T>::zero(sign).get_val();
   }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 
   // For all other values, NormalFloat to T conversion handles it the right way.
   DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
