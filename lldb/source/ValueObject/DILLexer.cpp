@@ -34,6 +34,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "eof";
   case Kind::float_constant:
     return "float_constant";
+  case Kind::greatergreater:
+    return "greatergreater";
   case Kind::identifier:
     return "identifier";
   case Kind::integer_constant:
@@ -46,6 +48,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "l_paren";
   case Kind::l_square:
     return "l_square";
+  case Kind::lessless:
+    return "lessless";
   case Kind::minus:
     return "minus";
   case Kind::minusequal:
@@ -194,14 +198,15 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
   // be ordered longest-to-shortest in the list below. E.g. '::' must come
   // before ':', and '+=' must come before '+'.
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::arrow, "->"},      {Token::coloncolon, "::"},
-      {Token::minusequal, "-="}, {Token::plusequal, "+="},
-      {Token::amp, "&"},         {Token::colon, ":"},
-      {Token::equal, "="},       {Token::l_paren, "("},
-      {Token::l_square, "["},    {Token::minus, "-"},
-      {Token::percent, "%"},     {Token::period, "."},
-      {Token::plus, "+"},        {Token::r_paren, ")"},
-      {Token::r_square, "]"},    {Token::slash, "/"},
+      {Token::arrow, "->"},          {Token::coloncolon, "::"},
+      {Token::greatergreater, ">>"}, {Token::lessless, "<<"},
+      {Token::minusequal, "-="},     {Token::plusequal, "+="},
+      {Token::amp, "&"},             {Token::colon, ":"},
+      {Token::equal, "="},           {Token::l_paren, "("},
+      {Token::l_square, "["},        {Token::minus, "-"},
+      {Token::percent, "%"},         {Token::period, "."},
+      {Token::plus, "+"},            {Token::r_paren, ")"},
+      {Token::r_square, "]"},        {Token::slash, "/"},
       {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {

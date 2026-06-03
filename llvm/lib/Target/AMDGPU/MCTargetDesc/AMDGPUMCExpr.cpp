@@ -65,6 +65,9 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case AGVK_Max:
     OS << "max(";
     break;
+  case AGVK_Min:
+    OS << "min(";
+    break;
   case AGVK_ExtraSGPRs:
     OS << "extrasgprs(";
     break;
@@ -103,6 +106,8 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
     return std::max(Arg1, Arg2);
   case AMDGPUMCExpr::AGVK_Or:
     return Arg1 | Arg2;
+  case AMDGPUMCExpr::AGVK_Min:
+    return std::min(Arg1, Arg2);
   }
 }
 
@@ -122,7 +127,7 @@ evaluateMCExprs(ArrayRef<const MCExpr *> Exprs, const MCAssembler *Asm,
 
 bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
                                       const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t VCCUsed = 0, FlatScrUsed = 0, XNACKUsed = 0;
 
   if (!evaluateMCExprs(Args, Asm, {VCCUsed, FlatScrUsed, XNACKUsed}))
@@ -136,10 +141,10 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
 
 bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
                                         const MCAssembler *Asm) const {
-  const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
+  const MCSubtargetInfo &STI = *Ctx.getSubtargetInfo();
   uint64_t NumAGPR = 0, NumVGPR = 0;
 
-  bool Has90AInsts = AMDGPU::isGFX90A(*STI);
+  bool Has90AInsts = AMDGPU::isGFX90A(STI);
 
   if (!evaluateMCExprs(Args, Asm, {NumAGPR, NumVGPR}))
     return false;
@@ -202,7 +207,7 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
     return false;
   const MCSubtargetInfo *STI = Ctx.getSubtargetInfo();
   unsigned FieldWidth = getInstPrefSizeFieldWidth(*STI);
-  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(STI);
+  unsigned CacheLineSize = AMDGPU::IsaInfo::getInstCacheLineSize(*STI);
   uint64_t CodeSizeInLines = divideCeil(CodeSizeInBytes, CacheLineSize);
   uint64_t MaxVal = (1u << FieldWidth) - 1;
   Res = MCValue::get(std::min(CodeSizeInLines, MaxVal));
@@ -494,7 +499,17 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     KnownBits KB = KBM[AGVK->getSubExpr(0)];
     for (const MCExpr *Arg : AGVK->getArgs()) {
       knownBitsMapHelper(Arg, KBM, Depth + 1);
-      KB = KnownBits::umax(KB, KBM[Arg]);
+      KB = KnownBits::smax(KB, KBM[Arg]);
+    }
+    KBM[Expr] = std::move(KB);
+    return;
+  }
+  case AMDGPUMCExpr::VariantKind::AGVK_Min: {
+    knownBitsMapHelper(AGVK->getSubExpr(0), KBM, Depth + 1);
+    KnownBits KB = KBM[AGVK->getSubExpr(0)];
+    for (const MCExpr *Arg : AGVK->getArgs()) {
+      knownBitsMapHelper(Arg, KBM, Depth + 1);
+      KB = KnownBits::smin(KB, KBM[Arg]);
     }
     KBM[Expr] = std::move(KB);
     return;
@@ -722,4 +737,11 @@ int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
   assert(isLitExpr(Expr));
   return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
       ->getValue();
+}
+
+AMDGPUMCExpr::VariantKind AMDGPU::getExprKind(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  if (!E)
+    return AMDGPUMCExpr::AGVK_None;
+  return E->getKind();
 }

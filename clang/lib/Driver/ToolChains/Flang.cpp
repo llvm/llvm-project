@@ -136,6 +136,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
                    options::OPT_fconvert_EQ, options::OPT_fpass_plugin_EQ,
                    options::OPT_funderscoring, options::OPT_fno_underscoring,
                    options::OPT_funsigned, options::OPT_fno_unsigned,
+                   options::OPT_facc_allow_default_none_scalars,
+                   options::OPT_fno_acc_allow_default_none_scalars,
+                   options::OPT_fopenacc_multiple_names_in_routine,
+                   options::OPT_fno_openacc_multiple_names_in_routine,
                    options::OPT_finstrument_functions});
 
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
@@ -260,25 +264,23 @@ void Flang::addCodegenOptions(const ArgList &Args,
        options::OPT_fstack_repack_arrays, options::OPT_fno_stack_repack_arrays,
        options::OPT_ftime_report, options::OPT_ftime_report_EQ,
        options::OPT_funroll_loops, options::OPT_fno_unroll_loops});
+
+  const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
+  addSeparateSectionFlags(Triple, Args, CmdArgs);
+
   if (Args.hasArg(options::OPT_fcoarray))
     CmdArgs.push_back("-fcoarray");
 }
 
 void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   const ToolChain &TC = getToolChain();
-  const Driver &D = TC.getDriver();
-  DiagnosticsEngine &Diags = D.getDiags();
-  LTOKind LTOMode = D.getLTOMode();
+  LTOKind LTOMode = TC.getLTOMode(Args);
   // LTO mode is parsed by the Clang driver library.
   assert(LTOMode != LTOK_Unknown && "Unknown LTO mode.");
   if (LTOMode == LTOK_Full)
     CmdArgs.push_back("-flto=full");
-  else if (LTOMode == LTOK_Thin) {
-    Diags.Report(
-        Diags.getCustomDiagID(DiagnosticsEngine::Warning,
-                              "the option '-flto=thin' is a work in progress"));
+  else if (LTOMode == LTOK_Thin)
     CmdArgs.push_back("-flto=thin");
-  }
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
 }
@@ -692,6 +694,11 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsHostOffloadingAction = JA.isHostOffloading(Action::OFK_OpenMP) ||
                                 JA.isHostOffloading(C.getActiveOffloadKinds());
+
+  // Tell the frontend when it is compiling for an offloading device, regardless
+  // of offloading programming model.
+  if (IsHostOffloadingAction)
+    CmdArgs.push_back("-offload-device");
 
   // Skips the primary input file, which is the input file that the compilation
   // proccess will be executed upon (e.g. the host bitcode file) and
@@ -1177,6 +1184,38 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());
 
+  // Default intrinsic module dirs must be added after any user-provided dirs in
+  // -fintrinsic-modules-path since the default dirs have lower precedence than
+  // user-provided dirs
+  if (std::optional<std::string> IntrModPath =
+          TC.getDefaultIntrinsicModuleDir()) {
+    CmdArgs.push_back("-fintrinsic-modules-path");
+    CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+  }
+
+  // Ideally, every target triple has its own set of builtin modules since they
+  // are compiled with platform-dependent conditionals such as `#if __x86_64__`.
+  // However, getting the builtin modules for offload targets requires building
+  // the flang-rt and openmp for those targets as well:
+  // -DLLVM_RUNTIME_TARGETS=default;amdgcn-amd-amdhsa;nvptx64-nvidia-cuda.
+  // To reduce friction when build systems have not yet been updated, we also
+  // add the host's builtin module to the search path (with lower priority), in
+  // case a module file has not been found for the offload targets itself.
+  // FIXME: This workaround may mix module files targeting different triples and
+  //        should eventually be removed.
+  auto &&HostTCs =
+      C.getOffloadToolChains<clang::driver::OffloadAction ::OFK_Host>();
+  for (auto [OKind, HostTC] : llvm::make_range(HostTCs.first, HostTCs.second)) {
+    if (HostTC == &TC)
+      continue;
+
+    if (std::optional<std::string> IntrModPath =
+            HostTC->getDefaultIntrinsicModuleDir()) {
+      CmdArgs.push_back("-fintrinsic-modules-path");
+      CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
+    }
+  }
+
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);
 
@@ -1240,7 +1279,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   renderGlobalISelOptions(D, Args, CmdArgs, Triple);
-  renderCommonIntegerOverflowOptions(Args, CmdArgs);
+  renderCommonIntegerOverflowOptions(Args, CmdArgs, false);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {

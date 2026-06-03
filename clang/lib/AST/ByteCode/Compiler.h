@@ -232,6 +232,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -258,6 +259,7 @@ protected:
 
   bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                           bool ConstantContext) override;
+  bool visitDtorCall(const VarDecl *VD, const APValue &Value) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -418,7 +420,7 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
@@ -427,6 +429,7 @@ private:
 
   bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
                               QualType DestType, const Expr *E);
+  bool emitVectorConversion(const Expr *Src, const Expr *E);
 
   /// A scalar element extracted during HLSL aggregate flattening.
   struct HLSLFlatElement {

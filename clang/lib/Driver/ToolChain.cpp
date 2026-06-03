@@ -516,8 +516,15 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 }
 
 SanitizerArgs
-ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs) const {
-  SanitizerArgs SanArgs(*this, JobArgs, !SanitizerArgsChecked);
+ToolChain::getSanitizerArgs(const llvm::opt::ArgList &JobArgs,
+                            StringRef BoundArch,
+                            Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerArgs SanArgs(*this, JobArgs,
+                        /*DiagnoseErrors=*/!SanitizerArgsChecked,
+                        /*DiagnoseBoundArchErrors=*/
+                        BoundArchSanitizerArgsChecked.insert(BoundArch).second,
+                        BoundArch, DeviceOffloadKind);
+
   SanitizerArgsChecked = true;
   return SanArgs;
 }
@@ -971,7 +978,10 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
     if ((OMPRuntime == Driver::OMPRT_OMP &&
          RuntimeLib == ToolChain::RLT_Libgcc) &&
         !getTriple().isKnownWindowsMSVCEnvironment()) {
-      CmdArgs.push_back("-latomic");
+      if (getTriple().isOSAIX())
+        CmdArgs.push_back("-lcompiler_rt");
+      else
+        CmdArgs.push_back("-latomic");
     }
   }
 }
@@ -1135,6 +1145,12 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     return getFallbackAndroidTargetPath(BaseDir);
 
   return {};
+}
+
+std::optional<std::string> ToolChain::getDefaultIntrinsicModuleDir() const {
+  SmallString<128> P(D.ResourceDir);
+  llvm::sys::path::append(P, "finclude", "flang");
+  return getTargetSubDirPath(P);
 }
 
 std::optional<std::string> ToolChain::getRuntimePath() const {
@@ -1310,6 +1326,59 @@ types::ID ToolChain::LookupTypeForExtension(StringRef Ext) const {
 
 bool ToolChain::HasNativeLLVMSupport() const {
   return false;
+}
+
+LTOKind ToolChain::getDefaultLTOMode() const { return LTOK_None; }
+
+bool ToolChain::isUsingLTO(const llvm::opt::ArgList &Args,
+                           Action::OffloadKind Kind) const {
+  return getLTOMode(Args, Kind) != LTOK_None;
+}
+
+static LTOKind parseLTOMode(const llvm::opt::ArgList &Args,
+                            llvm::opt::OptSpecifier OptEq,
+                            llvm::opt::OptSpecifier OptNeg) {
+  if (!Args.hasFlag(OptEq, OptNeg, false))
+    return LTOK_None;
+
+  const Arg *A = Args.getLastArg(OptEq);
+  StringRef LTOName = A->getValue();
+
+  return llvm::StringSwitch<LTOKind>(LTOName)
+      .Case("full", LTOK_Full)
+      .Case("thin", LTOK_Thin)
+      .Default(LTOK_Unknown);
+}
+
+LTOKind ToolChain::getLTOMode(const llvm::opt::ArgList &Args,
+                              Action::OffloadKind Kind) const {
+  bool IsOffload = Kind != Action::OFK_None;
+  auto OptEq = IsOffload ? options::OPT_foffload_lto_EQ : options::OPT_flto_EQ;
+  auto OptNeg = IsOffload ? options::OPT_fno_offload_lto : options::OPT_fno_lto;
+
+  // -fopenmp-target-jit implies -foffload-lto=full for device compilations,
+  // overriding any explicit -fno-offload-lto.
+  if (IsOffload && Args.hasFlag(options::OPT_fopenmp_target_jit,
+                                options::OPT_fno_openmp_target_jit, false)) {
+    if (Arg *A = Args.getLastArg(OptEq, OptNeg))
+      if (parseLTOMode(Args, OptEq, OptNeg) != LTOK_Full)
+        getDriver().Diag(diag::err_drv_incompatible_options)
+            << A->getSpelling() << "-fopenmp-target-jit";
+    return LTOK_Full;
+  }
+
+  if (!Args.hasArg(OptEq, OptNeg))
+    return getDefaultLTOMode();
+
+  LTOKind Mode = parseLTOMode(Args, OptEq, OptNeg);
+
+  if (Mode == LTOK_Unknown) {
+    const Arg *A = Args.getLastArg(OptEq);
+    getDriver().Diag(diag::err_drv_unsupported_option_argument)
+        << A->getSpelling() << A->getValue();
+    return LTOK_None;
+  }
+  return Mode;
 }
 
 bool ToolChain::isCrossCompiling() const {
@@ -1759,7 +1828,9 @@ ToolChain::getSystemGPUArchs(const llvm::opt::ArgList &Args) const {
   return SmallVector<std::string>();
 }
 
-SanitizerMask ToolChain::getSupportedSanitizers() const {
+SanitizerMask
+ToolChain::getSupportedSanitizers(StringRef BoundArch,
+                                  Action::OffloadKind DeviceOffloadKind) const {
   // Return sanitizers which don't require runtime support and are not
   // platform dependent.
 

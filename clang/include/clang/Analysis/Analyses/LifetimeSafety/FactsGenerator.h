@@ -65,9 +65,18 @@ private:
 
   void flow(OriginList *Dst, OriginList *Src, bool Kill);
 
-  void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
+  /// Handles assignment for both BinaryOperator and CXXOperatorCallExpr.
+  ///
+  /// LHSExpr is the destination whose stored loans are replaced by RHSExpr's
+  /// loans. TargetExpr is the assignment expression itself; it receives
+  /// LHSExpr's origins so chained assignments like `a = b = c` can propagate
+  /// through the result of `b = c`.
+  void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
+                        const Expr *RHSExpr);
 
   void handlePointerArithmetic(const BinaryOperator *BO);
+
+  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 
@@ -90,6 +99,11 @@ private:
   /// from other use-after-free errors.
   void handleMovedArgsInCall(const FunctionDecl *FD,
                              ArrayRef<const Expr *> Args);
+
+  // Handles [[clang::lifetime_capture_by(X)]] annotations on a function call to
+  // create flow facts from captured arguments to the capturer
+  void handleLifetimeCaptureBy(const FunctionDecl *FD,
+                               ArrayRef<const Expr *> Args);
 
   /// Checks if a call-like expression creates a borrow by passing a value to a
   /// reference parameter, creating an IssueFact if it does.

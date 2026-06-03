@@ -283,9 +283,11 @@ static void emitUseStmtOp(Fortran::lower::AbstractConverter &converter,
   mlir::ArrayAttr renamesAttr =
       renameAttrs.empty() ? mlir::ArrayAttr()
                           : mlir::ArrayAttr::get(context, renameAttrs);
+  mlir::BoolAttr hasOnlyWithRenamesAttr =
+      mlir::BoolAttr::get(context, stmt.hasOnlyWithRenames);
 
   fir::UseStmtOp::create(builder, loc, moduleNameAttr, onlySymbolsAttr,
-                         renamesAttr);
+                         renamesAttr, hasOnlyWithRenamesAttr);
 }
 
 /// Emit fir.module_debug_imports for USE statements in a module.
@@ -2537,9 +2539,10 @@ private:
       return;
     }
 
-    // Loops with induction variables inside OpenACC compute constructs
-    // need special handling to ensure that the IVs are privatized.
-    if (Fortran::lower::isInsideOpenACCComputeConstruct(*builder)) {
+    // Loops with induction variables inside OpenACC compute constructs or
+    // explicit `!$acc routine` procedures need special handling to ensure that
+    // the IVs are privatized.
+    if (Fortran::lower::shouldLowerDoConstructAsAccLoop(*builder)) {
       // Open up a new scope for the loop variables.
       localSymbols.pushScope();
       llvm::scope_exit scopeGuard([&]() { localSymbols.popScope(); });
@@ -3971,7 +3974,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, idxTy, toStringRef(name.symbol->name()));
+              loc, genType(*name.symbol), toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
@@ -4055,8 +4058,9 @@ private:
 
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
-      for (int64_t i = 1; i < nestedLoops; i++)
-        crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+      if (!outerDoConstruct->IsDoConcurrent())
+        for (int64_t i = 1; i < nestedLoops; i++)
+          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
 
     // Generate loop body
@@ -6522,7 +6526,8 @@ private:
       return;
     for (const auto &scope : intrinsicModuleScope->children()) {
       llvm::StringRef modName = toStringRef(scope.symbol()->name());
-      if (modName != "__fortran_ieee_exceptions")
+      if (modName != "__fortran_ieee_exceptions" &&
+          modName != "iso_fortran_env")
         continue;
       for (auto &var : Fortran::lower::pft::getScopeVariableList(scope)) {
         const Fortran::semantics::Symbol &sym = var.getSymbol();

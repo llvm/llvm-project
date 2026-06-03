@@ -67,6 +67,8 @@ public:
 
   static std::chrono::seconds GetPacketTimeout();
 
+  static std::chrono::milliseconds GetPacketTestDelay();
+
   ArchSpec GetSystemArchitecture() override;
 
   // Check if a given Process
@@ -137,11 +139,11 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
-  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
-  /// operation.
+  /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
+  /// operation in a single packet.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
-  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
-                   llvm::MutableArrayRef<uint8_t> buf) override;
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buf) override;
 
 private:
   llvm::Expected<StringExtractorGDBRemote>
@@ -492,13 +494,10 @@ private:
   // The invariant is that all real keys will have the file and architecture
   // set.
   // The empty key has an empty file and an empty arch.
-  // The tombstone key has an invalid arch and an empty file.
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
     static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
-
-    static ModuleCacheKey getTombstoneKey() { return ModuleCacheKey("", "T"); }
 
     static unsigned getHashValue(const ModuleCacheKey &key) {
       return llvm::hash_combine(key.first, key.second);

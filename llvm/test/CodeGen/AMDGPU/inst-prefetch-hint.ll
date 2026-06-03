@@ -8,6 +8,11 @@
 ; RUN: llvm-objdump -s -j .rodata %t.gfx11.o | FileCheck --check-prefix=OBJ-GFX11 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 --amdgpu-memcpy-loop-unroll=100000 -filetype=obj < %s -o %t.gfx12.o
 ; RUN: llvm-objdump -s -j .rodata %t.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
+;; Verify text assembly round-trips through the MC assembler (instprefsize MCExpr parsing).
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 --amdgpu-memcpy-loop-unroll=100000 < %s | llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=obj -o %t.rt.gfx11.o
+; RUN: llvm-objdump -s -j .rodata %t.rt.gfx11.o | FileCheck --check-prefix=OBJ-GFX11 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 --amdgpu-memcpy-loop-unroll=100000 < %s | llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -filetype=obj -o %t.rt.gfx12.o
+; RUN: llvm-objdump -s -j .rodata %t.rt.gfx12.o | FileCheck --check-prefix=OBJ-GFX12 %s
 
 ; The inst_pref_size is computed via MCExpr label subtraction, resolved at
 ; assembly/link time. In text output it appears as:

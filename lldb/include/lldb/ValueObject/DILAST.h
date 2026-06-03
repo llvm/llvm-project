@@ -42,14 +42,19 @@ enum class UnaryOpKind {
 
 /// The binary operators recognized by DIL.
 enum class BinaryOpKind {
+
   Add,       ///< "+"
   AddAssign, ///< "+="
   Assign,    ///< "="
   Div,       ///< "/"
   Mul,       ///< "*"
   Rem,       ///< "%"
+  Shl,       ///< "<<"
+  Shr,       ///< ">>"
   Sub,       ///< "-"
   SubAssign, ///< "-="
+=======
+>>>>>>> origin/main
 };
 
 /// Translates DIL tokens to BinaryOpKind.

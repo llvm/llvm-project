@@ -89,3 +89,8 @@ namespace Cmp {
   static_assert(A < B);
   static_assert(A <= B);
 }
+
+struct S {
+  _Accum s[2];
+};
+S s = S();

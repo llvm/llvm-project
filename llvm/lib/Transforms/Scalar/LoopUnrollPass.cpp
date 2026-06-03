@@ -307,10 +307,6 @@ struct UnrolledInstStateKeyInfo {
     return {PtrInfo::getEmptyKey(), 0, 0, 0};
   }
 
-  static inline UnrolledInstState getTombstoneKey() {
-    return {PtrInfo::getTombstoneKey(), 0, 0, 0};
-  }
-
   static inline unsigned getHashValue(const UnrolledInstState &S) {
     return PairInfo::getHashValue({S.I, S.Iteration});
   }
@@ -780,7 +776,7 @@ static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
   if (isa<SCEVConstant>(S))
     return true;
   if (auto *U = dyn_cast<SCEVUnknown>(S))
-    return UI.isUniform(U->getValue());
+    return UI.isUniformAtDef(U->getValue());
   for (const SCEV *Op : S->operands()) {
     if (!isSCEVUniform(Op, UI))
       return false;

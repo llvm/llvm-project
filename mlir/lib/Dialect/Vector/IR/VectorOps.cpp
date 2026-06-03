@@ -5453,6 +5453,31 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   return success();
 }
 
+/// When the vector type is `vector<1xT>`, the permutation map is irrelevant:
+/// the single vector lane always has iteration offset 0, so the element is at
+/// `indices` regardless of which source dimension the map points at. Replace
+/// with the minor identity to unblock lowering to vector.load / vector.store.
+template <typename TransferOp>
+static LogicalResult foldSize1TransferPermutationMap(TransferOp op) {
+  VectorType vecType = op.getVectorType();
+  if (vecType.getRank() != 1 || vecType.getShape()[0] != 1 ||
+      vecType.isScalable())
+    return failure();
+
+  AffineMap map = op.getPermutationMap();
+  if (map.isMinorIdentity())
+    return failure();
+
+  int64_t srcRank = op.getShapedType().getRank();
+  if (srcRank < 1)
+    return failure();
+
+  AffineMap minorIdentity =
+      AffineMap::getMinorIdentityMap(srcRank, 1, op.getContext());
+  op.setPermutationMapAttr(AffineMapAttr::get(minorIdentity));
+  return success();
+}
+
 ///  ```
 ///  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]}
 ///    : vector<1x4xf32>, tensor<4x4xf32>
@@ -5486,6 +5511,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   if (succeeded(foldTransferInBoundsAttribute(*this)))
     return getResult();
   if (succeeded(foldTransferFullMask(*this)))
+    return getResult();
+  if (succeeded(foldSize1TransferPermutationMap(*this)))
     return getResult();
   if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
@@ -5936,6 +5963,8 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
   if (succeeded(foldTransferInBoundsAttribute(*this)))
     return success();
   if (succeeded(foldTransferFullMask(*this)))
+    return success();
+  if (succeeded(foldSize1TransferPermutationMap(*this)))
     return success();
   return memref::foldMemRefCast(*this);
 }
@@ -6581,8 +6610,8 @@ LogicalResult ExpandLoadOp::verify() {
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected result dim to match mask dim");
+  if (resVType.getShape() != maskVType.getShape())
+    return emitOpError("expected result shape to match mask shape");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -6635,8 +6664,8 @@ LogicalResult CompressStoreOp::verify() {
     return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected valueToStore dim to match mask dim");
+  if (valueVType.getShape() != maskVType.getShape())
+    return emitOpError("expected valueToStore shape to match mask shape");
   return success();
 }
 
@@ -8345,6 +8374,34 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
 //===----------------------------------------------------------------------===//
 // InterleaveOp
 //===----------------------------------------------------------------------===//
+
+namespace {
+
+/// This folder works on the following round-trip identity:
+///  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp<DeinterleaveOp>();
+    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp<DeinterleaveOp>();
+    if (!lhsDefOp || !rhsDefOp || lhsDefOp != rhsDefOp)
+      return failure();
+    for (auto [idx, operand] : llvm::enumerate(interleaveOp.getOperands())) {
+      if (cast<OpResult>(operand).getResultNumber() != idx)
+        return failure();
+    }
+    rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
+    return success();
+  }
+};
+} // namespace
+
+void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<InterleaveDeinterleaveFolder>(context);
+}
 
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());

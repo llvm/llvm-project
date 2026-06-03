@@ -538,6 +538,14 @@ def TuningSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
                                      "SlowTwoMemOps", "true",
                                      "Two memory operand instructions are slow">;
 
+// On some processors, indirect calls from memory (CALL [mem]) are slow
+// compared to loading the address first and using a register indirect call.
+// This avoids folding loads into indirect call instructions, but does not
+// affect PUSH from memory folding.
+def TuningSlowIndirectCall : SubtargetFeature<"slow-indirect-call",
+                                     "SlowIndirectCall", "true",
+                                     "Indirect calls from memory are slow">;
+
 // True if the LEA instruction inputs have to be ready at address generation
 // (AG) time.
 def TuningLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LeaUsesAG", "true",
@@ -1643,7 +1651,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
 
-  list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
+  list<SubtargetFeature> ZN5AdditionalTuning = [TuningSlowIndirectCall];
+  list<SubtargetFeature> ZN5Tuning =
+    !listconcat(ZN4Tuning, ZN5AdditionalTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,
@@ -1653,7 +1663,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
 
-  list<SubtargetFeature> ZN6Tuning = ZN5Tuning;
+  list<SubtargetFeature> ZN6Tuning =
+    !listremove(ZN5Tuning, [TuningSlowIndirectCall]);
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,

@@ -704,21 +704,19 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
+  auto hasNoFreeInRange = [](auto Range) {
     for (const auto &[Idx, I] : enumerate(Range)) {
       if (Idx > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
+
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
-
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
 
   // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
@@ -728,7 +726,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     if (CtxBB->getSinglePredecessor() != AssumeBB)
       return false;
 
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
+    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
       return false;
 
     CtxIter = AssumeBB->end();
@@ -740,7 +738,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
 
   // Check if there are any calls between Assume and CtxIter that may free
   // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -3536,7 +3534,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (I->getType()->isPointerTy()) {
       if (Call->isReturnNonNull())
         return true;
-      if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+      if (const auto *RP = getArgumentAliasingToReturnedPointer(
+              Call, /*MustPreserveOffset=*/true))
         return isKnownNonZero(RP, Q, Depth);
     } else {
       if (MDNode *Ranges = Q.IIQ.getMetadata(Call, LLVMContext::MD_range))
@@ -6868,38 +6867,38 @@ uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
 
 const Value *
 llvm::getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                           bool MustPreserveNullness) {
+                                           bool MustPreserveOffset) {
   assert(Call &&
          "getArgumentAliasingToReturnedPointer only works on nonnull calls");
   if (const Value *RV = Call->getReturnedArgOperand())
     return RV;
   // This can be used only as a aliasing property.
   if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          Call, MustPreserveNullness))
+          Call, MustPreserveOffset))
     return Call->getArgOperand(0);
   return nullptr;
 }
 
 bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness) {
+    const CallBase *Call, bool MustPreserveOffset) {
   switch (Call->getIntrinsicID()) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::aarch64_irg:
   case Intrinsic::aarch64_tagp:
   // The amdgcn_make_buffer_rsrc function does not alter the address of the
-  // input pointer (and thus preserve null-ness for the purposes of escape
-  // analysis, which is where the MustPreserveNullness flag comes in to play).
-  // However, it will not necessarily map ptr addrspace(N) null to ptr
-  // addrspace(8) null, aka the "null descriptor", which has "all loads return
-  // 0, all stores are dropped" semantics. Given the context of this intrinsic
-  // list, no one should be relying on such a strict interpretation of
-  // MustPreserveNullness (and, at time of writing, they are not), but we
-  // document this fact out of an abundance of caution.
+  // input pointer (and thus preserves the byte offset, which is the property
+  // the MustPreserveOffset flag selects). However, it will not necessarily
+  // map ptr addrspace(N) null to ptr addrspace(8) null, aka the "null
+  // descriptor", which has "all loads return 0, all stores are dropped"
+  // semantics. Given the context of this intrinsic list, no one should be
+  // relying on such a strict bit-exact null mapping (and, at time of
+  // writing, they are not), but we document this fact out of an abundance
+  // of caution.
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return true;
   case Intrinsic::ptrmask:
-    return !MustPreserveNullness;
+    return !MustPreserveOffset;
   case Intrinsic::threadlocal_address:
     // The underlying variable changes with thread ID. The Thread ID may change
     // at coroutine suspend points.
@@ -6970,7 +6969,8 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/false)) {
           V = RP;
           continue;
         }
@@ -9188,10 +9188,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(
-      CmpI, TrueVal, FalseVal, LHS, RHS,
-      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
-      CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
+                                            SI->getFastMathFlagsOrNone(),
+                                            CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(

@@ -50,7 +50,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -431,9 +431,9 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
+  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
+  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
   unsigned Generation = STM.getGeneration();
 
   auto CreateExpr = [&Ctx](unsigned Value) {
@@ -511,7 +511,7 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
     // Recomputes NumSgprs + implicit SGPRs but all symbols should now be
     // resolvable.
     NumSgpr += IsaInfo::getNumExtraSGPRs(
-        &STM, VCCUsed, FlatUsed,
+        STM, VCCUsed, FlatUsed,
         getTargetStreamer()->getTargetID()->isXnackOnOrAny());
     if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
         STM.hasSGPRInitBug()) {
@@ -1131,28 +1131,47 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
       MF.getFunction().getCallingConv() == CallingConv::AMDGPU_CS_Chain) {
     MCContext &Ctx = MF.getContext();
     unsigned BlockSize = MFI.getDynamicVGPRBlockSize();
-    MCValue NumVGPRs;
-    if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
-            NumVGPRs, nullptr) ||
-        !NumVGPRs.isAbsolute()) {
-      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
-    }
-    // Calculate number of VGPR blocks.
-    // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
-    unsigned NumBlocks =
-        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
 
-    if (NumBlocks > 8) {
-      OutContext.reportError({},
-                             "too many DVGPR blocks for _dvgpr$ symbol for '" +
-                                 Twine(CurrentFnSym->getName()) + "'");
-      return;
+    const MCExpr *EncodedBlocks;
+    MCValue NumVGPRs;
+    if (CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
+            NumVGPRs, nullptr) &&
+        NumVGPRs.isAbsolute()) {
+
+      // Calculate number of VGPR blocks.
+      // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
+      unsigned NumBlocks =
+          divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
+      if (NumBlocks > AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) {
+        OutContext.reportError(
+            {}, "DVGPR block count " + Twine(NumBlocks) +
+                    " exceeds maximum of " +
+                    Twine(AMDGPU::IsaInfo::MaxDynamicVGPRBlocks) +
+                    " for __dvgpr$ symbol for '" +
+                    Twine(CurrentFnSym->getName()) + "'");
+        return;
+      }
+      unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+      EncodedBlocks = MCConstantExpr::create(EncodedNumBlocks, Ctx);
+    } else {
+      // Value not yet available so build a symbolic MCExpr:
+      // ((alignTo(max(NumVGPRs, 1), BlockSize) / BlockSize - 1) << 3
+      const MCExpr *One = MCConstantExpr::create(1, Ctx);
+      const MCExpr *BlockSizeConst = MCConstantExpr::create(BlockSize, Ctx);
+      const MCExpr *MaxVGPRs = AMDGPUMCExpr::createMax(
+          {CurrentProgramInfo.NumVGPRsForWavesPerEU, One}, Ctx);
+      const MCExpr *NumBlocks = MCBinaryExpr::createDiv(
+          AMDGPUMCExpr::createAlignTo(MaxVGPRs, BlockSizeConst, Ctx),
+          BlockSizeConst, Ctx);
+      EncodedBlocks =
+          MCBinaryExpr::createShl(MCBinaryExpr::createSub(NumBlocks, One, Ctx),
+                                  MCConstantExpr::create(3, Ctx), Ctx);
     }
-    unsigned EncodedNumBlocks = (NumBlocks - 1) << 3;
+
     // Add to function symbol to create _dvgpr$ symbol.
     const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
-        MCSymbolRefExpr::create(CurrentFnSym, Ctx),
-        MCConstantExpr::create(EncodedNumBlocks, Ctx), Ctx);
+        MCSymbolRefExpr::create(CurrentFnSym, Ctx), EncodedBlocks, Ctx);
     MCSymbol *DVgprFuncSym =
         Ctx.getOrCreateSymbol(Twine("_dvgpr$") + CurrentFnSym->getName());
     OutStreamer->emitAssignment(DVgprFuncSym, DVgprFuncVal);
@@ -1373,11 +1392,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (STM.getGeneration() >= AMDGPUSubtarget::GFX10) {
     ProgInfo.SGPRBlocks = CreateExpr(0ul);
   } else {
-    ProgInfo.SGPRBlocks = GetNumGPRBlocks(
-        ProgInfo.NumSGPRsForWavesPerEU, IsaInfo::getSGPREncodingGranule(&STM));
+    ProgInfo.SGPRBlocks = GetNumGPRBlocks(ProgInfo.NumSGPRsForWavesPerEU,
+                                          IsaInfo::getSGPREncodingGranule(STM));
   }
   ProgInfo.VGPRBlocks = GetNumGPRBlocks(ProgInfo.NumVGPRsForWavesPerEU,
-                                        IsaInfo::getVGPREncodingGranule(&STM));
+                                        IsaInfo::getVGPREncodingGranule(STM));
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
@@ -1508,14 +1527,22 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {
   switch (CallConv) {
-  default: [[fallthrough]];
-  case CallingConv::AMDGPU_CS: return R_00B848_COMPUTE_PGM_RSRC1;
-  case CallingConv::AMDGPU_LS: return R_00B528_SPI_SHADER_PGM_RSRC1_LS;
-  case CallingConv::AMDGPU_HS: return R_00B428_SPI_SHADER_PGM_RSRC1_HS;
-  case CallingConv::AMDGPU_ES: return R_00B328_SPI_SHADER_PGM_RSRC1_ES;
-  case CallingConv::AMDGPU_GS: return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
-  case CallingConv::AMDGPU_VS: return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
-  case CallingConv::AMDGPU_PS: return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
+  default:
+    [[fallthrough]];
+  case CallingConv::AMDGPU_CS:
+    return R_00B848_COMPUTE_PGM_RSRC1;
+  case CallingConv::AMDGPU_LS:
+    return R_00B528_SPI_SHADER_PGM_RSRC1_LS;
+  case CallingConv::AMDGPU_HS:
+    return R_00B428_SPI_SHADER_PGM_RSRC1_HS;
+  case CallingConv::AMDGPU_ES:
+    return R_00B328_SPI_SHADER_PGM_RSRC1_ES;
+  case CallingConv::AMDGPU_GS:
+    return R_00B228_SPI_SHADER_PGM_RSRC1_GS;
+  case CallingConv::AMDGPU_VS:
+    return R_00B128_SPI_SHADER_PGM_RSRC1_VS;
+  case CallingConv::AMDGPU_PS:
+    return R_00B028_SPI_SHADER_PGM_RSRC1_PS;
   }
 }
 
@@ -1796,7 +1823,7 @@ void AMDGPUAsmPrinter::getAmdKernelCode(AMDGPUMCKernelCodeT &Out,
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   MCContext &Ctx = MF.getContext();
 
-  Out.initDefault(&STM, Ctx, /*InitMCExpr=*/false);
+  Out.initDefault(STM, Ctx, /*InitMCExpr=*/false);
 
   Out.compute_pgm_resource1_registers =
       CurrentProgramInfo.getComputePGMRSrc1(STM, Ctx);

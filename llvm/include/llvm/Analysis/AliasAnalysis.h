@@ -221,10 +221,6 @@ template <> struct DenseMapInfo<AACacheLoc> {
     return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
             DenseMapInfo<LocationSize>::getEmptyKey()};
   }
-  static inline AACacheLoc getTombstoneKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getTombstoneKey(),
-            DenseMapInfo<LocationSize>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const AACacheLoc &Val) {
     return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);
@@ -994,6 +990,11 @@ LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
 /// loads.
 LLVM_ABI bool isWritableObject(const Value *Object,
                                bool &ExplicitlyDereferenceableOnly);
+
+/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
+/// than monotonic atomic load/store.
+LLVM_ABI ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI);
 
 /// A manager for alias analyses.
 ///

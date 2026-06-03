@@ -71,12 +71,7 @@ using namespace llvm;
 
 STATISTIC(FuseCounter, "Loops fused");
 STATISTIC(NumFusionCandidates, "Number of candidates for loop fusion");
-STATISTIC(InvalidPreheader, "Loop has invalid preheader");
-STATISTIC(InvalidHeader, "Loop has invalid header");
-STATISTIC(InvalidExitingBlock, "Loop has invalid exiting blocks");
-STATISTIC(InvalidExitBlock, "Loop has invalid exit block");
-STATISTIC(InvalidLatch, "Loop has invalid latch");
-STATISTIC(InvalidLoop, "Loop is invalid");
+STATISTIC(InvalidLoopStructure, "Loop has invalid structure");
 STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
@@ -210,7 +205,7 @@ struct FusionCandidate {
 
   /// Check if all members of the class are valid.
   bool isValid() const {
-    return Preheader && Header && ExitingBlock && ExitBlock && Latch && L &&
+    return Preheader && ExitingBlock && ExitBlock && Latch && L &&
            !L->isInvalid() && Valid;
   }
 
@@ -293,19 +288,8 @@ struct FusionCandidate {
   bool isEligibleForFusion(ScalarEvolution &SE) const {
     if (!isValid()) {
       LLVM_DEBUG(dbgs() << "FC has invalid CFG requirements!\n");
-      if (!Preheader)
-        ++InvalidPreheader;
-      if (!Header)
-        ++InvalidHeader;
-      if (!ExitingBlock)
-        ++InvalidExitingBlock;
-      if (!ExitBlock)
-        ++InvalidExitBlock;
-      if (!Latch)
-        ++InvalidLatch;
-      if (L->isInvalid())
-        ++InvalidLoop;
-
+      assert(Header && "Header should be guaranteed to exist!");
+      ++InvalidLoopStructure;
       return false;
     }
 
@@ -813,15 +797,18 @@ private:
           continue;
         }
 
-        // Ensure that FC0 and FC1 have identical guards.
-        // If one (or both) are not guarded, this check is not necessary.
-        if (FC0.GuardBranch && FC1.GuardBranch &&
-            !haveIdenticalGuards(FC0, FC1) && !TCDifference) {
-          LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
-                               "guards. Not Fusing.\n");
-          reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                     NonIdenticalGuards);
-          continue;
+        // If TCDifference is not set or if it is zero, peeling is not needed.
+        // In this case we must ensure if the loops are guarded the guards
+        // are identical.
+        if (!TCDifference || *TCDifference == 0) {
+          if (FC0.GuardBranch && FC1.GuardBranch &&
+              !haveIdenticalGuards(FC0, FC1)) {
+            LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
+                                 "guards. Not Fusing.\n");
+            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
+                                                       NonIdenticalGuards);
+            continue;
+          }
         }
 
         if (FC0.GuardBranch) {
@@ -1154,11 +1141,17 @@ private:
 
     assert(CurLoopLevel > Levels && "Fusion candidates are not separated");
 
-    if (DepResult->isScalar(CurLoopLevel, true) && !DepResult->isAnti()) {
-      LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant non-anti "
-                           "dependency\n");
-      NumDA++;
-      return true;
+    if (DepResult->isScalar(CurLoopLevel, true)) {
+      if (DepResult->isInput() || DepResult->isOutput()) {
+        LLVM_DEBUG(dbgs() << "Safe to fuse due to a loop-invariant "
+                          << (DepResult->isInput() ? "input" : "output")
+                          << " dependency\n");
+        NumDA++;
+        return true;
+      }
+      LLVM_DEBUG(
+          dbgs() << "Not safe to fuse due to a scalar flow dependency\n");
+      return false;
     }
 
     unsigned CurDir = DepResult->getDirection(CurLoopLevel, true);
@@ -1316,20 +1309,21 @@ private:
     assert(FC0.GuardBranch && FC1.GuardBranch &&
            "Expecting FC0 and FC1 to be guarded loops.");
 
-    if (auto FC0CmpInst =
-            dyn_cast<Instruction>(FC0.GuardBranch->getCondition()))
-      if (auto FC1CmpInst =
-              dyn_cast<Instruction>(FC1.GuardBranch->getCondition()))
-        if (!FC0CmpInst->isIdenticalTo(FC1CmpInst))
-          return false;
+    auto *FC0CmpInst = dyn_cast<Instruction>(FC0.GuardBranch->getCondition());
+    auto *FC1CmpInst = dyn_cast<Instruction>(FC1.GuardBranch->getCondition());
+    if ((!FC0CmpInst || !FC1CmpInst) &&
+        FC0.GuardBranch->getCondition() != FC1.GuardBranch->getCondition())
+      return false;
+
+    if (FC0CmpInst && FC1CmpInst && !FC0CmpInst->isIdenticalTo(FC1CmpInst))
+      return false;
 
     // The compare instructions are identical.
     // Now make sure the successor of the guards have the same flow into/around
     // the loop
     if (FC0.GuardBranch->getSuccessor(0) == FC0.Preheader)
       return (FC1.GuardBranch->getSuccessor(0) == FC1.Preheader);
-    else
-      return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
+    return (FC1.GuardBranch->getSuccessor(1) == FC1.Preheader);
   }
 
   /// Modify the latch branch of FC to be unconditional since successors of the

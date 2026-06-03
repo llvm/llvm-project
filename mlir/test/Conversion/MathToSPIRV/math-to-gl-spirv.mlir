@@ -62,6 +62,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %22 = math.acosh %arg0 : f32
   // CHECK: spirv.GL.Atanh %{{.*}}: f32
   %23 = math.atanh %arg0 : f32
+  // CHECK: spirv.GL.Trunc %{{.*}}: f32
+  %24 = math.trunc %arg0 : f32
   return
 }
 
@@ -117,6 +119,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %19 = math.acosh %arg0 : vector<3xf32>
   // CHECK: spirv.GL.Atanh %{{.*}}: vector<3xf32>
   %20 = math.atanh %arg0 : vector<3xf32>
+  // CHECK: spirv.GL.Trunc %{{.*}}: vector<3xf32>
+  %21 = math.trunc %arg0 : vector<3xf32>
   return
 }
 
@@ -132,6 +136,21 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
                             %c: vector<4xf32>) {
   // CHECK: spirv.GL.Fma %{{.*}}: vector<4xf32>
   %0 = math.fma %a, %b, %c : vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @float32_clamp_scalar
+func.func @float32_clamp_scalar(%value: f32, %min: f32, %max: f32) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : f32
+  %0 = math.clampf %value to [%min, %max] : f32
+  return
+}
+
+// CHECK-LABEL: @float32_clamp_vector
+func.func @float32_clamp_vector(%value: vector<4xf32>, %min: vector<4xf32>,
+                                %max: vector<4xf32>) {
+  // CHECK: spirv.GL.FClamp %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf32>
+  %0 = math.clampf %value to [%min, %max] : vector<4xf32>
   return
 }
 
@@ -183,46 +202,155 @@ func.func @ctlz_vector2(%val: vector<2xi32>) -> vector<2xi32> {
   return %0 : vector<2xi32>
 }
 
+// CHECK-LABEL: @cttz_scalar
+//  CHECK-SAME: (%[[VAL:.+]]: i32)
+func.func @cttz_scalar(%val: i32) -> i32 {
+  // CHECK-DAG: %[[V0:.+]] = spirv.Constant 0 : i32
+  // CHECK-DAG: %[[V32:.+]] = spirv.Constant 32 : i32
+  // CHECK: %[[LSB:.+]] = spirv.GL.FindILsb %[[VAL]] : i32
+  // CHECK: %[[CMP:.+]] = spirv.IEqual %[[VAL]], %[[V0]] : i32
+  // CHECK: %[[R:.+]] = spirv.Select %[[CMP]], %[[V32]], %[[LSB]] : i1, i32
+  // CHECK: return %[[R]]
+  %0 = math.cttz %val : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @cttz_vector
+func.func @cttz_vector(%val: vector<2xi32>) -> vector<2xi32> {
+  // CHECK: spirv.GL.FindILsb
+  // CHECK: spirv.IEqual
+  // CHECK: spirv.Select
+  %0 = math.cttz %val : vector<2xi32>
+  return %0 : vector<2xi32>
+}
+
+// Dynamic exponent: exp(y * log(x)); yields NaN for x<0.
 // CHECK-LABEL: @powf_scalar
 //  CHECK-SAME: (%[[LHS:.+]]: f32, %[[RHS:.+]]: f32)
 func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
-  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
-  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
-  // CHECK: %[[F1:.+]] = spirv.Constant 1.000000e+00 : f32
-  // CHECK: %[[REM:.+]] = spirv.FRem %[[RHS]], %[[F1]] : f32
-  // CHECK: %[[IS_FRACTION:.+]] = spirv.FOrdNotEqual %[[REM]], %[[F0]] : f32
-  // CHECK: %[[AND:.+]] = spirv.LogicalAnd %[[IS_FRACTION]], %[[LT]] : i1
-  // CHECK: %[[NAN:.+]] = spirv.Constant 0x7FC00000 : f32
-  // CHECK: %[[NEW_LHS:.+]] = spirv.Select %[[AND]], %[[NAN]], %[[LHS]] : i1, f32
-  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[NEW_LHS]] : f32
-  // CHECK: %[[IRHS:.+]] = spirv.ConvertFToS
-  // CHECK: %[[CST1:.+]] = spirv.Constant 1 : i32
-  // CHECK: %[[REM:.+]] = spirv.BitwiseAnd %[[IRHS]]
-  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[REM]], %[[CST1]] : i32
-  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
-  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
-  // CHECK: %[[SNEG:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
-  // CHECK: %[[SEL:.+]] = spirv.Select %[[SNEG]], %[[NEG]], %[[POW]] : i1, f32
+  // CHECK: %[[LOG:.+]] = spirv.GL.Log %[[LHS]] : f32
+  // CHECK: %[[MUL:.+]] = spirv.FMul %[[RHS]], %[[LOG]] : f32
+  // CHECK: %[[EXP:.+]] = spirv.GL.Exp %[[MUL]] : f32
   %0 = math.powf %lhs, %rhs : f32
-  // CHECK: return %[[SEL]]
+  // CHECK: return %[[EXP]]
   return %0: f32
 }
 
 // CHECK-LABEL: @powf_vector
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
-  // CHECK: spirv.FOrdLessThan
-  // CHECK: spirv.FRem
-  // CHECK: spirv.FOrdNotEqual
-  // CHECK: spirv.LogicalAnd
-  // CHECK: spirv.Select
-  // CHECK: spirv.GL.FAbs
-  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
-  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
-  // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
-  // CHECK: spirv.FNegate
-  // CHECK: spirv.Select
+  // CHECK: spirv.GL.Log %{{.*}} : vector<4xf32>
+  // CHECK: spirv.FMul %{{.*}} : vector<4xf32>
+  // CHECK: spirv.GL.Exp %{{.*}} : vector<4xf32>
   %0 = math.powf %lhs, %rhs : vector<4xf32>
   return %0: vector<4xf32>
+}
+
+// Constant odd integer exponent: parity is known statically, so the lowering
+// drops the runtime FToS/BitwiseAnd/IEqual/LogicalAnd parity computation.
+// CHECK-LABEL: @powf_const_odd_int_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_odd_int_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 3.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
+  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
+  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[LHS]], %[[F0]] : f32
+  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POW]] : f32
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[LT]], %[[NEG]], %[[POW]] : i1, f32
+  %c = arith.constant 3.0 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[SEL]]
+  return %0: f32
+}
+
+// Constant even integer exponent: result is non-negative, no select needed.
+// CHECK-LABEL: @powf_const_even_int_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_even_int_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 4.000000e+00 : f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[LHS]] : f32
+  // CHECK: %[[POW:.+]] = spirv.GL.Pow %[[ABS]], %[[RHS]] : f32
+  %c = arith.constant 4.0 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[POW]]
+  return %0: f32
+}
+
+// Constant non-integer exponent: falls into the dynamic exp(y*log(x)) path.
+// CHECK-LABEL: @powf_const_frac_exp
+//  CHECK-SAME: (%[[LHS:.+]]: f32)
+func.func @powf_const_frac_exp(%lhs: f32) -> f32 {
+  // CHECK: %[[RHS:.+]] = arith.constant 2.500000e+00 : f32
+  // CHECK: %[[LOG:.+]] = spirv.GL.Log %[[LHS]] : f32
+  // CHECK: %[[MUL:.+]] = spirv.FMul %[[RHS]], %[[LOG]] : f32
+  // CHECK: %[[EXP:.+]] = spirv.GL.Exp %[[MUL]] : f32
+  %c = arith.constant 2.5 : f32
+  %0 = math.powf %lhs, %c : f32
+  // CHECK: return %[[EXP]]
+  return %0: f32
+}
+
+// Splat constant odd integer-valued vector exponent: uniform odd parity.
+// CHECK-LABEL: @powf_const_odd_int_exp_vector
+func.func @powf_const_odd_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: spirv.GL.FAbs
+  // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
+  // CHECK: spirv.FNegate
+  // CHECK: spirv.Select
+  %c = arith.constant dense<3.0> : vector<4xf32>
+  %0 = math.powf %lhs, %c : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// Mixed-parity constant integer-valued vector exponent: per-element odd-mask
+// constant is materialized and AND-ed with lhs<0.
+// CHECK-LABEL: @powf_const_mixed_int_exp_vector
+func.func @powf_const_mixed_int_exp_vector(%lhs: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: spirv.GL.FAbs
+  // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
+  // CHECK: spirv.FOrdLessThan
+  // CHECK: spirv.FNegate
+  // CHECK: %[[ODD:.+]] = spirv.Constant dense<[true, false, true, false]> : vector<4xi1>
+  // CHECK: spirv.LogicalAnd %{{.*}}, %[[ODD]] : vector<4xi1>
+  // CHECK: spirv.Select
+  %c = arith.constant dense<[3.0, 2.0, 5.0, 4.0]> : vector<4xf32>
+  %0 = math.powf %lhs, %c : vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// CHECK-LABEL: @fpowi_scalar
+//  CHECK-SAME: (%[[BASE:.+]]: f32, %[[POW:.+]]: i32)
+func.func @fpowi_scalar(%base: f32, %power: i32) -> f32 {
+  // CHECK: %[[EXP:.+]] = spirv.ConvertSToF %[[POW]] : i32 to f32
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[BASE]] : f32
+  // CHECK: %[[POWF:.+]] = spirv.GL.Pow %[[ABS]], %[[EXP]] : f32
+  // CHECK: %[[F0:.+]] = spirv.Constant 0.000000e+00 : f32
+  // CHECK: %[[LT:.+]] = spirv.FOrdLessThan %[[BASE]], %[[F0]] : f32
+  // CHECK: %[[I1:.+]] = spirv.Constant 1 : i32
+  // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[POW]], %[[I1]] : i32
+  // CHECK: %[[ODD:.+]] = spirv.IEqual %[[AND]], %[[I1]] : i32
+  // CHECK: %[[NEG_C:.+]] = spirv.LogicalAnd %[[LT]], %[[ODD]] : i1
+  // CHECK: %[[NEG:.+]] = spirv.FNegate %[[POWF]] : f32
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[NEG_C]], %[[NEG]], %[[POWF]] : i1, f32
+  %0 = math.fpowi %base, %power : f32, i32
+  // CHECK: return %[[SEL]]
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fpowi_vector
+func.func @fpowi_vector(%base: vector<4xf32>, %power: vector<4xi32>) -> vector<4xf32> {
+  // CHECK: spirv.ConvertSToF %{{.*}} : vector<4xi32> to vector<4xf32>
+  // CHECK: spirv.GL.FAbs %{{.*}} : vector<4xf32>
+  // CHECK: spirv.GL.Pow %{{.*}} : vector<4xf32>
+  // CHECK: spirv.FOrdLessThan %{{.*}} : vector<4xf32>
+  // CHECK: spirv.BitwiseAnd %{{.*}} : vector<4xi32>
+  // CHECK: spirv.IEqual %{{.*}} : vector<4xi32>
+  // CHECK: spirv.LogicalAnd %{{.*}} : vector<4xi1>
+  // CHECK: spirv.FNegate %{{.*}} : vector<4xf32>
+  // CHECK: spirv.Select %{{.*}} : vector<4xi1>, vector<4xf32>
+  %0 = math.fpowi %base, %power : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL: @round_scalar
