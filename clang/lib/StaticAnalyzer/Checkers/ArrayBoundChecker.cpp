@@ -76,6 +76,24 @@ determineElementSize(const std::optional<QualType> T, const CheckerContext &C) {
   return C.getASTContext().getTypeSizeInChars(*T).getQuantity();
 }
 
+struct Messages {
+  std::string Short, Full;
+};
+
+enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
+
+constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
+                                              "a negative or overflowing"};
+static StringRef asAdjective(BadOffsetKind Problem) {
+  return Adjectives[static_cast<int>(Problem)];
+}
+
+constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
+                                                "around"};
+static StringRef asPreposition(BadOffsetKind Problem) {
+  return Prepositions[static_cast<int>(Problem)];
+}
+
 class StateUpdateReporter {
   const NonLoc ByteOffsetVal;
   const std::optional<QualType> ElementType;
@@ -121,24 +139,6 @@ private:
     return providesInformationAboutInteresting(SV.getAsSymbol(), BR);
   }
 };
-
-struct Messages {
-  std::string Short, Full;
-};
-
-enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
-
-constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
-                                              "a negative or overflowing"};
-static StringRef asAdjective(BadOffsetKind Problem) {
-  return Adjectives[static_cast<int>(Problem)];
-}
-
-constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
-                                                "around"};
-static StringRef asPreposition(BadOffsetKind Problem) {
-  return Prepositions[static_cast<int>(Problem)];
-}
 
 // NOTE: The `ArraySubscriptExpr` and `UnaryOperator` callbacks are `PostStmt`
 // instead of `PreStmt` because the current implementation passes the whole
