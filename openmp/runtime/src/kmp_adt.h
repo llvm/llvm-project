@@ -71,7 +71,7 @@ public:
       return false;
     }
     value = __kmp_basic_str_to_int(sv.data(), num_digits);
-    if (value == SIZE_MAX) {
+    if (value == INT_MAX) {
       *this = orig;
       return false;
     }
