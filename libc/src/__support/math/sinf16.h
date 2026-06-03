@@ -79,7 +79,7 @@ LIBC_INLINE float16 sinf16(float16 x) {
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
   int rounding = fputil::quick_get_round();
 #endif
 
@@ -90,7 +90,7 @@ LIBC_INLINE float16 sinf16(float16 x) {
     if (LIBC_UNLIKELY(x_abs == 0U))
       return x;
 
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     // When x > 0, and rounding upward, sin(x) == x.
     // When x < 0, and rounding downward, sin(x) == x.
     if ((rounding == FE_UPWARD && xbits.is_pos()) ||
@@ -102,7 +102,7 @@ LIBC_INLINE float16 sinf16(float16 x) {
       x_u--;
       return FPBits(x_u).get_val();
     }
-#endif // !LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#endif // !LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 
     // TODO: what about the case with rounding nearest and we're in here?
     // Previously, it's an UB

@@ -150,12 +150,12 @@ LIBC_INLINE double tan(double x) {
 #else
         if (LIBC_UNLIKELY(x_e < 4)) {
           // TODO: UB for rounding nearest
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
           int rounding_mode = fputil::quick_get_round();
           if ((xbits.sign() == Sign::POS && rounding_mode == FE_UPWARD) ||
               (xbits.sign() == Sign::NEG && rounding_mode == FE_DOWNWARD))
             return FPBits(xbits.uintval() + 1).get_val();
-#endif // !LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#endif // !LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
         }
         return fputil::multiply_add(x, 0x1.0p-54, x);
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE

@@ -1146,7 +1146,7 @@ strtofloatingpoint(const CharType *__restrict src) {
     }
 
     RoundDirection round_direction = RoundDirection::Nearest;
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     round_direction = RoundDirection::Nearest;
 #else
     switch (fputil::quick_get_round()) {
@@ -1163,7 +1163,7 @@ strtofloatingpoint(const CharType *__restrict src) {
       round_direction = RoundDirection::Down;
       break;
     }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
 
     StrToNumResult<ExpandedFloat<T>> parse_result({0, 0});
     if (base == 16) {

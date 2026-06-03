@@ -211,7 +211,7 @@ LIBC_INLINE double set_exceptional(double x) {
     if (xbits.is_nan())
       return x;
 
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     if (fputil::quick_get_round() == FE_UPWARD)
       return FPBits::min_subnormal().get_val();
 #endif
@@ -223,7 +223,7 @@ LIBC_INLINE double set_exceptional(double x) {
   // x >= round(log(MAX_NORMAL), D, RU) = 0x1.62e42fefa39fp+9 or +inf/nan
   // x is finite
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
       return FPBits::max_normal().get_val();

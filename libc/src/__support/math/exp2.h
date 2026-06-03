@@ -253,7 +253,7 @@ LIBC_INLINE double set_exceptional(double x) {
   // x >= 1024 or +inf/nan
   // x is finite
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
       return FPBits::max_normal().get_val();

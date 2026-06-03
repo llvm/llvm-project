@@ -206,7 +206,7 @@ LIBC_INLINE T hypot(T x, T y) {
         return FPBits_t::max_normal().get_val();
 #else
         return FPBits_t::inf().get_val();
-#endif // LIBC_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to

@@ -96,7 +96,7 @@ LIBC_INLINE constexpr float16 exp10f16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     }
 
     // When x <= -8.

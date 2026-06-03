@@ -110,7 +110,7 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double sqrt(long double x) {
     // Append the exponent field.
     x_exp = ((x_exp >> 1) + LDBits::EXP_BIAS);
     y |= (static_cast<StorageType>(x_exp) << (LDBits::FRACTION_LEN + 1));
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
     // Round to nearest, ties to even
     if (rb && (lsb || (r != 0)))
       ++y;

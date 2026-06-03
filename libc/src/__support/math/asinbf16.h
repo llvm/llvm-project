@@ -45,7 +45,7 @@ LIBC_INLINE LIBC_CONSTEXPR bfloat16 asinbf16(bfloat16 x) {
       return x; // with sign
 
     if (LIBC_UNLIKELY(x_abs <= 0x3D00)) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUNDING_NEAREST
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       int rounding = fputil::quick_get_round();
       if ((xbits.is_pos() && rounding == FE_UPWARD) ||
           (xbits.is_neg() && rounding == FE_DOWNWARD)) {
