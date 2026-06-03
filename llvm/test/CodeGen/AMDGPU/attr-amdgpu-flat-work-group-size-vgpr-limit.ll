@@ -575,7 +575,7 @@ attributes #1024 = { nounwind "amdgpu-flat-work-group-size"="1024,1024" }
 
 declare void @foo()
 
-; GCN: ; f256 Kernel info:
+; GCN: ; f256:
 ; GFX9: NumVgprs: 256
 ; GFX90A: NumVgprs: 256
 ; GFX90A: NumAgprs: 0
@@ -588,7 +588,7 @@ declare void @foo()
 ; GFX11WGP-WAVE64: NumVgprs: 256
 ; GFX11CU-WAVE32: NumVgprs: 256
 ; GFX11CU-WAVE64: NumVgprs: 256
-; GCN: ; f512 Kernel info:
+; GCN: ; f512:
 ; GFX9:             NumVgprs: 128
 ; GFX90A:           NumVgprs: 128
 ; GFX90A:           NumAgprs: 128
@@ -601,7 +601,7 @@ declare void @foo()
 ; GFX11WGP-WAVE64:  NumVgprs: 256
 ; GFX11CU-WAVE32:   NumVgprs: 192
 ; GFX11CU-WAVE64:   NumVgprs: 192
-; GCN: ; f1024 Kernel info:
+; GCN: ; f1024:
 ; GFX9:             NumVgprs: 64
 ; GFX90A:           NumVgprs: 64
 ; GFX90A:           NumAgprs: 64

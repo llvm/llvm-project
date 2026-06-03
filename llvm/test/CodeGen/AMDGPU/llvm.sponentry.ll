@@ -604,29 +604,29 @@ attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size"="16" }
 attributes #1 = { nounwind "amdgpu-dynamic-vgpr-block-size"="32" }
 attributes #2 = { nounwind "amdgpu-dynamic-vgpr-block-size"="0" }
 
-; CHECK: ; sponentry_cs_dvgpr_16 Kernel info:
+; CHECK: ; sponentry_cs_dvgpr_16:
 ; CHECK: ScratchSize: 8
-; CHECK: ; sponentry_cs_dvgpr_32 Kernel info:
+; CHECK: ; sponentry_cs_dvgpr_32:
 ; CHECK: ScratchSize: 8
-; CHECK: ; sponentry_cs_no_dvgpr Kernel info:
+; CHECK: ; sponentry_cs_no_dvgpr:
 ; CHECK: ScratchSize: 8
-; CHECK: ; sponentry_cs_dvgpr_control_flow Kernel info:
+; CHECK: ; sponentry_cs_dvgpr_control_flow:
 ; CHECK: ScratchSize: 8
-; CHECK: ; sponentry_cs_dvgpr_calls Kernel info:
+; CHECK: ; sponentry_cs_dvgpr_calls:
 ; CHECK: ScratchSize: 16
-; CHECK: ; sponentry_cs_dvgpr_realign Kernel info:
+; CHECK: ; sponentry_cs_dvgpr_realign:
 ; CHECK: ScratchSize: 128
-; CHECK: ; sponentry_gfx Function info:
+; CHECK: ; sponentry_gfx:
 ; CHECK: ScratchSize: 12
-; CHECK: ; sponentry_gfx_dvgpr_realign Function info:
+; CHECK: ; sponentry_gfx_dvgpr_realign:
 ; CHECK: ScratchSize: 384
-; CHECK: ; sponentry_gfx_stack_args Function info:
+; CHECK: ; sponentry_gfx_stack_args:
 ; CHECK: ScratchSize: 12
-; CHECK: ; sponentry_gfx_dyn_alloc Function info:
+; CHECK: ; sponentry_gfx_dyn_alloc:
 ; CHECK: ScratchSize: 16
-; CHECK: ; sponentry_cs_chain Function info:
+; CHECK: ; sponentry_cs_chain:
 ; CHECK: ScratchSize: 12
-; CHECK: ; sponentry_cs_chain_dvgpr_realign Function info:
+; CHECK: ; sponentry_cs_chain_dvgpr_realign:
 ; CHECK: ScratchSize: 384
-; CHECK: ; sponentry_cs_chain_dyn_alloc Function info:
+; CHECK: ; sponentry_cs_chain_dyn_alloc:
 ; CHECK: ScratchSize: 16

@@ -709,7 +709,7 @@ define i32 @load_2xi16_align2(ptr addrspace(1) %p) #0 {
 
 attributes #0 = { nounwind }
 
-; SI: ; local_unaligned_load_store_i16 Kernel info:
+; SI: ; local_unaligned_load_store_i16:
 ; SI: ScratchSize: 0{{$}}
-; SI: ; global_unaligned_load_store_i16 Kernel info:
+; SI: ; global_unaligned_load_store_i16:
 ; SI: ScratchSize: 0{{$}}

@@ -796,8 +796,7 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
 
     if (!AMDGPU::isEntryFunctionCC(F.getCallingConv())) {
       using RIK = MCResourceInfo::ResourceInfoKind;
-      OutStreamer->emitRawComment(" " + Twine(FuncName) + " Function info:",
-                                  false);
+      OutStreamer->emitRawComment(" " + Twine(FuncName) + ":", false);
 
       emitCommonFunctionComments(
           RI.getSymbol(FuncName, RIK::RIK_NumVGPR, OutContext)
@@ -816,7 +815,7 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
     }
 
     const SIProgramInfo &PI = Info.ProgInfo;
-    OutStreamer->emitRawComment(" " + Twine(FuncName) + " Kernel info:", false);
+    OutStreamer->emitRawComment(" " + Twine(FuncName) + ":", false);
     emitCommonFunctionComments(
         PI.NumArchVGPR, STM.hasMAIInsts() ? PI.NumAccVGPR : nullptr, PI.NumVGPR,
         PI.NumSGPR, PI.ScratchSize, Info.CodeSize, IsMemoryBound);
@@ -878,11 +877,6 @@ void AMDGPUAsmPrinter::emitDeferredComments() {
                                     Twine(PI.TIdIGCompCount),
                                 false);
 
-    [[maybe_unused]] int64_t PGMRSrc3;
-    assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-           STM.hasGFX90AInsts() || STM.hasGFX1250Insts() ||
-           (PI.ComputePGMRSrc3->evaluateAsAbsolute(PGMRSrc3) &&
-            static_cast<uint64_t>(PGMRSrc3) == 0));
     if (STM.hasGFX90AInsts()) {
       OutStreamer->emitRawComment(
           " COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: " +
@@ -985,8 +979,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
       CurrentProgramInfo.ComputePGMRSrc3->evaluateAsAbsolute(PGM_Rsrc3);
   (void)PGM_Rsrc3;
   (void)EvaluatableRsrc3;
-  assert(STM.getGeneration() >= AMDGPUSubtarget::GFX10 ||
-         STM.hasGFX90AInsts() || STM.hasGFX1250Insts() || !EvaluatableRsrc3 ||
+  assert(STM.hasPGMRSrc3() || !EvaluatableRsrc3 ||
          static_cast<uint64_t>(PGM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 

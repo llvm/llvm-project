@@ -728,94 +728,94 @@ define i64 @v_add_u64_vop2_literal_64(i64 %x) {
   ret i64 %add
 }
 
-; CHECK: ; v_mul_f32_vop2 Function info:
+; CHECK: ; v_mul_f32_vop2:
 ; NOT-GFX12: codeLenInByte = 12
 ; GFX1200: codeLenInByte = 28
 ; GFX1250: codeLenInByte = 16
-; CHECK: ; v_mul_f32_vop2_inline_imm Function info:
+; CHECK: ; v_mul_f32_vop2_inline_imm:
 ; NOT-GFX12: codeLenInByte = 12
 ; GFX1200: codeLenInByte = 28
 ; GFX1250: codeLenInByte = 16
-; CHECK: ; v_mul_f32_vop2_literal Function info:
+; CHECK: ; v_mul_f32_vop2_literal:
 ; NOT-GFX12: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_mul_f32_vop3_src_mods Function info:
+; CHECK: ; v_mul_f32_vop3_src_mods:
 ; NOT-GFX12: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_mul_f32_vop3_src_mods_inline_imm Function info:
+; CHECK: ; v_mul_f32_vop3_src_mods_inline_imm:
 ; NOT-GFX12: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_mul_f32_vop3_src_mods_literal Function info:
+; CHECK: ; v_mul_f32_vop3_src_mods_literal:
 ; GFX9: codeLenInByte = 24
 ; GFX10: codeLenInByte = 20
 ; GFX11: codeLenInByte = 20
 ; GFX1200: codeLenInByte = 36
 ; GFX1250: codeLenInByte = 24
-; CHECK: ; v_mul_f32_vop2_frame_index Function info:
+; CHECK: ; v_mul_f32_vop2_frame_index:
 ; GFX9: codeLenInByte = 20
 ; GFX10: codeLenInByte = 20
 ; GFX11: codeLenInByte = 12
 ; GFX1200: codeLenInByte = 28
 ; GFX1250: codeLenInByte = 16
-; CHECK: ; v_fma_f32 Function info:
+; CHECK: ; v_fma_f32:
 ; NOT-GFX12: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_fma_f32_src_mods Function info:
+; CHECK: ; v_fma_f32_src_mods:
 ; NOT-GFX12: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_fmac_f32 Function info:
+; CHECK: ; v_fmac_f32:
 ; GFX9: codeLenInByte = 16
 ; GFX10: codeLenInByte = 12
 ; GFX11: codeLenInByte = 12
 ; GFX1200: codeLenInByte = 28
 ; GFX1250: codeLenInByte = 16
-; CHECK: ; v_fmaak_f32 Function info:
+; CHECK: ; v_fmaak_f32:
 ; GFX9: codeLenInByte = 24
 ; GFX10: codeLenInByte = 16
 ; GFX11: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_fma_k_f32_src_mods Function info:
+; CHECK: ; v_fma_k_f32_src_mods:
 ; GFX9: codeLenInByte = 24
 ; GFX10: codeLenInByte = 20
 ; GFX1100: codeLenInByte = 20
 ; GFX1150: codeLenInByte = 20
 ; GFX1200: codeLenInByte = 36
 ; GFX1250: codeLenInByte = 24
-; CHECK: ; s_fmaak_f32 Kernel info:
+; CHECK: ; s_fmaak_f32:
 ; GFX9: codeLenInByte = 20
 ; GFX10: codeLenInByte = 12
 ; GFX1100: codeLenInByte = 16
 ; GFX1150: codeLenInByte = 16
 ; GFX1200: codeLenInByte = 16
 ; GFX1250: codeLenInByte = 24
-; CHECK: ; v_mul_f64_vop2_literal_32 Function info:
+; CHECK: ; v_mul_f64_vop2_literal_32:
 ; GFX9: codeLenInByte = 28
 ; GFX10: codeLenInByte = 20
 ; GFX1100: codeLenInByte = 20
 ; GFX1150: codeLenInByte = 20
 ; GFX1200: codeLenInByte = 32
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_mul_f64_vop2_literal_64 Function info:
+; CHECK: ; v_mul_f64_vop2_literal_64:
 ; GFX9: codeLenInByte = 32
 ; GFX10: codeLenInByte = 32
 ; GFX1100: codeLenInByte = 36
 ; GFX1150: codeLenInByte = 36
 ; GFX1200: codeLenInByte = 48
 ; GFX1250: codeLenInByte = 24
-; CHECK: ; v_add_u64_vop2_literal_32 Function info:
+; CHECK: ; v_add_u64_vop2_literal_32:
 ; GFX9: codeLenInByte = 20
 ; GFX10: codeLenInByte = 28
 ; GFX1100: codeLenInByte = 32
 ; GFX1150: codeLenInByte = 32
 ; GFX1200: codeLenInByte = 48
 ; GFX1250: codeLenInByte = 20
-; CHECK: ; v_add_u64_vop2_literal_64 Function info:
+; CHECK: ; v_add_u64_vop2_literal_64:
 ; GFX9: codeLenInByte = 20
 ; GFX10: codeLenInByte = 28
 ; GFX1100: codeLenInByte = 32

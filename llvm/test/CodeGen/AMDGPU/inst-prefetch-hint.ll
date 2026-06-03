@@ -64,10 +64,10 @@ bb:
   ret void
 }
 
-; GCN: ; large Kernel info:
+; GCN: ; large:
 ; GFX11: codeLenInByte = 3{{[0-9][0-9]$}}
 ; GFX12: codeLenInByte = 4{{[0-9][0-9]$}}
-; GCN: ; small Kernel info:
+; GCN: ; small:
 ; GCN: codeLenInByte = {{[0-9]$}}
-; GCN: ; inline_asm Kernel info:
+; GCN: ; inline_asm:
 ; GCN: codeLenInByte = 24

@@ -275,14 +275,14 @@ attributes #8 = { "amdgpu-flat-work-group-size"="1,512" }
 attributes #9 = { "amdgpu-flat-work-group-size"="1,1024" }
 attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 
-; GCN: ; max_occupancy Kernel info:
+; GCN: ; max_occupancy:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; limited_occupancy_3 Kernel info:
+; GCN: ; limited_occupancy_3:
 ; GFX9:       ; Occupancy: 3
 ; GFX950:     ; Occupancy: 3
 ; GFX10W64:   ; Occupancy: 3
@@ -290,28 +290,28 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 3
 ; GFX1100W32: ; Occupancy: 5
 ; GFX1250:    ; Occupancy: 3
-; GCN: ; limited_occupancy_18 Kernel info:
+; GCN: ; limited_occupancy_18:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 18
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; limited_occupancy_19 Kernel info:
+; GCN: ; limited_occupancy_19:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_24_vgprs Kernel info:
+; GCN: ; used_24_vgprs:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_28_vgprs Kernel info:
+; GCN: ; used_28_vgprs:
 ; GFX9:       ; Occupancy: 9
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 18
@@ -319,7 +319,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_32_vgprs Kernel info:
+; GCN: ; used_32_vgprs:
 ; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 8
 ; GFX10W64:   ; Occupancy: 16
@@ -327,7 +327,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030W32: ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_36_vgprs Kernel info:
+; GCN: ; used_36_vgprs:
 ; GFX9:       ; Occupancy: 7
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 14
@@ -336,7 +336,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030W32: ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_40_vgprs Kernel info:
+; GCN: ; used_40_vgprs:
 ; GFX9:       ; Occupancy: 6
 ; GFX950:     ; Occupancy: 8
 ; GFX10W64:   ; Occupancy: 12
@@ -344,7 +344,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030W32: ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_44_vgprs Kernel info:
+; GCN: ; used_44_vgprs:
 ; GFX9:       ; Occupancy: 5
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 11
@@ -353,7 +353,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030W32: ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_48_vgprs Kernel info:
+; GCN: ; used_48_vgprs:
 ; GFX9:       ; Occupancy: 5
 ; GFX950:     ; Occupancy: 8
 ; GFX10W64:   ; Occupancy: 10
@@ -361,7 +361,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030W32: ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_56_vgprs Kernel info:
+; GCN: ; used_56_vgprs:
 ; GFX9:       ; Occupancy: 4
 ; GFX950:     ; Occupancy: 8
 ; GFX10W64:   ; Occupancy: 9
@@ -370,7 +370,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 12
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_64_vgprs Kernel info:
+; GCN: ; used_64_vgprs:
 ; GFX9:       ; Occupancy: 4
 ; GFX950:     ; Occupancy: 8
 ; GFX10W64:   ; Occupancy: 8
@@ -378,7 +378,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 10
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_72_vgprs Kernel info:
+; GCN: ; used_72_vgprs:
 ; GFX9:       ; Occupancy: 3
 ; GFX950:     ; Occupancy: 7
 ; GFX10W64:   ; Occupancy: 7
@@ -387,7 +387,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 10
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 12
-; GCN: ; used_80_vgprs Kernel info:
+; GCN: ; used_80_vgprs:
 ; GFX9:       ; Occupancy: 3
 ; GFX950:     ; Occupancy: 6
 ; GFX10W64:   ; Occupancy: 6
@@ -395,7 +395,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 9
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 12
-; GCN: ; used_84_vgprs Kernel info:
+; GCN: ; used_84_vgprs:
 ; GFX9:       ; Occupancy: 3
 ; GFX950:     ; Occupancy: 5
 ; GFX1010W64: ; Occupancy: 6
@@ -405,7 +405,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 9
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 10
-; GCN: ; used_88_vgprs Kernel info:
+; GCN: ; used_88_vgprs:
 ; GFX9:       ; Occupancy: 2
 ; GFX950:     ; Occupancy: 5
 ; GFX10W64:   ; Occupancy: 5
@@ -414,7 +414,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 8
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 10
-; GCN: ; used_96_vgprs Kernel info:
+; GCN: ; used_96_vgprs:
 ; GFX9:       ; Occupancy: 2
 ; GFX950:     ; Occupancy: 5
 ; GFX10W64:   ; Occupancy: 5
@@ -422,7 +422,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 8
 ; GFX1100W32: ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 10
-; GCN: ; used_100_vgprs Kernel info:
+; GCN: ; used_100_vgprs:
 ; GFX9:       ; Occupancy: 2
 ; GFX950:     ; Occupancy: 4
 ; GFX1010W64: ; Occupancy: 5
@@ -431,7 +431,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 7
 ; GFX1100W32: ; Occupancy: 12
 ; GFX1250:    ; Occupancy: 9
-; GCN: ; used_112_vgprs Kernel info:
+; GCN: ; used_112_vgprs:
 ; GFX9:       ; Occupancy: 2
 ; GFX950:     ; Occupancy: 4
 ; GFX10W64:   ; Occupancy: 4
@@ -439,7 +439,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 6
 ; GFX1100W32: ; Occupancy: 12
 ; GFX1250:    ; Occupancy: 9
-; GCN: ; used_128_vgprs Kernel info:
+; GCN: ; used_128_vgprs:
 ; GFX9:       ; Occupancy: 2
 ; GFX950:     ; Occupancy: 4
 ; GFX10W64:   ; Occupancy: 4
@@ -447,7 +447,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 5
 ; GFX1100W32: ; Occupancy: 10
 ; GFX1250:    ; Occupancy: 8
-; GCN: ; used_144_vgprs Kernel info:
+; GCN: ; used_144_vgprs:
 ; GFX9:       ; Occupancy: 1
 ; GFX950:     ; Occupancy: 3
 ; GFX10W64:   ; Occupancy: 3
@@ -455,7 +455,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 5
 ; GFX1100W32: ; Occupancy: 10
 ; GFX1250:    ; Occupancy: 7
-; GCN: ; used_168_vgprs Kernel info:
+; GCN: ; used_168_vgprs:
 ; GFX9:       ; Occupancy: 1
 ; GFX950:     ; Occupancy: 3
 ; GFX10W64:   ; Occupancy: 3
@@ -464,7 +464,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 4
 ; GFX1100W32: ; Occupancy: 9
 ; GFX1250:    ; Occupancy: 5
-; GCN: ; used_200_vgprs Kernel info:
+; GCN: ; used_200_vgprs:
 ; GFX9:       ; Occupancy: 1
 ; GFX950:     ; Occupancy: 2
 ; GFX10W64:   ; Occupancy: 2
@@ -473,7 +473,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 3
 ; GFX1100W32: ; Occupancy: 7
 ; GFX1250:    ; Occupancy: 4
-; GCN: ; used_256_vgprs Kernel info:
+; GCN: ; used_256_vgprs:
 ; GFX9:       ; Occupancy: 1
 ; GFX950:     ; Occupancy: 2
 ; GFX10W64:   ; Occupancy: 2
@@ -481,35 +481,35 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 2
 ; GFX1100W32: ; Occupancy: 5
 ; GFX1250:    ; Occupancy: 4
-; GCN: ; used_80_sgprs Kernel info:
+; GCN: ; used_80_sgprs:
 ; GFX9:       ; Occupancy: 10
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_88_sgprs Kernel info:
+; GCN: ; used_88_sgprs:
 ; GFX9:       ; Occupancy: 9
 ; GFX950:     ; Occupancy: 8
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_100_sgprs Kernel info:
+; GCN: ; used_100_sgprs:
 ; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 7
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_101_sgprs Kernel info:
+; GCN: ; used_101_sgprs:
 ; GFX9:       ; Occupancy: 7
 ; GFX950:     ; Occupancy: 7
 ; GFX1010:    ; Occupancy: 20
 ; GFX1030:    ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_lds_6552 Kernel info:
+; GCN: ; used_lds_6552:
 ; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 20
@@ -517,7 +517,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX10W32:   ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_lds_6556 Kernel info:
+; GCN: ; used_lds_6556:
 ; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 20
@@ -525,7 +525,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX10W32:   ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_lds_13112 Kernel info:
+; GCN: ; used_lds_13112:
 ; GFX9:       ; Occupancy: 8
 ; GFX950:     ; Occupancy: 8
 ; GFX1010W64: ; Occupancy: 20
@@ -533,7 +533,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX10W32:   ; Occupancy: 16
 ; GFX1100:    ; Occupancy: 16
 ; GFX1250:    ; Occupancy: 16
-; GCN: ; used_lds_8252_max_group_size_64 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_64:
 ; GFX9:       ; Occupancy: 2{{$}}
 ; GFX950:     ; Occupancy: 5{{$}}
 ; GFX10W64:   ; Occupancy: 4{{$}}
@@ -541,7 +541,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 4{{$}}
 ; GFX1100W32: ; Occupancy: 8{{$}}
 ; GFX1250:    ; Occupancy: 10{{$}}
-; GCN: ; used_lds_8252_max_group_size_96 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_96:
 ; GFX9:       ; Occupancy: 4{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX10W64:   ; Occupancy: 8{{$}}
@@ -549,7 +549,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 12{{$}}
 ; GFX1250:    ; Occupancy: 12{{$}}
-; GCN: ; used_lds_8252_max_group_size_128 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_128:
 ; GFX9:       ; Occupancy: 4{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX10W64:   ; Occupancy: 8{{$}}
@@ -557,7 +557,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 8{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
-; GCN: ; used_lds_8252_max_group_size_192 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_192:
 ; GFX9:       ; Occupancy: 6{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX10W64:   ; Occupancy: 12{{$}}
@@ -566,7 +566,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 12{{$}}
 ; GFX1100W32: ; Occupancy: 15{{$}}
 ; GFX1250:    ; Occupancy: 15{{$}}
-; GCN: ; used_lds_8252_max_group_size_256 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_256:
 ; GFX9:       ; Occupancy: 7{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX10W64:   ; Occupancy: 15{{$}}
@@ -575,14 +575,14 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1100W64: ; Occupancy: 15{{$}}
 ; GFX1100W32: ; Occupancy: 16{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
-; GCN: ; used_lds_8252_max_group_size_512 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_512:
 ; GFX9:       ; Occupancy: 10{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX1010:    ; Occupancy: 20{{$}}
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
-; GCN: ; used_lds_8252_max_group_size_1024 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_1024:
 ; GFX9:       ; Occupancy: 8{{$}}
 ; GFX950:     ; Occupancy: 8{{$}}
 ; GFX1010W32: ; Occupancy: 16{{$}}
@@ -590,7 +590,7 @@ attributes #10 = { "amdgpu-flat-work-group-size"="1,32" }
 ; GFX1030:    ; Occupancy: 16{{$}}
 ; GFX1100:    ; Occupancy: 16{{$}}
 ; GFX1250:    ; Occupancy: 16{{$}}
-; GCN: ; used_lds_8252_max_group_size_32 Kernel info:
+; GCN: ; used_lds_8252_max_group_size_32:
 ; GFX9:       ; Occupancy: 2{{$}}
 ; GFX950:     ; Occupancy: 5{{$}}
 ; GFX10:      ; Occupancy: 4{{$}}

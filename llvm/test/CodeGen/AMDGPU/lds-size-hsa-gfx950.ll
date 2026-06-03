@@ -28,7 +28,7 @@ define amdgpu_kernel void @test_lds_array_size_163840() {
   ret void
 }
 
-; GCN: ; test_lds_array_size_131076 Kernel info:
+; GCN: ; test_lds_array_size_131076:
 ; GCN: ; LDSByteSize: 131076 bytes/workgroup
-; GCN: ; test_lds_array_size_163840 Kernel info:
+; GCN: ; test_lds_array_size_163840:
 ; GCN: ; LDSByteSize: 163840 bytes/workgroup

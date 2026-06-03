@@ -54,7 +54,7 @@ define amdgpu_ps void @large_alloca_pixel_shader_inreg(i32 inreg %x, i32 inreg %
 
 attributes #0 = { nounwind  }
 
-; ALL: ; large_alloca_pixel_shader Kernel info:
+; ALL: ; large_alloca_pixel_shader:
 ; ALL: ; ScratchSize: 32772
-; ALL: ; large_alloca_pixel_shader_inreg Kernel info:
+; ALL: ; large_alloca_pixel_shader_inreg:
 ; ALL: ; ScratchSize: 32772

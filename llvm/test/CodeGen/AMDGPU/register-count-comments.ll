@@ -25,9 +25,9 @@ define amdgpu_kernel void @one_vgpr_used(ptr addrspace(1) %out, i32 %x) nounwind
 }
 
 ; SI: .section	.AMDGPU.csdata
-; SI: ; foo Kernel info:
+; SI: ; foo:
 ; SI: ; TotalNumSgprs: {{[0-9]+}}
 ; SI: ; NumVgprs: {{[0-9]+}}
-; SI: ; one_vgpr_used Kernel info:
+; SI: ; one_vgpr_used:
 ; SI: ; TotalNumSgprs: {{[0-9]+}}
 ; SI: ; NumVgprs: 1

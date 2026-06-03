@@ -34,13 +34,13 @@ define amdgpu_kernel void @kernel_calls_mfma.f32.32x32x1f32(ptr addrspace(1) %ou
   ret void
 }
 
-; CHECK: ; kernel_illegal_agpr_use_asm Kernel info:
+; CHECK: ; kernel_illegal_agpr_use_asm:
 ; CHECK: NumVgprs: 0
 ; CHECK: NumAgprs: 1
-; CHECK: ; func_illegal_agpr_use_asm Function info:
+; CHECK: ; func_illegal_agpr_use_asm:
 ; CHECK: NumVgprs: 0
 ; CHECK: NumAgprs: 1
-; CHECK: ; kernel_calls_mfma.f32.32x32x1f32 Kernel info:
+; CHECK: ; kernel_calls_mfma.f32.32x32x1f32:
 ; GFX908: NumVgprs: 5
 ; GFX908: NumAgprs: 32
 ; GFX90A: NumVgprs: 35

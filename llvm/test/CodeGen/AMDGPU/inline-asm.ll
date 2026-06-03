@@ -351,39 +351,39 @@ define void @mixed_def_sgpr_vgpr_def_asm() {
   ret void
 }
 
-; CHECK: ; inline_asm Kernel info:
+; CHECK: ; inline_asm:
 ; CHECK: codeLenInByte = {{[0-9]+}}
-; CHECK: ; inline_asm_shader Kernel info:
+; CHECK: ; inline_asm_shader:
 ; CHECK: codeLenInByte = {{[0-9]+}}
-; CHECK: ; branch_on_asm_vgpr Kernel info:
+; CHECK: ; branch_on_asm_vgpr:
 ; CHECK: codeLenInByte = {{[0-9]+}}
-; CHECK: ; branch_on_asm_sgpr Kernel info:
+; CHECK: ; branch_on_asm_sgpr:
 ; CHECK: codeLenInByte = {{[0-9]+}}
-; CHECK: ; v_cmp_asm Kernel info:
+; CHECK: ; v_cmp_asm:
 ; CHECK: codeLenInByte = {{[0-9]+}}
-; CHECK: ; code_size_inline_asm Kernel info:
+; CHECK: ; code_size_inline_asm:
 ; CHECK: codeLenInByte = 12
-; CHECK: ; code_size_inline_asm_small_inst Kernel info:
+; CHECK: ; code_size_inline_asm_small_inst:
 ; CHECK: codeLenInByte = 12
-; CHECK: ; code_size_inline_asm_2_inst Kernel info:
+; CHECK: ; code_size_inline_asm_2_inst:
 ; CHECK: codeLenInByte = 20
-; CHECK: ; code_size_inline_asm_2_inst_extra_newline Kernel info:
+; CHECK: ; code_size_inline_asm_2_inst_extra_newline:
 ; CHECK: codeLenInByte = 20
-; CHECK: ; code_size_inline_asm_0_inst Kernel info:
+; CHECK: ; code_size_inline_asm_0_inst:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_1_comment Kernel info:
+; CHECK: ; code_size_inline_asm_1_comment:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_newline_1_comment Kernel info:
+; CHECK: ; code_size_inline_asm_newline_1_comment:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_1_comment_newline Kernel info:
+; CHECK: ; code_size_inline_asm_1_comment_newline:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_2_comments_line Kernel info:
+; CHECK: ; code_size_inline_asm_2_comments_line:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_2_comments_line_nospace Kernel info:
+; CHECK: ; code_size_inline_asm_2_comments_line_nospace:
 ; CHECK: codeLenInByte = 4
-; CHECK: ; code_size_inline_asm_mixed_comments0 Kernel info:
+; CHECK: ; code_size_inline_asm_mixed_comments0:
 ; CHECK: codeLenInByte = 20
-; CHECK: ; code_size_inline_asm_mixed_comments1 Kernel info:
+; CHECK: ; code_size_inline_asm_mixed_comments1:
 ; CHECK: codeLenInByte = 20
-; CHECK: ; code_size_inline_asm_mixed_comments_operands Kernel info:
+; CHECK: ; code_size_inline_asm_mixed_comments_operands:
 ; CHECK: codeLenInByte = 20

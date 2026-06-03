@@ -60,15 +60,15 @@ define amdgpu_kernel void @kernel_no_calls_no_stack() {
   ret void
 }
 
-; GCN: ; stack_object_addrspacecast_in_kernel_no_calls Kernel info:
+; GCN: ; stack_object_addrspacecast_in_kernel_no_calls:
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 6
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
-; GCN: ; stack_object_in_kernel_no_calls Kernel info:
+; GCN: ; stack_object_in_kernel_no_calls:
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 4
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
-; GCN: ; kernel_no_calls_no_stack Kernel info:
+; GCN: ; kernel_no_calls_no_stack:
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 0
 ; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 4
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0

@@ -152,57 +152,57 @@ attributes #13 = { nounwind denormal_fpenv(ieee, float:preservesign|ieee) }
 attributes #14 = { nounwind denormal_fpenv(ieee|preservesign, float:ieee) }
 attributes #15 = { nounwind denormal_fpenv(preservesign|ieee, float:ieee) }
 
-; GCN: ; test_default_si Kernel info:
+; GCN: ; test_default_si:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCN: ; test_default_vi Kernel info:
+; GCN: ; test_default_vi:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCN: ; test_f64_denormals Kernel info:
+; GCN: ; test_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCNL: ; test_f32_denormals Kernel info:
+; GCNL: ; test_f32_denormals:
 ; GCNL: FloatMode: 48
 ; GCN: IeeeMode: 1
-; GCN: ; test_f32_f64_denormals Kernel info:
+; GCN: ; test_f32_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCN: ; test_no_denormals Kernel info:
+; GCN: ; test_no_denormals:
 ; GCN: FloatMode: 0
 ; GCN: IeeeMode: 1
-; GCN: ; test_f16_f64_denormals Kernel info:
+; GCN: ; test_f16_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCN: ; test_no_f16_f64_denormals Kernel info:
+; GCN: ; test_no_f16_f64_denormals:
 ; GCN: FloatMode: 48
 ; GCN: IeeeMode: 1
-; GCN: ; test_f32_f16_f64_denormals Kernel info:
+; GCN: ; test_f32_f16_f64_denormals:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 1
-; GCN: ; test_just_f32_attr_flush Kernel info:
+; GCN: ; test_just_f32_attr_flush:
 ; GCN: FloatMode: 192
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_all_outputs Kernel info:
+; GCN: ; test_flush_all_outputs:
 ; GCN: FloatMode: 80
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_all_inputs Kernel info:
+; GCN: ; test_flush_all_inputs:
 ; GCN: FloatMode: 160
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_f32_inputs Kernel info:
+; GCN: ; test_flush_f32_inputs:
 ; GCN: FloatMode: 224
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_f32_outputs Kernel info:
+; GCN: ; test_flush_f32_outputs:
 ; GCN: FloatMode: 208
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_f64_inputs Kernel info:
+; GCN: ; test_flush_f64_inputs:
 ; GCN: FloatMode: 176
 ; GCN: IeeeMode: 1
-; GCN: ; test_flush_f64_outputs Kernel info:
+; GCN: ; test_flush_f64_outputs:
 ; GCN: FloatMode: 112
 ; GCN: IeeeMode: 1
-; GCN: ; kill_gs_const Kernel info:
+; GCN: ; kill_gs_const:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
-; GCN: ; kill_vcc_implicit_def Kernel info:
+; GCN: ; kill_vcc_implicit_def:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0

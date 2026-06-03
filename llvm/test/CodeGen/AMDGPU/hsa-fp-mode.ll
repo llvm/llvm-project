@@ -94,21 +94,21 @@ attributes #8 = { nounwind "amdgpu-dx10-clamp"="false" "amdgpu-ieee"="false" "ta
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
-; GCN: ; test_default_ci Kernel info:
+; GCN: ; test_default_ci:
 ; GCN: FloatMode: 240
-; GCN: ; test_default_vi Kernel info:
+; GCN: ; test_default_vi:
 ; GCN: FloatMode: 240
-; GCN: ; test_f64_denormals Kernel info:
+; GCN: ; test_f64_denormals:
 ; GCN: FloatMode: 192
-; GCN: ; test_f32_denormals Kernel info:
+; GCN: ; test_f32_denormals:
 ; GCN: FloatMode: 48
-; GCN: ; test_f32_f64_denormals Kernel info:
+; GCN: ; test_f32_f64_denormals:
 ; GCN: FloatMode: 240
-; GCN: ; test_no_denormals Kernel info:
+; GCN: ; test_no_denormals:
 ; GCN: FloatMode: 0
-; GCN: ; test_no_dx10_clamp_vi Kernel info:
+; GCN: ; test_no_dx10_clamp_vi:
 ; GCN: FloatMode: 240
-; GCN: ; test_no_ieee_mode_vi Kernel info:
+; GCN: ; test_no_ieee_mode_vi:
 ; GCN: FloatMode: 240
-; GCN: ; test_no_ieee_mode_no_dx10_clamp_vi Kernel info:
+; GCN: ; test_no_ieee_mode_no_dx10_clamp_vi:
 ; GCN: FloatMode: 240

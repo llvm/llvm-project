@@ -274,11 +274,11 @@ attributes #1 = { nounwind }
 ; ASSUME1024: {{.*}}
 ; DEFAULTSIZE: {{.*}}
 
-; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align4 Kernel info:
+; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; DEFAULTSIZE: ; ScratchSize: 16
-; ASSUME1024: ; kernel_non_entry_block_static_alloca_uniformly_reached_align4 Kernel info:
+; ASSUME1024: ; kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; ASSUME1024: ; ScratchSize: 1040
-; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align64 Kernel info:
+; DEFAULTSIZE: ; kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; DEFAULTSIZE: ; ScratchSize: 64
-; ASSUME1024: ; kernel_non_entry_block_static_alloca_uniformly_reached_align64 Kernel info:
+; ASSUME1024: ; kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; ASSUME1024: ; ScratchSize: 1088

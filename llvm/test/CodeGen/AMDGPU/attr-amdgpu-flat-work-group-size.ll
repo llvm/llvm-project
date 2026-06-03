@@ -126,22 +126,22 @@ attributes #3 = {"amdgpu-flat-work-group-size"="1024,1024"}
 ; HSAMD:  .max_flat_workgroup_size: 1024
 ; HSAMD:  .name: min_1024_max_1024
 
-; CHECK: ; min_64_max_64 Kernel info:
+; CHECK: ; min_64_max_64:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; min_64_max_128 Kernel info:
+; CHECK: ; min_64_max_128:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; min_128_max_128 Kernel info:
+; CHECK: ; min_128_max_128:
 ; CHECK: SGPRBlocks: 8
 ; CHECK: VGPRBlocks: 7
 ; CHECK: NumSGPRsForWavesPerEU: 65
 ; CHECK: NumVGPRsForWavesPerEU: 29
-; CHECK: ; min_1024_max_1024 Kernel info:
+; CHECK: ; min_1024_max_1024:
 ; CHECK: SGPRBlocks: 8
 ; CHECK: VGPRBlocks: 10
 ; CHECK: NumSGPRsForWavesPerEU: 65

@@ -1033,33 +1033,33 @@ body: |
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 ...
 
-# ASM: ; high_vgprs Function info:
+# ASM: ; high_vgprs:
 # ASM: NumVgprs: 1024
-# ASM: ; vopd Function info:
+# ASM: ; vopd:
 # ASM: NumVgprs: 777
-# ASM: ; fmaak_fmamk Function info:
+# ASM: ; fmaak_fmamk:
 # ASM: NumVgprs: 358
-# ASM: ; fmac Function info:
+# ASM: ; fmac:
 # ASM: NumVgprs: 258
-# ASM: ; rev_opcodes Function info:
+# ASM: ; rev_opcodes:
 # ASM: NumVgprs: 513
-# ASM: ; minimal_mode_change Function info:
+# ASM: ; minimal_mode_change:
 # ASM: NumVgprs: 532
-# ASM: ; terminators Function info:
+# ASM: ; terminators:
 # ASM: NumVgprs: 257
-# ASM: ; control_flow Function info:
+# ASM: ; control_flow:
 # ASM: NumVgprs: 259
-# ASM: ; inline_asm Function info:
+# ASM: ; inline_asm:
 # ASM: NumVgprs: 257
-# ASM: ; bundle Function info:
+# ASM: ; bundle:
 # ASM: NumVgprs: 257
-# ASM: ; hard_clauses Function info:
+# ASM: ; hard_clauses:
 # ASM: NumVgprs: 259
-# ASM: ; pseudo Function info:
+# ASM: ; pseudo:
 # ASM: NumVgprs: 1
-# ASM: ; ld_scale Function info:
+# ASM: ; ld_scale:
 # ASM: NumVgprs: 516
-# ASM: ; commute_no_piggyback Function info:
+# ASM: ; commute_no_piggyback:
 # ASM: NumVgprs: 514
-# ASM: ; redundant_xcnt Function info:
+# ASM: ; redundant_xcnt:
 # ASM: NumVgprs: 258

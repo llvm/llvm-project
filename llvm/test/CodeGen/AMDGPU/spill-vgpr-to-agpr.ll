@@ -97,12 +97,12 @@ define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %
   ret void
 }
 
-; GFX908: ; max_11_vgprs_used_9a Kernel info:
+; GFX908: ; max_11_vgprs_used_9a:
 ; GFX908: NumVgprs: 10
 ; GFX908: ScratchSize: 0
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
-; GFX908: ; max_11_vgprs_used_1a_partial_spill Kernel info:
+; GFX908: ; max_11_vgprs_used_1a_partial_spill:
 ; GFX908: NumVgprs: 10
 ; GFX908: ScratchSize: 12
 ; GFX908: VGPRBlocks: 2

@@ -25,7 +25,7 @@ define amdgpu_kernel void @store_v5i32(ptr addrspace(3) %out, <5 x i32> %a) noun
   ret void
 }
 
-; GCN: ; store_v3i32 Kernel info:
+; GCN: ; store_v3i32:
 ; GCN: ScratchSize: 0
-; GCN: ; store_v5i32 Kernel info:
+; GCN: ; store_v5i32:
 ; GCN: ScratchSize: 0

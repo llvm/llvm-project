@@ -174,67 +174,67 @@ entry:
 }
 attributes #12 = {"amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2,10" "amdgpu-lds-size"="16384"}
 
-; CHECK: ; empty_exactly_1 Kernel info:
+; CHECK: ; empty_exactly_1:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 32
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 129
-; CHECK: ; empty_exactly_5 Kernel info:
+; CHECK: ; empty_exactly_5:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 10
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
-; CHECK: ; empty_exactly_10 Kernel info:
+; CHECK: ; empty_exactly_10:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; empty_at_least_1 Kernel info:
+; CHECK: ; empty_at_least_1:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; empty_at_least_5 Kernel info:
+; CHECK: ; empty_at_least_5:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; empty_at_least_10 Kernel info:
+; CHECK: ; empty_at_least_10:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; empty_at_most_5 Kernel info:
+; CHECK: ; empty_at_most_5:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 10
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 41
-; CHECK: ; empty_at_most_10 Kernel info:
+; CHECK: ; empty_at_most_10:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; empty_between_5_and_10 Kernel info:
+; CHECK: ; empty_between_5_and_10:
 ; CHECK: SGPRBlocks: 0
 ; CHECK: VGPRBlocks: 0
 ; CHECK: NumSGPRsForWavesPerEU: 1
 ; CHECK: NumVGPRsForWavesPerEU: 1
-; CHECK: ; exactly_10 Kernel info:
+; CHECK: ; exactly_10:
 ; CHECK: SGPRBlocks: 3
 ; CHECK: VGPRBlocks: 5
 ; CHECK: NumSGPRsForWavesPerEU: 30
 ; CHECK: NumVGPRsForWavesPerEU: 24
-; CHECK: ; empty_workitems_exactly_256_waves_exactly_2 Kernel info:
+; CHECK: ; empty_workitems_exactly_256_waves_exactly_2:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 21
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 85
-; CHECK: ; empty_at_least_2_lds_limited Kernel info:
+; CHECK: ; empty_at_least_2_lds_limited:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 12
 ; CHECK: NumSGPRsForWavesPerEU: 102
 ; CHECK: NumVGPRsForWavesPerEU: 49
-; CHECK: ; empty_at_least_2_lds_limited_max_above_achievable Kernel info:
+; CHECK: ; empty_at_least_2_lds_limited_max_above_achievable:
 ; CHECK: SGPRBlocks: 12
 ; CHECK: VGPRBlocks: 12
 ; CHECK: NumSGPRsForWavesPerEU: 102

@@ -344,40 +344,40 @@ attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"="+wavefron
 attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"="+wavefrontsize64,+cumode" }
 attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"="+wavefrontsize64,+cumode" }
 
-; CHECK: ; _amdgpu_ps_1_arg Kernel info:
+; CHECK: ; _amdgpu_ps_1_arg:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_3_arg Kernel info:
+; CHECK: ; _amdgpu_ps_3_arg:
 ; CHECK: NumVgprs: 6
-; CHECK: ; _amdgpu_ps_2_arg_gap Kernel info:
+; CHECK: ; _amdgpu_ps_2_arg_gap:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_2_arg_no_pack Kernel info:
+; CHECK: ; _amdgpu_ps_2_arg_no_pack:
 ; CHECK: NumVgprs: 6
-; CHECK: ; _amdgpu_ps_all_arg Kernel info:
+; CHECK: ; _amdgpu_ps_all_arg:
 ; CHECK: NumVgprs: 24
-; CHECK: ; _amdgpu_ps_all_arg_extra_unused Kernel info:
+; CHECK: ; _amdgpu_ps_all_arg_extra_unused:
 ; CHECK: NumVgprs: 26
-; CHECK: ; _amdgpu_ps_all_arg_extra Kernel info:
+; CHECK: ; _amdgpu_ps_all_arg_extra:
 ; CHECK: NumVgprs: 26
 ; CHECK: NumVGPRsForWavesPerEU: 26
-; CHECK: ; _amdgpu_ps_all_unused Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_all_unused_ia0 Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused_ia0:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_all_unused_extra_used Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused_extra_used:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_part_unused_extra_used Kernel info:
+; CHECK: ; _amdgpu_ps_part_unused_extra_used:
 ; CHECK: NumVgprs: 5
-; CHECK: ; _amdgpu_ps_part_unused_extra_unused Kernel info:
+; CHECK: ; _amdgpu_ps_part_unused_extra_unused:
 ; CHECK: NumVgprs: 7
-; CHECK: ; _amdgpu_ps_all_unused_extra_unused Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused_extra_unused:
 ; CHECK: NumVgprs: 4
-; CHECK: ; _amdgpu_ps_all_unused_extra_used_no_packing Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused_extra_used_no_packing:
 ; CHECK: NumVgprs: 26
-; CHECK: ; _amdgpu_ps_all_unused_extra_unused_no_packing Kernel info:
+; CHECK: ; _amdgpu_ps_all_unused_extra_unused_no_packing:
 ; CHECK: NumVgprs: 26
-; CHECK: ; _amdgpu_ps_some_unused_arg_extra Kernel info:
+; CHECK: ; _amdgpu_ps_some_unused_arg_extra:
 ; CHECK: NumVgprs: 24
 ; CHECK: NumVGPRsForWavesPerEU: 24
-; CHECK: ; _amdgpu_ps_some_unused_no_packing_arg_extra Kernel info:
+; CHECK: ; _amdgpu_ps_some_unused_no_packing_arg_extra:
 ;CHECK: NumVgprs: 26
 ;CHECK: NumVGPRsForWavesPerEU: 26

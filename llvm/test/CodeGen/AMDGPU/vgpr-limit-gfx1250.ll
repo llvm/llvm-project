@@ -570,14 +570,14 @@ define amdgpu_kernel void @use1024vgprs_codegen(ptr %p) #1281 {
 attributes #2561 = { nounwind "amdgpu-flat-work-group-size"="256,256" "amdgpu-waves-per-eu"="1" }
 attributes #1281 = { nounwind "amdgpu-flat-work-group-size"="128,128" "amdgpu-waves-per-eu"="1" }
 
-; GCN: ; k256_w1_asm Kernel info:
+; GCN: ; k256_w1_asm:
 ; GFX1250: NumVgprs: 256
 ; GFX1250-NOT: NumAgprs:
 ; GFX1250-NOT: TotalNumVgprs:
 ; GFX1250: VGPRBlocks: 15
-; GCN: ; use512vgprs_codegen Kernel info:
+; GCN: ; use512vgprs_codegen:
 ; GFX1250: NumVgprs: 482
 ; GFX1250: VGPRBlocks: 30
-; GCN: ; use1024vgprs_codegen Kernel info:
+; GCN: ; use1024vgprs_codegen:
 ; GFX1250: NumVgprs: 998
 ; GFX1250: VGPRBlocks: 62

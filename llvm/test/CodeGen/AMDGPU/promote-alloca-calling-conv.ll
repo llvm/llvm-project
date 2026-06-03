@@ -90,11 +90,11 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; promote_alloca_shaders (Kernel info):
 ; ASM: ; ScratchSize: 24
 ; promote_to_vector_call_c (Function info):
-; ASM: ; promote_to_vector_call_c Function info:
+; ASM: ; promote_to_vector_call_c:
 ; ASM-NOT: LDSByteSize
 ; ASM: ; ScratchSize: 12
 ; no_promote_to_lds_c (Function info):
-; ASM: ; no_promote_to_lds_c Function info:
+; ASM: ; no_promote_to_lds_c:
 ; ASM-NOT: LDSByteSize
 ; ASM: ; ScratchSize: 24
 ; call_private (Kernel info):

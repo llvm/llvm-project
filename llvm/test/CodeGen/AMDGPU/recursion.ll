@@ -84,9 +84,9 @@ define amdgpu_kernel void @kernel_calls_tail_recursive_with_stack() {
   ret void
 }
 
-; CHECK: ; recursive Function info:
+; CHECK: ; recursive:
 ; CHECK: ScratchSize: 16
-; CHECK: ; tail_recursive Function info:
+; CHECK: ; tail_recursive:
 ; CHECK: ScratchSize: 0
 
 !llvm.module.flags = !{!0}

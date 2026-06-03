@@ -31,11 +31,11 @@ define amdgpu_ps void @buffer_fat_ptr(ptr addrspace(7) inreg %p) {
   ret void
 }
 
-; CHECK: ; vec_of_i1 Kernel info:
+; CHECK: ; vec_of_i1:
 ; CHECK:  TotalNumSgprs: 8
-; CHECK: ; vec_of_i8 Kernel info:
+; CHECK: ; vec_of_i8:
 ; CHECK:  TotalNumSgprs: 4
-; CHECK: ; vec_of_16_bit_ty Kernel info:
+; CHECK: ; vec_of_16_bit_ty:
 ; CHECK: TotalNumSgprs: 3
-; CHECK: ; buffer_fat_ptr Kernel info:
+; CHECK: ; buffer_fat_ptr:
 ; CHECK: TotalNumSgprs: 5

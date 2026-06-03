@@ -38,13 +38,13 @@ define amdgpu_kernel void @force_align256(<64 x i32>) {
   ret void
 }
 
-; CHECK: ; no_args Kernel info:
+; CHECK: ; no_args:
 ; CHECK: ScratchSize: 8{{$}}
-; CHECK: ; force_align32 Kernel info:
+; CHECK: ; force_align32:
 ; CHECK: ScratchSize: 8{{$}}
-; CHECK: ; force_align64 Kernel info:
+; CHECK: ; force_align64:
 ; CHECK: ScratchSize: 8{{$}}
-; CHECK: ; force_align128 Kernel info:
+; CHECK: ; force_align128:
 ; CHECK: ScratchSize: 8{{$}}
-; CHECK: ; force_align256 Kernel info:
+; CHECK: ; force_align256:
 ; CHECK: ScratchSize: 8{{$}}

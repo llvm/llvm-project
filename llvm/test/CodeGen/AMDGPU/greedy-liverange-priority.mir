@@ -99,9 +99,9 @@ body: |
     S_ENDPGM 0
 ...
 
-# GCN: ; test1 Function info:
+# GCN: ; test1:
 # OLD: NumVgprs: 11{{$}}
 # NEW: NumVgprs: 7{{$}}
-# GCN: ; test2 Function info:
+# GCN: ; test2:
 # OLD: NumVgprs: 7{{$}}
 # NEW: NumVgprs: 11{{$}}

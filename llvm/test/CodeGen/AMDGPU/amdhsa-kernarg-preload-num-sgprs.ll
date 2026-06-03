@@ -85,15 +85,15 @@ define amdgpu_kernel void @many__i32(
 
 attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
-; ASM: ; amdhsa_kernarg_preload_4_implicit_6 Kernel info:
+; ASM: ; amdhsa_kernarg_preload_4_implicit_6:
 ; ASM: ; TotalNumSgprs: 18
 ; ASM: ; NumSGPRsForWavesPerEU: 18
-; ASM: ; amdhsa_kernarg_preload_8_implicit_2 Kernel info:
+; ASM: ; amdhsa_kernarg_preload_8_implicit_2:
 ; ASM: ; TotalNumSgprs: 16
 ; ASM: ; NumSGPRsForWavesPerEU: 16
-; ASM: ; amdhsa_kernarg_preload_1_implicit_2 Kernel info:
+; ASM: ; amdhsa_kernarg_preload_1_implicit_2:
 ; ASM: ; TotalNumSgprs: 9
 ; ASM: ; NumSGPRsForWavesPerEU: 9
-; ASM: ; amdhsa_kernarg_preload_0_implicit_2 Kernel info:
+; ASM: ; amdhsa_kernarg_preload_0_implicit_2:
 ; ASM: ; TotalNumSgprs: 6
 ; ASM: ; NumSGPRsForWavesPerEU: 6

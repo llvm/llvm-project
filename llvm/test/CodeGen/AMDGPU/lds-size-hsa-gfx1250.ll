@@ -65,15 +65,15 @@ define amdgpu_kernel void @test_lds_array_i32() {
   ret void
 }
 
-; GCN: ; test_lds_i8 Kernel info:
+; GCN: ; test_lds_i8:
 ; GCN: ; LDSByteSize: 1 bytes/workgroup
-; GCN: ; test_lds_i16 Kernel info:
+; GCN: ; test_lds_i16:
 ; GCN: ; LDSByteSize: 2 bytes/workgroup
-; GCN: ; test_lds_i32 Kernel info:
+; GCN: ; test_lds_i32:
 ; GCN: ; LDSByteSize: 4 bytes/workgroup
-; GCN: ; test_lds_array_i8 Kernel info:
+; GCN: ; test_lds_array_i8:
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup
-; GCN: ; test_lds_array_i16 Kernel info:
+; GCN: ; test_lds_array_i16:
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup
-; GCN: ; test_lds_array_i32 Kernel info:
+; GCN: ; test_lds_array_i32:
 ; GCN: ; LDSByteSize: 327680 bytes/workgroup

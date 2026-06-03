@@ -126,19 +126,19 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind noinline "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #2 = { norecurse }
 
-; GCN: ; kernel Kernel info:
+; GCN: ; kernel:
 ; GCN: ; NumVgprs: 3
-; GCN: ; func Function info:
+; GCN: ; func:
 ; GCN: ; NumVgprs: 8
-; GCN: ; kernel_call Kernel info:
+; GCN: ; kernel_call:
 ; GCN: ; TotalNumSgprs: 37
 ; GCN: ; NumVgprs: 9
-; GCN: ; func_regular_call Function info:
+; GCN: ; func_regular_call:
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10
-; GCN: ; func_tail_call Function info:
+; GCN: ; func_tail_call:
 ; GCN: ; TotalNumSgprs: 32
 ; GCN: ; NumVgprs: 8
-; GCN: ; func_call_tail_call Function info:
+; GCN: ; func_call_tail_call:
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 10

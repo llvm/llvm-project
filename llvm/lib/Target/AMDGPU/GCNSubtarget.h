@@ -313,6 +313,12 @@ public:
     return getGeneration() >= AMDGPUSubtarget::GFX10;
   }
 
+  /// \returns true if the target has the COMPUTE_PGM_RSRC3 register.
+  bool hasPGMRSrc3() const {
+    return getGeneration() >= AMDGPUSubtarget::GFX10 || hasGFX90AInsts() ||
+           hasGFX1250Insts();
+  }
+
   /// \returns If target supports ds_read/write_b128 and user enables generation
   /// of ds_read/write_b128.
   bool useDS128() const { return HasCIInsts && EnableDS128; }

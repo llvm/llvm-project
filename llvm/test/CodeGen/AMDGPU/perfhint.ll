@@ -473,29 +473,29 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 
-; GCN: ; test_membound Kernel info:
+; GCN: ; test_membound:
 ; GCN: MemoryBound: 1
 ; GCN: WaveLimiterHint : 1
-; GCN: ; test_membound_1 Kernel info:
+; GCN: ; test_membound_1:
 ; GCN: MemoryBound: 1
-; GCN: ; test_large_stride Kernel info:
+; GCN: ; test_large_stride:
 ; GCN: MemoryBound: 0
 ; GCN: WaveLimiterHint : 1
-; GCN: ; test_indirect Kernel info:
+; GCN: ; test_indirect:
 ; GCN: MemoryBound: 1
 ; GCN: WaveLimiterHint : 1
-; GCN: ; test_indirect_through_phi Kernel info:
-; GCN: MemoryBound: 0
-; GCN: WaveLimiterHint : 0
-; GCN: ; kernel_call_test_membound_func Kernel info:
-; GCN: MemoryBound: 1
-; GCN: WaveLimiterHint : 1
-; GCN: ; kernel_indirect_call Kernel info:
+; GCN: ; test_indirect_through_phi:
 ; GCN: MemoryBound: 0
 ; GCN: WaveLimiterHint : 0
-; GCN: ; kernel_call_maybe_recursive_test_membound_func Kernel info:
+; GCN: ; kernel_call_test_membound_func:
 ; GCN: MemoryBound: 1
 ; GCN: WaveLimiterHint : 1
-; GCN: ; kernel_call_mutually_recursive_test_membound_func_0 Kernel info:
+; GCN: ; kernel_indirect_call:
+; GCN: MemoryBound: 0
+; GCN: WaveLimiterHint : 0
+; GCN: ; kernel_call_maybe_recursive_test_membound_func:
+; GCN: MemoryBound: 1
+; GCN: WaveLimiterHint : 1
+; GCN: ; kernel_call_mutually_recursive_test_membound_func_0:
 ; GCN: MemoryBound: 1
 ; GCN: WaveLimiterHint : 1

@@ -61,19 +61,19 @@ bb:
   ret void
 }
 
-; CHECK: ; kernel_32_agprs Kernel info:
+; CHECK: ; kernel_32_agprs:
 ; CHECK:      NumAgprs:       32
-; CHECK: ; kernel_0_agprs Kernel info:
+; CHECK: ; kernel_0_agprs:
 ; CHECK:      NumAgprs:       0
-; CHECK: ; kernel_40_vgprs Kernel info:
+; CHECK: ; kernel_40_vgprs:
 ; CHECK:      NumAgprs:       16
-; CHECK: ; kernel_max_gprs Kernel info:
+; CHECK: ; kernel_max_gprs:
 ; CHECK:      NumAgprs:       256
-; CHECK: ; func_32_agprs Function info:
+; CHECK: ; func_32_agprs:
 ; CHECK:      NumAgprs:       32
-; CHECK: ; kernel_call_func_32_agprs Kernel info:
+; CHECK: ; kernel_call_func_32_agprs:
 ; CHECK:      NumAgprs:       32
-; CHECK: ; kernel_call_undef_func Kernel info:
+; CHECK: ; kernel_call_undef_func:
 ; CHECK:      NumAgprs:       32
 ; CHECK:      .set amdgpu.max_num_agpr, 32
 

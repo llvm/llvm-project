@@ -1597,7 +1597,7 @@ attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
-; HSA: ; use_group_to_flat_addrspacecast Kernel info:
+; HSA: ; use_group_to_flat_addrspacecast:
 ; HSA: NumSgprs: {{[0-9]+}}
-; HSA: ; use_private_to_flat_addrspacecast Kernel info:
+; HSA: ; use_private_to_flat_addrspacecast:
 ; HSA: NumSgprs: {{[0-9]+}}

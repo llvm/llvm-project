@@ -95,7 +95,7 @@ bb:
   ret void
 }
 
-; GCN: ; kernel_32_agprs Kernel info:
+; GCN: ; kernel_32_agprs:
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
@@ -108,7 +108,7 @@ bb:
 ; GCN:    Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 2
 
-; GCN: ; kernel_0_agprs Kernel info:
+; GCN: ; kernel_0_agprs:
 ; GCN:    NumVgprs: 1
 ; GCN:    NumAgprs: 0
 ; GCN:    TotalNumVgprs: 1
@@ -119,7 +119,7 @@ bb:
 ; GFX90A: Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 0
 
-; GCN: ; kernel_40_vgprs Kernel info:
+; GCN: ; kernel_40_vgprs:
 ; GCN:    NumVgprs: 40
 ; GCN:    NumAgprs: 16
 ; GFX908: TotalNumVgprs: 40
@@ -133,24 +133,24 @@ bb:
 ; GFX90A: Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 9
 
-; GCN: ; func_32_agprs Function info:
+; GCN: ; func_32_agprs:
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 44
 
-; GCN: ; func_32_vgprs Function info:
+; GCN: ; func_32_vgprs:
 ; GCN:    NumVgprs: 32
 ; GCN:    NumAgprs: 9
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 41
 
-; GCN: ; func_0_agprs Kernel info:
+; GCN: ; func_0_agprs:
 ; GCN:    NumVgprs: 1
 ; GCN:    NumAgprs: 0
 ; GCN:    TotalNumVgprs: 1
 
-; GCN: ; kernel_max_gprs Kernel info:
+; GCN: ; kernel_max_gprs:
 ; GCN:    NumVgprs: 256
 ; GCN:    NumAgprs: 256
 ; GFX908: TotalNumVgprs: 256
@@ -163,7 +163,7 @@ bb:
 ; GCN:    Occupancy: 1
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 63
 
-; GCN: ; kernel_call_func_32_agprs Kernel info:
+; GCN: ; kernel_call_func_32_agprs:
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
@@ -176,13 +176,13 @@ bb:
 ; GCN:    Occupancy: 8
 ; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 2
 
-; GCN: ; func_call_func_32_agprs Function info:
+; GCN: ; func_call_func_32_agprs:
 ; GCN:    NumVgprs: 9
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32
 ; GFX90A: TotalNumVgprs: 44
 
-; GCN: ; kernel_call_undef_func Kernel info:
+; GCN: ; kernel_call_undef_func:
 ; GCN:    NumVgprs: 32
 ; GCN:    NumAgprs: 32
 ; GFX908: TotalNumVgprs: 32

@@ -18,7 +18,7 @@ define amdgpu_kernel void @empty_function_unreachable() #0 {
 
 attributes #0 = { nounwind }
 
-; SI: ; empty_function_ret Kernel info:
+; SI: ; empty_function_ret:
 ; SI: codeLenInByte = 4
-; SI: ; empty_function_unreachable Kernel info:
+; SI: ; empty_function_unreachable:
 ; SI: codeLenInByte = 0

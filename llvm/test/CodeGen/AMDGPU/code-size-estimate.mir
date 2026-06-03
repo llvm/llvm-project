@@ -129,17 +129,17 @@ body:             |
     S_ENDPGM 0
 ...
 
-# CHECK: ; indirect_mov Function info:
+# CHECK: ; indirect_mov:
 # CHECK: ; codeLenInByte = 12
-# CHECK: ; meta Function info:
+# CHECK: ; meta:
 # CHECK: ; codeLenInByte = 4
-# CHECK: ; wait_asyncmark_meta Function info:
+# CHECK: ; wait_asyncmark_meta:
 # CHECK: ; codeLenInByte = 4
-# CHECK: ; align4 Function info:
+# CHECK: ; align4:
 # CHECK: ; codeLenInByte = 16
-# CHECK: ; align8 Function info:
+# CHECK: ; align8:
 # CHECK: ; codeLenInByte = 20
-# CHECK: ; align16 Function info:
+# CHECK: ; align16:
 # CHECK: ; codeLenInByte = 20
-# CHECK: ; align32 Function info:
+# CHECK: ; align32:
 # CHECK: ; codeLenInByte = 36

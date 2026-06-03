@@ -66,7 +66,7 @@ entry:
   ret void
 }
 
-; HSA: ; {{.*}} Function info:
+; HSA: ; {{.*}}:
 ; HSA-NOT: COMPUTE_PGM_RSRC2
 
 !llvm.module.flags = !{!0}

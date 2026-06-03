@@ -1519,5 +1519,5 @@ attributes #2 = { nounwind "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
-; GCN: ; use_workitem_id_x Function info:
+; GCN: ; use_workitem_id_x:
 ; GCN: ScratchSize: 0

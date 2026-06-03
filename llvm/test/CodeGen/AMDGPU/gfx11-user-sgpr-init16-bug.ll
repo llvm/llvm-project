@@ -197,15 +197,15 @@ attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-ld
 attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
-; GCN: ; minimal_kernel_inputs Kernel info:
+; GCN: ; minimal_kernel_inputs:
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
-; GCN: ; minimal_kernel_inputs_with_stack Kernel info:
+; GCN: ; minimal_kernel_inputs_with_stack:
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 0
-; GCN: ; queue_ptr Kernel info:
+; GCN: ; queue_ptr:
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 15
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 4
-; GCN: ; all_inputs Kernel info:
+; GCN: ; all_inputs:
 ; WORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 13
 ; NOWORKAROUND: ; COMPUTE_PGM_RSRC2:USER_SGPR: 8

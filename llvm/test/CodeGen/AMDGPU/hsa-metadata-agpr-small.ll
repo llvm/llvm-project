@@ -17,7 +17,7 @@ bb:
 }
 
 ; CHECK: .section .AMDGPU.csdata
-; CHECK: ; kernel_32_agprs Kernel info:
+; CHECK: ; kernel_32_agprs:
 ; GFX908:   ; NumVgprs: 9
 ; GFX908:   ; NumAgprs: 32
 ; GFX908:   ; TotalNumVgprs: 32
@@ -28,7 +28,7 @@ bb:
 
 ; GFX801:   ; NumVgprs: 9
 
-; CHECK: ; kernel_40_vgprs Kernel info:
+; CHECK: ; kernel_40_vgprs:
 ; GFX908:   ; NumVgprs: 40
 ; GFX908:   ; NumAgprs: 16
 ; GFX908:   ; TotalNumVgprs: 40

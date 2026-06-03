@@ -123,7 +123,7 @@ attributes #0 = { nounwind }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
-; GCN: ; no_vcc_no_flat Kernel info:
+; GCN: ; no_vcc_no_flat:
 ; CI: ; TotalNumSgprs: 8
 ; VI-NOXNACK: ; TotalNumSgprs: 8
 ; HSA-VI-NOXNACK: ; TotalNumSgprs: 8
@@ -134,7 +134,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 8
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 8
 
-; GCN: ; vcc_no_flat Kernel info:
+; GCN: ; vcc_no_flat:
 ; CI: ; TotalNumSgprs: 10
 ; VI-NOXNACK: ; TotalNumSgprs: 10
 ; HSA-VI-NOXNACK: ; TotalNumSgprs: 10
@@ -145,7 +145,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 10
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 10
 
-; GCN: ; no_vcc_flat Kernel info:
+; GCN: ; no_vcc_flat:
 ; CI: ; TotalNumSgprs: 12
 ; VI-NOXNACK: ; TotalNumSgprs: 14
 ; HSA-VI-NOXNACK: ; TotalNumSgprs: 24
@@ -156,7 +156,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 8
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 8
 
-; GCN: ; vcc_flat Kernel info:
+; GCN: ; vcc_flat:
 ; CI: ; TotalNumSgprs: 12
 ; VI-NOXNACK: ; TotalNumSgprs: 14
 ; HSA-VI-NOXNACK: ; TotalNumSgprs: 24
@@ -167,7 +167,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 10
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 10
 
-; GCN: ; use_flat_scr Kernel info:
+; GCN: ; use_flat_scr:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; HSA-VI-NOXNACK: NumSgprs: 24
@@ -178,7 +178,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 0
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 0
 
-; GCN: ; use_flat_scr_lo Kernel info:
+; GCN: ; use_flat_scr_lo:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; HSA-VI-NOXNACK: NumSgprs: 24
@@ -189,7 +189,7 @@ attributes #0 = { nounwind }
 ; GFX10-ARCH-FLAT-NOXNACK: ; TotalNumSgprs: 0
 ; GFX10-ARCH-FLAT-XNACK: ; TotalNumSgprs: 0
 
-; GCN: ; use_flat_scr_hi Kernel info:
+; GCN: ; use_flat_scr_hi:
 ; CI: NumSgprs: 4
 ; VI-NOXNACK: NumSgprs: 6
 ; HSA-VI-NOXNACK: NumSgprs: 24

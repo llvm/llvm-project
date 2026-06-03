@@ -191,7 +191,7 @@ st:
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; GCN: ; max_11_vgprs Kernel info:
+; GCN: ; max_11_vgprs:
 ; GFX900: NumVgprs: 11
 ; GFX908: NumVgprs: 10
 ; GFX900: ScratchSize: 0
@@ -199,13 +199,13 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN:    VGPRBlocks: 2
 ; GFX900: NumVGPRsForWavesPerEU: 11
 ; GFX908: NumVGPRsForWavesPerEU: 10
-; GCN: ; max_10_vgprs_spill_v32 Kernel info:
+; GCN: ; max_10_vgprs_spill_v32:
 ; GFX908: NumVgprs: 10
 ; GFX900: ScratchSize: 100
 ; GFX908: ScratchSize: 68
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
-; GCN: ; max_256_vgprs_spill_9x32 Kernel info:
+; GCN: ; max_256_vgprs_spill_9x32:
 ; GFX900: NumVgprs: 256
 ; GFX900: ScratchSize: 132
 ; GFX908: NumVgprs: 252
@@ -214,7 +214,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GFX908:    VGPRBlocks: 62
 ; GFX900:    NumVGPRsForWavesPerEU: 256
 ; GFX908:    NumVGPRsForWavesPerEU: 252
-; GCN: ; max_256_vgprs_spill_9x32_2bb Kernel info:
+; GCN: ; max_256_vgprs_spill_9x32_2bb:
 ; GFX900: NumVgprs: 256
 ; GFX908: NumVgprs: 254
 ; GFX900: ScratchSize: 132

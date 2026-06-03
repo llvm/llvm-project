@@ -227,9 +227,9 @@ define amdgpu_kernel void @nocall_false_sharing() {
   ret void
 }
 
-; CHECK: ; nocall_ideal Kernel info:
+; CHECK: ; nocall_ideal:
 ; CHECK: ; LDSByteSize: 4 bytes
-; CHECK: ; withcall Kernel info:
+; CHECK: ; withcall:
 ; CHECK: ; LDSByteSize: 16 bytes
-; CHECK: ; nocall_false_sharing Kernel info:
+; CHECK: ; nocall_false_sharing:
 ; CHECK: ; LDSByteSize: 4 bytes

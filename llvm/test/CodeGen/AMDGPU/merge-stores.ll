@@ -1254,11 +1254,11 @@ declare void @llvm.amdgcn.s.barrier() #1
 attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }
 
-; GCN: ; merge_global_store_2_constants_i8 Kernel info:
+; GCN: ; merge_global_store_2_constants_i8:
 ; GCN: ScratchSize: 0{{$}}
-; GCN: ; merge_global_store_2_constants_i8_natural_align Kernel info:
+; GCN: ; merge_global_store_2_constants_i8_natural_align:
 ; GCN: ScratchSize: 0{{$}}
-; GCN: ; merge_global_store_2_constants_i16 Kernel info:
+; GCN: ; merge_global_store_2_constants_i16:
 ; GCN: ScratchSize: 0{{$}}
-; GCN: ; merge_global_store_2_constants_0_i16 Kernel info:
+; GCN: ; merge_global_store_2_constants_0_i16:
 ; GCN: ScratchSize: 0{{$}}

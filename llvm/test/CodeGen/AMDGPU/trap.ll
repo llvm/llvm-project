@@ -145,8 +145,8 @@ attributes #1 = { nounwind }
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 
-; GCN: ; hsa_trap Kernel info:
+; GCN: ; hsa_trap:
 ; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
 ; NO-HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0
-; GCN: ; hsa_debugtrap Kernel info:
+; GCN: ; hsa_debugtrap:
 ; HSA-TRAP: COMPUTE_PGM_RSRC2:TRAP_HANDLER: 0

@@ -409,23 +409,23 @@ declare void @llvm.lifetime.end.p5(i64 immarg, ptr addrspace(5) nocapture)
 
 declare void @llvm.assume(i1)
 
-; GCN-PROMOTE: ; vector_read_alloca_bitcast Kernel info:
+; GCN-PROMOTE: ; vector_read_alloca_bitcast:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN-PROMOTE: ; vector_write_alloca_bitcast Kernel info:
+; GCN-PROMOTE: ; vector_write_alloca_bitcast:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN-PROMOTE: ; vector_write_read_bitcast_to_float Kernel info:
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_float:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN-PROMOTE: ; vector_write_read_bitcast_to_double Kernel info:
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_double:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN-PROMOTE: ; vector_write_read_bitcast_to_i64 Kernel info:
+; GCN-PROMOTE: ; vector_write_read_bitcast_to_i64:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN-PROMOTE: ; vector_read_alloca_bitcast_assume Kernel info:
+; GCN-PROMOTE: ; vector_read_alloca_bitcast_assume:
 ; GCN-PROMOTE: ScratchSize: 0
-; GCN: ; bitcast_vector_to_vector Kernel info:
+; GCN: ; bitcast_vector_to_vector:
 ; GCN: ScratchSize: 0
-; GCN: ; vector_bitcast_from_alloca_array Kernel info:
+; GCN: ; vector_bitcast_from_alloca_array:
 ; GCN: ScratchSize: 0
-; GCN: ; vector_bitcast_to_array_from_alloca_array Kernel info:
+; GCN: ; vector_bitcast_to_array_from_alloca_array:
 ; GCN: ScratchSize: 0
-; GCN: ; vector_bitcast_to_struct_from_alloca_array Kernel info:
+; GCN: ; vector_bitcast_to_struct_from_alloca_array:
 ; GCN: ScratchSize: 0

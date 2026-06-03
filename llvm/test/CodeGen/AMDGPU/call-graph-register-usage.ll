@@ -233,79 +233,79 @@ entry:
   ret void
 }
 
-; GCN: ; use_vcc Function info:
+; GCN: ; use_vcc:
 ; GCN: ; TotalNumSgprs: 34
 ; GCN: ; NumVgprs: 0
-; GCN: ; indirect_use_vcc Function info:
+; GCN: ; indirect_use_vcc:
 ; GCN: ; TotalNumSgprs: 36
 ; GCN: ; NumVgprs: 41
-; GCN: ; indirect_2level_use_vcc_kernel Kernel info:
+; GCN: ; indirect_2level_use_vcc_kernel:
 ; CI: ; TotalNumSgprs: 38
 ; VI-NOBUG: ; TotalNumSgprs: 40
 ; VI-BUG: ; TotalNumSgprs: 96
 ; GCN: ; NumVgprs: 41
-; GCN: ; use_flat_scratch Function info:
+; GCN: ; use_flat_scratch:
 ; CI: ; TotalNumSgprs: 36
 ; VI: ; TotalNumSgprs: 38
 ; GCN: ; NumVgprs: 0
-; GCN: ; indirect_use_flat_scratch Function info:
+; GCN: ; indirect_use_flat_scratch:
 ; CI: ; TotalNumSgprs: 38
 ; VI: ; TotalNumSgprs: 40
 ; GCN: ; NumVgprs: 41
-; GCN: ; indirect_2level_use_flat_scratch_kernel Kernel info:
+; GCN: ; indirect_2level_use_flat_scratch_kernel:
 ; CI: ; TotalNumSgprs: 38
 ; VI-NOBUG: ; TotalNumSgprs: 40
 ; VI-BUG: ; TotalNumSgprs: 96
 ; GCN: ; NumVgprs: 41
-; GCN: ; use_10_vgpr Function info:
+; GCN: ; use_10_vgpr:
 ; GCN: ; NumVgprs: 10
-; GCN: ; indirect_use_10_vgpr Function info:
+; GCN: ; indirect_use_10_vgpr:
 ; GCN: ; NumVgprs: 41
-; GCN: ; indirect_2_level_use_10_vgpr Kernel info:
+; GCN: ; indirect_2_level_use_10_vgpr:
 ; GCN: ; NumVgprs: 41
-; GCN: ; use_50_vgpr Function info:
+; GCN: ; use_50_vgpr:
 ; GCN: ; NumVgprs: 50
-; GCN: ; indirect_use_50_vgpr Function info:
+; GCN: ; indirect_use_50_vgpr:
 ; GCN: ; NumVgprs: 50
-; GCN: ; use_80_sgpr Function info:
+; GCN: ; use_80_sgpr:
 ; GCN: ; TotalNumSgprs: 80
-; GCN: ; indirect_use_80_sgpr Function info:
+; GCN: ; indirect_use_80_sgpr:
 ; GCN: ; TotalNumSgprs: 82
-; GCN: ; indirect_2_level_use_80_sgpr Kernel info:
+; GCN: ; indirect_2_level_use_80_sgpr:
 ; CI: ; TotalNumSgprs: 84
 ; VI-NOBUG: ; TotalNumSgprs: 86
 ; VI-BUG: ; TotalNumSgprs: 96
-; GCN: ; use_stack0 Function info:
+; GCN: ; use_stack0:
 ; GCN: ScratchSize: 2052
-; GCN: ; use_stack1 Function info:
+; GCN: ; use_stack1:
 ; GCN: ScratchSize: 404
-; GCN: ; indirect_use_stack Function info:
+; GCN: ; indirect_use_stack:
 ; GCN: ScratchSize: 2132
-; GCN: ; indirect_2_level_use_stack Kernel info:
+; GCN: ; indirect_2_level_use_stack:
 ; GCN: ScratchSize: 2132
-; GCN: ; multi_call_use_use_stack Kernel info:
+; GCN: ; multi_call_use_use_stack:
 ; GCN: ScratchSize: 2052
-; GCN: ; usage_external Kernel info:
+; GCN: ; usage_external:
 ; GCN: ScratchSize: 16384
 ;
 ; GCN-V5: ScratchSize: 0
-; GCN: ; usage_external_recurse Kernel info:
+; GCN: ; usage_external_recurse:
 ; GCN: ScratchSize: 16384
 ;
 ; GCN-V5: ScratchSize: 0
-; GCN: ; direct_recursion_use_stack Function info:
+; GCN: ; direct_recursion_use_stack:
 ; GCN: ScratchSize: 18448{{$}}
 ;
 ; GCN-V5: ScratchSize: 2064{{$}}
-; GCN: ; count_use_sgpr96_external_call Kernel info:
+; GCN: ; count_use_sgpr96_external_call:
 ; CI: TotalNumSgprs: 84
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: 50
-; GCN: ; count_use_sgpr160_external_call Kernel info:
+; GCN: ; count_use_sgpr160_external_call:
 ; CI: TotalNumSgprs: 84
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: 50
-; GCN: ; count_use_vgpr160_external_call Kernel info:
+; GCN: ; count_use_vgpr160_external_call:
 ; CI: TotalNumSgprs: 84
 ; VI-BUG: TotalNumSgprs: 96
 ; GCN: NumVgprs: 50

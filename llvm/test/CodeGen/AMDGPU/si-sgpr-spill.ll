@@ -1689,9 +1689,9 @@ attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind readonly }
 
-; TOVGPR: ; main Kernel info:
+; TOVGPR: ; main:
 ; TOVGPR: ScratchSize: 0{{$}}
-; TOVGPR: ; main1 Kernel info:
+; TOVGPR: ; main1:
 ; TOVGPR: ScratchSize: 0{{$}}
 
 !0 = !{!1, !1, i64 0, i32 1}
