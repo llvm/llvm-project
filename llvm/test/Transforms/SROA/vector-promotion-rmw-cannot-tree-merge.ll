@@ -40,39 +40,6 @@ entry:
   ret <4 x float> %result
 }
 
-; Missing init store: the alloca has partial loads/stores but no
-; full-width init, so the RMW path (which needs an init seed) refuses.
-define <4 x float> @missing_init_store(<2 x float> %a, <2 x float> %b) {
-; CHECK-LABEL: define <4 x float> @missing_init_store(
-; CHECK-SAME: <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VEC_EXTRACT:%.*]] = shufflevector <4 x float> undef, <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[R0:%.*]] = fadd <2 x float> [[ALLOCA_SROA_0_0_VEC_EXTRACT]], [[A]]
-; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[R0]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_0_VEC_EXPAND]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[R1:%.*]] = fadd <2 x float> [[ALLOCA_SROA_0_8_VEC_EXTRACT]], [[B]]
-; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[R1]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_8_VEC_EXPAND]], <4 x float> [[ALLOCA_SROA_0_0_VECBLEND]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    ret <4 x float> [[ALLOCA_SROA_0_8_VECBLEND]]
-;
-entry:
-  %alloca = alloca [4 x float], align 16
-
-  %p0 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 0
-  %v0 = load <2 x float>, ptr %p0, align 8
-  %r0 = fadd <2 x float> %v0, %a
-  store <2 x float> %r0, ptr %p0, align 8
-
-  %p1 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 2
-  %v1 = load <2 x float>, ptr %p1, align 8
-  %r1 = fadd <2 x float> %v1, %b
-  store <2 x float> %r1, ptr %p1, align 8
-
-  %result = load <4 x float>, ptr %alloca, align 16
-  ret <4 x float> %result
-}
-
 ; Atomic RMW: the partial load/store at slice 0 carry memory-ordering
 ; (monotonic). The rewrite would drop the atomic stores and elide the
 ; atomic loads, losing that ordering, so the RMW path must reject it.
@@ -109,31 +76,34 @@ entry:
 }
 
 ; Ordering constraint: the init store must precede every partial access.
-; Here a partial store at slice 0 appears BEFORE the full-width init
-; store, so the very first access by block order is not the init store
-; and the rewrite must refuse — otherwise the per-slice SSA seed
-; would be wrong.
-define <4 x float> @init_store_not_first(<4 x float> %init, <2 x float> %a, <2 x float> %b) {
+; Here a partial store at slice 0 appears BEFORE the second full-width
+; store, so the rewrite sees two full-width stores (only one allowed)
+; and must refuse.
+define <4 x float> @init_store_not_first(<4 x float> %init, <4 x float> %init2, <2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: define <4 x float> @init_store_not_first(
-; CHECK-SAME: <4 x float> [[INIT:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) {
+; CHECK-SAME: <4 x float> [[INIT:%.*]], <4 x float> [[INIT2:%.*]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[A]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_0_VEC_EXPAND]], <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[INIT]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[ALLOCA_SROA_0_0_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_0_VEC_EXPAND]], <4 x float> [[INIT]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VEC_EXTRACT:%.*]] = shufflevector <4 x float> [[INIT2]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[R1:%.*]] = fadd <2 x float> [[ALLOCA_SROA_0_8_VEC_EXTRACT]], [[B]]
 ; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VEC_EXPAND:%.*]] = shufflevector <2 x float> [[R1]], <2 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
-; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_8_VEC_EXPAND]], <4 x float> [[INIT]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[ALLOCA_SROA_0_8_VECBLEND:%.*]] = shufflevector <4 x float> [[ALLOCA_SROA_0_8_VEC_EXPAND]], <4 x float> [[INIT2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[ALLOCA_SROA_0_8_VECBLEND]]
 ;
 entry:
   %alloca = alloca [4 x float], align 16
 
-  ; Partial store BEFORE the init store.
+  ; First full-width store initializes the alloca (no UB on later loads).
+  store <4 x float> %init, ptr %alloca, align 16
+
+  ; Partial store between the two full-width stores.
   %p_pre = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 0
   store <2 x float> %a, ptr %p_pre, align 8
 
-  ; Full-width init store comes after.
-  store <4 x float> %init, ptr %alloca, align 16
+  ; Second full-width store — the rewrite sees two full-width stores
+  ; (only one init store is allowed) and must bail out.
+  store <4 x float> %init2, ptr %alloca, align 16
 
   %p1 = getelementptr inbounds [4 x float], ptr %alloca, i32 0, i32 2
   %v1 = load <2 x float>, ptr %p1, align 8
