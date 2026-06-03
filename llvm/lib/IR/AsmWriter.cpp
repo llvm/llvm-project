@@ -2626,7 +2626,7 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())
@@ -5041,20 +5041,11 @@ void AssemblyWriter::writeAllAttributeGroups() {
 
 void AssemblyWriter::printUseListOrder(const Value *V,
                                        ArrayRef<unsigned> Shuffle) {
-  bool IsInFunction = Machine.getFunction();
-  if (IsInFunction)
+  if (Machine.getFunction())
     Out << "  ";
 
-  Out << "uselistorder";
-  if (const BasicBlock *BB = IsInFunction ? nullptr : dyn_cast<BasicBlock>(V)) {
-    Out << "_bb ";
-    writeOperand(BB->getParent(), false);
-    Out << ", ";
-    writeOperand(BB, false);
-  } else {
-    Out << " ";
-    writeOperand(V, true);
-  }
+  Out << "uselistorder ";
+  writeOperand(V, true);
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
   Out << ", { " << llvm::interleaved(Shuffle) << " }\n";

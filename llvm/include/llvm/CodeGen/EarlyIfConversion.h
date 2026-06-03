@@ -16,8 +16,8 @@ namespace llvm {
 class EarlyIfConverterPass
     : public OptionalPassInfoMixin<EarlyIfConverterPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

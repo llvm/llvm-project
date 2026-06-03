@@ -683,9 +683,11 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
     CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
   Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
 
-  Value *Pair = Builder.CreateAtomicCmpXchg(
+  AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
-      AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
+      AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
+      LI->getSyncScopeID());
+  Pair->setVolatile(LI->isVolatile());
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
   if (NeedBitcast)
     Loaded = Builder.CreateBitCast(Loaded, Ty);
@@ -737,7 +739,8 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
                                    : Ordering;
   AtomicRMWInst *AI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Xchg, SI->getPointerOperand(), SI->getValueOperand(),
-      SI->getAlign(), RMWOrdering);
+      SI->getAlign(), RMWOrdering, SI->getSyncScopeID());
+  AI->setVolatile(SI->isVolatile());
   SI->eraseFromParent();
 
   // Now we have an appropriate swap instruction, lower it as usual.
@@ -1710,6 +1713,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  if (RMWI->isVolatile())
+    return false;
   // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)

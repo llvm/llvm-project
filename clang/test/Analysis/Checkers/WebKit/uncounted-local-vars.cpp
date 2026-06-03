@@ -7,11 +7,16 @@ void someFunction();
 
 namespace raw_ptr {
 void foo() {
-  RefCountable *bar;
-  // FIXME: later on we might warn on uninitialized vars too
+  RefCountable *bar; // A local variable in a trivial context is ignored.
 }
 
 void bar(RefCountable *) {}
+
+void baz() {
+  RefCountable *bar;
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  someFunction();
+}
 } // namespace raw_ptr
 
 namespace reference {
@@ -384,6 +389,19 @@ void baz() {
 }
 
 } // namespace local_assignment_basic
+
+namespace local_assignment_to_guardian_parameter {
+
+RefCountable *provide_ref_cntbl();
+
+void foo(RefPtr<RefCountable>& arg) {
+  RefCountable* ptr = arg.get();
+  // expected-warning@-1{{Local variable 'ptr' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  arg = nullptr;
+  ptr->method();
+}
+
+} // namespace local_assignment_to_guardian
 
 namespace local_assignment_to_parameter {
 
