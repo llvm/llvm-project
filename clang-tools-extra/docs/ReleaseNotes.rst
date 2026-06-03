@@ -683,8 +683,8 @@ Changes in existing checks
   - Fixed a false positive with suggesting ``empty`` when comparing a container
     to a default-constructed object of an unrelated type.
 
-  - Extended to also warn when the non-member ``std::size()`` function is used
-    in a boolean context or compared to ``0`` or ``1``, consistent with the
+  - Extended to warn when the non-member ``std::size()`` function is used
+    in a Boolean context or compared to ``0`` or ``1``, consistent with the
     existing ``size()``/``length()`` member call detection.
 
 - Improved :doc:`readability-convert-member-functions-to-static
