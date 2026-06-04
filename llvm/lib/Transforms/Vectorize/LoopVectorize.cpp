@@ -375,6 +375,13 @@ cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
              "`-vplan-print-after*` if the plan has one."));
 #endif
 
+#if !defined(NDEBUG)
+static cl::opt<bool> PrintIntCostsPerLane(
+    "print-int-costs-per-lane", cl::init(false), cl::Hidden,
+    cl::desc("When printing out debug containing the costs per lane use "
+             "integer values instead."));
+#endif
+
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
@@ -5769,7 +5776,10 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
     double CostPerLane = double(Cost.getValue()) / EstimatedWidth;
-    LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
+    if (PrintIntCostsPerLane)
+      LLVM_DEBUG(dbgs() << format("%.0f", CostPerLane));
+    else
+      LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
   LLVM_DEBUG(dbgs() << ")\n");

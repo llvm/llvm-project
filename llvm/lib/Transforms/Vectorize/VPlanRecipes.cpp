@@ -47,6 +47,13 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+#if !defined(NDEBUG)
+static cl::opt<bool> VPlanDontPrintMetadata(
+    "vplan-dont-print-metadata", cl::init(false), cl::Hidden,
+    cl::desc("When printing out recipes avoid printing out metadata to avoid "
+             "potentially non-deterministic behaviour."));
+#endif
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -1969,7 +1976,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M)
+  if (Metadata.empty() || !M || VPlanDontPrintMetadata)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
