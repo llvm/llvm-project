@@ -32,3 +32,38 @@ define float @test_reduce_v4f32_fmul_x86(<4 x float> %a0) {
   %5 = extractelement <4 x float> %4, i64 0
   ret float %5
 }
+
+; Partial reduction: reduce lower 4 elements of a 16-element vector using fadd.
+define float @test_partial_reduce_v16f32_v4f32_fadd(<16 x float> %a0) {
+; CHECK-LABEL: define float @test_partial_reduce_v16f32_v4f32_fadd(
+; CHECK-SAME: <16 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[A0]], <16 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP1]])
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %1 = shufflevector <16 x float> %a0, <16 x float> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = fadd reassoc <16 x float> %a0, %1
+  %3 = shufflevector <16 x float> %2, <16 x float> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <16 x float> %2, %3
+  %5 = extractelement <16 x float> %4, i64 0
+  ret float %5
+}
+
+; Negative test: fadd without reassoc should NOT fold.
+define float @test_no_reduce_v4f32_fadd_no_reassoc_x86(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fadd_no_reassoc_x86(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
