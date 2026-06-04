@@ -801,8 +801,8 @@ Expected<bool> L0DeviceTy::isEventCompleteImpl(void *EventPtr,
 
 Expected<float> L0DeviceTy::getEventElapsedTimeImpl(void *StartEventPtr,
                                                     void *EndEventPtr) {
-  return Plugin::error(error::ErrorCode::UNSUPPORTED, "%s not implemented yet\n",
-                       __func__);
+  return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                       "%s not implemented yet\n", __func__);
 }
 
 Error L0DeviceTy::callGlobalConstructors(GenericPluginTy &Plugin,
