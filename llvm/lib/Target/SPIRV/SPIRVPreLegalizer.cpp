@@ -203,15 +203,50 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
 //
 // We also handle the llvm.spv.bitcast intrinsic here. If the source and
 // destination SPIR-V types are the same, we lower it to a COPY to enable
-// further optimizations like copy propagation.
+// further optimizations like copy propagation. Chains of bitcasts are folded
+// by pointing each bitcast at its ultimate source, which leaves the now-dead
+// intermediates to be erased; bitcast(bitcast(x)) thus collapses to a single
+// OpBitcast (or a COPY when the final type matches the source).
 static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                           MachineIRBuilder MIB) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  // Point every llvm.spv.bitcast at the deepest source reachable through a
+  // chain of bitcasts whose type stays compatible with this bitcast's result.
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_bitcast))
+        continue;
+      SPIRVTypeInst DstType =
+          GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg());
+      assert(DstType &&
+             "Expected destination SPIR-V type to have been assigned already.");
+      Register SrcReg = MI.getOperand(2).getReg();
+      Register RootReg = SrcReg;
+      for (MachineInstr *Def = MRI.getVRegDef(RootReg);
+           Def && isSpvIntrinsic(*Def, Intrinsic::spv_bitcast);
+           Def = MRI.getVRegDef(RootReg)) {
+        Register NextReg = Def->getOperand(2).getReg();
+        if (!GR->isBitcastCompatible(DstType, GR->getSPIRVTypeForVReg(NextReg)))
+          break;
+        RootReg = NextReg;
+      }
+      if (RootReg != SrcReg)
+        MI.getOperand(2).setReg(RootReg);
+    }
+  }
+
   SmallVector<MachineInstr *, 16> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (isSpvIntrinsic(MI, Intrinsic::spv_bitcast)) {
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(2).getReg();
+        // An intermediate bitcast left unused by the chain folding above is
+        // dead; drop it so it never reaches the instruction selector.
+        if (MRI.use_empty(DstReg)) {
+          ToErase.push_back(&MI);
+          continue;
+        }
         SPIRVTypeInst DstType = GR->getSPIRVTypeForVReg(DstReg);
         assert(
             DstType &&

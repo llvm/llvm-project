@@ -40,9 +40,7 @@ entry:
 define void @main2() local_unnamed_addr #0 {
 entry:
 ; CHECK:  %[[LOAD:[0-9]+]] = OpLoad %[[#v2_double]] {{.*}}
-; CHECK:  %[[BITCAST1:[0-9]+]] = OpBitcast %[[#v4_uint]] %[[LOAD]]
-; CHECK:  %[[BITCAST2:[0-9]+]] = OpBitcast %[[#v2_double]] %[[BITCAST1]]
-; CHECK: OpStore {{%[0-9]+}} %[[BITCAST2]] {{.*}}
+; CHECK: OpStore {{%[0-9]+}} %[[LOAD]] {{.*}}
 
   %out_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
   %src_ptr = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %out_buffer_handle, i32 0)
