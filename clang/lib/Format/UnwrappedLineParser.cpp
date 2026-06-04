@@ -1508,23 +1508,47 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   }
   switch (FormatTok->Tok.getKind()) {
-  case tok::kw_asm:
+  case tok::kw_asm: {
+    bool DoNotFormat = false;
+    tok::TokenKind OpenType;
+    tok::TokenKind CloseType;
     nextToken();
-    if (FormatTok->is(tok::l_brace)) {
+    while (FormatTok &&
+           FormatTok->isOneOf(tok::kw_volatile, tok::kw_inline, tok::kw_goto)) {
+      nextToken();
+    }
+    if (FormatTok && FormatTok->is(tok::l_brace)) {
       FormatTok->setFinalizedType(TT_InlineASMBrace);
+      OpenType = tok::l_brace;
+      CloseType = tok::r_brace;
+      DoNotFormat = true;
+    } else if (FormatTok && FormatTok->is(tok::l_paren)) {
+      OpenType = tok::l_paren;
+      CloseType = tok::r_paren;
+      FormatTok->setFinalizedType(TT_InlineASMParen);
+    }
+    if (DoNotFormat) {
+      FormatToken *OpenTok = FormatTok;
+      int NestLevel = 0;
       nextToken();
       while (FormatTok && !eof()) {
-        if (FormatTok->is(tok::r_brace)) {
-          FormatTok->setFinalizedType(TT_InlineASMBrace);
-          nextToken();
-          addUnwrappedLine();
-          break;
+        if (FormatTok->is(OpenType)) {
+          ++NestLevel;
+        } else if (FormatTok->is(CloseType)) {
+          --NestLevel;
+          if (NestLevel < 1) {
+            FormatTok->setFinalizedType(OpenTok->getType());
+            nextToken();
+            addUnwrappedLine();
+            break;
+          }
         }
         FormatTok->Finalized = true;
         nextToken();
       }
     }
     break;
+  }
   case tok::kw_namespace:
     parseNamespace();
     return;
