@@ -313,6 +313,178 @@ define <2 x i16> @test_umax3_v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) {
   ret <2 x i16> %max2
 }
 
+define i16 @test_smin3_i16(i16 %a, i16 %b, i16 %c) {
+; GFX10-LABEL: test_smin3_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min3_i16 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_smin3_i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_min3_i16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %min1 = call i16 @llvm.smin.i16(i16 %a, i16 %b)
+  %min2 = call i16 @llvm.smin.i16(i16 %min1, i16 %c)
+  ret i16 %min2
+}
+
+define i16 @test_smin3_i16_with_constants(i16 %a, i16 %b) {
+; GFX10-LABEL: test_smin3_i16_with_constants:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min3_i16 v0, v0, v1, 7
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_smin3_i16_with_constants:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_min3_i16 v0.l, v0.l, v1.l, 7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %min1 = call i16 @llvm.smin.i16(i16 %a, i16 %b)
+  %min2 = call i16 @llvm.smin.i16(i16 %min1, i16 7)
+  ret i16 %min2
+}
+
+define i16 @test_smax3_i16(i16 %a, i16 %b, i16 %c) {
+; GFX10-LABEL: test_smax3_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max3_i16 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_smax3_i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max3_i16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %max1 = call i16 @llvm.smax.i16(i16 %a, i16 %b)
+  %max2 = call i16 @llvm.smax.i16(i16 %max1, i16 %c)
+  ret i16 %max2
+}
+
+define i16 @test_smax3_i16_with_constants(i16 %a, i16 %b) {
+; GFX10-LABEL: test_smax3_i16_with_constants:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max3_i16 v0, v0, v1, 7
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_smax3_i16_with_constants:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max3_i16 v0.l, v0.l, v1.l, 7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %max1 = call i16 @llvm.smax.i16(i16 %a, i16 %b)
+  %max2 = call i16 @llvm.smax.i16(i16 %max1, i16 7)
+  ret i16 %max2
+}
+
+define i16 @test_umin3_i16(i16 %a, i16 %b, i16 %c) {
+; GFX10-LABEL: test_umin3_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min3_u16 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_umin3_i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_min3_u16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %min1 = call i16 @llvm.umin.i16(i16 %a, i16 %b)
+  %min2 = call i16 @llvm.umin.i16(i16 %min1, i16 %c)
+  ret i16 %min2
+}
+
+define i16 @test_umin3_i16_with_constants(i16 %a, i16 %b) {
+; GFX10-LABEL: test_umin3_i16_with_constants:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_min3_u16 v0, v0, v1, 7
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_umin3_i16_with_constants:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_min3_u16 v0.l, v0.l, v1.l, 7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %min1 = call i16 @llvm.umin.i16(i16 %a, i16 %b)
+  %min2 = call i16 @llvm.umin.i16(i16 %min1, i16 7)
+  ret i16 %min2
+}
+
+define i16 @test_umax3_i16(i16 %a, i16 %b, i16 %c) {
+; GFX10-LABEL: test_umax3_i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max3_u16 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_umax3_i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max3_u16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %max1 = call i16 @llvm.umax.i16(i16 %a, i16 %b)
+  %max2 = call i16 @llvm.umax.i16(i16 %max1, i16 %c)
+  ret i16 %max2
+}
+
+define i16 @test_umax3_i16_with_constants(i16 %a, i16 %b) {
+; GFX10-LABEL: test_umax3_i16_with_constants:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_max3_u16 v0, v0, v1, 7
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_umax3_i16_with_constants:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_max3_u16 v0.l, v0.l, v1.l, 7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %max1 = call i16 @llvm.umax.i16(i16 %a, i16 %b)
+  %max2 = call i16 @llvm.umax.i16(i16 %max1, i16 7)
+  ret i16 %max2
+}
+
+declare i16 @llvm.smin.i16(i16, i16)
+declare i16 @llvm.umin.i16(i16, i16)
+declare i16 @llvm.smax.i16(i16, i16)
+declare i16 @llvm.umax.i16(i16, i16)
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.umin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
