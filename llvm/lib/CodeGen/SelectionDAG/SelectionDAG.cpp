@@ -5747,10 +5747,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1);
 
   case ISD::SELECT: {
-    SDValue Cond = Op.getOperand(0);
     return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
-           isGuaranteedNotToBeUndefOrPoison(Cond, Kind, Depth + 1) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind,
+                                            Depth + 1) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedElts,
                                             Kind, Depth + 1) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(2), DemandedElts,
