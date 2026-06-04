@@ -2569,12 +2569,19 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // write directly to stdin *this might block if stdin buffer is full*
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
-    ConnectionStatus status;
     Status error;
+
+#if defined(_WIN32)
+    // On Windows the inferior's stdio is owned by NativeProcessWindows.
+    if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
+      return SendErrorResponse(0x15);
+#else
+    ConnectionStatus status;
     m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
+#endif
   }
 
   return SendOKResponse();

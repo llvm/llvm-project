@@ -101,6 +101,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef _WIN32
+#include "Plugins/Process/Windows/Common/IOHandlerProcessSTDIOWindows.h"
+#endif
+
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
 #elif defined(_WIN32)
@@ -879,8 +883,18 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       SetPrivateState(SetThreadStopInfo(response));
 
       if (!disable_stdio) {
-        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+        }
+#ifdef _WIN32
+        else if (m_stdin_forward) {
+          // No client-side PTY FD on Windows.
+          std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+          if (!m_process_input_reader)
+            m_process_input_reader =
+                std::make_shared<IOHandlerProcessSTDIOWindows>(this);
+        }
+#endif
       }
     }
   } else {
