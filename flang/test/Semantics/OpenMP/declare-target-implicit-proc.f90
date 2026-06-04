@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -fsyntax-only %s 2>&1 | FileCheck %s
 
-! Test OpenMP 5.2 §7.8.2 ¶10: implicit external procedure in DECLARE TARGET
+! Test OpenMP 5.2 3.2.1, 7.8 & 7.8.1: implicit external procedure in DECLARE TARGET
 ! A name in DECLARE TARGET with no explicit type is treated as external subroutine
 
 program test_implicit_declare_target

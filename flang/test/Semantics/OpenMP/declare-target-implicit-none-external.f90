@@ -1,7 +1,7 @@
 ! RUN: not %flang_fc1 -fopenmp -fopenmp-version=52 -fsyntax-only %s 2>&1 | FileCheck %s
 
 ! Test that IMPLICIT NONE(EXTERNAL) blocks implicit procedure creation
-! per OpenMP 5.2 §7.8.2 ¶10
+! per OpenMP 5.2 3.2.1, 7.8 &7.8.1
 
 program test_implicit_none_external
   implicit none(external)

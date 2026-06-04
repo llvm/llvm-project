@@ -2942,10 +2942,9 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
           name->symbol = func;
         }
       }
-      // OMP 5.2 §7.8.1 ¶10: If a name appears in a declare target directive
-      // and has not been explicitly typed as a variable or procedure, and
-      // no other declaration gives it a procedure property, treat it as an
-      // external subroutine.
+      // OpenMP 5.2 , 3.2.1, 7.8 & 7.8.1: a declare target extended-list
+      // name that was never declared as a variable or given procedure
+      // properties is treated as an external procedure.
       if (symbol->has<EntityDetails>() && !symbol->GetType() &&
           !symbol->test(Symbol::Flag::Function) &&
           !symbol->test(Symbol::Flag::Subroutine)) {

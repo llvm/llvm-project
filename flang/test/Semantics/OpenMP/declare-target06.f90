@@ -3,9 +3,10 @@
 ! Check OpenMP construct validity for the following directives:
 ! 2.14.7 Declare Target Directive
 ! When used in an implicit none context.
-! Per OMP 5.2 §7.8.2 ¶10, unknown names in DECLARE TARGET are treated as
-! external procedures, so no "No explicit type" error is expected for
-! names in ENTER/TO clauses (or bare list). LINK clause is different.
+! Per OpenMP 5.2 ,3.2.1, 7.8 & 7.8.1, names in DECLARE TARGET may denote
+! procedures. Unknown names are treated as external procedures, so no
+! "No explicit type" error is expected for names in ENTER/TO clauses
+! (or bare list). LINK clause is different.
 
 module test_0
     implicit none

@@ -9348,14 +9348,14 @@ bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
         }
       }
 
-      // OpenMP 5.2, 7.8.2 p10: a procedure name in DECLARE TARGET with no
-      // explicit data/procedure properties is treated as an external
-      // subroutine. Only apply this at program/module scope level, not inside
-      // subprograms where local variables could be forward-declared.
+      // OpenMP 5.2 3.2.1, 7.8 & 7.8.1: an extended-list item in
+      // DECLARE TARGET may be a procedure name. If the name has no prior
+      // declaration, preserve both possibilities (variable or procedure)
+      // by creating an EntityDetails placeholder. A later variable
+      // declaration in the same spec part can override it; otherwise
+      // resolve-directives promotes it to ProcEntityDetails.
+      // Only apply at program/module scope, not inside subprograms.
       // Also skip if a common block with the same name exists.
-      // Use isImplicitNoneExternal() since this creates an implicit external,
-      // not an implicit type. Use EntityDetails so a later variable
-      // declaration in the same spec part can override it.
       if (!isImplicitNoneExternal() &&
           currScope().kind() != Scope::Kind::Subprogram &&
           currScope().kind() != Scope::Kind::BlockConstruct &&

@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -fsyntax-only %s 2>&1 | FileCheck %s
 
-! Test OpenMP 5.2 §7.8.2 ¶10: implicit external procedure in DECLARE TARGET
+! Test OpenMP 5.2 , 3.2.1, 7.8 & 7.8.1: implicit external procedure in DECLARE TARGET
 ! When the name is later defined as a function, it should work correctly
 
 program test_implicit_declare_target_func

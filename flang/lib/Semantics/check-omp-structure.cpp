@@ -1468,8 +1468,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
       context_.Say(name->source,
           "The procedure name cannot be in a %s directive"_err_en_US,
           ContextDirectiveAsFortran());
-    // OMP 5.2 7.8.1 p10: a procedure name in DECLARE TARGET is valid
-    // (treated as external subroutine if not otherwise specified).
+    // OpenMP 5.2 , 3.2.1, 7.8 &7.8.1: a procedure name in DECLARE TARGET
+    // is valid (extended-list items may be procedure names).
   } else if (name->symbol->attrs().test(Attr::PARAMETER)) {
     if (directive == llvm::omp::Directive::OMPD_threadprivate)
       context_.Say(name->source,
@@ -2345,7 +2345,8 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
 
   // The bare form (no arguments, no clauses) is only permitted in the
   // specification part of a subroutine, function, or interface body
-  // (OpenMP 5.2 §7.8.2).
+  // (OpenMP 5.2 & 
+  // 7.8.2).
   if (x.v.Arguments().v.empty() && x.v.Clauses().v.empty()) {
     const Scope &scope{GetScopingUnit(*scopeStack_.back())};
     if (scope.kind() != Scope::Kind::Subprogram) {
