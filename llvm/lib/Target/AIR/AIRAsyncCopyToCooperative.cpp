@@ -22,6 +22,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
+#include <cstdlib>
 
 using namespace llvm;
 
@@ -200,6 +201,8 @@ static bool lowerAsyncCopy(CallInst *CI, Module &M, unsigned TGSize) {
 }
 
 static bool asyncCopyToCooperative(Module &M, unsigned TGSize) {
+  if (::getenv("AIR_DISABLE_COOP_COPY"))
+    return false;
   if (!moduleUsesMMA(M) || !moduleHasAsyncCopy(M))
     return false;
   if (!mmaReadsAsyncArena(M))
