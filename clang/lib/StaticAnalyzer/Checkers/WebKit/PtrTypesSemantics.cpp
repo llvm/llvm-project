@@ -652,23 +652,44 @@ public:
   bool IsFunctionTrivial(const Decl *D) {
     const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
     auto Result = WithCachedResult(D, [&]() {
-      if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+      auto *FnDecl = dyn_cast<FunctionDecl>(D);
+      auto *MethodDecl = dyn_cast<CXXMethodDecl>(D);
+      auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D);
+      auto *DtorDecl = dyn_cast<CXXDestructorDecl>(D);
+
+      if (FnDecl) {
         if (isNoDeleteFunction(FnDecl))
           return true;
-        if (auto *MD = dyn_cast<CXXMethodDecl>(D); MD && MD->isVirtual())
+        if (MethodDecl && MethodDecl->isVirtual())
           return false;
         for (auto *Param : FnDecl->parameters()) {
           if (!HasTrivialDestructor(Param))
             return false;
         }
       }
-      if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
+      if (CtorDecl) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
             return false;
         }
-        if (CtorDecl->isTrivial() && CtorDecl->isDefaultConstructor() &&
-            !CtorDecl->hasBody())
+      }
+      // An implicit or =default special member runs no user code when it is
+      // trivial in the C++ standard sense, so it cannot delete. Such a
+      // member's synthesized body is typically absent from the AST until
+      // codegen materialises it, which the generic null-body check below
+      // would otherwise conservatively classify as non-trivial.
+      if (MethodDecl && !MethodDecl->isUserProvided()) {
+        if (CtorDecl) {
+          const CXXRecordDecl *RD = CtorDecl->getParent();
+          if ((CtorDecl->isDefaultConstructor() &&
+               RD->hasTrivialDefaultConstructor()) ||
+              (CtorDecl->isCopyConstructor() &&
+               RD->hasTrivialCopyConstructor()) ||
+              (CtorDecl->isMoveConstructor() &&
+               RD->hasTrivialMoveConstructor()))
+            return true;
+        }
+        if (DtorDecl && DtorDecl->getParent()->hasTrivialDestructor())
           return true;
       }
       const Stmt *Body = D->getBody();

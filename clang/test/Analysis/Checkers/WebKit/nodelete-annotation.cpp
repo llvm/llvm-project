@@ -743,3 +743,27 @@ namespace create_with_default_constructor {
   };
 
 } // namespace create_with_default_constructor
+
+struct Clazzzz {
+    void ref() const;
+    void deref() const;
+};
+
+Ref<Clazzzz> [[clang::annotate_type("webkit.nodelete")]] create() {
+    return adoptRef(*new Clazzzz());
+}
+
+namespace trivial_implicit_ctor_in_new_expr {
+
+// 'new T()' with parens emits a CXXConstructExpr for T's implicit default
+// ctor. That ctor has no body in the AST (the synthesized body is materialised
+// only at codegen), but it is trivial by the C++ standard and runs no user
+// code, so it cannot delete. Verify the fast-path treats it as trivial.
+struct Plain { int x; };
+
+void [[clang::annotate_type("webkit.nodelete")]] valueInitNew() {
+  Plain* p = new Plain();
+  (void)p;
+}
+
+} // namespace trivial_implicit_ctor_in_new_expr
