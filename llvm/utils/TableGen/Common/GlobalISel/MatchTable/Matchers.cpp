@@ -476,15 +476,16 @@ void SwitchMatcher::emit(MatchTable &Table) {
 
 //===- RuleMatcher --------------------------------------------------------===//
 
-RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc)
-    : Matcher(Matcher::MK_Rule), SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
+RuleMatcher::RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand)
+    : Matcher(Matcher::MK_Rule), UsesRecordOperand(UsesRecordOperand),
+      SrcLoc(SrcLoc), RuleID(NextRuleID++) {}
 
 uint64_t RuleMatcher::NextRuleID = 0;
 
 StringRef RuleMatcher::getOpcode() const { return Roots.front()->getOpcode(); }
 
 bool RuleMatcher::recordsOperand() const {
-  return matchersRecordOperand(Roots);
+  return !usesRecordOperand() || matchersRecordOperand(InsnMatchers);
 }
 
 LLTCodeGen RuleMatcher::getFirstConditionAsRootType() const {

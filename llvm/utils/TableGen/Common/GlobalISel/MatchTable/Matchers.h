@@ -337,6 +337,13 @@ protected:
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
+  /// Whether the back-end that emitted this RuleMatcher relies on
+  /// RecordNamedOperandMatcher for C++ code to access instruction operands.
+  /// When false, it means the back-end uses other means that we do not know
+  /// about and we thus need to assume ANY operand can be accessed by ANY C++
+  /// code (GenericInstructionPredicateMatcher)
+  bool UsesRecordOperand = true;
+
   std::vector<std::string> RequiredSimplePredicates;
   std::vector<const Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
@@ -372,7 +379,7 @@ protected:
   }
 
 public:
-  RuleMatcher(ArrayRef<SMLoc> SrcLoc);
+  RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand = true);
   RuleMatcher(RuleMatcher &&Other) = default;
   RuleMatcher &operator=(RuleMatcher &&Other) = default;
 
@@ -389,6 +396,8 @@ public:
   ArrayRef<const Record *> getRequiredFeatures() const {
     return RequiredFeatures;
   }
+
+  bool usesRecordOperand() const { return UsesRecordOperand; }
 
   void addHwModeIdx(unsigned Idx) { HwModeIdx = Idx; }
   int getHwModeIdx() const { return HwModeIdx; }
