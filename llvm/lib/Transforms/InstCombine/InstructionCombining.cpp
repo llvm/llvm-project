@@ -1824,15 +1824,8 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   SelectInst *NewSel = SelectInst::Create(SI->getCondition(), NewTV, NewFV);
 
   // Preserve metadata that remains valid for the transformed select.
-  if (MDNode *Prof = SI->getMetadata(LLVMContext::MD_prof))
-    NewSel->setMetadata(LLVMContext::MD_prof, Prof);
-  if (MDNode *Unpred = SI->getMetadata(LLVMContext::MD_unpredictable))
-    NewSel->setMetadata(LLVMContext::MD_unpredictable, Unpred);
-
-  // Preserve !fpmath only for FP-typed selects.
-  if (isa<FPMathOperator>(NewSel))
-    if (MDNode *FPMath = SI->getMetadata(LLVMContext::MD_fpmath))
-      NewSel->setMetadata(LLVMContext::MD_fpmath, FPMath);
+  NewSel->copyMetadata(*SI,
+                       {LLVMContext::MD_prof, LLVMContext::MD_unpredictable});
 
   // Preserve source location information.
   NewSel->setDebugLoc(SI->getDebugLoc());
