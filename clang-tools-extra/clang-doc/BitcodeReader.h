@@ -78,14 +78,14 @@ private:
   template <typename T> llvm::Error readRecord(unsigned ID, T I);
 
   // Allocate the relevant type of info and add read data to the object.
-  template <typename T> llvm::Expected<OwnedPtr<Info>> createInfo(unsigned ID);
+  template <typename T> llvm::Expected<Info *> createInfo(unsigned ID);
 
   // Helper function to step through blocks to find and dispatch the next record
   // or block to be read.
   llvm::Expected<Cursor> skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
 
   // Helper function to set up the appropriate type of Info.
-  llvm::Expected<OwnedPtr<Info>> readBlockToInfo(unsigned ID);
+  llvm::Expected<Info *> readBlockToInfo(unsigned ID);
 
   template <typename InfoType, typename T, typename CallbackFunction>
   llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);

@@ -1008,9 +1008,9 @@ public:
 
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
-  LLVM_ABI CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                          FMFSource FMFSource = {},
-                                          const Twine &Name = "");
+  LLVM_ABI Value *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                       FMFSource FMFSource = {},
+                                       const Twine &Name = "");
 
   /// Create a call to intrinsic \p ID with 2 operands which is mangled on the
   /// first type.
@@ -1045,8 +1045,8 @@ public:
   }
 
   /// Create call to the fabs intrinsic.
-  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
-                       const Twine &Name = "") {
+  Value *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                    const Twine &Name = "") {
     return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
   }
 
@@ -2178,23 +2178,23 @@ public:
   }
 
   Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
-                      bool IsNonNeg = false) {
+                      bool IsNonNeg = false, MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
-      return Folded;
-    Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
-    if (IsNonNeg)
-      I->setNonNeg();
-    return I;
+    Value *Val = CreateCast(Instruction::UIToFP, V, DestTy, Name, FPMathTag);
+    if (auto *I = dyn_cast<Instruction>(Val))
+      if (IsNonNeg)
+        I->setNonNeg();
+    return Val;
   }
 
-  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      MDNode *FPMathTag = nullptr) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_sitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::SIToFP, V, DestTy, Name);
+    return CreateCast(Instruction::SIToFP, V, DestTy, Name, FPMathTag);
   }
 
   Value *CreateFPTrunc(Value *V, Type *DestTy, const Twine &Name = "",

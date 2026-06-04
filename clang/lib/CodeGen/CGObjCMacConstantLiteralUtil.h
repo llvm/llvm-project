@@ -31,7 +31,6 @@ class NSConstantNumberMapInfo {
 
   enum class MapInfoType {
     Empty,
-    Tombstone,
     Int,
     Float,
   };
@@ -41,13 +40,11 @@ class NSConstantNumberMapInfo {
   llvm::APSInt Int;
   llvm::APFloat Float;
 
-  /// Default constructor that can create Empty or Tombstone info entries
+  /// Default constructor that can create an Empty info entry.
   explicit NSConstantNumberMapInfo(MapInfoType I = MapInfoType::Empty)
       : InfoType(I), QType(), Int(), Float(0.0) {}
 
-  bool isEmptyOrTombstone() const {
-    return InfoType == MapInfoType::Empty || InfoType == MapInfoType::Tombstone;
-  }
+  bool isEmpty() const { return InfoType == MapInfoType::Empty; }
 
 public:
   NSConstantNumberMapInfo(CanQualType QT, const llvm::APSInt &V)
@@ -56,10 +53,9 @@ public:
       : InfoType(MapInfoType::Float), QType(QT), Int(), Float(V) {}
 
   unsigned getHashValue() const {
-    assert(!isEmptyOrTombstone() && "Cannot hash empty or tombstone map info!");
+    assert(!isEmpty() && "Cannot hash empty map info!");
 
-    unsigned QTypeHash = llvm::DenseMapInfo<QualType>::getHashValue(
-        llvm::DenseMapInfo<QualType>::getTombstoneKey());
+    unsigned QTypeHash = llvm::DenseMapInfo<QualType>::getHashValue(QType);
 
     if (InfoType == MapInfoType::Int)
       return llvm::detail::combineHashValue((unsigned)Int.getZExtValue(),
@@ -74,16 +70,12 @@ public:
     return NSConstantNumberMapInfo();
   }
 
-  static inline NSConstantNumberMapInfo getTombstoneKey() {
-    return NSConstantNumberMapInfo(MapInfoType::Tombstone);
-  }
-
   bool operator==(const NSConstantNumberMapInfo &RHS) const {
     if (InfoType != RHS.InfoType || QType != RHS.QType)
       return false;
 
-    // Handle the empty and tombstone equality
-    if (isEmptyOrTombstone())
+    // Handle the empty equality.
+    if (isEmpty())
       return true;
 
     if (InfoType == MapInfoType::Int)
@@ -169,10 +161,6 @@ using namespace clang::CodeGen::CGObjCMacConstantLiteralUtil;
 template <> struct DenseMapInfo<NSConstantNumberMapInfo> {
   static NSConstantNumberMapInfo getEmptyKey() {
     return NSConstantNumberMapInfo::getEmptyKey();
-  }
-
-  static NSConstantNumberMapInfo getTombstoneKey() {
-    return NSConstantNumberMapInfo::getTombstoneKey();
   }
 
   static unsigned getHashValue(const NSConstantNumberMapInfo &S) {

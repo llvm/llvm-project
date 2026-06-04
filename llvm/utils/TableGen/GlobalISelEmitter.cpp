@@ -35,8 +35,8 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/GlobalISel/GlobalISelMatchTable.h"
 #include "Common/GlobalISel/GlobalISelMatchTableExecutorEmitter.h"
+#include "Common/GlobalISel/MatchTable/Matchers.h"
 #include "Common/InfoByHwMode.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
@@ -916,6 +916,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       // here since we don't support ImmLeaf predicates yet. However, we still
       // need to note the hidden operand to get GIM_CheckNumOperands correct.
       InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
+      return InsnMatcher;
+    }
+
+    if (SrcGIOrNull->getName() == "G_BLOCK_ADDR") {
+      // Name operand of G_BLOCK_ADDR so it can be referenced in the destination
+      // pattern.
+      InsnMatcher.addOperand(OpIdx++, Src.getName().str(), TempOpIdx);
       return InsnMatcher;
     }
 
@@ -2215,7 +2222,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
       // Erase the root.
-      unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+      unsigned RootInsnID = InsnMatcher.getInsnVarID();
       M.addAction<EraseInstAction>(RootInsnID);
 
       // We're done with this pattern!  It's eligible for GISel emission; return
@@ -2298,7 +2305,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return std::move(Error);
 
   // Erase the root.
-  unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+  unsigned RootInsnID = InsnMatcher.getInsnVarID();
   M.addAction<EraseInstAction>(RootInsnID);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
@@ -2311,12 +2318,12 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
                                    bool Optimize, bool WithCoverage) {
   if (!Optimize) {
     SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
-    return MatchTable::buildTable(InputRules, WithCoverage);
+    return ::buildMatchTable(InputRules, WithCoverage);
   }
 
   std::vector<std::unique_ptr<Matcher>> MatcherStorage;
   std::vector<Matcher *> OptRules = optimizeRuleset(Rules, MatcherStorage);
-  return MatchTable::buildTable(OptRules, WithCoverage);
+  return ::buildMatchTable(OptRules, WithCoverage);
 }
 
 void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {

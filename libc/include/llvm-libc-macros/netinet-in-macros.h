@@ -30,9 +30,8 @@
 #define INADDR_ANY __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x00000000)
 #define INADDR_BROADCAST __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
 #define INADDR_NONE __LLVM_LIBC_CAST(static_cast, in_addr_t, 0xffffffff)
-
-#define INET_ADDRSTRLEN 16
-#define INET6_ADDRSTRLEN 46
+// Not specified by POSIX, added in SVR4
+#define INADDR_LOOPBACK __LLVM_LIBC_CAST(static_cast, in_addr_t, 0x7f000001)
 
 // The following macros test for special IPv6 addresses. Each macro is of type
 // int and takes a single argument of type const struct in6_addr *:

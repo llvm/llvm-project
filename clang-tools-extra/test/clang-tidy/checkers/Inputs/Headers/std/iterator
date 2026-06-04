@@ -1,0 +1,48 @@
+#ifndef _ITERATOR_
+#define _ITERATOR_
+
+#include "cstddef"
+
+namespace std {
+
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag : input_iterator_tag {};
+struct bidirectional_iterator_tag : forward_iterator_tag {};
+struct random_access_iterator_tag : bidirectional_iterator_tag {};
+
+template <typename Iterator>
+struct iterator_traits {
+  typedef typename Iterator::difference_type difference_type;
+  typedef typename Iterator::value_type value_type;
+  typedef typename Iterator::pointer pointer;
+  typedef typename Iterator::reference reference;
+  typedef typename Iterator::iterator_category iterator_category;
+};
+
+template <typename T>
+struct iterator_traits<T *> {
+  typedef ptrdiff_t difference_type;
+  typedef T value_type;
+  typedef T *pointer;
+  typedef T &reference;
+  typedef random_access_iterator_tag iterator_category;
+};
+
+#if __cplusplus >= 201103L
+template <typename Container>
+auto begin(Container &c) -> decltype(c.begin()) { return c.begin(); }
+
+template <typename Container>
+auto end(Container &c) -> decltype(c.end()) { return c.end(); }
+#endif
+
+template <typename T, size_t N>
+T *begin(T (&arr)[N]) { return arr; }
+
+template <typename T, size_t N>
+T *end(T (&arr)[N]) { return arr + N; }
+
+} // namespace std
+
+#endif // _ITERATOR_

@@ -250,16 +250,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO() && (Version >= VersionTuple(116) || LinkerIsLLD) &&
+  if (auto LTO = getToolChain().getLTOMode(Args);
+      LTO != LTOK_None && (Version >= VersionTuple(116) || LinkerIsLLD) &&
       NeedsTempPath(Inputs)) {
     std::string TmpPathName;
-    if (D.getLTOMode() == LTOK_Full) {
+    if (LTO == LTOK_Full) {
       // If we are using full LTO, then automatically create a temporary file
       // path for the linker to use, so that it's lifetime will extend past a
       // possible dsymutil step.
       TmpPathName =
           D.GetTemporaryPath("cc", types::getTypeTempSuffix(types::TY_Object));
-    } else if (D.getLTOMode() == LTOK_Thin)
+    } else if (LTO == LTOK_Thin)
       // If we are using thin LTO, then create a directory instead.
       TmpPathName = D.GetTemporaryDirectory("thinlto");
 
@@ -515,6 +516,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
     }
+  }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
   }
 }
 
@@ -1214,7 +1221,7 @@ AppleMachO::~AppleMachO() {}
 MachO::~MachO() {}
 
 void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                                const llvm::Triple Triple) const {
+                                const llvm::Triple &Triple) const {
   if (SDKInfo) {
     if (!SDKInfo->supportsTriple(Triple))
       getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -2035,15 +2042,14 @@ struct DarwinPlatform {
   }
   static DarwinPlatform createFromSDKInfo(StringRef SDKRoot,
                                           const DarwinSDKInfo &SDKInfo) {
-    const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
-        SDKInfo.getCanonicalPlatformInfo();
-    const llvm::Triple::OSType OS = PlatformInfo.getOS();
+    const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
+    const llvm::Triple::OSType OS = PlatformTriple.getOS();
     VersionTuple Version = SDKInfo.getVersion();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));
     DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
-    Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
+    Result.Environment = getEnvKindFromEnvType(PlatformTriple.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
     return Result;
@@ -2076,15 +2082,10 @@ struct DarwinPlatform {
     llvm::Triple::OSType OS = getOSFromPlatform(Platform);
     llvm::Triple::EnvironmentType EnvironmentType =
         getEnvTypeFromEnvKind(Environment);
-    StringRef PlatformPrefix =
-        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
-    return DarwinSDKInfo("", OS, EnvironmentType, getOSVersion(),
+    return DarwinSDKInfo(OS, EnvironmentType, getOSVersion(),
                          getDisplayName(Platform, Environment, getOSVersion()),
                          /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99),
-                         {DarwinSDKInfo::SDKPlatformInfo(
-                             llvm::Triple::Apple, OS, EnvironmentType,
-                             llvm::Triple::MachO, PlatformPrefix)});
+                         VersionTuple(getOSVersion().getMajor(), 0, 99));
   }
 
 private:
@@ -4040,10 +4041,13 @@ void Darwin::CheckObjCARC() const {
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
 
-SanitizerMask Darwin::getSupportedSanitizers() const {
+SanitizerMask
+Darwin::getSupportedSanitizers(StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

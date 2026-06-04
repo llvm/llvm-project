@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM,OGCG
 
 template <typename T>
 struct IsChar {
@@ -19,7 +19,7 @@ template <typename T>
 concept SameAsChar = (bool)IsInt<T>();
 
 // LLVM-DAG: [[STRUCT_A:%.*]] = type { i8, double }
-// CIR-DAG: ![[STRUCT_A:.*]] = !cir.record<struct "A" {!s8i, !cir.double}>
+// CIR-DAG: ![[STRUCT_A:.*]] = !cir.struct<"A" {!s8i, !cir.double}>
 struct A {
   char i;
   double j;
@@ -29,20 +29,20 @@ struct A {
 };
 
 // LLVM-DAG: [[STRUCT_B:%.*]] = type { [[STRUCT_A]], i32 }
-// CIR-DAG: ![[STRUCT_B:.*]] = !cir.record<struct "B" {![[STRUCT_A]], !s32i}>
+// CIR-DAG: ![[STRUCT_B:.*]] = !cir.struct<"B" {![[STRUCT_A]], !s32i}>
 struct B {
   A a;
   int b;
 };
 
 // LLVM-DAG: [[STRUCT_C:%.*]] = type <{ [[STRUCT_B]], [[STRUCT_A]], i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_C:.*]] = !cir.record<struct "C" packed padded {![[STRUCT_B]], ![[STRUCT_A]], !s32i, !cir.array<!u8i x 4>}>
+// CIR-DAG: ![[STRUCT_C:.*]] = !cir.struct<"C" packed padded {![[STRUCT_B]], ![[STRUCT_A]], !s32i, !cir.array<!u8i x 4>}>
 struct C : public B, public A {
   int c;
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.record<struct "D" {![[STRUCT_A]], ![[STRUCT_A]], !u8i, ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {![[STRUCT_A]], ![[STRUCT_A]], !u8i, ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -51,14 +51,14 @@ struct D {
 };
 
 // LLVM-DAG: [[STRUCT_E:%.*]] = type { i32, ptr }
-// CIR-DAG: ![[STRUCT_E:.*]] = !cir.record<struct "E" {!s32i, !cir.ptr<!s8i>}>
+// CIR-DAG: ![[STRUCT_E:.*]] = !cir.struct<"E" {!s32i, !cir.ptr<!s8i>}>
 struct E {
   int a;
   const char* fn = __builtin_FUNCTION();
   ~E() {};
 };
 
-// CIR-DAG: ![[STRUCT_F:.*]] = !cir.record<struct "F" padded {!u8i}>
+// CIR-DAG: ![[STRUCT_F:.*]] = !cir.struct<"F" padded {!u8i}>
 struct F {
   F (int i = 1);
   F (const F &f) = delete;
@@ -66,7 +66,7 @@ struct F {
 };
 
 // LLVM-DAG: [[STRUCT_G:%.*]] = type <{ i32, [4 x i8] }>
-// CIR-DAG: ![[STRUCT_G:.*]] = !cir.record<struct "G" packed padded {!s32i, !cir.array<!u8i x 4>}>
+// CIR-DAG: ![[STRUCT_G:.*]] = !cir.struct<"G" packed padded {!s32i, !cir.array<!u8i x 4>}>
 struct G {
   int a;
   F f;
@@ -74,7 +74,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.record<union "U" {!u8i, ![[STRUCT_A]], !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {!u8i, ![[STRUCT_A]], !s8i}>
 union U {
   unsigned : 1;
   A a;
@@ -84,7 +84,7 @@ union U {
 
 namespace gh61145 {
   // LLVM-DAG: [[STRUCT_VEC:%.*Vec.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.record<struct "gh61145::Vec" padded {!u8i}>
+  // CIR-DAG: ![[STRUCT_VEC:.*]] = !cir.struct<"gh61145::Vec" padded {!u8i}>
   struct Vec {
     Vec();
     Vec(Vec&&);
@@ -92,13 +92,13 @@ namespace gh61145 {
   };
 
   // LLVM-DAG: [[STRUCT_S1:%.*]] = type { i8 }
-  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.record<struct "gh61145::S1" padded {!u8i}>
+  // CIR-DAG: ![[STRUCT_S1:.*]] = !cir.struct<"gh61145::S1" padded {!u8i}>
   struct S1 {
     Vec v;
   };
 
   // LLVM-DAG: [[STRUCT_S2:%.*]] = type { i8, i8 }
-  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.record<struct "gh61145::S2" padded {!u8i, !s8i}>
+  // CIR-DAG: ![[STRUCT_S2:.*]] = !cir.struct<"gh61145::S2" padded {!u8i, !s8i}>
   struct S2 {
     Vec v;
     char c;
@@ -107,7 +107,7 @@ namespace gh61145 {
 
 namespace gh62266 {
   // LLVM-DAG: [[STRUCT_H:%.*H.*]] = type { i32, i32 }
-  // CIR-DAG: ![[STRUCT_H:.*]] = !cir.record<struct "gh62266::H<2>" {!s32i, !s32i}>
+  // CIR-DAG: ![[STRUCT_H:.*]] = !cir.struct<"gh62266::H<2>" {!s32i, !s32i}>
   template <int J>
   struct H {
     int i;
@@ -117,7 +117,7 @@ namespace gh62266 {
 
 namespace gh61567 {
   // LLVM-DAG: [[STRUCT_I:%.*I.*]] = type { i32, ptr }
-  // CIR-DAG: ![[STRUCT_I:.*]] = !cir.record<struct "gh61567::I" {!s32i, !cir.ptr<!s32i>}>
+  // CIR-DAG: ![[STRUCT_I:.*]] = !cir.struct<"gh61567::I" {!s32i, !cir.ptr<!s32i>}>
   struct I {
     int a;
     int&& r = 2;
@@ -881,4 +881,46 @@ namespace gh68198 {
   void foo27() {
     void* arr10 = new int[4][2]({5, 6}, {7, 8});
   }
+}
+
+
+namespace base_cleanup {
+
+struct Base {
+  ~Base() {}
+  int b;
+};
+
+struct Derived : Base {
+  int d;
+};
+
+void base_cleanup() {
+  Derived x{{1}, 2};
+}
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// CIR: cir.cleanup.scope {
+// CIR:   cir.yield
+// CIR: } cleanup normal {
+// CIR:   cir.call @_ZN12base_cleanup7DerivedD1Ev(
+// CIR:   cir.yield
+// CIR: }
+
+// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// OGCG-NOT: define
+// OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// OGCG: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
+
+// LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
+// LLVMCIR-NOT: define
+// LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
+// LLVMCIR: }
+
 }
