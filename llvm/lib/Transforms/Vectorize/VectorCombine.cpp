@@ -3595,25 +3595,24 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
           return nullptr;
         for (unsigned Idx = 0, E = Item.size(); Idx < E; Idx += R) {
           auto [V, Lane] = Item[Idx];
-          if (!V)
+          if (!V) {
             NewItem.push_back({nullptr, PoisonMaskElem});
-          else {
-            NewItem.push_back(lookThroughShuffles(
-                cast<Instruction>(V)->getOperand(0), Lane / R));
+            continue;
           }
+          NewItem.push_back(
+              lookThroughShuffles(cast<Operator>(V)->getOperand(0), Lane / R));
         }
       } else {
         // Narrowing: expand operand Item.
         unsigned R = SrcElts / DstElts;
         for (auto [V, Lane] : Item) {
           if (!V) {
-            for (unsigned J = 0; J < R; ++J)
-              NewItem.push_back({nullptr, PoisonMaskElem});
-          } else {
-            Value *Op = cast<Instruction>(V)->getOperand(0);
-            for (unsigned J = 0; J < R; ++J)
-              NewItem.push_back(lookThroughShuffles(Op, Lane * R + J));
+            NewItem.append(R, {nullptr, PoisonMaskElem});
+            continue;
           }
+          Value *Op = cast<Operator>(V)->getOperand(0);
+          for (unsigned J = 0; J < R; ++J)
+            NewItem.push_back(lookThroughShuffles(Op, Lane * R + J));
         }
       }
       Value *Op = generateNewInstTree(NewItem, &BitCast->getOperandUse(0), Ty,
@@ -3809,15 +3808,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
                                   &BitCast->getOperandUse(0));
             continue;
           }
-          if (DstElts > SrcElts && DstElts % SrcElts == 0 &&
-              Item.size() % (DstElts / SrcElts) == 0) {
+          if (DstElts > SrcElts && DstElts % SrcElts == 0) {
             // Widening bitcast (e.g. <2 x i32> -> <4 x i16>). Compress
             // consecutive groups of R destination lanes into one source
             // lane.
             unsigned R = DstElts / SrcElts;
             SmallVector<InstLane> NItem;
-            bool Valid = true;
-            for (unsigned Idx = 0, E = Item.size(); Idx < E; Idx += R) {
+            bool Valid = Item.size() % R == 0;
+            for (unsigned Idx = 0, E = Item.size(); Valid && Idx < E;
+                 Idx += R) {
               auto [V0, L0] = Item[Idx];
               if (!V0) {
                 if (any_of(ArrayRef(Item).slice(Idx + 1, R - 1),
@@ -3842,7 +3841,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
               if (!Valid)
                 break;
               NItem.push_back(lookThroughShuffles(
-                  cast<Instruction>(V0)->getOperand(0), L0 / R));
+                  cast<Operator>(V0)->getOperand(0), L0 / R));
             }
             if (Valid) {
               TraversedElCountChangingBitcast = true;
@@ -3856,11 +3855,10 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             SmallVector<InstLane> NItem;
             for (auto [V, Lane] : Item) {
               if (!V) {
-                for (unsigned J = 0; J < R; ++J)
-                  NItem.push_back({nullptr, PoisonMaskElem});
+                NItem.append(R, {nullptr, PoisonMaskElem});
                 continue;
               }
-              Value *Op = cast<Instruction>(V)->getOperand(0);
+              Value *Op = cast<Operator>(V)->getOperand(0);
               for (unsigned J = 0; J < R; ++J)
                 NItem.push_back(lookThroughShuffles(Op, Lane * R + J));
             }

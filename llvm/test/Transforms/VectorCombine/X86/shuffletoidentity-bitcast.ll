@@ -199,3 +199,138 @@ define <3 x i32> @bitcast_widening_non_divisible(<2 x i64> %x) {
   %r = shufflevector <4 x i32> %bc, <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x i32> %r
 }
+
+; One-way widening bitcast: operate in wider type, don't bitcast back.
+; Output type differs from input type.
+define <4 x i32> @bitcast_oneway_widen_or(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @bitcast_oneway_widen_or(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i64> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
+;
+  %a_lo = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 0>
+  %a_hi = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 1>
+  %b_lo = shufflevector <2 x i64> %b, <2 x i64> poison, <1 x i32> <i32 0>
+  %b_hi = shufflevector <2 x i64> %b, <2 x i64> poison, <1 x i32> <i32 1>
+  %bc_a_lo = bitcast <1 x i64> %a_lo to <2 x i32>
+  %bc_a_hi = bitcast <1 x i64> %a_hi to <2 x i32>
+  %bc_b_lo = bitcast <1 x i64> %b_lo to <2 x i32>
+  %bc_b_hi = bitcast <1 x i64> %b_hi to <2 x i32>
+  %or_lo = or <2 x i32> %bc_a_lo, %bc_b_lo
+  %or_hi = or <2 x i32> %bc_a_hi, %bc_b_hi
+  %result = shufflevector <2 x i32> %or_lo, <2 x i32> %or_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %result
+}
+
+; One-way narrowing bitcast: operate in narrower type, don't bitcast back.
+define <2 x i64> @bitcast_oneway_narrow_sub(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @bitcast_oneway_narrow_sub(
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <4 x i32> [[TMP1:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[RESULT1:%.*]] = sub <2 x i64> [[RESULT]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x i64> [[RESULT1]]
+;
+  %a_lo = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %a_hi = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %b_lo = shufflevector <4 x i32> %b, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %b_hi = shufflevector <4 x i32> %b, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %bc_a_lo = bitcast <2 x i32> %a_lo to <1 x i64>
+  %bc_a_hi = bitcast <2 x i32> %a_hi to <1 x i64>
+  %bc_b_lo = bitcast <2 x i32> %b_lo to <1 x i64>
+  %bc_b_hi = bitcast <2 x i32> %b_hi to <1 x i64>
+  %sub_lo = sub <1 x i64> %bc_a_lo, %bc_b_lo
+  %sub_hi = sub <1 x i64> %bc_a_hi, %bc_b_hi
+  %result = shufflevector <1 x i64> %sub_lo, <1 x i64> %sub_hi, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %result
+}
+
+; Poison lanes in shuffle through bitcast: ensure poison is preserved.
+define <4 x i32> @bitcast_poison_lanes(<4 x i32> %a) {
+; CHECK-LABEL: @bitcast_poison_lanes(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC_LO:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[ADD_LO:%.*]] = add <1 x i64> [[BC_LO]], [[BC_LO]]
+; CHECK-NEXT:    [[RES_LO:%.*]] = bitcast <1 x i64> [[ADD_LO]] to <2 x i32>
+; CHECK-NEXT:    [[RESULT:%.*]] = shufflevector <2 x i32> [[RES_LO]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
+;
+  %a_lo = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %bc_lo = bitcast <2 x i32> %a_lo to <1 x i64>
+  %add_lo = add <1 x i64> %bc_lo, %bc_lo
+  %res_lo = bitcast <1 x i64> %add_lo to <2 x i32>
+  %result = shufflevector <2 x i32> %res_lo, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+  ret <4 x i32> %result
+}
+
+; Negative test: different operations on halves should not fold.
+define <4 x i32> @bitcast_different_ops_neg(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @bitcast_different_ops_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC_A_LO:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[A]] to <2 x i64>
+; CHECK-NEXT:    [[BC_A_HI:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[BC_B_LO:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[BC_B_HI:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> poison, <1 x i32> <i32 1>
+; CHECK-NEXT:    [[ADD_LO:%.*]] = add <1 x i64> [[BC_A_LO]], [[BC_B_LO]]
+; CHECK-NEXT:    [[XOR_HI:%.*]] = xor <1 x i64> [[BC_A_HI]], [[BC_B_HI]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <1 x i64> [[ADD_LO]], <1 x i64> [[XOR_HI]], <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <2 x i64> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[RESULT]]
+;
+  %a_lo = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %a_hi = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %b_lo = shufflevector <4 x i32> %b, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %b_hi = shufflevector <4 x i32> %b, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %bc_a_lo = bitcast <2 x i32> %a_lo to <1 x i64>
+  %bc_a_hi = bitcast <2 x i32> %a_hi to <1 x i64>
+  %bc_b_lo = bitcast <2 x i32> %b_lo to <1 x i64>
+  %bc_b_hi = bitcast <2 x i32> %b_hi to <1 x i64>
+  %add_lo = add <1 x i64> %bc_a_lo, %bc_b_lo
+  %xor_hi = xor <1 x i64> %bc_a_hi, %bc_b_hi
+  %res_lo = bitcast <1 x i64> %add_lo to <2 x i32>
+  %res_hi = bitcast <1 x i64> %xor_hi to <2 x i32>
+  %result = shufflevector <2 x i32> %res_lo, <2 x i32> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %result
+}
+
+; Bitcast with intrinsic (abs) through narrowing bitcast.
+define <4 x i32> @bitcast_narrow_abs(<4 x i32> %a) {
+; CHECK-LABEL: @bitcast_narrow_abs(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP1]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %lo = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %hi = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %bc_lo = bitcast <2 x i32> %lo to <1 x i64>
+  %bc_hi = bitcast <2 x i32> %hi to <1 x i64>
+  %abs_lo = call <1 x i64> @llvm.abs.v1i64(<1 x i64> %bc_lo, i1 false)
+  %abs_hi = call <1 x i64> @llvm.abs.v1i64(<1 x i64> %bc_hi, i1 false)
+  %res_lo = bitcast <1 x i64> %abs_lo to <2 x i32>
+  %res_hi = bitcast <1 x i64> %abs_hi to <2 x i32>
+  %result = shufflevector <2 x i32> %res_lo, <2 x i32> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %result
+}
+
+; Single-element source vector: full ratio compression (R equals total elements).
+define <2 x i64> @bitcast_single_src_elt(<2 x i64> %a) {
+; CHECK-LABEL: @bitcast_single_src_elt(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[TMP1]], splat (i16 1)
+; CHECK-NEXT:    [[RESULT:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[RESULT]]
+;
+  %a0 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 0>
+  %a1 = shufflevector <2 x i64> %a, <2 x i64> poison, <1 x i32> <i32 1>
+  %bc0 = bitcast <1 x i64> %a0 to <4 x i16>
+  %bc1 = bitcast <1 x i64> %a1 to <4 x i16>
+  %add0 = add <4 x i16> %bc0, splat (i16 1)
+  %add1 = add <4 x i16> %bc1, splat (i16 1)
+  %res0 = bitcast <4 x i16> %add0 to <1 x i64>
+  %res1 = bitcast <4 x i16> %add1 to <1 x i64>
+  %result = shufflevector <1 x i64> %res0, <1 x i64> %res1, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %result
+}
