@@ -16,10 +16,31 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <type_traits>
 
 #include "test_macros.h"
 
+// Pin down the sizeof gate: narrow signed types still resolve to abs(int) via
+// integer promotion, and the new template stays out of their overload set.
+// Detection probes the template path specifically (the type of std::abs(t) is
+// the unpromoted T only for the new overload).
+template <class T>
+constexpr bool unpromoted_abs = std::is_same<decltype(std::abs(T(0))), T>::value;
+static_assert(!unpromoted_abs<signed char>);
+static_assert(!unpromoted_abs<short>);
+
 #if TEST_HAS_EXTENSION(bit_int)
+// _BitInt(N) narrower than int does not promote and the new template's sizeof
+// gate excludes it, so abs is not callable. Probe via SFINAE.
+template <class T, class = void>
+constexpr bool has_abs = false;
+template <class T>
+constexpr bool has_abs<T, decltype((void)std::abs(T(0)))> = true;
+static_assert(!has_abs<signed _BitInt(7)>);
+static_assert(!has_abs<signed _BitInt(16)>);
+static_assert(!has_abs<signed _BitInt(31)>);
+static_assert(has_abs<signed _BitInt(32)>);
+
 template <int N>
 void test_signed_bitint() {
   using T = signed _BitInt(N);
