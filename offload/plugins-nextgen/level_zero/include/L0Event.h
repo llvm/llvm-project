@@ -107,15 +107,20 @@ public:
     return Plugin::success();
   }
 
-  /// Get a free event from the pool.
+  /// Get a L0 Event (ze_event_handle_t) from the pool.
   Expected<ze_event_handle_t> getEvent() {
     std::lock_guard<std::mutex> Lock(*Mtx);
     return getEventLocked();
   }
+  /// Get an L0EventTy object that wraps a ze_event_handle_t from the pool.
+  /// This is the preferred way to get an event unless a raw event is really
+  /// needed.
   Expected<L0EventTy *> getEventObject();
 
-  /// Return an event to the pool.
+  /// Return a ze_event_handle_t to the pool.
   Error releaseEvent(ze_event_handle_t Event);
+  /// Returns an L0EventTy object to the pool so it can be reused. This does not
+  /// return the underlying ze_event_handle_t to the handle pool.
   Error releaseEventObject(L0EventTy *EventObj);
 };
 

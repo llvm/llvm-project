@@ -419,18 +419,21 @@ public:
     return l0Context.getDriverAPIVersion();
   }
 
-  /// Return an event from the driver associated to this device.
+  /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
     return l0Context.getEventPool().getEvent();
   }
+  /// Get a high-level L0EventTy object from the driver associated to this
+  /// device.
   Expected<L0EventTy *> getEventObject() {
     return l0Context.getEventPool().getEventObject();
   }
 
-  /// Release event to the pool associated to this device.
+  /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
     return l0Context.getEventPool().releaseEvent(Event);
   }
+  /// Release an L0EventTy object to the pool associated to this device.
   Error releaseEventObject(L0EventTy *EventObj) {
     return l0Context.getEventPool().releaseEventObject(EventObj);
   }
