@@ -7151,14 +7151,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
       }
-    }
-
-    // Old bitcode allowed an optional bitcast between a musttail call and its
-    // return. Under opaque pointers that cast is always a no-op, and the
-    // verifier no longer accepts it, so drop it.
-    if (auto *BC = dyn_cast<BitCastInst>(&I);
-        BC && BC->getSrcTy() == BC->getDestTy() &&
-        isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
       if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
           CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
         BC->replaceAllUsesWith(CI);
