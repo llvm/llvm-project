@@ -1460,15 +1460,35 @@ public:
   /// value must go out of scope before the next call to \c ResolveImportedPath.
   static TemporarilyOwnedStringRef
   ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix);
+  /// Resolve \c Path in the context of module file \c M with substitution
+  /// of the path prefixes in case provided them by `-ffile-prefix-map` or
+  /// `-fmacro-prefix-map` options.
+  /// The return value must go out of scope before the next call to
+  /// \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, ModuleFile &ModF,
+                      const LangOptions &LangOpts);
+  /// Resolve \c Path in the context of the \c Prefix directory with
+  /// substitution of the path prefixes in case provided them by
+  /// `-ffile-prefix-map` or `-fmacro-prefix-map` options.
+  /// The return value must go out of scope before the next call to
+  /// \c ResolveImportedPath.
+  static TemporarilyOwnedStringRef
+  ResolveImportedPath(SmallString<0> &Buf, StringRef Path, StringRef Prefix,
+                      const LangOptions &LangOpts);
 
   /// Resolve \c Path in the context of module file \c M.
-  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
-                                                    StringRef Path,
-                                                    ModuleFile &ModF);
+  /// The module path could be remapped with the path prefixes provided by
+  /// `-ffile-prefix-map` or `-fmacro-prefix-map` options.
+  static std::string
+  ResolveImportedPathAndAllocate(SmallString<0> &Buf, StringRef Path,
+                                 ModuleFile &ModF, const LangOptions &LangOpts);
   /// Resolve \c Path in the context of the \c Prefix directory.
-  static std::string ResolveImportedPathAndAllocate(SmallString<0> &Buf,
-                                                    StringRef Path,
-                                                    StringRef Prefix);
+  /// The path could be remapped with the path prefixes provided by
+  /// `-ffile-prefix-map` or `-fmacro-prefix-map` options.
+  static std::string
+  ResolveImportedPathAndAllocate(SmallString<0> &Buf, StringRef Path,
+                                 StringRef Prefix, const LangOptions &LangOpts);
 
   /// Returns the first key declaration for the given declaration. This
   /// is one that is formerly-canonical (or still canonical) and whose module
@@ -1998,8 +2018,9 @@ public:
   /// \returns true if an error occurred, false otherwise.
   static bool readASTFileControlBlock(
       StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
-      const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
-      ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
+      const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+      bool FindModuleFileExtensions, ASTReaderListener &Listener,
+      bool ValidateDiagnosticOptions,
       unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
                                         ARR_OutOfDate);
 

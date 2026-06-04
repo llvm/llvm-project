@@ -1010,7 +1010,7 @@ void DumpModuleInfoAction::ExecuteAction() {
   // FileCcontrolBlock is (re-)parsed.
   ASTReader::readASTFileControlBlock(
       getCurrentFile(), FileMgr, CI.getModuleCache(),
-      CI.getPCHContainerReader(),
+      CI.getPCHContainerReader(), CI.getLangOpts(),
       /*FindModuleFileExtensions=*/true, Listener,
       HSOpts.ModulesValidateDiagnosticOptions);
 }
