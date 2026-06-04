@@ -985,3 +985,14 @@ transform.sequence failures(propagate) {
   "transform.sequence"(%arg0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 1, 0>}> ({
   }) : (!pdl.operation) -> ()
 }
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{duplicate normal form: #transform.test_single_block_normal_form<nested false>}}
+    // expected-note @below {{previous instance: #transform.test_single_block_normal_form<nested true>}}
+    transform.structured.match attributes {sym_name = "nested"} in %arg0 : (!transform.any_op) -> !transform.normalized_op<#transform.test_single_block_normal_form<nested true>, #transform.test_single_block_normal_form<nested false>>
+    transform.yield
+  }
+}

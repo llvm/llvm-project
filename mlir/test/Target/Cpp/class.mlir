@@ -76,3 +76,25 @@ emitc.class @reflectionClass {
 // CHECK-NEXT:    }
 // CHECK-NEXT:  };
 
+// struct does not emit a public: section.
+emitc.class struct @structClass {
+  emitc.field @x : i32
+  emitc.field @y : i32
+}
+
+// CHECK-LABEL: struct structClass {
+// CHECK-NEXT:    int32_t x;
+// CHECK-NEXT:    int32_t y;
+// CHECK-NEXT:  };
+
+// union does not emit a public: section.
+emitc.class union @unionClass {
+  emitc.field @asInt : i32
+  emitc.field @asFloat : f32
+}
+
+// CHECK-LABEL: union unionClass {
+// CHECK-NEXT:    int32_t asInt;
+// CHECK-NEXT:    float asFloat;
+// CHECK-NEXT:  };
+

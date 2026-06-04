@@ -392,13 +392,13 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
                                   unsigned fromColumn,
                                   unsigned toColumn) const {
   assert(fromRow <= toRow && "end of row range must be after beginning!");
-  assert(toRow < nRows && "end of row range out of bounds!");
+  assert(toRow <= nRows && "end of row range out of bounds!");
   assert(fromColumn <= toColumn &&
          "end of column range must be after beginning!");
-  assert(toColumn < nColumns && "end of column range out of bounds!");
-  Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
-  for (unsigned i = fromRow; i <= toRow; ++i)
-    for (unsigned j = fromColumn; j <= toColumn; ++j)
+  assert(toColumn <= nColumns && "end of column range out of bounds!");
+  Matrix<T> subMatrix(toRow - fromRow, toColumn - fromColumn);
+  for (unsigned i = fromRow; i < toRow; ++i)
+    for (unsigned j = fromColumn; j < toColumn; ++j)
       subMatrix(i - fromRow, j - fromColumn) = at(i, j);
   return subMatrix;
 }
@@ -465,6 +465,15 @@ IntMatrix IntMatrix::identity(unsigned dimension) {
   for (unsigned i = 0; i < dimension; ++i)
     matrix(i, i) = 1;
   return matrix;
+}
+
+FracMatrix IntMatrix::asFracMatrix() const {
+  FracMatrix mat(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      mat(i, j) = at(i, j);
+
+  return mat;
 }
 
 std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
@@ -653,8 +662,6 @@ IntMatrix::computeSmithNormalForm() const {
         u.negateRow(i);
       }
 
-      DynamicAPInt pivot = d(i, i);
-
       // Clear other entries in row i and column i with Euclid's algorithm.
       for (unsigned r = i + 1; r < numRows; ++r) {
         while (d(r, i) != 0) {
@@ -684,7 +691,7 @@ IntMatrix::computeSmithNormalForm() const {
         }
       }
 
-      if (auto row = findNonMultipleRow(d, i + 1, pivot)) {
+      if (auto row = findNonMultipleRow(d, i + 1, d(i, i))) {
         // Add the row (r) to row i. This brings d(r, c) into the i-th row,
         // creating a new value at d(i, c) that will be used to reduce the
         // pivot size.
@@ -731,6 +738,15 @@ DynamicAPInt IntMatrix::determinant(IntMatrix *inverse) const {
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
+}
+
+IntMatrix FracMatrix::asIntMatrix() const {
+  IntMatrix mat(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      mat(i, j) = at(i, j).getAsInteger();
+
+  return mat;
 }
 
 FracMatrix::FracMatrix(IntMatrix m)

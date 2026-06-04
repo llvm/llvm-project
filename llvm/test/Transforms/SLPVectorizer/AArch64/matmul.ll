@@ -14,43 +14,29 @@ define void @wrap_mul4(ptr nocapture %Out, ptr nocapture readonly %A, ptr nocapt
 ; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[TEMP2:%.*]] = load double, ptr [[ARRAYIDX5_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B:%.*]], i64 1, i64 0
-; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX30_I:%.*]] = getelementptr inbounds [4 x double], ptr [[B]], i64 1, i64 2
 ; CHECK-NEXT:    [[ARRAYIDX47_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 1, i64 0
 ; CHECK-NEXT:    [[TEMP10:%.*]] = load double, ptr [[ARRAYIDX47_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], ptr [[A]], i64 1, i64 1
 ; CHECK-NEXT:    [[TEMP11:%.*]] = load double, ptr [[ARRAYIDX52_I]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[TEMP]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, ptr [[ARRAYIDX7_I]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[TEMP2]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4:%.*]] = getelementptr inbounds double, ptr [[OUT:%.*]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, ptr [[ARRAYIDX25_I]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP3]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[ARRAYIDX30_I]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul <2 x double> [[TMP7]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[TMP11]], [[TMP13]]
-; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store <2 x double> [[TMP14]], ptr [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> poison, double [[TEMP]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x double> [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x double>, ptr [[ARRAYIDX7_I]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> poison, double [[TEMP2]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP7]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x double> [[TMP4]], [[TMP8]]
+; CHECK-NEXT:    store <4 x double> [[TMP9]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 4
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul <2 x double> [[TMP1]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[TEMP11]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP18]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP5]], [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = fadd <2 x double> [[TMP17]], [[TMP20]]
-; CHECK-NEXT:    store <2 x double> [[TMP21]], ptr [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]], align 8
-; CHECK-NEXT:    [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 6
-; CHECK-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP10]], [[TMP16]]
-; CHECK-NEXT:    [[TMP23:%.*]] = fmul <2 x double> [[TMP12]], [[TMP19]]
-; CHECK-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP22]], [[TMP23]]
-; CHECK-NEXT:    store <2 x double> [[TMP24]], ptr [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12]], align 8
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> poison, double [[TEMP10]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul <4 x double> [[TMP1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> poison, double [[TEMP11]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x double> [[TMP5]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd <4 x double> [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    store <4 x double> [[TMP16]], ptr [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %temp = load double, ptr %A, align 8

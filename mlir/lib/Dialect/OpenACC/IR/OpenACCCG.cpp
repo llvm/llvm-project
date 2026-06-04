@@ -19,9 +19,11 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -62,47 +64,99 @@ struct RemoveEmptyKernelEnvironment
     if (!block.empty())
       return failure();
 
-    // Conservatively disable canonicalization of empty acc.kernel_environment
-    // operations if the wait operands in the kernel_environment cannot be fully
-    // represented by acc.wait operation.
-
-    // Disable canonicalization if device type is not the default
-    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
-      for (auto attr : deviceTypeAttr) {
-        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
-          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if any wait segment has a devnum
-    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
-      for (auto attr : hasDevnumAttr) {
-        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
-          if (boolAttr.getValue())
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if there are multiple wait segments
-    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
-      if (segmentsAttr.size() > 1)
-        return failure();
-    }
-
     // Remove empty kernel environment.
     // Preserve synchronization by creating acc.wait operation if needed.
     if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
-                                               /*asyncOperand=*/Value(),
-                                               /*waitDevnum=*/Value(),
-                                               /*async=*/nullptr,
-                                               /*ifCond=*/Value());
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(
+          op, op.getWaitOperands(), /*asyncOperand=*/Value(),
+          op.getWaitDevnum(), /*async=*/nullptr, /*ifCond=*/Value());
     else
       rewriter.eraseOp(op);
 
+    return success();
+  }
+};
+
+static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                    PatternRewriter &rewriter,
+                                                    size_t numInput) {
+  const size_t numLaunch = op.getLaunchArgs().size();
+  op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
+              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                             static_cast<int32_t>(numInput),
+                                             op.getStream() ? 1 : 0}));
+}
+
+struct ComputeRegionRemoveDuplicateArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool mergedAny = false;
+    while (true) {
+      bool merged = false;
+      for (size_t j = 1; j < numInput && !merged; ++j) {
+        for (size_t i = 0; i < j; ++i) {
+          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+              op->getOperand(static_cast<unsigned>(numLaunch + j)))
+            continue;
+          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                      body->getArgument(keepIdx));
+          body->eraseArgument(dropIdx);
+          op->eraseOperand(dropIdx);
+          --numInput;
+          merged = true;
+          mergedAny = true;
+          break;
+        }
+      }
+      if (!merged)
+        break;
+    }
+
+    if (!mergedAny)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+    return success();
+  }
+};
+
+struct ComputeRegionRemoveUnusedArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool changed = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput;) {
+      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        ++k;
+        continue;
+      }
+      body->eraseArgument(static_cast<unsigned>(k));
+      op->eraseOperand(static_cast<unsigned>(k));
+      --numInput;
+      changed = true;
+    }
+
+    if (!changed)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
     return success();
   }
 };
@@ -218,31 +272,108 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
   results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
+/// Extract async for `clauseDeviceType`. Returns true if a clause was found.
+template <typename ComputeConstructT>
+static bool
+extractAsyncClause(ComputeConstructT computeConstruct,
+                   DeviceType clauseDeviceType, MLIRContext *context,
+                   std::optional<Value> &asyncOperand, UnitAttr &asyncOnly) {
+  if (computeConstruct.hasAsyncOnly(clauseDeviceType)) {
+    asyncOnly = UnitAttr::get(context);
+    return true;
+  }
+  if (Value asyncValue = computeConstruct.getAsyncValue(clauseDeviceType)) {
+    asyncOperand = asyncValue;
+    return true;
+  }
+  return false;
+}
+
+/// Extract wait for `clauseDeviceType`. Returns true if a clause was found.
+template <typename ComputeConstructT>
+static bool extractWaitClause(ComputeConstructT computeConstruct,
+                              DeviceType clauseDeviceType, MLIRContext *context,
+                              std::optional<Value> &waitDevnum,
+                              SmallVectorImpl<Value> &waitOperands,
+                              UnitAttr &waitOnly) {
+  if (computeConstruct.hasWaitOnly(clauseDeviceType)) {
+    waitOnly = UnitAttr::get(context);
+    return true;
+  }
+  Value devnum = computeConstruct.getWaitDevnum(clauseDeviceType);
+  auto waitValues = computeConstruct.getWaitValues(clauseDeviceType);
+  if (!devnum && waitValues.empty())
+    return false;
+  if (devnum)
+    waitDevnum = devnum;
+  waitOperands.append(waitValues.begin(), waitValues.end());
+  return true;
+}
+
+template <typename ComputeConstructT>
+static void populateKernelEnvironmentAsyncWait(
+    ComputeConstructT computeConstruct, DeviceType deviceType,
+    std::optional<Value> &asyncOperand, UnitAttr &asyncOnly,
+    std::optional<Value> &waitDevnum, SmallVectorImpl<Value> &waitOperands,
+    UnitAttr &waitOnly) {
+  MLIRContext *context = computeConstruct->getContext();
+
+  // Prefer device_type-specific clauses, then default ones.
+  if (!extractAsyncClause(computeConstruct, deviceType, context, asyncOperand,
+                          asyncOnly)) {
+    if (deviceType != DeviceType::None)
+      extractAsyncClause(computeConstruct, DeviceType::None, context,
+                         asyncOperand, asyncOnly);
+  }
+
+  if (!extractWaitClause(computeConstruct, deviceType, context, waitDevnum,
+                         waitOperands, waitOnly)) {
+    if (deviceType != DeviceType::None)
+      extractWaitClause(computeConstruct, DeviceType::None, context, waitDevnum,
+                        waitOperands, waitOnly);
+  }
+}
+
 template <typename ComputeConstructT>
 KernelEnvironmentOp
 KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       DeviceType deviceType,
                                        OpBuilder &builder) {
+  std::optional<Value> asyncOperand;
+  UnitAttr asyncOnly = nullptr;
+  std::optional<Value> waitDevnum;
+  SmallVector<Value> waitOperands;
+  UnitAttr waitOnly = nullptr;
+  populateKernelEnvironmentAsyncWait(computeConstruct, deviceType, asyncOperand,
+                                     asyncOnly, waitDevnum, waitOperands,
+                                     waitOnly);
+
   auto kernelEnvironment = KernelEnvironmentOp::create(
       builder, computeConstruct->getLoc(),
-      computeConstruct.getDataClauseOperands(),
-      computeConstruct.getAsyncOperands(),
-      computeConstruct.getAsyncOperandsDeviceTypeAttr(),
-      computeConstruct.getAsyncOnlyAttr(), computeConstruct.getWaitOperands(),
-      computeConstruct.getWaitOperandsSegmentsAttr(),
-      computeConstruct.getWaitOperandsDeviceTypeAttr(),
-      computeConstruct.getHasWaitDevnumAttr(),
-      computeConstruct.getWaitOnlyAttr());
+      computeConstruct.getDataClauseOperands(), asyncOperand.value_or(Value()),
+      asyncOnly, waitDevnum.value_or(Value()), waitOperands, waitOnly);
   Block &block = kernelEnvironment.getRegion().emplaceBlock();
   builder.setInsertionPointToStart(&block);
   return kernelEnvironment;
 }
 
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, DeviceType,
+                                                   OpBuilder &);
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, DeviceType,
+                                                  OpBuilder &);
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, DeviceType,
+                                                 OpBuilder &);
+
+LogicalResult KernelEnvironmentOp::verify() {
+  if (getAsyncOnly() && getAsyncOperand())
+    return emitError("async-only cannot appear with async operand");
+  if (getWaitOnly() && (!getWaitOperands().empty() || getWaitDevnum()))
+    return emitError("wait-only cannot appear with wait operands or devnum");
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // FirstprivateMapInitialOp
@@ -396,6 +527,23 @@ BlockArgument ComputeRegionOp::appendInputArg(Value value) {
   return getBody()->addArgument(value.getType(), getLoc());
 }
 
+std::optional<BlockArgument>
+ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
+  Region &region = getRegion();
+
+  auto useIsInRegion = [&](OpOperand &use) -> bool {
+    return region.isAncestor(use.getOwner()->getParentRegion());
+  };
+
+  if (!areValuesDefinedAbove(ValueRange(value), region) ||
+      !llvm::any_of(value.getUses(), useIsInRegion))
+    return std::nullopt;
+
+  BlockArgument arg = appendInputArg(value);
+  replaceAllUsesInRegionWith(value, arg, region);
+  return arg;
+}
+
 bool ComputeRegionOp::isEffectivelySerial() {
   auto *ctx = getContext();
 
@@ -441,13 +589,37 @@ SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
 }
 
 Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
+  Block *body = getBody();
+  if (blockArg.getOwner() != body)
+    return Value();
   unsigned argNumber = blockArg.getArgNumber();
   unsigned numLaunchArgs = getLaunchArgs().size();
-  assert(argNumber < (numLaunchArgs + getInputArgs().size()) &&
-         "invalid block argument");
+  unsigned numInputArgs = getInputArgs().size();
+  if (argNumber >= numLaunchArgs + numInputArgs)
+    return Value();
   if (argNumber < numLaunchArgs)
     return getLaunchArgs()[argNumber];
   return getInputArgs()[argNumber - numLaunchArgs];
+}
+
+std::optional<BlockArgument> ComputeRegionOp::getBlockArg(Value value) {
+  Block *body = getBody();
+  for (auto [idx, launchVal] : llvm::enumerate(getLaunchArgs())) {
+    if (launchVal == value)
+      return body->getArgument(idx);
+  }
+  unsigned numLaunch = getLaunchArgs().size();
+  for (auto [idx, inputVal] : llvm::enumerate(getInputArgs())) {
+    if (inputVal == value)
+      return body->getArgument(numLaunch + idx);
+  }
+  return std::nullopt;
+}
+
+void ComputeRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<ComputeRegionRemoveDuplicateArgs, ComputeRegionRemoveUnusedArgs>(
+      context);
 }
 
 BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
@@ -557,6 +729,8 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
     return failure();
+  ComputeRegionOp::ensureTerminator(*body, parser.getBuilder(),
+                                    result.location);
 
   const size_t numLaunchOperands = launchOperands.size();
   const size_t numInputOperands = inputOperands.size();

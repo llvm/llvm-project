@@ -26,6 +26,7 @@
 
 #include "support/Context.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include <functional>
@@ -230,9 +231,6 @@ template <> struct DenseMapInfo<clang::clangd::Config::ExternalIndexSpec> {
   using ExternalIndexSpec = clang::clangd::Config::ExternalIndexSpec;
   static inline ExternalIndexSpec getEmptyKey() {
     return {ExternalIndexSpec::File, "", ""};
-  }
-  static inline ExternalIndexSpec getTombstoneKey() {
-    return {ExternalIndexSpec::File, "TOMB", "STONE"};
   }
   static unsigned getHashValue(const ExternalIndexSpec &Val) {
     return llvm::hash_combine(Val.Kind, Val.Location, Val.MountPoint);

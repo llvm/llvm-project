@@ -120,7 +120,16 @@ enum SortOrder {
 // LazyBool is for boolean values that need to be calculated lazily. Values
 // start off set to eLazyBoolCalculate, and then they can be calculated once
 // and set to eLazyBoolNo or eLazyBoolYes.
-enum LazyBool { eLazyBoolCalculate = -1, eLazyBoolNo = 0, eLazyBoolYes = 1 };
+//
+// eLazyBoolDontKnow is the same value as eLazyBoolCalculate but is used in
+// contexts where the calculation is always attempted, but may turn out to not
+// be possible.
+enum LazyBool {
+  eLazyBoolCalculate = -1,
+  eLazyBoolDontKnow = eLazyBoolCalculate,
+  eLazyBoolNo = 0,
+  eLazyBoolYes = 1
+};
 
 /// Instruction types
 enum InstructionType {

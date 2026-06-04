@@ -14,6 +14,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
 #include <optional>
@@ -123,7 +124,7 @@ void insertChildMapInfoIntoParent(
     Fortran::lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
+    llvm::SmallVectorImpl<Object> &mapObjects);
 
 void generateMemberPlacementIndices(
     const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
@@ -228,6 +229,31 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+
+/// Map a parsed OpenMP context trait-set selector to its OMPContext kind.
+llvm::omp::TraitSet
+mapTraitSet(parser::OmpTraitSetSelectorName::Value flangSet);
+
+/// Map a parsed OpenMP context trait selector within \p set to its OMPContext
+/// kind.
+llvm::omp::TraitSelector
+mapTraitSelector(const parser::OmpTraitSelectorName &name,
+                 llvm::omp::TraitSet set);
+
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
+/// Populate \p vmi from a parsed OpenMP context selector. Constant user
+/// conditions are folded into user_condition_true/false traits. A non-constant
+/// user condition is recorded as user_condition_unknown and returned for later
+/// lowering as a runtime condition.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
 
 } // namespace omp
 } // namespace lower

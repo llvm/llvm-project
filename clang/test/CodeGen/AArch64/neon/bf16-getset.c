@@ -1,8 +1,8 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +bf16 -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN:                   %clang_cc1_cg_arm64_neon -target-feature +bf16           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +bf16 -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -target-feature +bf16 -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 #include <arm_neon.h>
 
@@ -120,3 +120,47 @@ bfloat16x8_t test_vdupq_laneq_bf16(bfloat16x8_t v) {
     // LLVM-NEXT: ret <8 x bfloat> [[VECINIT7_I]]
     return vdupq_n_bf16(v);
   }
+
+//===------------------------------------------------------===//
+// 2.14.1.4 Split vectors
+//===------------------------------------------------------===//
+
+// ALL-LABEL: @test_vget_high_bf16(
+bfloat16x4_t test_vget_high_bf16(bfloat16x8_t a) {
+  // CIR: cir.call @vget_high_bf16({{%.*}}) : (!cir.vector<8 x !cir.bf16>
+
+  // LLVM-SAME: <8 x bfloat> {{.*}} [[A:%.*]])
+  // LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  // LLVM: ret <4 x bfloat> [[SHUFFLE_I]]
+  return vget_high_bf16(a);
+}
+
+// ALL-LABEL: @test_vget_low_bf16(
+bfloat16x4_t test_vget_low_bf16(bfloat16x8_t a) {
+  // CIR: cir.call @vget_low_bf16({{%.*}}) : (!cir.vector<8 x !cir.bf16>
+
+  // LLVM-SAME: <8 x bfloat> {{.*}} [[A:%.*]])
+  // LLVM: [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  // LLVM: ret <4 x bfloat> [[SHUFFLE_I]]
+  return vget_low_bf16(a);
+}
+
+// ALL-LABEL: @test_vget_lane_bf16(
+bfloat16_t test_vget_lane_bf16(bfloat16x4_t v) {
+  // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<4 x !cir.bf16>
+
+  // LLVM-SAME: <4 x bfloat> {{.*}} [[V:%.*]])
+  // LLVM: [[VGET_LANE:%.*]] = extractelement <4 x bfloat> [[V]], i32 1
+  // LLVM: ret bfloat [[VGET_LANE]]
+  return vget_lane_bf16(v, 1);
+}
+
+// ALL-LABEL: @test_vgetq_lane_bf16(
+bfloat16_t test_vgetq_lane_bf16(bfloat16x8_t v) {
+  // CIR: cir.vec.extract %{{.*}}[%{{.*}} : !s32i] : !cir.vector<8 x !cir.bf16>
+
+  // LLVM-SAME: <8 x bfloat> {{.*}} [[V:%.*]])
+  // LLVM: [[VGETQ_LANE:%.*]] = extractelement <8 x bfloat> [[V]], i32 7
+  // LLVM: ret bfloat [[VGETQ_LANE]]
+  return vgetq_lane_bf16(v, 7);
+}

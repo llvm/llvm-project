@@ -63,7 +63,7 @@ static bool IsPageExecutable(uint32_t protect) {
 
 namespace lldb_private {
 
-ProcessDebugger::~ProcessDebugger() {}
+ProcessDebugger::~ProcessDebugger() = default;
 
 lldb::pid_t ProcessDebugger::GetDebuggedProcessId() const {
   if (m_session_data)
@@ -248,6 +248,12 @@ Status ProcessDebugger::HaltProcess(bool &caused_stop) {
   Log *log = GetLog(WindowsLog::Process);
   Status error;
   llvm::sys::ScopedLock lock(m_mutex);
+  if (!m_session_data) {
+    caused_stop = false;
+    LLDB_LOG(log, "HaltProcess called with no active session.");
+    return Status::FromErrorString(
+        "HaltProcess called with no active debugger session.");
+  }
   caused_stop = ::DebugBreakProcess(m_session_data->m_debugger->GetProcess()
                                         .GetNativeProcess()
                                         .GetSystemHandle());
@@ -288,7 +294,7 @@ Status ProcessDebugger::ReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
   error = Status(GetLastError(), eErrorTypeWin32);
   MemoryRegionInfo info;
   if (GetMemoryRegionInfo(vm_addr, info).Fail() ||
-      info.GetMapped() != MemoryRegionInfo::OptionalBool::eYes)
+      info.GetMapped() != eLazyBoolYes)
     return error;
   size = info.GetRange().GetRangeEnd() - vm_addr;
   LLDB_LOG(log, "retrying the read with size {0:x}", size);
@@ -421,10 +427,10 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
       // range from the vm_addr to LLDB_INVALID_ADDRESS
       info.GetRange().SetRangeBase(vm_addr);
       info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
-      info.SetReadable(MemoryRegionInfo::eNo);
-      info.SetExecutable(MemoryRegionInfo::eNo);
-      info.SetWritable(MemoryRegionInfo::eNo);
-      info.SetMapped(MemoryRegionInfo::eNo);
+      info.SetReadable(eLazyBoolNo);
+      info.SetExecutable(eLazyBoolNo);
+      info.SetWritable(eLazyBoolNo);
+      info.SetMapped(eLazyBoolNo);
       return error;
     } else {
       error = Status(last_error, eErrorTypeWin32);
@@ -441,14 +447,13 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     const bool readable = IsPageReadable(mem_info.Protect);
     const bool executable = IsPageExecutable(mem_info.Protect);
     const bool writable = IsPageWritable(mem_info.Protect);
-    info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
-    info.SetExecutable(executable ? MemoryRegionInfo::eYes
-                                  : MemoryRegionInfo::eNo);
-    info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+    info.SetReadable(readable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetExecutable(executable ? eLazyBoolYes : eLazyBoolNo);
+    info.SetWritable(writable ? eLazyBoolYes : eLazyBoolNo);
   } else {
-    info.SetReadable(MemoryRegionInfo::eNo);
-    info.SetExecutable(MemoryRegionInfo::eNo);
-    info.SetWritable(MemoryRegionInfo::eNo);
+    info.SetReadable(eLazyBoolNo);
+    info.SetExecutable(eLazyBoolNo);
+    info.SetWritable(eLazyBoolNo);
   }
 
   // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
@@ -457,7 +462,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
         reinterpret_cast<addr_t>(mem_info.BaseAddress));
     info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) +
                                 mem_info.RegionSize);
-    info.SetMapped(MemoryRegionInfo::eYes);
+    info.SetMapped(eLazyBoolYes);
   } else {
     // In the unmapped case we need to return the distance to the next block of
     // memory. VirtualQueryEx nearly does that except that it gives the
@@ -467,7 +472,7 @@ Status ProcessDebugger::GetMemoryRegionInfo(lldb::addr_t vm_addr,
     DWORD page_offset = vm_addr % data.dwPageSize;
     info.GetRange().SetRangeBase(vm_addr);
     info.GetRange().SetByteSize(mem_info.RegionSize - page_offset);
-    info.SetMapped(MemoryRegionInfo::eNo);
+    info.SetMapped(eLazyBoolNo);
   }
 
   LLDB_LOG_VERBOSE(log,
@@ -544,11 +549,22 @@ void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnDebugString(const std::string &string) {}
+void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
+                                    bool is_unicode,
+                                    uint16_t length_lower_word) {
+  // Do nothing by default
+}
 
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);
+
+  if (!m_session_data) {
+    LLDB_LOG(log,
+             "OnDebuggerError called with no active session: error {0}: {1}",
+             error.GetError(), error);
+    return;
+  }
 
   if (m_session_data->m_initial_stop_received) {
     // This happened while debugging.  Do we shutdown the debugging session,

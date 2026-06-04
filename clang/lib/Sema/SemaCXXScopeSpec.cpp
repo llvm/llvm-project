@@ -681,8 +681,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       }
     }
 
-    if (auto *TD = dyn_cast_or_null<TypedefNameDecl>(SD))
-      MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    MarkAnyDeclReferenced(SD->getLocation(), SD, /*OdrUse=*/false);
 
     // If we're just performing this lookup for error-recovery purposes,
     // don't extend the nested-name-specifier. Just return now.

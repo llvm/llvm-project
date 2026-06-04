@@ -46,14 +46,26 @@ protected:
   void saveObjC(const DWARFDebugInfoEntry *InputDieEntry, DIE *OutDIE,
                 AttributesInfo &AttrInfo);
 
-  void saveNameRecord(StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
+  void saveNameRecord(const DWARFDebugInfoEntry *InputDieEntry,
+                      StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
                       bool AvoidForPubSections);
-  void saveNamespaceRecord(StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
+  void saveNamespaceRecord(const DWARFDebugInfoEntry *InputDieEntry,
+                           StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
                            TypeEntry *TypeEntry);
-  void saveObjCNameRecord(StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag);
-  void saveTypeRecord(StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
+  void saveObjCNameRecord(const DWARFDebugInfoEntry *InputDieEntry,
+                          StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag);
+  void saveTypeRecord(const DWARFDebugInfoEntry *InputDieEntry,
+                      StringEntry *Name, DIE *OutDIE, dwarf::Tag Tag,
                       uint32_t QualifiedNameHash, bool ObjcClassImplementation,
                       TypeEntry *TypeEntry);
+
+  /// Return the output offset of \p InputDieEntry's immediate
+  /// non-declaration parent, for use as the DW_IDX_parent field of a name
+  /// index entry. Matches classic's one-level lookup: does not walk past a
+  /// pruned or declaration parent to find a surviving ancestor. Returns
+  /// std::nullopt if there is no usable parent.
+  std::optional<uint64_t>
+  getDefiningParentOutOffset(const DWARFDebugInfoEntry *InputDieEntry);
 
   /// Global linking data.
   LinkingGlobalData &GlobalData;

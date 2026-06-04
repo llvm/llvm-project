@@ -159,11 +159,6 @@ end
   to be constant will generate a compilation error. `ieee_support_standard`
   depends in part on `ieee_support_halting`, so this also applies to
   `ieee_support_standard` calls.
-* F'2023 constraint C7108 prohibits the use of a structure constructor
-  that could also be interpreted as a generic function reference.
-  No other Fortran compiler enforces C7108 (to our knowledge);
-  they all resolve the ambiguity by interpreting the call as a function
-  reference.  We do the same, with a portability warning.
 * An override for an inaccessible procedure binding works only within
   the same module; other apparent overrides of inaccessible bindings
   are actually new bindings of the same name.
@@ -350,6 +345,19 @@ end
   with bounds remapping.
 * The `CONTIGUOUS` attribute can be redundantly applied to simply
   contiguous objects, including scalars, with a portability warning.
+* `IS_CONTIGUOUS` is always true when its argument is a named constant
+  (`PARAMETER`) or a subobject of a named constant, even when the standard's
+  rules in F2023 8.5.7 would otherwise classify the subobject as non-contiguous
+  (for example, a strided section like `a(::2)`).  This happens because Flang
+  constant-folds an array section of a named constant into a fresh constant array
+  containing only the selected elements, and that fresh array is trivially
+  contiguous.  When `-pedantic` is enabled, Flang emits the
+  `-Wconstant-is-contiguous` warning at each such call.  For example:
+```fortran
+integer, parameter :: a(5) = [1,2,3,4,5]
+print *, is_contiguous(a(::2))                   ! prints T in Flang
+```
+  Other compilers may report `a(::2)` as non-contiguous.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
@@ -532,6 +540,14 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 

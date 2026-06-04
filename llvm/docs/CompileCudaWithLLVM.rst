@@ -22,22 +22,24 @@ Compiling CUDA Code
 Prerequisites
 -------------
 
-CUDA is supported since llvm 3.9. Clang currently supports CUDA 7.0 through
-12.1. If clang detects a newer CUDA version, it will issue a warning and will
-attempt to use detected CUDA SDK it as if it were CUDA 12.1.
+CUDA has been supported since LLVM 3.9. Clang typically supports the recent
+major CUDA releases, though the support for the most recent versions may need
+Clang compiled from recent sources. If clang detects a newer CUDA version,
+it will issue a warning and will make a best-effort attempt to use detected
+CUDA SDK as if it were the most recent version supported by Clang.
 
-Before you build CUDA code, you'll need to have installed the CUDA SDK.  See
+Before building CUDA code, you'll need to have installed the CUDA SDK.  See
 `NVIDIA's CUDA installation guide
 <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_ for
-details.  Note that clang `maynot support
+details.  Note that clang `may not support
 <https://bugs.llvm.org/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed by
 some Linux package managers. Clang does attempt to deal with specific details of
 CUDA installation on a handful of common Linux distributions, but in general the
 most reliable way to make it work is to install CUDA in a single directory from
 NVIDIA's `.run` package and specify its location via `--cuda-path=...` argument.
 
-CUDA compilation is supported on Linux. Compilation on macOS and Windows may or
-may not work and currently have no maintainers.
+CUDA compilation is fully supported on Linux. Compilation on Windows should work, but your mileage may vary.
+Compilation on macOS is no longer supported as CUDA support has been dropped by NVIDIA.
 
 Invoking clang
 --------------
@@ -55,7 +57,7 @@ brackets as described below:
 
 .. code-block:: console
 
-  $ clang++ axpy.cu -o axpy --cuda-gpu-arch=<GPU arch> \
+  $ clang++ axpy.cu -o axpy --offload-arch=<GPU arch> \
       -L<CUDA install path>/<lib64 or lib>             \
       -lcudart_static -ldl -lrt -pthread
   $ ./axpy
@@ -64,9 +66,10 @@ brackets as described below:
   y[2] = 6
   y[3] = 8
 
-On macOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
-"CUDA driver version is insufficient for CUDA runtime version" errors when you
-run your program.
+Note that it has to be `clang++` as CUDA headers rely on C++ features.
+
+.. note::
+  macOS is no longer supported for CUDA compilation.
 
 * ``<CUDA install path>`` -- the directory where you installed CUDA SDK.
   Typically, ``/usr/local/cuda``.
@@ -80,15 +83,18 @@ run your program.
 
 * ``<GPU arch>`` -- the `compute capability
   <https://developer.nvidia.com/cuda-gpus>`_ of your GPU. For example, if you
-  want to run your program on a GPU with compute capability of 3.5, specify
-  ``--cuda-gpu-arch=sm_35``.
+  want to run your program on a GPU with compute capability of 8.0, specify
+  ``--offload-arch=sm_80``.
 
-  Note: You cannot pass ``compute_XX`` as an argument to ``--cuda-gpu-arch``;
-  only ``sm_XX`` is currently supported.  However, clang always includes PTX in
-  its binaries, so e.g. a binary compiled with ``--cuda-gpu-arch=sm_30`` would be
-  forwards-compatible with e.g. ``sm_35`` GPUs.
+  Note: You cannot pass ``compute_XX`` as an argument to ``--offload-arch``;
+  only ``sm_XX`` is currently supported.
 
-  You can pass ``--cuda-gpu-arch`` multiple times to compile for multiple archs.
+  CUDA compilation no longer includes PTX by default. If you want to enable it,
+  use ``--cuda-include-ptx=all|sm_*``. For example, a binary compiled with
+  ``--offload-arch=sm_80`` would need ``--cuda-include-ptx=sm_80`` (or ``all``)
+  to be forwards-compatible with e.g. ``sm_86`` GPUs.
+
+  You can pass ``--offload-arch`` multiple times to compile for multiple archs.
 
 The `-L` and `-l` flags only need to be passed when linking.  When compiling,
 you may also need to pass ``--cuda-path=/path/to/cuda`` if you didn't install
@@ -177,11 +183,10 @@ nvcc does not officially support ``std::complex``.  It's an error to use
 __device__`` code due to nvcc's interpretation of the "wrong-side rule" (see
 below).  However, we have heard from implementers that it's possible to get
 into situations where nvcc will omit a call to an ``std::complex`` function,
-especially when compiling without optimizations.
+especially when compiling without optimizations. Using ``--expt-relaxed-constexpr``
+may help.
 
-As of 2016-11-16, clang supports ``std::complex`` without these caveats.  It is
-tested with libstdc++ 4.8.5 and newer, but is known to work only with libc++
-newer than 2016-11-16.
+Clang supports ``std::complex`` without these caveats.
 
 ``<algorithm>``
 ---------------
@@ -270,8 +275,8 @@ compilation steps.
     * Invoke ``ptxas`` to generate a SASS file, ``S_arch``.  Note that, unlike
       nvcc, clang always generates SASS code.
 
-  * Invoke ``fatbin`` to combine all ``P_arch`` and ``S_arch`` files into a
-    single fat binary file, ``F``.
+  * Invoke ``fatbin`` to combine all ``S_arch`` files (and ``P_arch`` files if
+    PTX inclusion was requested) into a single fat binary file, ``F``.
 
   * Compile ``H`` using clang.  ``__device__`` code is parsed and must be
     semantically correct, even though we're not generating code for the device

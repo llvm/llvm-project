@@ -66,6 +66,14 @@ def riscv_sw_guarded_tail : RVSDNode<"SW_GUARDED_TAIL", SDT_RISCVCall,
                                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                       SDNPVariadic]>;
 
+// LPAD aligned calls
+def riscv_lpad_call
+    : RVSDNode<"LPAD_CALL", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+def riscv_lpad_call_indirect
+    : RVSDNode<"LPAD_CALL_INDIRECT", SDT_RISCVCall,
+               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
 def riscv_ret_glue  : RVSDNode<"RET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
@@ -1025,7 +1033,7 @@ def DRET : Priv<"dret", 0b0111101>, Sched<[]> {
 // matter since PseudoLI is currently only used in the AsmParser where it gets
 // expanded to real instructions immediately.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm_li:$imm), [],
                       "li", "$rd, $imm">;
 
@@ -1748,7 +1756,6 @@ class LongBccPseudo : Pseudo<(outs),
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1762,7 +1769,6 @@ class LongBcciPseudo<DAGOperand InTyImm, int size>
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1777,36 +1783,23 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,
                PseudoInstExpansion<(JAL X0, simm21_lsb0_jal:$imm20)>;
 
-let Predicates = [NoStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
-def PseudoBRIND : Pseudo<(outs), (ins GPRJALR:$rs1, simm12_lo:$imm12), []>,
+let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
+// Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoBRIND : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
                   PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-
-let Predicates = [HasStdExtZicfilp],
-    isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
-def PseudoBRINDNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
-                       PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
                     PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
 }
 
-// For Zicfilp, need to avoid using X7/T2 for indirect branches which need
-// landing pad.
-let Predicates = [HasStdExtZicfilp] in {
-def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, 0)>;
-def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
-          (PseudoBRINDNonX7 GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
-
 def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
 def : Pat<(riscv_sw_guarded_brind (add GPRX7:$rs1, simm12_lo:$imm12)),
           (PseudoBRINDX7 GPRX7:$rs1, simm12_lo:$imm12)>;
-}
 
-let Predicates = [NoStdExtZicfilp] in {
-def : Pat<(brind GPRJALR:$rs1), (PseudoBRIND GPRJALR:$rs1, 0)>;
-def : Pat<(brind (add GPRJALR:$rs1, simm12_lo:$imm12)),
-          (PseudoBRIND GPRJALR:$rs1, simm12_lo:$imm12)>;
-}
+def : Pat<(brind GPRJALRNonX7:$rs1), (PseudoBRIND GPRJALRNonX7:$rs1, 0)>;
+def : Pat<(brind (add GPRJALRNonX7:$rs1, simm12_lo:$imm12)),
+          (PseudoBRIND GPRJALRNonX7:$rs1, simm12_lo:$imm12)>;
 
 // PseudoCALLReg is a generic pseudo instruction for calls which will eventually
 // expand to auipc and jalr while encoding, with any given register used as the
@@ -1833,25 +1826,46 @@ def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
+// PseudoCALLLpadAlign is used for calls to returns_twice functions (e.g.,
+// setjmp) when Zicfilp is enabled. RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] call <func> [.option noexact] lpad <label>
+// Size = 12: 8-byte call (auipc+jalr) + 4-byte lpad (auipc x0, label).
+// Note: The 2-byte alignment padding is not included in Size because it's
+// emitted separately via .p2align directive.
+let isCall = 1, Defs = [X1], Size = 12, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in
+def PseudoCALLLpadAlign : Pseudo<(outs),
+                                 (ins call_symbol:$func, uimm20_auipc:$lpad_label),
+                                 []>,
+                          Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+
+// PseudoCALLIndirectLpadAlign is the indirect call version.
+// RISCVAsmPrinter expands this to:
+// [.p2align 2] [.option exact] jalr ra, <rs1>, 0 [.option noexact] lpad <label>
+// Size = 8: 4-byte jalr + 4-byte lpad.
+let isCall = 1, Defs = [X1], Size = 8, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0 in
+def PseudoCALLIndirectLpadAlign : Pseudo<(outs),
+                                         (ins GPRJALRNonX7:$rs1,
+                                              uimm20_auipc:$lpad_label),
+                                         []>,
+                                  Sched<[WriteJalr, ReadJalr]>;
+
 def : Pat<(riscv_sret_glue), (SRET)>;
 def : Pat<(riscv_mret_glue), (MRET)>;
 let Predicates = [HasStdExtSmrnmi] in
 def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
-let Predicates = [NoStdExtZicfilp] in
-def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALR:$rs1),
-                                [(riscv_call GPRJALR:$rs1)]>,
+// Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoCALLIndirect : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
+                                [(riscv_call GPRJALRNonX7:$rs1)]>,
                          PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
-def PseudoCALLIndirectNonX7 : Pseudo<(outs), (ins GPRJALRNonX7:$rs1),
-                                     [(riscv_call GPRJALRNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
 def PseudoCALLIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_call GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X1, GPR:$rs1, 0)>;
-}
 }
 
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
@@ -1868,19 +1882,15 @@ def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
-let Predicates = [NoStdExtZicfilp] in
-def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
-                                [(riscv_tail GPRTC:$rs1)]>,
+// Use GPRTCNonX7 to avoid X7 which is reserved for landing pad labels
+// in cf-protection-branch. The NonX7 constraint is applied unconditionally
+// to simplify the code at a negligible performance cost.
+def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
+                                [(riscv_tail GPRTCNonX7:$rs1)]>,
                          PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-let Predicates = [HasStdExtZicfilp] in {
-def PseudoTAILIndirectNonX7 : Pseudo<(outs), (ins GPRTCNonX7:$rs1),
-                                     [(riscv_tail GPRTCNonX7:$rs1)]>,
-                              PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-// For large code model, non-indirect calls could be software-guarded
 def PseudoTAILIndirectX7 : Pseudo<(outs), (ins GPRX7:$rs1),
                                   [(riscv_sw_guarded_tail GPRX7:$rs1)]>,
                            PseudoInstExpansion<(JALR X0, GPR:$rs1, 0)>;
-}
 }
 
 def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
@@ -1904,14 +1914,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLAImm : Pseudo<(outs GPR:$dst), (ins ixlenimm_li_restricted:$imm), [],
                           "lla", "$dst, $imm">;
 def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
@@ -1919,29 +1929,29 @@ def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
 def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
 def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lga", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                       "la", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLAImm : Pseudo<(outs GPR:$rd), (ins ixlenimm_li_restricted:$imm), [],
                          "la", "$rd, $imm">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
@@ -1981,7 +1991,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
 // There are single-instruction versions of these in Zbb, so disable these
 // Pseudos if that extension is present.
 let hasSideEffects = 0, mayLoad = 0,
-    mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+    mayStore = 0, isCodeGenOnly = 0 in {
 def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
 def PseudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.h", "$rd, $rs">;
 // rv64's sext.w is defined above, using InstAlias<"sext.w ...
@@ -1990,7 +2000,7 @@ def PseudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.h", "$rd, $rs
 } // hasSideEffects = 0, ...
 
 let Predicates = [IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-  isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+  isCodeGenOnly = 0 in {
 def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
 } // Predicates = [IsRV64], ...
 
@@ -2370,10 +2380,13 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
+include "RISCVInstrInfoZvdota.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
 include "RISCVInstrInfoZvzip.td"
+include "RISCVInstrInfoZvvm.td"
+include "RISCVInstrInfoZvbdota.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"
@@ -2390,6 +2403,9 @@ include "RISCVInstrInfoZicfiss.td"
 // Short Forward Branch
 include "RISCVInstrInfoSFB.td"
 
+// CHERI
+include "RISCVInstrInfoY.td"
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
@@ -2402,8 +2418,8 @@ include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
+include "RISCVInstrInfoXqccmt.td"
 include "RISCVInstrInfoXMips.td"
-include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
 include "RISCVInstrInfoXAIF.td"

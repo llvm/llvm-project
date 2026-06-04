@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
 #include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -113,7 +114,7 @@ ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
 llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
   BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
                                       PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
-                                      sizeof(hPC), NULL, NULL);
+                                      sizeof(hPC), nullptr, nullptr);
   if (!ok)
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   return llvm::Error::success();
@@ -197,14 +198,18 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     startupinfoex.StartupInfo.wShowWindow = SW_HIDE;
   }
 
-  DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT |
-                EXTENDED_STARTUPINFO_PRESENT;
+  DWORD flags = CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT;
+  const bool stdio_redirected = launch_info.IsFDRedirected(STDIN_FILENO) &&
+                                launch_info.IsFDRedirected(STDOUT_FILENO) &&
+                                launch_info.IsFDRedirected(STDERR_FILENO);
+  if (stdio_redirected)
+    flags |= CREATE_NO_WINDOW;
+  else if (!launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) &&
+           pty_mode == PseudoConsole::Mode::None)
+    flags |= CREATE_NEW_CONSOLE;
+
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
-
-  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) ||
-      pty_mode != PseudoConsole::Mode::None)
-    flags &= ~CREATE_NEW_CONSOLE;
 
   std::vector<wchar_t> environment =
       CreateEnvironmentBufferW(launch_info.GetEnvironment());
@@ -230,30 +235,26 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   PROCESS_INFORMATION pi = {};
 
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, NULL, NULL,
+      wexecutable.c_str(), pwcommandLine, nullptr, nullptr,
       /*bInheritHandles=*/!inherited_handles.empty() ||
           pty_mode != PseudoConsole::Mode::None,
       flags, environment.data(),
-      wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
+      wworkingDirectory.size() == 0 ? nullptr : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
-    error = Status(::GetLastError(), eErrorTypeWin32);
     // Note that error 50 ("The request is not supported") will occur if you
     // try debug a 64-bit inferior from a 32-bit LLDB.
-  }
-
-  if (result) {
-    // Do not call CloseHandle on pi.hProcess, since we want to pass that back
-    // through the HostProcess.
-    ::CloseHandle(pi.hThread);
-    if (pty_mode == PseudoConsole::Mode::Pipe)
-      launch_info.GetPTY().CloseAnonymousPipes();
-  }
-
-  if (!result)
+    error = Status(::GetLastError(), eErrorTypeWin32);
     return HostProcess();
+  }
+
+  // Do not call CloseHandle on pi.hProcess, since we want to pass that back
+  // through the HostProcess.
+  ::CloseHandle(pi.hThread);
+  if (pty_mode == PseudoConsole::Mode::Pipe)
+    launch_info.GetPTY().CloseAnonymousPipes();
 
   return HostProcess(pi.hProcess);
 }
@@ -263,26 +264,54 @@ llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
     HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
   std::vector<HANDLE> inherited_handles;
 
-  startupinfoex.StartupInfo.hStdError =
-      stderr_handle ? stderr_handle : GetStdHandle(STD_ERROR_HANDLE);
   startupinfoex.StartupInfo.hStdInput =
       stdin_handle ? stdin_handle : GetStdHandle(STD_INPUT_HANDLE);
   startupinfoex.StartupInfo.hStdOutput =
       stdout_handle ? stdout_handle : GetStdHandle(STD_OUTPUT_HANDLE);
 
-  if (startupinfoex.StartupInfo.hStdError)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdError);
-  if (startupinfoex.StartupInfo.hStdInput)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdInput);
-  if (startupinfoex.StartupInfo.hStdOutput)
-    inherited_handles.push_back(startupinfoex.StartupInfo.hStdOutput);
-
-  if (launch_info) {
+  // eFileActionDuplicate stores the source fd in m_fd and the destination in
+  // m_arg. GetFileActionForFD searches by m_fd (source), so a
+  // AppendDuplicateFileAction(STDOUT, STDERR) won't be found when looking up
+  // STDERR. Scan for duplicate actions that target stderr explicitly.
+  HANDLE effective_stderr = stderr_handle;
+  if (!effective_stderr && launch_info) {
     for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {
       const FileAction *act = launch_info->GetFileActionAtIndex(i);
       if (act->GetAction() == FileAction::eFileActionDuplicate &&
+          act->GetActionArgument() == STDERR_FILENO) {
+        effective_stderr = startupinfoex.StartupInfo.hStdOutput;
+        break;
+      }
+    }
+  }
+  startupinfoex.StartupInfo.hStdError =
+      effective_stderr ? effective_stderr : GetStdHandle(STD_ERROR_HANDLE);
+
+  // PROC_THREAD_ATTRIBUTE_HANDLE_LIST requires unique entries.
+  auto push_if_new = [&](HANDLE h) {
+    if (h && std::find(inherited_handles.begin(), inherited_handles.end(), h) ==
+                 inherited_handles.end())
+      inherited_handles.push_back(h);
+  };
+  push_if_new(startupinfoex.StartupInfo.hStdError);
+  push_if_new(startupinfoex.StartupInfo.hStdInput);
+  push_if_new(startupinfoex.StartupInfo.hStdOutput);
+
+  if (launch_info) {
+    for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {
+      const WindowsFileAction *act = static_cast<const WindowsFileAction *>(
+          launch_info->GetFileActionAtIndex(i));
+      if (std::find(inherited_handles.begin(), inherited_handles.end(),
+                    act->GetHandle()) != inherited_handles.end())
+        continue;
+      if (act->GetAction() != FileAction::eFileActionDuplicate)
+        continue;
+      if (act->GetActionArgument() != -1 &&
           act->GetFD() == act->GetActionArgument())
-        inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
+        inherited_handles.push_back(act->GetHandle());
+      else if (act->GetActionArgumentHandle() != INVALID_HANDLE_VALUE &&
+               act->GetHandle() == act->GetActionArgumentHandle())
+        inherited_handles.push_back(act->GetHandle());
     }
   }
 
@@ -304,7 +333,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
                                        int fd) {
   const FileAction *action = launch_info.GetFileActionForFD(fd);
   if (action == nullptr)
-    return NULL;
+    return nullptr;
   const std::string path = action->GetFileSpec().GetPath();
 
   return GetStdioHandle(path, fd);
@@ -313,7 +342,7 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
 HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
                                               int fd) {
   if (path.empty())
-    return NULL;
+    return nullptr;
   SECURITY_ATTRIBUTES secattr = {};
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
@@ -322,21 +351,26 @@ HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
   DWORD flags = 0;
-  if (fd == STDIN_FILENO) {
+  switch (fd) {
+  case STDIN_FILENO:
     access = GENERIC_READ;
     create = OPEN_EXISTING;
     flags = FILE_ATTRIBUTE_READONLY;
-  }
-  if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    break;
+  case STDERR_FILENO:
+    flags = FILE_FLAG_WRITE_THROUGH;
+    [[fallthrough]];
+  case STDOUT_FILENO:
     access = GENERIC_WRITE;
     create = CREATE_ALWAYS;
-    if (fd == STDERR_FILENO)
-      flags = FILE_FLAG_WRITE_THROUGH;
+    break;
+  default:
+    break;
   }
 
   std::wstring wpath;
   llvm::ConvertUTF8toWide(path, wpath);
   HANDLE result = ::CreateFileW(wpath.c_str(), access, share, &secattr, create,
-                                flags, NULL);
-  return (result == INVALID_HANDLE_VALUE) ? NULL : result;
+                                flags, nullptr);
+  return (result == INVALID_HANDLE_VALUE) ? nullptr : result;
 }

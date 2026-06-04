@@ -132,9 +132,9 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (HasHWShadowStack) {
     if (STI.hasStdExtZcmop()) {
       static_assert(RAReg == RISCV::X1, "C.SSPUSH only accepts X1");
-      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_C_SSPUSH));
+      BuildMI(MBB, MI, DL, TII->get(RISCV::C_SSPUSH)).addReg(RAReg);
     } else {
-      BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPUSH)).addReg(RAReg);
+      BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     }
     return;
   }
@@ -197,7 +197,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoMOP_SSPOPCHK)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
   }
 
@@ -1482,10 +1482,10 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // If the stack was realigned, the frame pointer is set in order to allow
     // SP to be restored, so we need another base register to record the stack
     // after realignment.
-    // |--------------------------| -- <-- FP
+    // |--------------------------| --
     // | callee-allocated save    | | <----|
     // | area for register varargs| |      |
-    // |--------------------------| |      |
+    // |--------------------------| <-- FP |
     // | callee-saved registers   | |      |
     // |--------------------------| --     |
     // | realignment (the size of | |      |
@@ -1527,10 +1527,10 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // When using FP to access scalable vector objects, we need to minus
     // the frame size.
     //
-    // |--------------------------| -- <-- FP
+    // |--------------------------| --
     // | callee-allocated save    | |
     // | area for register varargs| |
-    // |--------------------------| |
+    // |--------------------------| | -- <-- FP
     // | callee-saved registers   | |
     // |--------------------------| | MFI.getStackSize()
     // | scalar local variables   | |
@@ -1558,10 +1558,10 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   // When using SP to access frame objects, we need to add RVV stack size.
   //
-  // |--------------------------| -- <-- FP
+  // |--------------------------| --
   // | callee-allocated save    | | <----|
   // | area for register varargs| |      |
-  // |--------------------------| |      |
+  // |--------------------------| |      | <-- FP
   // | callee-saved registers   | |      |
   // |--------------------------| --     |
   // | RVV alignment padding    | |      |
@@ -1598,9 +1598,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
     // Ensure the base of the RVV stack is correctly aligned: add on the
     // alignment padding.
-    int ScalarLocalVarSize = MFI.getStackSize() -
-                             RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    int64_t ScalarLocalVarSize =
+        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
   return Offset;
@@ -1667,9 +1667,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // For Zilsd on RV32, append GPRPair registers to the CSR list. This prevents
   // the need to create register sets for each abi which is a lot more complex.
   // Don't use Zilsd for callee-saved coalescing if the required alignment
-  // exceeds the stack alignment.
+  // exceeds the stack alignment or when Zcmp/Xqccmp or save/restore libcalls
+  // are enabled.
   bool UseZilsd = !STI.is64Bit() && STI.hasStdExtZilsd() &&
-                  STI.getZilsdAlign() <= getStackAlign();
+                  STI.getZilsdAlign() <= getStackAlign() &&
+                  !RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF);
   if (UseZilsd) {
     SmallVector<MCPhysReg, 32> NewCSRs;
     SmallSet<MCPhysReg, 16> CSRSet;
@@ -1681,10 +1683,15 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // Append GPRPair registers for pairs where both sub-registers are in CSR
     // list. Iterate through all GPRPairs and check if both sub-regs are CSRs.
     for (MCPhysReg Pair : RISCV::GPRPairRegClass) {
+      // Do not append a pair that's already in the CSR list.
+      if (CSRSet.contains(Pair))
+        continue;
       MCPhysReg EvenReg = TRI.getSubReg(Pair, RISCV::sub_gpr_even);
       MCPhysReg OddReg = TRI.getSubReg(Pair, RISCV::sub_gpr_odd);
-      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg))
+      if (CSRSet.contains(EvenReg) && CSRSet.contains(OddReg)) {
         NewCSRs.push_back(Pair);
+        CSRSet.insert(Pair);
+      }
     }
 
     MRI.setCalleeSavedRegs(NewCSRs);
@@ -1999,6 +2006,7 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
                       needsDwarfCFI(MF) && !hasFP(MF),
                       /*NeedProbe=*/true, ProbeSize, DynAllocation,
                       MachineInstr::NoFlags);
+        inlineStackProbe(MF, MBB);
       } else {
         const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
         RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),

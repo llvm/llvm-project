@@ -5,7 +5,7 @@
 
 define <4 x ptr> @vec_of_local_to_flat_nonnull_arg() {
 ; OPT-LABEL: define <4 x ptr> @vec_of_local_to_flat_nonnull_arg() {
-; OPT-NEXT:    [[X:%.*]] = addrspacecast <4 x ptr addrspace(3)> zeroinitializer to <4 x ptr>
+; OPT-NEXT:    [[X:%.*]] = addrspacecast <4 x ptr addrspace(3)> splat (ptr addrspace(3) null) to <4 x ptr>
 ; OPT-NEXT:    ret <4 x ptr> [[X]]
 ;
   %x = addrspacecast <4 x ptr addrspace(3)> zeroinitializer to <4 x ptr>

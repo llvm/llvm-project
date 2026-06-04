@@ -41,8 +41,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class DeclaratorDecl;
 class FunctionDecl;
-class LocationContext;
-class StackFrameContext;
+class StackFrame;
 class Stmt;
 
 namespace ento {
@@ -173,10 +172,10 @@ public:
   // Forwarding methods to SymbolManager.
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
-                                      const LocationContext *LCtx,
-                                      QualType type, unsigned visitCount,
+                                      const StackFrame *SF, QualType type,
+                                      unsigned visitCount,
                                       const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(Elem, LCtx, type, visitCount, symbolTag);
+    return SymMgr.conjureSymbol(Elem, SF, type, visitCount, symbolTag);
   }
 
   /// Construct an SVal representing '0' for the specified type.
@@ -193,15 +192,14 @@ public:
   /// conjured symbols should be used sparingly.
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
                                         ConstCFGElementRef elem,
-                                        const LocationContext *LCtx,
-                                        unsigned count);
+                                        const StackFrame *SF, unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
                                         ConstCFGElementRef elem,
-                                        const LocationContext *LCtx,
-                                        QualType type, unsigned count);
+                                        const StackFrame *SF, QualType type,
+                                        unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(ConstCFGElementRef elem,
-                                        const LocationContext *LCtx,
-                                        QualType type, unsigned visitCount);
+                                        const StackFrame *SF, QualType type,
+                                        unsigned visitCount);
   DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call, QualType type,
                                         unsigned visitCount,
                                         const void *symbolTag = nullptr);
@@ -211,25 +209,23 @@ public:
 
   /// Conjure a symbol representing heap allocated memory region.
   DefinedSVal getConjuredHeapSymbolVal(ConstCFGElementRef elem,
-                                       const LocationContext *LCtx,
-                                       QualType type, unsigned Count);
+                                       const StackFrame *SF, QualType type,
+                                       unsigned Count);
 
   /// Create an SVal representing the result of an alloca()-like call, that is,
   /// an AllocaRegion on the stack.
   ///
   /// After calling this function, it's a good idea to set the extent of the
   /// returned AllocaRegion.
-  loc::MemRegionVal getAllocaRegionVal(const Expr *E,
-                                       const LocationContext *LCtx,
+  loc::MemRegionVal getAllocaRegionVal(const Expr *E, const StackFrame *SF,
                                        unsigned Count);
 
   DefinedOrUnknownSVal getDerivedRegionValueSymbolVal(
       SymbolRef parentSymbol, const TypedValueRegion *region);
 
   DefinedSVal getMetadataSymbolVal(const void *symbolTag,
-                                   const MemRegion *region,
-                                   const Expr *expr, QualType type,
-                                   const LocationContext *LCtx,
+                                   const MemRegion *region, const Expr *expr,
+                                   QualType type, const StackFrame *SF,
                                    unsigned count);
 
   DefinedSVal getMemberPointer(const NamedDecl *ND);
@@ -237,8 +233,7 @@ public:
   DefinedSVal getFunctionPointer(const FunctionDecl *func);
 
   DefinedSVal getBlockPointer(const BlockDecl *block, CanQualType locTy,
-                              const LocationContext *locContext,
-                              unsigned blockCount);
+                              const StackFrame *SF, unsigned blockCount);
 
   /// Returns the value of \p E, if it can be determined in a non-path-sensitive
   /// manner.
@@ -345,10 +340,11 @@ public:
   /// space.
   /// \param type pointer type.
   loc::ConcreteInt makeNullWithType(QualType type) {
+    type =
+        type->isAtomicType() ? type->getAs<AtomicType>()->getValueType() : type;
+
     // We cannot use the `isAnyPointerType()`.
-    assert((type->isPointerType() || type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() || type->isNullPtrType() ||
-            type->isReferenceType()) &&
+    assert((type->isObjCObjectPointerType() || Loc::isLocType(type)) &&
            "makeNullWithType must use pointer type");
 
     // The `sizeof(T&)` is `sizeof(T)`, thus we replace the reference with a
@@ -390,12 +386,10 @@ public:
   }
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D, const StackFrame *SF);
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D,
-                               const StackFrameContext *SFC);
+  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D, const StackFrame *SF);
 };
 
 SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,

@@ -152,10 +152,14 @@ void func() {}
 // expected-note@+1 {{'func_local' defined here}}
 void func_local() {} 
 
-// dev60-warning@+3 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
 // omp60-error@+2 {{unexpected 'allocate' clause, only 'enter', 'link', 'device_type', 'indirect' or 'local' clauses expected}}
 // expected-error@+1 {{function name is not allowed in 'local' clause}}
 #pragma omp declare target local(func_local) allocate(a)
+
+// omp60-error@+1 {{unexpected 'local' clause, only 'device_type', 'indirect' clauses expected}}
+#pragma omp begin declare target local
+int begin_local_var;
+#pragma omp end declare target
 #endif // _OPENMP
 
 void bar();
@@ -335,7 +339,6 @@ int y_enter_local;
 #pragma omp declare target local(y_enter_local)
 
 int y_local_enter;
-// dev60-warning@+1 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
 #pragma omp declare target local(y_local_enter)
 // expected-error@+1 {{'y_local_enter' must not appear in both clauses 'local' and 'enter'}}
 #pragma omp declare target enter(y_local_enter)
@@ -346,7 +349,6 @@ int y_link_local;
 #pragma omp declare target local(y_link_local)
 
 int y_local_link;
-// dev60-warning@+1 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
 #pragma omp declare target local(y_local_link)
 // expected-error@+1 {{'y_local_link' must not appear in both clauses 'local' and 'link'}}
 #pragma omp declare target link(y_local_link)
@@ -466,7 +468,6 @@ int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(nohost)
 
 int counter = 0;
-// dev60-warning@+9 {{'local' clause on 'declare_target' directive is not yet fully implemented; variable will be treated as 'enter'}}
 // omp52-error@+8 {{unexpected 'local' clause, only 'enter', 'link', 'device_type' or 'indirect' clauses expected}}
 // omp52-error@+7 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 // omp51-error@+6 {{unexpected 'local' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}

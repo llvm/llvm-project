@@ -10,8 +10,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 @c = global [6 x i8] zeroinitializer, align 1
 @b = internal global %struct.anon zeroinitializer, align 1
 
-; Function Attrs: noreturn nounwind
-define void @_Z1dv() #0 {
+define void @_Z1dv() {
 ; CHECK-LABEL: @_Z1dv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @"_ZN3$_01aEv"(ptr nonnull @b)
@@ -48,26 +47,26 @@ entry:
   %call = tail call ptr @"_ZN3$_01aEv"(ptr nonnull @b) #2
   br label %for.cond
 
-for.cond:                                         ; preds = %for.cond.cleanup, %entry
+for.cond:
   %f.0 = phi i32 [ 0, %entry ], [ %add5, %for.cond.cleanup ]
   %g.0 = phi i32 [ 0, %entry ], [ %g.1.lcssa, %for.cond.cleanup ]
   %cmp12 = icmp ult i32 %g.0, 4
   %conv = and i32 %f.0, 65535
   br i1 %cmp12, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %for.cond
+for.body.lr.ph:
   %0 = zext i32 %g.0 to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %for.cond
+for.cond.cleanup:
   %g.1.lcssa = phi i32 [ %g.0, %for.cond ], [ 4, %for.cond.cleanup.loopexit ]
   %add5 = add nuw nsw i32 %conv, 4
   br label %for.cond
 
-for.body:                                         ; preds = %for.body, %for.body.lr.ph
+for.body:
   %indvars.iv = phi i64 [ %0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %1 = trunc i64 %indvars.iv to i32
   %add = add i32 %conv, %1

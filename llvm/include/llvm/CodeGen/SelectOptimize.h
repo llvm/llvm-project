@@ -21,12 +21,12 @@ namespace llvm {
 
 class TargetMachine;
 
-class SelectOptimizePass : public PassInfoMixin<SelectOptimizePass> {
+class SelectOptimizePass : public OptionalPassInfoMixin<SelectOptimizePass> {
   const TargetMachine *TM;
 
 public:
   explicit SelectOptimizePass(const TargetMachine &TM) : TM(&TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

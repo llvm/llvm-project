@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -verify -Wno-coroutines-unsupported-target
 
 template<typename T, typename U>
 U f(T t) {

@@ -23,6 +23,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <optional>
@@ -753,6 +754,17 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
   return true;
 }
 
+bool APInt::isInverseOfSlowCase(const APInt &RHS) const {
+  const unsigned Last = getNumWords() - 1;
+  for (unsigned I = 0; I != Last; ++I)
+    if ((U.pVal[I] ^ RHS.U.pVal[I]) != WORDTYPE_MAX)
+      return false;
+
+  unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
+  WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
+  return (U.pVal[Last] ^ RHS.U.pVal[Last]) == TailMask;
+}
+
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
@@ -776,33 +788,43 @@ APInt APInt::byteSwap() const {
 }
 
 APInt APInt::reverseBits() const {
-  switch (BitWidth) {
-  case 64:
-    return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
-  case 32:
-    return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
-  case 16:
-    return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
-  case 8:
-    return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
-  case 0:
-    return *this;
-  default:
-    break;
+  if (isSingleWord()) {
+    switch (BitWidth) {
+    case 64:
+      return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
+    case 32:
+      return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
+    case 16:
+      return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
+    case 8:
+      return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+    case 1: // fallthrough
+    case 0:
+      return *this;
+    default:
+      return APInt(BitWidth,
+                   llvm::reverseBits<uint64_t>(U.VAL) >> (64 - BitWidth));
+    }
   }
 
-  APInt Val(*this);
-  APInt Reversed(BitWidth, 0);
-  unsigned S = BitWidth;
-
-  for (; Val != 0; Val.lshrInPlace(1)) {
-    Reversed <<= 1;
-    Reversed |= Val[0];
-    --S;
+  APInt Result(BitWidth, 0);
+  unsigned NumWords = getNumWords();
+  unsigned ExcessBits = NumWords * APINT_BITS_PER_WORD - BitWidth;
+  if (ExcessBits == 0) {
+    // Fast path. No cross-word shift needed.
+    for (unsigned I = 0; I < NumWords; ++I)
+      Result.U.pVal[I] = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1 - I]);
+    return Result;
   }
-
-  Reversed <<= S;
-  return Reversed;
+  // Holds reversed bits of the previous (more significant) word.
+  uint64_t PrevRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1]);
+  for (unsigned I = 0; I < NumWords - 1; ++I) {
+    uint64_t CurrRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 2 - I]);
+    Result.U.pVal[I] = (PrevRev >> ExcessBits) | (CurrRev << (64 - ExcessBits));
+    PrevRev = CurrRev;
+  }
+  Result.U.pVal[NumWords - 1] = PrevRev >> ExcessBits;
+  return Result;
 }
 
 APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
@@ -1280,12 +1302,12 @@ APInt APInt::sqrt() const {
   // floating point representation after 192 bits. There are no discrepancies
   // between this algorithm and pari/gp for bit widths < 192 bits.
   APInt square(x_old * x_old);
-  APInt nextSquare((x_old + 1) * (x_old +1));
   if (this->ult(square))
     return x_old;
-  assert(this->ule(nextSquare) && "Error in APInt::sqrt computation");
-  APInt midpoint((nextSquare - square).udiv(two));
+  APInt delta(2 * x_old + 1);
   APInt offset(*this - square);
+  assert(offset.ule(delta) && "Error in APInt::sqrt computation");
+  APInt midpoint(delta.udiv(two));
   if (offset.ult(midpoint))
     return x_old;
   return x_old + 1;
@@ -1755,7 +1777,7 @@ uint64_t APInt::urem(uint64_t RHS) const {
     return U.pVal[0] % RHS;
   if (llvm::isPowerOf2_64(RHS))
     // X % 2^w ===> X & (2^w - 1)
-    return getZExtValue() & (RHS - 1);
+    return U.pVal[0] & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;
@@ -3236,4 +3258,24 @@ APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
 APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
   return clmulr(LHS, RHS).lshr(1);
+}
+
+APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  return Result;
+}
+
+APInt llvm::APIntOps::expandBits(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  return Result;
 }

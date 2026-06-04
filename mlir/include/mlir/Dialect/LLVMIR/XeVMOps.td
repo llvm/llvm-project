@@ -80,6 +80,8 @@ def XeVM_1DBlockElemType : AnyTypeOf<[I8, I16, I32, I64]>;
 //   ir - invalidated after read
 //===----------------------------------------------------------------------===//
 
+def LoadCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def LoadCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def LoadCacheControl_L1uc_L2uc_L3c
@@ -110,7 +112,8 @@ def LoadCacheControlInvalidateRead
 def XeVM_LoadCacheControl
     : I32EnumAttr<
           "LoadCacheControl", "XeVM load ops cache control",
-          [LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
+          [LoadCacheControl_Use_Default,
+           LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
            LoadCacheControl_L1uc_L2c_L3uc, LoadCacheControl_L1uc_L2c_L3c,
            LoadCacheControl_L1c_L2uc_L3uc, LoadCacheControl_L1c_L2uc_L3c,
            LoadCacheControl_L1c_L2c_L3uc, LoadCacheControl_L1c_L2c_L3c,
@@ -136,6 +139,9 @@ def XeVM_LoadCacheControlAttr
 //   s - streaming
 //===----------------------------------------------------------------------===//
 
+
+def StoreCacheControl_Use_Default
+    : I32EnumAttrCase<"USE_DEFAULT", 0, "Use_Default">;
 def StoreCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def StoreCacheControl_L1uc_L2uc_L3wb
@@ -170,7 +176,8 @@ def StoreCacheControl_L1wb_L2uc_L3wb
 def XeVM_StoreCacheControl
     : I32EnumAttr<
           "StoreCacheControl", "XeVM store ops cache control",
-          [StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
+          [StoreCacheControl_Use_Default,
+           StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
            StoreCacheControl_L1uc_L2wb_L3uc, StoreCacheControl_L1uc_L2wb_L3wb,
            StoreCacheControl_L1wt_L2uc_L3uc, StoreCacheControl_L1wt_L2uc_L3wb,
            StoreCacheControl_L1wt_L2wb_L3uc, StoreCacheControl_L1wt_L2wb_L3wb,
@@ -622,9 +629,9 @@ def XeVM_TruncfDstElemTypeAttr : XeVM_Attr<"TruncfDstElemType", "dst_etype"> {
 
 def XeVM_TruncfOp
     : XeVM_Op<"truncf">,
-      Results<(outs AnyTypeOf<[VectorOfRankAndType<[1], [I8, I<4>]>, I8,
+      Results<(outs AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8, I<4>]>, I8,
                                I<4>]>:$dst)>,
-      Arguments<(ins AnyTypeOf<[VectorOfRankAndType<[1], [F16, BF16]>, F16,
+      Arguments<(ins AnyTypeOf<[FixedVectorOfRankAndType<[1], [F16, BF16]>, F16,
                                 BF16]>:$src,
           XeVM_TruncfSrcElemTypeAttr:$src_etype,
           XeVM_TruncfDstElemTypeAttr:$dst_etype)> {
@@ -646,8 +653,8 @@ def XeVM_MMAMxOp
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$d)>,
       Arguments<(ins FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$a,
           FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>:$b,
-          FixedVectorOfRankAndType<[1], [I8]>:$scale_a,
-          FixedVectorOfRankAndType<[1], [I8]>:$scale_b,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_a,
+          AnyTypeOf<[FixedVectorOfRankAndType<[1], [I8]>, I8]>:$scale_b,
           Optional<FixedVectorOfRankAndType<[1], [XeVM_MatrixElemType]>>:$c,
           XeVM_MMAShapeAttr:$shape, XeVM_MMATypesAttr:$types)> {
 
@@ -669,8 +676,8 @@ def XeVM_MMAMxOp
     Parameters:
       * `a` - vector of matrix A elements.
       * `b` - vector of matrix B elements.
-      * `scale_a` - vector of scaling factors for matrix A.
-      * `scale_b` - vector of scaling factors for matrix B.
+      * `scale_a` - vector or scalar of scaling factors for matrix A.
+      * `scale_b` - vector or scalar of scaling factors for matrix B.
       * `c` - (optional) vector of matrix C elements.
       * `shape` - the shape of the matrices, specified as `M`, `N`, and `K` values.
       * `types` - the data types of the matrices, specified as `D`, `A`, `B`, and optionally `C`.

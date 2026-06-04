@@ -52,4 +52,3 @@ for.end:
   ret double %Sum.0
 }
 
-declare double @llvm.sin.f64(double)

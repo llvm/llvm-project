@@ -116,6 +116,10 @@ def FeatureStdExtZiccif
     : RISCVExtension<1, 0,
                      "Main Memory Supports Instruction Fetch with Atomicity Requirement">;
 
+def FeatureStdExtZiccid
+    : RISCVExtension<1, 0,
+                     "Instruction/Data Coherence and Consistency", [FeatureStdExtZiccif]>;
+
 def FeatureStdExtZicclsm
     : RISCVExtension<1, 0, "Main Memory Supports Misaligned Loads/Stores">;
 
@@ -174,11 +178,6 @@ def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
 def FeatureStdExtZicfilp
     : RISCVExperimentalExtension<1, 0, "Landing pad",
                                  [FeatureStdExtZicsr]>;
-def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
-                       AssemblerPredicate<(all_of FeatureStdExtZicfilp),
-                                          "'Zicfilp' (Landing pad)">;
-def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<1, 0, "Shadow stack",
@@ -690,12 +689,35 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
 
+def FeatureStdExtZvqwdota8i
+    : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product",
+                                 [FeatureStdExtZve32x]>;
+
+def FeatureStdExtZvqwdota16i
+    : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product",
+                                 [FeatureStdExtZve64x]>;
+
+def HasStdExtZvqwdota8iOrZvqwdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
+                         "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
+                         "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+
+def FeatureStdExtZvfwdota16bf
+    : RISCVExperimentalExtension<0, 2, "BF16 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfwdota16bf : Predicate<"Subtarget->hasStdExtZvfwdota16bf()">,
+                            AssemblerPredicate<(all_of FeatureStdExtZvfwdota16bf),
+                                               "'Zvfwdota16bf' (BF16 Dot-Product)">;
+
+def FeatureStdExtZvfqwdota8f
+    : RISCVExperimentalExtension<0, 2, "OCP FP8 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfqwdota8f : Predicate<"Subtarget->hasStdExtZvfqwdota8f()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
+                                              "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
+
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
-def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
-                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
-                          "'Zvfbfa' (Additional BF16 vector compute support)">;
 
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
@@ -887,6 +909,66 @@ def FeatureStdExtZvzip
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
                          "'Zvzip' (Vector Reordering Structured Data)">;
+
+// Integrated Matrix Extension integer matrix multiply-accumulate
+def FeatureStdExtZvvmm
+    : RISCVExperimentalExtension<0, 1, "Integer Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmm : Predicate<"Subtarget->hasStdExtZvvmm()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvvmm),
+                         "'Zvvmm' (Integer Matrix Multiply-Accumulate)">;
+
+// Integrated Matrix Extension floating-point matrix multiply-accumulate
+def FeatureStdExtZvvfmm
+    : RISCVExperimentalExtension<0, 1,
+                                 "Floating-Point Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
+                          "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
+
+// Zvbdota family of batched dot-product extensions
+def FeatureStdExtZvqwbdota8i
+    : RISCVExperimentalExtension<0, 2,
+                                 "8-bit integer batched dot-product extension",
+                                 [FeatureStdExtZve32x]>;
+def FeatureStdExtZvqwbdota16i
+    : RISCVExperimentalExtension<0, 2,
+                                 "16-bit integer batched dot-product extension",
+                                 [FeatureStdExtZve64x]>;
+def HasStdExtZvqwbdota8iOrZvqwbdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwbdota8i() || Subtarget->hasStdExtZvqwbdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwbdota8i,
+                                 FeatureStdExtZvqwbdota16i),
+                         "'Zvqwbdota8i' or 'Zvqwbdota16i' (8-bit or 16-bit "
+                         "integer batched dot-product extension)">;
+
+def FeatureStdExtZvfwbdota16bf
+    : RISCVExperimentalExtension<0, 2,
+                                 "BF16 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfwbdota16bf
+    : Predicate<"Subtarget->hasStdExtZvfwbdota16bf()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfwbdota16bf),
+                         "'Zvfwbdota16bf' (BF16 batched dot-product extension)">;
+
+def FeatureStdExtZvfqwbdota8f
+    : RISCVExperimentalExtension<0, 2,
+                                 "OCP FP8 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfqwbdota8f
+    : Predicate<"Subtarget->hasStdExtZvfqwbdota8f()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfqwbdota8f),
+                         "'Zvfqwbdota8f' (OCP FP8 batched dot-product extension)">;
+
+def FeatureStdExtZvfbdota32f
+    : RISCVExperimentalExtension<0, 2,
+                                 "FP32 batched dot-product extension",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfbdota32f
+    : Predicate<"Subtarget->hasStdExtZvfbdota32f()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfbdota32f),
+                         "'Zvfbdota32f' (FP32 batched dot-product extension)">;
 
 // Vector instruction predicates
 
@@ -1132,7 +1214,7 @@ def HasStdExtZbkbOrP
 
 // "Y" extension (CHERI support)
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def FeatureStdExtY : RISCVExperimentalExtension<0, 98, "'Base Y' (CHERI)">;
 def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
                  AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
@@ -1517,6 +1599,14 @@ def HasVendorXqccmp
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
 
+def FeatureVendorXqccmt
+    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmt
+    : Predicate<"Subtarget->hasVendorXqccmt()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmt),
+                         "'Xqccmt' (Qualcomm 16-bit Table Jump)">;
+
 def FeatureVendorXqcia
     : RISCVExtension<0, 7, "Qualcomm uC Arithmetic Extension">;
 def HasVendorXqcia
@@ -1670,15 +1760,6 @@ def FeatureVendorXqci
                       FeatureVendorXqcilsm, FeatureVendorXqcisim,
                       FeatureVendorXqcisls, FeatureVendorXqcisync]>;
 
-// Rivos Extension(s)
-
-def FeatureVendorXRivosVizip
-    :  RISCVExperimentalExtension<0, 1, "Rivos Vector Register Zips">;
-def HasVendorXRivosVizip
-    : Predicate<"Subtarget->hasVendorXRivosVizip()">,
-      AssemblerPredicate<(all_of FeatureVendorXRivosVizip),
-                         "'XRivosVizip' (Rivos Vector Register Zips)">;
-
 // Andes Extension(s)
 
 def FeatureVendorXAndesPerf
@@ -1750,6 +1831,13 @@ def HasXAIFET : Predicate<"Subtarget->hasXAIFET()">,
                           AssemblerPredicate<(all_of FeatureVendorXAIFET),
                           "'XAIFET' (AI Foundry ET Extension)">;
 
+def FeatureVendorXCheriot
+    : RISCVExtension<1, 0, "CHERIoT extension",
+    [FeatureStdExtZca, FeatureStdExtE, FeatureStdExtM]>;
+def HasCheriot
+    : Predicate<"Subtarget->hasVendorXCheriot()">,
+      AssemblerPredicate<(all_of FeatureVendorXCheriot), "'XCheriot' (CHERIoT Extension)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1787,7 +1875,7 @@ def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
-                       "Enable Linker relaxation.">;
+                       "Enable Linker relaxation">;
 
 def FeatureExactAssembly
     : SubtargetFeature<"exact-asm", "EnableExactAssembly", "true",
@@ -1799,12 +1887,12 @@ foreach i = {1-31} in
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
-                                          "true", "Enable save/restore.">;
+                                          "true", "Enable save/restore">;
 
 def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
                                           "EnableTrailingSeqCstFence",
                                           "false",
-                                          "Disable trailing fence for seq-cst store.">;
+                                          "Disable trailing fence for seq-cst store">;
 
 def FeatureUnalignedScalarMem
    : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
@@ -1944,7 +2032,7 @@ def TuneDLenFactor2
 def TuneNoDefaultUnroll
     : RISCVTuneFeature<"no-default-unroll", "no-default-unroll",
                        "enable-default-unroll", "EnableDefaultUnroll", "false",
-                       "Disable default unroll preference.">;
+                       "Disable default unroll preference">;
 
 // Many Microarchitectures are able to fuse a branch over a single instruction
 // with the branched-over instruction. We call this fusion "short forward
@@ -2060,4 +2148,3 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
-

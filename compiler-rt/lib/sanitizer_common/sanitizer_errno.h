@@ -31,6 +31,8 @@
 #  define __errno_location _errno
 #elif SANITIZER_HAIKU
 #  define __errno_location _errnop
+#elif SANITIZER_AIX
+#  define __errno_location _Errno
 #endif
 
 extern "C" int *__errno_location();

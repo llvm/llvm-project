@@ -30,6 +30,8 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+extern cl::opt<uint32_t> PreferredLandingPadLabel;
+
 static cl::opt<bool> UsePseudoMovImm(
     "riscv-use-rematerializable-movimm", cl::Hidden,
     cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
@@ -1082,7 +1084,7 @@ static unsigned getSegInstNF(unsigned Intrinsic) {
   }
 }
 
-static bool isApplicableToPLI(int Val) {
+static bool isApplicableToPLIOrPLUI(int Val) {
   // Check if the immediate is packed i8 or i10
   int16_t Bit31To16 = Val >> 16;
   int16_t Bit15To0 = Val;
@@ -1091,7 +1093,8 @@ static bool isApplicableToPLI(int Val) {
   if (Bit31To16 != Bit15To0)
     return false;
 
-  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
+  return isInt<10>(Bit15To0) || isShiftedInt<10, 6>(Bit15To0) ||
+         Bit15To8 == Bit7To0;
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
@@ -1133,17 +1136,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     else if (!isInt<16>(Imm) && isUInt<16>(Imm) &&
              isInt<12>(SignExtend64<16>(Imm)) && hasAllHUsers(Node))
       Imm = SignExtend64<16>(Imm);
-    // If the upper 32-bits are not used try to convert this into a simm32 by
-    // sign extending bit 32.
-    else if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
-      Imm = SignExtend64<32>(Imm);
 
-    if (VT == MVT::i64 && Subtarget->hasStdExtP() && isApplicableToPLI(Imm) &&
-        hasAllWUsers(Node)) {
-      // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers, we
-      // can simply copy lower 32 bits to higher 32 bits to make it able to
-      // rematerialize to PLI_B or PLI_H
-      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+    // If the upper XLen-16 bits are not used, the lower 2 bytes are the same,
+    // and we can't use li, convert to an xlen splat so we can use pli.b.
+    if (Subtarget->hasStdExtP() && !isInt<12>(Imm) &&
+        (Imm & 0xff) == ((Imm >> 8) & 0xff) && hasAllHUsers(Node)) {
+      // Splat the lower 16 bits to XLen. Sign extend for RV32.
+      uint64_t Splat = Imm & 0xffff;
+      Splat = (Splat << 16) | Splat;
+      if (VT == MVT::i64)
+        Imm = Splat << 32 | Splat;
+      else
+        Imm = SignExtend64<32>(Splat);
+    } else {
+      // If the upper 32-bits are not used try to convert this into a simm32 by
+      // sign extending bit 32.
+      if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
+        Imm = SignExtend64<32>(Imm);
+
+      if (VT == MVT::i64 && !isInt<12>(Imm) && !isShiftedInt<20, 12>(Imm) &&
+          Subtarget->hasStdExtP() && isApplicableToPLIOrPLUI(Imm) &&
+          hasAllWUsers(Node)) {
+        // If it's 4 packed 8-bit integers or 2 packed signed 16-bit integers,
+        // we can simply copy lower 32 bits to higher 32 bits to make it able to
+        // rematerialize to PLI_B or PLI_H
+        Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+      }
     }
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
@@ -1221,11 +1239,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::BuildGPRPair:
-  case RISCVISD::BuildPairF64: {
+  case RISCVISD::BuildPairF64:
+  case RISCVISD::BuildPairGPRVec: {
     if (Opcode == RISCVISD::BuildPairF64 && !Subtarget->hasStdExtZdinx())
       break;
 
-    assert((!Subtarget->is64Bit() || Opcode == RISCVISD::BuildGPRPair) &&
+    assert((!Subtarget->is64Bit() || Opcode != RISCVISD::BuildPairF64) &&
            "BuildPairF64 only handled here on rv32i_zdinx");
 
     SDValue N =
@@ -1234,9 +1253,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::SplitGPRPair:
-  case RISCVISD::SplitF64: {
+  case RISCVISD::SplitF64:
+  case RISCVISD::SplitGPRVec: {
     if (Subtarget->hasStdExtZdinx() || Opcode != RISCVISD::SplitF64) {
-      assert((!Subtarget->is64Bit() || Opcode == RISCVISD::SplitGPRPair) &&
+      assert((!Subtarget->is64Bit() || Opcode != RISCVISD::SplitF64) &&
              "SplitF64 only handled here on rv32i_zdinx");
 
       if (!SDValue(Node, 0).use_empty()) {
@@ -1255,9 +1275,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-
-    assert(Opcode != RISCVISD::SplitGPRPair &&
-           "SplitGPRPair should already be handled");
 
     if (!Subtarget->hasStdExtZfa())
       break;
@@ -1960,8 +1977,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         int ConstantVal = ConstantOffset->getSExtValue();
         Simm12 = isInt<12>(ConstantVal);
         if (Simm12)
-          Offset = CurDAG->getTargetConstant(ConstantVal, SDLoc(Offset),
-                                             Offset.getValueType());
+          Offset = CurDAG->getSignedTargetConstant(ConstantVal, SDLoc(Offset),
+                                                   Offset.getValueType());
       }
 
       unsigned Opcode = 0;
@@ -2939,47 +2956,59 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case ISD::SPLAT_VECTOR: {
     if (!Subtarget->hasStdExtP())
       break;
-    auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0));
-    if (!ConstNode)
-      break;
+    if (auto *ConstNode = dyn_cast<ConstantSDNode>(Node->getOperand(0))) {
+      bool IsDoubleWide = Subtarget->isPExtPackedDoubleType(VT);
 
-    if (ConstNode->isZero()) {
-      SDValue New =
-          CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, RISCV::X0, VT);
-      ReplaceNode(Node, New.getNode());
-      return;
-    }
+      if (ConstNode->isZero()) {
+        MCPhysReg X0Reg = IsDoubleWide ? RISCV::X0_Pair : RISCV::X0;
+        SDValue New =
+            CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL, X0Reg, VT);
+        ReplaceNode(Node, New.getNode());
+        return;
+      }
 
-    unsigned EltSize = VT.getVectorElementType().getSizeInBits();
-    APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
+      unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+      APInt Val = ConstNode->getAPIntValue().trunc(EltSize);
 
-    // Find the smallest splat.
-    if (Val.getBitWidth() > 16 && Val.isSplat(16))
-      Val = Val.trunc(16);
-    if (Val.getBitWidth() > 8 && Val.isSplat(8))
-      Val = Val.trunc(8);
+      // Use LI for all ones since it can be compressed to c.li.
+      if (Val.isAllOnes() && !IsDoubleWide) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            RISCV::ADDI, DL, VT, CurDAG->getRegister(RISCV::X0, VT),
+            CurDAG->getAllOnesConstant(DL, XLenVT, /*IsTarget=*/true));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
 
-    EltSize = Val.getBitWidth();
-    int64_t Imm = Val.getSExtValue();
+      // Find the smallest splat.
+      if (Val.getBitWidth() > 16 && Val.isSplat(16))
+        Val = Val.trunc(16);
+      if (Val.getBitWidth() > 8 && Val.isSplat(8))
+        Val = Val.trunc(8);
 
-    unsigned Opc = 0;
-    if (EltSize == 8) {
-      Opc = RISCV::PLI_B;
-    } else if (isInt<10>(Imm)) {
-      Opc = EltSize == 32 ? RISCV::PLI_W : RISCV::PLI_H;
-    } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
-      Opc = RISCV::PLUI_H;
-      Imm = Imm >> 6;
-    } else if (EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
-      Opc = RISCV::PLUI_W;
-      Imm = Imm >> 22;
-    }
+      EltSize = Val.getBitWidth();
+      int64_t Imm = Val.getSExtValue();
 
-    if (Opc) {
-      SDNode *NewNode = CurDAG->getMachineNode(
-          Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
-      ReplaceNode(Node, NewNode);
-      return;
+      unsigned Opc = 0;
+      if (EltSize == 8) {
+        Opc = IsDoubleWide ? RISCV::PLI_DB : RISCV::PLI_B;
+      } else if (EltSize == 16 && isInt<10>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLI_DH : RISCV::PLI_H;
+      } else if (!IsDoubleWide && EltSize == 32 && isInt<10>(Imm)) {
+        Opc = RISCV::PLI_W;
+      } else if (EltSize == 16 && isShiftedInt<10, 6>(Imm)) {
+        Opc = IsDoubleWide ? RISCV::PLUI_DH : RISCV::PLUI_H;
+        Imm = Imm >> 6;
+      } else if (!IsDoubleWide && EltSize == 32 && isShiftedInt<10, 22>(Imm)) {
+        Opc = RISCV::PLUI_W;
+        Imm = Imm >> 22;
+      }
+
+      if (Opc) {
+        SDNode *NewNode = CurDAG->getMachineNode(
+            Opc, DL, VT, CurDAG->getSignedTargetConstant(Imm, DL, XLenVT));
+        ReplaceNode(Node, NewNode);
+        return;
+      }
     }
 
     break;
@@ -3067,6 +3096,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue V = Node->getOperand(0);
     auto Idx = Node->getConstantOperandVal(1);
     MVT InVT = V.getSimpleValueType();
+
+    // Handle P-extension extract_subvector for v2i16 from v4i16 and v4i8 from
+    // v8i8
+    if (Subtarget->hasStdExtP() && !Subtarget->is64Bit() &&
+        ((InVT == MVT::v4i16 && VT == MVT::v2i16) ||
+         (InVT == MVT::v8i8 && VT == MVT::v4i8))) {
+      unsigned NumElts = VT.getVectorNumElements();
+      if (Idx != 0 && Idx != NumElts)
+        break;
+
+      unsigned SubRegIdx = Idx == 0 ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+      SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
+      ReplaceNode(Node, Extract.getNode());
+      return;
+    }
+
     SDLoc DL(V);
 
     const RISCVTargetLowering &TLI = *Subtarget->getTargetLowering();
@@ -3174,6 +3219,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->setNodeMemRefs(Load, {Ld->getMemOperand()});
     // Replace the splat with the vlse.
     ReplaceNode(Node, Load);
+    return;
+  }
+  case RISCVISD::LPAD_CALL:
+  case RISCVISD::LPAD_CALL_INDIRECT: {
+    bool IsIndirect = Opcode == RISCVISD::LPAD_CALL_INDIRECT;
+    unsigned PseudoOpc = IsIndirect ? RISCV::PseudoCALLIndirectLpadAlign
+                                    : RISCV::PseudoCALLLpadAlign;
+
+    uint32_t LpadLabel = 0;
+    if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
+      if (!isUInt<20>(PreferredLandingPadLabel))
+        report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit "
+                           "in unsigned 20-bits");
+      LpadLabel = PreferredLandingPadLabel;
+    }
+
+    SmallVector<SDValue, 4> Ops;
+    Ops.push_back(Node->getOperand(1));
+    Ops.push_back(CurDAG->getTargetConstant(LpadLabel, DL, XLenVT));
+    Ops.push_back(Node->getOperand(0));
+    if (Node->getGluedNode())
+      Ops.push_back(Node->getOperand(Node->getNumOperands() - 1));
+
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(PseudoOpc, DL, Node->getVTList(), Ops));
     return;
   }
   case ISD::PREFETCH:

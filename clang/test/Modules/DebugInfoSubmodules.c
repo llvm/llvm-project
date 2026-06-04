@@ -3,6 +3,7 @@
 // RUN:     -fimplicit-module-maps -x c -fmodules-cache-path=%t -I %S/Inputs \
 // RUN:     %s -mllvm -debug-only=pchcontainer -emit-llvm -o %t.ll \
 // RUN:     2>&1 | FileCheck %s
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 // REQUIRES: asserts
 #include "DebugSubmoduleA.h"
 

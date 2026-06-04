@@ -140,6 +140,10 @@ __lldb_objc_find_implementation_for_selector (void *object,
     } else {
       return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;
     }
+#if defined(__arm64e__)
+    return_struct.class_addr =
+      __builtin_ptrauth_strip(return_struct.class_addr, /*ptrauth_key_asda*/ 2);
+#endif
     if (debug)
       printf("*** Super, class addr: %p\n", return_struct.class_addr);
   } else {
@@ -622,10 +626,10 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     // step through any method dispatches.  Warn to that effect and get out of
     // here.
     if (process_sp->CanJIT()) {
-      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-          "Could not find implementation lookup function \"%s\""
-          " step in through ObjC method dispatch will not work.\n",
-          get_impl_name.AsCString());
+      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Format(
+          "Could not find implementation lookup function \"{0}\" step in "
+          "through ObjC method dispatch will not work.\n",
+          get_impl_name);
     }
     return;
   }
