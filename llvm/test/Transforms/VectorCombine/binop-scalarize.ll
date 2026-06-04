@@ -247,7 +247,7 @@ define <2 x float> @test_fdiv(float %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fdiv(
 ; CHECK-SAME: float [[Arg:%.*]]) {
 ; CHECK-NEXT:  [[ScalarFDiv:%.*]] = fdiv fast float [[Arg]], 3.000000e+00
-; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float 0x7FF8000000000000), float [[ScalarFDiv]], i64 0
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float +qnan), float [[ScalarFDiv]], i64 0
 ; CHECK-NEXT:  ret <2 x float> [[Insert]]
   %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
   %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
@@ -259,7 +259,7 @@ define <2 x float> @test_frem(float %arg) {
 ; CHECK-LABEL: define <2 x float> @test_frem(
 ; CHECK-SAME: float [[Arg:%.*]]) {
 ; CHECK-NEXT:  [[ScalarFRem:%.*]] = frem fast float [[Arg]], 3.000000e+00
-; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float 0x7FF8000000000000), float [[ScalarFRem]], i64 0
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float +qnan), float [[ScalarFRem]], i64 0
 ; CHECK-NEXT:  ret <2 x float> [[Insert]]
   %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
   %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
