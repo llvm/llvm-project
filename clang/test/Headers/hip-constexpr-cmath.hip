@@ -12,7 +12,7 @@
 // RUN:   -target-cpu gfx906 -verify %t/main.hip -fcuda-is-device -o /dev/null
 //
 // Test with the 202604 stl
-// RUN: not %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %t/stl/include \
 // RUN:   -internal-isystem %t/stl/2026/include \
