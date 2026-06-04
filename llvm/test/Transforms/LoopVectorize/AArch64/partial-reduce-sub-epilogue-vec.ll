@@ -60,11 +60,10 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-EPI:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-EPI-NEXT:    [[TMP18:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP16]])
-; CHECK-EPI-NEXT:    [[TMP19:%.*]] = add i32 [[TMP18]], [[STARTVAL]]
 ; CHECK-EPI-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-EPI:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-EPI-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 36, %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-EPI-NEXT:    [[BC_MERGE_RDX7:%.*]] = phi i32 [ [[TMP19]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
+; CHECK-EPI-NEXT:    [[BC_MERGE_RDX7:%.*]] = phi i32 [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP10]], %[[VEC_EPILOG_ITER_CHECK]] ], [ [[STARTVAL]], %[[ITER_CHECK]] ]
 ; CHECK-EPI-NEXT:    br label %[[LOOP:.*]]
 ; CHECK-EPI:       [[LOOP]]:
 ; CHECK-EPI-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -81,7 +80,7 @@ define i32 @sub_reduction(i32 %startval, ptr %src1, ptr %src2) #0 {
 ; CHECK-EPI-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IV]], 38
 ; CHECK-EPI-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-EPI:       [[EXIT]]:
-; CHECK-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[TMP19]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
+; CHECK-EPI-NEXT:    [[SUB_LCSSA:%.*]] = phi i32 [ [[SUB]], %[[LOOP]] ], [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ [[TMP18]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-EPI-NEXT:    ret i32 [[SUB_LCSSA]]
 ;
 ; CHECK-PARTIAL-RED-EPI-LABEL: define i32 @sub_reduction(
