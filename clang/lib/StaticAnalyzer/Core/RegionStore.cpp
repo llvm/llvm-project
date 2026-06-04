@@ -2148,14 +2148,14 @@ RegionStoreManager::getConstantValFromInitializer(const FieldRegion *R,
 
   const Expr *E = Init;
   for (const SubRegion *SR : llvm::reverse(Path)) {
-    const auto *ILE = dyn_cast<InitListExpr>(E);
     // If E is not an InitListExpr, it may be an ImplicitValueInitExpr
     // representing zero-initialization of this aggregate element.
-    if (!ILE) {
-      return isa<ImplicitValueInitExpr>(E)
-                 ? std::optional<SVal>(svalBuilder.makeZeroVal(LeafTy))
-                 : std::nullopt;
-    }
+    if (isa<ImplicitValueInitExpr>(E))
+      return svalBuilder.makeZeroVal(LeafTy);
+
+    const auto *ILE = dyn_cast<InitListExpr>(E);
+    if (!ILE)
+      return std::nullopt;
 
     if (const auto *FR = dyn_cast<FieldRegion>(SR)) {
       if (ILE->getType()->isUnionType()) {
