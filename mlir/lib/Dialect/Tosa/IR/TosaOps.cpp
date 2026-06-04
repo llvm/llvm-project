@@ -712,7 +712,7 @@ LogicalResult verifyConvOutputSize(
 }
 
 //===----------------------------------------------------------------------===//
-// TOSA block scaling utilities.
+// mxint8Type DenseElementTypeInterface implementation.
 //===----------------------------------------------------------------------===//
 size_t mlir::tosa::mxint8Type::getDenseElementBitSize() const { return 8; }
 

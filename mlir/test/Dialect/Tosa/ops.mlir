@@ -1613,14 +1613,14 @@ func.func @test_cast_to_block_scaled_mxint8(%arg0: tensor<4x32xf32>) -> (tensor<
 
 // -----
 // CHECK-LABEL: test_const_mxint8_hex
-func.func @test_const_mxint8_hex(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+func.func @test_const_mxint8_hex() -> tensor<2x!tosa.mxint8> {
     %0 = "tosa.const"() {values = dense<"0x007F"> : tensor<2x!tosa.mxint8>} : () -> tensor<2x!tosa.mxint8>
     return %0 : tensor<2x!tosa.mxint8>
 }
 
 // -----
 // CHECK-LABEL: test_const_mxint8
-func.func @test_const_mxint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+func.func @test_const_mxint8() -> tensor<2x!tosa.mxint8> {
     %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127 : i8, -128 : i8]>} : () -> tensor<2x!tosa.mxint8>
     return %0 : tensor<2x!tosa.mxint8>
 }
