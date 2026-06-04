@@ -3802,6 +3802,14 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 //===----------------------------------------------------------------------===//
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
+
+// Node for the HVC exception-generating call.  The single operand is the
+// 16-bit instruction immediate; the argument registers, clobber mask and glue
+// are attached as variadic operands during lowering.
+def AArch64hvc : SDNode<"AArch64ISD::HVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+
 let isTrap = 1 in {
 def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
                                 [(int_aarch64_break timm32_0_65535:$imm)]>;
@@ -3811,9 +3819,16 @@ def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
 def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
                                 [(int_aarch64_hlt timm32_0_65535:$imm)]>;
+// Following the Microsoft __hvc calling convention (a software convention, not
+// an architectural rule), HVC passes up to four arguments in X0-X3 and returns
+// a value in X0.  It is therefore selected from the AArch64hvc node (built by
+// LowerINTRINSIC_W_CHAIN) rather than a plain intrinsic pattern, and defines X0
+// for the result.
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
+def : Pat<(AArch64hvc timm32_0_65535:$imm), (HVC timm32_0_65535:$imm)>;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;

@@ -39,7 +39,7 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  1      1     0.13                  U     dcps3
 # CHECK-NEXT:  1      1     0.13    *      *      U     dmb	sy
 # CHECK-NEXT:  1      1     0.13                  U     hlt	#0x7a67
-# CHECK-NEXT:  1      1     0.13                  U     hvc	#0xecb9
+# CHECK-NEXT:  1      1     0.13    *      *      U     hvc	#0xecb9
 # CHECK-NEXT:  1      1     0.13    *      *      U     isb
 # CHECK-NEXT:  1      1     0.13    *      *      U     pssbb
 # CHECK-NEXT:  1      1     0.13                  U     smc	#0x7e57
