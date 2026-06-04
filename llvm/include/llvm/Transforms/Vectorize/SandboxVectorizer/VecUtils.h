@@ -25,9 +25,6 @@ template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
   static inline SmallVector<sandboxir::Value *> getEmptyKey() {
     return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
   }
-  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
-    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
-  }
   static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
     return hash_combine_range(Vec);
   }

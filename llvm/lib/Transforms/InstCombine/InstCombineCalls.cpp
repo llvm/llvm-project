@@ -292,10 +292,11 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
 Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   Value *LoadPtr = II.getArgOperand(0);
   const Align Alignment = II.getParamAlign(0).valueOrOne();
+  Value *Mask = II.getArgOperand(1);
 
-  // If the mask is all ones or undefs, this is a plain vector load of the 1st
+  // If the mask is all ones or poison, this is a plain vector load of the 1st
   // argument.
-  if (maskIsAllOneOrUndef(II.getArgOperand(1))) {
+  if (match(Mask, m_AllOnesOrPoison())) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                             "unmaskedload");
     L->copyMetadata(II);
@@ -325,12 +326,13 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros, this instruction does nothing.
-  if (maskIsAllZeroOrUndef(ConstMask))
+  // If the mask is all zeros or poison, this instruction does nothing.
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
-  // If the mask is all ones, this is a plain vector store of the 1st argument.
-  if (maskIsAllOneOrUndef(ConstMask)) {
+  // If the mask is all ones or poison, this is a plain vector store of the 1st
+  // argument.
+  if (match(ConstMask, m_AllOnesOrPoison())) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -388,8 +390,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros, a scatter does nothing.
-  if (maskIsAllZeroOrUndef(ConstMask))
+  // If the mask is all zeros or poison, a scatter does nothing.
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
