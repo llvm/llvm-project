@@ -881,10 +881,10 @@ TEST_F(LexerTest, FindEndOfIdentifierContinuation) {
   EXPECT_EQ(Measure("naïve", 2), 4u); // 'ï' (2 bytes) + "ve".
   EXPECT_EQ(Measure("æon", 0), 4u);   // Starts with 'æ' (2 bytes).
 
-  // Dollar sign (requires DollarIdents).
-  LangOpts.DollarIdents = true;
+  // Dollar sign (requires DollarMacros).
+  LangOpts.DollarMacros = true;
   EXPECT_EQ(Measure("ab$cd", 2), 3u); // '$' is identifier continue.
-  LangOpts.DollarIdents = false;
+  LangOpts.DollarMacros = false;
   EXPECT_EQ(Measure("ab$cd", 2), 0u); // '$' is not identifier continue.
 }
 

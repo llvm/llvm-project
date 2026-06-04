@@ -47,7 +47,7 @@
 6: FOO(blarg)
 // CHECK-Identifiers-False: 6: blarg $foo
 
-// RUN: %clang_cc1 -x assembler-with-cpp -fdollars-in-identifiers -E %s -o - | FileCheck -check-prefix=CHECK-Identifiers-True -strict-whitespace %s
+// RUN: %clang_cc1 -x assembler-with-cpp -fdollars-in-macros -fdollars-in-identifiers -E %s -o - | FileCheck -check-prefix=CHECK-Identifiers-True -strict-whitespace %s
 #define FOO(name)  name ## $foo
 7: FOO(blarg)
 // CHECK-Identifiers-True: 7: blarg$foo

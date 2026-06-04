@@ -2275,7 +2275,7 @@ defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option], " '$' in identifiers">>;
 defm dollars_in_macros : BoolFOption<"dollars-in-macros",
-  LangOpts<"DollarMacros">, DefaultTrue,
+  LangOpts<"DollarMacros">, Default<!strconcat("!", asm_preprocessor.KeyPath)>,
   PosFlag<SetTrue, [], [CC1Option], "Allow">,
   NegFlag<SetFalse, [], [CC1Option], "Disallow">,
   BothFlags<[], [CC1Option], " '$' in macros">>;
