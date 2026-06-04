@@ -1986,11 +1986,11 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << diagMD(md, llvmModule.get());
-    auto op =
+    Value result =
         MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
             .getRes();
-    mapValue(value, op);
-    return op;
+    mapValue(value, result);
+    return result;
   }
 
   // Convert constants such as immediate values that have no mapping yet.
