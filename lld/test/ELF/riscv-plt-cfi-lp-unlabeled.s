@@ -25,11 +25,11 @@
 # DIS:      <.plt>:
 # DIS-NEXT:     auipc t3, 0x2
 # DIS-NEXT:     sub t1, t1, t2
-# DIS32-NEXT:   lw t2, 0x94(t3)
-# DIS64-NEXT:   ld t2, 0xfc(t3)
+# DIS32-NEXT:   lw t2, 0x98(t3)
+# DIS64-NEXT:   ld t2, 0x100(t3)
 # DIS-NEXT:     addi t1, t1, -0x30
-# DIS32-NEXT:   addi t0, t3, 0x94
-# DIS64-NEXT:   addi t0, t3, 0xfc
+# DIS32-NEXT:   addi t0, t3, 0x98
+# DIS64-NEXT:   addi t0, t3, 0x100
 # DIS32-NEXT:   srli t1, t1, 0x2
 # DIS64-NEXT:   srli t1, t1, 0x1
 # DIS32-NEXT:   lw t0, 0x4(t0)
