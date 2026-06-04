@@ -18,7 +18,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -103,7 +102,6 @@ public:
   const AMDGPUTargetMachine &TM;
   const TargetLibraryInfo *TLI;
   const UniformityInfo &UA;
-  const LoopInfo &LI;
   const DataLayout &DL;
   SimplifyQuery SQ;
   const bool HasFP32DenormalFlush;
@@ -114,14 +112,11 @@ public:
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
-  IntrinsicInst *CurrentWaterfall = nullptr;
-
   AMDGPUCodeGenPrepareImpl(Function &F, const AMDGPUTargetMachine &TM,
                            const TargetLibraryInfo *TLI, AssumptionCache *AC,
-                           const DominatorTree *DT, const UniformityInfo &UA,
-                           const LoopInfo &LI)
+                           const DominatorTree *DT, const UniformityInfo &UA)
       : F(F), ST(TM.getSubtarget<GCNSubtarget>(F)), TM(TM), TLI(TLI), UA(UA),
-        LI(LI), DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
+        DL(F.getDataLayout()), SQ(DL, TLI, DT, AC),
         HasFP32DenormalFlush(SIModeRegisterDefaults(F, ST).FP32Denormals ==
                              DenormalMode::getPreserveSign()) {}
 
@@ -271,7 +266,6 @@ public:
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool visitVectorReduceAdd(IntrinsicInst &I);
   bool visitSaturatingAdd(IntrinsicInst &I);
-  bool visitGetElementPtrInst(GetElementPtrInst &I);
 
   bool run();
 };
@@ -282,7 +276,6 @@ public:
   AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
 
@@ -2083,44 +2076,9 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::uadd_sat:
   case Intrinsic::sadd_sat:
     return visitSaturatingAdd(I);
-  case Intrinsic::amdgcn_waterfall_begin:
-    CurrentWaterfall = nullptr;
-    return false;
-  case Intrinsic::amdgcn_waterfall_end:
-    CurrentWaterfall = &I;
-    return false;
   default:
     return false;
   }
-}
-
-bool AMDGPUCodeGenPrepareImpl::visitGetElementPtrInst(GetElementPtrInst &I) {
-  if (!CurrentWaterfall || UA.isUniformAtDef(&I))
-    return false;
-  if (I.getParent() != CurrentWaterfall->getParent())
-    return false;
-
-  // Divergent GEP within a waterfall region will introduce a nested waterfall.
-  // This will lead to bad or broken code gen.
-  // Pointer likely became non-uniform due to sinking into a divergent loop.
-  // Make sure LICM can run on the relevant loops and hope it can
-  // hoist/canonicalize the pointer.
-  LLVM_DEBUG(dbgs() << "Divergent GEP found in waterfall = " << I << "\n");
-  Value *PtrVal = I.getPointerOperand()->stripPointerCasts();
-  Instruction *PtrInst = dyn_cast<Instruction>(PtrVal);
-  if (!PtrInst)
-    return false;
-
-  Loop *CurrentLoop = LI.getLoopFor(PtrInst->getParent());
-  while (CurrentLoop) {
-    MDNode *LoopID = CurrentLoop->getLoopID();
-    MDNode *NewLoopID = makePostTransformationMetadata(
-        I.getContext(), LoopID, {"llvm.licm.disable"}, {});
-    CurrentLoop->setLoopID(NewLoopID);
-    CurrentLoop = CurrentLoop->getParentLoop();
-  }
-
-  return true;
 }
 
 /// Match the core sequence in the fract pattern (x - floor(x), which doesn't
@@ -2326,8 +2284,7 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
   const UniformityInfo &UA =
       getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  return AMDGPUCodeGenPrepareImpl(F, TM, TLI, AC, DT, UA, LI).run();
+  return AMDGPUCodeGenPrepareImpl(F, TM, TLI, AC, DT, UA).run();
 }
 
 PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
@@ -2337,8 +2294,7 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   AssumptionCache *AC = &FAM.getResult<AssumptionAnalysis>(F);
   const DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   const UniformityInfo &UA = FAM.getResult<UniformityInfoAnalysis>(F);
-  const LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
-  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TLI, AC, DT, UA, LI);
+  AMDGPUCodeGenPrepareImpl Impl(F, ATM, TLI, AC, DT, UA);
   if (!Impl.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA = PreservedAnalyses::none();
@@ -2350,7 +2306,6 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
