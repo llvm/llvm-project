@@ -678,4 +678,25 @@ gpu.func @dpas_mx(%a : vector<8x32xf8E5M2>, %b: vector<32x16xf8E5M2>, %acc: vect
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @dpas_3d_batch
+gpu.func @dpas_3d_batch(%a : vector<4x8x16xf16>, %b: vector<4x16x16xf16>) {
+  // CHECK: %{{.+}} = xegpu.dpas %{{.+}}, %{{.+}} : vector<4x8x16xf16>, vector<4x16x16xf16> -> vector<4x8x16xf32>
+  %1 = xegpu.dpas %a, %b: vector<4x8x16xf16>, vector<4x16x16xf16> -> vector<4x8x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_3d_batch_with_acc
+gpu.func @dpas_3d_batch_with_acc(%a : vector<4x8x16xf16>, %b: vector<4x16x16xf16>, %acc: vector<4x8x16xf32>) {
+  // CHECK: %{{.+}} = xegpu.dpas %{{.+}}, %{{.+}}, %{{.+}} : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+  %1 = xegpu.dpas %a, %b, %acc : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @dpas_mx_3d_batch
+gpu.func @dpas_mx_3d_batch(%a : vector<4x8x32xf8E5M2>, %b: vector<4x32x16xf8E5M2>, %acc: vector<4x8x16xbf16>, %a_scale: vector<4x8x1xf8E8M0FNU>, %b_scale: vector<4x1x16xf8E8M0FNU>) {
+  // CHECK: %{{.+}} = xegpu.dpas_mx %{{.+}}, %{{.+}}, %{{.+}} scale_a = %{{.+}} scale_b = %{{.+}} : (vector<4x8x32xf8E5M2>, vector<4x32x16xf8E5M2>, vector<4x8x16xbf16>, vector<4x8x1xf8E8M0FNU>, vector<4x1x16xf8E8M0FNU>) -> vector<4x8x16xbf16>
+  %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %a_scale scale_b = %b_scale : (vector<4x8x32xf8E5M2>, vector<4x32x16xf8E5M2>, vector<4x8x16xbf16>, vector<4x8x1xf8E8M0FNU>, vector<4x1x16xf8E8M0FNU>) -> vector<4x8x16xbf16>
+  gpu.return
+}
+
 }

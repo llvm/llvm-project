@@ -964,9 +964,21 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
 
   let description = [{DPAS performs matrix multiplication on matrix A of `mxk`
     size, B of `kxn` size, and accumulate on matrix C of `mxn` to the same size
-    matrix , `m=8`, `n=16` and `k=8 * 32/bit_width_of_elem_type`. So for fp16
-    data type, the matrices are `A: vector<8x16xf16>`, `B: vector<16x16xf16>`,
-    and `C/D: vector<8x16xf32>`.
+    matrix.
+
+    The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
+    dimensions, the leading dimensions are treated as **batch dimensions** that
+    must match across all operands (lhs, rhs, acc, and result). The batch
+    dimensions represent independent matrix multiplications that are executed in
+    parallel. For example:
+    - 2D: `A: vector<8x16xf16>`, `B: vector<16x16xf16>` -> `C: vector<8x16xf32>`
+    - 3D: `A: vector<4x8x16xf16>`, `B: vector<4x16x16xf16>` -> `C: vector<4x8x16xf32>`
+      (4 independent 8x16 matrix multiplications)
+    - 4D: `A: vector<2x4x8x16xf16>`, `B: vector<2x4x16x16xf16>` -> `C: vector<2x4x8x16xf32>`
+      (2x4=8 independent 8x16 matrix multiplications)
+
+    The last 2 dimensions are always the core matrix multiplication dimensions
+    (M, K for lhs; K, N for rhs; M, N for result).
 
     In lane level code, each lane from a subgroup holds a data fragment for A, B, C and the result,
     which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
@@ -979,19 +991,21 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
     Arguments:
 
     - `lhs`: A vector value representing the left-hand-side matrix tile (A) participating in the
-      matrix multiply.
+      matrix multiply. Can be 1D, 2D, 3D, or 4D where leading dimensions are batch dimensions.
 
-    - `rhs`: A vector value representing the right-hand-side matrix tile (B).
+    - `rhs`: A vector value representing the right-hand-side matrix tile (B). Can be 1D, 2D, 3D, or 4D
+      where leading dimensions are batch dimensions.
 
     - `acc`: [optional] A vector value representing the accumulator matrix tile (C). When present, the
       result is computed as `lhs * rhs + acc`; otherwise, the accumulator is implicitly assumed to be zero.
+      Must have the same batch dimensions as lhs and rhs.
 
     - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
       operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
       that govern distribution at the subgroup and/or lane level. Only valid at workgroup and subgroup
       level.
 
-    Example 1 (Workgroup level):
+    Example 1 (Workgroup level, 2D):
 
     ```mlir
       %d = xegpu.dpas %a, %b, %c <{
@@ -1001,11 +1015,19 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>,
           : vector<64x128xf16>, vector<128x128xf16>, vector<64x128xf32> -> vector<64x128xf32>
     ```
 
-    Example 2 (Lane level):
+    Example 2 (Lane level, 1D):
 
     ```mlir
       %d = xegpu.dpas %a, %b, %c
             :  vector<8xf16>, vector<16xf16>, vector<8xf32> -> vector<8xf32>
+    ```
+
+    Example 3 (Workgroup level, 3D with batch):
+
+    ```mlir
+      // 4 independent 8x16 matrix multiplications
+      %d = xegpu.dpas %a, %b, %c
+          : vector<4x8x16xf16>, vector<4x16x16xf16>, vector<4x8x16xf32> -> vector<4x8x16xf32>
     ```
   }];
 
@@ -1477,6 +1499,21 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
     size, B is of size `kxn`, and accumulate on matrix C of size `mxn` to the same size
     matrix.
 
+    The operands can be 2D, 3D, or 4D vectors. When the vectors have more than 2
+    dimensions, the leading dimensions are treated as **batch dimensions** that
+    must match across all operands (a, b, acc, result, scale_a, scale_b). The batch
+    dimensions represent independent matrix multiplications that are executed in
+    parallel. For example:
+    - 2D: `A: vector<8x32xf8E5M2>`, `B: vector<32x16xf8E5M2>` -> `C: vector<8x16xbf16>`
+    - 3D: `A: vector<4x8x32xf8E5M2>`, `B: vector<4x32x16xf8E5M2>` -> `C: vector<4x8x16xbf16>`
+      (4 independent 8x16 scaled matrix multiplications)
+    - 4D: `A: vector<2x4x8x32xf8E5M2>`, `B: vector<2x4x32x16xf8E5M2>` -> `C: vector<2x4x8x16xbf16>`
+      (2x4=8 independent 8x16 scaled matrix multiplications)
+
+    The last 2 dimensions are always the core matrix multiplication dimensions
+    (M, K for a; K, N for b; M, N for result). The scale vectors also follow the
+    same batch dimension structure.
+
     In lane level code, each lane from a subgroup holds a data fragment for A, B, Acc and the result,
     which are represented as 1D vectors.
 
@@ -1486,18 +1523,19 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
     Arguments:
 
     - `a`: A vector value representing the left-hand-side matrix tile (A) participating in the
-      matrix multiply.
+      matrix multiply. Can be 1D, 2D, 3D, or 4D where leading dimensions are batch dimensions.
 
-    - `b`: A vector value representing the right-hand-side matrix tile (B).
+    - `b`: A vector value representing the right-hand-side matrix tile (B). Can be 1D, 2D, 3D, or 4D
+      where leading dimensions are batch dimensions.
 
     - `acc`: A vector value representing the accumulator matrix tile (C). The
-      result is computed as `a * b + acc`.
+      result is computed as `a * b + acc`. Must have the same batch dimensions as a and b.
 
     - `scale_a`: A floating point vector/scalar value used to scale `a` for
-      matrix multiplication.
+      matrix multiplication. When a vector, must have matching batch dimensions.
 
     - `scale_b`: A floating point vector/scalar value used to scale `b` for
-      matrix multiplication.
+      matrix multiplication. When a vector, must have matching batch dimensions.
 
     - `layout_a`, `layout_b`, `layout_cd`: [optional] Attributes that identify this
       operation as anchor for operands A, B, and the accumulator/result, enabling users to assign layouts
@@ -1509,9 +1547,9 @@ def XeGPU_DpasMxOp : XeGPU_Op<"dpas_mx", [Pure, AttrSizedOperandSegments,
   let arguments = (ins XeGPU_DpasOprType:$a, XeGPU_DpasOprType:$b,
       Optional<XeGPU_DpasResType>:$acc,
       Optional<AnyTypeOf<[F8E8M0FNU,
-                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_a,
+                          VectorOfRankAndType<[1, 2, 3, 4], [F8E8M0FNU]>]>>:$scale_a,
       Optional<AnyTypeOf<[F8E8M0FNU,
-                          VectorOfRankAndType<[1, 2], [F8E8M0FNU]>]>>:$scale_b,
+                          VectorOfRankAndType<[1, 2, 3, 4], [F8E8M0FNU]>]>>:$scale_b,
       OptionalAttr<DistributeLayoutAttr>:$layout_a,
       OptionalAttr<DistributeLayoutAttr>:$layout_b,
       OptionalAttr<DistributeLayoutAttr>:$layout_cd,
