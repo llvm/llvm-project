@@ -448,6 +448,7 @@ unsigned int _CountTrailingZeros(unsigned long);
 unsigned int _CountTrailingZeros64(unsigned __int64);
 
 unsigned int __hlt(unsigned int, ...);
+unsigned int __hvc(unsigned int, ...);
 
 void __cdecl __prefetch(const void *);
 void __cdecl __prefetch2(const void *, unsigned char);
