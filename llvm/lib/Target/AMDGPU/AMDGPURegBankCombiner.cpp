@@ -554,6 +554,30 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
   unsigned AMDGPUOpc = GetAMDGPUOp(Opc);
   if (!AMDGPUOpc)
     return false;
+  // remove canonicalize
+  auto RewriteR = [&](Register &R, Register &R1, Register &R2, bool isLeft) {
+    MachineInstr *Def = MRI.getVRegDef(R);
+    if (Def->getOpcode() == AMDGPU::G_FCANONICALIZE) {
+      if (isLeft)
+        R1 = Def->getOperand(1).getReg();
+      else
+        R2 = Def->getOperand(1).getReg();
+      ;
+    } else if (Def->getOpcode() == Opc) {
+      Register SRC11 = Def->getOperand(1).getReg();
+      Register SRC22 = Def->getOperand(2).getReg();
+      MachineInstr *Def1 = MRI.getVRegDef(SRC11);
+      MachineInstr *Def2 = MRI.getVRegDef(SRC22);
+      if (Def1 && Def1->getOpcode() == AMDGPU::G_FCANONICALIZE) {
+          R1 = Def1->getOperand(1).getReg();
+      }
+      if (Def2 && Def2->getOpcode() == AMDGPU::G_FCANONICALIZE) {
+        R2 = Def2->getOperand(1).getReg();
+      }
+    }
+  };
+  RewriteR(Src1, R0, R1, true);
+  RewriteR(Src2, R1, R2, false);
   MatchInfo = {GetAMDGPUOp(Opc), R0, R1, R2};
   return true;
 }
