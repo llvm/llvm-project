@@ -569,7 +569,7 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
       MachineInstr *Def1 = MRI.getVRegDef(SRC11);
       MachineInstr *Def2 = MRI.getVRegDef(SRC22);
       if (Def1 && Def1->getOpcode() == AMDGPU::G_FCANONICALIZE) {
-          R1 = Def1->getOperand(1).getReg();
+        R1 = Def1->getOperand(1).getReg();
       }
       if (Def2 && Def2->getOpcode() == AMDGPU::G_FCANONICALIZE) {
         R2 = Def2->getOperand(1).getReg();
