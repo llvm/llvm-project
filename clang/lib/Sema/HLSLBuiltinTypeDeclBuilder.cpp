@@ -2167,6 +2167,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::completeDefinition() {
          "Definition must be started before completing it.");
 
   Record->completeDefinition();
+  Record->setIsHLSLBuiltinRecord(true);
   return *this;
 }
 

@@ -3303,8 +3303,7 @@ bool QualType::isHLSLPODType(const ASTContext &Context) const {
           dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
     // User-defined records in HLSL do not have constructors or copy/assignment
     // operators. They are still considered POD.
-    if (!RD->hasUserProvidedSpecialMembers() || RD->isTrivial() ||
-        RD->isStandardLayout())
+    if (!RD->isHLSLBuiltinRecord() || RD->isTrivial() || RD->isStandardLayout())
       return true;
   }
   return false;

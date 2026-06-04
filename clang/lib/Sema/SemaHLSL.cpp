@@ -5650,7 +5650,7 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   while (Ty->isArrayType())
     Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
   if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl())
-    return !RD->hasUserProvidedSpecialMembers();
+    return !RD->isHLSLBuiltinRecord();
 
   return false;
 }
@@ -5751,9 +5751,7 @@ bool SemaHLSL::canHaveOverloadedBinOp(QualType LHSTy, BinaryOperatorKind Opc) {
   CXXRecordDecl *RD = LHSTy->getAsCXXRecordDecl();
   if (!RD)
     return true;
-  // hasUserProvidedSpecialMembers() should be true only for HLSL built-in
-  // records like resources.
-  return RD->hasUserProvidedSpecialMembers() || Opc != BO_Assign;
+  return RD->isHLSLBuiltinRecord() || Opc != BO_Assign;
 }
 
 // Walks though the global variable declaration, collects all resource binding

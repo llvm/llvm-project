@@ -6937,7 +6937,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //        constructors or conversion functions)
   if (DestType->isRecordType() &&
       (!S.getLangOpts().HLSL ||
-       DestType->getAsCXXRecordDecl()->hasUserProvidedSpecialMembers())) {
+       DestType->getAsCXXRecordDecl()->isHLSLBuiltinRecord())) {
     //     - If the initialization is direct-initialization, or if it is
     //       copy-initialization where the cv-unqualified version of the
     //       source type is the same class as, or a derived class of, the
@@ -7026,7 +7026,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
   //      constructors or conversion functions).
   if (!SourceType.isNull() && SourceType->isRecordType() &&
       (!S.getLangOpts().HLSL ||
-       SourceType->getAsCXXRecordDecl()->hasUserProvidedSpecialMembers())) {
+       SourceType->getAsCXXRecordDecl()->isHLSLBuiltinRecord())) {
     assert(Initializer && "Initializer must be non-null");
     // For a conversion to _Atomic(T) from either T or a class type derived
     // from T, initialize the T object then convert to _Atomic type.

@@ -34,8 +34,8 @@ void main() {
 // CHECK-NEXT: store ptr %this, ptr [[ThisPtrAdds]], align 4
 // CHECK-NEXT: [[ThisPtr:%.*]] = load ptr, ptr [[ThisPtrAdds]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Another]], ptr align 1 @__const._ZN4Pair8getFirstEv.Another, i32 8, i1 false)
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[Another]], i32 8, i1 false)
-// CHECK-NEXT: call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) [[ThisPtr]], ptr noundef byval(%struct.Pair) align 1 [[Tmp]])
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[ThisPtr]], ptr align 1 [[Another]], i32 8, i1 false)
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[ThisPtr]], i32 8, i1 false)
 // CHECK-NEXT: [[First:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 0
 // CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr [[First]], align 1
 // CHECK-NEXT: ret i32 %[[LOAD]]
@@ -47,11 +47,11 @@ void main() {
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Pair, align 1
 // CHECK-NEXT: store ptr %this, ptr [[ThisPtrAdds]], align 4
 // CHECK-NEXT: [[ThisPtr:%.*]] = load ptr, ptr [[ThisPtrAdds]], align 4
-// CHECK-NEXT: [[First:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[Tmp]], i32 0, i32 0
+// CHECK-NEXT: [[First:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 0
 // CHECK-NEXT: store i32 0, ptr [[First]], align 1
-// CHECK-NEXT: [[Second:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[Tmp]], i32 0, i32 1
+// CHECK-NEXT: [[Second:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 1
 // CHECK-NEXT: store i32 123, ptr [[Second]], align 1
-// CHECK-NEXT: call void @_ZN4PairaSES_(ptr noundef nonnull align 1 dereferenceable(8) [[ThisPtr]], ptr noundef byval(%struct.Pair) align 1 [[Tmp]])
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[ThisPtr]], i32 8, i1 false)
 // CHECK-NEXT: [[Second2:%.*]] = getelementptr inbounds nuw %struct.Pair, ptr [[ThisPtr]], i32 0, i32 1
 // CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr [[Second2]], align 1
 // CHECK-NEXT: ret i32 %[[LOAD]]

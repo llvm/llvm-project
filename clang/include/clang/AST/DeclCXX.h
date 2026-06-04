@@ -759,38 +759,20 @@ public:
            needsImplicitDefaultConstructor();
   }
 
-  // Used by HLSL to determine if a record is a built-in implicit HLSL
-  // struct/class or a user-defined one. User-defined HLSL records cannot
-  // have ctors, dtors, or overloaded operators, while implicit built-in
-  // HLSL records such as resource classes can. It would be nice to use the
-  // isImplicit() methods to determine that, but this flag is not propagated
-  // to template-instantiated classes.
-  //
-  /// Determines whether this class has any user provided special members.
-  bool hasUserProvidedSpecialMembers() const {
-    return data().UserDeclaredSpecialMembers & SMF_All ||
-           data().UserDeclaredConstructor ||
-           data().UserProvidedDefaultConstructor;
-  }
-
   /// Determine if we need to declare a default constructor for
   /// this class.
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    // In HLSL, only built-in records like resource classes can have
-    // constructors and overloadable operators.
-    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
-      return false;
-
-    return (!data().UserDeclaredConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
-           // FIXME: Proposed fix to core wording issue: if a class inherits
-           // a default constructor and doesn't explicitly declare one, one
-           // is declared implicitly.
-           (data().HasInheritedDefaultConstructor &&
-            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
+    return ((!data().UserDeclaredConstructor &&
+             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
+             (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
+            // FIXME: Proposed fix to core wording issue: if a class inherits
+            // a default constructor and doesn't explicitly declare one, one
+            // is declared implicitly.
+            (data().HasInheritedDefaultConstructor &&
+             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -816,12 +798,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
-    // In HLSL, only built-in records like resource classes can have
-    // constructors and overloadable operators.
-    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
-      return false;
-
-    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor);
+    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -914,16 +892,11 @@ public:
   /// Determine whether this class should get an implicit move
   /// constructor or if any existing special member function inhibits this.
   bool needsImplicitMoveConstructor() const {
-    // In HLSL, only built-in records like resource classes can have
-    // constructors and overloadable operators.
-    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
-      return false;
-
     return !(data().DeclaredSpecialMembers & SMF_MoveConstructor) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveAssignment() &&
-           !hasUserDeclaredDestructor();
+           !hasUserDeclaredMoveAssignment() && !hasUserDeclaredDestructor() &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a defaulted move
@@ -952,12 +925,8 @@ public:
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
-    // In HLSL, only built-in records like resource classes can have
-    // constructors and overloadable operators.
-    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
-      return false;
-
-    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment);
+    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -1015,17 +984,12 @@ public:
   /// assignment operator or if any existing special member function inhibits
   /// this.
   bool needsImplicitMoveAssignment() const {
-    // In HLSL, only built-in records like resource classes can have
-    // constructors and overloadable operators.
-    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
-      return false;
-
     return !(data().DeclaredSpecialMembers & SMF_MoveAssignment) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveConstructor() &&
-           !hasUserDeclaredDestructor() &&
-           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
+           !hasUserDeclaredMoveConstructor() && !hasUserDeclaredDestructor() &&
+           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable()) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
   }
 
   /// Determine whether we need to eagerly declare a move assignment
@@ -1593,6 +1557,14 @@ public:
   /// Returns true if the class contains HLSL intangible type, either as
   /// a field or in base class.
   bool isHLSLIntangible() const { return data().IsHLSLIntangible; }
+
+  /// Returns true if the class is a built-in HLSL record.
+  bool isHLSLBuiltinRecord() const { return data().IsHLSLBuiltinRecord; }
+
+  /// Sets the flag that the class is a built-in HLSL record.
+  void setIsHLSLBuiltinRecord(bool Value) {
+    data().IsHLSLBuiltinRecord = Value;
+  }
 
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
