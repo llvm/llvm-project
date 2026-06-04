@@ -22,7 +22,7 @@ define <8 x float> @frintz_f32_i32_f32(<8 x float> %in) {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
   %res = fptosi <8 x float> %in to <8 x i32>
-  %res2 = sitofp <8 x i32> %res to <8 x float>
+  %res2 = sitofp nsz <8 x i32> %res to <8 x float>
   ret <8 x float> %res2
 }
 
@@ -41,7 +41,7 @@ define <4 x double> @frintz_f64_i32_f64(<4 x double> %in) {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
   %res = fptosi <4 x double> %in to <4 x i32>
-  %res2 = sitofp <4 x i32> %res to <4 x double>
+  %res2 = sitofp nsz <4 x i32> %res to <4 x double>
   ret <4 x double> %res2
 }
 
@@ -60,7 +60,7 @@ define <4 x double> @frintz_f64_i64_f64(<4 x double> %in) {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
   %res = fptosi <4 x double> %in to <4 x i64>
-  %res2 = sitofp <4 x i64> %res to <4 x double>
+  %res2 = sitofp nsz <4 x i64> %res to <4 x double>
   ret <4 x double> %res2
 }
 
@@ -79,6 +79,6 @@ define <8 x float> @frintz_f32_i64_f32(<8 x float> %in) {
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-NEXT:    ret
   %res = fptosi <8 x float> %in to <8 x i64>
-  %res2 = sitofp <8 x i64> %res to <8 x float>
+  %res2 = sitofp nsz <8 x i64> %res to <8 x float>
   ret <8 x float> %res2
 }
