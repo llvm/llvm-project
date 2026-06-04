@@ -9027,8 +9027,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   }
   case ISD::ANY_EXTEND_VECTOR_INREG:
-    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(Op),
-                       Op.getValueType(), Op.getOperand(0));
+    EVT VT = Op.getValueType()
+                 assert(Subtarget.hasStdExtP() && Subtarget.is64Bit() &&
+                        (VT == MVT::v2i32 || VT == MVT::v4i16) &&
+                        "Unexpected custom legalisation");
+    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(Op), VT,
+                       Op.getOperand(0));
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
