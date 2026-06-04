@@ -744,14 +744,6 @@ namespace create_with_default_constructor {
 
 } // namespace create_with_default_constructor
 
-struct Clazzzz {
-    void ref() const;
-    void deref() const;
-};
-
-Ref<Clazzzz> [[clang::annotate_type("webkit.nodelete")]] create() {
-    return adoptRef(*new Clazzzz());
-}
 
 namespace trivial_implicit_ctor_in_new_expr {
 
