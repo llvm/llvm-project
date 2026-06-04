@@ -27,7 +27,7 @@ using namespace lld::elf;
 
 namespace {
 
-class RISCV : public TargetInfo {
+class RISCV final : public TargetInfo {
 public:
   RISCV(Ctx &);
   uint32_t calcEFlags() const override;
