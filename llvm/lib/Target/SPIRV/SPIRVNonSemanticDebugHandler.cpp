@@ -468,6 +468,34 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
   return std::nullopt;
 }
 
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
+    const DICompositeType *VT, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  const auto *BaseTy = dyn_cast_or_null<DIBasicType>(VT->getBaseType());
+  if (!BaseTy)
+    return std::nullopt;
+  auto BTIt = DebugTypeRegs.find(BaseTy);
+  if (BTIt == DebugTypeRegs.end())
+    return std::nullopt;
+
+  // DebugTypeVector models only 1D vectors (multi-subrange types cannot be
+  // encoded).
+  DINodeArray Elements = VT->getElements();
+  if (Elements.size() != 1)
+    return std::nullopt;
+  const auto *SR = cast<DISubrange>(Elements[0]);
+  const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount());
+  if (!CI)
+    return std::nullopt;
+
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister CountReg = emitOpConstantI32(
+      static_cast<uint32_t>(CI->getZExtValue()), I32TypeReg, MAI);
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
+                     ExtInstSetReg, {BTIt->second, CountReg}, MAI);
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (CompileUnits.empty())
@@ -595,33 +623,10 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     DebugTypeRegs[BT] = BTReg;
   }
 
-  // Emit DebugTypeVector for each collected vector type. Skip entries that
-  // would produce a module rejected by spirv-val: Base Type must resolve to
-  // a DebugTypeBasic, the subrange count must be a constant, and the Vulkan
-  // flavor of NSDI requires Component Count in [1, 4].
+  // Emit DebugTypeVector for each collected vector type.
   for (const DICompositeType *VT : VectorTypes) {
-    const auto *BaseTy = dyn_cast_or_null<DIBasicType>(VT->getBaseType());
-    if (!BaseTy)
-      continue;
-    auto BTIt = DebugTypeRegs.find(BaseTy);
-    if (BTIt == DebugTypeRegs.end())
-      continue;
-
-    DINodeArray Elements = VT->getElements();
-    if (Elements.size() != 1)
-      continue;
-    const auto *SR = cast<DISubrange>(Elements[0]);
-    const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount());
-    if (!CI)
-      continue;
-    uint64_t Count = CI->getZExtValue();
-    if (Count == 0 || Count > 4)
-      continue;
-
-    MCRegister CountReg =
-        emitOpConstantI32(static_cast<uint32_t>(Count), I32TypeReg, MAI);
-    emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
-                ExtInstSetReg, {BTIt->second, CountReg}, MAI);
+    if (auto VecReg = emitDebugTypeVector(VT, ExtInstSetReg, MAI))
+      DebugTypeRegs[VT] = *VecReg;
   }
 
   // Emit DebugTypePointer for each referenced pointer type.

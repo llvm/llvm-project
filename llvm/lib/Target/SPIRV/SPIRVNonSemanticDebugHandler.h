@@ -219,6 +219,16 @@ private:
                                          MCRegister ExtInstSetReg,
                                          SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Emit \c DebugTypeVector for the vector composite type \p VT.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p VT has no \c DIBasicType base type, if the base type
+  /// has not been emitted yet, if \p VT has more than one \c DISubrange
+  /// element, or if the component count is not a compile-time constant.
+  std::optional<MCRegister> emitDebugTypeVector(const DICompositeType *VT,
+                                                MCRegister ExtInstSetReg,
+                                                SPIRV::ModuleAnalysisInfo &MAI);
+
   /// Map a \c DISubroutineType::getTypeArray() element to an operand register
   /// for
   /// \c DebugTypeFunction. Non-null \p Ty resolves via \c DebugTypeRegs; if the
