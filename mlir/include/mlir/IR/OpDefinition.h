@@ -778,6 +778,18 @@ public:
   }
 };
 
+/// This trait marks operations that are allowed to produce builtin token
+/// values.
+template <typename ConcreteType>
+class TokenProducerTrait : public TraitBase<ConcreteType, TokenProducerTrait> {
+};
+
+/// This trait marks operations that are allowed to consume builtin token
+/// values.
+template <typename ConcreteType>
+class TokenConsumerTrait : public TraitBase<ConcreteType, TokenConsumerTrait> {
+};
+
 /// This class provides verification for ops that are known to have zero
 /// successors.
 template <typename ConcreteType>

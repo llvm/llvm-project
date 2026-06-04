@@ -511,6 +511,10 @@ Changes in existing checks
   `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
   macros are ignored.
 
+- Improved :doc:`fuchsia-statically-constructed-objects
+  <clang-tidy/checks/fuchsia/statically-constructed-objects>` check by fixing a
+  crash when checking value-dependent static member initializers in class templates.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
@@ -679,6 +683,10 @@ Changes in existing checks
   - Fixed a false positive with suggesting ``empty`` when comparing a container
     to a default-constructed object of an unrelated type.
 
+  - Extended to warn when the non-member ``std::size()`` function is used
+    in a Boolean context or compared to ``0`` or ``1``, consistent with the
+    existing ``size()``/``length()`` member call detection.
+
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
 
@@ -710,6 +718,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding an
+  `IgnoreMacros` option to exclude statements, branches, nesting levels, and
+  variable declarations inside macros from the reported metrics.
 
 - Improved :doc:`readability-identifier-length
   <clang-tidy/checks/readability/identifier-length>` check:
@@ -757,6 +770,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a crash when analyzing a redeclaration whose initializer is attached
+    to another declaration.
 
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by adding the

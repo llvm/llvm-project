@@ -127,6 +127,26 @@ std::optional<int64_t> GetIntValueFromExpr(
   return std::nullopt;
 }
 
+// There are several clauses that take an optional, compile-time
+// constant bool argument. Those clauses are stored as std::optional, e.g.
+// OmpClause::ReverseOffload -> std::optional<OmpReverseOffloadClause>.
+// Retrieve the logical value if present.
+template <typename ClauseTy>
+std::optional<bool> GetLogicalArgument(
+    const std::optional<ClauseTy> &maybeClause, SemanticsContext &semaCtx) {
+  if (maybeClause) {
+    // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+    auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+      if (auto v{GetLogicalValue(*maybeExpr)}) {
+        return *v;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 

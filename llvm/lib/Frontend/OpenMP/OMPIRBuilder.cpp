@@ -11791,12 +11791,13 @@ std::unique_ptr<CodeExtractor> DeviceSharedMemOutlineInfo::createCodeExtractor(
 
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          uint64_t Size, int32_t Flags,
-                                         GlobalValue::LinkageTypes,
+                                         GlobalValue::LinkageTypes Linkage,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
         M, object::OffloadKind::OFK_OpenMP, ID,
-        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
+        /*AuxAddr=*/nullptr, Linkage);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -11907,7 +11908,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       }
       createOffloadEntry(CE->getID(), CE->getAddress(),
                          /*Size=*/0, CE->getFlags(),
-                         GlobalValue::WeakAnyLinkage);
+                         GlobalValue::ExternalLinkage);
     } else if (const auto *CE = dyn_cast<
                    OffloadEntriesInfoManager::OffloadEntryInfoDeviceGlobalVar>(
                    E.first)) {
