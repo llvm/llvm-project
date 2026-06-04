@@ -219,11 +219,15 @@ setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                             DistributeLayoutAttr consumerLayout,
                             const uArch::uArch *uArch);
 
-/// Sets up the anchor layout for a store scatter operation.
+/// Sets up the anchor layout for a store scatter operation. When
+/// `coalesceFactor > 1`, the store is a coalescing sink: its lane_data along
+/// the fastest-changing dim is seeded to `coalesceFactor` (and lane_layout
+/// shrunk to match), so the factor propagates backward to producers.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
                                                    int chunkSize,
-                                                   const uArch::uArch *uArch);
+                                                   const uArch::uArch *uArch,
+                                                   int coalesceFactor = 1);
 
 /// Sets up the anchor layout for a store matrix operation.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
