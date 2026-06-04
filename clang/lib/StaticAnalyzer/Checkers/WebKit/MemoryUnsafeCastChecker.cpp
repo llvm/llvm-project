@@ -145,8 +145,7 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, BR, ADC, this, BT);
 
-  // Match calls returning derived type where an argument is
-  // a void pointer
+  // Match calls returning derived type where an argument is a void pointer.
   auto VoidPtrCast =
       castExpr(hasType(pointerType(pointee(voidType()))),
                hasSourceExpression(ignoringImpCasts(
