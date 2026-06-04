@@ -14,6 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
@@ -28,6 +29,8 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -58,6 +61,32 @@ using namespace llvm::PatternMatch;
 
 // The name for newly created blocks.
 const char FlowBlockName[] = "Flow";
+
+// True if BB contains nothing but an unconditional branch and has only one
+// predecessor.
+static bool isIntermediateTarget(const BasicBlock &BB) {
+  return BB.size() == 1 && isa<UncondBrInst>(BB.getTerminator()) &&
+         BB.hasNPredecessors(1);
+}
+
+/// True if BB's terminator must be preserved verbatim and therefore cannot
+/// serve as a rewritable flow tail (it can be neither killed nor have its
+/// successors rewritten). Currently only callbr.
+static bool isIsland(const BasicBlock &BB) {
+  return isa<CallBrInst>(BB.getTerminator());
+}
+
+/// True if BB is an unreachable target block: it is terminated by
+/// `unreachable`, or (after exit unification) it is marked by an
+/// @llvm.amdgcn.unreachable call.
+static bool isUnreachableTarget(const BasicBlock &BB) {
+  if (isa<UnreachableInst>(BB.getTerminator()))
+    return true;
+  return any_of(BB, [](const Instruction &I) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    return CB && CB->getIntrinsicID() == Intrinsic::amdgcn_unreachable;
+  });
+}
 
 namespace {
 
@@ -227,6 +256,52 @@ public:
   bool resultIsRememberedBlock() { return ResultIsRemembered; }
 };
 
+class StructurizeCFG; // forward declaration
+
+/// The state of the current flow tail, i.e. the node that is the current tail
+/// of our structurization chain:
+/// - None:        region entry, no pending tail yet
+/// - Rewritable:  node with a rewritable terminator
+/// - Closed:      node with a non-rewritable terminator that cannot be used for
+///                flow stitching
+class FlowTail {
+  enum class TailState { None, Rewritable, Closed };
+
+  RegionNode *Node;
+  TailState State;
+
+public:
+  FlowTail() : Node(nullptr), State(TailState::None) {}
+  FlowTail(RegionNode *Node)
+      : Node(Node), State(Node ? TailState::Rewritable : TailState::None) {}
+
+  RegionNode &operator*() {
+    assert(isRewritable() && "FlowTail is not rewritable");
+    return *Node;
+  }
+
+  RegionNode *operator->() {
+    assert(isRewritable() && "FlowTail is not rewritable");
+    return Node;
+  }
+
+  /// Close the flow tail, marking the end of an island.
+  void close(RegionNode *Boundary) {
+    assert(Boundary && "closing requires a boundary node");
+    Node = Boundary;
+    State = TailState::Closed;
+  }
+
+  RegionNode *getClosedEntry() const {
+    assert(isClosed() && "FlowTail is not closed");
+    return Node;
+  }
+
+  bool isClosed() const { return State == TailState::Closed; }
+  bool isNone() const { return State == TailState::None; }
+  bool isRewritable() const { return State == TailState::Rewritable; }
+};
+
 /// Transforms the control flow graph on one single entry/exit region
 /// at a time.
 ///
@@ -302,7 +377,11 @@ class StructurizeCFG {
 
   Val2BBMap HoistedValues;
 
-  RegionNode *PrevNode;
+  FlowTail Tail;
+
+  // True if the region exit domination info needs to be fixed after the
+  // transform due to specific island requirements, see handleIsland.
+  bool NeedFixRegionExitDom = false;
 
   void hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
@@ -342,8 +421,9 @@ class StructurizeCFG {
 
   DebugLoc killTerminator(BasicBlock *BB);
 
-  void changeExit(RegionNode *Node, BasicBlock *NewExit,
-                  bool IncludeDominator);
+  void changeExit(FlowTail &Tail, BasicBlock *NewExit, bool IncludeDominator);
+
+  void checkClosedFlow();
 
   BasicBlock *getNextFlow(BasicBlock *Dominator);
 
@@ -358,6 +438,8 @@ class StructurizeCFG {
   bool isPredictableTrue(RegionNode *Node);
 
   void wireFlow(bool ExitUseAllowed, BasicBlock *LoopEnd);
+
+  void handleIsland(BasicBlock *CallBrBlock);
 
   void handleLoops(bool ExitUseAllowed, BasicBlock *LoopEnd);
 
@@ -561,9 +643,8 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 
   } else {
     // Test for successors as back edge
-    // TODO: support other terminators other than branches.
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    if (isa<UncondBrInst, CondBrInst>(BB->getTerminator()))
+    if (isa<UncondBrInst, CondBrInst, CallBrInst>(BB->getTerminator()))
       for (BasicBlock *Succ : successors(BB))
         if (Visited.count(Succ))
           Loops[Succ] = BB;
@@ -620,6 +701,14 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
           LPred[P] = buildCondition(CondBr, Idx, true);
         }
       }
+      // } else if (isIsland(*P)) {
+      //   // Island edges have no SSA condition, so we treat them as an
+      //   // unconditional branch.
+      //   if (Visited.count(P))
+      //     Pred[P] = {BoolTrue, std::nullopt};
+      //   else
+      //     LPred[P] = {BoolFalse, std::nullopt};
+      // }
     } else {
       // It's an exit from a sub region
       while (R->getParent() != ParentRegion)
@@ -1037,10 +1126,10 @@ DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
 }
 
 /// Let node exit(s) point to NewExit
-void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
+void StructurizeCFG::changeExit(FlowTail &Tail, BasicBlock *NewExit,
                                 bool IncludeDominator) {
-  if (Node->isSubRegion()) {
-    Region *SubRegion = Node->getNodeAs<Region>();
+  if (Tail->isSubRegion()) {
+    Region *SubRegion = Tail->getNodeAs<Region>();
     BasicBlock *OldExit = SubRegion->getExit();
     BasicBlock *Dominator = nullptr;
 
@@ -1071,7 +1160,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     // Update the region info
     SubRegion->replaceExit(NewExit);
   } else {
-    BasicBlock *BB = Node->getNodeAs<BasicBlock>();
+    BasicBlock *BB = Tail->getNodeAs<BasicBlock>();
     DebugLoc DL = killTerminator(BB);
     UncondBrInst *Br = UncondBrInst::Create(NewExit, BB);
     Br->setDebugLoc(DL);
@@ -1079,6 +1168,18 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
   }
+}
+
+/// A closed flow tail marks an island boundary that handleIsland already wired
+/// (the callbr itself, whose terminator is immutable, or one of its forwarders,
+/// already converged into the dispatch ladder; see wireFlow). Such a node must
+/// not be rewritten or extended, so before more flow is stitched onto the tail
+/// (needPrefix) swap in a fresh, rewritable Flow node to continue from.
+void StructurizeCFG::checkClosedFlow() {
+  if (!Tail.isClosed())
+    return;
+  BasicBlock *Flow = getNextFlow(ParentRegion->getEntry());
+  Tail = ParentRegion->getBBNode(Flow);
 }
 
 /// Create a new flow node and update dominator tree and region info
@@ -1097,9 +1198,10 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
 /// Create a new or reuse the previous node as flow node. Returns a block and a
 /// debug location to be used for new instructions in that block.
 std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
-  BasicBlock *Entry = PrevNode->getEntry();
+  checkClosedFlow();
+  BasicBlock *Entry = Tail->getEntry();
 
-  if (!PrevNode->isSubRegion()) {
+  if (!Tail->isSubRegion()) {
     DebugLoc DL = killTerminator(Entry);
     if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end())
       return {Entry, DL};
@@ -1109,8 +1211,8 @@ std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
   BasicBlock *Flow = getNextFlow(Entry);
 
   // and wire it up
-  changeExit(PrevNode, Flow, true);
-  PrevNode = ParentRegion->getBBNode(Flow);
+  changeExit(Tail, Flow, true);
+  Tail = ParentRegion->getBBNode(Flow);
   return {Flow, DebugLoc()};
 }
 
@@ -1128,8 +1230,7 @@ BasicBlock *StructurizeCFG::needPostfix(BasicBlock *Flow,
 
 /// Set the previous node
 void StructurizeCFG::setPrevNode(BasicBlock *BB) {
-  PrevNode = ParentRegion->contains(BB) ? ParentRegion->getBBNode(BB)
-                                        : nullptr;
+  Tail = ParentRegion->contains(BB) ? ParentRegion->getBBNode(BB) : nullptr;
 }
 
 /// Does BB dominate all the predicates of Node?
@@ -1146,14 +1247,15 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
   bool Dominated = false;
 
   // Regionentry is always true
-  if (!PrevNode)
+  // If we're in a closed flow, we assume that anything might be called.
+  if (Tail.isNone() || Tail.isClosed())
     return true;
 
   for (auto [BB, PI] : Preds) {
     if (PI.Pred != BoolTrue)
       return false;
 
-    if (!Dominated && DT->dominates(BB, PrevNode->getEntry()))
+    if (!Dominated && DT->dominates(BB, Tail->getEntry()))
       Dominated = true;
   }
 
@@ -1165,20 +1267,41 @@ bool StructurizeCFG::isPredictableTrue(RegionNode *Node) {
 void StructurizeCFG::wireFlow(bool ExitUseAllowed,
                               BasicBlock *LoopEnd) {
   RegionNode *Node = Order.pop_back_val();
-  Visited.insert(Node->getEntry());
+  BasicBlock *Entry = Node->getEntry();
+  Visited.insert(Entry);
+
+  // There is nothing to do for island blocks because they are handled by
+  // handleIsland and we think of their terminators as immutable here.
+  // A subregion whose entry happens to be an island must be wired normally, or
+  // everything inside it past the entry would be dropped.
+  if (!Node->isSubRegion() && isIsland(*Entry)) {
+    Tail.close(Node);
+    return;
+  }
+
+  // A callbr forwarder, a simple single-branch block reached straight from the
+  // callbr (created by handleIsland's edge split, or a reused trivial target),
+  // has already been converged into the dispatch ladder. Close the tail and
+  // leave it, so the normal machinery does not redirect it out of the ladder.
+  bool HasIslandPred = llvm::any_of(
+      predecessors(Entry), [](BasicBlock *Pred) { return isIsland(*Pred); });
+  if (HasIslandPred && isIntermediateTarget(*Entry)) {
+    Tail.close(Node);
+    return;
+  }
 
   if (isPredictableTrue(Node)) {
-    // Just a linear flow
-    if (PrevNode) {
-      changeExit(PrevNode, Node->getEntry(), true);
-    }
-    PrevNode = Node;
+    // Just a linear flow. Only a rewritable tail is redirected to flow into
+    // this node; a closed tail is an island boundary handleIsland already
+    // wired, so it is left as-is.
+    if (Tail.isRewritable())
+      changeExit(Tail, Entry, true);
+    Tail = Node;
   } else {
     // Insert extra prefix node (or reuse last one)
     auto [Flow, DL] = needPrefix(false);
 
     // Insert extra postfix node (or use exit instead)
-    BasicBlock *Entry = Node->getEntry();
     BasicBlock *Next = needPostfix(Flow, ExitUseAllowed);
 
     // let it point to entry and next block
@@ -1188,15 +1311,198 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
 
-    PrevNode = Node;
+    Tail = Node;
     while (!Order.empty() && !Visited.count(LoopEnd) &&
            dominatesPredicates(Entry, Order.back())) {
       handleLoops(false, LoopEnd);
     }
 
-    changeExit(PrevNode, Next, false);
+    if (Tail.isRewritable())
+      changeExit(Tail, Next, false);
     setPrevNode(Next);
   }
+}
+
+/// Handle an "island", i.e. a block whose terminator is not rewritable (e.g., a
+/// callbr) in this context and considered immutable from this pass's
+/// perspective.
+///
+/// The island is left untouched; its edges are split into forwarders that
+/// converge at a new Flow block (ExitFlow). The callbr's runtime target choice
+/// is recovered as a per-target i1 "sel" phi and re-dispatched by a structured
+/// ladder of 2-way branches:
+///
+///                  callbr
+///                /   |   \
+///            fwd_0 fwd_1 fwd_2      forwarders (intermediate target blocks)
+///                \   |   /
+///             ExitFlow (Flow_0) -- sel_0? --> real_0
+///                   |  else
+///                 Flow_1 --------- sel_1? --> real_1
+///                   |  else
+///              real_2
+///            or Flow_2 (if real_1 == real_2) ------> real_2   (shared last
+///            target)
+///
+void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+  // 1. Split the island's edges into forwarders, so the island's targets are no
+  // longer direct successors of the (immutable) callbr terminator. This also
+  // turns a self-loop back-edge into a *mutable* forwarder, so later steps
+  // never rewrite the island edge itself.
+  //
+  // Reuse a target as-is only if it is already a trivial forwarder *inside this
+  // region*. A trivial target that is the region's exit block is still split:
+  // the ladder consumes its forwarders, and consuming the exit block would move
+  // the region's SESE boundary, which the precomputed RegionInfo cannot
+  // represent.
+  SmallVector<BasicBlock *, 4> Targets;
+  if (CallBrInst *CallBr = dyn_cast<CallBrInst>(IslandBB->getTerminator())) {
+    for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
+      BasicBlock *Target = CallBr->getSuccessor(I);
+      // Leave an unreachable target's callbr edge direct and keep the dead lane
+      // out of the dispatch sel phi, which SILowerI1Copies cannot lower. It
+      // stays a direct predecessor of its successor and is not part of the
+      // ladder.
+      // However, that gives the region exit a predecessor createFlow's
+      // single-pred exit wiring does not account for. Flag that the exit's
+      // immediate dominator needs to be fixed.
+      if (isUnreachableTarget(*Target)) {
+        NeedFixRegionExitDom = true;
+        continue;
+      }
+      if (isIntermediateTarget(*Target) && ParentRegion->contains(Target)) {
+        Targets.push_back(Target);
+        continue;
+      }
+      BasicBlock *NewBB = SplitCallBrEdge(IslandBB, Target, I, &DTU);
+      ParentRegion->getRegionInfo()->setRegionFor(NewBB, ParentRegion);
+      Targets.push_back(NewBB);
+    }
+  } else {
+    llvm_unreachable("not a supported island type");
+  }
+
+  // 2. Create EntryFlow in front of the island for its in-region, non-forwarder
+  // predecessors (e.g. a loop back-edge from a separate latch), giving a
+  // rewritable header anchor. Forwarders route through the ladder instead.
+  // Out-of-region predecessors (only the region entry has any, by SESE) stay
+  // direct, keeping the region boundary intact. Skipped when empty to avoid an
+  // orphan Flow.
+  SmallVector<BasicBlock *, 4> Preds;
+  for (BasicBlock *Pred : predecessors(IslandBB))
+    if (ParentRegion->contains(Pred) && !llvm::is_contained(Targets, Pred))
+      Preds.push_back(Pred);
+  if (!Preds.empty()) {
+    BasicBlock *EntryFlow = SplitBlockPredecessors(IslandBB, Preds, "", &DTU);
+    EntryFlow->setName(FlowBlockName);
+    FlowSet.insert(EntryFlow);
+    ParentRegion->getRegionInfo()->setRegionFor(EntryFlow, ParentRegion);
+  }
+
+  // 3. Build the dispatch ladder shown in the diagram above. sel_k is the i1
+  // phi in ExitFlow that is true only on the edge from forwarder k; ExitFlow
+  // dominates the whole ladder, so the sel phis are usable at every level. If
+  // the island has a self-loop, it is dispatched by the ladder as well.
+  //
+  // Edge edits are recorded in DTUpdates and applied via the same
+  // DomTreeUpdater, keeping the DominatorTree incrementally correct. The island
+  // Flow blocks are created without DT->addNewBlock and get their idoms from
+  // the inserted edges, so we must not mix in a direct getNextFlow here.
+  unsigned N = Targets.size();
+  SmallVector<DominatorTree::UpdateType, 16> DTUpdates;
+  auto MakeFlow = [&]() {
+    BasicBlock *Flow = BasicBlock::Create(Func->getContext(), FlowBlockName,
+                                          Func, ParentRegion->getExit());
+    FlowSet.insert(Flow);
+    ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
+    return Flow;
+  };
+  BasicBlock *ExitFlow = MakeFlow();
+
+  // Converge every forwarder into ExitFlow and remember the real target each
+  // one guards (its single successor). Real's phi incomings from the forwarder
+  // are re-bound onto the ladder edge in the dispatch loop below: we maintain
+  // SSA directly because handleIsland runs before createFlow, which clears the
+  // deferred delPhiValues/addPhiValues bookkeeping.
+  SmallVector<BasicBlock *, 4> RealTargets;
+  RealTargets.reserve(N);
+  for (BasicBlock *Fwd : Targets) {
+    BasicBlock *Real = Fwd->getSingleSuccessor();
+    assert(Real && "forwarder must have a single successor");
+    RealTargets.push_back(Real);
+
+    DebugLoc DL = Fwd->getTerminator()->getDebugLoc();
+    Fwd->getTerminator()->eraseFromParent();
+    UncondBrInst::Create(ExitFlow, Fwd)->setDebugLoc(DL);
+    DTUpdates.push_back({DominatorTree::Delete, Fwd, Real});
+    DTUpdates.push_back({DominatorTree::Insert, Fwd, ExitFlow});
+  }
+
+  // Materialize the per-target selection booleans in ExitFlow: sel_k is true
+  // exactly on the edge coming from Targets[k]. The last target needs no
+  // sel: it is the unconditional "else" of the ladder.
+  SmallVector<PHINode *, 4> Sel;
+  Sel.reserve(N ? N - 1 : 0);
+  for (unsigned I = 0; I + 1 < N; ++I) {
+    PHINode *P = PHINode::Create(Boolean, N, "island.sel");
+    P->insertInto(ExitFlow, ExitFlow->end());
+    for (unsigned J = 0; J < N; ++J)
+      P->addIncoming(J == I ? BoolTrue : BoolFalse, Targets[J]);
+    Sel.push_back(P);
+  }
+
+  // Wire each ladder level's 2-way branch to its real target.
+  BasicBlock *CurFlow = ExitFlow;
+  auto RebindRealPhis = [](BasicBlock *Real, BasicBlock *Fwd,
+                           BasicBlock *NewPred) {
+    for (PHINode &Phi : Real->phis()) {
+      int Idx = Phi.getBasicBlockIndex(Fwd);
+      if (Idx != -1)
+        Phi.setIncomingBlock(Idx, NewPred);
+    }
+  };
+  for (unsigned I = 0; I < N; ++I) {
+    BasicBlock *Fwd = Targets[I];
+    BasicBlock *Real = RealTargets[I];
+
+    // Real is now entered from CurFlow instead of from its forwarder. Re-bind
+    // Real's phi incomings from Fwd onto the new CurFlow edge, keeping the
+    // original value. This preserves phis that distinguish island targets (e.g.
+    // a join phi selecting the callbr's =r output on the fallthrough vs another
+    // value on an indirect target). The value was defined before the callbr (or
+    // is the callbr's own output), so it dominates CurFlow.
+    RebindRealPhis(Real, Fwd, CurFlow);
+
+    if (I + 1 < N) {
+      BasicBlock *NextReal = RealTargets[I + 1];
+      if (I + 2 == N && Real != NextReal) {
+        // Optimization for last target: branch directly to the final real
+        // target when that keeps the two island lanes as distinct CFG edges.
+        // Shared targets need the final Flow block so PHIs can retain per-lane
+        // values.
+        RebindRealPhis(NextReal, Targets[I + 1], CurFlow);
+        CondBrInst::Create(Sel[I], Real, NextReal, CurFlow);
+        DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
+        DTUpdates.push_back({DominatorTree::Insert, CurFlow, NextReal});
+        break;
+      }
+
+      BasicBlock *NextFlow = MakeFlow();
+      CondBrInst::Create(Sel[I], Real, NextFlow, CurFlow);
+      DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
+      DTUpdates.push_back({DominatorTree::Insert, CurFlow, NextFlow});
+      CurFlow = NextFlow;
+    } else {
+      // Last target: unconditional else of the ladder.
+      UncondBrInst::Create(Real, CurFlow);
+      DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
+    }
+  }
+
+  // Apply all island edge edits to the DominatorTree at once.
+  DTU.applyUpdates(DTUpdates);
 }
 
 void StructurizeCFG::handleLoops(bool ExitUseAllowed,
@@ -1243,17 +1549,27 @@ void StructurizeCFG::createFlow() {
   Conditions.clear();
   LoopConds.clear();
 
-  PrevNode = nullptr;
+  Tail = FlowTail();
   Visited.clear();
 
   while (!Order.empty()) {
     handleLoops(EntryDominatesExit, nullptr);
   }
 
-  if (PrevNode)
-    changeExit(PrevNode, Exit, EntryDominatesExit);
-  else
+  if (Tail.isRewritable())
+    changeExit(Tail, Exit, EntryDominatesExit);
+  else if (Tail.isNone())
     assert(EntryDominatesExit);
+
+  if (NeedFixRegionExitDom) {
+    BasicBlock *Exit = ParentRegion->getExit();
+    BasicBlock *Idom = nullptr;
+    for (BasicBlock *Pred : predecessors(Exit))
+      Idom = Idom ? DT->findNearestCommonDominator(Idom, Pred) : Pred;
+    if (Idom)
+      DT->changeImmediateDominator(Exit, Idom);
+    NeedFixRegionExitDom = false;
+  }
 }
 
 /// Handle a rare case where the disintegrated nodes instructions
@@ -1395,12 +1711,7 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
                          const TargetTransformInfo *TTI) {
-  // CallBr and its corresponding direct target blocks are for now ignored by
-  // this pass. This is not a limitation for the currently intended uses cases
-  // of callbr in the AMDGPU backend.
-  // Parent and child regions are not affected by this (current) restriction.
-  // See `llvm/test/Transforms/StructurizeCFG/callbr.ll` for details.
-  if (R->isTopLevelRegion() || isa<CallBrInst>(R->getEntry()->getTerminator()))
+  if (R->isTopLevelRegion())
     return false;
 
   this->DT = DT;
@@ -1408,6 +1719,15 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   Func = R->getEntry()->getParent();
 
   ParentRegion = R;
+
+  SmallVector<BasicBlock *, 8> IslandBlocks;
+  for (RegionNode *E : R->elements()) {
+    if (!E->isSubRegion() && isIsland(*E->getEntry()))
+      IslandBlocks.push_back(E->getNodeAs<BasicBlock>());
+  }
+
+  for (BasicBlock *BB : IslandBlocks)
+    handleIsland(BB);
 
   orderNodes();
   collectInfos();
