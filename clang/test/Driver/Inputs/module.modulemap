@@ -1,3 +1,0 @@
-module Empty {
-  header "empty.h"
-}

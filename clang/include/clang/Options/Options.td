@@ -2184,10 +2184,6 @@ def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
-def fcrash_diagnostics_tar : Joined<["-"], "fcrash-diagnostics-tar=">,
-  Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
-  HelpText<"Put crash-report tarball at <path>">, MetaVarName<"<path>">;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,

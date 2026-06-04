@@ -11,7 +11,7 @@
 
 #pragma clang __debug crash
 
-// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
+// CHECK: Preprocessed source(s) and associated run script(s) are located at:
 
 // __has_feature(cxx_exceptions) is default-off in the cl-compatible driver.
 FOO
