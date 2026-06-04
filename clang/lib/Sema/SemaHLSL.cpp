@@ -2269,6 +2269,10 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     A = HLSLIsCounterAttr::Create(getASTContext(), ACI);
     break;
 
+  case ParsedAttr::AT_HLSLIsArrayed:
+    A = HLSLIsArrayedAttr::Create(getASTContext(), ACI);
+    break;
+
   case ParsedAttr::AT_HLSLContainedType: {
     if (AL.getNumArgs() != 1 && !AL.hasParsedType()) {
       Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;

@@ -6864,7 +6864,7 @@ public:
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
                      llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false) {}
+                     false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
