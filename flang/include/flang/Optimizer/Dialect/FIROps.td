@@ -2088,10 +2088,10 @@ def fir_ShapeOp : fir_Op<"shape", [Pure]> {
 }
 
 def fir_ShapeExtentsOp : fir_Op<"shape_extents", [Pure]> {
-  let summary = "unpack a `!fir.shape` into per-dimension extent SSA values";
+  let summary = "unpack a shape value into per-dimension extent SSA values";
 
   let description = [{
-    Takes a single abstract `!fir.shape<n>` value and yields `n` integer SSA
+    Takes a single abstract `!fir.shape<n>` or `!fir.shapeshift<n>` value and yields `n` integer SSA
     results, one per dimension extent in Fortran row-to-column order. This is
     intended for lowering when extent values are needed but the defining
     `fir.shape` is not visible (for example when a shape is forwarded through
@@ -2105,7 +2105,7 @@ def fir_ShapeExtentsOp : fir_Op<"shape_extents", [Pure]> {
     ```
   }];
 
-  let arguments = (ins fir_ShapeType:$shape);
+  let arguments = (ins AnyShapeType:$shape);
 
   let results = (outs Variadic<AnyIntegerType>:$extents);
 

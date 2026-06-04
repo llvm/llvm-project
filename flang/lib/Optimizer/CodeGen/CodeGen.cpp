@@ -4613,9 +4613,18 @@ struct ShapeExtentsOpConversion
   matchAndRewrite(fir::ShapeExtentsOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
-    auto shapeTy = mlir::cast<fir::ShapeType>(op.getShape().getType());
-    if (shapeTy.getRank() != op.getNumResults())
+
+    mlir::Type ty = op.getShape().getType();
+    unsigned rank;
+    if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+      rank = shapeTy.getRank();
+    else if (auto ssTy = mlir::dyn_cast<fir::ShapeShiftType>(ty))
+      rank = ssTy.getRank();
+    else
       return mlir::failure();
+    if (rank != op.getNumResults())
+      return mlir::failure();
+
     mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
     mlir::Value llvmShape = adaptor.getShape();
     llvm::SmallVector<mlir::Value> results;
@@ -4631,8 +4640,35 @@ struct ShapeExtentsOpConversion
   }
 };
 
-struct ShapeShiftOpConversion : public MustBeDeadConversion<fir::ShapeShiftOp> {
-  using MustBeDeadConversion::MustBeDeadConversion;
+struct ShapeShiftOpConversion : public fir::FIROpConversion<fir::ShapeShiftOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::ShapeShiftOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (op->use_empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+    auto loc = op.getLoc();
+    auto ssTy = mlir::cast<fir::ShapeShiftType>(op.getType());
+    mlir::Type llvmTy = convertType(ssTy);
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value structVal =
+        mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+    // Pack extent operands only; lower bounds are not part of the LLVM shape
+    // bundle consumed by fir.shape_extents.
+    for (auto [i, extent] : llvm::enumerate(adaptor.getPairs())) {
+      if (i & 1)
+        continue;
+      mlir::Value extentI64 =
+          integerCast(loc, rewriter, i64Ty, extent, /*fold=*/true);
+      structVal = mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal,
+                                                    extentI64, i / 2);
+    }
+    rewriter.replaceOp(op, structVal);
+    return mlir::success();
+  }
 };
 
 struct ShiftOpConversion : public MustBeDeadConversion<fir::ShiftOp> {

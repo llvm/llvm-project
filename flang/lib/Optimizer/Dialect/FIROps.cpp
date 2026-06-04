@@ -4810,16 +4810,22 @@ struct FoldShapeExtentsOfShape
   mlir::LogicalResult
   matchAndRewrite(fir::ShapeExtentsOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    auto shapeOp = op.getShape().getDefiningOp<fir::ShapeOp>();
-    if (!shapeOp)
+    mlir::Value shape = op.getShape();
+    mlir::ValueRange extents;
+    if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
+      extents = shapeOp.getExtents();
+    else if (auto ssOp = shape.getDefiningOp<fir::ShapeShiftOp>())
+      extents = ssOp.getExtents();
+    else
       return mlir::failure();
-
     llvm::SmallVector<mlir::Value> results;
-    for (auto [extent, resultType] : llvm::zip(shapeOp.getExtents(), op.getResultTypes())) {
+    for (auto [extent, resultType] :
+         llvm::zip(extents, op.getResultTypes())) {
       if (extent.getType() == resultType) {
         results.push_back(extent);
       } else if (fir::ConvertOp::canBeConverted(extent.getType(), resultType)) {
-        results.push_back(fir::ConvertOp::create(rewriter, op.getLoc(), resultType, extent));
+        results.push_back(
+            fir::ConvertOp::create(rewriter, op.getLoc(), resultType, extent));
       } else {
         return mlir::failure();
       }
@@ -4831,10 +4837,15 @@ struct FoldShapeExtentsOfShape
 } // namespace
 
 llvm::LogicalResult fir::ShapeExtentsOp::verify() {
-  auto shapeTy = mlir::dyn_cast<fir::ShapeType>(getShape().getType());
-  if (!shapeTy)
-    return emitOpError("operand must be a !fir.shape type");
-  if (getNumResults() != shapeTy.getRank())
+  mlir::Type ty = getShape().getType();
+  unsigned rank;
+  if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+    rank = shapeTy.getRank();
+  else if (auto ssTy = mlir::dyn_cast<fir::ShapeShiftType>(ty))
+    rank = ssTy.getRank();
+  else
+    return emitOpError("operand must be !fir.shape or !fir.shapeshift");
+  if (getNumResults() != rank)
     return emitOpError("number of results must match shape rank");
   return mlir::success();
 }
@@ -4842,9 +4853,14 @@ llvm::LogicalResult fir::ShapeExtentsOp::verify() {
 void fir::ShapeExtentsOp::build(mlir::OpBuilder &builder,
                                 mlir::OperationState &result,
                                 mlir::Value shape) {
-  auto shapeTy = mlir::cast<fir::ShapeType>(shape.getType());
+  mlir::Type ty = shape.getType();
+  unsigned rank;
+  if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+    rank = shapeTy.getRank();
+  else
+    rank = mlir::cast<fir::ShapeShiftType>(ty).getRank();
   mlir::Type indexTy = builder.getIndexType();
-  llvm::SmallVector<mlir::Type> resultTypes(shapeTy.getRank(), indexTy);
+  llvm::SmallVector<mlir::Type> resultTypes(rank, indexTy);
   result.addTypes(resultTypes);
   result.addOperands(shape);
 }

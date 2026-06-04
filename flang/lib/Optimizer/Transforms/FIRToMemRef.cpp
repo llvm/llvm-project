@@ -178,8 +178,8 @@ private:
   void populateShape(SmallVectorImpl<Value> &vec, fir::ShapeOp shape) const;
 
   /// Recover per-dimension extent SSA values from a shape operand. Inserts
-  /// `fir.shape_extents` when the defining `fir.shape` is not visible (e.g.
-  /// block argument from control-flow merge).
+  /// `fir.shape_extents` when the defining `fir.shape` or `fir.shapeshift` is
+  /// not visible (e.g. block argument from control-flow merge).
   bool materializeShapeExtents(Value shapeVal, PatternRewriter &rewriter,
                                Location loc,
                                SmallVectorImpl<Value> &shapeVec) const;
@@ -334,13 +334,18 @@ bool FIRToMemRef::materializeShapeExtents(
     return true;
   }
 
+  if (auto ssOp = shapeVal.getDefiningOp<fir::ShapeShiftOp>()) {
+    shapeVec.append(ssOp.getExtents().begin(), ssOp.getExtents().end());
+    return true;
+  }
+
   if (auto extentsOp = shapeVal.getDefiningOp<fir::ShapeExtentsOp>()) {
     shapeVec.append(extentsOp.getExtents().begin(),
                     extentsOp.getExtents().end());
     return true;
   }
 
-  if (mlir::isa<fir::ShapeType>(shapeVal.getType())) {
+  if (mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
     auto extentsOp = fir::ShapeExtentsOp::create(rewriter, loc, shapeVal);
     shapeVec.append(extentsOp.getExtents().begin(),
                     extentsOp.getExtents().end());
@@ -686,7 +691,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   if (!sliceInfo.hasProjectedSlice && sliceInfo.shapeVec.empty()) {
     auto shapeVal = arrayCoorOp.getShape();
-    if (shapeVal && mlir::isa<fir::ShapeType>(shapeVal.getType())) {
+    if (shapeVal && mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
       rewriter.setInsertionPoint(arrayCoorOp);
       if(!materializeShapeExtents(shapeVal, rewriter, loc,
                                     sliceInfo.shapeVec))

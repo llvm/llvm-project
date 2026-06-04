@@ -129,6 +129,12 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
     return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                   /*isPacked=*/false);
   });
+  addConversion([&](fir::ShapeShiftType shapeShift) {
+    mlir::Type i64Ty = mlir::IntegerType::get(&getContext(), 64);
+    llvm::SmallVector<mlir::Type> members(shapeShift.getRank(), i64Ty);
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                  /*isPacked=*/false);
+  });
   addConversion([&](fir::TypeDescType tdesc) {
     return convertTypeDescType(tdesc.getContext());
   });
