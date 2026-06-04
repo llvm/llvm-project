@@ -7683,7 +7683,8 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // Prefer Base=0 when the case values are still dense after shifting out their
   // common low zero bits without subtracting a base. This avoids creating an
   // unnecessary `(condition - local_min)` expression.
-  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0, OptSize)))
+  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0,
+                                                 /*OptSize=*/true)))
     Base = 0;
   else if (Base != 0)
     Shift = getDenseSwitchRangeReductionShift(Values, Base, OptSize);

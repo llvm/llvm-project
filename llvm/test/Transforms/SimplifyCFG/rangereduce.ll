@@ -286,13 +286,13 @@ three:
 
 define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[A]], i32 31)
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i32 [[TMP1]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 28
-; CHECK-NEXT:    br i1 [[TMP2]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 31)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 28
+; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[SWITCH_TABLEIDX]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [28 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [28 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
