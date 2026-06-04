@@ -274,8 +274,8 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
     if (IsWin64)
-      return (HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
-                      : CSR_Win64_RT_MostRegs_SaveList);
+      return HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
+                     : CSR_Win64_RT_MostRegs_SaveList;
     return CSR_64_RT_MostRegs_SaveList;
   case CallingConv::PreserveAll:
     if (HasAVX)
@@ -314,11 +314,11 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return HasSSE ? CSR_SysV64_RegCall_SaveList
                     : CSR_SysV64_RegCall_NoSSE_SaveList;
     }
-    return (HasSSE ? CSR_32_RegCall_SaveList : CSR_32_RegCall_NoSSE_SaveList);
+    return HasSSE ? CSR_32_RegCall_SaveList : CSR_32_RegCall_NoSSE_SaveList;
   case CallingConv::CFGuard_Check:
     assert(!Is64Bit && "CFGuard check mechanism only used on 32-bit X86");
-    return (HasSSE ? CSR_Win32_CFGuard_Check_SaveList
-                   : CSR_Win32_CFGuard_Check_NoSSE_SaveList);
+    return HasSSE ? CSR_Win32_CFGuard_Check_SaveList
+                  : CSR_Win32_CFGuard_Check_NoSSE_SaveList;
   case CallingConv::Cold:
     if (Is64Bit)
       return CSR_64_MostRegs_SaveList;
