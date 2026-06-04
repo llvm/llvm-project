@@ -3190,14 +3190,13 @@ struct T {
   }
 };
 
-// FIXME: false-negative
 void foo() {
   S s;
   {
     int num;
-    s.p_ = &num; // does not warn
-  }
-  s.bar();
+    s.p_ = &num; // expected-warning {{local variable 'num' does not live long enough}}
+  }              // expected-note {{destroyed here}}
+  s.bar();       // expected-note {{later used here}}
   s.p_ = &GLOBAL_INT;
 }
 
@@ -3595,3 +3594,347 @@ void capturing_multiple_locals() {
     }                               // expected-note 2 {{destroyed here}} 
     (void)v;                        // expected-note 2 {{later used here}}
 }
+
+namespace tree_origin {
+
+struct Inner {
+  View v;
+  View w;
+};
+
+struct S {
+  View v;
+  Inner inner;
+  int x;
+};
+
+void struct_field() {
+  S s;
+  {
+    MyObj obj;
+    s.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  s.v.use();   // expected-note {{later used here}}
+}
+
+void struct_field2() {
+  S s;
+  {
+    MyObj obj;
+    s.inner.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  (void)s.inner;     // expected-note {{later used here}}
+}
+
+void struct_field3() {
+  S s;
+  {
+    MyObj obj;
+    s.inner.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  s.inner.v.use();   // expected-note {{later used here}}
+}
+
+void struct_field_safe() {
+  S s;
+  {
+    MyObj obj;
+    s.v = obj;
+  }
+  (void)s.inner;
+}
+
+void struct_field_safe2() {
+  S s;
+  {
+    MyObj obj;
+    s.inner.v = obj;
+  }
+  (void)s.inner.w;
+}
+
+S return_struct() {
+  S s;
+  MyObj local;
+  s.v = local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+  return s;    // expected-note {{returned here}}
+}
+
+S return_struct_assign() {
+  S s, s2;
+  MyObj local;
+  s.v = local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+  s2 = s;
+  return s2; // expected-note {{returned here}}
+}
+
+View *return_field_addr() {
+  S s;
+  View* v = &s.v; // expected-warning {{stack memory associated with local variable 's' is returned}}
+  return v; // expected-note {{returned here}}
+}
+
+void struct_field_in_loop(int n) {
+  S s;
+  for (int i = 0; i < n; i++) {
+    MyObj obj;
+    s.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  (void)s;     // expected-note {{later used here}}
+}
+
+void struct_field_in_loop_safe(int n) {
+  for (int i = 0; i < n; i++) {
+    MyObj obj;
+    S s;
+    s.v = obj;
+  }
+}
+
+void struct_field_in_loop_safe2(int n) {
+  S s;
+  for (int i = 0; i < n; i++) {
+    MyObj obj;
+    s.v = obj;
+  }
+}
+
+void struct_field_read_in_loop_safe(int n) {
+  for (int i = 0; i < n; i++) {
+    S s;
+    (void)s.v;
+  }
+}
+
+void struct_int_field_read_in_loop_safe(int n) {
+  for (int i = 0; i < n; i++) {
+    S s;
+    (void)s.x;
+  }
+}
+
+void field_pointee_propagate_in_loop_safe(int n) {
+  View outer;
+  MyObj obj;
+  for (int i = 0; i < n; i++) {
+    S local;
+    local.v = obj;
+    outer = local.v;
+  }
+  outer.use();
+}
+
+struct PtrRef {
+  MyObj *&ref;
+};
+
+void ref_field_dangle() {
+  MyObj *p;
+  PtrRef h{p};
+  {
+    MyObj temp;
+    h.ref = &temp; // expected-warning {{local variable 'temp' does not live long enough}}
+  }                // expected-note {{destroyed here}}
+  (void)*h.ref;    // expected-note {{later used here}}
+}
+
+void ref_field_dangle_then_rescue() {
+  MyObj safe;
+  MyObj *p;
+  PtrRef h{p};
+  {
+    MyObj temp;
+    h.ref = &temp;
+  }
+  h.ref = &safe;
+  (void)*h.ref;
+}
+
+struct Node {
+  Node *next;
+  View v;
+};
+
+void self_referential_struct_field() {
+  Node n;
+  {
+    MyObj obj;
+    n.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }            // expected-note {{destroyed here}}
+  n.v.use();   // expected-note {{later used here}}
+}
+
+void self_referential_pointer_assign() {
+  Node n;
+  {
+    Node child;
+    n.next = &child; // expected-warning {{local variable 'child' does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)n; // expected-note {{later used here}}
+}
+
+struct SelfRefMultiPtr {
+  SelfRefMultiPtr *p1;
+  SelfRefMultiPtr **p2;
+};
+
+void self_referential_mixed_pointer_depth() {
+  SelfRefMultiPtr s;
+  {
+    SelfRefMultiPtr *p;
+    s.p2 = &p; // expected-warning {{local variable 'p' does not live long enough}}
+  } // expected-note {{destroyed here}}
+  (void)s; // expected-note {{later used here}}
+}
+
+// FIXME: False negative. The cycle-cut leaf at `n.next`'s pointee has
+// no field edges, so the loan on `n.next->v` lands on an orphan tree
+// disconnected from n.
+void self_referential_pointer_field_write() {
+  Node n, child;
+  n.next = &child;
+  {
+    MyObj local;
+    n.next->v = local;
+  }
+  (void)n; // Should warn.
+}
+
+struct DerivedView : S {
+  View v2;
+};
+
+void derived_to_base_upcast() {
+  DerivedView d;
+  // CK_DerivedToBase: Src and Dst children sets diverge in flow (Base and
+  // Derived have different direct fields), so flow must skip unmatched
+  // fields without crashing.
+  S& b = d;
+  (void)b;
+}
+
+// FIXME: False positive.
+void derived_field_safe() {
+  DerivedView d;
+  {
+    MyObj obj;
+    d.v2 = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  (void)d.v;    // expected-note {{later used here}}
+}
+
+class PrivateHolder {
+private:
+  View v;
+  friend PrivateHolder return_private_holder();
+public:
+  void dangle_via_other(PrivateHolder &other) {
+    {
+      MyObj obj;
+      other.v = obj; // expected-warning {{local variable 'obj' does not live long enough}}
+    }                // expected-note {{destroyed here}}
+    other.v.use();   // expected-note {{later used here}}
+  }
+
+  PrivateHolder return_via_other() {
+    PrivateHolder result;
+    MyObj local;
+    result.v = local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+    return result;    // expected-note {{returned here}}
+  }
+};
+
+PrivateHolder return_private_holder() {
+  PrivateHolder h;
+  MyObj local;
+  h.v = local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+  return h;    // expected-note {{returned here}}
+}
+
+class ProtectedField {
+protected:
+  View v;
+};
+
+class DerivedAccess : public ProtectedField {
+public:
+  // FIXME: False negative. `other.v` is inherited from `ProtectedField`; like
+  // `inherited_field`, the tree carries no edge for an inherited field, so the
+  // loan does not propagate.
+  void dangle_via_other(DerivedAccess &other) {
+    {
+      MyObj obj;
+      other.v = obj;
+    }
+    other.v.use();
+  }
+};
+
+struct UnionStruct {
+  union {
+    int* p;
+    float f;
+  };
+};
+
+// FIXME: False negative. Don't track origins for union for now.
+UnionStruct union_field() {
+  UnionStruct u;
+  int x;
+  u.p = &x;
+  return u; // Should warn.
+}
+
+struct StoreS {
+  View v;
+  void store(const MyObj& obj) { v = obj; }
+};
+
+// FIXME: False negative. Two pieces missing:
+// 1. Infer `lifetime_capture_by(this)` on non-ctor methods that
+//    capture a parameter into a field.
+// 2. Consume the attribute in `handleFunctionCall` and flow the
+//    captured argument's origin into the corresponding target at
+//    the call site.
+StoreS return_after_this_set() {
+  StoreS s;
+  MyObj local;
+  s.store(local);
+  return s; // Should warn.
+}
+
+struct BaseS { View v; };
+struct DerivedS : BaseS {};
+
+// FIXME: False negative. `d.v` accesses an inherited field. Only track
+// direct fields for now, so DerivedS's tree has no edge for `v` and the
+// loan does not propagate.
+DerivedS inherited_field() {
+  DerivedS d;
+  MyObj local;
+  d.v = local;
+  return d; // Should warn.
+}
+
+// FIXME: False negative. `p->v1 = local` deposits into p's origin tree,
+// which is independent of s's tree after the initial `p = &s` flow.
+// Requires alias analysis.
+S field_write_via_pointer() {
+  S s;
+  MyObj local;
+  S *p = &s;
+  p->v = local;
+  return s; // Should warn.
+}
+
+struct ViewPtrHolder { View *p; };
+
+// FIXME: False negative. Aggregate (record/array) list initialization is
+// not handled, so the loan from `&v` does not flow into `h.p`.
+View *struct_init_single_field() {
+  View v;
+  ViewPtrHolder h{&v};
+  return h.p; // Should warn.
+}
+
+} // namespace tree_origin

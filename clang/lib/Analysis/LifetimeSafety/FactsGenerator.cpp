@@ -277,18 +277,45 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
 }
 
 void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
-  auto *MD = ME->getMemberDecl();
-  if (isa<FieldDecl>(MD) && doesDeclHaveStorage(MD)) {
-    assert(ME->isGLValue() && "Field member should be GL value");
-    OriginNode *Dst = getOriginNode(*ME);
-    assert(Dst && "Field member should have an origin list as it is GL value");
-    OriginNode *Src = getOriginNode(*ME->getBase());
+  auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!FD)
+    return;
+
+  assert(ME->isGLValue() && "Field member should be GL value");
+  OriginNode *Dst = getOriginNode(*ME);
+  assert(Dst && "Field member should have an origin list as it is GL value");
+
+  OriginNode *Src = getOriginNode(*ME->getBase());
+  if (doesDeclHaveStorage(FD)) {
     assert(Src && "Base expression should be a pointer/reference type");
     // The field's glvalue (outermost origin) holds the same loans as the base
     // expression.
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         Dst->getOriginID(), Src->getOriginID(),
         /*Kill=*/true));
+  }
+
+  // Only narrow when the field is in the base's tree; otherwise the
+  // MemberExpr resolved to an orphan disconnected from the base (e.g., a
+  // `[[gsl::Pointer]]` base whose fields aren't expanded), and narrowing
+  // would drop the base's root liveness, so a loan deposited on the root
+  // via `lifetime_capture_by(this)` would be missed.
+  if (Src &&
+      Src->resolveMemberField(FD, ME->getBase()->isGLValue(), ME->isArrow())) {
+    // Narrow the UseFact's liveness coverage to the accessed field's
+    // subtree.
+    //
+    // E.g., for `(void)s.inner`, without narrowing, the UseFact at `s`
+    // would keep `s.v`'s subtree live and falsely flag a UAF when a loan
+    // held by `s.v` has already expired.
+    if (UseFact *UF = UseFacts.lookup(ME->getBase())) {
+      assert(!UseFacts.contains(ME) && "ME already has a UseFact");
+      OriginNode *NewUsedOrigins =
+          doesDeclHaveStorage(FD) ? Dst->getPointeeChild() : Dst;
+      UF->setUsedOrigins(NewUsedOrigins);
+      UseFacts[ME] = UF;
+      UseFacts.erase(ME->getBase());
+    }
   }
 }
 
@@ -401,18 +428,24 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginNode *LHSNode = nullptr;
+  QualType LHSType;
+  UseFact *LHSUseFact = nullptr;
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     LHSNode = getOriginNode(*DRE_LHS);
     assert(LHSNode && "LHS is a DRE and should have an origin list");
-  }
-  // Handle assignment to member fields (e.g., `this->view = s` or `view = s`).
-  // This enables detection of dangling fields when local values escape to
-  // fields.
-  if (const auto *ME_LHS = dyn_cast<MemberExpr>(LHSExpr)) {
+    LHSType = DRE_LHS->getDecl()->getType();
+    LHSUseFact = UseFacts.lookup(DRE_LHS);
+  } else if (const auto *ME_LHS = dyn_cast<MemberExpr>(LHSExpr)) {
+    // Handle assignment to member fields (e.g., `this->view = s` or `view =
+    // s`). This enables detection of dangling fields when local values escape
+    // to fields.
     LHSNode = getOriginNode(*ME_LHS);
     assert(LHSNode && "LHS is a MemberExpr and should have an origin list");
+    LHSType = ME_LHS->getMemberDecl()->getType();
+    LHSUseFact = UseFacts.lookup(ME_LHS);
   }
+
   if (!LHSNode)
     return;
   OriginNode *RHSNode = getOriginNode(*RHSExpr);
@@ -423,28 +456,26 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   // assigned.
   RHSNode = getRValueOrigins(RHSExpr, RHSNode);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
-    QualType QT = DRE_LHS->getDecl()->getType();
-    if (QT->isReferenceType()) {
-      if (hasOrigins(QT->getPointeeType())) {
+  if (LHSUseFact) {
+    if (LHSType->isReferenceType()) {
+      if (hasOrigins(LHSType->getPointeeType())) {
         // Writing through a reference uses the binding but overwrites the
         // pointee. Model this as a Read of the outer origin (keeping the
         // binding live) and a Write of the inner origins (killing the pointee's
         // liveness).
-        if (UseFact *UF = UseFacts.lookup(DRE_LHS)) {
-          const OriginNode *FullNode = UF->getUsedOrigins();
-          assert(FullNode);
-          UF->setUsedOrigins(FactMgr.getOriginMgr().createSingleOriginNode(
-              FullNode->getOriginID()));
-          if (const OriginNode *InnerNode = FullNode->getPointeeChild()) {
-            UseFact *WriteUF = FactMgr.createFact<UseFact>(DRE_LHS, InnerNode);
-            WriteUF->markAsWritten();
-            CurrentBlockFacts.push_back(WriteUF);
-          }
+        const OriginNode *FullNode = LHSUseFact->getUsedOrigins();
+        assert(FullNode);
+        LHSUseFact->setUsedOrigins(
+            FactMgr.getOriginMgr().createSingleOriginNode(
+                FullNode->getOriginID()));
+        if (const OriginNode *InnerNode = FullNode->getPointeeChild()) {
+          UseFact *WriteUF = FactMgr.createFact<UseFact>(LHSExpr, InnerNode);
+          WriteUF->markAsWritten();
+          CurrentBlockFacts.push_back(WriteUF);
         }
       }
     } else
-      markUseAsWrite(DRE_LHS);
+      LHSUseFact->markAsWritten();
   }
   if (!RHSNode) {
     // RHS has no tracked origins (e.g., assigning a callable without origins
@@ -587,9 +618,14 @@ void FactsGenerator::VisitCXXFunctionalCastExpr(
 void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
   if (!hasOrigins(ILE))
     return;
-  // For list initialization with a single element, like `View{...}`, the
-  // origin of the list itself is the origin of its single element.
-  if (ILE->getNumInits() == 1)
+  // For list initialization with a single element of the same type, like
+  // `View{other}`, the origin of the list itself is the origin of its single
+  // element.
+  //
+  // TODO: Handle aggregate (record/array) list initialization.
+  if (ILE->getNumInits() == 1 &&
+      ILE->getType().getCanonicalType() ==
+          ILE->getInit(0)->getType().getCanonicalType())
     killAndFlowOrigin(*ILE, *ILE->getInit(0));
 }
 
@@ -888,9 +924,10 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
 
   const auto UseFields = [&](const CXXRecordDecl *RD) {
     for (const auto *Field : RD->fields())
-      if (auto *FieldNode = getOriginNode(*Field))
-        CurrentBlockFacts.push_back(
-            FactMgr.createFact<UseFact>(Call, FieldNode));
+      if (FactMgr.getOriginMgr().isAccessedField(Field))
+        if (auto *FieldNode = getOriginNode(*Field))
+          CurrentBlockFacts.push_back(
+              FactMgr.createFact<UseFact>(Call, FieldNode));
   };
 
   UseFields(ClassDecl);
@@ -1110,11 +1147,6 @@ void FactsGenerator::handleUse(const Expr *E) {
     CurrentBlockFacts.push_back(UF);
     UseFacts[E] = UF;
   }
-}
-
-void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
-  if (UseFacts.contains(DRE))
-    UseFacts[DRE]->markAsWritten();
 }
 
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
