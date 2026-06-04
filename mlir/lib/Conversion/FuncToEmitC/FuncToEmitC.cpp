@@ -68,8 +68,7 @@ public:
                                            "result type conversion failed");
       if (isa<emitc::ArrayType>(resultType))
         return rewriter.notifyMatchFailure(
-            callOp,
-            "converting function calls returning arrays is not supported ATM");
+            callOp, "function calls returning arrays are not supported");
     }
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
@@ -111,8 +110,7 @@ public:
                                            "result type conversion failed");
       if (isa<emitc::ArrayType>(resultType))
         return rewriter.notifyMatchFailure(
-            funcOp,
-            "converting functions returning arrays is not supported ATM");
+            funcOp, "functions returning arrays are not supported");
     }
 
     // Create the converted `emitc.func` op.
@@ -167,9 +165,8 @@ public:
           returnOp, "only zero or one operand is supported");
     if (returnOp.getNumOperands() == 1 &&
         isa<emitc::ArrayType>(adaptor.getOperands()[0].getType()))
-      return rewriter.notifyMatchFailure(
-          returnOp,
-          "converting returnOp is only supported for non-array values ATM");
+      return rewriter.notifyMatchFailure(returnOp,
+                                         "returning arrays is not supported");
 
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
         returnOp,

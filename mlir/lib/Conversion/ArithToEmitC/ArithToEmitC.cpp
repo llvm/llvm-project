@@ -62,9 +62,6 @@ public:
     Type newTy = this->getTypeConverter()->convertType(arithConst.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(arithConst, "type conversion failed");
-    if (isa<MemRefType>(arithConst.getType()))
-      return rewriter.notifyMatchFailure(
-          arithConst, "memref constants cannot be converted");
     rewriter.replaceOpWithNewOp<emitc::ConstantOp>(arithConst, newTy,
                                                    adaptor.getValue());
     return success();

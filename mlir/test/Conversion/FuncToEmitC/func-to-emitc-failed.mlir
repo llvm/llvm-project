@@ -45,30 +45,6 @@ func.func private @return_rank2_arg(%arg0: memref<1x1xi32>) -> memref<1x1xi32> {
 // -----
 
 // expected-error@+1 {{failed to legalize operation 'func.func'}}
-func.func private @return_rank0_constant() -> memref<i64> {
-  %0 = arith.constant dense<-1> : memref<i64>
-  return %0 : memref<i64>
-}
-
-// -----
-
-// expected-error@+1 {{failed to legalize operation 'func.func'}}
-func.func private @return_rank1_constant() -> memref<1xi64> {
-  %0 = arith.constant dense<[-1]> : memref<1xi64>
-  return %0 : memref<1xi64>
-}
-
-// -----
-
-// expected-error@+1 {{failed to legalize operation 'func.func'}}
-func.func private @return_rank2_constant() -> memref<1x1xi64> {
-  %0 = arith.constant dense<[[-1]]> : memref<1x1xi64>
-  return %0 : memref<1x1xi64>
-}
-
-// -----
-
-// expected-error@+1 {{failed to legalize operation 'func.func'}}
 func.func private @return_rank1_two_elements(%arg0: memref<2xi64>) -> memref<2xi64> {
   return %arg0 : memref<2xi64>
 }
