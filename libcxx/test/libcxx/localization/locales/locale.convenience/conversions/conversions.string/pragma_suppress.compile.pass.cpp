@@ -23,8 +23,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 void test() {
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
-    (void)converter.to_bytes(std::basic_string<char16_t>(u"hello"));
-    (void)converter.from_bytes(std::string("hello"));
+  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
+  (void)converter.to_bytes(std::basic_string<char16_t>(u"hello"));
+  (void)converter.from_bytes(std::string("hello"));
 }
 #pragma clang diagnostic pop
