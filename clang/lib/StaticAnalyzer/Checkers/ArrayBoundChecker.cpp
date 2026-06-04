@@ -167,7 +167,7 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   BugType BT{this, "Out-of-bound access"};
   BugType TaintBT{this, "Out-of-bound access", categories::TaintedData};
 
-  void performCheck(const Expr *E, CheckerContext &C) const;
+  void handleAccessExpr(const Expr *E, CheckerContext &C) const;
 
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
                  NonLoc Offset, std::optional<NonLoc> Extent,
@@ -188,15 +188,15 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
 
 public:
   void checkPostStmt(const ArraySubscriptExpr *E, CheckerContext &C) const {
-    performCheck(E, C);
+    handleAccessExpr(E, C);
   }
   void checkPostStmt(const UnaryOperator *E, CheckerContext &C) const {
     if (E->getOpcode() == UO_Deref)
-      performCheck(E, C);
+      handleAccessExpr(E, C);
   }
   void checkPostStmt(const MemberExpr *E, CheckerContext &C) const {
     if (E->isArrow())
-      performCheck(E->getBase(), C);
+      handleAccessExpr(E->getBase(), C);
   }
 };
 
@@ -570,7 +570,8 @@ bool StateUpdateReporter::providesInformationAboutInteresting(
   return false;
 }
 
-void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
+void ArrayBoundChecker::handleAccessExpr(const Expr *E,
+                                         CheckerContext &C) const {
   const SVal Location = C.getSVal(E);
 
   // The header ctype.h (from e.g. glibc) implements the isXXXXX() macros as
