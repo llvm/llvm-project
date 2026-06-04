@@ -2129,12 +2129,20 @@ let append Predicates = [IsRV32] in {
                   (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // 8/16-bit multiply low patterns
+  // FIXME: Can we use Promote?
   def : Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
             (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
   def : Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
             (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
 
-  // 8/16-bit bitrevers patterns
+  // 8-bit multiply high patterns
+  // FIXME: We can expand to this.
+  def : Pat<(v4i8 (mulhs GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 8)>;
+  def : Pat<(v4i8 (mulhu GPR:$rs1, GPR:$rs2)),
+            (PNSRLI_B (PWMULU_B GPR:$rs1, GPR:$rs2), 8)>;
+
+  // 8/16-bit bitreverse patterns
   // FIXME: Use BREV8 with Zbkb.
   def : Pat<(v4i8 (bitreverse GPR:$rs)),
             (REV8_RV32 (REV_RV32 GPR:$rs))>;
@@ -2422,12 +2430,24 @@ let append Predicates = [IsRV64] in {
   def : PatGprGpr<riscv_mulhrsu, PMULHRSU_W, v2i32>;
 
   // 8/16/32-bit multiply low patterns
+  // FIXME custom lower
   def : Pat<(v8i8 (mul GPR:$rs1, GPR:$rs2)),
-            (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2), (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
+            (PPAIRE_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2),
+                      (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(v4i16 (mul GPR:$rs1, GPR:$rs2)),
-            (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2), (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
+            (PPAIRE_H (PMUL_W_H00 GPR:$rs1, GPR:$rs2),
+                      (PMUL_W_H11 GPR:$rs1, GPR:$rs2))>;
   def : Pat<(v2i32 (mul GPR:$rs1, GPR:$rs2)),
             (PACK (MUL_W00 GPR:$rs1, GPR:$rs2), (MUL_W11 GPR:$rs1, GPR:$rs2))>;
+
+  // 8-bit multiply high patterns
+  // FIXME custom lower
+  def : Pat<(v8i8 (mulhs GPR:$rs1, GPR:$rs2)),
+            (PPAIRO_B (PMUL_H_B00 GPR:$rs1, GPR:$rs2),
+                      (PMUL_H_B11 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(v8i8 (mulhu GPR:$rs1, GPR:$rs2)),
+            (PPAIRO_B (PMULU_H_B00 GPR:$rs1, GPR:$rs2),
+                      (PMULU_H_B11 GPR:$rs1, GPR:$rs2))>;
 
   // 32-bit logical shift left/right patterns
   def : PatGprImm<riscv_pshl, PSLLI_W, uimm5, v2i32>;
