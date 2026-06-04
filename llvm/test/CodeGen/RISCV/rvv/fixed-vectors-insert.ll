@@ -38,7 +38,6 @@ define <4 x i32> @insertelt_v4i32_idx(<4 x i32> %a, i32 %y, i32 zeroext %idx) {
 ; CHECK-NEXT:    vslideup.vx v8, v9, a1
 ; CHECK-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v4i32_idx:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -47,8 +46,6 @@ define <4 x i32> @insertelt_v4i32_idx(<4 x i32> %a, i32 %y, i32 zeroext %idx) {
 ; VISNI-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; VISNI-NEXT:    vslideup.vx v8, v9, a1
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <4 x i32> %a, i32 %y, i32 %idx
   ret <4 x i32> %b
 }
@@ -197,7 +194,6 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v64i32_idx:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    addi sp, sp, -384
@@ -230,8 +226,6 @@ define <64 x i32> @insertelt_v64i32_idx(<64 x i32> %a, i32 %y, i32 zeroext %idx)
 ; VISNI-NEXT:    addi sp, sp, 384
 ; VISNI-NEXT:    .cfi_def_cfa_offset 0
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <64 x i32> %a, i32 %y, i32 %idx
   ret <64 x i32> %b
 }
@@ -316,7 +310,6 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v3i64:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -329,8 +322,6 @@ define <3 x i64> @insertelt_v3i64(<3 x i64> %a, i64 %y) {
 ; VISNI-NEXT:    vslide1down.vx v8, v8, a0
 ; VISNI-NEXT:    vslidedown.vi v8, v8, 1
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <3 x i64> %a, i64 %y, i32 2
   ret <3 x i64> %b
 }
@@ -400,7 +391,6 @@ define <32 x i16> @insertelt_v32i16(<32 x i16> %a, i16 %y, i32 %idx) {
 ; RV64-NEXT:    vslideup.vx v8, v12, a1
 ; RV64-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v32i16:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    li a2, 32
@@ -412,8 +402,6 @@ define <32 x i16> @insertelt_v32i16(<32 x i16> %a, i16 %y, i32 %idx) {
 ; VISNI-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; VISNI-NEXT:    vslideup.vx v8, v12, a1
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <32 x i16> %a, i16 %y, i32 %idx
   ret <32 x i16> %b
 }
@@ -847,7 +835,6 @@ define <4 x bfloat> @insertelt_v4bf16_idx(<4 x bfloat> %a, bfloat %y, i32 zeroex
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
 ; CHECK-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v4bf16_idx:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    fmv.x.h a1, fa0
@@ -857,8 +844,6 @@ define <4 x bfloat> @insertelt_v4bf16_idx(<4 x bfloat> %a, bfloat %y, i32 zeroex
 ; VISNI-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
 ; VISNI-NEXT:    vslideup.vx v8, v9, a0
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <4 x bfloat> %a, bfloat %y, i32 %idx
   ret <4 x bfloat> %b
 }
@@ -921,7 +906,6 @@ define <4 x half> @insertelt_v4f16_idx(<4 x half> %a, half %y, i32 zeroext %idx)
 ; ZVFHMIN-NEXT:    vslideup.vx v8, v9, a0
 ; ZVFHMIN-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: insertelt_v4f16_idx:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
@@ -930,8 +914,6 @@ define <4 x half> @insertelt_v4f16_idx(<4 x half> %a, half %y, i32 zeroext %idx)
 ; VISNI-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
 ; VISNI-NEXT:    vslideup.vx v8, v9, a0
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
   %b = insertelement <4 x half> %a, half %y, i32 %idx
   ret <4 x half> %b
 }
@@ -946,7 +928,6 @@ define <2 x i8> @pr169017(<4 x i16> %vecinit, <2 x i8> %dst_vec) {
 ; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
 ;
-<<<<<<< HEAD
 ; VISNI-LABEL: pr169017:
 ; VISNI:       # %bb.0: # %entry
 ; VISNI-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -955,8 +936,6 @@ define <2 x i8> @pr169017(<4 x i16> %vecinit, <2 x i8> %dst_vec) {
 ; VISNI-NEXT:    vsetvli zero, zero, e8, mf8, tu, ma
 ; VISNI-NEXT:    vmv.s.x v8, a0
 ; VISNI-NEXT:    ret
-=======
->>>>>>> origin/main
 entry:
   %cast = bitcast <4 x i16> %vecinit to i64
   %trunc = trunc i64 %cast to i8

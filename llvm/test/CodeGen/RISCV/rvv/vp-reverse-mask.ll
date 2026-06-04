@@ -302,9 +302,10 @@ define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
-; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
@@ -322,29 +323,29 @@ define <vscale x 128 x i1> @test_vp_reverse_nxv128i1(<vscale x 128 x i1> %src, i
 ; CHECK-NEXT:    slli a3, a3, 4
 ; CHECK-NEXT:    sub sp, sp, a3
 ; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    addi a3, sp, 64
-; CHECK-NEXT:    li a4, -1
-; CHECK-NEXT:    sub a5, a0, a2
-; CHECK-NEXT:    add a6, a0, a3
-; CHECK-NEXT:    sltu a0, a0, a5
-; CHECK-NEXT:    add a2, a3, a2
-; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    add a4, a0, a3
+; CHECK-NEXT:    li a5, -1
+; CHECK-NEXT:    addi a4, a4, -1
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vsse8.v v24, (a6), a4
-; CHECK-NEXT:    sub a6, a6, a1
-; CHECK-NEXT:    and a0, a0, a5
+; CHECK-NEXT:    vsse8.v v24, (a4), a5
+; CHECK-NEXT:    sub a6, a0, a2
+; CHECK-NEXT:    sltu a0, a0, a6
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a6
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
-; CHECK-NEXT:    vsse8.v v8, (a6), a4
+; CHECK-NEXT:    sub a4, a4, a1
+; CHECK-NEXT:    vsse8.v v8, (a4), a5
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    vle8.v v8, (a2)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vand.vi v16, v8, 1
+; CHECK-NEXT:    vmsne.vi v8, v16, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vle8.v v16, (a3)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vand.vi v24, v8, 1
 ; CHECK-NEXT:    vand.vi v16, v16, 1
-; CHECK-NEXT:    vmsne.vi v8, v24, 0
 ; CHECK-NEXT:    vmsne.vi v0, v16, 0
 ; CHECK-NEXT:    addi sp, s0, -80
 ; CHECK-NEXT:    .cfi_def_cfa sp, 80

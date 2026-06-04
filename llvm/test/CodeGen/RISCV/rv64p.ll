@@ -511,28 +511,12 @@ define i128 @slli_i128_large(i128 %x) {
 define i128 @srl_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srl_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srl a3, a1, a2
-<<<<<<< HEAD
-; CHECK-NEXT:    bltz a4, .LBB32_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a3
-; CHECK-NEXT:    j .LBB32_3
-; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    not a5, a2
-; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    sll a1, a1, a5
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB32_3:
-; CHECK-NEXT:    srai a1, a4, 63
-; CHECK-NEXT:    and a1, a1, a3
-=======
+; CHECK-NEXT:    slli a3, a2, 57
 ; CHECK-NEXT:    srx a0, a1, a2
-; CHECK-NEXT:    slli a2, a2, 57
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    mvm a0, a3, a2
-; CHECK-NEXT:    andn a1, a3, a2
->>>>>>> origin/main
+; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    andn a1, a1, a3
 ; CHECK-NEXT:    ret
   %b = lshr i128 %x, %y
   ret i128 %b
@@ -586,30 +570,12 @@ define i128 @srli_i128_large(i128 %x) {
 define i128 @sra_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sra_i128:
 ; CHECK:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    addi a4, a2, -64
-; CHECK-NEXT:    sra a1, a1, a2
-; CHECK-NEXT:    bltz a4, .LBB37_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    srai a3, a3, 63
-; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    mv a1, a3
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB37_2:
-; CHECK-NEXT:    not a4, a2
-; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    srl a0, a0, a2
-; CHECK-NEXT:    sll a2, a3, a4
-; CHECK-NEXT:    or a0, a0, a2
-=======
-; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    slli a3, a2, 57
 ; CHECK-NEXT:    srx a0, a1, a2
-; CHECK-NEXT:    slli a2, a2, 57
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    mvm a0, a3, a2
-; CHECK-NEXT:    sra a1, a3, a2
->>>>>>> origin/main
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    sra a1, a1, a3
 ; CHECK-NEXT:    ret
   %b = ashr i128 %x, %y
   ret i128 %b
@@ -1817,13 +1783,14 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pli.b a1, 1
+; CHECK-NEXT:    lui a1, %hi(.LCPI136_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI136_0)(a1)
 ; CHECK-NEXT:    lui a2, 65664
+; CHECK-NEXT:    addi a2, a2, 1024
+; CHECK-NEXT:    slli a3, a2, 27
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    addi a1, a2, 1024
-; CHECK-NEXT:    slli a2, a1, 27
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    mul a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = and i64 %x, u0x0101010101010101
   %b = mul i64 %a, u0x0080402010080400

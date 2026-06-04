@@ -14,25 +14,7 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    srli a0, a0, 1
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/intrinsic-cttz-elts-vscale.ll
-; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v10, a0
-; RV32-NEXT:    vid.v v11
-; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV32-NEXT:    vmsne.vi v0, v8, 0
-; RV32-NEXT:    li a1, -1
-; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmadd.vx v11, a1, v10
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vvm v8, v8, v11, v0
-; RV32-NEXT:    vredmaxu.vs v8, v8, v8
-; RV32-NEXT:    vmv.x.s a1, v8
-; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srli a0, a0, 16
-=======
 ; RV32-NEXT:  .LBB0_2:
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/cttz-elts.ll
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_nxv4i32:
@@ -44,25 +26,7 @@ define i32 @ctz_nxv4i32(<vscale x 4 x i32> %a) #0 {
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    srli a0, a0, 1
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/intrinsic-cttz-elts-vscale.ll
-; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    vid.v v11
-; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; RV64-NEXT:    vmsne.vi v0, v8, 0
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmadd.vx v11, a1, v10
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vmerge.vvm v8, v8, v11, v0
-; RV64-NEXT:    vredmaxu.vs v8, v8, v8
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    slli a0, a0, 48
-; RV64-NEXT:    srli a0, a0, 48
-=======
 ; RV64-NEXT:  .LBB0_2:
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/cttz-elts.ll
 ; RV64-NEXT:    ret
   %res = call i32 @llvm.experimental.cttz.elts.i32.nxv4i32(<vscale x 4 x i32> %a, i1 0)
   ret i32 %res
@@ -81,45 +45,6 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:  .LBB1_2:
 ; RV32-NEXT:    li a1, 0
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/intrinsic-cttz-elts-vscale.ll
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __muldi3
-; RV32-NEXT:    sw a0, 16(sp)
-; RV32-NEXT:    sw a1, 20(sp)
-; RV32-NEXT:    addi a2, sp, 16
-; RV32-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
-; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vlse64.v v16, (a2), zero
-; RV32-NEXT:    vmv.v.i v24, 0
-; RV32-NEXT:    li a2, -1
-; RV32-NEXT:    vmadd.vx v8, a2, v16
-; RV32-NEXT:    addi a2, sp, 32
-; RV32-NEXT:    vl2r.v v16, (a2) # vscale x 16-byte Folded Reload
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vmsne.vi v0, v16, 0
-; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV32-NEXT:    vmerge.vim v16, v24, -1, v0
-; RV32-NEXT:    vand.vv v8, v8, v16
-; RV32-NEXT:    vredmaxu.vs v8, v8, v8
-; RV32-NEXT:    vmv.x.s a2, v8
-; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v8, v8, a3
-; RV32-NEXT:    vmv.x.s a3, v8
-; RV32-NEXT:    sltu a4, a0, a2
-; RV32-NEXT:    sub a1, a1, a4
-; RV32-NEXT:    sub a1, a1, a3
-; RV32-NEXT:    sub a0, a0, a2
-; RV32-NEXT:    csrr a2, vlenb
-; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    add sp, sp, a2
-; RV32-NEXT:    .cfi_def_cfa sp, 48
-; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    addi sp, sp, 48
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-=======
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/cttz-elts.ll
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ctz_nxv8i1_no_range:
@@ -130,23 +55,7 @@ define i64 @ctz_nxv8i1_no_range(<vscale x 8 x i16> %a) {
 ; RV64-NEXT:    bgez a0, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    csrr a0, vlenb
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/intrinsic-cttz-elts-vscale.ll
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmv.v.x v24, a0
-; RV64-NEXT:    vid.v v16
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    vmadd.vx v16, a1, v24
-; RV64-NEXT:    vmv.v.i v24, 0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vmsne.vi v0, v8, 0
-; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; RV64-NEXT:    vmerge.vvm v8, v24, v16, v0
-; RV64-NEXT:    vredmaxu.vs v8, v8, v8
-; RV64-NEXT:    vmv.x.s a1, v8
-; RV64-NEXT:    sub a0, a0, a1
-=======
 ; RV64-NEXT:  .LBB1_2:
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/cttz-elts.ll
 ; RV64-NEXT:    ret
   %res = call i64 @llvm.experimental.cttz.elts.i64.nxv8i16(<vscale x 8 x i16> %a, i1 0)
   ret i64 %res

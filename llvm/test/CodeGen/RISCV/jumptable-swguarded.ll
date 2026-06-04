@@ -38,7 +38,6 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; CHECK-NEXT:    sw a0, 0(a1)
 ; CHECK-NEXT:  .LBB0_9: # %exit
 ; CHECK-NEXT:    ret
-<<<<<<< HEAD
 ;
 ; NO-ZICFILP-LABEL: above_threshold:
 ; NO-ZICFILP:       # %bb.0: # %entry
@@ -73,8 +72,6 @@ define void @above_threshold(i32 signext %in, ptr %out) nounwind {
 ; NO-ZICFILP-NEXT:    sw a0, 0(a1)
 ; NO-ZICFILP-NEXT:  .LBB0_9: # %exit
 ; NO-ZICFILP-NEXT:    ret
-=======
->>>>>>> origin/main
 entry:
   switch i32 %in, label %exit [
     i32 1, label %bb1

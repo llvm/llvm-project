@@ -4594,25 +4594,16 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 36(sp) # 4-byte Folded Spill
-<<<<<<< HEAD
-; RV32-NEXT:    mv s0, a1
-; RV32-NEXT:    lw a2, 0(a1)
-; RV32-NEXT:    lw a3, 4(a1)
-; RV32-NEXT:    lw a4, 8(a1)
-; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    mv s1, a0
-=======
 ; RV32-NEXT:    mv s1, a1
 ; RV32-NEXT:    mv s0, a0
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:    addi a2, sp, 16
 ; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    call __atomic_load
-; RV32-NEXT:    lw a4, 16(sp)
+; RV32-NEXT:    lw a2, 16(sp)
 ; RV32-NEXT:    lw a3, 20(sp)
-; RV32-NEXT:    lw a1, 24(sp)
-; RV32-NEXT:    lw a2, 28(sp)
->>>>>>> origin/main
+; RV32-NEXT:    lw a4, 24(sp)
+; RV32-NEXT:    lw a1, 28(sp)
 ; RV32-NEXT:  .LBB62_1: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    addi a0, a2, 1
@@ -4644,17 +4635,10 @@ define i128 @rmw128(ptr %p) nounwind {
 ; RV32-NEXT:    lw a1, 28(sp)
 ; RV32-NEXT:    beqz a0, .LBB62_1
 ; RV32-NEXT:  # %bb.2: # %atomicrmw.end
-<<<<<<< HEAD
-; RV32-NEXT:    sw a2, 0(s1)
-; RV32-NEXT:    sw a3, 4(s1)
-; RV32-NEXT:    sw a4, 8(s1)
-; RV32-NEXT:    sw a1, 12(s1)
-=======
-; RV32-NEXT:    sw a4, 0(s0)
+; RV32-NEXT:    sw a2, 0(s0)
 ; RV32-NEXT:    sw a3, 4(s0)
-; RV32-NEXT:    sw a1, 8(s0)
-; RV32-NEXT:    sw a2, 12(s0)
->>>>>>> origin/main
+; RV32-NEXT:    sw a4, 8(s0)
+; RV32-NEXT:    sw a1, 12(s0)
 ; RV32-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload

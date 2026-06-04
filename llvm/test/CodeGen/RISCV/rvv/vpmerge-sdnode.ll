@@ -531,45 +531,22 @@ define <vscale x 64 x i8> @vpmerge_vi_nxv64i8(<vscale x 64 x i8> %vb, <vscale x 
 define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> %vb, <vscale x 128 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv128i8:
 ; CHECK:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vmv8r.v v24, v16
-=======
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
->>>>>>> origin/main
+; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    vmv1r.v v7, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
-<<<<<<< HEAD
 ; CHECK-NEXT:    add a4, a0, a1
 ; CHECK-NEXT:    vl8r.v v16, (a4)
-; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    sub a2, a3, a1
-; CHECK-NEXT:    sltu a4, a3, a2
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a2, a4, a2
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v16, v16, v24, v0
-; CHECK-NEXT:    vl8r.v v24, (a0)
-=======
 ; CHECK-NEXT:    sub a4, a3, a1
 ; CHECK-NEXT:    sltu a5, a3, a4
 ; CHECK-NEXT:    addi a5, a5, -1
 ; CHECK-NEXT:    and a4, a5, a4
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a2)
-; CHECK-NEXT:    add a2, a0, a1
-; CHECK-NEXT:    vl8r.v v24, (a2)
-; CHECK-NEXT:    vl8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
-; CHECK-NEXT:    vmerge.vvm v24, v24, v16, v0
->>>>>>> origin/main
+; CHECK-NEXT:    vmerge.vvm v16, v16, v24, v0
+; CHECK-NEXT:    vl8r.v v24, (a0)
 ; CHECK-NEXT:    bltu a3, a1, .LBB35_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
@@ -589,15 +566,6 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a3, vlenb
-<<<<<<< HEAD
-; CHECK-NEXT:    vlm.v v0, (a1)
-; CHECK-NEXT:    slli a1, a3, 3
-; CHECK-NEXT:    sub a3, a2, a1
-; CHECK-NEXT:    sltu a4, a2, a3
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a3, a4, a3
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
-=======
 ; CHECK-NEXT:    slli a3, a3, 3
 ; CHECK-NEXT:    sub a4, a2, a3
 ; CHECK-NEXT:    sltu a5, a2, a4
@@ -606,7 +574,6 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
->>>>>>> origin/main
 ; CHECK-NEXT:    vmerge.vxm v16, v16, a0, v0
 ; CHECK-NEXT:    bltu a2, a3, .LBB36_2
 ; CHECK-NEXT:  # %bb.1:
@@ -628,15 +595,6 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    csrr a2, vlenb
-<<<<<<< HEAD
-; CHECK-NEXT:    vlm.v v0, (a0)
-; CHECK-NEXT:    slli a0, a2, 3
-; CHECK-NEXT:    sub a2, a1, a0
-; CHECK-NEXT:    sltu a3, a1, a2
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a2, a3, a2
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
-=======
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub a3, a1, a2
 ; CHECK-NEXT:    sltu a4, a1, a3
@@ -645,7 +603,6 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:    vsetvli zero, a3, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m8, tu, ma
->>>>>>> origin/main
 ; CHECK-NEXT:    vmerge.vim v16, v16, 2, v0
 ; CHECK-NEXT:    bltu a1, a2, .LBB37_2
 ; CHECK-NEXT:  # %bb.1:

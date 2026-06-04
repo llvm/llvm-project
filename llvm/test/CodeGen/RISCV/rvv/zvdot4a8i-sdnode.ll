@@ -290,13 +290,8 @@ define i32 @vdot4a_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscal
 ; DOT-LABEL: vdot4a_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/zvqdotq-sdnode.ll
-; DOT-NEXT:    vqdot.vv v16, v8, v10
-; DOT-NEXT:    vmv.s.x v8, zero
-=======
-; DOT-NEXT:    vmv.s.x v12, zero
 ; DOT-NEXT:    vdot4a.vv v16, v8, v10
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/zvdot4a8i-sdnode.ll
+; DOT-NEXT:    vmv.s.x v8, zero
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; DOT-NEXT:    vredsum.vs v8, v16, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
@@ -326,13 +321,8 @@ define i32 @vdot4au_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vsca
 ; DOT-LABEL: vdot4au_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/zvqdotq-sdnode.ll
-; DOT-NEXT:    vqdotu.vv v16, v8, v10
-; DOT-NEXT:    vmv.s.x v8, zero
-=======
-; DOT-NEXT:    vmv.s.x v12, zero
 ; DOT-NEXT:    vdot4au.vv v16, v8, v10
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/zvdot4a8i-sdnode.ll
+; DOT-NEXT:    vmv.s.x v8, zero
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; DOT-NEXT:    vredsum.vs v8, v16, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
@@ -362,13 +352,8 @@ define i32 @vdot4asu_vv_accum(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vsc
 ; DOT-LABEL: vdot4asu_vv_accum:
 ; DOT:       # %bb.0: # %entry
 ; DOT-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/zvqdotq-sdnode.ll
-; DOT-NEXT:    vqdotsu.vv v16, v8, v10
-; DOT-NEXT:    vmv.s.x v8, zero
-=======
-; DOT-NEXT:    vmv.s.x v12, zero
 ; DOT-NEXT:    vdot4asu.vv v16, v8, v10
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/zvdot4a8i-sdnode.ll
+; DOT-NEXT:    vmv.s.x v8, zero
 ; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; DOT-NEXT:    vredsum.vs v8, v16, v8
 ; DOT-NEXT:    vmv.x.s a0, v8
@@ -801,37 +786,18 @@ define <vscale x 32 x i32> @partial_reduce_m16(<vscale x 128 x i8> %a, <vscale x
 ; DOT-NEXT:    add a0, a0, a1
 ; DOT-NEXT:    vl8r.v v8, (a0)
 ; DOT-NEXT:    addi a0, sp, 16
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/zvqdotq-sdnode.ll
 ; DOT-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-=======
-; DOT-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; DOT-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; DOT-NEXT:    vmv.v.i v24, 0
-; DOT-NEXT:    vmv.v.i v0, 0
-; DOT-NEXT:    csrr a0, vlenb
-; DOT-NEXT:    slli a0, a0, 3
-; DOT-NEXT:    add a0, sp, a0
-; DOT-NEXT:    addi a0, a0, 16
-; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vdot4a.vv v0, v16, v8
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/zvdot4a8i-sdnode.ll
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 4
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
 ; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/zvqdotq-sdnode.ll
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
 ; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vqdot.vv v0, v16, v8
-=======
-; DOT-NEXT:    vdot4a.vv v24, v8, v16
-; DOT-NEXT:    vmv.v.v v8, v0
-; DOT-NEXT:    vmv.v.v v16, v24
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/zvdot4a8i-sdnode.ll
+; DOT-NEXT:    vdot4a.vv v0, v16, v8
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
 ; DOT-NEXT:    mv a1, a0
@@ -842,7 +808,7 @@ define <vscale x 32 x i32> @partial_reduce_m16(<vscale x 128 x i8> %a, <vscale x
 ; DOT-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; DOT-NEXT:    addi a0, sp, 16
 ; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; DOT-NEXT:    vqdot.vv v24, v16, v8
+; DOT-NEXT:    vdot4a.vv v24, v16, v8
 ; DOT-NEXT:    vmv.v.v v8, v0
 ; DOT-NEXT:    vmv.v.v v16, v24
 ; DOT-NEXT:    csrr a0, vlenb

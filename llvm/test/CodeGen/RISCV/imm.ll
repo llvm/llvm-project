@@ -4793,27 +4793,34 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ; RV32I-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 1048568
+; RV32I-NEXT:    lui a3, 524280
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    lui a2, 524280
-; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    ret
 ;
 ; RV32IXQCILI-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV32IXQCILI:       # %bb.0:
 ; RV32IXQCILI-NEXT:    lui a2, 1048568
+; RV32IXQCILI-NEXT:    lui a3, 524280
 ; RV32IXQCILI-NEXT:    and a0, a0, a2
-; RV32IXQCILI-NEXT:    lui a2, 524280
-; RV32IXQCILI-NEXT:    and a1, a1, a2
+; RV32IXQCILI-NEXT:    and a1, a1, a3
 ; RV32IXQCILI-NEXT:    ret
 ;
-; RV64I-LABEL: imm64_same_lo_hi_negative_demanded:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1015809
-; RV64I-NEXT:    slli a1, a1, 5
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    slli a1, a1, 15
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    ret
+; RV64-NOPOOL-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64-NOPOOL:       # %bb.0:
+; RV64-NOPOOL-NEXT:    lui a1, 1015809
+; RV64-NOPOOL-NEXT:    slli a1, a1, 5
+; RV64-NOPOOL-NEXT:    addi a1, a1, -1
+; RV64-NOPOOL-NEXT:    slli a1, a1, 15
+; RV64-NOPOOL-NEXT:    and a0, a0, a1
+; RV64-NOPOOL-NEXT:    ret
+;
+; RV64I-POOL-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64I-POOL:       # %bb.0:
+; RV64I-POOL-NEXT:    lui a1, %hi(.LCPI72_0)
+; RV64I-POOL-NEXT:    ld a1, %lo(.LCPI72_0)(a1)
+; RV64I-POOL-NEXT:    and a0, a0, a1
+; RV64I-POOL-NEXT:    ret
 ;
 ; RV64IZBA-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV64IZBA:       # %bb.0:
@@ -4853,9 +4860,9 @@ define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
 ; RV32-REMAT-LABEL: imm64_same_lo_hi_negative_demanded:
 ; RV32-REMAT:       # %bb.0:
 ; RV32-REMAT-NEXT:    lui a2, 1048568
+; RV32-REMAT-NEXT:    lui a3, 524280
 ; RV32-REMAT-NEXT:    and a0, a0, a2
-; RV32-REMAT-NEXT:    lui a2, 524280
-; RV32-REMAT-NEXT:    and a1, a1, a2
+; RV32-REMAT-NEXT:    and a1, a1, a3
 ; RV32-REMAT-NEXT:    ret
 ;
 ; RV64-REMAT-LABEL: imm64_same_lo_hi_negative_demanded:

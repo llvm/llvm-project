@@ -40,7 +40,7 @@ define <vscale x 1 x bfloat> @test_i32_bf16(<vscale x 1 x bfloat> %0, <vscale x 
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    fsrm a2
-; CHECK-NEXT:    vsetvli zero, zero, e32alt, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v10, v11
 ; CHECK-NEXT:    vse32.v v9, (a1)
 ; CHECK-NEXT:    ret
@@ -172,13 +172,13 @@ define <8 x i64> @test_bf16_i64(<8 x i64> %v, <8 x bfloat> %v2, ptr %p) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vadd.vv v16, v16, v16
 ; CHECK-NEXT:    vsetvli zero, zero, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa5, v12
-; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vadd.vv v12, v16, v16
+; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
-; CHECK-NEXT:    vadd.vv v8, v8, v12
+; CHECK-NEXT:    fmv.w.x fa4, zero
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
 ; CHECK-NEXT:    fsh fa5, 0(a0)

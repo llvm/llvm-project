@@ -359,40 +359,12 @@ define <16 x double> @vfmin_vv_v16f64_unmasked(<16 x double> %va, <16 x double> 
 define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-<<<<<<< HEAD
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v7, v0, 2
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    bltu a2, a1, .LBB26_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v8, v8, v24, v0.t
-; CHECK-NEXT:    addi a0, a2, -16
-; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    sltu a1, a2, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmin.vv v16, v24, v16, v0.t
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-=======
-; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    vfmin.vv v8, v8, v24
 ; CHECK-NEXT:    vfmin.vv v16, v16, v0
->>>>>>> origin/main
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.minnum.v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 %evl)
   ret <32 x double> %v
@@ -401,10 +373,10 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v32f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    vfmin.vv v8, v8, v24
 ; CHECK-NEXT:    vfmin.vv v16, v16, v0
 ; CHECK-NEXT:    ret

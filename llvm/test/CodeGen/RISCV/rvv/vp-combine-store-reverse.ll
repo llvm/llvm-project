@@ -115,9 +115,9 @@ define void @test_store_splice_mask_is_reverse(<vscale x 2 x float> %val, ptr %p
 define void @test_store_splice_different_evl(<vscale x 2 x float> %val, ptr %ptr, i32 zeroext %evl1, i32 zeroext %evl2) {
 ; CHECK-LABEL: test_store_splice_different_evl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a3, vlenb
-; CHECK-NEXT:    vsetvli a4, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    csrr a3, vlenb
 ; CHECK-NEXT:    srli a3, a3, 2
 ; CHECK-NEXT:    addi a4, a3, -1
 ; CHECK-NEXT:    vrsub.vx v9, v9, a4

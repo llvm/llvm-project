@@ -1319,18 +1319,17 @@ define <64 x i32> @vdot4asu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %
 ; NODOT-NEXT:    add a1, sp, a1
 ; NODOT-NEXT:    addi a1, a1, 16
 ; NODOT-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; NODOT-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; NODOT-NEXT:    vmv8r.v v24, v8
-; NODOT-NEXT:    csrr a1, vlenb
-; NODOT-NEXT:    slli a1, a1, 3
-; NODOT-NEXT:    mv a2, a1
-; NODOT-NEXT:    slli a1, a1, 1
-; NODOT-NEXT:    add a1, a1, a2
-; NODOT-NEXT:    add a1, sp, a1
-; NODOT-NEXT:    addi a1, a1, 16
-; NODOT-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; NODOT-NEXT:    li a1, 64
 ; NODOT-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; NODOT-NEXT:    vmv8r.v v24, v8
+; NODOT-NEXT:    csrr a2, vlenb
+; NODOT-NEXT:    slli a2, a2, 3
+; NODOT-NEXT:    mv a3, a2
+; NODOT-NEXT:    slli a2, a2, 1
+; NODOT-NEXT:    add a2, a2, a3
+; NODOT-NEXT:    add a2, sp, a2
+; NODOT-NEXT:    addi a2, a2, 16
+; NODOT-NEXT:    vs8r.v v8, (a2) # vscale x 64-byte Folded Spill
 ; NODOT-NEXT:    vslidedown.vx v8, v16, a1
 ; NODOT-NEXT:    csrr a2, vlenb
 ; NODOT-NEXT:    slli a2, a2, 3
@@ -1600,12 +1599,8 @@ define <64 x i32> @vdot4asu_vv_partial_v64i32_v256i8(<256 x i8> %a, <256 x i8> %
 ; DOT-NEXT:    add a0, sp, a0
 ; DOT-NEXT:    addi a0, a0, 16
 ; DOT-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-<<<<<<< HEAD:llvm/test/CodeGen/RISCV/rvv/fixed-vectors-zvqdotq.ll
 ; DOT-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
-; DOT-NEXT:    vqdotsu.vv v0, v16, v8
-=======
 ; DOT-NEXT:    vdot4asu.vv v0, v16, v8
->>>>>>> origin/main:llvm/test/CodeGen/RISCV/rvv/fixed-vectors-zvdot4a8i.ll
 ; DOT-NEXT:    csrr a0, vlenb
 ; DOT-NEXT:    slli a0, a0, 3
 ; DOT-NEXT:    mv a1, a0

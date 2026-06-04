@@ -61,8 +61,8 @@ define void @compressstore_v7i8(ptr %base, <7 x i8> %v, <7 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a1
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
-; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vcpop.m a1, v9
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vse8.v v10, (a0)
 ; CHECK-NEXT:    ret

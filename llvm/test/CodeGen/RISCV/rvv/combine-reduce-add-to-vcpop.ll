@@ -101,11 +101,10 @@ define i32 @test_v256i1(<256 x i1> %x) {
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x30, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 48 * vlenb
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vmv1r.v v6, v0
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-NEXT:    vmv1r.v v7, v8
+; CHECK-NEXT:    vmv1r.v v6, v0
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v5, v8, 8

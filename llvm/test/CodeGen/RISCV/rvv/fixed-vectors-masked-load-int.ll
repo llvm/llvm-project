@@ -320,13 +320,8 @@ define <256 x i8> @masked_load_v256i8(ptr %a, <256 x i1> %mask) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 128
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-<<<<<<< HEAD
 ; CHECK-NEXT:    vle8.v v24, (a0), v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
-=======
-; CHECK-NEXT:    vmv1r.v v16, v8
-; CHECK-NEXT:    vle8.v v8, (a0), v0.t
->>>>>>> origin/main
 ; CHECK-NEXT:    addi a0, a0, 128
 ; CHECK-NEXT:    vle8.v v16, (a0), v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24

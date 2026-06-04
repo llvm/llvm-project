@@ -16,11 +16,10 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -512
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    li a0, 512
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    vmv.x.s a0, v16
-; CHECK-NEXT:    li a1, 512
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a0
 ; CHECK-NEXT:    addi a0, sp, 512
 ; CHECK-NEXT:    vse8.v v16, (a0)
@@ -105,11 +104,10 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -512
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vmv.x.s a1, v24
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vmv8r.v v24, v8
+; CHECK-NEXT:    vmv.x.s a1, v24
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v24, 5

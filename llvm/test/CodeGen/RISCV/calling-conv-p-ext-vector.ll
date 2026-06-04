@@ -74,16 +74,16 @@ define <16 x i8> @test_cc_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-NEXT:    lw a4, 4(a2)
 ; RV32-NEXT:    lw a5, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 12(a1)
-; RV32-NEXT:    lw a7, 8(a1)
-; RV32-NEXT:    lw t0, 4(a1)
-; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    padd.b a2, a6, a2
-; RV32-NEXT:    padd.b a5, a7, a5
-; RV32-NEXT:    padd.b a4, t0, a4
-; RV32-NEXT:    padd.b a1, a1, a3
-; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    sw a4, 4(a0)
+; RV32-NEXT:    lw a6, 8(a1)
+; RV32-NEXT:    lw a7, 12(a1)
+; RV32-NEXT:    lw t0, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
+; RV32-NEXT:    padd.b a2, a7, a2
+; RV32-NEXT:    padd.b a5, a6, a5
+; RV32-NEXT:    padd.b a1, a1, a4
+; RV32-NEXT:    padd.b a3, t0, a3
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
 ; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
@@ -104,16 +104,16 @@ define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; RV32-NEXT:    lw a4, 4(a2)
 ; RV32-NEXT:    lw a5, 8(a2)
 ; RV32-NEXT:    lw a2, 12(a2)
-; RV32-NEXT:    lw a6, 12(a1)
-; RV32-NEXT:    lw a7, 8(a1)
-; RV32-NEXT:    lw t0, 4(a1)
-; RV32-NEXT:    lw a1, 0(a1)
-; RV32-NEXT:    padd.h a2, a6, a2
-; RV32-NEXT:    padd.h a5, a7, a5
-; RV32-NEXT:    padd.h a4, t0, a4
-; RV32-NEXT:    padd.h a1, a1, a3
-; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    sw a4, 4(a0)
+; RV32-NEXT:    lw a6, 8(a1)
+; RV32-NEXT:    lw a7, 12(a1)
+; RV32-NEXT:    lw t0, 0(a1)
+; RV32-NEXT:    lw a1, 4(a1)
+; RV32-NEXT:    padd.h a2, a7, a2
+; RV32-NEXT:    padd.h a5, a6, a5
+; RV32-NEXT:    padd.h a1, a1, a4
+; RV32-NEXT:    padd.h a3, t0, a3
+; RV32-NEXT:    sw a3, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
 ; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
@@ -342,12 +342,7 @@ define <4 x i16> @test_exhaust_2xlen_rv32_2(i64 %dummy, i64 %dummy2, i64 %dummy3
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a1, 4(sp)
 ; RV32-NEXT:    lw a0, 0(sp)
-<<<<<<< HEAD
-; RV32-NEXT:    padd.h a0, a0, a0
-; RV32-NEXT:    padd.h a1, a1, a1
-=======
 ; RV32-NEXT:    padd.dh a0, a0, a0
->>>>>>> origin/main
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_exhaust_2xlen_rv32_2:

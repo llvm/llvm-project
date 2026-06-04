@@ -265,36 +265,15 @@ define i2 @test_ctpop_i2(i2 %a) {
 define i11 @test_ctpop_i11(i11 %a) {
 ; RV32-LABEL: test_ctpop_i11:
 ; RV32:       # %bb.0:
-<<<<<<< HEAD
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    lui a1, 5
 ; RV32-NEXT:    andi a0, a0, 2047
 ; RV32-NEXT:    srli a2, a0, 1
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    sub a0, a0, a1
-; RV32-NEXT:    addi s0, a2, -1
-; RV32-NEXT:    and a1, a0, s0
-; RV32-NEXT:    lui a2, 3
-=======
-; RV32-NEXT:    andi a0, a0, 2047
-; RV32-NEXT:    lui a1, 5
-; RV32-NEXT:    srli a2, a0, 1
-; RV32-NEXT:    addi a1, a1, 1365
-; RV32-NEXT:    and a1, a2, a1
-; RV32-NEXT:    lui a2, 3
-; RV32-NEXT:    addi a2, a2, 819
 ; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    slli a1, a0, 16
-; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    srli a1, a1, 16
->>>>>>> origin/main
+; RV32-NEXT:    lui a2, 3
 ; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    addi a2, a2, 819
 ; RV32-NEXT:    and a1, a1, a2
@@ -312,36 +291,15 @@ define i11 @test_ctpop_i11(i11 %a) {
 ;
 ; RV64-LABEL: test_ctpop_i11:
 ; RV64:       # %bb.0:
-<<<<<<< HEAD
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    andi a0, a0, 2047
 ; RV64-NEXT:    srli a2, a0, 1
 ; RV64-NEXT:    addi a1, a1, 1365
 ; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    sub a0, a0, a1
-; RV64-NEXT:    addi s0, a2, -1
-; RV64-NEXT:    and a1, a0, s0
-; RV64-NEXT:    lui a2, 3
-=======
-; RV64-NEXT:    andi a0, a0, 2047
-; RV64-NEXT:    lui a1, 5
-; RV64-NEXT:    srli a2, a0, 1
-; RV64-NEXT:    addi a1, a1, 1365
-; RV64-NEXT:    and a1, a2, a1
-; RV64-NEXT:    lui a2, 3
-; RV64-NEXT:    addi a2, a2, 819
 ; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    slli a1, a0, 48
-; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    srli a1, a1, 48
->>>>>>> origin/main
+; RV64-NEXT:    lui a2, 3
 ; RV64-NEXT:    srli a1, a1, 2
 ; RV64-NEXT:    addi a2, a2, 819
 ; RV64-NEXT:    and a1, a1, a2

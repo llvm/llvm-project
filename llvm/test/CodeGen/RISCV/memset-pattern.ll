@@ -154,13 +154,8 @@ define void @memset_1_noalign(ptr %a, i128 %value) nounwind {
 ; RV64-NEXT:    sb s1, 10(a0)
 ; RV64-NEXT:    sb s0, 11(a0)
 ; RV64-NEXT:    addi a0, a0, 16
-<<<<<<< HEAD
 ; RV64-NEXT:    bne a0, a4, .LBB1_1
-; RV64-NEXT:  # %bb.2: # %split
-=======
-; RV64-NEXT:    bne a0, a3, .LBB1_1
 ; RV64-NEXT:  # %bb.2: # %memset.pattern-post-expansion
->>>>>>> origin/main
 ; RV64-NEXT:    ld s0, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload

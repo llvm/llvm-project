@@ -725,29 +725,26 @@ define i32 @packh_zero_i8(i8 %a) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; RV64I-LABEL: and_mul_32bitsplat:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 4112
-; RV64I-NEXT:    addi a1, a1, 257
-; RV64I-NEXT:    slli a2, a1, 32
-; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI33_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI33_0)(a1)
 ; RV64I-NEXT:    lui a2, 65664
 ; RV64I-NEXT:    addi a2, a2, 1024
+; RV64I-NEXT:    slli a3, a2, 27
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a2, 27
-; RV64I-NEXT:    add a1, a2, a1
-; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    add a2, a2, a3
+; RV64I-NEXT:    mul a0, a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: and_mul_32bitsplat:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    lui a1, 4112
+; RV64ZBKB-NEXT:    lui a1, %hi(.LCPI33_0)
+; RV64ZBKB-NEXT:    ld a1, %lo(.LCPI33_0)(a1)
 ; RV64ZBKB-NEXT:    lui a2, 65664
-; RV64ZBKB-NEXT:    addi a1, a1, 257
 ; RV64ZBKB-NEXT:    addi a2, a2, 1024
-; RV64ZBKB-NEXT:    pack a1, a1, a1
+; RV64ZBKB-NEXT:    slli a3, a2, 27
 ; RV64ZBKB-NEXT:    and a0, a0, a1
-; RV64ZBKB-NEXT:    slli a1, a2, 27
-; RV64ZBKB-NEXT:    add a1, a2, a1
-; RV64ZBKB-NEXT:    mul a0, a0, a1
+; RV64ZBKB-NEXT:    add a2, a2, a3
+; RV64ZBKB-NEXT:    mul a0, a0, a2
 ; RV64ZBKB-NEXT:    ret
   %a = and i64 %x, u0x0101010101010101
   %b = mul i64 %a, u0x0080402010080400

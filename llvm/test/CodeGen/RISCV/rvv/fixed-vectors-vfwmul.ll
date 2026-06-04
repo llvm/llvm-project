@@ -514,8 +514,8 @@ define <8 x float> @vfwmul_v8bf16(ptr %x, ptr %y) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFH-NEXT:    vle16.v v10, (a0)
-; ZVFH-NEXT:    vle16.v v12, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v10
+; ZVFH-NEXT:    vle16.v v12, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v12
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFH-NEXT:    vfmul.vv v8, v8, v10
@@ -541,8 +541,8 @@ define <16 x float> @vfwmul_v16bf16(ptr %x, ptr %y) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFH-NEXT:    vle16.v v12, (a0)
-; ZVFH-NEXT:    vle16.v v16, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v12
+; ZVFH-NEXT:    vle16.v v16, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v16
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfmul.vv v8, v8, v12
@@ -569,8 +569,8 @@ define <32 x float> @vfwmul_v32bf16(ptr %x, ptr %y) {
 ; ZVFH-NEXT:    li a2, 32
 ; ZVFH-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; ZVFH-NEXT:    vle16.v v16, (a0)
-; ZVFH-NEXT:    vle16.v v24, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v16
+; ZVFH-NEXT:    vle16.v v24, (a1)
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v24
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFH-NEXT:    vfmul.vv v8, v8, v16
@@ -603,28 +603,27 @@ define <64 x float> @vfwmul_v64bf16(ptr %x, ptr %y) {
 ; ZVFH-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; ZVFH-NEXT:    li a2, 64
 ; ZVFH-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; ZVFH-NEXT:    vle16.v v16, (a0)
-; ZVFH-NEXT:    vle16.v v8, (a1)
+; ZVFH-NEXT:    vle16.v v8, (a0)
 ; ZVFH-NEXT:    li a0, 32
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVFH-NEXT:    vslidedown.vx v24, v16, a0
+; ZVFH-NEXT:    vslidedown.vx v0, v8, a0
+; ZVFH-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFH-NEXT:    vle16.v v24, (a1)
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v16
-; ZVFH-NEXT:    addi a1, sp, 16
-; ZVFH-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; ZVFH-NEXT:    vslidedown.vx v16, v8, a0
-; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v8
-; ZVFH-NEXT:    vmv4r.v v8, v24
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v24, v8
-; ZVFH-NEXT:    vmv4r.v v8, v16
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; ZVFH-NEXT:    addi a1, sp, 16
+; ZVFH-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZVFH-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVFH-NEXT:    vslidedown.vx v8, v24, a0
+; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v0
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v0, v8
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v24
 ; ZVFH-NEXT:    addi a0, sp, 16
-; ZVFH-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZVFH-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFH-NEXT:    vfmul.vv v8, v8, v0
-; ZVFH-NEXT:    vfmul.vv v16, v24, v16
+; ZVFH-NEXT:    vfmul.vv v8, v24, v8
+; ZVFH-NEXT:    vfmul.vv v16, v16, v0
 ; ZVFH-NEXT:    csrr a0, vlenb
 ; ZVFH-NEXT:    slli a0, a0, 3
 ; ZVFH-NEXT:    add sp, sp, a0
@@ -644,18 +643,20 @@ define <64 x float> @vfwmul_v64bf16(ptr %x, ptr %y) {
 ; ZVFBFA-NEXT:    li a2, 64
 ; ZVFBFA-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
 ; ZVFBFA-NEXT:    vle16.v v16, (a0)
-; ZVFBFA-NEXT:    vle16.v v24, (a1)
 ; ZVFBFA-NEXT:    li a0, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; ZVFBFA-NEXT:    vslidedown.vx v8, v16, a0
-; ZVFBFA-NEXT:    addi a1, sp, 16
-; ZVFBFA-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; ZVFBFA-NEXT:    vslidedown.vx v0, v24, a0
+; ZVFBFA-NEXT:    addi a3, sp, 16
+; ZVFBFA-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; ZVFBFA-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vle16.v v0, (a1)
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; ZVFBFA-NEXT:    vslidedown.vx v24, v0, a0
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
-; ZVFBFA-NEXT:    vfwmul.vv v8, v16, v24
+; ZVFBFA-NEXT:    vfwmul.vv v8, v16, v0
 ; ZVFBFA-NEXT:    addi a0, sp, 16
-; ZVFBFA-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZVFBFA-NEXT:    vfwmul.vv v16, v24, v0
+; ZVFBFA-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
+; ZVFBFA-NEXT:    vfwmul.vv v16, v0, v24
 ; ZVFBFA-NEXT:    csrr a0, vlenb
 ; ZVFBFA-NEXT:    slli a0, a0, 3
 ; ZVFBFA-NEXT:    add sp, sp, a0
@@ -674,10 +675,10 @@ define <64 x float> @vfwmul_v64bf16(ptr %x, ptr %y) {
 define <2 x float> @vfwmul_vf_v2bf16(ptr %x, bfloat %y) {
 ; ZVFH-LABEL: vfwmul_vf_v2bf16:
 ; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    fmv.x.w a1, fa0
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vle16.v v8, (a0)
-; ZVFH-NEXT:    fmv.x.w a0, fa0
-; ZVFH-NEXT:    vmv.v.x v9, a0
+; ZVFH-NEXT:    vmv.v.x v9, a1
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v9
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -702,10 +703,10 @@ define <2 x float> @vfwmul_vf_v2bf16(ptr %x, bfloat %y) {
 define <4 x float> @vfwmul_vf_v4bf16(ptr %x, bfloat %y) {
 ; ZVFH-LABEL: vfwmul_vf_v4bf16:
 ; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    fmv.x.w a1, fa0
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFH-NEXT:    vle16.v v8, (a0)
-; ZVFH-NEXT:    fmv.x.w a0, fa0
-; ZVFH-NEXT:    vmv.v.x v9, a0
+; ZVFH-NEXT:    vmv.v.x v9, a1
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v8
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v9
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -730,10 +731,10 @@ define <4 x float> @vfwmul_vf_v4bf16(ptr %x, bfloat %y) {
 define <8 x float> @vfwmul_vf_v8bf16(ptr %x, bfloat %y) {
 ; ZVFH-LABEL: vfwmul_vf_v8bf16:
 ; ZVFH:       # %bb.0:
+; ZVFH-NEXT:    fmv.x.w a1, fa0
 ; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFH-NEXT:    vle16.v v10, (a0)
-; ZVFH-NEXT:    fmv.x.w a0, fa0
-; ZVFH-NEXT:    vmv.v.x v12, a0
+; ZVFH-NEXT:    vmv.v.x v12, a1
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v10
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v10, v12
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
@@ -761,8 +762,8 @@ define <16 x float> @vfwmul_vf_v16bf16(ptr %x, bfloat %y) {
 ; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFH-NEXT:    vle16.v v12, (a0)
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
-; ZVFH-NEXT:    vmv.v.x v16, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v12
+; ZVFH-NEXT:    vmv.v.x v16, a0
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v12, v16
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFH-NEXT:    vfmul.vv v8, v8, v12
@@ -789,9 +790,9 @@ define <32 x float> @vfwmul_vf_v32bf16(ptr %x, bfloat %y) {
 ; ZVFH-NEXT:    li a1, 32
 ; ZVFH-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; ZVFH-NEXT:    vle16.v v16, (a0)
+; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; ZVFH-NEXT:    fmv.x.w a0, fa0
 ; ZVFH-NEXT:    vmv.v.x v24, a0
-; ZVFH-NEXT:    vfwcvtbf16.f.f.v v8, v16
 ; ZVFH-NEXT:    vfwcvtbf16.f.f.v v16, v24
 ; ZVFH-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFH-NEXT:    vfmul.vv v8, v8, v16

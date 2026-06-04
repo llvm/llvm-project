@@ -669,8 +669,8 @@ define i32 @ushlsat_i32(i32 %a, i32 %b) {
 define i8 @ushlsati_i8(i8 %a) {
 ; CHECK-LABEL: ushlsati_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 24
 ; CHECK-NEXT:    li a1, 5
+; CHECK-NEXT:    slli a0, a0, 24
 ; CHECK-NEXT:    sshl a0, a0, a1
 ; CHECK-NEXT:    srli a0, a0, 24
 ; CHECK-NEXT:    ret
@@ -681,8 +681,8 @@ define i8 @ushlsati_i8(i8 %a) {
 define i16 @ushlsati_i16(i16 %a) {
 ; CHECK-LABEL: ushlsati_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    li a1, 10
+; CHECK-NEXT:    slli a0, a0, 16
 ; CHECK-NEXT:    sshl a0, a0, a1
 ; CHECK-NEXT:    srli a0, a0, 16
 ; CHECK-NEXT:    ret
@@ -1365,9 +1365,9 @@ define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %o
 ; CHECK-NEXT:    mv a5, a3
 ; CHECK-NEXT:    mv a6, a2
 ; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    sw a6, 0(a4)
 ; CHECK-NEXT:    sw a5, 4(a4)
-; CHECK-NEXT:    padd.dw a0, a2, zero
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64

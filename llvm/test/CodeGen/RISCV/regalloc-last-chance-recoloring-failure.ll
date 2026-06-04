@@ -31,8 +31,6 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    li s0, 36
 ; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
@@ -84,8 +82,6 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    add a0, sp, a0
 ; SUBREGLIVENESS-NEXT:    addi a0, a0, 16
 ; SUBREGLIVENESS-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; SUBREGLIVENESS-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; SUBREGLIVENESS-NEXT:    vmclr.m v0
 ; SUBREGLIVENESS-NEXT:    li s0, 36
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vmclr.m v0

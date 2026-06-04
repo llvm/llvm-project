@@ -14,8 +14,8 @@ define i64 @mv_to_fmv(i64 %a, i64 %b) nounwind {
 ; CHECK32ZDINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK32ZDINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK32ZDINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK32ZDINX-NEXT:    add a1, a1, a3
 ; CHECK32ZDINX-NEXT:    add s0, a0, a2
+; CHECK32ZDINX-NEXT:    add a1, a1, a3
 ; CHECK32ZDINX-NEXT:    sltu s1, s0, a0
 ; CHECK32ZDINX-NEXT:    add s1, a1, s1
 ; CHECK32ZDINX-NEXT:    call foo

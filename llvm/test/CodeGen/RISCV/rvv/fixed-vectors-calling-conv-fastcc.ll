@@ -207,10 +207,9 @@ define fastcc <32 x i32> @ret_v32i32_call_v32i32_v32i32_v32i32_i32(<32 x i32> %x
 ; CHECK-NEXT:    addi s0, sp, 256
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -128
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    mv a3, sp
 ; CHECK-NEXT:    mv a0, sp

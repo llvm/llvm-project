@@ -7,21 +7,12 @@
 define <vscale x 8 x i7> @vsrl_vx_nxv8i7(<vscale x 8 x i7> %a, i7 signext %b, <vscale x 8 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vand.vx v8, v8, a0
 ; CHECK-NEXT:    vand.vx v9, v9, a0
-; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
-=======
-; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vand.vx v9, v9, a1
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
->>>>>>> origin/main
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %b, i32 0
   %vb = shufflevector <vscale x 8 x i7> %elt.head, <vscale x 8 x i7> poison, <vscale x 8 x i32> zeroinitializer

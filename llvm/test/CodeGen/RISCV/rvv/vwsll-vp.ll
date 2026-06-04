@@ -19,18 +19,10 @@ define <vscale x 2 x i64> @vwsll_vv_nxv2i64_sext(<vscale x 2 x i32> %a, <vscale 
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv2i64_sext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %y = sext <vscale x 2 x i32> %b to <vscale x 2 x i64>
@@ -49,18 +41,10 @@ define <vscale x 2 x i64> @vwsll_vv_nxv2i64_zext(<vscale x 2 x i32> %a, <vscale 
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv2i64_zext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %y = zext <vscale x 2 x i32> %b to <vscale x 2 x i64>
@@ -250,16 +234,9 @@ define <vscale x 2 x i64> @vwsll_vi_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv2i64:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %z = call <vscale x 2 x i64> @llvm.vp.shl.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> splat (i64 2), <vscale x 2 x i1> %m, i32 %vl)
@@ -281,18 +258,10 @@ define <vscale x 4 x i32> @vwsll_vv_nxv4i32_sext(<vscale x 4 x i16> %a, <vscale 
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv4i32_sext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %y = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
@@ -311,18 +280,10 @@ define <vscale x 4 x i32> @vwsll_vv_nxv4i32_zext(<vscale x 4 x i16> %a, <vscale 
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv4i32_zext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %y = zext <vscale x 4 x i16> %b to <vscale x 4 x i32>
@@ -484,16 +445,9 @@ define <vscale x 4 x i32> @vwsll_vi_nxv4i32(<vscale x 4 x i16> %a, <vscale x 4 x
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv4i32:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %z = call <vscale x 4 x i32> @llvm.vp.shl.nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i1> %m, i32 %vl)
@@ -515,18 +469,10 @@ define <vscale x 8 x i16> @vwsll_vv_nxv8i16_sext(<vscale x 8 x i8> %a, <vscale x
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv8i16_sext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %y = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -545,18 +491,10 @@ define <vscale x 8 x i16> @vwsll_vv_nxv8i16_zext(<vscale x 8 x i8> %a, <vscale x
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vv_nxv8i16_zext:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
-; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v9
 ; CHECK-ZVBB-NEXT:    vmv1r.v v11, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vv v8, v11, v10
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %y = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -690,16 +628,9 @@ define <vscale x 8 x i16> @vwsll_vi_nxv8i16(<vscale x 8 x i8> %a, <vscale x 8 x 
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_nxv8i16:
 ; CHECK-ZVBB:       # %bb.0:
-<<<<<<< HEAD
-; CHECK-ZVBB-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
-; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2, v0.t
-=======
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
 ; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 2
->>>>>>> origin/main
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %z = call <vscale x 8 x i16> @llvm.vp.shl.nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16> splat (i16 2), <vscale x 8 x i1> %m, i32 %vl)

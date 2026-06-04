@@ -72,11 +72,11 @@ define <7 x i8> @expandload_v7i8(ptr %base, <7 x i1> %mask) {
 ; CHECK-NEXT:    vmv.s.x v8, a1
 ; CHECK-NEXT:    vmand.mm v0, v0, v8
 ; CHECK-NEXT:    vcpop.m a1, v0
+; CHECK-NEXT:    viota.m v9, v0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    viota.m v10, v0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v10, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <7 x i8> @llvm.masked.expandload.v7i8(ptr %base, <7 x i1> %mask, <7 x i8> poison)
   ret <7 x i8>%res
