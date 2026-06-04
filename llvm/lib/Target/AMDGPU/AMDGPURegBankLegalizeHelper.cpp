@@ -14,6 +14,7 @@
 #include "AMDGPURegBankLegalizeHelper.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
@@ -38,6 +39,7 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
       RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
+      AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
       VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
 bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
@@ -94,20 +96,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
-  unsigned MovExecOpc, MovExecTermOpc, XorTermOpc, AndSaveExecOpc, ExecReg;
-  if (IsWave32) {
-    MovExecOpc = AMDGPU::S_MOV_B32;
-    MovExecTermOpc = AMDGPU::S_MOV_B32_term;
-    XorTermOpc = AMDGPU::S_XOR_B32_term;
-    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B32;
-    ExecReg = AMDGPU::EXEC_LO;
-  } else {
-    MovExecOpc = AMDGPU::S_MOV_B64;
-    MovExecTermOpc = AMDGPU::S_MOV_B64_term;
-    XorTermOpc = AMDGPU::S_XOR_B64_term;
-    AndSaveExecOpc = AMDGPU::S_AND_SAVEEXEC_B64;
-    ExecReg = AMDGPU::EXEC;
-  }
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
 
 #ifndef NDEBUG
   const int OrigRangeSize = std::distance(BeginIt, EndIt);
@@ -269,7 +258,7 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.buildIntrinsic(Intrinsic::amdgcn_ballot, CondRegLM).addReg(CondReg);
 
   // Update EXEC, save the original EXEC value to SavedExec.
-  B.buildInstr(AndSaveExecOpc)
+  B.buildInstr(LMC.AndSaveExecOpc)
       .addDef(SavedExec)
       .addReg(CondRegLM, RegState::Kill);
   MRI.setSimpleHint(SavedExec, CondRegLM);
@@ -277,7 +266,10 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   B.setInsertPt(*BodyBB, BodyBB->end());
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  B.buildInstr(XorTermOpc).addDef(ExecReg).addReg(ExecReg).addReg(SavedExec);
+  B.buildInstr(LMC.XorTermOpc)
+      .addDef(LMC.ExecReg)
+      .addReg(LMC.ExecReg)
+      .addReg(SavedExec);
 
   // XXX - s_xor_b64 sets scc to 1 if the result is nonzero, so can we use
   // s_cbranch_scc0?
@@ -287,11 +279,11 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 
   // Save the EXEC mask before the loop.
   B.setInsertPt(MBB, MBB.end());
-  B.buildInstr(MovExecOpc).addDef(SaveExecReg).addReg(ExecReg);
+  B.buildInstr(LMC.MovOpc).addDef(SaveExecReg).addReg(LMC.ExecReg);
 
   // Restore the EXEC mask after the loop.
   B.setInsertPt(*RestoreExecBB, RestoreExecBB->begin());
-  B.buildInstr(MovExecTermOpc).addDef(ExecReg).addReg(SaveExecReg);
+  B.buildInstr(LMC.MovTermOpc).addDef(LMC.ExecReg).addReg(SaveExecReg);
 
   // Set the insert point after the original instruction, so any new
   // instructions will be in the remainder.
@@ -836,12 +828,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
   // Split 64-bit find-first-bit operations into 32-bit halves:
   //   (ffbh hi:lo)            -> umin(ffbh(hi), uaddsat(ffbh(lo), 32))
   //   (ffbl hi:lo)            -> umin(ffbl(lo), uaddsat(ffbl(hi), 32))
-  //   (ctlz_zero_undef hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
-  //   (cttz_zero_undef hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
+  //   (ctlz_zero_poison hi:lo) -> umin(ffbh(hi), add(ffbh(lo), 32))
+  //   (cttz_zero_poison hi:lo) -> umin(ffbl(lo), add(ffbl(hi), 32))
   unsigned Opc = MI.getOpcode();
 
   // FFBH/FFBL return 0xFFFFFFFF on zero input, using uaddsat to avoid
-  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_undef), so plain add
+  // wrapping. CTLZ/CTTZ guarantee non-zero input (zero_poison), so plain add
   // is fine.
   unsigned FFBOpc;
   unsigned AddOpc;
@@ -857,12 +849,12 @@ bool RegBankLegalizeHelper::lowerSplitBitCount64To32(MachineInstr &MI) {
     AddOpc = AMDGPU::G_UADDSAT;
     SearchFromMSB = false;
     break;
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
+  case AMDGPU::G_CTLZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBH_U32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = true;
     break;
-  case AMDGPU::G_CTTZ_ZERO_UNDEF:
+  case AMDGPU::G_CTTZ_ZERO_POISON:
     FFBOpc = AMDGPU::G_AMDGPU_FFBL_B32;
     AddOpc = AMDGPU::G_ADD;
     SearchFromMSB = false;
@@ -1257,6 +1249,17 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSplitTo32Select(MI);
   case SplitTo32SExtInReg:
     return lowerSplitTo32SExtInReg(MI);
+  case CtPop64To32: {
+    auto Unmerge = B.buildUnmerge({VgprRB, S32}, MI.getOperand(1).getReg());
+    auto LoPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(0));
+    auto HiPopCnt = B.buildCTPOP({VgprRB, S32}, Unmerge.getReg(1));
+    // Max popcount of two 32-bit values is 64, so this add cannot overflow.
+    B.buildAdd(MI.getOperand(0).getReg(), LoPopCnt, HiPopCnt,
+               MachineInstr::NoSWrap | MachineInstr::NoUWrap);
+
+    MI.eraseFromParent();
+    break;
+  }
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -1673,6 +1676,8 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32SExt:
   case Sgpr32ZExt:
     return SgprRB;
+  case AgprAnyTy:
+    return AgprRB;
   case Vgpr16:
   case Vgpr32:
   case Vgpr64:
@@ -1703,6 +1708,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB256:
   case VgprB512:
   case VgprBRC:
+  case VgprAnyTy:
   case Vgpr32AExt:
   case Vgpr32SExt:
   case Vgpr32ZExt:
@@ -1789,6 +1795,19 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprPtr128: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
+      break;
+    }
+    case VgprAnyTy: {
+      assert(RB == VgprRB);
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB == AgprRB)
+        break;
+      Register NewAgprDst = MRI.createVirtualRegister({AgprRB, Ty});
+      Op.setReg(NewAgprDst);
+      if (!MRI.use_nodbg_empty(Reg))
+        B.buildCopy(Reg, NewAgprDst);
       break;
     }
     // uniform in vcc/vgpr: scalars, vectors and B-types
@@ -1980,6 +1999,20 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
         Op.setReg(CopyToVgpr.getReg(0));
+      }
+      break;
+    }
+    case VgprAnyTy: {
+      if (RB != VgprRB) {
+        auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
+        Op.setReg(CopyToVgpr.getReg(0));
+      }
+      break;
+    }
+    case AgprAnyTy: {
+      if (RB != AgprRB) {
+        auto CopyToAgpr = B.buildCopy({AgprRB, Ty}, Reg);
+        Op.setReg(CopyToAgpr.getReg(0));
       }
       break;
     }

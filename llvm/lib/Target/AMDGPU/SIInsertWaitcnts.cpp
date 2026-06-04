@@ -40,7 +40,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/DebugCounter.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -528,6 +528,10 @@ class SIInsertWaitcnts {
   struct BlockInfo {
     std::unique_ptr<WaitcntBrackets> Incoming;
     bool Dirty = true;
+    BlockInfo() = default;
+    BlockInfo(BlockInfo &&) = default;
+    BlockInfo &operator=(BlockInfo &&) = default;
+    ~BlockInfo();
   };
 
   MapVector<MachineBasicBlock *, BlockInfo> BlockInfos;
@@ -802,7 +806,11 @@ public:
                       AMDGPU::Waitcnt &UpdateWait) const;
 
   void determineWaitForPhysReg(AMDGPU::InstCounterType T, MCPhysReg Reg,
-                               AMDGPU::Waitcnt &Wait) const;
+                               AMDGPU::Waitcnt &Wait,
+                               const MachineInstr &MI) const;
+  MCPhysReg determineVGPR16Dependency(const MachineInstr &MI,
+                                      AMDGPU::InstCounterType T,
+                                      MCPhysReg Reg) const;
   void determineWaitForLDSDMA(AMDGPU::InstCounterType T, VMEMID TID,
                               AMDGPU::Waitcnt &Wait) const;
   AMDGPU::Waitcnt determineAsyncWait(unsigned N);
@@ -920,10 +928,6 @@ private:
     assert(Reg != AMDGPU::SCC && "Shouldn't be used on SCC");
     if (!Context->TRI.isInAllocatableClass(Reg))
       return {{}, {}};
-    const TargetRegisterClass *RC = Context->TRI.getPhysRegBaseClass(Reg);
-    unsigned Size = Context->TRI.getRegSizeInBits(*RC);
-    if (Size == 16 && Context->ST.hasD16Writes32BitVgpr())
-      Reg = Context->TRI.get32BitRegister(Reg);
     return Context->TRI.regunits(Reg);
   }
 
@@ -1051,6 +1055,8 @@ private:
   CounterValueArray AsyncScore{};
 };
 
+SIInsertWaitcnts::BlockInfo::~BlockInfo() = default;
+
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
   static char ID;
@@ -1113,7 +1119,13 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
-  unsigned CurrScore = UB + 1;
+  unsigned Increment = 1;
+  if (T == AMDGPU::VA_VDST && AMDGPU::getHasMatrixScale(Inst.getOpcode())) {
+    // V_WMMA_SCALE instructions use VOP3PX2 encoding. Hardware treats this as
+    // two VOP3P instructions and increments VA_VDST twice.
+    Increment = 2;
+  }
+  unsigned CurrScore = UB + Increment;
   if (CurrScore == 0)
     report_fatal_error("InsertWaitcnt score wraparound");
   // PendingEvents and ScoreUB need to be update regardless if this event
@@ -1629,13 +1641,59 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
   return Wait;
 }
 
+// With D16Write32BitVgpr, D16 inst might be clobbered by events running on the
+// other half 16bit.
+//
+// Replace VGPR16 to VGPR32 for wait check if:
+// 1. MI is a VALU, and there is a wait event on the other half
+// 2. MI is a LdSt, and there is a wait event on the other half from different
+// order group
+MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
+                                                     AMDGPU::InstCounterType T,
+                                                     MCPhysReg Reg) const {
+  const TargetRegisterClass *RC = Context->TRI.getPhysRegBaseClass(Reg);
+  unsigned Size = Context->TRI.getRegSizeInBits(*RC);
+
+  if (Size != 16 || !Context->ST.hasD16Writes32BitVgpr())
+    return Reg;
+
+  // With D16Writes32BitVgpr, D16 Inst might clobber the whole vgpr32
+  // check dependency on the other half
+  Register Reg32 = Context->TRI.get32BitRegister(Reg);
+  Register OtherHalf = Context->TRI.getSubReg(
+      Reg32,
+      AMDGPU::isHi16Reg(Reg, Context->TRI) ? AMDGPU::lo16 : AMDGPU::hi16);
+
+  AMDGPU::Waitcnt Wait;
+  for (MCRegUnit RU : regunits(OtherHalf))
+    determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
+
+  // No wait on otherhalf
+  if (!Wait.hasWait())
+    return Reg;
+
+  if (Context->TII.isVALU(MI))
+    return Reg32;
+
+  // If hi/lo16 mixed events
+  WaitEventSet MIEvents = Context->getEventsFor(MI);
+  WaitEventSet OtherHalfEvents = Context->getWaitEvents(T);
+  WaitEventSet Events = MIEvents & OtherHalfEvents;
+  if (Events.twoOrMore())
+    return Reg32;
+  return Reg;
+}
+
 void WaitcntBrackets::determineWaitForPhysReg(AMDGPU::InstCounterType T,
                                               MCPhysReg Reg,
-                                              AMDGPU::Waitcnt &Wait) const {
+                                              AMDGPU::Waitcnt &Wait,
+                                              const MachineInstr &MI) const {
   if (Reg == AMDGPU::SCC) {
     determineWaitForScore(T, SCCScore, Wait);
   } else {
     bool IsVGPR = Context->TRI.isVectorRegister(Context->MRI, Reg);
+    if (IsVGPR)
+      Reg = determineVGPR16Dependency(MI, T, Reg);
     for (MCRegUnit RU : regunits(Reg))
       determineWaitForScore(
           T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
@@ -2562,12 +2620,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       const MachineOperand &CallAddrOp = TII.getCalleeOperand(MI);
       if (CallAddrOp.isReg()) {
         ScoreBrackets.determineWaitForPhysReg(
-            SmemAccessCounter, CallAddrOp.getReg().asMCReg(), Wait);
+            SmemAccessCounter, CallAddrOp.getReg().asMCReg(), Wait, MI);
 
         if (const auto *RtnAddrOp =
                 TII.getNamedOperand(MI, AMDGPU::OpName::dst)) {
           ScoreBrackets.determineWaitForPhysReg(
-              SmemAccessCounter, RtnAddrOp->getReg().asMCReg(), Wait);
+              SmemAccessCounter, RtnAddrOp->getReg().asMCReg(), Wait, MI);
         }
       }
     } else if (Opc == AMDGPU::S_BARRIER_WAIT) {
@@ -2650,9 +2708,10 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           if (Op.isImplicit() && MI.mayLoadOrStore())
             continue;
 
-          ScoreBrackets.determineWaitForPhysReg(AMDGPU::VA_VDST, Reg, Wait);
+          ScoreBrackets.determineWaitForPhysReg(AMDGPU::VA_VDST, Reg, Wait, MI);
           if (Op.isDef())
-            ScoreBrackets.determineWaitForPhysReg(AMDGPU::VM_VSRC, Reg, Wait);
+            ScoreBrackets.determineWaitForPhysReg(AMDGPU::VM_VSRC, Reg, Wait,
+                                                  MI);
           // RAW always needs an s_waitcnt. WAW needs an s_waitcnt unless the
           // previous write and this write are the same type of VMEM
           // instruction, in which case they are (in some architectures)
@@ -2663,25 +2722,29 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
               ScoreBrackets.hasOtherPendingVmemTypes(Reg, getVmemType(MI)) ||
               ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Reg) ||
               !ST.hasVmemWriteVgprInOrder()) {
-            ScoreBrackets.determineWaitForPhysReg(AMDGPU::LOAD_CNT, Reg, Wait);
-            ScoreBrackets.determineWaitForPhysReg(AMDGPU::SAMPLE_CNT, Reg,
-                                                  Wait);
-            ScoreBrackets.determineWaitForPhysReg(AMDGPU::BVH_CNT, Reg, Wait);
+            ScoreBrackets.determineWaitForPhysReg(AMDGPU::LOAD_CNT, Reg, Wait,
+                                                  MI);
+            ScoreBrackets.determineWaitForPhysReg(AMDGPU::SAMPLE_CNT, Reg, Wait,
+                                                  MI);
+            ScoreBrackets.determineWaitForPhysReg(AMDGPU::BVH_CNT, Reg, Wait,
+                                                  MI);
             ScoreBrackets.clearVgprVmemTypes(Reg);
           }
 
           if (Op.isDef() || ScoreBrackets.hasPendingEvent(EXP_LDS_ACCESS)) {
-            ScoreBrackets.determineWaitForPhysReg(AMDGPU::EXP_CNT, Reg, Wait);
+            ScoreBrackets.determineWaitForPhysReg(AMDGPU::EXP_CNT, Reg, Wait,
+                                                  MI);
           }
-          ScoreBrackets.determineWaitForPhysReg(AMDGPU::DS_CNT, Reg, Wait);
+          ScoreBrackets.determineWaitForPhysReg(AMDGPU::DS_CNT, Reg, Wait, MI);
         } else if (Op.getReg() == AMDGPU::SCC) {
-          ScoreBrackets.determineWaitForPhysReg(AMDGPU::KM_CNT, Reg, Wait);
+          ScoreBrackets.determineWaitForPhysReg(AMDGPU::KM_CNT, Reg, Wait, MI);
         } else {
-          ScoreBrackets.determineWaitForPhysReg(SmemAccessCounter, Reg, Wait);
+          ScoreBrackets.determineWaitForPhysReg(SmemAccessCounter, Reg, Wait,
+                                                MI);
         }
 
         if (ST.hasWaitXcnt() && Op.isDef())
-          ScoreBrackets.determineWaitForPhysReg(AMDGPU::X_CNT, Reg, Wait);
+          ScoreBrackets.determineWaitForPhysReg(AMDGPU::X_CNT, Reg, Wait, MI);
       }
     }
   }
@@ -3025,7 +3088,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   bool StrictDom = false;
 
   LLVM_DEBUG(dbgs() << "Merging async marks ...");
-  // Early exit: both empty
+  // Early exit: nothing to merge when both sides are empty.
   if (AsyncMarks.empty() && OtherMarks.empty()) {
     LLVM_DEBUG(dbgs() << " nothing to merge\n");
     return false;
@@ -3067,6 +3130,11 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
+  // OtherMarks is empty -> OtherSize == 0 -> MergeCount == 0.
+  // Our existing marks are the conservative result; return early to avoid
+  // passing MergeCount == 0 to seq_inclusive which asserts Begin <= End.
+  if (MergeCount == 0)
+    return StrictDom;
   for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
@@ -3939,7 +4007,7 @@ bool SIInsertWaitcnts::run() {
               ST.getOccupancyWithNumVGPRs(
                   TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass),
                   /*IsDynamicVGPR=*/false) <
-                  AMDGPU::IsaInfo::getMaxWavesPerEU(&ST))) {
+                  AMDGPU::IsaInfo::getMaxWavesPerEU(ST))) {
     for (auto [MI, Flag] : EndPgmInsts) {
       if (Flag) {
         if (ST.requiresNopBeforeDeallocVGPRs()) {

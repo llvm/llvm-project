@@ -26,7 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <cstdint>
 #include <utility>
 
@@ -1024,7 +1024,9 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
       for (auto &&F : llvm::split(BInfo.getRequiredFeatures(GID), ','))
         FeatureMap[F] = true;
   } else {
-    static const llvm::Triple AMDGCN("amdgcn-amd-amdhsa");
+    static const llvm::Triple AMDGCN(llvm::Triple::amdgcn,
+                                     llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                     llvm::Triple::AMDHSA);
     llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second, AMDGCN,
                                        FeatureMap);
   }

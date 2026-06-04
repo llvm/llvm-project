@@ -1128,16 +1128,9 @@ protected:
   unsigned Depth : DepthWidth;
   unsigned Position : PositionWidth;
 
-  static constexpr unsigned MaxDepth = (1U << DepthWidth) - 1;
-  static constexpr unsigned MaxPosition = (1U << PositionWidth) - 1;
-
-  TemplateParmPosition(unsigned D, unsigned P) : Depth(D), Position(P) {
-    // The input may fill maximum values to show that it is invalid.
-    // Add one here to convert it to zero.
-    assert((D + 1) <= MaxDepth &&
-           "The depth of template parmeter position is more than 2^20!");
-    assert((P + 1) <= MaxPosition &&
-           "The position of template parmeter position is more than 2^12!");
+  TemplateParmPosition(int D, int P) {
+    setDepth(D);
+    setPosition(P);
   }
 
 public:
@@ -1145,17 +1138,17 @@ public:
 
   /// Get the nesting depth of the template parameter.
   unsigned getDepth() const { return Depth; }
-  void setDepth(unsigned D) {
-    assert((D + 1) <= MaxDepth &&
-           "The depth of template parmeter position is more than 2^20!");
+  void setDepth(int D) {
+    assert(D >= 0 && "The depth cannot be negative");
+    assert(D < (1 << DepthWidth) && "The depth is too large");
     Depth = D;
   }
 
   /// Get the position of the template parameter within its parameter list.
   unsigned getPosition() const { return Position; }
-  void setPosition(unsigned P) {
-    assert((P + 1) <= MaxPosition &&
-           "The position of template parmeter position is more than 2^12!");
+  void setPosition(int P) {
+    assert(P >= 0 && "The position cannot be negative");
+    assert(P < (1 << PositionWidth) && "The position is too large");
     Position = P;
   }
 
@@ -1208,7 +1201,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
 public:
   static TemplateTypeParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation KeyLoc,
-         SourceLocation NameLoc, unsigned D, unsigned P, IdentifierInfo *Id,
+         SourceLocation NameLoc, int D, int P, IdentifierInfo *Id,
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
          UnsignedOrNone NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -1389,14 +1382,14 @@ class NonTypeTemplateParmDecl final
   }
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
-                          SourceLocation IdLoc, unsigned D, unsigned P,
+                          SourceLocation IdLoc, int D, int P,
                           const IdentifierInfo *Id, QualType T,
                           bool ParameterPack, TypeSourceInfo *TInfo)
       : DeclaratorDecl(NonTypeTemplateParm, DC, IdLoc, Id, T, TInfo, StartLoc),
         TemplateParmPosition(D, P), ParameterPack(ParameterPack) {}
 
   NonTypeTemplateParmDecl(DeclContext *DC, SourceLocation StartLoc,
-                          SourceLocation IdLoc, unsigned D, unsigned P,
+                          SourceLocation IdLoc, int D, int P,
                           const IdentifierInfo *Id, QualType T,
                           TypeSourceInfo *TInfo,
                           ArrayRef<QualType> ExpandedTypes,
@@ -1405,12 +1398,12 @@ class NonTypeTemplateParmDecl final
 public:
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
+         SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id,
          QualType T, bool ParameterPack, TypeSourceInfo *TInfo);
 
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
-         SourceLocation IdLoc, unsigned D, unsigned P, const IdentifierInfo *Id,
+         SourceLocation IdLoc, int D, int P, const IdentifierInfo *Id,
          QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
@@ -1609,8 +1602,8 @@ class TemplateTemplateParmDecl final
   /// The number of parameters in an expanded parameter pack.
   unsigned NumExpandedParams = 0;
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
-                           unsigned P, bool ParameterPack, IdentifierInfo *Id,
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, int D, int P,
+                           bool ParameterPack, IdentifierInfo *Id,
                            TemplateNameKind ParameterKind, bool Typename,
                            TemplateParameterList *Params)
       : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
@@ -1618,10 +1611,9 @@ class TemplateTemplateParmDecl final
         Typename(Typename), ParameterPack(ParameterPack),
         ExpandedParameterPack(false) {}
 
-  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
-                           unsigned P, IdentifierInfo *Id,
-                           TemplateNameKind ParameterKind, bool Typename,
-                           TemplateParameterList *Params,
+  TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, int D, int P,
+                           IdentifierInfo *Id, TemplateNameKind ParameterKind,
+                           bool Typename, TemplateParameterList *Params,
                            ArrayRef<TemplateParameterList *> Expansions);
 
   void anchor() override;
@@ -1632,15 +1624,14 @@ public:
   friend TrailingObjects;
 
   static TemplateTemplateParmDecl *
-  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-         unsigned P, bool ParameterPack, IdentifierInfo *Id,
-         TemplateNameKind ParameterKind, bool Typename,
-         TemplateParameterList *Params);
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, int D, int P,
+         bool ParameterPack, IdentifierInfo *Id, TemplateNameKind ParameterKind,
+         bool Typename, TemplateParameterList *Params);
 
   static TemplateTemplateParmDecl *
-  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-         unsigned P, IdentifierInfo *Id, TemplateNameKind ParameterKind,
-         bool Typename, TemplateParameterList *Params,
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, int D, int P,
+         IdentifierInfo *Id, TemplateNameKind ParameterKind, bool Typename,
+         TemplateParameterList *Params,
          ArrayRef<TemplateParameterList *> Expansions);
 
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,

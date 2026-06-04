@@ -16,7 +16,7 @@ namespace llvm {
 class Function;
 class TargetMachine;
 
-class AtomicExpandPass : public PassInfoMixin<AtomicExpandPass> {
+class AtomicExpandPass : public RequiredPassInfoMixin<AtomicExpandPass> {
 private:
   const TargetMachine *TM;
 

@@ -1161,12 +1161,10 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 define i32 @pow2_bswap(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: pow2_bswap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    shrl $5, %eax
+; CHECK-NEXT:    orl $67108863, %eax # imm = 0x3FFFFFF
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 0, %a0
@@ -1213,12 +1211,10 @@ define i32 @pow2_bitreverse(i32 %a0, i32 %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $3, %eax
-; CHECK-NEXT:    leal (%rax,%rcx,2), %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    andl $67108864, %edi # imm = 0x4000000
+; CHECK-NEXT:    leal 536870912(,%rdi,8), %eax
+; CHECK-NEXT:    leal 134217728(%rax,%rdi,2), %eax
 ; CHECK-NEXT:    andl $805306368, %eax # imm = 0x30000000
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    andl %esi, %eax

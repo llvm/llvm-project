@@ -9,6 +9,7 @@
 #include "AArch64PointerAuth.h"
 
 #include "AArch64.h"
+#include "AArch64FrameLowering.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
@@ -60,14 +61,14 @@ FunctionPass *llvm::createAArch64PointerAuthPass() {
 
 char AArch64PointerAuthLegacy::ID = 0;
 
-static void emitPACSymOffsetIntoX16(const TargetInstrInfo &TII,
+static void emitPACSymOffsetIntoReg(const TargetInstrInfo &TII,
                                     MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator I, DebugLoc DL,
-                                    MCSymbol *PACSym) {
-  BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), AArch64::X16)
+                                    MCSymbol *PACSym, Register Reg) {
+  BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), Reg)
       .addSym(PACSym, AArch64II::MO_PAGE);
-  BuildMI(MBB, I, DL, TII.get(AArch64::ADDXri), AArch64::X16)
-      .addReg(AArch64::X16)
+  BuildMI(MBB, I, DL, TII.get(AArch64::ADDXri), Reg)
+      .addReg(Reg)
       .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
       .addImm(0);
 }
@@ -175,7 +176,7 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
-        emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
+        emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X16);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
             .setMIFlag(MachineInstr::FrameDestroy);
       }
@@ -184,6 +185,61 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     }
     MBB.erase(TI);
+    return;
+  }
+
+  // When FPDiff != 0 (tail call with callee-popped stack arg space), SP has
+  // been adjusted and no longer matches the entry SP used as the signing
+  // modifier. We must reconstruct entry SP for authentication.
+  auto &AFL = *static_cast<const AArch64FrameLowering *>(
+      MF.getSubtarget().getFrameLowering());
+  if (int64_t FPDiff = AFL.getArgumentStackToRestore(MF, MBB)) {
+    // Use AUTI[AB]1716 variants: x17=LR, x16=entry_SP.
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::X17)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::LR)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+    emitFrameOffset(MBB, MBBI, DL, AArch64::X16, AArch64::SP,
+                    StackOffset::getFixed(-FPDiff), TII,
+                    MachineInstr::FrameDestroy);
+
+    if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
+      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else if (MFnI->branchProtectionPAuthLR()) {
+      assert(PACSym && "No PAC instruction to refer to");
+      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+
+      // The PACM hint-space instruction modifies the following AUTI[AB]1716
+      // to optionally take x15 as an extra operand depending on the
+      // presence of +pauth-lr at runtime. On machines without +pauth-lr, it
+      // behaves as a nop, and the address of the PACI[AB]SP in x15 is
+      // ignored.
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
+          .setMIFlag(MachineInstr::FrameDestroy);
+
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+      unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+          .setMIFlag(MachineInstr::FrameDestroy);
+    } else {
+      unsigned AutOpc = UseBKey ? AArch64::AUTIB1716 : AArch64::AUTIA1716;
+      BuildMI(MBB, MBBI, DL, TII->get(AutOpc))
+          .setMIFlag(MachineInstr::FrameDestroy);
+      emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORRXrs), AArch64::LR)
+        .addReg(AArch64::XZR)
+        .addReg(AArch64::X17)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
 
@@ -196,7 +252,7 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
   } else {
     if (MFnI->branchProtectionPAuthLR()) {
-      emitPACSymOffsetIntoX16(*TII, MBB, MBBI, DL, PACSym);
+      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X16);
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);

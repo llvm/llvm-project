@@ -93,10 +93,11 @@ llvm::gi::getNameForFeatureBitset(ArrayRef<const Record *> FeatureBitset,
 }
 
 template <class GroupT>
-std::vector<Matcher *>
-llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
-                        std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+static std::vector<Matcher *>
+optimizeRules(ArrayRef<Matcher *> Rules,
+              std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
 
+  std::vector<Matcher *> Worklist(Rules.begin(), Rules.end());
   std::vector<Matcher *> OptRules;
   std::unique_ptr<GroupT> CurrentGroup = std::make_unique<GroupT>();
   assert(CurrentGroup->empty() && "Newly created group isn't empty!");
@@ -114,13 +115,15 @@ llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
       append_range(OptRules, CurrentGroup->matchers());
     else {
       CurrentGroup->finalize();
+      CurrentGroup->optimize();
       OptRules.push_back(CurrentGroup.get());
       MatcherStorage.emplace_back(std::move(CurrentGroup));
       ++NumGroups;
     }
     CurrentGroup = std::make_unique<GroupT>();
   };
-  for (Matcher *Rule : Rules) {
+
+  for (Matcher *Rule : Worklist) {
     // Greedily add as many matchers as possible to the current group:
     if (CurrentGroup->addMatcher(*Rule))
       continue;
@@ -136,19 +139,47 @@ llvm::gi::optimizeRules(ArrayRef<Matcher *> Rules,
   }
   ProcessCurrentGroup();
 
+  assert(OptRules.size() <= Worklist.size() && "Optimization added rules?");
   LLVM_DEBUG(dbgs() << "NumGroups: " << NumGroups << "\n");
   (void)NumGroups;
   assert(CurrentGroup->empty() && "The last group wasn't properly processed");
   return OptRules;
 }
 
-template std::vector<Matcher *> llvm::gi::optimizeRules<GroupMatcher>(
-    ArrayRef<Matcher *> Rules,
-    std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
+std::vector<Matcher *> llvm::gi::optimizeRuleset(
+    MutableArrayRef<RuleMatcher> Rules,
+    std::vector<std::unique_ptr<Matcher>> &MatcherStorage) {
+  SmallVector<Matcher *> InputRules(make_pointer_range(Rules));
 
-template std::vector<Matcher *> llvm::gi::optimizeRules<SwitchMatcher>(
-    ArrayRef<Matcher *> Rules,
-    std::vector<std::unique_ptr<Matcher>> &MatcherStorage);
+  // Now sort the Rules.
+  unsigned CurrentOrdering = 0;
+  StringMap<unsigned> OpcodeOrder;
+  for (RuleMatcher &Rule : Rules) {
+    const StringRef Opcode = Rule.getOpcode();
+    assert(!Opcode.empty() && "Didn't expect an undefined opcode");
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
+  }
+
+  llvm::stable_sort(
+      InputRules, [&OpcodeOrder](const Matcher *A, const Matcher *B) {
+        const auto *L = cast<RuleMatcher>(A);
+        const auto *R = cast<RuleMatcher>(B);
+        return std::tuple(OpcodeOrder[L->getOpcode()],
+                          L->insnmatchers_front().getNumOperandMatchers()) <
+               std::tuple(OpcodeOrder[R->getOpcode()],
+                          R->insnmatchers_front().getNumOperandMatchers());
+      });
+
+  for (Matcher *R : InputRules)
+    R->optimize();
+
+  // Then form groups, and switches in that order.
+  std::vector<Matcher *> OptRules =
+      optimizeRules<GroupMatcher>(InputRules, MatcherStorage);
+  OptRules = optimizeRules<SwitchMatcher>(OptRules, MatcherStorage);
+  return OptRules;
+}
 
 static std::string getEncodedEmitStr(StringRef NamedValue, unsigned NumBytes) {
   if (NumBytes == 2 || NumBytes == 4 || NumBytes == 8)
@@ -603,21 +634,20 @@ void GroupMatcher::emit(MatchTable &Table) {
 void GroupMatcher::optimize() {
   // Make sure we only sort by a specific predicate within a range of rules that
   // all have that predicate checked against a specific value (not a wildcard):
+  // TODO: Is this even relevant ? Check diffs w/ just using a simple sort
+  // instead of this.
   auto F = Matchers.begin();
   auto T = F;
   auto E = Matchers.end();
   while (T != E) {
     while (T != E) {
-      auto *R = static_cast<RuleMatcher *>(*T);
-      if (!R->getFirstConditionAsRootType().get().isValid())
+      if (!(*T)->getFirstConditionAsRootType().get().isValid())
         break;
       ++T;
     }
     std::stable_sort(F, T, [](Matcher *A, Matcher *B) {
-      auto *L = static_cast<RuleMatcher *>(A);
-      auto *R = static_cast<RuleMatcher *>(B);
-      return L->getFirstConditionAsRootType() <
-             R->getFirstConditionAsRootType();
+      return A->getFirstConditionAsRootType() <
+             B->getFirstConditionAsRootType();
     });
     if (T != E)
       F = ++T;
@@ -626,7 +656,23 @@ void GroupMatcher::optimize() {
   Matchers = optimizeRules<SwitchMatcher>(Matchers, MatcherStorage);
 }
 
+LLTCodeGen GroupMatcher::getFirstConditionAsRootType() const {
+  if (!hasFirstCondition())
+    return {};
+
+  const PredicateMatcher &PM = *Conditions.front();
+  if (const auto *TM = dyn_cast<LLTOperandMatcher>(&PM)) {
+    if (TM->getInsnVarID() == 0 && TM->getOpIdx() == 0)
+      return TM->getTy();
+  }
+
+  return {};
+}
+
 //===- SwitchMatcher ------------------------------------------------------===//
+
+SwitchMatcher::SwitchMatcher() : Matcher(MK_Switch) {}
+SwitchMatcher::~SwitchMatcher() = default;
 
 bool SwitchMatcher::recordsOperand() const {
   assert(!isa_and_present<RecordNamedOperandMatcher>(Condition.get()) &&
@@ -814,13 +860,15 @@ bool RuleMatcher::recordsOperand() const {
   return matchersRecordOperand(Matchers);
 }
 
-LLTCodeGen RuleMatcher::getFirstConditionAsRootType() {
+LLTCodeGen RuleMatcher::getFirstConditionAsRootType() const {
   InstructionMatcher &InsnMatcher = *Matchers.front();
-  if (!InsnMatcher.predicates_empty())
+  if (!InsnMatcher.predicates_empty()) {
     if (const auto *TM =
-            dyn_cast<LLTOperandMatcher>(&**InsnMatcher.predicates_begin()))
+            dyn_cast<LLTOperandMatcher>(&**InsnMatcher.predicates_begin())) {
       if (TM->getInsnVarID() == 0 && TM->getOpIdx() == 0)
         return TM->getTy();
+    }
+  }
   return {};
 }
 
@@ -1547,6 +1595,12 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
     return Error::success();
   }
 
+  // Metadata operands have no LLT representation and no runtime type check is
+  // needed — they are guaranteed to be MO_Metadata by the IRTranslator. This
+  // mirrors how srcvalue is handled in importChildMatcher.
+  if (VTy.getMachineValueType() == MVT::Metadata)
+    return Error::success();
+
   auto OpTyOrNone = MVTToLLT(VTy.getMachineValueType().SimpleTy);
   if (!OpTyOrNone)
     return failUnsupported("unsupported type");
@@ -1925,6 +1979,11 @@ bool InstructionMatcher::isHigherPriorityThan(InstructionMatcher &B) {
     if (std::get<1>(Operand)->isHigherPriorityThan(*std::get<0>(Operand)))
       return false;
   }
+  // Instruction matchers involving more predicates have higher priority.
+  if (predicates_size() > B.predicates_size())
+    return true;
+  if (predicates_size() < B.predicates_size())
+    return false;
 
   return false;
 }

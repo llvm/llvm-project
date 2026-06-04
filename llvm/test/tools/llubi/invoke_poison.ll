@@ -13,5 +13,8 @@ exit:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   invoke void poison()
+; CHECK-NEXT:           to label %exit unwind label %cleanup at @main
 ; CHECK-NEXT: Immediate UB detected: Indirect call through poison function pointer.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -10,6 +10,7 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
+#include "../lib/Transforms/Vectorize/VPlanUtils.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -33,6 +34,43 @@ namespace {
   } while (0)
 
 using VPInstructionTest = VPlanTestBase;
+using VPlanSCEVTest = VPlanTestIRBase;
+
+TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
+  const char *ModuleString = R"(
+define void @f(i32 %x) {
+entry:
+  br label %loop
+loop:
+  br label %loop
+}
+)";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("f");
+  BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
+  doAnalysis(*F);
+
+  Loop *L = LI->getLoopFor(LoopHeader);
+  PredicatedScalarEvolution PSE(*SE, *L);
+  VPlan Plan(LoopHeader, IntegerType::get(*Ctx, 32));
+  Argument *X = F->getArg(0);
+  VPValue *Op = Plan.getOrAddLiveIn(X);
+
+  // is_int_min_poison is local to the call, not a global no-wrap fact.
+  // Exercise both getAbsExpr flag paths; SCEV drops IsNSW for this input.
+  const SCEV *XSCEV = SE->getSCEV(X);
+
+  VPWidenIntrinsicRecipe Abs(Intrinsic::abs, {Op, Plan.getTrue()},
+                             X->getType());
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/true),
+            vputils::getSCEVExprForVPValue(&Abs, PSE, L));
+
+  VPWidenIntrinsicRecipe WrappingAbs(Intrinsic::abs, {Op, Plan.getFalse()},
+                                     X->getType());
+  EXPECT_EQ(SE->getAbsExpr(XSCEV, /*IsNSW=*/false),
+            vputils::getSCEVExprForVPValue(&WrappingAbs, PSE, L));
+}
 
 TEST_F(VPInstructionTest, insertBefore) {
   VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {});
@@ -1698,8 +1736,8 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPRecipeValue(this);
-    new VPRecipeValue(this);
+    new VPMultiDefValue(this);
+    new VPMultiDefValue(this);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
@@ -1787,6 +1825,44 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
   EXPECT_TRUE(Plan.getVF().isMaterialized());
 }
 
+using VPUtilsTest = VPlanTestBase;
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
+  VPlan &Plan = getPlan();
+
+  // isSingleScalar opcode without operands.
+  std::unique_ptr<VPInstruction> VScale(
+      new VPInstruction(VPInstruction::VScale, {}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
+
+  // isSingleScalar opcode with a uniform operand.
+  std::unique_ptr<VPInstruction> EVL(
+      new VPInstruction(VPInstruction::ExplicitVectorLength, {&Plan.getVF()}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(EVL.get()));
+
+  // isVectorToScalar opcode with a uniform operand.
+  std::unique_ptr<VPInstruction> FirstActiveLane(
+      new VPInstruction(VPInstruction::FirstActiveLane, {&Plan.getVF()}));
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane.get()));
+
+  // StepVector produces a distinct value per lane and is non-uniform; use it
+  // as the non-single-scalar operand in the negative cases below.
+  std::unique_ptr<VPInstruction> StepVector(
+      new VPInstruction(VPInstruction::StepVector, {}));
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector.get()));
+
+  // isSingleScalar opcode with a non-single-scalar operand.
+  std::unique_ptr<VPInstruction> EVLNonUniform(new VPInstruction(
+      VPInstruction::ExplicitVectorLength, {StepVector.get()}));
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(EVLNonUniform.get()));
+
+  // isVectorToScalar opcode with a non-single-scalar operand.
+  std::unique_ptr<VPInstruction> FirstActiveLaneNonUniform(
+      new VPInstruction(VPInstruction::FirstActiveLane, {StepVector.get()}));
+  EXPECT_FALSE(
+      vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+}
+
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
 TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   VPlan &Plan = getPlan();
@@ -1803,6 +1879,39 @@ TEST_F(VPInstructionTest, VPSymbolicValueAddUserAfterMaterialization) {
   EXPECT_DEATH(I->addOperand(VF), "accessing materialized symbolic value");
 }
 #endif
+
+TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("vector.header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("vector.latch");
+  VPRegionBlock *LoopRegion =
+      Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc::getUnknown(),
+                            "vector.loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
+  VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
+
+  auto *VScale = new VPInstruction(VPInstruction::VScale, {});
+  Plan.getVectorPreheader()->appendRecipe(VScale);
+
+  VPValue *UF = &Plan.getUF();
+  auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
+                                 VPIRFlags::getDefaultFlags(Instruction::Mul));
+  Plan.getVectorPreheader()->appendRecipe(Step);
+
+  auto *Increment = new VPInstruction(
+      Instruction::Add, {LoopRegion->getCanonicalIV(), Step},
+      VPIRFlags::WrapFlagsTy(LoopRegion->hasCanonicalIVNUW(), false), {},
+      DebugLoc::getUnknown(), "index.next");
+  Latch->appendRecipe(Increment);
+
+  auto *Br = new VPInstruction(VPInstruction::BranchOnCount,
+                               {Increment, &Plan.getVectorTripCount()});
+  Latch->appendRecipe(Br);
+
+  Plan.getVFxUF().markMaterialized();
+  EXPECT_EQ(Increment, LoopRegion->getOrCreateCanonicalIVIncrement());
+}
 
 } // namespace
 } // namespace llvm

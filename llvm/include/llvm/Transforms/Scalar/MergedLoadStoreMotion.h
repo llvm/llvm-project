@@ -40,7 +40,7 @@ struct MergedLoadStoreMotionOptions {
 };
 
 class MergedLoadStoreMotionPass
-    : public PassInfoMixin<MergedLoadStoreMotionPass> {
+    : public OptionalPassInfoMixin<MergedLoadStoreMotionPass> {
   MergedLoadStoreMotionOptions Options;
 
 public:

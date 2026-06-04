@@ -120,7 +120,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
       with:
         max-size: 1G
-        key: libc_fullbuild_${{ matrix.c_compiler }}
+        key: libc_fullbuild_v2_${{ matrix.c_compiler }}
         variant: sccache
 
     - name: Set reusable strings
@@ -145,7 +145,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}"
+          -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }}
+          -DLIBC_COMPILE_OPTIONS_NATIVE=''"
 
         if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"

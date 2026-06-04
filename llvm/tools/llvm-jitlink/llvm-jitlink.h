@@ -78,6 +78,7 @@ struct Session {
   };
 
   orc::ExecutionSession ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemoryMgr;
   std::unique_ptr<orc::DylibManager> DylibMgr;
   orc::JITDylib *MainJD = nullptr;
   orc::JITDylib *ProcessSymsJD = nullptr;

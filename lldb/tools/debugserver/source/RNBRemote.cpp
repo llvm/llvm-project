@@ -481,6 +481,9 @@ void RNBRemote::CreatePacketTable() {
                      "jGetSharedCacheInfo", "Replies with JSON data about the "
                                             "location and uuid of the shared "
                                             "cache in the inferior process."));
+  t.push_back(Packet(
+      json_multi_breakpoint, &RNBRemote::HandlePacket_jMultiBreakpoint, NULL,
+      "jMultiBreakpoint", "Set/remove multiple breakpoints at once"));
   t.push_back(Packet(start_noack_mode, &RNBRemote::HandlePacket_QStartNoAckMode,
                      NULL, "QStartNoAckMode",
                      "Request that " DEBUGSERVER_PROGRAM_NAME
@@ -2837,9 +2840,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2985,6 +2987,38 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
         append_hex_value(ostrm, stack_memory.second.bytes,
                          stack_memory.second.length, false);
+        ostrm << ';';
+      }
+    }
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -3272,6 +3306,73 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   for (const std::vector<uint8_t> &buffer : buffers)
     binary_encode_data_vector(reply_stream, buffer);
 
+  return SendPacket(reply_stream.str());
+}
+
+rnb_err_t RNBRemote::HandlePacket_jMultiBreakpoint(const char *p) {
+  const std::string_view packet_name("jMultiBreakpoint:");
+  std::string_view packet(p);
+
+  if (!starts_with(packet, packet_name))
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  "Invalid MultiBreakpoint packet prefix");
+
+  packet.remove_prefix(packet_name.size());
+
+  JSONParser parser(packet.cbegin());
+  JSONValue::SP parsed = parser.ParseJSONValue();
+  if (!parsed || parsed->GetKind() != JSONValue::Kind::Object)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a JSON dictionary");
+
+  auto *request_dict = static_cast<JSONObject *>(parsed.get());
+  JSONValue::SP request_array_sp =
+      request_dict->GetObject("breakpoint_requests");
+
+  if (!request_array_sp ||
+      request_array_sp->GetKind() != JSONValue::Kind::Array)
+    return HandlePacket_ILLFORMED(
+        __FILE__, __LINE__, p,
+        "MultiBreakpoint did not contain a valid 'breakpoint_requests' field");
+
+  auto *request_array = static_cast<JSONArray *>(request_array_sp.get());
+  std::vector<std::string> requests;
+  requests.reserve(request_array->GetNumElements());
+  for (JSONValue::SP value : request_array->Elements()) {
+    if (!value || value->GetKind() != JSONValue::Kind::String)
+      return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                    "MultiBreakpoint had a non-string entry");
+    auto *request_str = static_cast<JSONString *>(value.get());
+    requests.push_back(request_str->GetData());
+  }
+
+  auto reply_array = std::make_shared<JSONGenerator::Array>();
+  for (const std::string &request : requests) {
+    BreakpointResult result = ExecuteBreakpointRequest(request.c_str());
+    std::string reply_str;
+    switch (result.kind) {
+    case BreakpointResult::Kind::OK:
+      reply_str = "OK";
+      break;
+    case BreakpointResult::Kind::Error: {
+      char error_str[8];
+      snprintf(error_str, sizeof(error_str), "E%02x", result.error_code);
+      reply_str = error_str;
+      break;
+    }
+    case BreakpointResult::Kind::IllFormed:
+    case BreakpointResult::Kind::Unimplemented:
+      reply_str = "E03";
+      break;
+    }
+    reply_array->AddItem(std::make_shared<JSONGenerator::String>(reply_str));
+  }
+
+  JSONGenerator::Dictionary reply_dict;
+  reply_dict.AddItem("results", reply_array);
+  std::ostringstream reply_stream;
+  reply_dict.DumpBinaryEscaped(reply_stream);
   return SendPacket(reply_stream.str());
 }
 
@@ -3629,6 +3730,7 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
     reply << "memory-tagging+;";
 
   reply << "MultiMemRead+;";
+  reply << "jMultiBreakpoint+;";
   return SendPacket(reply.str().c_str());
 }
 
@@ -5753,6 +5855,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             memory_array_sp->AddItem(stack_memory_sp);
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
+        }
+
+        std::vector<uint64_t> added_binaries;
+        JSONGenerator::ObjectSP detailed_binary_infos;
+
+        // If we've stopped with a breakpoint exception on this
+        // thread, and we're stopped at the dyld notification
+        // function address, collect information about libraries
+        // that have been loaded, expedite that information in
+        // the stop packet.
+        if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+            DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                     detailed_binary_infos)) {
+          JSONGenerator::ArraySP load_addresses;
+          load_addresses = std::make_shared<JSONGenerator::Array>();
+          for (nub_addr_t addr : added_binaries)
+            load_addresses->AddIntegerItem(addr);
+          thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+          if (detailed_binary_infos)
+            thread_dict_sp->AddItem("detailed-binaries-info",
+                                    detailed_binary_infos);
         }
       }
 

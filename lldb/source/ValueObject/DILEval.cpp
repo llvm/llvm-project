@@ -12,11 +12,13 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
@@ -42,13 +44,15 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
   SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {}",
+                                    ctx.GetFunctionName());
 
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+  symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
   return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
@@ -58,7 +62,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 location);
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -82,7 +86,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       llvm::Expected<uint64_t> uint_bit_size =
           uint_type.GetBitSize(m_exe_ctx_scope.get());
       if (!uint_bit_size)
-        return int_bit_size.takeError();
+        return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
           (in_type.IsSigned() && bitfield_size == *int_bit_size))
         return valobj->CastToBasicType(int_type);
@@ -184,7 +188,7 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
 
     if (*rhs_size == *lhs_size) {
       llvm::Expected<lldb::TypeSystemSP> type_system =
-          GetTypeSystemFromCU(m_exe_ctx_scope);
+          GetTypeSystemFromCU(*m_exe_ctx_scope);
       if (!type_system)
         return type_system.takeError();
       CompilerType r_type_unsigned = GetBasicType(
@@ -357,8 +361,8 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     // Try looking for an instance variable (class member).
     SymbolContext sc = stack_frame->GetSymbolContext(
         lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
-    llvm::StringRef ivar_name = sc.GetInstanceVariableName();
-    value_sp = stack_frame->FindVariable(ConstString(ivar_name));
+    llvm::StringRef instance_name = sc.GetInstanceName();
+    value_sp = stack_frame->FindVariable(ConstString(instance_name));
     if (value_sp)
       value_sp = value_sp->GetChildMemberWithName(name_ref);
 
@@ -703,7 +707,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     diff /= item_size;
 
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_exe_ctx_scope);
+        GetTypeSystemFromCU(*m_exe_ctx_scope);
     if (!type_system)
       return type_system.takeError();
     CompilerType ptrdiff_type = type_system.get()->GetPointerDiffType(true);
@@ -1177,7 +1181,7 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -1201,7 +1205,7 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -1224,7 +1228,7 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode &node) {
   bool value = node.GetValue();
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
   return ValueObject::CreateValueObjectFromBool(m_exe_ctx_scope, *type_system,
@@ -1258,6 +1262,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          target_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           target_type.TypeDescription().length());
@@ -1268,6 +1274,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          source_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           source_type.TypeDescription().length());

@@ -17,5 +17,7 @@ entry:
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr = call ptr @malloc(i64 4) => ptr 0x10 [ptr]
 ; CHECK-NEXT:   call void @free(ptr %ptr)
-; CHECK-NEXT: Immediate UB detected: double-freeing a memory object.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @free(ptr %ptr) at @main
+; CHECK-NEXT: Immediate UB detected: double-freeing a memory object allocated at 0x10.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

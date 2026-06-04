@@ -32,7 +32,6 @@ namespace math {
 
 LIBC_INLINE constexpr double cos(double x) {
   using namespace range_reduction_double_internal;
-  using DoubleDouble = fputil::DoubleDouble;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -122,7 +121,6 @@ LIBC_INLINE constexpr double cos(double x) {
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   return rr.hi + rr.lo;
 #else
-  using Float128 = typename fputil::DyadicFloat<128>;
   double rlp = rr.lo + err;
   double rlm = rr.lo - err;
 

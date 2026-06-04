@@ -1210,6 +1210,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 /// emits them as-needed.
 void CodeGenModule::EmitVTable(CXXRecordDecl *theClass) {
   VTables.GenerateClassData(theClass);
+  EmittedVTables.insert(theClass);
 }
 
 void
@@ -1292,11 +1293,18 @@ void CodeGenModule::EmitDeferredVTables() {
   size_t savedSize = DeferredVTables.size();
 #endif
 
-  for (const CXXRecordDecl *RD : DeferredVTables)
+  for (const CXXRecordDecl *RD : DeferredVTables) {
+    // if a table has been emitted in an earlier PTU, but was also marked
+    // deferred, we should skip if the linkage is external
+    if (EmittedVTables.count(RD) &&
+        getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
+      continue;
+
     if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD))
       VTables.GenerateClassData(RD);
     else if (shouldOpportunisticallyEmitVTables())
       OpportunisticVTables.push_back(RD);
+  }
 
   assert(savedSize == DeferredVTables.size() &&
          "deferred extra vtables during vtable emission?");

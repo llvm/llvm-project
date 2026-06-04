@@ -411,6 +411,7 @@ bool isConvergenceIntrinsic(const Instruction *I) {
 bool expectIgnoredInIRTranslation(const Instruction *I) {
   return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
                                  Intrinsic::spv_resource_handlefrombinding,
+                                 Intrinsic::spv_resource_getbasepointer,
                                  Intrinsic::spv_resource_getpointer>());
 }
 
@@ -552,8 +553,16 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
 Type *SPIRVEmitIntrinsics::reconstructType(Value *Op, bool UnknownElemTypeI8,
                                            bool IsPostprocessing) {
   Type *Ty = Op->getType();
-  if (auto *OpI = dyn_cast<Instruction>(Op))
+  if (auto *OpI = dyn_cast<Instruction>(Op)) {
     Ty = restoreMutatedType(GR, OpI, Ty);
+    // Aggregate undef/constant values are lowered to spv_undef/
+    // spv_const_composite intrinsics whose return type is i32; recover the
+    // original aggregate type so downstream pointee deduction sees it.
+    if (match(OpI, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
+                               m_Intrinsic<Intrinsic::spv_const_composite>())))
+      if (auto It = AggrConstTypes.find(OpI); It != AggrConstTypes.end())
+        Ty = It->second;
+  }
   if (!isUntypedPointerTy(Ty))
     return Ty;
   // try to find the pointee type
@@ -738,6 +747,8 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
     if (!UnknownElemTypeI8)
       return;
     insertTodoType(Op);
+    if (isa<IntToPtrInst>(Op))
+      return;
   }
   Ty = RefTy;
 }
@@ -1014,7 +1025,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     // TODO: maybe improve performance by caching demangled names
 
     auto *II = dyn_cast<IntrinsicInst>(I);
-    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+    if (II && (II->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+               II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
@@ -1026,12 +1038,15 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        if (Ty->isArrayTy())
-          Ty = Ty->getArrayElementType();
-        else {
-          assert(Ty && Ty->isStructTy());
-          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
-          Ty = cast<StructType>(Ty)->getElementType(Index);
+        if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+          if (Ty->isArrayTy())
+            Ty = Ty->getArrayElementType();
+          else {
+            assert(Ty && Ty->isStructTy());
+            uint32_t Index =
+                cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+            Ty = cast<StructType>(Ty)->getElementType(Index);
+          }
         }
         Ty = reconstitutePeeledArrayType(Ty);
       } else {
@@ -1542,6 +1557,22 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
+      // For a `llvm.spv.abort` call whose composite message argument was
+      // rewritten to a value-id (i32), also retarget the call to a matching
+      // intrinsic declaration so the IR verifier is satisfied. The SPIR-V
+      // type of the value is tracked via the GlobalRegistry, so the selector
+      // still emits OpAbortKHR with the original composite type.
+      if (auto *CI = dyn_cast<CallInst>(U);
+          CI && CI->getIntrinsicID() == Intrinsic::spv_abort) {
+        Type *NewArgTy = New->getType();
+        Type *ExpectedArgTy = CI->getFunctionType()->getParamType(0);
+        if (NewArgTy != ExpectedArgTy) {
+          Module *M = CI->getModule();
+          Function *NewF = Intrinsic::getOrInsertDeclaration(
+              M, Intrinsic::spv_abort, {NewArgTy});
+          CI->setCalledFunction(NewF);
+        }
+      }
     } else if (auto *Phi = dyn_cast<PHINode>(U)) {
       if (Phi->getType() != New->getType()) {
         Phi->mutateType(New->getType());
@@ -1718,11 +1749,15 @@ Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
   if (!Call.isInlineAsm())
     return &Call;
 
-  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
   LLVMContext &Ctx = CurrF->getContext();
-
-  Constant *TyC = UndefValue::get(IA->getFunctionType());
-  MDString *ConstraintString = MDString::get(Ctx, IA->getConstraintString());
+  // TODO: this does not retain elementtype info for memory constraints, which
+  //       in turn means that we lower them into pointers to i8, rather than
+  //       pointers to elementtype; this can be fixed during reverse translation
+  //       but we should correct it here, possibly by tweaking the function
+  //       type to take TypedPointerType args.
+  Constant *TyC = UndefValue::get(SPIRV::getOriginalFunctionType(Call));
+  MDString *ConstraintString =
+      MDString::get(Ctx, SPIRV::getOriginalAsmConstraints(Call));
   SmallVector<Value *> Args = {
       buildMD(TyC),
       MetadataAsValue::get(Ctx, MDNode::get(Ctx, ConstraintString))};
@@ -2035,6 +2070,15 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     Type *OpTy = Op->getType();
     if (auto *OpI = dyn_cast<Instruction>(Op))
       OpTy = restoreMutatedType(GR, OpI, OpTy);
+    // Aggregate undef/constant values were lowered by preprocessUndefs/
+    // preprocessCompositeConstants to spv_undef/spv_const_composite calls
+    // returning i32; recover the original aggregate type so the pointee type
+    // assigned to the store's pointer operand reflects the value being stored.
+    if (match(Op, m_CombineOr(m_Intrinsic<Intrinsic::spv_undef>(),
+                              m_Intrinsic<Intrinsic::spv_const_composite>())))
+      if (auto It = AggrConstTypes.find(cast<Instruction>(Op));
+          It != AggrConstTypes.end())
+        OpTy = It->second;
     if (OpTy == Op->getType())
       OpTy = deduceElementTypeByValueDeep(OpTy, Op, false);
     replacePointerOperandWithPtrCast(I, Pointer, OpTy, 1, B);
@@ -2232,10 +2276,19 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   const auto *TLI = TM.getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
       TLI->getLoadMemOperandFlags(I, CurrF->getDataLayout());
-  auto *NewI =
-      B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
-                        {I.getPointerOperand(), B.getInt16(Flags),
-                         B.getInt32(I.getAlign().value())});
+
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getPointerOperand(), B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_load;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_load;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
+  CallInst *NewI =
+      B.CreateIntrinsic(IntrinsicId, {I.getOperand(0)->getType()}, Args);
+
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2263,10 +2316,18 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
     CB->mutateType(B.getInt32Ty());
   }
 
+  unsigned IntrinsicId;
+  SmallVector<Value *, 4> Args = {I.getValueOperand(), PtrOp,
+                                  B.getInt16(Flags)};
+  if (!I.isAtomic()) {
+    IntrinsicId = Intrinsic::spv_store;
+    Args.push_back(B.getInt32(I.getAlign().value()));
+  } else {
+    IntrinsicId = Intrinsic::spv_atomic_store;
+    Args.push_back(B.getInt8(static_cast<uint8_t>(I.getOrdering())));
+  }
   auto *NewI = B.CreateIntrinsic(
-      Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
-      {I.getValueOperand(), PtrOp, B.getInt16(Flags),
-       B.getInt32(I.getAlign().value())});
+      IntrinsicId, {I.getValueOperand()->getType(), PtrOp->getType()}, Args);
   NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
@@ -2306,19 +2367,63 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   SmallVector<Value *> Args(I.operands());
   Args.push_back(B.getInt32(
       static_cast<uint32_t>(getMemScope(I.getContext(), I.getSyncScopeID()))));
+  // Per SPIR-V spec atomic ops must combine the ordering bits with the
+  // storage-class bit.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  unsigned AS = I.getPointerOperand()->getType()->getPointerAddressSpace();
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(addressSpaceToStorageClass(AS, ST)));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering())) | ScSem));
   Args.push_back(B.getInt32(
-      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering()))));
+      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering())) | ScSem));
   auto *NewI = B.CreateIntrinsic(Intrinsic::spv_cmpxchg,
                                  {I.getPointerOperand()->getType()}, {Args});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
 
+static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return false;
+  switch (CI->getIntrinsicID()) {
+  case Intrinsic::spv_abort:
+    return true;
+  case Intrinsic::trap:
+  case Intrinsic::ubsantrap:
+    // When the extension is enabled, selection lowers these to OpAbortKHR.
+    return ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort);
+  default:
+    return false;
+  }
+}
+
+// The OpAbortKHR instruction itself is a block terminator, so we don't need to
+// emit an extra OpUnreachable instruction.
+static bool precededByAbortIntrinsic(const UnreachableInst &I,
+                                     const SPIRVSubtarget &ST) {
+  // Find a previous non-debug instruction.
+  const Instruction *Prev = I.getPrevNode();
+  while (Prev && Prev->isDebugOrPseudoInst())
+    Prev = Prev->getPrevNode();
+
+  if (Prev && isAbortCall(*Prev, ST))
+    return true;
+
+  assert(llvm::none_of(
+             *I.getParent(),
+             [&ST](const Instruction &II) { return isAbortCall(II, ST); }) &&
+         "abort-like call must be the last non-debug instruction before its "
+         "block's terminator");
+  return false;
+}
+
 Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
-  IRBuilder<> B(I.getParent());
-  B.SetInsertPoint(&I);
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  if (precededByAbortIntrinsic(I, ST))
+    return &I;
+  IRBuilder<> B(&I);
   B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }
@@ -2544,25 +2649,12 @@ bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*Inst->getFunction());
   if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
     return false;
-  // Add aliasing decorations to internal load and store intrinsics
-  // and atomic instructions, skipping atomic store as it won't have ID to
-  // attach the decoration.
-  if (match(Inst, m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>()))
-    return true;
-  auto *CI = dyn_cast<CallInst>(Inst);
-  if (!CI)
-    return false;
-  if (Function *Fun = CI->getCalledFunction()) {
-    if (Fun->isIntrinsic())
-      return false;
-    std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
-    const std::string Prefix = "__spirv_Atomic";
-    const bool IsAtomic = Name.find(Prefix) == 0;
-
-    if (!Fun->getReturnType()->isVoidTy() && IsAtomic)
-      return true;
-  }
-  return false;
+  // Add aliasing decorations to internal load and store intrinsics.
+  // Do not attach them to store atomic or load atomic intrinsics / instructions
+  // since the extension is inconsistent at the moment (we cannot add the
+  // decoration to atomic stores because they do not have an id).
+  return match(Inst,
+               m_AnyIntrinsic<Intrinsic::spv_load, Intrinsic::spv_store>());
 }
 
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
@@ -2604,6 +2696,28 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     B.CreateIntrinsic(Intrinsic::spv_assign_fpmaxerror_decoration,
                       {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+  if (I->getModule()->getTargetTriple().getVendor() == Triple::AMD &&
+      isa<AtomicRMWInst>(I)) {
+    // If present, we encode AMDGPU atomic metadata as UserSemantic string
+    // decorations, which will be parsed during reverse translation.
+    auto &Ctx = B.getContext();
+    auto *US = ConstantAsMetadata::get(
+        ConstantInt::get(B.getInt32Ty(), SPIRV::Decoration::UserSemantic));
+
+    SmallVector<Metadata *> MDs;
+    if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+    if (I->hasMetadata("amdgpu.no.remote.memory"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
+    if (I->hasMetadata("amdgpu.ignore.denormal.mode"))
+      MDs.push_back(MDNode::get(
+          Ctx, {US, MDString::get(Ctx, "amdgpu.ignore.denormal.mode")}));
+    if (!MDs.empty())
+      B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
+                        {I, MetadataAsValue::get(Ctx, MDNode::get(Ctx, MDs))});
   }
 }
 

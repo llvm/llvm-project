@@ -38,7 +38,7 @@ void ARMElfTargetObjectFile::Initialize(MCContext &Ctx,
   const ARMBaseTargetMachine &ARM_TM = static_cast<const ARMBaseTargetMachine &>(TM);
   bool isAAPCS_ABI = ARM_TM.TargetABI == ARM::ARMABI::ARM_ABI_AAPCS;
   bool genExecuteOnly =
-      ARM_TM.getMCSubtargetInfo()->hasFeature(ARM::FeatureExecuteOnly);
+      ARM_TM.getMCSubtargetInfo().hasFeature(ARM::FeatureExecuteOnly);
 
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   InitializeELF(isAAPCS_ABI);
@@ -80,7 +80,7 @@ getIndirectSymViaRWPI(const MCSymbol *Sym) const {
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  if (TM.getMCAsmInfo()->getExceptionHandlingType() != ExceptionHandling::ARM)
+  if (TM.getMCAsmInfo().getExceptionHandlingType() != ExceptionHandling::ARM)
     return TargetLoweringObjectFileELF::getTTypeGlobalReference(
         GV, Encoding, TM, MMI, Streamer);
 

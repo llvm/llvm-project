@@ -169,7 +169,9 @@ static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
   return true;
 }
 
-PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
+PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   // FIXME: This is not always needed. For example, it is not needed in the
   // v2 abi.
   NeedsLocalForSize = true;
@@ -219,7 +221,9 @@ bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
   return evaluateAsRelocatable(Expr, Res, Asm);
 }
 
-PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
+PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
+                                     const MCTargetOptions &Options)
+    : MCAsmInfoXCOFF(Options) {
   if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
     report_fatal_error("XCOFF is not supported for little-endian targets");
   CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;

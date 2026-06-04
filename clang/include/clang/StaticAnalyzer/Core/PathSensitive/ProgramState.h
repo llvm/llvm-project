@@ -346,8 +346,7 @@ public:
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
   [[nodiscard]] ProgramStateRef
-  enterStackFrame(const CallEvent &Call,
-                  const StackFrameContext *CalleeCtx) const;
+  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
   SVal getSelfSVal(const LocationContext *LC) const;
@@ -377,10 +376,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const LocationContext *LCtx) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const LocationContext *LCtx) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -584,10 +583,8 @@ public:
   }
   ExprEngine &getOwningEngine() { return *Eng; }
 
-  ProgramStateRef
-  removeDeadBindingsFromEnvironmentAndStore(ProgramStateRef St,
-                                            const StackFrameContext *LCtx,
-                                            SymbolReaper &SymReaper);
+  ProgramStateRef removeDeadBindingsFromEnvironmentAndStore(
+      ProgramStateRef St, const StackFrame *SF, SymbolReaper &SymReaper);
 
 public:
 
@@ -792,22 +789,17 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E,
+                                  const LocationContext *LCtx) const {
+  return Env.getSVal(EnvironmentEntry(E, LCtx), *getStateManager().svalBuilder);
 }
 
 inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
+ProgramState::getSValAsScalarOrLoc(const Expr *E,
                                    const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, LCtx);
   return UnknownVal();
 }
 

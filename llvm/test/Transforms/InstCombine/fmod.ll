@@ -6,7 +6,7 @@ define float @test_inf_const(float %f) {
 ; CHECK-SAME: float [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call float @llvm.fabs.f32(float [[F]])
-; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[ISINF:%.*]] = fcmp oeq float [[ABS]], +inf
 ; CHECK-NEXT:    br i1 [[ISINF]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL:%.*]] = frem nnan float [[F]], 2.000000e+00

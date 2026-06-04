@@ -314,6 +314,7 @@ add_libc_unittest(
     rmdir_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir

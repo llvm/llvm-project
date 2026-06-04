@@ -25,11 +25,10 @@ class Loop;
 //===--------------------------------------------------------------------===//
 // Implementation of DDG DOT Printer for a loop.
 //===--------------------------------------------------------------------===//
-class DDGDotPrinterPass : public PassInfoMixin<DDGDotPrinterPass> {
+class DDGDotPrinterPass : public RequiredPassInfoMixin<DDGDotPrinterPass> {
 public:
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
-  static bool isRequired() { return true; }
 };
 
 //===--------------------------------------------------------------------===//

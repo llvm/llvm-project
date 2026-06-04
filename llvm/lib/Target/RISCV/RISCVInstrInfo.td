@@ -1025,7 +1025,7 @@ def DRET : Priv<"dret", 0b0111101>, Sched<[]> {
 // matter since PseudoLI is currently only used in the AsmParser where it gets
 // expanded to real instructions immediately.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLI : Pseudo<(outs GPR:$rd), (ins ixlenimm_li:$imm), [],
                       "li", "$rd, $imm">;
 
@@ -1374,11 +1374,6 @@ class PatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1))), (Inst GPR:$rs1)>;
 class PatGprGpr<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
     : Pat<(vt (OpNode (vt GPR:$rs1), (vt GPR:$rs2))), (Inst GPR:$rs1, GPR:$rs2)>;
-
-class PatGprSplatGpr<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
-                     ValueType ScalarVT = XLenVT>
-    : Pat<(VecVT (OpNode GPR:$rs1, (splat_vector (ScalarVT GPR:$rs2)))),
-          (Inst GPR:$rs1, GPR:$rs2)>;
 
 class PatGprImm<SDPatternOperator OpNode, RVInst Inst, SDPatternOperator ImmType,
                 ValueType vt = XLenVT>
@@ -1753,7 +1748,6 @@ class LongBccPseudo : Pseudo<(outs),
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1767,7 +1761,6 @@ class LongBcciPseudo<DAGOperand InTyImm, int size>
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1888,14 +1881,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLLAImm : Pseudo<(outs GPR:$dst), (ins ixlenimm_li_restricted:$imm), [],
                           "lla", "$dst, $imm">;
 def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
@@ -1903,29 +1896,29 @@ def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
 def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
 def : Pat<(riscv_lla tconstpool:$in), (PseudoLLA tconstpool:$in)>;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLGA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lga", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                       "la", "$dst, $src">;
 
 // Refer to comment on PseudoLI for explanation of Size=32
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
-    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+    isCodeGenOnly = 0 in
 def PseudoLAImm : Pseudo<(outs GPR:$rd), (ins ixlenimm_li_restricted:$imm), [],
                          "la", "$rd, $imm">;
 
-let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.ie", "$dst, $src">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
-    isAsmParserOnly = 1 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = 0 in
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
@@ -1965,7 +1958,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
 // There are single-instruction versions of these in Zbb, so disable these
 // Pseudos if that extension is present.
 let hasSideEffects = 0, mayLoad = 0,
-    mayStore = 0, isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+    mayStore = 0, isCodeGenOnly = 0 in {
 def PseudoSEXT_B : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.b", "$rd, $rs">;
 def PseudoSEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "sext.h", "$rd, $rs">;
 // rv64's sext.w is defined above, using InstAlias<"sext.w ...
@@ -1974,7 +1967,7 @@ def PseudoZEXT_H : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.h", "$rd, $rs
 } // hasSideEffects = 0, ...
 
 let Predicates = [IsRV64], hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-  isCodeGenOnly = 0, isAsmParserOnly = 1 in {
+  isCodeGenOnly = 0 in {
 def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs">;
 } // Predicates = [IsRV64], ...
 
@@ -2358,6 +2351,7 @@ include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
 include "RISCVInstrInfoZvzip.td"
+include "RISCVInstrInfoZvvm.td"
 
 // Packed SIMD
 include "RISCVInstrInfoP.td"
@@ -2386,6 +2380,7 @@ include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
 include "RISCVInstrInfoXqccmp.td"
+include "RISCVInstrInfoXqccmt.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"

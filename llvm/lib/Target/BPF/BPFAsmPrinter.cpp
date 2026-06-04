@@ -42,11 +42,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+BPFAsmPrinter::BPFAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+    : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+
+BPFAsmPrinter::~BPFAsmPrinter() = default;
+
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
   // Only emit BTF when debuginfo available.
-  if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
+  if (MAI.doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
     Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }

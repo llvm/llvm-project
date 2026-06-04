@@ -234,11 +234,16 @@ Property::Property(llvm::StringRef name, llvm::StringRef desc, bool is_global,
     : m_name(name), m_description(desc), m_value_sp(value_sp),
       m_is_global(is_global) {}
 
-bool Property::DumpQualifiedName(Stream &strm) const {
+bool Property::DumpQualifiedName(
+    Stream &strm, std::optional<Stream::HighlightSettings> highlight) const {
   if (!m_name.empty()) {
-    if (m_value_sp->DumpQualifiedName(strm))
-      strm.PutChar('.');
-    strm << m_name;
+    bool has_sub_properties = static_cast<bool>(m_value_sp->GetAsProperties());
+    bool dumped_something = m_value_sp->DumpQualifiedName(strm, highlight);
+    if (!has_sub_properties) {
+      if (dumped_something)
+        strm.PutChar('.');
+      strm.PutCStringColorHighlighted(m_name, highlight);
+    }
     return true;
   }
   return false;
@@ -272,9 +277,10 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
-                               uint32_t output_width,
-                               bool display_qualified_name) const {
+void Property::DumpDescription(
+    CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,
+    bool display_qualified_name,
+    std::optional<Stream::HighlightSettings> highlight) const {
   if (!m_value_sp)
     return;
   llvm::StringRef desc = GetDescription();
@@ -295,10 +301,10 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
       StreamString qualified_name;
       DumpQualifiedName(qualified_name);
       interpreter.OutputFormattedHelpText(strm, qualified_name.GetString(),
-                                          "--", desc, output_width);
+                                          "--", desc, output_width, highlight);
     } else {
       interpreter.OutputFormattedHelpText(strm, m_name, "--", desc,
-                                          output_width);
+                                          output_width, highlight);
     }
   }
 }

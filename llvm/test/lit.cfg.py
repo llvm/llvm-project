@@ -243,6 +243,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -275,6 +276,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-extract-bundle-entry",
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",
@@ -588,6 +590,9 @@ if config.link_llvm_dylib:
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_opencsd", False):
+    config.available_features.add("opencsd")
 
 if config.have_tflite:
     config.available_features.add("have_tflite")

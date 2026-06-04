@@ -56,7 +56,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
       with:
         max-size: 1G
-        key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
+        key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
         variant: sccache
     
     # MPFR is required by some of the mathlib tests.
@@ -97,6 +97,7 @@ jobs:
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+        -DLIBC_COMPILE_OPTIONS_NATIVE=""
         -DLLVM_ENABLE_RUNTIMES=libc
         -G Ninja
         -S ${{ github.workspace }}/runtimes

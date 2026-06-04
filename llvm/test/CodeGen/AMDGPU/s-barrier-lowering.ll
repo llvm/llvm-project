@@ -14,16 +14,16 @@
 
 ; SOUT:        .set .Lfunc1.num_named_barrier, 7
 define void @func1() {
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar3)
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar3, i32 7)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
     ret void
 }
 
 ; SOUT:        .set .Lfunc2.num_named_barrier, 2
 define void @func2() {
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar2)
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
     ret void
 }
@@ -32,8 +32,8 @@ define void @func2() {
 ; SOUT:        .set .Lkernel1.num_named_barrier, max(6, .Lfunc1.num_named_barrier, .Lfunc2.num_named_barrier)
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1.kernel1, i32 11)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 11)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
     %state = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) @bar1)
     call void @llvm.amdgcn.s.barrier()
@@ -46,8 +46,8 @@ define amdgpu_kernel void @kernel1() #0 {
 ; SOUT:        .set .Lkernel2.num_named_barrier, max(6, .Lfunc2.num_named_barrier)
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-DAG: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
-    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
     call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) @bar1)
+    call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 9)
     call void @llvm.amdgcn.s.barrier.wait(i16 1)
 
     call void @func2()

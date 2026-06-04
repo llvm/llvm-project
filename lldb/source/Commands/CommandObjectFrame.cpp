@@ -32,6 +32,8 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <optional>
@@ -174,6 +176,8 @@ protected:
     ValueObjectPrinter printer(*valobj_sp, &result.GetOutputStream(), options);
     if (llvm::Error error = printer.PrintValueObject())
       result.AppendError(toString(std::move(error)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   CommandOptions m_options;
@@ -355,7 +359,7 @@ protected:
     } else {
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.",
+            "too many arguments; expected frame-index, saw '%s'",
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
@@ -366,7 +370,7 @@ protected:
 
       if (command.GetArgumentCount() == 1) {
         if (command[0].ref().getAsInteger(0, frame_idx)) {
-          result.AppendErrorWithFormat("invalid frame index argument '%s'.",
+          result.AppendErrorWithFormat("invalid frame index argument '%s'",
                                        command[0].c_str());
           return;
         }
@@ -384,7 +388,7 @@ protected:
       m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Frame index (%u) out of range.", frame_idx);
+      result.AppendErrorWithFormat("Frame index (%u) out of range", frame_idx);
     }
   }
 
@@ -434,6 +438,77 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
+
+  // `frame variable` repeats by incrementing the printing depth. When the depth
+  // is too shallow, hitting enter a few times will quickly expand the data.
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    llvm::StringRef depth_opt = "--depth";
+
+    Args repeat_args;
+    auto increment_option =
+        [&](llvm::StringRef option) -> std::optional<std::string> {
+      uint32_t num;
+      bool failed = option.getAsInteger(10, num);
+      if (failed)
+        return std::nullopt;
+      return llvm::utostr(num + 1);
+    };
+
+    bool has_depth_option = false;
+    bool increment_next_arg = false;
+    for (const auto &entry : current_command_args) {
+      llvm::StringRef arg = entry.ref();
+
+      if (arg == "-" || arg == "--") {
+        repeat_args.AppendArgument(arg);
+        continue;
+      }
+
+      if (increment_next_arg) {
+        increment_next_arg = false;
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(*maybe_opt);
+          continue;
+        }
+      }
+
+      if (depth_opt.starts_with(arg) || arg == "-D") {
+        repeat_args.AppendArgument(arg);
+        increment_next_arg = true;
+        has_depth_option = true;
+        continue;
+      }
+      if (arg.consume_front("-D")) {
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(llvm::formatv("-D{0}", *maybe_opt).str());
+          has_depth_option = true;
+          continue;
+        }
+      }
+
+      repeat_args.AppendArgument(arg);
+    }
+
+    if (!has_depth_option) {
+      // Access the default max-depth from the target. This is because
+      // GetRepeatCommand is called before ParseOptions, which is when
+      // m_varobj_options.max_depth becomes assigned.
+      if (auto target_sp = GetCommandInterpreter().GetSelectedTarget()) {
+        auto [default_depth, _] =
+            target_sp->GetMaximumDepthOfChildrenToDisplay();
+        // Insert the depth after `frame variable`, before positional args.
+        assert(repeat_args[0].ref() == "frame" && "expects resolved command");
+        repeat_args.InsertArgumentAtIndex(2, "--depth");
+        repeat_args.InsertArgumentAtIndex(3, llvm::utostr(default_depth + 1));
+      }
+    }
+
+    std::string repeat_command;
+    if (!repeat_args.GetQuotedCommandString(repeat_command))
+      return std::nullopt;
+    return repeat_command;
+  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
@@ -585,7 +660,7 @@ protected:
                   findUniqueRegexMatches(regex, regex_var_list, *variable_list);
               if (!results) {
                 result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'.",
+                    "no variables matched the regular expression '%s'",
                     entry.c_str());
                 continue;
               }
@@ -678,7 +753,7 @@ protected:
               else
                 result.AppendErrorWithFormat(
                     "unable to find any variable expression path that matches "
-                    "'%s'.",
+                    "'%s'",
                     entry.c_str());
             }
           }
@@ -761,7 +836,7 @@ protected:
                                            m_cmd_name);
 
     // Increment statistics.
-    TargetStats &target_stats = GetTarget().GetStatistics();
+    TargetStats &target_stats = GetTarget()->GetStatistics();
     if (result.Succeeded())
       target_stats.GetFrameVariableStats().NotifySuccess();
     else
@@ -852,7 +927,8 @@ protected:
 public:
   CommandObjectFrameRecognizerAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer add",
-                            "Add a new frame recognizer.", nullptr) {
+                            "Add a new frame recognizer.", nullptr,
+                            eCommandAllowsDummyTarget) {
     SetHelpLong(R"(
 Frame recognizers allow for retrieving information about special frames based on
 ABI, arguments or other special properties of that frame, even without source
@@ -907,26 +983,26 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
 #if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
-    result.AppendErrorWithFormat("%s needs a Python class name (-l argument).",
+    result.AppendErrorWithFormat("%s needs a Python class name (-l argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_module.empty()) {
-    result.AppendErrorWithFormat("%s needs a module name (-s argument).",
+    result.AppendErrorWithFormat("%s needs a module name (-s argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_symbols.empty()) {
     result.AppendErrorWithFormat(
-        "%s needs at least one symbol name (-n argument).", m_cmd_name.c_str());
+        "%s needs at least one symbol name (-n argument)", m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_regex && m_options.m_symbols.size() > 1) {
     result.AppendErrorWithFormat(
-        "%s needs only one symbol regular expression (-n argument).",
+        "%s needs only one symbol regular expression (-n argument)",
         m_cmd_name.c_str());
     return;
   }
@@ -946,14 +1022,14 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
     auto module = std::make_shared<RegularExpression>(m_options.m_module);
     auto func =
         std::make_shared<RegularExpression>(m_options.m_symbols.front());
-    GetTarget().GetFrameRecognizerManager().AddRecognizer(
+    GetTarget()->GetFrameRecognizerManager().AddRecognizer(
         recognizer_sp, module, func, Mangled::NamePreference::ePreferDemangled,
         m_options.m_first_instruction_only);
   } else {
     auto module = ConstString(m_options.m_module);
     std::vector<ConstString> symbols(m_options.m_symbols.begin(),
                                      m_options.m_symbols.end());
-    GetTarget().GetFrameRecognizerManager().AddRecognizer(
+    GetTarget()->GetFrameRecognizerManager().AddRecognizer(
         recognizer_sp, module, symbols,
         Mangled::NamePreference::ePreferDemangled,
         m_options.m_first_instruction_only);
@@ -967,13 +1043,14 @@ class CommandObjectFrameRecognizerClear : public CommandObjectParsed {
 public:
   CommandObjectFrameRecognizerClear(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer clear",
-                            "Delete all frame recognizers.", nullptr) {}
+                            "Delete all frame recognizers.", nullptr,
+                            eCommandAllowsDummyTarget) {}
 
   ~CommandObjectFrameRecognizerClear() override = default;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    GetTarget().GetFrameRecognizerManager().RemoveAllRecognizers();
+    GetTarget()->GetFrameRecognizerManager().RemoveAllRecognizers();
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };
@@ -1027,7 +1104,7 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    GetTarget().GetFrameRecognizerManager().ForEach(
+    GetTarget()->GetFrameRecognizerManager().ForEach(
         [&request](uint32_t rid, bool enabled, std::string rname,
                    std::string module,
                    llvm::ArrayRef<lldb_private::ConstString> symbols,
@@ -1049,7 +1126,7 @@ public:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%s' is not a valid recognizer id",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1064,7 +1141,8 @@ public:
   CommandObjectFrameRecognizerEnable(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
             interpreter, "frame recognizer enable",
-            "Enable a frame recognizer by id.", nullptr) {
+            "Enable a frame recognizer by id.", nullptr,
+            eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeRecognizerID);
   }
 
@@ -1073,9 +1151,9 @@ public:
 protected:
   void DoExecuteWithId(CommandReturnObject &result,
                        uint32_t recognizer_id) override {
-    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    auto &recognizer_mgr = GetTarget()->GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1089,7 +1167,8 @@ public:
   CommandObjectFrameRecognizerDisable(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
             interpreter, "frame recognizer disable",
-            "Disable a frame recognizer by id.", nullptr) {
+            "Disable a frame recognizer by id.", nullptr,
+            eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeRecognizerID);
   }
 
@@ -1098,9 +1177,9 @@ public:
 protected:
   void DoExecuteWithId(CommandReturnObject &result,
                        uint32_t recognizer_id) override {
-    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    auto &recognizer_mgr = GetTarget()->GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1114,7 +1193,8 @@ public:
   CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
       : CommandObjectWithFrameRecognizerArg(
             interpreter, "frame recognizer delete",
-            "Delete an existing frame recognizer by id.", nullptr) {
+            "Delete an existing frame recognizer by id.", nullptr,
+            eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeRecognizerID);
   }
 
@@ -1123,9 +1203,9 @@ public:
 protected:
   void DoExecuteWithId(CommandReturnObject &result,
                        uint32_t recognizer_id) override {
-    auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
+    auto &recognizer_mgr = GetTarget()->GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1137,15 +1217,15 @@ class CommandObjectFrameRecognizerList : public CommandObjectParsed {
 public:
   CommandObjectFrameRecognizerList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer list",
-                            "Show a list of active frame recognizers.",
-                            nullptr) {}
+                            "Show a list of active frame recognizers.", nullptr,
+                            eCommandAllowsDummyTarget) {}
 
   ~CommandObjectFrameRecognizerList() override = default;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     bool any_printed = false;
-    GetTarget().GetFrameRecognizerManager().ForEach(
+    GetTarget()->GetFrameRecognizerManager().ForEach(
         [&result,
          &any_printed](uint32_t recognizer_id, bool enabled, std::string name,
                        std::string module, llvm::ArrayRef<ConstString> symbols,
@@ -1180,7 +1260,7 @@ public:
       : CommandObjectParsed(
             interpreter, "frame recognizer info",
             "Show which frame recognizer is applied a stack frame (if any).",
-            nullptr) {
+            nullptr, eCommandAllowsDummyTarget) {
     AddSimpleArgumentList(eArgTypeFrameIndex);
   }
 
@@ -1191,7 +1271,7 @@ protected:
     const char *frame_index_str = command.GetArgumentAtIndex(0);
     uint32_t frame_index;
     if (!llvm::to_integer(frame_index_str, frame_index)) {
-      result.AppendErrorWithFormat("'%s' is not a valid frame index.",
+      result.AppendErrorWithFormat("'%s' is not a valid frame index",
                                    frame_index_str);
       return;
     }
@@ -1208,7 +1288,7 @@ protected:
     }
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one frame index argument.", m_cmd_name.c_str());
+          "'%s' takes exactly one frame index argument", m_cmd_name.c_str());
       return;
     }
 
@@ -1219,7 +1299,8 @@ protected:
     }
 
     auto recognizer =
-        GetTarget().GetFrameRecognizerManager().GetRecognizerForFrame(frame_sp);
+        GetTarget()->GetFrameRecognizerManager().GetRecognizerForFrame(
+            frame_sp);
 
     Stream &output_stream = result.GetOutputStream();
     output_stream.Printf("frame %d ", frame_index);

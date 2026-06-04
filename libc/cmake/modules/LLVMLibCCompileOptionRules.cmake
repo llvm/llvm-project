@@ -52,6 +52,9 @@ function(_get_compile_options_from_flags output_var)
         list(APPEND compile_options "-mfma")
       endif()
     endif()
+    if(LIBC_COMPILER_HAS_BUILTIN_ISNAN)
+      list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ISNAN")
+    endif()
     if(ADD_ROUND_OPT_FLAG)
       if(LIBC_TARGET_ARCHITECTURE_IS_X86_64)
         # ROUND_OPT_FLAG is only enabled if SSE4.2 is detected, not just SSE4.1,
@@ -127,6 +130,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES")
   endif()
 
+  if(LIBC_CONF_USE_MEM_BUILTINS)
+    libc_add_definition(config_options "LIBC_COPT_USE_MEM_BUILTINS")
+  endif()
+
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
     libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
   endif()
@@ -152,6 +159,10 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_THREAD_MODE)
     libc_add_definition(config_options "LIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
+  endif()
+
+  if(LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+    libc_add_definition(config_options "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY")
   endif()
 
   if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
@@ -297,6 +308,16 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-Wstrict-prototypes")
       list(APPEND compile_options "-Wthread-safety")
       list(APPEND compile_options "-Wglobal-constructors")
+    endif()
+
+    # Older Clang versions emit false positive shadow warnings for lambda captures
+    # inside static member functions (fixed in Clang 22, see PR #157667 and #165919).
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "22.0.0")
+      list(APPEND compile_options "-Wshadow")
+    endif()
+
+    if(LIBC_CC_SUPPORTS_NO_FENV_ACCESS)
+      list(APPEND compile_options "-Wno-fenv-access")
     endif()
   elseif(MSVC)
     list(APPEND compile_options "/EHs-c-")

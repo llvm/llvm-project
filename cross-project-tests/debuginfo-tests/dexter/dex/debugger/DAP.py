@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import List, Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,9 +52,11 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
@@ -94,6 +97,13 @@ class DAPMessageLogger:
 
     def write_message(self, message: dict, incoming: bool):
         prefix = self.prefix_recv if incoming else self.prefix_send
+        if self.start_time is not None:
+            message_time = time.time() - self.start_time
+            minutes = int(message_time / 60)
+            seconds = int(message_time % 60)
+            milliseconds = int((message_time % 1) * 1000)
+            prefix += f" {minutes}:{seconds:02d}:{milliseconds:03d}"
+
         # ANSI escape codes get butchered by json.dumps(), so we fix them up here.
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent
@@ -926,6 +936,70 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             stop_reason=reason,
             program_state=ProgramState(state_frames),
         )
+
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        """Returns a StepIR with stackframes and source locations (but no watched values)."""
+        assert (
+            not self._debugger_state.is_running
+        ), "Cannot get step info while debugger is running!"
+        trace_req_id = self.send_message(
+            self.make_request("stackTrace", {"threadId": self._debugger_state.thread})
+        )
+        trace_response = self._await_response(trace_req_id)
+        if not trace_response["success"]:
+            raise DebuggerException("failed to get stack frames")
+        stackframes = trace_response["body"]["stackFrames"]
+
+        frames = []
+
+        for stackframe in stackframes:
+            # No source, skip the frame! Currently I've only observed this for frames below main, so we break here; if
+            # it happens elsewhere, then this will break more stuff and we'll come up with a better solution.
+            if (
+                stackframe.get("source") is None
+                or stackframe["source"].get("path") is None
+            ):
+                break
+
+            loc_dict = {
+                "path": self._external_to_debug_path(stackframe["source"]["path"]),
+                "lineno": stackframe["line"],
+                "column": stackframe["column"],
+            }
+            loc = LocIR(**loc_dict)
+            frame = FrameIR(
+                function=self._sanitize_function_name(stackframe["name"]),
+                is_inlined=stackframe["name"].startswith("[Inline Frame]"),
+                loc=loc,
+                instruction_addr=stackframe.get("instructionPointerReference", None),
+            )
+
+            # We skip frames that are below "main", since we do not expect those to be user code.
+            fname = frame.function or ""  # pylint: disable=no-member
+            if any(name in fname for name in self.frames_below_main):
+                break
+
+            frames.append(frame)
+
+        if len(frames) == 1 and frames[0].function is None:
+            frames = []
+
+        reason = self._translate_stop_reason(self._debugger_state.stopped_reason)
+
+        return StepIR(
+            step_index=step_index,
+            frames=frames,
+            stop_reason=reason,
+        )
+
+    def collect_watches(self, step: StepIR, watches: List[str]):
+        """Evaluates the provided watches and stores their evaluation results (ValueIR) in the provided step."""
+        frame_idx = 0
+        if not watches:
+            return
+        active_exprs = set(watches)
+        for expr in active_exprs:
+            step.watches[expr] = self.evaluate_expression(expr, frame_idx)
 
     @property
     def is_running(self):

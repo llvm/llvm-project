@@ -287,7 +287,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!matchMed<GFCstOrSplatGFCstMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (!K0->Value.isExactlyValue(0.0) || !K1->Value.isExactlyValue(1.0))
+  if (!K0->Value.isPosZero() || !K1->Value.isExactlyValue(1.0))
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -335,7 +335,7 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
   auto isOp3Zero = [&]() {
     MachineInstr *Op3 = getDefIgnoringCopies(MI.getOperand(3).getReg(), MRI);
     if (Op3->getOpcode() == TargetOpcode::G_FCONSTANT)
-      return Op3->getOperand(1).getFPImm()->isExactlyValue(0.0);
+      return Op3->getOperand(1).getFPImm()->isPosZero();
     return false;
   };
   // For IEEE=false perform combine only when it's safe to assume that there are
@@ -501,8 +501,8 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
   if (isFCst(K0) && isFCst(K1)) {
     const ConstantFP *KO_FPImm = K0->getOperand(1).getFPImm();
     const ConstantFP *K1_FPImm = K1->getOperand(1).getFPImm();
-    return (KO_FPImm->isExactlyValue(0.0) && K1_FPImm->isExactlyValue(1.0)) ||
-           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isExactlyValue(0.0));
+    return (KO_FPImm->isPosZero() && K1_FPImm->isExactlyValue(1.0)) ||
+           (KO_FPImm->isExactlyValue(1.0) && K1_FPImm->isPosZero());
   }
   return false;
 }

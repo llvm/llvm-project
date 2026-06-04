@@ -13,7 +13,6 @@ import subprocess
 import sys
 import threading
 
-
 def pythonize_bool(value):
     if value is None:
         return False
@@ -441,3 +440,41 @@ def killProcessAndChildren(pid):
             psutilProc.kill()
         except psutil.NoSuchProcess:
             pass
+
+
+def memoize(f):
+    cache = {}  # Unbounded
+
+    def make_key(args, kwargs):
+        return args, tuple(kwargs.items())
+
+    def memoized(*args, **kwargs):
+        key = make_key(args, kwargs)
+        if key not in cache:
+            cache[key] = f(*args, **kwargs)
+        return cache[key]
+
+    return memoized
+
+
+@memoize
+def runCommandCached(lit_config, cmd, allow_failure, **kwargs):
+    """
+    Run a command with subprocess.run, with a cache global to this llvm-lit invocation
+    If allow_failure is True, lit_config.fatal will be invoked if the command fails.
+    All additional kwargs are passed to subprocess.run
+    """
+    try:
+        result = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
+        )
+        return result.stdout
+    except FileNotFoundError as e:
+        msg = f"Failed to run {cmd}: {e}"
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+
+    if not allow_failure:
+        lit_config.fatal(msg)
+
+    return None

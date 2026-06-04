@@ -17,7 +17,6 @@ define void @test(ptr %mdct_forward_x) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <3 x float> @llvm.masked.load.v3f32.p0(ptr align 4 [[ADD_PTR_I]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x float> [[TMP5]], <3 x float> poison, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.masked.load.v3f32.p0(ptr align 4 [[ARRAYIDX5_I_I]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x float> poison)
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> poison, <4 x i32> <i32 2, i32 0, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>

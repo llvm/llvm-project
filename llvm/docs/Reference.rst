@@ -9,61 +9,63 @@ LLVM and API reference documentation.
 .. toctree::
    :hidden:
 
-   AIToolPolicy
-   Atomics
-   BitCodeFormat
-   BlockFrequencyTerminology
-   BranchWeightMetadata
-   CalleeTypeMetadata
-   CallGraphSection
-   CIBestPractices
+   HowToUseAttributes
    CommandGuide/index
-   ContentAddressableStorage
-   ConvergenceAndUniformity
+   CommandGuide/llvm-reduce
+   OptBisect
+   SymbolizerMarkupFormat
+   PDB/index
+   GarbageCollection
+   Statepoints
+   LibFuzzer
+   FuzzingLLVM
+   LangRef
+   UndefinedBehavior
+   InAlloca
+   BitCodeFormat
+   MIRLangRef
+   GlobalISel/index
    ConvergentOperations
-   Coroutines
-   DependenceGraphs/index
+   TestingGuide
+   TestSuiteGuide
+   GwpAsan
+   XRay
+   XRayExample
+   FaultMaps
+   Atomics
    ExceptionHandling
    Extensions
-   FaultMaps
-   FuzzingLLVM
-   GarbageCollection
-   GetElementPtr
-   GlobalISel/index
-   GwpAsan
    HowToSetUpLLVMStyleRTTI
-   HowToUseAttributes
-   InAlloca
-   InterfaceExportAnnotations
-   LangRef
-   LibFuzzer
-   MarkedUpDisassembly
-   MIRLangRef
-   OptBisect
-   PCSectionsMetadata
-   PDB/index
-   PointerAuth
-   MLGO
+   BlockFrequencyTerminology
+   BranchWeightMetadata
+   GetElementPtr
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
+   DependenceGraphs/index
+   SpeculativeLoadHardening
+   SegmentedStacks
+   MarkedUpDisassembly
+   StackMaps
+   Coroutines
+   PointerAuth
+   YamlIO
+   ConvergenceAndUniformity
+   MLGO
+   ContentAddressableStorage
+   CIBestPractices
+   AIToolPolicy
+   CalleeTypeMetadata
+   CallGraphSection
+   InterfaceExportAnnotations
+   PCSectionsMetadata
    QualGroup
    Security
    SecurityTransparencyReports
-   SegmentedStacks
-   StackMaps
-   SpeculativeLoadHardening
-   Statepoints
-   SymbolizerMarkupFormat
    SystemLibrary
-   TestingGuide
    TransformMetadata
    TypeMetadata
-   UndefinedBehavior
-   XRay
-   XRayExample
    XRayFDRFormat
-   YamlIO
 
 API Reference
 -------------

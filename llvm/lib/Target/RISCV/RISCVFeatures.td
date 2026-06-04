@@ -116,6 +116,10 @@ def FeatureStdExtZiccif
     : RISCVExtension<1, 0,
                      "Main Memory Supports Instruction Fetch with Atomicity Requirement">;
 
+def FeatureStdExtZiccid
+    : RISCVExtension<1, 0,
+                     "Instruction/Data Coherence and Consistency", [FeatureStdExtZiccif]>;
+
 def FeatureStdExtZicclsm
     : RISCVExtension<1, 0, "Main Memory Supports Misaligned Loads/Stores">;
 
@@ -885,6 +889,23 @@ def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),
                          "'Zvzip' (Vector Reordering Structured Data)">;
 
+// Integrated Matrix Extension integer matrix multiply-accumulate
+def FeatureStdExtZvvmm
+    : RISCVExperimentalExtension<0, 1, "Integer Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmm : Predicate<"Subtarget->hasStdExtZvvmm()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvvmm),
+                         "'Zvvmm' (Integer Matrix Multiply-Accumulate)">;
+
+// Integrated Matrix Extension floating-point matrix multiply-accumulate
+def FeatureStdExtZvvfmm
+    : RISCVExperimentalExtension<0, 1,
+                                 "Floating-Point Matrix Multiply-Accumulate",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
+                          "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
+
 // Vector instruction predicates
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
@@ -1513,6 +1534,14 @@ def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
       AssemblerPredicate<(all_of FeatureVendorXqccmp),
                          "'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)">;
+
+def FeatureVendorXqccmt
+    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Table Jump",
+                     [FeatureStdExtZca, FeatureStdExtZicsr]>;
+def HasVendorXqccmt
+    : Predicate<"Subtarget->hasVendorXqccmt()">,
+      AssemblerPredicate<(all_of FeatureVendorXqccmt),
+                         "'Xqccmt' (Qualcomm 16-bit Table Jump)">;
 
 def FeatureVendorXqcia
     : RISCVExtension<0, 7, "Qualcomm uC Arithmetic Extension">;

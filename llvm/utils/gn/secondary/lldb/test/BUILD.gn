@@ -84,8 +84,8 @@ write_lit_cfg("lit_api_site_cfg") {
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
     "LLDB_TEST_PLATFORM_URL=",
     "LLDB_TEST_PLATFORM_WORKING_DIR=",
-    "LLDB_TEST_RESOURCE_DIR=",
     "LLDB_TEST_SYSROOT=",
+    "LLDB_TEST_USE_LLDB_SERVER=0",
     "LLVM_BUILD_MODE=.",
     "LLVM_ENABLE_SHARED_LIBS=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
@@ -145,6 +145,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLDB_TEST_PLATFORM_WORKING_DIR=",
     "LLDB_TEST_SHELL_DISABLE_REMOTE=True",
     "LLDB_TEST_SYSROOT=",
+    "LLDB_TEST_USE_LLDB_SERVER=0",
     "LLDB_TOOL_LLDB_SERVER_BUILD=1",
     "LLDB_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "LLDB_USE_SYSTEM_DEBUGSERVER=1",  # XXX port //lldb/tools/debugserver (?)

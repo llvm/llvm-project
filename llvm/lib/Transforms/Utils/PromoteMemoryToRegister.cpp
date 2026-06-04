@@ -349,7 +349,7 @@ public:
            "Not a load/store to/from an alloca?");
 
     // If we already have this instruction number, return it.
-    DenseMap<const Instruction *, unsigned>::iterator It = InstNumbers.find(I);
+    auto It = InstNumbers.find(I);
     if (It != InstNumbers.end())
       return It->second;
 
@@ -1187,7 +1187,7 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
       if (!Src)
         continue;
 
-      DenseMap<AllocaInst *, unsigned>::iterator AI = AllocaLookup.find(Src);
+      auto AI = AllocaLookup.find(Src);
       if (AI == AllocaLookup.end())
         continue;
 
@@ -1204,7 +1204,7 @@ void PromoteMem2Reg::RenamePass(BasicBlock *BB, BasicBlock *Pred) {
       if (!Dest)
         continue;
 
-      DenseMap<AllocaInst *, unsigned>::iterator ai = AllocaLookup.find(Dest);
+      auto ai = AllocaLookup.find(Dest);
       if (ai == AllocaLookup.end())
         continue;
 

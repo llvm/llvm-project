@@ -134,10 +134,7 @@ public:
     LLVM_DEBUG(dbgs() << "CreateVOPD Pass:\n");
 
     const SIInstrInfo *SII = ST->getInstrInfo();
-    const SIRegisterInfo *TRI = ST->getRegisterInfo();
     bool Changed = false;
-    unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(*ST);
-    bool HasVOPD3 = ST->hasVOPD3();
 
     SmallVector<VOPDCombineInfo> ReplaceCandidates;
 
@@ -151,39 +148,10 @@ public:
         if (FirstMI->isDebugInstr())
           continue;
         auto *SecondMI = &*MII;
-        unsigned Opc = FirstMI->getOpcode();
-        unsigned Opc2 = SecondMI->getOpcode();
-        VOPDCombineInfo CI;
 
-        const auto checkVOPD = [&](bool VOPD3) -> bool {
-          llvm::AMDGPU::CanBeVOPD FirstCanBeVOPD =
-              AMDGPU::getCanBeVOPD(Opc, EncodingFamily, VOPD3);
-          llvm::AMDGPU::CanBeVOPD SecondCanBeVOPD =
-              AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
-
-          if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y &&
-              llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI, VOPD3)) {
-            CI = VOPDCombineInfo(FirstMI, SecondMI, VOPD3);
-            return true;
-          }
-          // We can try swapping the order of the instructions, but in that case
-          // neither instruction can write to a register the other reads from.
-          // OpX cannot write something OpY reads because that is the hardware
-          // rule, and OpY cannot write what OpX reads because that would
-          // violate the data dependency in the original order.
-          for (const auto &Use : SecondMI->uses())
-            if (Use.isReg() && FirstMI->modifiesRegister(Use.getReg(), TRI))
-              return false;
-          if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X &&
-              llvm::checkVOPDRegConstraints(*SII, *SecondMI, *FirstMI, VOPD3)) {
-            CI = VOPDCombineInfo(SecondMI, FirstMI, VOPD3);
-            return true;
-          }
-          return false;
-        };
-
-        if (checkVOPD(false) || (HasVOPD3 && checkVOPD(true))) {
-          ReplaceCandidates.push_back(CI);
+        if (auto Match = tryMatchVOPDPair(*SII, *FirstMI, *SecondMI)) {
+          ReplaceCandidates.push_back(
+              VOPDCombineInfo(Match->MIX, Match->MIY, Match->IsVOPD3));
           ++MII;
         }
       }

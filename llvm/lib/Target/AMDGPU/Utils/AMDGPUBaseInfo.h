@@ -126,6 +126,7 @@ struct True16D16Info {
 struct WMMAInstInfo {
   uint32_t Opcode;
   bool is_wmma_xdl;
+  bool HasMatrixScale;
 };
 
 #define GET_MIMGBaseOpcode_DECL
@@ -232,40 +233,43 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+/// \returns Instruction cache line size in bytes for given subtarget \p STI.
+unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
+
 /// \returns Wavefront size for given subtarget \p STI.
-unsigned getWavefrontSize(const MCSubtargetInfo *STI);
+unsigned getWavefrontSize(const MCSubtargetInfo &STI);
 
 /// \returns Local memory size in bytes for given subtarget \p STI.
-unsigned getLocalMemorySize(const MCSubtargetInfo *STI);
+unsigned getLocalMemorySize(const MCSubtargetInfo &STI);
 
 /// \returns Maximum addressable local memory size in bytes for given subtarget
 /// \p STI.
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI);
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI);
 
 /// \returns Number of execution units per compute unit for given subtarget \p
 /// STI.
-unsigned getEUsPerCU(const MCSubtargetInfo *STI);
+unsigned getEUsPerCU(const MCSubtargetInfo &STI);
 
 /// \returns Maximum number of work groups per compute unit for given subtarget
 /// \p STI and limited by given \p FlatWorkGroupSize.
-unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
+unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
                                unsigned FlatWorkGroupSize);
 
 /// \returns Minimum number of waves per execution unit for given subtarget \p
 /// STI.
-unsigned getMinWavesPerEU(const MCSubtargetInfo *STI);
+unsigned getMinWavesPerEU(const MCSubtargetInfo &STI);
 
 /// \returns Maximum number of waves per execution unit for given subtarget \p
 /// STI without any kind of limitation.
-unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI);
+unsigned getMaxWavesPerEU(const MCSubtargetInfo &STI);
 
 /// \returns Number of waves per execution unit required to support the given \p
 /// FlatWorkGroupSize.
-unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo *STI,
+unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                                    unsigned FlatWorkGroupSize);
 
 /// \returns Minimum flat work group size for given subtarget \p STI.
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo *STI);
+unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI);
 
 /// \returns Maximum flat work group size
 constexpr unsigned getMaxFlatWorkGroupSize() {
@@ -275,52 +279,52 @@ constexpr unsigned getMaxFlatWorkGroupSize() {
 
 /// \returns Number of waves per work group for given subtarget \p STI and
 /// \p FlatWorkGroupSize.
-unsigned getWavesPerWorkGroup(const MCSubtargetInfo *STI,
+unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize);
 
 /// \returns SGPR allocation granularity for given subtarget \p STI.
-unsigned getSGPRAllocGranule(const MCSubtargetInfo *STI);
+unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI);
 
 /// \returns SGPR encoding granularity for given subtarget \p STI.
-unsigned getSGPREncodingGranule(const MCSubtargetInfo *STI);
+unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI);
 
 /// \returns Total number of SGPRs for given subtarget \p STI.
-unsigned getTotalNumSGPRs(const MCSubtargetInfo *STI);
+unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Addressable number of SGPRs for given subtarget \p STI.
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Minimum number of SGPRs that meets the given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU);
+unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU);
 
 /// \returns Maximum number of SGPRs that meets the given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         bool Addressable);
 
 /// \returns Number of extra SGPRs implicitly required by given subtarget \p
 /// STI when the given special registers are used.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
+unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed, bool XNACKUsed);
 
 /// \returns Number of extra SGPRs implicitly required by given subtarget \p
 /// STI when the given special registers are used. XNACK is inferred from
 /// \p STI.
-unsigned getNumExtraSGPRs(const MCSubtargetInfo *STI, bool VCCUsed,
+unsigned getNumExtraSGPRs(const MCSubtargetInfo &STI, bool VCCUsed,
                           bool FlatScrUsed);
 
 /// \returns Number of SGPR blocks needed for given subtarget \p STI when
 /// \p NumSGPRs are used. \p NumSGPRs should already include any special
 /// register counts.
-unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs);
+unsigned getNumSGPRBlocks(const MCSubtargetInfo &STI, unsigned NumSGPRs);
 
 /// \returns VGPR allocation granularity for given subtarget \p STI.
 ///
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned
-getVGPRAllocGranule(const MCSubtargetInfo *STI, unsigned DynamicVGPRBlockSize,
+getVGPRAllocGranule(const MCSubtargetInfo &STI, unsigned DynamicVGPRBlockSize,
                     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns VGPR encoding granularity for given subtarget \p STI.
@@ -328,7 +332,7 @@ getVGPRAllocGranule(const MCSubtargetInfo *STI, unsigned DynamicVGPRBlockSize,
 /// For subtargets which support it, \p EnableWavefrontSize32 should match
 /// the ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned getVGPREncodingGranule(
-    const MCSubtargetInfo *STI,
+    const MCSubtargetInfo &STI,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// For subtargets with a unified VGPR file and mixed ArchVGPR/AGPR usage,
@@ -336,29 +340,29 @@ unsigned getVGPREncodingGranule(
 unsigned getArchVGPRAllocGranule();
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
-unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI);
+unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Addressable number of architectural VGPRs for a given subtarget \p
 /// STI.
-unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo *STI);
+unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI);
 
 /// \returns Addressable number of VGPRs for given subtarget \p STI.
-unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI,
+unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
                                 unsigned DynamicVGPRBlockSize);
 
 /// \returns Minimum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize);
 
 /// \returns Maximum number of VGPRs that meets given number of waves per
 /// execution unit requirement for given subtarget \p STI.
-unsigned getMaxNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU,
+unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize);
 
 /// \returns Number of waves reachable for a given \p NumVGPRs usage for given
 /// subtarget \p STI.
-unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo *STI,
+unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize);
 
@@ -380,13 +384,13 @@ unsigned getOccupancyWithNumSGPRs(unsigned SGPRs, unsigned MaxWaves,
 /// For subtargets which support it, \p EnableWavefrontSize32 should match the
 /// ENABLE_WAVEFRONT_SIZE32 kernel descriptor field.
 unsigned getEncodedNumVGPRBlocks(
-    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    const MCSubtargetInfo &STI, unsigned NumVGPRs,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
 /// \returns Number of VGPR blocks that need to be allocated for the given
 /// subtarget \p STI when \p NumVGPRs are used.
 unsigned getAllocatedNumVGPRBlocks(
-    const MCSubtargetInfo *STI, unsigned NumVGPRs,
+    const MCSubtargetInfo &STI, unsigned NumVGPRs,
     unsigned DynamicVGPRBlockSize,
     std::optional<bool> EnableWavefrontSize32 = std::nullopt);
 
@@ -617,6 +621,9 @@ bool getMAIIsGFX940XDL(unsigned Opc);
 
 LLVM_READONLY
 bool getWMMAIsXDL(unsigned Opc);
+
+LLVM_READONLY
+bool getHasMatrixScale(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.
@@ -1019,7 +1026,7 @@ LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
 void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
-                               const MCSubtargetInfo *STI);
+                               const MCSubtargetInfo &STI);
 
 bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);

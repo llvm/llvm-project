@@ -13,8 +13,8 @@
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 
 #include "ScriptedPythonInterface.h"
-
 namespace lldb_private {
+
 class ScriptedBreakpointPythonInterface : public ScriptedBreakpointInterface,
                                           public ScriptedPythonInterface,
                                           public PluginInterface {
@@ -29,6 +29,10 @@ public:
   GetAbstractMethodRequirements() const override {
     return llvm::SmallVector<AbstractMethodRequirement>({{"__callback__", 2}});
   }
+
+  bool OverridesResolver(Target &target,
+                         StructuredDataImpl &resolver_data) override;
+  void SetBreakpoint(lldb::BreakpointSP break_sp) override;
 
   bool ResolverCallback(SymbolContext sym_ctx) override;
   lldb::SearchDepth GetDepth() override;

@@ -42,6 +42,7 @@ class VPRecipeBase;
 class VPPhiAccessors;
 class VPRegionValue;
 class VPRegionBlock;
+class VPSingleDefRecipe;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -79,11 +80,12 @@ public:
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
-    VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
-    VPVRecipeValueSC, /// A VPValue defined by a recipe.
-    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
-                      /// the canonical IV of a loop region.
+    VPVIRValueSC,        /// A live-in VPValue wrapping an IR Value.
+    VPVSymbolicSC,       /// A symbolic live-in VPValue without IR backing.
+    VPVSingleDefValueSC, /// A VPValue defined by a VPSingleDefRecipe.
+    VPVMultiDefValueSC,  /// A VPValue defined by a multi-def recipe.
+    VPRegionValueSC,     /// A VPValue sub-class that is defined by a
+                         /// region, like a loop region canonical IV.
   };
 
   VPValue(const VPValue &) = delete;
@@ -278,11 +280,14 @@ struct VPConstantInt : public VPIRValue {
 /// A symbolic live-in VPValue, used for values like vector trip count, VF, and
 /// VFxUF.
 struct VPSymbolicValue : public VPValue {
-  VPSymbolicValue() : VPValue(VPVSymbolicSC, nullptr) {}
+  VPSymbolicValue(Type *Ty) : VPValue(VPVSymbolicSC, nullptr), Ty(Ty) {}
 
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
+
+  /// Returns the scalar type of this symbolic value.
+  Type *getType() const { return Ty; }
 
   /// Returns true if this symbolic value has been materialized.
   bool isMaterialized() const { return Materialized; }
@@ -294,33 +299,72 @@ struct VPSymbolicValue : public VPValue {
   }
 
 private:
+  /// The scalar type of this symbolic value.
+  Type *Ty;
+
   /// Track whether this symbolic value has been materialized (replaced).
   /// After materialization, accessing users should trigger an assertion.
   bool Materialized = false;
 };
 
-/// A VPValue defined by a recipe that produces one or more values.
+/// Abstract base class for VPValues defined by a VPRecipeBase.
 class VPRecipeValue : public VPValue {
   friend class VPValue;
   friend class VPDef;
 
-  /// Pointer to the VPRecipeBase that defines this VPValue.
-  VPRecipeBase *Def;
-
 #if !defined(NDEBUG)
   /// Returns true if this VPRecipeValue is defined by \p D.
   /// NOTE: Only used by VPDef to assert that VPRecipeValues added/removed from
-  /// /p D are associated with its VPRecipeBase,
+  /// /p D are associated with its VPRecipeBase.
   bool isDefinedBy(const VPDef *D) const;
 #endif
 
-public:
-  LLVM_ABI_FOR_TEST VPRecipeValue(VPRecipeBase *Def, Value *UV = nullptr);
+protected:
+  VPRecipeValue(unsigned char SC, Value *UV = nullptr) : VPValue(SC, UV) {}
 
-  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue();
+public:
+  LLVM_ABI_FOR_TEST virtual ~VPRecipeValue() = 0;
 
   static bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPVRecipeValueSC;
+    return V->getVPValueID() == VPVMultiDefValueSC ||
+           V->getVPValueID() == VPVSingleDefValueSC;
+  }
+};
+
+/// A VPRecipeValue defined by a VPSingleDefRecipe.
+class VPSingleDefValue : public VPRecipeValue {
+  friend class VPDef;
+  friend class VPSingleDefRecipe;
+
+protected:
+  /// Construct a VPSingleDefValue. Must only be used by VPSingleDefRecipe.
+  LLVM_ABI_FOR_TEST VPSingleDefValue(VPSingleDefRecipe *Def,
+                                     Value *UV = nullptr);
+
+public:
+  ~VPSingleDefValue() override;
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVSingleDefValueSC;
+  }
+};
+
+/// A VPRecipeValue defined by a multi-def recipe, stores a pointer to it.
+class VPMultiDefValue : public VPRecipeValue {
+  friend class VPDef;
+
+  /// Pointer to the multi-def recipe that defines this VPValue, among others.
+  VPRecipeBase *Def;
+
+public:
+  LLVM_ABI_FOR_TEST VPMultiDefValue(VPRecipeBase *Def, Value *UV = nullptr);
+
+  ~VPMultiDefValue() override;
+
+  VPRecipeBase *getDef() const { return Def; }
+
+  static bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPVMultiDefValueSC;
   }
 };
 
@@ -431,6 +475,8 @@ public:
 /// from VPDef before VPValue.
 class VPDef {
   friend class VPRecipeValue;
+  friend class VPSingleDefValue;
+  friend class VPMultiDefValue;
 
   /// The VPValues defined by this VPDef.
   TinyPtrVector<VPRecipeValue *> DefinedValues;
@@ -450,7 +496,8 @@ class VPDef {
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
     llvm::erase(DefinedValues, V);
-    V->Def = nullptr;
+    if (auto *SV = dyn_cast<VPMultiDefValue>(V))
+      SV->Def = nullptr;
   }
 
 public:

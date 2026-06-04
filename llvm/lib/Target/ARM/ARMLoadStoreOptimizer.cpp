@@ -613,7 +613,8 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   // Move backward just before the "Before" position.
   while (LiveRegPos != Before) {
     --LiveRegPos;
-    LiveRegs.stepBackward(*LiveRegPos);
+    if (!LiveRegPos->isDebugInstr())
+      LiveRegs.stepBackward(*LiveRegPos);
   }
 }
 

@@ -195,7 +195,6 @@ ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
   if (InferMissingFrames)
     MissingContextInferrer = std::make_unique<MissingFrameInferrer>(this);
-  load();
 }
 
 ProfiledBinary::~ProfiledBinary() = default;
@@ -228,9 +227,9 @@ void ProfiledBinary::warnNoFuncEntry() {
                      "inconsistent name from symbol table and dwarf info.");
 }
 
-void ProfiledBinary::load() {
+void ProfiledBinary::load(StringRef TripleStr) {
   // Attempt to open the binary.
-  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
+  OBinary = unwrapOrError(createBinary(Path), Path);
   Binary &ExeBinary = *OBinary.getBinary();
 
   IsCOFF = isa<COFFObjectFile>(&ExeBinary);
@@ -238,7 +237,10 @@ void ProfiledBinary::load() {
     exitWithError("not a valid ELF/COFF image", Path);
 
   auto *Obj = cast<ObjectFile>(&ExeBinary);
-  TheTriple = Obj->makeTriple();
+  if (!TripleStr.empty())
+    TheTriple = Triple(TripleStr);
+  else
+    TheTriple = Obj->makeTriple();
 
   LLVM_DEBUG(dbgs() << "Loading " << Path << "\n");
 
@@ -530,7 +532,7 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       if (!ProbeDecoder.buildGUID2FuncDescMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size()))
+              Contents.size(), /*IsMMapped=*/false, ShowDetailedWarning))
         exitWithError(
             "Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {
@@ -753,7 +755,7 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
     exitWithError("no instruction info for target " + TheTriple.str(),
                   FileName);
 
-  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *AsmInfo, *MRI, *STI);
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
   Ctx.setObjectFileInfo(MOFI.get());

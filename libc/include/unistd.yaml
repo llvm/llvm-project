@@ -14,6 +14,14 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: STDERR_FILENO
     macro_header: unistd-macros.h
+  - macro_name: _SC_PAGESIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_PAGE_SIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_CONF
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_ONLN
+    macro_header: unistd-macros.h
 types:
   - type_name: uid_t
   - type_name: gid_t
@@ -39,7 +47,7 @@ objects:
 functions:
   - name: __llvm_libc_syscall
     standards:
-      - POSIX
+      - posix
     return_type: long
     arguments:
       - type: long
@@ -51,26 +59,26 @@ functions:
       - type: long
   - name: _exit
     standards:
-      - POSIX
+      - posix
     return_type: _Noreturn void
     arguments:
       - type: int
   - name: access
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: int
   - name: chdir
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
   - name: chown
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
@@ -78,26 +86,26 @@ functions:
       - type: gid_t
   - name: close
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: dup
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: dup2
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: int
   - name: dup3
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -105,14 +113,14 @@ functions:
       - type: int
   - name: execv
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: __exec_argv_t
   - name: execve
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
@@ -120,7 +128,7 @@ functions:
       - type: __exec_envp_t
   - name: faccessat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -129,40 +137,47 @@ functions:
       - type: int
   - name: fchdir
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: fchown
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: uid_t
       - type: gid_t
+  - name: fpathconf
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: int
+      - type: int
   - name: fork
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: void
   - name: fsync
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
   - name: ftruncate
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
       - type: off_t
   - name: getcwd
     standards:
-      - POSIX
+      - posix
     return_type: char *
     arguments:
       - type: char *
@@ -176,13 +191,13 @@ functions:
       - type: size_t
   - name: geteuid
     standards:
-      - POSIX
+      - posix
     return_type: uid_t
     arguments:
       - type: void
   - name: gethostname
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: char *
@@ -195,7 +210,7 @@ functions:
       - type: void
   - name: getopt
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -203,19 +218,19 @@ functions:
       - type: const char *
   - name: getpid
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: void
   - name: getppid
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: void
   - name: getsid
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: pid_t
@@ -227,19 +242,19 @@ functions:
       - type: void
   - name: getuid
     standards:
-      - POSIX
+      - posix
     return_type: uid_t
     arguments:
       - type: void
   - name: getgid
     standards:
-      - POSIX
+      - posix
     return_type: gid_t
     arguments:
       - type: void
   - name: isatty
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -247,14 +262,14 @@ functions:
     attributes: []
   - name: link
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: linkat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -264,15 +279,22 @@ functions:
       - type: int
   - name: lseek
     standards:
-      - POSIX
+      - posix
     return_type: off_t
     arguments:
       - type: int
       - type: off_t
       - type: int
+  - name: pathconf
+    standards:
+      - posix
+    return_type: long
+    arguments:
+      - type: const char *
+      - type: int
   - name: pipe
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int *
@@ -285,7 +307,7 @@ functions:
       - type: int
   - name: pread
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -294,7 +316,7 @@ functions:
       - type: off_t
   - name: pwrite
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -303,7 +325,7 @@ functions:
       - type: off_t
   - name: read
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int
@@ -311,7 +333,7 @@ functions:
       - type: size_t
   - name: readlink
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: const char *__restrict
@@ -319,21 +341,22 @@ functions:
       - type: size_t
   - name: readlinkat
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
+      - type: int
       - type: const char *__restrict
       - type: char *__restrict
       - type: size_t
   - name: rmdir
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
   - name: swab
     standards:
-      - POSIX
+      - posix
     return_type: void
     arguments:
       - type: const void *__restrict
@@ -341,48 +364,47 @@ functions:
       - type: ssize_t
   - name: setsid
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: void
   - name: symlink
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: const char *
   - name: symlinkat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
-      - type: int
       - type: const char *
       - type: int
       - type: const char *
   - name: sysconf
     standards:
-      - POSIX
-    return_type: int
+      - posix
+    return_type: long
     arguments:
       - type: int
   - name: truncate
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
       - type: off_t
   - name: unlink
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: const char *
   - name: unlinkat
     standards:
-      - POSIX
+      - posix
     return_type: int
     arguments:
       - type: int
@@ -390,7 +412,7 @@ functions:
       - type: int
   - name: write
     standards:
-      - POSIX
+      - posix
     return_type: ssize_t
     arguments:
       - type: int

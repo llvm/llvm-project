@@ -75,18 +75,31 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
 
 EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
                                                  PtrCallback PtrCB) {
-
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = false;
   this->CheckFullyInitialized = false;
   this->PtrCB = PtrCB;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+  if (!this->visitExpr(E, true)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
   }
+
+  return std::move(this->EvalResult);
+}
+
+EvaluationResult EvalEmitter::interpretAsLValuePointer(const Expr *E,
+                                                       PtrCallback PtrCB) {
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitLValueExpr(E, true))
+    EvalResult.setInvalid();
 
   return std::move(this->EvalResult);
 }
@@ -326,6 +339,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
+  Desc.LifeState = Lifetime::Started;
 
   return true;
 }

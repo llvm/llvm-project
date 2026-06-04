@@ -25,18 +25,16 @@ class Module;
 /// Instruments functions to detect race conditions reads. This function pass
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
-struct ThreadSanitizerPass : public PassInfoMixin<ThreadSanitizerPass> {
+struct ThreadSanitizerPass : public RequiredPassInfoMixin<ThreadSanitizerPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  static bool isRequired() { return true; }
 };
 
 /// A module pass for tsan instrumentation.
 ///
 /// Create ctor and init functions.
 struct ModuleThreadSanitizerPass
-  : public PassInfoMixin<ModuleThreadSanitizerPass> {
+    : public RequiredPassInfoMixin<ModuleThreadSanitizerPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
