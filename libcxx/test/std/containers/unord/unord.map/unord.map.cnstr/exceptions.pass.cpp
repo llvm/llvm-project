@@ -8,15 +8,11 @@
 
 // UNSUPPORTED: no-exceptions
 
-// The frozen C++03 headers use a separate __hash_table that is not affected by this fix, and
-// std::unordered_map::emplace is not available there.
-// UNSUPPORTED: c++03
-
 // <unordered_map>
 
-// Check that the unordered_map copy constructor does not leak nodes when an allocation
-// throws partway through copying the elements. The enclosing container is not fully
-// constructed yet, so its destructor does not run to release the already-copied nodes.
+// Check that the unordered_map copy constructor does not leak nodes when a node allocation
+// throws partway through copying the elements. The already-copied nodes must be released even
+// though the container itself never finishes constructing.
 
 #include <cassert>
 #include <cstddef>
@@ -33,7 +29,7 @@
 // to std::allocator (operator new) so that count_new.h can observe leaked nodes.
 template <class T>
 struct CountedThrowingAllocator {
-  using value_type = T;
+  typedef T value_type;
 
   int* countdown_;
 
@@ -63,20 +59,22 @@ struct CountedThrowingAllocator {
 };
 
 int main(int, char**) {
-  using Alloc = CountedThrowingAllocator<std::pair<const int, int> >;
-  using Map   = std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, Alloc>;
+  typedef CountedThrowingAllocator<std::pair<const int, int> > Alloc;
+  typedef std::unordered_map<int, int, std::hash<int>, std::equal_to<int>, Alloc> Map;
 
   const int never_throw = 1 << 30;
   int countdown         = never_throw;
 
-  // Build a source map large enough that copying it performs several node allocations.
+  // Build a source map large enough that copying it performs several node allocations. The
+  // allocator is propagated by select_on_container_copy_construction, so the copy shares this
+  // same countdown.
   Map src((Alloc(countdown)));
   for (int i = 0; i < 16; ++i)
-    src.emplace(i, i);
+    src.insert(std::make_pair(i, i));
 
-  // For every point at which an allocation can fail during the copy, verify that the
-  // partially-constructed copy does not leak any nodes. The allocator is propagated by
-  // select_on_container_copy_construction, so it shares the same countdown.
+  // Make a node allocation fail at every position partway through the copy and verify that no
+  // nodes are leaked. `outstanding_before` captures the allocations held by the source so the
+  // check is unaffected by it.
   for (int fail_at = 0; fail_at < 32; ++fail_at) {
     const int outstanding_before = globalMemCounter.outstanding_new;
 
