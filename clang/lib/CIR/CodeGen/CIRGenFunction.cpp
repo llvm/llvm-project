@@ -1302,10 +1302,19 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
 
   // If the type contains a pointer to data member we can't memset it to zero.
   // Instead, create a null constant and copy it to the destination.
-  // TODO: there are other patterns besides zero that we can usefully memset,
-  // like -1, which happens to be the pattern used by member-pointers.
+  // Member pointers use -1 as the null value, so a plain zero store would be
+  // incorrect; emitNullConstant produces the right per-field pattern.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    cgm.errorNYI(loc, "type is not zero initializable");
+    // emitNullConstant does not yet handle types with virtual bases.
+    if (const auto *rd = ty->getAsCXXRecordDecl(); rd && rd->getNumVBases()) {
+      cgm.errorNYI(loc,
+                   "emitNullInitialization: non-zero-init type with virtual "
+                   "bases");
+      return;
+    }
+    mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
+    builder.createStore(loc, nullVal, destPtr);
+    return;
   }
 
   // In LLVM Codegen: otherwise, just memset the whole thing to zero using
