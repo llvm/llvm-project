@@ -183,9 +183,13 @@ bool Constant::isNotMinSignedValue() const {
     return !CFP->getValueAPF().bitcastToAPInt().isMinSignedValue();
 
   // Check that vectors don't contain INT_MIN
-  if (isa<FixedVectorType>(getType())) {
-    return !containsMatchingVectorElement(
-        [&](const auto *E) { return !E->isNotMinSignedValue(); });
+  if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+      Constant *Elt = getAggregateElement(I);
+      if (!Elt || !Elt->isNotMinSignedValue())
+        return false;
+    }
+    return true;
   }
 
   // Check for splats that aren't INT_MIN
@@ -303,6 +307,44 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
   Constant *CmpEq = ConstantFoldCompareInstruction(ICmpInst::ICMP_EQ, C0, C1);
   return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
+}
+
+static bool
+containsUndefinedElement(const Constant *C,
+                         function_ref<bool(const Constant *)> HasFn) {
+  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
+    if (HasFn(C))
+      return true;
+    if (isa<ConstantAggregateZero>(C))
+      return false;
+    if (isa<ScalableVectorType>(C->getType()))
+      return false;
+
+    for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
+         i != e; ++i) {
+      if (Constant *Elem = C->getAggregateElement(i))
+        if (HasFn(Elem))
+          return true;
+    }
+  }
+
+  return false;
+}
+
+bool Constant::containsUndefOrPoisonElement() const {
+  return containsUndefinedElement(
+      this, [&](const auto *C) { return isa<UndefValue>(C); });
+}
+
+bool Constant::containsPoisonElement() const {
+  return containsUndefinedElement(
+      this, [&](const auto *C) { return isa<PoisonValue>(C); });
+}
+
+bool Constant::containsUndefElement() const {
+  return containsUndefinedElement(this, [&](const auto *C) {
+    return isa<UndefValue>(C) && !isa<PoisonValue>(C);
+  });
 }
 
 bool Constant::containsMatchingVectorElement(

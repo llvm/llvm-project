@@ -5495,16 +5495,18 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     auto *VTy = dyn_cast<FixedVectorType>(Ty);
     if (!VTy)
       return nullptr;
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
-    match(C, m_ContainsMatchingVectorElement(
-                 m_CombineAnd(m_Unless(m_Undef()), m_Constant(BestValue))));
+    Constant *BestValue;
+    if (!match(C, m_ContainsMatchingVectorElement(m_CombineAnd(
+                      m_Unless(m_Undef()), m_Constant(BestValue)))))
+      BestValue = Constant::getNullValue(VTy->getScalarType());
     return Constant::replaceUndefsWith(C, BestValue);
   };
 
   Constant *C;
   if (match(Op0, m_CombineAnd(m_Constant(C),
-                              m_ContainsMatchingVectorElement(m_UndefValue()),
-                              m_Unless(m_ConstantExpr())))) {
+                              m_Unless(m_ContainsMatchingVectorElement(
+                                  m_Isa<ConstantExpr>())))) &&
+      C->containsUndefOrPoisonElement()) {
     if (Constant *Repl = getFreezeVectorReplacement(C))
       return replaceInstUsesWith(I, Repl);
   }

@@ -181,9 +181,9 @@ inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 /// Match an arbitrary ConstantFP and ignore it.
 inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
-template <typename SPTy> struct containsvectorelement_match {
+template <typename SPTy> struct ContainsMatchingVectorElement_match {
   SPTy SubPattern;
-  containsvectorelement_match(const SPTy &SP) : SubPattern(SP) {}
+  ContainsMatchingVectorElement_match(const SPTy &SP) : SubPattern(SP) {}
 
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
@@ -195,7 +195,7 @@ template <typename SPTy> struct containsvectorelement_match {
 /// Match a vector constant where at least one of its elements matches the
 /// subpattern. Any bindings in the subpattern will be bound to the first match.
 template <typename SPTy>
-inline containsvectorelement_match<SPTy>
+inline ContainsMatchingVectorElement_match<SPTy>
 m_ContainsMatchingVectorElement(const SPTy &SubPattern) {
   return SubPattern;
 }

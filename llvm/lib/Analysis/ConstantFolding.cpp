@@ -120,7 +120,7 @@ static bool foldMixesPoisonBits(Constant *C, unsigned NumSrcElt,
   // If element counts don't divide evenly, bail out if a poison source element
   // might span multiple destination lanes.
   if (NumSrcElt % NumDstElt != 0)
-    return match(C, m_ContainsMatchingVectorElement(m_Poison()));
+    return C->containsPoisonElement();
   unsigned Ratio = NumSrcElt / NumDstElt;
   for (unsigned i = 0; i != NumSrcElt; i += Ratio) {
     bool HasPoison = false;
@@ -151,7 +151,7 @@ static bool computePoisonDstLanes(Constant *C, unsigned NumSrcElt,
   // If element counts don't divide evenly, bail out if a poison source element
   // might span multiple destination lanes.
   if ((NumDstElt < NumSrcElt ? NumSrcElt % NumDstElt : NumDstElt % NumSrcElt))
-    return !match(C, m_ContainsMatchingVectorElement(m_Poison()));
+    return !C->containsPoisonElement();
   if (NumDstElt < NumSrcElt) {
     unsigned Ratio = NumSrcElt / NumDstElt;
     for (unsigned i = 0; i != NumDstElt; ++i) {
@@ -197,8 +197,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
       // Bitcasting a byte containing any poison bit to an integer or fp type
       // yields poison.
-      if (SrcEltTy->isByteTy() &&
-          match(C, m_ContainsMatchingVectorElement(m_Poison())))
+      if (SrcEltTy->isByteTy() && C->containsPoisonElement())
         return PoisonValue::get(DestTy);
 
       // If the vector is a vector of floating point or bytes, convert it to a
@@ -2316,7 +2315,7 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   auto *OpVT = cast<VectorType>(Op->getType());
 
   // This is the same as the underlying binops - poison propagates.
-  if (match(Op, m_ContainsMatchingVectorElement(m_Poison())))
+  if (Op->containsPoisonElement())
     return PoisonValue::get(OpVT->getElementType());
 
   // Shortcut non-accumulating reductions.

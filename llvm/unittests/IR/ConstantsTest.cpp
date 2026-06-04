@@ -597,26 +597,26 @@ TEST(ConstantsTest, containsUndefElemTest) {
 
   {
     Constant *V1 = ConstantVector::get({C1, C2});
-    EXPECT_FALSE(match(V1, m_ContainsMatchingVectorElement(m_UndefValue())));
-    EXPECT_FALSE(match(V1, m_ContainsMatchingVectorElement(m_Poison())));
+    EXPECT_FALSE(V1->containsUndefOrPoisonElement());
+    EXPECT_FALSE(V1->containsPoisonElement());
   }
 
   {
     Constant *V2 = ConstantVector::get({C1, CU});
-    EXPECT_TRUE(match(V2, m_ContainsMatchingVectorElement(m_UndefValue())));
-    EXPECT_FALSE(match(V2, m_ContainsMatchingVectorElement(m_Poison())));
+    EXPECT_TRUE(V2->containsUndefOrPoisonElement());
+    EXPECT_FALSE(V2->containsPoisonElement());
   }
 
   {
     Constant *V3 = ConstantVector::get({C1, CP});
-    EXPECT_TRUE(match(V3, m_ContainsMatchingVectorElement(m_UndefValue())));
-    EXPECT_TRUE(match(V3, m_ContainsMatchingVectorElement(m_Poison())));
+    EXPECT_TRUE(V3->containsUndefOrPoisonElement());
+    EXPECT_TRUE(V3->containsPoisonElement());
   }
 
   {
     Constant *V4 = ConstantVector::get({CU, CP});
-    EXPECT_TRUE(match(V4, m_ContainsMatchingVectorElement(m_UndefValue())));
-    EXPECT_TRUE(match(V4, m_ContainsMatchingVectorElement(m_Poison())));
+    EXPECT_TRUE(V4->containsUndefOrPoisonElement());
+    EXPECT_TRUE(V4->containsPoisonElement());
   }
 }
 

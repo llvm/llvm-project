@@ -1290,7 +1290,8 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
 
   // If any element of a constant divisor fixed width vector is zero or undef
   // the behavior is undefined and we can fold the whole op to poison.
-  if (match(Op1, m_ContainsMatchingVectorElement(
+  if (isa<FixedVectorType>(I.getType()) &&
+      match(Op1, m_ContainsMatchingVectorElement(
                      m_CombineOr(m_Zero(), m_UndefValue())))) {
     return replaceInstUsesWith(I, PoisonValue::get(I.getType()));
   }

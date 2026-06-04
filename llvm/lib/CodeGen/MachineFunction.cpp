@@ -54,7 +54,6 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
@@ -80,7 +79,6 @@
 #include "LiveDebugValues/LiveDebugValues.h"
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "codegen"
 
@@ -1563,8 +1561,7 @@ static bool CanShareConstantPoolEntry(const Constant *A, const Constant *B,
   if (StoreSize != DL.getTypeStoreSize(B->getType()) || StoreSize > 128)
     return false;
 
-  bool ContainsUndefOrPoisonA =
-      match(A, m_ContainsMatchingVectorElement(m_UndefValue()));
+  bool ContainsUndefOrPoisonA = A->containsUndefOrPoisonElement();
 
   Type *IntTy = IntegerType::get(A->getContext(), StoreSize*8);
 
