@@ -763,7 +763,7 @@ static std::optional<std::string> ApplyLLDBCastFixIts(StringRef expr_text) {
     // Don't rewrite valid casts such as `0xABCDEF as UInt32`
     return std::nullopt;
 
-  // The substitution must preserve the boundary character (capture group 1).
+  // The substitution must preserve any boundary character (capture group 1).
   return cast_regex.sub("\\1unsafeBitCast(\\2, to: \\3.self)", expr_text);
 }
 
