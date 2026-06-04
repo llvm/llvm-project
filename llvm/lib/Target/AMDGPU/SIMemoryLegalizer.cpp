@@ -1020,7 +1020,7 @@ static bool isNonVolatileMemoryAccess(const GCNSubtarget &ST,
   bool GASEnabled = ST.isGloballyAddressableScratchEnabled();
   if (!GASEnabled && ST.getInstrInfo()->isFLATScratch(MI.getOpcode()))
     return true;
-  return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
+  return all_of(MI.memoperands(), [GASEnabled](const MachineMemOperand *MMO) {
     // If globally addressable scratch is enabled, we can only set NV=1 by
     // checking for the thread-private or invariant memory. If it is disabled,
     // we can additionally consider private memory.
