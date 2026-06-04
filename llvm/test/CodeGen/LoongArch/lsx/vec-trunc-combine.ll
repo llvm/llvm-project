@@ -51,28 +51,16 @@ define <4 x i16> @test_trunc_v4i32_to_v4i16(<4 x i32> %arg) {
 define <4 x i8> @test_trunc_v4i64_to_v4i8(<4 x i64> %arg) {
 ; LA32-LABEL: test_trunc_v4i64_to_v4i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 3
-; LA32-NEXT:    vori.b $vr0, $vr2, 0
+; LA32-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickev.h $vr0, $vr0, $vr0
+; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_trunc_v4i64_to_v4i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 0
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 1
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 3
-; LA64-NEXT:    vori.b $vr0, $vr2, 0
+; LA64-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vpickev.h $vr0, $vr0, $vr0
+; LA64-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    ret
   %trunc = trunc <4 x i64> %arg to <4 x i8>
   ret <4 x i8> %trunc
@@ -81,28 +69,14 @@ define <4 x i8> @test_trunc_v4i64_to_v4i8(<4 x i64> %arg) {
 define <4 x i16> @test_trunc_v4i64_to_v4i16(<4 x i64> %arg) {
 ; LA32-LABEL: test_trunc_v4i64_to_v4i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA32-NEXT:    vinsgr2vr.h $vr2, $a0, 3
-; LA32-NEXT:    vori.b $vr0, $vr2, 0
+; LA32-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickev.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_trunc_v4i64_to_v4i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.h $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.h $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 0
-; LA64-NEXT:    vinsgr2vr.h $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 1
-; LA64-NEXT:    vinsgr2vr.h $vr2, $a0, 3
-; LA64-NEXT:    vori.b $vr0, $vr2, 0
+; LA64-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vpickev.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    ret
   %trunc = trunc <4 x i64> %arg to <4 x i16>
   ret <4 x i16> %trunc
@@ -125,44 +99,14 @@ define <4 x i32> @test_trunc_v4i64_to_v4i32(<4 x i64> %arg) {
 define <8 x i8> @test_trunc_v8i32_to_v8i8(<8 x i32> %arg) {
 ; LA32-LABEL: test_trunc_v8i32_to_v8i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 1
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 3
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 1
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 5
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 6
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 3
-; LA32-NEXT:    vinsgr2vr.b $vr2, $a0, 7
-; LA32-NEXT:    vori.b $vr0, $vr2, 0
+; LA32-NEXT:    vpickev.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_trunc_v8i32_to_v8i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 0
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 1
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 2
-; LA64-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 3
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 4
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 1
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 5
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 6
-; LA64-NEXT:    vpickve2gr.w $a0, $vr1, 3
-; LA64-NEXT:    vinsgr2vr.b $vr2, $a0, 7
-; LA64-NEXT:    vori.b $vr0, $vr2, 0
+; LA64-NEXT:    vpickev.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    ret
   %trunc = trunc <8 x i32> %arg to <8 x i8>
   ret <8 x i8> %trunc
@@ -185,44 +129,18 @@ define <8 x i16> @test_trunc_v8i32_to_v8i16(<8 x i32> %arg) {
 define <8 x i8> @test_trunc_v8i64_to_v8i8(<8 x i64> %arg) {
 ; LA32-LABEL: test_trunc_v8i64_to_v8i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 1
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 2
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 2
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 3
-; LA32-NEXT:    vpickve2gr.w $a0, $vr2, 0
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 4
-; LA32-NEXT:    vpickve2gr.w $a0, $vr2, 2
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 5
-; LA32-NEXT:    vpickve2gr.w $a0, $vr3, 0
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 6
-; LA32-NEXT:    vpickve2gr.w $a0, $vr3, 2
-; LA32-NEXT:    vinsgr2vr.b $vr4, $a0, 7
-; LA32-NEXT:    vori.b $vr0, $vr4, 0
+; LA32-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickev.w $vr1, $vr3, $vr2
+; LA32-NEXT:    vpickev.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_trunc_v8i64_to_v8i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 0
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 0
-; LA64-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 1
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 0
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 2
-; LA64-NEXT:    vpickve2gr.d $a0, $vr1, 1
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 3
-; LA64-NEXT:    vpickve2gr.d $a0, $vr2, 0
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 4
-; LA64-NEXT:    vpickve2gr.d $a0, $vr2, 1
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 5
-; LA64-NEXT:    vpickve2gr.d $a0, $vr3, 0
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 6
-; LA64-NEXT:    vpickve2gr.d $a0, $vr3, 1
-; LA64-NEXT:    vinsgr2vr.b $vr4, $a0, 7
-; LA64-NEXT:    vori.b $vr0, $vr4, 0
+; LA64-NEXT:    vpickev.w $vr0, $vr1, $vr0
+; LA64-NEXT:    vpickev.w $vr1, $vr3, $vr2
+; LA64-NEXT:    vpickev.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    ret
   %trunc = trunc <8 x i64> %arg to <8 x i8>
   ret <8 x i8> %trunc

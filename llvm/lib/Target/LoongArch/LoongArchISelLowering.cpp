@@ -408,6 +408,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v16i32, MVT::v8i64,
                    MVT::v16i64})
       setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
+    for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v16i32, MVT::v8i64,
+                   MVT::v16i64})
+      setOperationAction(ISD::TRUNCATE, VT, Custom);
   }
 
   // Set operations for 'LASX' feature.
@@ -661,6 +664,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerSIGN_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return lowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::TRUNCATE:
+    return lowerTRUNCATE(Op, DAG);
   }
   return SDValue();
 }
@@ -1008,6 +1013,81 @@ SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
   }
 
   return SDValue();
+}
+
+// For large vectors, we can use [X]VPICKEV to narrow the vector
+// recursively until it matches the destination type.
+// This is more efficient than bitcasting to a wider one
+// then shuffling, especially when the source vector is illegal
+// and needs to be constructed from multiple registers.
+SDValue LoongArchTargetLowering::lowerTRUNCATE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT VT = Op.getValueType();
+  EVT SrcVT = Src.getValueType();
+
+  unsigned SrcBits = SrcVT.getSizeInBits();
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  unsigned DstEltBits = VT.getScalarSizeInBits();
+  unsigned BlockBits = Subtarget.hasExtLASX() ? 256 : 128;
+
+  SmallVector<SDValue, 8> Blocks;
+  unsigned MidNumElts = BlockBits / SrcEltBits;
+  MVT MidVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltBits), MidNumElts);
+  if (Src.getOpcode() == ISD::CONCAT_VECTORS &&
+      Src.getOperand(0).getValueSizeInBits() == BlockBits)
+    for (unsigned i = 0; i < Src.getNumOperands(); i++)
+      Blocks.push_back(Src.getOperand(i));
+  else if (SrcBits > BlockBits)
+    for (unsigned i = 0; i < SrcBits / BlockBits; i++)
+      Blocks.push_back(
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MidVT, Src,
+                      DAG.getVectorIdxConstant(i * MidNumElts, DL)));
+  else if (SrcBits < BlockBits)
+    Blocks.push_back(DAG.getNode(ISD::INSERT_SUBVECTOR, DL, MidVT,
+                                 DAG.getUNDEF(MidVT), Src,
+                                 DAG.getVectorIdxConstant(0, DL)));
+  else
+    Blocks.push_back(Src);
+
+  unsigned CurEltBits = SrcEltBits;
+  bool IsValidUpperBits = SrcBits >= BlockBits;
+  while (CurEltBits > DstEltBits) {
+    unsigned NarrowBits = CurEltBits / 2;
+    unsigned NarrowNumElts = BlockBits / NarrowBits;
+    MVT NarrowVT =
+        MVT::getVectorVT(MVT::getIntegerVT(NarrowBits), NarrowNumElts);
+
+    SmallVector<SDValue, 4> Next;
+    bool SelfPair = Blocks.size() <= 1;
+    for (unsigned i = 0; i < Blocks.size(); i += 2) {
+      SDValue Lo = Blocks[i];
+      SDValue Hi = SelfPair ? Lo : Blocks[i + 1];
+      SDValue Res = DAG.getNode(LoongArchISD::VPICKEV, DL, NarrowVT, Hi, Lo);
+
+      // Fix the data layout under LASX due to XVPICKEV is per 128-bit lane.
+      if (BlockBits == 256 && IsValidUpperBits) {
+        MVT PermVT = MVT::v4i64;
+        Res = DAG.getBitcast(PermVT, Res);
+        Res = DAG.getNode(
+            LoongArchISD::XVPERMI, DL, PermVT, Res,
+            DAG.getConstant(0b11011000, DL, Subtarget.getGRLenVT()));
+        Res = DAG.getBitcast(NarrowVT, Res);
+        // After the first self-pair, all valid data lives in the low 128 bits.
+        if (SelfPair)
+          IsValidUpperBits = false;
+      }
+
+      Next.push_back(Res);
+    }
+
+    Blocks = std::move(Next);
+    CurEltBits = NarrowBits;
+  }
+
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Blocks[0],
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 // Lower vecreduce_add using vhaddw instructions.
@@ -5788,6 +5868,7 @@ void LoongArchTargetLowering::ReplaceNodeResults(
       }
     }
 
+    Results.push_back(lowerTRUNCATE(SDValue(N, 0), DAG));
     break;
   }
   case ISD::SIGN_EXTEND: {
