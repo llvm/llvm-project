@@ -49,13 +49,15 @@ static bool checkMinMax(std::stringstream &OS, unsigned Occ, unsigned MinOcc,
                         unsigned MaxOcc,
                         std::function<unsigned(unsigned)> GetOcc,
                         std::function<unsigned(unsigned)> GetMinGPRs,
-                        std::function<unsigned(unsigned)> GetMaxGPRs) {
+                        std::function<unsigned(unsigned)> GetMaxGPRs,
+                        bool AllowUnreachable = false) {
   bool MinValid = true, MaxValid = true, RangeValid = true;
   unsigned MinGPRs = GetMinGPRs(Occ);
   unsigned MaxGPRs = GetMaxGPRs(Occ);
   unsigned RealOcc;
 
-  if (MinGPRs >= MaxGPRs)
+  bool Unreachable = MinGPRs >= MaxGPRs;
+  if (Unreachable)
     RangeValid = false;
   else {
     RealOcc = GetOcc(MinGPRs);
@@ -81,6 +83,12 @@ static bool checkMinMax(std::stringstream &OS, unsigned Occ, unsigned MinOcc,
 
   OS << std::left << std::setw(15) << MinStr.str() << std::setw(3) << MaxGPRs
      << " (O" << GetOcc(MaxGPRs) << ')' << (MaxValid ? "" : " >");
+
+  // A coarse resource (SGPRs before GFX10) cannot realize every occupancy
+  // level: an empty [min, max] window just means this level is unreachable,
+  // which is not a min/max inconsistency.
+  if (Unreachable && AllowUnreachable)
+    return true;
 
   return MinValid && MaxValid && RangeValid;
 }
@@ -199,6 +207,23 @@ TEST_F(AMDGPUTestBase, TestVGPRLimitsPerOccupancy) {
   testGPRLimits("VGPR", true, test);
 
   testDynamicVGPRLimits("gfx1200", "+wavefrontsize32", test);
+}
+
+TEST_F(AMDGPUTestBase, TestSGPRLimitsPerOccupancy) {
+  auto test = [](std::stringstream &OS, unsigned Occ, const GCNSubtarget &ST,
+                 unsigned /*DynamicVGPRBlockSize*/) {
+    unsigned MaxSGPRNum = ST.getAddressableNumSGPRs();
+    return checkMinMax(
+        OS, Occ, ST.getOccupancyWithNumSGPRs(MaxSGPRNum), ST.getMaxWavesPerEU(),
+        [&](unsigned NumGPRs) { return ST.getOccupancyWithNumSGPRs(NumGPRs); },
+        [&](unsigned Occ) { return ST.getMinNumSGPRs(Occ); },
+        [&](unsigned Occ) {
+          return ST.getMaxNumSGPRs(Occ, /*Addressable=*/true);
+        },
+        /*AllowUnreachable=*/true);
+  };
+
+  testGPRLimits("SGPR", false, test);
 }
 
 static void testAbsoluteLimits(StringRef CPUName, StringRef FS,
