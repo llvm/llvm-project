@@ -1669,6 +1669,36 @@ TEST_F(ScalarEvolutionsTest, ForgetValueWithOverflowInst) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ForgetValueAddChainFolding) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define i32 @foo(i32 %x) { "
+      "  %add1 = add i32 %x, 1 "
+      "  %add2 = add i32 %add1, 1 "
+      "  %add3 = add i32 %add2, 1 "
+      "  ret i32 %add3 "
+      "} ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *Add1 = getInstructionByName(F, "add1");
+    auto *Add2 = getInstructionByName(F, "add2");
+    auto *Add3 = getInstructionByName(F, "add3");
+
+    const SCEV *Add3Scev = SE.getSCEV(Add3);
+    EXPECT_NE(Add3Scev, nullptr);
+    EXPECT_EQ(SE.getExistingSCEV(Add1), nullptr);
+    EXPECT_EQ(SE.getExistingSCEV(Add2), nullptr);
+
+    SE.forgetValue(Add1);
+    EXPECT_EQ(SE.getExistingSCEV(Add3), nullptr);
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering) {
   // Regression test for a case where caching of equivalent values caused the
   // comparator to get inconsistent.
