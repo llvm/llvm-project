@@ -140,6 +140,10 @@ do_configure() {
     extra_flags+="
       -DLLVM_ENABLE_ZSTD=OFF
       -DLLVM_ENABLE_ZLIB=OFF
+      -DLLVM_ENABLE_TERMINFO=OFF
+      -DLLVM_ENABLE_LIBXML2=OFF
+      -DLLVM_ENABLE_PIC=OFF
+      -DLLVM_ENABLE_THREADS=OFF
       -DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections
       -DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections
       -DCMAKE_C_FLAGS_RELEASE=-Os -DNDEBUG
