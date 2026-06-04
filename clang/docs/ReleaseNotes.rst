@@ -354,6 +354,9 @@ New Compiler Flags
   that ``bool`` values loaded from memory cannot have a bit pattern other
   than 0 or 1.
 
+- New option ``-fcrash-diagnostics-tar`` added to create an archive of crash
+  reproducer files for easier bug filing.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -598,6 +601,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Diagnostics for the C++11 range-based for statement now report the correct
+  iterator type in notes for invalid iterator types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -687,6 +693,7 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -821,6 +828,10 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
+
+- Fixed a bug where host-device ambiguities in CUDA/HIP when retrieving the
+  address of specializations of templated functions that have overloads for both
+  host and device. (#GH199299)
 
 AIX Support
 ^^^^^^^^^^^

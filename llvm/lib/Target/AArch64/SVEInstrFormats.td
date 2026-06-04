@@ -724,7 +724,7 @@ class SVE_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType 
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, (i32 imm_ty:$i))),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1), imm_ty:$i)>;
 
-class SVE2p1_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
+class SVE_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 
@@ -10174,7 +10174,7 @@ class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
 
 multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatternOperator intrinsic> {
   def NAME : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
-  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32>;
+  def : SVE_Cvt_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32>;
 }
 
 // SVE2 multi-vec shift narrow
@@ -11485,10 +11485,14 @@ class sve2_fp_to_int_downcvt<string asm, ZPRRegOp ZdRC, RegisterOperand ZSrcOp, 
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_fp_to_int_downcvt<string asm, bit U> {
+multiclass sve2_fp_to_int_downcvt<string asm, bit U, SDPatternOperator op> {
   def _HtoB : sve2_fp_to_int_downcvt<asm, ZPR8,  ZZ_h_mul_r, 0b01, U>;
   def _StoH : sve2_fp_to_int_downcvt<asm, ZPR16, ZZ_s_mul_r, 0b10, U>;
   def _DtoS : sve2_fp_to_int_downcvt<asm, ZPR32, ZZ_d_mul_r, 0b11, U>;
+
+  def: SVE_Cvt_VG2_Pat<NAME # _HtoB, op, nxv16i8, nxv8f16>;
+  def: SVE_Cvt_VG2_Pat<NAME # _StoH, op, nxv8i16, nxv4f32>;
+  def: SVE_Cvt_VG2_Pat<NAME # _DtoS, op, nxv4i32, nxv2f64>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -11508,8 +11512,12 @@ class sve2_int_to_fp_upcvt<string asm, ZPRRegOp ZdRC, ZPRRegOp ZnRC,
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U> {
+multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U, SDPatternOperator op> {
   def _BtoH : sve2_int_to_fp_upcvt<asm, ZPR16, ZPR8,  0b01, U>;
   def _HtoS : sve2_int_to_fp_upcvt<asm, ZPR32, ZPR16, 0b10, U>;
   def _StoD : sve2_int_to_fp_upcvt<asm, ZPR64, ZPR32, 0b11, U>;
+
+  def : SVE_1_Op_Pat<nxv8f16, op, nxv16i8, !cast<Instruction>(NAME # _BtoH)>;
+  def : SVE_1_Op_Pat<nxv4f32, op, nxv8i16, !cast<Instruction>(NAME # _HtoS)>;
+  def : SVE_1_Op_Pat<nxv2f64, op, nxv4i32, !cast<Instruction>(NAME # _StoD)>;
 }
