@@ -672,6 +672,11 @@ Changes in existing checks
   false positives when a class is seen through both a header include and
   a C++20 module import.
 
+- Improved :doc:`readability-braces-around-statements
+  <clang-tidy/checks/readability/braces-around-statements>` check by fixing a
+  crash when diagnosing a statement that ends in the middle of a macro body
+  expansion.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check:
 
