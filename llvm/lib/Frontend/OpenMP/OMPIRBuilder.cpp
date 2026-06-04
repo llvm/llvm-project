@@ -11797,7 +11797,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
     llvm::offloading::emitOffloadingEntry(
         M, object::OffloadKind::OFK_OpenMP, ID,
         Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
-        /*AuxAddr*/ nullptr, Linkage);
+        /*AuxAddr=*/nullptr, Linkage);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
