@@ -121,10 +121,10 @@ define <16 x float> @concat_fmul_self_v16f32_v4f32(<4 x float> %a0, <4 x float> 
 define <8 x double> @concat_fmul_self_v8f64_v4f64(<4 x double> %a0, <4 x double> %a1) {
 ; SSE-LABEL: concat_fmul_self_v8f64_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    mulpd %xmm0, %xmm0
 ; SSE-NEXT:    mulpd %xmm1, %xmm1
 ; SSE-NEXT:    mulpd %xmm2, %xmm2
 ; SSE-NEXT:    mulpd %xmm3, %xmm3
+; SSE-NEXT:    mulpd %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: concat_fmul_self_v8f64_v4f64:
@@ -148,10 +148,10 @@ define <8 x double> @concat_fmul_self_v8f64_v4f64(<4 x double> %a0, <4 x double>
 define <16 x float> @concat_fmul_self_v16f32_v8f32(<8 x float> %a0, <8 x float> %a1) {
 ; SSE-LABEL: concat_fmul_self_v16f32_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    mulps %xmm0, %xmm0
 ; SSE-NEXT:    mulps %xmm1, %xmm1
 ; SSE-NEXT:    mulps %xmm2, %xmm2
 ; SSE-NEXT:    mulps %xmm3, %xmm3
+; SSE-NEXT:    mulps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: concat_fmul_self_v16f32_v8f32:

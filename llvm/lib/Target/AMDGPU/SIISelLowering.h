@@ -399,7 +399,7 @@ public:
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
-  bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
+
   bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                unsigned Index) const override;
   bool isExtractVecEltCheap(EVT VT, unsigned Index) const override;

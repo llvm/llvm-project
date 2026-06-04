@@ -2354,23 +2354,6 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool SITargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
-                                             EVT DestVT) const {
-  if (N->getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return AMDGPUTargetLowering::isNarrowingProfitable(N, SrcVT, DestVT);
-
-  unsigned Index = N->getConstantOperandVal(1);
-  unsigned ScalarBits = DestVT.getScalarSizeInBits();
-  unsigned OffsetBits = Index * ScalarBits;
-  unsigned SubvectorBits = DestVT.getSizeInBits();
-
-  // If the extracted subvector starts on a dword boundary and has a dword
-  // sized payload, keeping the original wide result is preferable because the
-  // subvector can be referenced directly through subregisters. Otherwise,
-  // narrowing may avoid element extraction or reconstruction.
-  return OffsetBits % 32 != 0 || SubvectorBits % 32 != 0;
-}
-
 bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
