@@ -143,9 +143,6 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
-  // Copy attributes
-  AttributeList OldAttrList = OldIntr.getAttributes();
-  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -2398,8 +2395,6 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
-  AttributeList OldAttrList = II.getAttributes();
-  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {

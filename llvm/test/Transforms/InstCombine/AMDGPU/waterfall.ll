@@ -67,49 +67,7 @@ define amdgpu_ps <4 x float> @test_waterfall_same_index_aba(<8 x i32> addrspace(
   ret <4 x float> %r1
 }
 
-; Inside a waterfall region, InstCombine runs two transforms on the same
-; image.sample call:
-;   1. modifyIntrinsicCall: lod = 0.0 rewrites image.sample.l.1d to
-;      image.sample.lz.1d, dropping the lod operand.
-;   2. simplifyAMDGCNMemoryIntrinsicDemanded: only lanes 0 and 1 escape
-;      waterfall.end, so the dmask shrinks from 15 to 3 and the return
-;      type shrinks from <4 x float> to <2 x float>. This is reached via
-;      waterfall.end's SimplifyAndSetOp.
-; Each transform rebuilds the call with IC.Builder.CreateIntrinsic, which
-; would drop any call-site-only attributes (here, memory(argmem: read)
-; attached via #1). The new call is guaranteed to inherit attributes from
-; the intrinsic declaration, but not call-site attributes.
-define amdgpu_ps <2 x float> @waterfall_image_l_to_lz_shrink(<8 x i32> addrspace(4)* inreg %in, i32 %vidx, float %s, <4 x i32> inreg %samp) {
-; CHECK-LABEL: @waterfall_image_l_to_lz_shrink(
-; CHECK-NEXT:    [[TOK:%.*]] = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 [[VIDX:%.*]])
-; CHECK-NEXT:    [[S_IDX:%.*]] = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32(token [[TOK]], i32 [[VIDX]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[S_IDX]] to i64
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[IN:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    [[R:%.*]] = load <8 x i32>, ptr addrspace(4) [[PTR]], align 32
-; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[R]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0) #[[ATTR:[0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[V4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[W4:%.*]] = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token [[TOK]], <4 x float> [[TMP2]])
-; CHECK-NEXT:    [[R1:%.*]] = shufflevector <4 x float> [[W4]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    ret <2 x float> [[R1]]
-;
-; CHECK: attributes #[[ATTR]] = { memory(argmem: read) }
-  %tok   = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %vidx)
-  %s_idx = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token %tok, i32 %vidx)
-  %ptr   = getelementptr <8 x i32>, ptr addrspace(4) %in, i32 %s_idx
-  %r     = load <8 x i32>, ptr addrspace(4) %ptr, align 32
-  %v4    = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float 0.0, <8 x i32> %r, <4 x i32> %samp, i1 false, i32 0, i32 0) #1
-  %w4    = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %tok, <4 x float> %v4)
-  %e0    = extractelement <4 x float> %w4, i32 0
-  %e1    = extractelement <4 x float> %w4, i32 1
-  %r0    = insertelement <2 x float> poison, float %e0, i32 0
-  %r1    = insertelement <2 x float> %r0,    float %e1, i32 1
-  ret <2 x float> %r1
-}
-
 declare token @llvm.amdgcn.waterfall.begin.i32(token, i32)
 declare i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(token, i32)
 declare <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token, <4 x float>)
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-declare <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
-
-attributes #1 = { memory(argmem: read) }
