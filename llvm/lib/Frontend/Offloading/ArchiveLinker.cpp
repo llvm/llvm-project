@@ -180,7 +180,7 @@ resolveArchiveMembers(const Inputs &In,
   for (const InputDesc &Desc : In.Order) {
     std::optional<std::string> Filename;
 
-    if (Desc.Kind == InputDesc::Library) {
+    if (Desc.Kind == InputDesc::KindTy::Library) {
       Filename = searchLibrary(Desc.Value, In.Root, In.SearchPaths);
       if (!Filename)
         return createStringError("unable to find library -l%s",

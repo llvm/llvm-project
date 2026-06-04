@@ -72,7 +72,7 @@ struct Symbol {
 /// Description of a single input (file or library).
 struct InputDesc {
   StringRef Value; // file path, or library name for -l (the value after -l)
-  enum KindTy { File, Library } Kind;
+  enum class KindTy { File, Library } Kind;
   bool WholeArchive; // --whole-archive state in effect at this input
 };
 

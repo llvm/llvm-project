@@ -205,8 +205,8 @@ getInput(const ArgList &Args) {
     offloading::InputDesc Desc;
     Desc.Value = Arg->getValue();
     Desc.Kind = Arg->getOption().matches(OPT_library)
-                    ? offloading::InputDesc::Library
-                    : offloading::InputDesc::File;
+                    ? offloading::InputDesc::KindTy::Library
+                    : offloading::InputDesc::KindTy::File;
     Desc.WholeArchive = WholeArchive;
     InputDescs.push_back(Desc);
   }
