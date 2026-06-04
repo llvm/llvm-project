@@ -624,7 +624,6 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   llvm::omp::Clause clauseId{x.Id()};
 
   // Filter out clauses that don't take OmpObjectList.
-  version = std::max(version, 45u);
   auto argType{GetArgumentListItemKind(clauseId, version)};
   if (!argType) {
     return;
