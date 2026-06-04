@@ -469,7 +469,10 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
-    const auto *FDef = cast<FunctionDecl>(FD);
+    const auto *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+
     if (FDef->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
         FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return;
