@@ -80,12 +80,16 @@ getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
 /// tensor_desc to i32 type such that lane data becomes [1, 1]. This makes the
 /// later lowering easily use the load with transpose instruction.
 static bool canBeOptimizedForTranspose(ArrayRef<int64_t> laneLayout,
-                                       ArrayRef<int64_t> laneData) {
+                                       ArrayRef<int64_t> laneData,
+                                       int64_t elementBitWidth) {
   if (laneLayout.size() != 2 || laneData.size() != 2)
     return false;
   if (laneLayout[0] == 1 || laneLayout[1] != 1)
     return false;
   if (laneData[0] != 1 || laneData[1] == 1)
+    return false;
+  // Add a tighter check to see if the bundle to transpose is 32bit.
+  if (elementBitWidth * laneData[1] != 32)
     return false;
   return true;
 }
@@ -97,11 +101,15 @@ static bool canBeOptimizedForTranspose(xegpu::TensorDescType tdescType) {
   int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
   if (elementTyBitwidth >= 32)
     return false;
+  // sub-byte type is not supported for now.
+  if (elementTyBitwidth < 8)
+    return false;
   auto maybeLaneLayout = getMaybeLaneLayout(tdescType);
   auto maybeLaneData = getMaybeLaneData(tdescType);
   if (!maybeLaneData || !maybeLaneLayout)
     return false;
-  return canBeOptimizedForTranspose(*maybeLaneLayout, *maybeLaneData);
+  return canBeOptimizedForTranspose(*maybeLaneLayout, *maybeLaneData,
+                                    elementTyBitwidth);
 }
 
 /// Check if a tensor desc type can be optimized for transpose, if so return the
@@ -253,11 +261,17 @@ public:
   matchAndRewrite(xegpu::CreateNdDescOp createNdOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto tdescTy = createNdOp.getType();
+    // sub-byte type is not supported for now.
+    if (tdescTy.getElementTypeBitWidth() < 8)
+      return failure();
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-           "Expecting target chip to be pvc, bmg for transpose optimization.");
+    assert(chipStr &&
+           (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+            chipStr.value() == "cri") &&
+           "Expecting target chip to be pvc, bmg or cri for transpose "
+           "optimization.");
     const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
@@ -566,12 +580,13 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
-      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg"))
+      if (chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg" ||
+                      chipStr.value() == "cri"))
         isTargetSupported = true;
     });
 
@@ -614,7 +629,9 @@ struct XeGPUPeepHoleOptimizerPass final
             return true;
           auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
           auto laneData = layout.getEffectiveLaneDataAsInt();
-          return !canBeOptimizedForTranspose(laneLayout, laneData);
+          return !canBeOptimizedForTranspose(
+              laneLayout, laneData,
+              extractOp.getSourceVectorType().getElementTypeBitWidth());
         });
 
     target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(

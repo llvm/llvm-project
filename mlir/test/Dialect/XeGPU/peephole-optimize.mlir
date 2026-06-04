@@ -59,6 +59,92 @@ gpu.func @no_scf_i8(%arg0: memref<64x64xi8>, %arg1: vector<8x32xi8>) -> vector<8
 
 
 // -----
+// Transpose optimization is also enabled for the "cri" target, producing the
+// same i32-repacked load as for the pvc/bmg targets.
+// CHECK-LABEL: gpu.func @no_scf_cri(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xf16>, %{{.*}}: vector<8x16xf16>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
+// CHECK:         %[[C16:.*]] = arith.constant 16 : index
+// CHECK:         %[[C32:.*]] = arith.constant 32 : index
+// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[ARG0]] : memref<64x64xf16> -> index
+// CHECK:         %[[T0:.*]] = arith.index_cast %[[PTR]] : index to i64
+// CHECK:         %[[BDESC:.*]] = xegpu.create_nd_tdesc %[[T0]], shape : [64, %[[C32]]], strides : [%[[C32]], 1] : i64
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+// CHECK-NEXT:    %[[B:.*]] = xegpu.load_nd %[[BDESC]][%{{.*}}, %[[C16]]]
+// CHECK-SAME:      {layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>}
+// CHECK-SAME:      : !xegpu.tensor_desc<16x8xi32, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1], order = [0, 1]>>
+// CHECK-SAME:      -> vector<16x8xi32>
+// CHECK:         %[[BITCAST:.*]] = vector.bitcast %[[B]] : vector<16x8xi32> to vector<16x16xf16>
+// CHECK:         %[[TRANSPOSE:.*]] = vector.transpose %[[BITCAST]], [1, 0] : vector<16x16xf16> to vector<16x16xf16>
+// CHECK:         %[[DPAS:.*]] = xegpu.dpas %{{.*}}, %[[TRANSPOSE]] : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+// CHECK:         %[[ODESC:.*]] = xegpu.create_nd_tdesc %[[ARG2]] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK:         xegpu.store_nd %[[DPAS]], %[[ODESC]]
+#a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+#b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
+#bt = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>
+gpu.module @cri_module [#xevm.target<chip = "cri">] {
+gpu.func @no_scf_cri(%arg0: memref<64x64xf16>, %arg1: vector<8x16xf16>, %arg2: memref<8x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<64x64xf16> -> !xegpu.tensor_desc<16x16xf16, #b>
+  %1 = xegpu.load_nd %0[%c0, %c32] { result_layout = #b } : !xegpu.tensor_desc<16x16xf16, #b> -> vector<16x16xf16>
+  %2 = vector.transpose %1, [1, 0] { layout_result_0 = #bt } : vector<16x16xf16> to vector<16x16xf16>
+  %3 = xegpu.dpas %arg1, %2 { layout_result_0 = #a } : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
+  %4 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #a>
+  xegpu.store_nd %3, %4[%c0, %c0] : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #a>
+  gpu.return
+}
+}
+
+// -----
+// Sub-byte element types (here i4) are not supported by the transpose
+// optimization, so the transpose-intent load is left untouched even though its
+// 4 x 8 = 32 bit packed bundle would otherwise be eligible.
+// CHECK-LABEL: gpu.func @no_scf_subbyte(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xi4>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x64xi4>) {
+// CHECK:         %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<64x64xi4>
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>>
+// CHECK:         %[[T1:.*]] = xegpu.load_nd %[[T0]][
+// CHECK-SAME:      : !xegpu.tensor_desc<16x64xi4, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>> -> vector<16x64xi4>
+// CHECK-NOT:     vector.bitcast
+// CHECK:         xegpu.store_nd %[[T1]]
+#b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>
+gpu.module @xevm_module {
+gpu.func @no_scf_subbyte(%arg0: memref<64x64xi4>, %arg1: memref<16x64xi4>) {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<64x64xi4> -> !xegpu.tensor_desc<16x64xi4, #b>
+  %1 = xegpu.load_nd %0[%c0, %c32] { result_layout = #b } : !xegpu.tensor_desc<16x64xi4, #b> -> vector<16x64xi4>
+  %2 = xegpu.create_nd_tdesc %arg1 : memref<16x64xi4> -> !xegpu.tensor_desc<16x64xi4, #b>
+  xegpu.store_nd %1, %2[%c0, %c0] : vector<16x64xi4>, !xegpu.tensor_desc<16x64xi4, #b>
+  gpu.return
+}
+}
+
+// -----
+// A transpose-intent load whose packed bundle is not exactly 32 bits (here i8
+// with lane_data = [1, 2], i.e. 8 x 2 = 16 bits) is left untouched.
+// CHECK-LABEL: gpu.func @no_scf_i8_narrow(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<64x64xi8>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x16xi8>) {
+// CHECK:         %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<64x64xi8>
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x16xi8, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>>
+// CHECK:         %[[T1:.*]] = xegpu.load_nd %[[T0]][
+// CHECK-SAME:      : !xegpu.tensor_desc<16x16xi8, #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>> -> vector<16x16xi8>
+// CHECK-NOT:     vector.bitcast
+// CHECK:         xegpu.store_nd %[[T1]]
+#b = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
+gpu.module @xevm_module {
+gpu.func @no_scf_i8_narrow(%arg0: memref<64x64xi8>, %arg1: memref<16x16xi8>) {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<64x64xi8> -> !xegpu.tensor_desc<16x16xi8, #b>
+  %1 = xegpu.load_nd %0[%c0, %c32] { result_layout = #b } : !xegpu.tensor_desc<16x16xi8, #b> -> vector<16x16xi8>
+  %2 = xegpu.create_nd_tdesc %arg1 : memref<16x16xi8> -> !xegpu.tensor_desc<16x16xi8, #b>
+  xegpu.store_nd %1, %2[%c0, %c0] : vector<16x16xi8>, !xegpu.tensor_desc<16x16xi8, #b>
+  gpu.return
+}
+}
+
+// -----
 // CHECK-LABEL:   gpu.func @gemm_b_transpose(
 // CHECK-SAME:      %{{.*}} memref<256x256xf16>, %[[ARG1:[a-zA-Z0-9]+]]: memref<256x256xf16>, %{{.*}}: memref<256x256xf32>) {
 // CHECK:           %[[C128:.*]] = arith.constant 128 : index
@@ -278,6 +364,30 @@ gpu.func @array_length(%arg0: vector<8x16xf16>, %arg1: memref<256x256xf16>, %arg
   xegpu.store_nd %4#1, %0[%c0, %c16]  : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #a>
   xegpu.store_nd %4#2, %0[%c16, %c0]  : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #a>
   xegpu.store_nd %4#3, %0[%c16, %c16]  : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32, #a>
+  gpu.return
+}
+}
+
+// -----
+// Array length optimization is skipped for sub-byte types. The FCD (32) is a
+// multiple of the subgroup size (16) and larger than it, so a non-sub-byte
+// descriptor would be folded to array_length = 2 (loading vector<32x16x...>);
+// the i4 descriptor is instead left unchanged.
+// CHECK-LABEL: gpu.func @array_length_subbyte(
+// CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]+]]: memref<256x256xi4>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x32xi4>) {
+// CHECK:         %[[T0:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<256x256xi4>
+// CHECK-SAME:      -> !xegpu.tensor_desc<16x32xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK:         %[[T1:.*]] = xegpu.load_nd %[[T0]][
+// CHECK-SAME:      : !xegpu.tensor_desc<16x32xi4, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x32xi4>
+// CHECK:         xegpu.store_nd %[[T1]]
+#l = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+gpu.module @xevm_module {
+gpu.func @array_length_subbyte(%arg0: memref<256x256xi4>, %arg1: memref<16x32xi4>) {
+  %c0 = arith.constant 0 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<256x256xi4> -> !xegpu.tensor_desc<16x32xi4, #l>
+  %1 = xegpu.load_nd %0[%c0, %c0] { result_layout = #l } : !xegpu.tensor_desc<16x32xi4, #l> -> vector<16x32xi4>
+  %2 = xegpu.create_nd_tdesc %arg1 : memref<16x32xi4> -> !xegpu.tensor_desc<16x32xi4, #l>
+  xegpu.store_nd %1, %2[%c0, %c0] : vector<16x32xi4>, !xegpu.tensor_desc<16x32xi4, #l>
   gpu.return
 }
 }
