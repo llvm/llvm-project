@@ -70,8 +70,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -79,7 +78,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      H, Lookup);
+      SAs.Instance, H, Lookup);
 }
 
 void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
@@ -89,8 +88,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -98,7 +96,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
         }
         Complete(std::move(Result));
       },
-      H, Lookup);
+      SAs.Instance, H, Lookup);
 }
 
 Expected<tpctypes::DylibHandle>

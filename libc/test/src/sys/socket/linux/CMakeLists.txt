@@ -205,6 +205,26 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sendmmsg_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendmmsg_test.cpp
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_mmsghdr
+    libc.src.errno.errno
+    libc.src.string.strlen
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendmmsg
+    libc.src.sys.socket.recvmsg
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   sendmsg_recvmsg_test
   SUITE
     libc_sys_socket_unittests

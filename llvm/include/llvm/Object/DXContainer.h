@@ -478,6 +478,7 @@ private:
   DirectX::Signature OutputSignature;
   DirectX::Signature PatchConstantSignature;
   std::optional<mcdxbc::DebugName> DebugName;
+  std::optional<mcdxbc::CompilerVersion> VersionInfo;
 
   Error parseHeader();
   Error parsePartOffsets();
@@ -488,6 +489,7 @@ private:
   Error parseRootSignature(StringRef Part);
   Error parsePSVInfo(StringRef Part);
   Error parseSignature(StringRef Part, DirectX::Signature &Array);
+  Error parseCompilerVersionInfo(StringRef Part);
   friend class PartIterator;
 
 public:
@@ -600,6 +602,10 @@ public:
   }
   const DirectX::Signature &getPatchConstantSignature() const {
     return PatchConstantSignature;
+  }
+
+  const std::optional<mcdxbc::CompilerVersion> &getCompilerVersionInfo() const {
+    return VersionInfo;
   }
 };
 

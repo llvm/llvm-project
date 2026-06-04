@@ -1634,6 +1634,11 @@ def bitcast_bitcast_fold : GICombineRule<
       [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
 
+def bitcast_bitcast_to_bitcast : GICombineRule<
+  (defs root:$dst),
+  (match (G_BITCAST $dst, $src1), (G_BITCAST $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) != MRI.getType(${dst}.getReg()); }]),
+  (apply (G_BITCAST $dst, $src0))>;
 
 def fptrunc_fpext_fold : GICombineRule<
   (defs root:$dst),
@@ -2165,6 +2170,23 @@ def add_shift : GICombineRule<
   (apply (G_SHL $new_shl, $y, $n),
          (G_SUB $dst, $x, $new_shl))>;
 
+// FIXME: Tablegen should be able to handle commutativity of G_AND and G_OR. 
+//        Remove once commutativity is handled automatically.
+def combine_or_of_and_frags : GICombinePatFrag<
+  (outs root: $dst), (ins $x, $y),
+  [
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $and, $x)),
+    (pattern (G_AND $and, $x, $y), (G_OR $dst, $x, $and)),
+    (pattern (G_AND $and, $y, $x), (G_OR $dst, $x, $and))
+  ]>;
+
+// fold or (and x, y), x --> x
+def combine_or_of_and: GICombineRule<
+  (defs root:$dst),
+  (match (combine_or_of_and_frags $dst, $x, $y)),
+  (apply (GIReplaceReg $dst, $x))>;
+
 def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
    (match (G_FREEZE $root, $src),
@@ -2401,7 +2423,9 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        bitcast_bitcast_fold,
+                                        bitcast_bitcast_to_bitcast,
+                                        fptrunc_fpext_fold,
                                         right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
@@ -2471,7 +2495,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,
     binop_with_neg, sub_minus_one, sub_of_mul_const,
     avgfloor_u_match, avgfloor_s_match,
-    avgceil_u_match, avgceil_s_match]>;
+    avgceil_u_match, avgceil_s_match, combine_or_of_and]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

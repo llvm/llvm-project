@@ -103,7 +103,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       if (llvm::Error err = dap.RunAttachCommands(args.attachCommands))
         return err;
 
-      dap.target = dap.debugger.GetSelectedTarget();
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
 
       // Validate the attachCommand results.
       if (!dap.target.GetProcess().IsValid())
