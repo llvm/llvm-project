@@ -34,3 +34,9 @@ struct with_bitfield {
   long v : 8;
 };
 struct with_bitfield deref_bitfield = {.v = (long) &*(int *)0}; // no-error
+
+// '&a[i]' is evaluated as 'a + i'.
+intptr_t subscript_scalar = (intptr_t) &((int *)0)[0]; // no-error
+intptr_t subscript_scalar_offset = (intptr_t) &((int *)0)[2]; // no-error
+struct with_bitfield subscript_bitfield = {.v = (long) &((int *)0)[0]}; // no-error
+struct with_bitfield subscript_bitfield_offset = {.v = (long) &((int *)0)[2]}; // no-error
