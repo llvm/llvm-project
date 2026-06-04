@@ -931,8 +931,8 @@ private:
         allocate_buffer(llvm::densemap::detail::allocBytes<BucketT>(NumBuckets),
                         llvm::densemap::detail::allocAlign<BucketT>()));
     Buckets = reinterpret_cast<BucketT *>(Storage);
-    // NumBuckets is a power of two >= 64, so the used array trailing the
-    // buckets is aligned.
+    // NumBuckets is a power of two >= 4 (getMinBucketToReserveForEntries(1) is
+    // 4), so the used array trailing the buckets is aligned.
     assert(sizeof(BucketT) * NumBuckets % alignof(UsedT) == 0 &&
            "used array would be misaligned");
     Used = reinterpret_cast<UsedT *>(Storage + sizeof(BucketT) * NumBuckets);
