@@ -519,17 +519,11 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     return false;
 
   Register R0, R1, R2;
-  auto MatchMinOrMax3 = [&](MachineInstr &MI, MachineRegisterInfo &MRI,
-                            unsigned Op, Register &R0, Register &R1,
-                            Register &R2) {
-    auto P1 = m_BinOp(Op, m_OneNonDBGUse(m_BinOp(Op, m_Reg(R0), m_Reg(R1))),
-                      m_Reg(R2));
-    auto P2 = m_BinOp(Op, m_Reg(R0),
-                      m_OneNonDBGUse(m_BinOp(Op, m_Reg(R1), m_Reg(R2))));
-
-    return mi_match(MI, MRI, m_any_of(P1, P2));
-  };
-  if (!MatchMinOrMax3(MI, MRI, Opc, R0, R1, R2)) {
+  auto P1 = m_BinOp(Opc, m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
+                    m_Reg(R2));
+  auto P2 = m_BinOp(Opc, m_Reg(R0),
+                    m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R1), m_Reg(R2))));
+  if (!mi_match(MI, MRI, m_any_of(P1, P2))) {
     return false;
   }
 
