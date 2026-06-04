@@ -82,8 +82,8 @@ func.func private @caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 
 /// Positive tests: only callee updated.
 
-/// Private non-scalarizeable callers break the DFS loop but still allow
-/// rewritten callees. The caller's signature remains unchanged.
+/// Private non-scalarizeable callers still allow rewritten callees.
+/// The caller's signature remains unchanged.
 func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
   return %arg0 : tensor<1xi64>
 }
@@ -171,6 +171,25 @@ func.func private @non_scalarizeable_caller_expecting_tensor_type(
 
 // -----
 
+/// Positive tests: callee updated for a direct call user that is not enclosed
+/// by a func.func.
+
+func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
+  return %arg0 : tensor<1xi64>
+}
+// CHECK-LABEL: func.func private @callee
+// CHECK-SAME:      %[[SRC:.*]]: tensor<1xi64>) -> i64
+//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[EXT:.*]] = tensor.extract %[[SRC]][%[[C0]]] : tensor<1xi64>
+//       CHECK:   return %[[EXT]] : i64
+
+%0 = tensor.empty() : tensor<1xi64>
+%1 = func.call @callee(%0) : (tensor<1xi64>) -> tensor<1xi64>
+// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1xi64>
+// CHECK: %[[CALL:.*]] = func.call @callee(%[[EMPTY]]) : (tensor<1xi64>) -> i64
+
+// -----
+
 /// Positive tests: only caller updated.
 
 /// `func.constant` is a non-call symbol user of the target, so it blocks
@@ -250,23 +269,6 @@ func.func @public_caller(%arg0: tensor<1xi64>) -> tensor<1xi64> {
 //       CHECK:   %[[CALL:.*]] = call @callee(%arg0) : (tensor<1xi64>) -> tensor<1xi64>
 //   CHECK-NOT:   tensor.extract
 //       CHECK:   return %[[CALL]] : tensor<1xi64>
-
-// -----
-
-/// Callee blocked by a symbol user that is not enclosed by a func.func.
-
-func.func private @callee(%arg0: tensor<1xi64>) -> tensor<1xi64> {
-  return %arg0 : tensor<1xi64>
-}
-// CHECK-LABEL: func.func private @callee
-// CHECK-SAME:      %[[SRC:.*]]: tensor<1xi64>) -> tensor<1xi64>
-//   CHECK-NOT:   tensor.extract
-//       CHECK:   return %[[SRC]] : tensor<1xi64>
-
-%0 = tensor.empty() : tensor<1xi64>
-%1 = func.call @callee(%0) : (tensor<1xi64>) -> tensor<1xi64>
-// CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<1xi64>
-// CHECK: %[[CALL:.*]] = func.call @callee(%[[EMPTY]]) : (tensor<1xi64>) -> tensor<1xi64>
 
 // -----
 

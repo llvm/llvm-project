@@ -27,6 +27,9 @@ using namespace mlir;
 
 namespace {
 
+// Analysis state used by the memoized DFS below. It classifies whether a
+// candidate private function can be scalarized. The rewrite only consumes the
+// functions classified as `rewritable`.
 enum class ScalarizationState {
   // No DFS classification has been computed for this function yet.
   unknown,
@@ -41,6 +44,11 @@ enum class ScalarizationState {
   rewritable
 };
 
+// Info analyzed to decide scalarizing a locally eligible function: a private
+// definition with exactly one statically-shaped ranked tensor result containing
+// one element. Functions not meeting these criteria are not represented here,
+// although they may still appear in the broader module analysis as callers or
+// blockers.
 struct ScalarizableFunctionInfo {
   RankedTensorType tensorType;
   SmallVector<func::ReturnOp> returnOps;
@@ -129,9 +137,11 @@ computeScalarizationState(func::FuncOp func, ScalarizationAnalysis &analysis) {
     directCallUsers.push_back(directCall);
 
     func::FuncOp caller = directCall->getParentOfType<func::FuncOp>();
-    // The symbol user must be enclosed by a func.func.
+    // A direct call user outside any func.func can still be updated in place,
+    // but it terminates the DFS because there is no caller signature to
+    // analyze or rewrite transitively.
     if (!caller)
-      return setBlocked();
+      continue;
     // Since `getScalarizableFunctionInfoIfEligible` has already categorized
     // every direct func.func in the current module, any direct caller must
     // already appear in the analysis tables.
@@ -183,6 +193,7 @@ static void rewriteScalarizableFunction(func::FuncOp func,
                                         const ScalarizableFunctionInfo &sfi,
                                         ArrayRef<func::CallOp> directCalls,
                                         RewriterBase &rewriter) {
+  OpBuilder::InsertionGuard guard(rewriter);
   // Scalarize the unique element before each return.
   RankedTensorType tensorType = sfi.tensorType;
   SmallVector<Value> zeroIndices;
@@ -214,7 +225,6 @@ static void rewriteScalarizableFunction(func::FuncOp func,
   // Fix direct call users that were recorded during analysis.
   for (func::CallOp directCall : directCalls) {
     rewriter.setInsertionPoint(directCall);
-    OpBuilder::InsertionGuard guard(rewriter);
     func::CallOp newDirectCall = func::CallOp::create(
         rewriter, directCall.getLoc(), func, directCall.getOperands());
     newDirectCall->setAttrs(directCall->getAttrs());
