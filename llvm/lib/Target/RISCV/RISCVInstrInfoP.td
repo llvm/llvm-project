@@ -561,7 +561,7 @@ let append Predicates = [IsRV32] in {
 } // Predicates = [IsRV32]
 
 let append Predicates = [IsRV64] in {
-  def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
+  def REV16_RV64 : Unary_r<0b011010110000, 0b101, "rev16">;
   def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
 
   let IsSignExtendingOpW = 1 in {
@@ -2055,6 +2055,10 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVecI16VT (vselect (XLenVecI16VT GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
 
+  // 16-bit bswap patterns
+  def : Pat<(XLenVecI16VT (bswap GPR:$rs)),
+            (PPAIROE_B GPR:$rs, GPR:$rs)>;
+
 let append Predicates = [IsRV32] in {
   def : PatGpr<bitreverse, REV_RV32>;
 
@@ -2129,6 +2133,13 @@ let append Predicates = [IsRV32] in {
             (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
   def : Pat<(v2i16 (mul GPR:$rs1, GPR:$rs2)),
             (PNSRLI_H (PWMUL_H GPR:$rs1, GPR:$rs2), 0)>;
+
+  // 8/16-bit bitrevers patterns
+  // FIXME: Use BREV8 with Zbkb.
+  def : Pat<(v4i8 (bitreverse GPR:$rs)),
+            (REV8_RV32 (REV_RV32 GPR:$rs))>;
+  def : Pat<(v2i16 (bitreverse GPR:$rs)),
+            (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
 
   // Load/Store patterns
   def : StPat<store, SW, GPR, v4i8>;
@@ -2277,6 +2288,21 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<umax, PMAXU_DH, v4i16>;
   def : PatGprPairGprPair<smax, PMAX_DW, v2i32>;
   def : PatGprPairGprPair<umax, PMAXU_DW, v2i32>;
+
+  // 16-bit bswap patterns
+  def : Pat<(v4i16 (bswap GPRPair:$rs)),
+            (PPAIROE_DB GPRPair:$rs, GPRPair:$rs)>;
+
+  // 8/16-bit bitreverse patterns
+  // FIXME: Custom lower?
+  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
+            (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
+                          (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
+  def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
+            (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
+                                      (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
+                        (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
+                                      (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
 
   // splat pattern
   def : Pat<(v8i8 (splat_vector (XLenVT GPR:$rs2))),
@@ -2440,6 +2466,18 @@ let append Predicates = [IsRV64] in {
   // 32-bit vselect patterns
   def : Pat<(v2i32 (vselect (v2i32 GPR:$mask), GPR:$true_v, GPR:$false_v)),
             (MERGE GPR:$mask, GPR:$false_v, GPR:$true_v)>;
+
+  // 32-bit bswap patterns
+  def : Pat<(v2i32 (bswap GPR:$rs)),
+            (PPAIROE_W (REV8_RV64 GPR:$rs), (REV8_RV64 GPR:$rs))>;
+
+  // 8/16/32-bit bitreverse patterns
+  def : Pat<(v8i8 (bitreverse GPR:$rs)),
+            (REV8_RV64 (REV_RV64 GPR:$rs))>;
+  def : Pat<(v4i16 (bitreverse GPR:$rs)),
+            (REV16_RV64 (REV_RV64 GPR:$rs))>;
+  def : Pat<(v2i32 (bitreverse GPR:$rs)),
+            (PPAIROE_W (REV_RV64 GPR:$rs), (REV_RV64 GPR:$rs))>;
 
   // Load/Store patterns
   def : StPat<store, SD, GPR, v8i8>;
