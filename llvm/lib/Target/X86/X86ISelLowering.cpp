@@ -24774,8 +24774,7 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
   MVT VT = V.getSimpleValueType();
   MVT EltVT = VT.getVectorElementType();
   unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<SDValue, 8> NewVecC;
-  SDLoc DL(V);
+  SmallVector<APInt, 8> NewVecC;
   for (unsigned i = 0; i < NumElts; ++i) {
     auto *Elt = dyn_cast<ConstantSDNode>(BV->getOperand(i));
     if (!Elt || Elt->isOpaque() || Elt->getSimpleValueType(0) != EltVT)
@@ -24789,10 +24788,9 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
                 (!IsInc && EltC.isMinSignedValue())))
       return SDValue();
 
-    NewVecC.push_back(DAG.getConstant(EltC + (IsInc ? 1 : -1), DL, EltVT));
+    NewVecC.push_back(EltC + (IsInc ? 1 : -1));
   }
-
-  return DAG.getBuildVector(VT, DL, NewVecC);
+  return getConstVector(NewVecC, VT, DAG, SDLoc(V));
 }
 
 /// As another special case, use PSUBUS[BW] when it's profitable. E.g. for
@@ -48913,6 +48911,15 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       CondVT.getVectorElementType() == MVT::i1 &&
       (VT.getVectorElementType() == MVT::i8 ||
        VT.getVectorElementType() == MVT::i16)) {
+    // Handle AVX512F masked trunc patterns, which do have vXi8/vXi16 selects.
+    if (LHS.getOpcode() == ISD::TRUNCATE) {
+      SDValue TruncSrc = LHS.getOperand(0);
+      EVT TruncSrcVT = TruncSrc.getValueType();
+      if ((VT == MVT::v8i16 && TruncSrcVT == MVT::v8i64) ||
+          (VT == MVT::v16i8 && TruncSrcVT == MVT::v16i32) ||
+          (VT == MVT::v16i16 && TruncSrcVT == MVT::v16i32))
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+    }
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
   }

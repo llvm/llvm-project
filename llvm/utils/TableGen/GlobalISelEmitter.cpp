@@ -919,6 +919,13 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return InsnMatcher;
     }
 
+    if (SrcGIOrNull->getName() == "G_BLOCK_ADDR") {
+      // Name operand of G_BLOCK_ADDR so it can be referenced in the destination
+      // pattern.
+      InsnMatcher.addOperand(OpIdx++, Src.getName().str(), TempOpIdx);
+      return InsnMatcher;
+    }
+
     // Special case because the operand order is changed from setcc. The
     // predicate operand needs to be swapped from the last operand to the first
     // source.
@@ -2215,7 +2222,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
       // Erase the root.
-      unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+      unsigned RootInsnID = InsnMatcher.getInsnVarID();
       M.addAction<EraseInstAction>(RootInsnID);
 
       // We're done with this pattern!  It's eligible for GISel emission; return
@@ -2298,7 +2305,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return std::move(Error);
 
   // Erase the root.
-  unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+  unsigned RootInsnID = InsnMatcher.getInsnVarID();
   M.addAction<EraseInstAction>(RootInsnID);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.

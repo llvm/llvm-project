@@ -28,6 +28,9 @@ class Session;
 /// from load().
 class NativeDylibManager : public Service {
 public:
+  enum LookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
+  using SymbolLookupSet = std::vector<std::pair<std::string, LookupFlags>>;
+
   /// Create a NativeDylibManager, adding associated symbols to the given
   /// SimpleSymbolTable (typically the BootstrapInfo table).
   static Expected<std::unique_ptr<NativeDylibManager>>
@@ -56,13 +59,18 @@ public:
   using OnLoadCompleteFn = move_only_function<void(Expected<void *>)>;
   void load(OnLoadCompleteFn &&OnComplete, std::string Path);
 
-  /// Lookup addresses of the given symbols.
+  /// Lookup addresses of the given symbols in the given library.
   ///
-  /// Returns a sequence of addresses.
+  /// Each entry in Symbols pairs a name with a flag indicating whether the
+  /// symbol is required or weakly referenced. A missing required symbol is
+  /// reported as an empty optional in the result vector; a missing
+  /// weakly-referenced symbol is reported as a present optional with a zero
+  /// (nullptr) address. This matches the resolve semantics of
+  /// llvm::orc::rt_bootstrap::SimpleExecutorDylibManager.
   using OnLookupCompleteFn =
-      move_only_function<void(Expected<std::vector<void *>>)>;
+      move_only_function<void(Expected<std::vector<std::optional<void *>>>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
-              std::vector<std::string> Names);
+              SymbolLookupSet Symbols);
 
   void onDetach(Service::OnCompleteFn OnComplete,
                 bool ShutdownRequested) override;

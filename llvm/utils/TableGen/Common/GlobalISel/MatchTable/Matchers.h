@@ -289,12 +289,14 @@ public:
   using action_iterator = ActionList::iterator;
 
 protected:
+  std::vector<std::unique_ptr<InstructionMatcher>> InsnMatchers;
+
   /// A list of matchers that all need to succeed for the current rule to match.
   /// FIXME: This currently supports a single match position but could be
   /// extended to support multiple positions to support div/rem fusion or
   /// load-multiple instructions.
-  using MatchersTy = std::vector<std::unique_ptr<InstructionMatcher>>;
-  MatchersTy Matchers;
+  using RootsTy = SmallVector<InstructionMatcher *, 1>;
+  RootsTy Roots;
 
   /// A list of actions that need to be taken when all predicates in this rule
   /// have succeeded.
@@ -303,11 +305,6 @@ protected:
   /// Combiners can sometimes just run C++ code to finish matching a rule &
   /// mutate instructions instead of relying on MatchActions. Empty if unused.
   std::string CustomCXXAction;
-
-  using DefinedInsnVariablesMap = std::map<InstructionMatcher *, unsigned>;
-
-  /// A map of instruction matchers to the local variables
-  DefinedInsnVariablesMap InsnVariableIDs;
 
   using MutatableInsnSet = SmallPtrSet<InstructionMatcher *, 4>;
 
@@ -324,10 +321,6 @@ protected:
   /// A map of anonymous physical register operands defined by the matchers that
   /// may be referenced by the renderers.
   PhysRegOperandsTy PhysRegOperands;
-
-  /// ID for the next instruction variable defined with
-  /// implicitlyDefineInsnVar()
-  unsigned NextInsnVarID = 0;
 
   /// ID for the next output instruction allocated with allocateOutputInsnID()
   unsigned NextOutputInsnID = 0;
@@ -369,6 +362,14 @@ protected:
 
   GISelFlags updateGISelFlag(GISelFlags CurFlags, const Record *R,
                              StringRef FlagName, GISelFlags FlagBit);
+
+  friend class InstructionOperandMatcher;
+
+  InstructionMatcher &allocateInstructionMatcher(StringRef SymbolicName,
+                                                 bool AllowNumOpsCheck = true) {
+    return *InsnMatchers.emplace_back(std::make_unique<InstructionMatcher>(
+        *this, InsnMatchers.size(), SymbolicName, AllowNumOpsCheck));
+  }
 
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc);
@@ -437,21 +438,6 @@ public:
   SaveAndRestore<GISelFlags> setGISelFlags(const Record *R);
   GISelFlags getGISelFlags() const { return Flags; }
 
-  /// Define an instruction without emitting any code to do so.
-  unsigned implicitlyDefineInsnVar(InstructionMatcher &Matcher);
-
-  unsigned getInsnVarID(InstructionMatcher &InsnMatcher) const;
-  DefinedInsnVariablesMap::const_iterator defined_insn_vars_begin() const {
-    return InsnVariableIDs.begin();
-  }
-  DefinedInsnVariablesMap::const_iterator defined_insn_vars_end() const {
-    return InsnVariableIDs.end();
-  }
-  iterator_range<DefinedInsnVariablesMap::const_iterator>
-  defined_insn_vars() const {
-    return make_range(defined_insn_vars_begin(), defined_insn_vars_end());
-  }
-
   MutatableInsnSet::const_iterator mutatable_insns_begin() const {
     return MutatableInsns.begin();
   }
@@ -465,6 +451,10 @@ public:
     bool R = MutatableInsns.erase(InsnMatcher);
     assert(R && "Reserving a mutatable insn that isn't available");
     (void)R;
+  }
+
+  auto all_instmatchers() const {
+    return make_range(InsnMatchers.begin(), InsnMatchers.end());
   }
 
   action_iterator actions_begin() { return Actions.begin(); }
@@ -520,7 +510,7 @@ public:
   StringRef getOpcode() const;
 
   // FIXME: Remove this as soon as possible
-  InstructionMatcher &insnmatchers_front() const { return *Matchers.front(); }
+  InstructionMatcher &roots_front() const { return *Roots.front(); }
 
   unsigned allocateOutputInsnID() { return NextOutputInsnID++; }
   unsigned allocateTempRegID() { return NextTempRegID++; }
@@ -529,9 +519,9 @@ public:
     return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
   }
 
-  iterator_range<MatchersTy::iterator> insnmatchers() { return Matchers; }
-  bool insnmatchers_empty() const { return Matchers.empty(); }
-  void insnmatchers_pop_front();
+  iterator_range<RootsTy::iterator> roots() { return Roots; }
+  bool roots_empty() const { return Roots.empty(); }
+  void roots_pop_front();
 };
 
 template <class PredicateTy> class PredicateListMatcher {
@@ -1676,14 +1666,10 @@ protected:
   }
 
 public:
-  InstructionMatcher(RuleMatcher &Rule, StringRef SymbolicName,
-                     bool AllowNumOpsCheck = true)
-      : Rule(Rule), SymbolicName(SymbolicName),
-        AllowNumOpsCheck(AllowNumOpsCheck) {
-    // We create a new instruction matcher.
-    // Get a new ID for that instruction.
-    InsnVarID = Rule.implicitlyDefineInsnVar(*this);
-  }
+  InstructionMatcher(RuleMatcher &Rule, unsigned InsnVarID,
+                     StringRef SymbolicName, bool AllowNumOpsCheck = true)
+      : Rule(Rule), SymbolicName(SymbolicName), InsnVarID(InsnVarID),
+        AllowNumOpsCheck(AllowNumOpsCheck) {}
 
   /// Construct a new instruction predicate and add it to the matcher.
   template <class Kind, class... Args>
@@ -1768,7 +1754,7 @@ public:
 /// subpattern.
 class InstructionOperandMatcher : public OperandPredicateMatcher {
 protected:
-  std::unique_ptr<InstructionMatcher> InsnMatcher;
+  InstructionMatcher &InsnMatcher;
 
   GISelFlags Flags;
 
@@ -1778,20 +1764,20 @@ public:
                             bool AllowNumOpsCheck = true)
       : OperandPredicateMatcher(OPM_Instruction, InsnVarID, OpIdx),
         InsnMatcher(
-            new InstructionMatcher(Rule, SymbolicName, AllowNumOpsCheck)),
+            Rule.allocateInstructionMatcher(SymbolicName, AllowNumOpsCheck)),
         Flags(Rule.getGISelFlags()) {}
 
   static bool classof(const PredicateMatcher *P) {
     return P->getKind() == OPM_Instruction;
   }
 
-  InstructionMatcher &getInsnMatcher() const { return *InsnMatcher; }
+  InstructionMatcher &getInsnMatcher() const { return InsnMatcher; }
 
   void emitCaptureOpcodes(MatchTable &Table, RuleMatcher &Rule) const;
   void emitPredicateOpcodes(MatchTable &Table,
                             RuleMatcher &Rule) const override {
     emitCaptureOpcodes(Table, Rule);
-    InsnMatcher->emitPredicateOpcodes(Table, Rule);
+    InsnMatcher.emitPredicateOpcodes(Table, Rule);
   }
 
   bool isHigherPriorityThan(const OperandPredicateMatcher &B) const override;
@@ -1799,7 +1785,7 @@ public:
   /// Report the maximum number of temporary operands needed by the predicate
   /// matcher.
   unsigned countRendererFns() const override {
-    return InsnMatcher->countRendererFns();
+    return InsnMatcher.countRendererFns();
   }
 };
 

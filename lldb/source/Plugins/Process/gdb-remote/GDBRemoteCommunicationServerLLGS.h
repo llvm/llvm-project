@@ -287,6 +287,9 @@ protected:
   PacketResult
   Handle_jAcceleratorPluginInitialize(StringExtractorGDBRemote &packet);
 
+  PacketResult
+  Handle_jAcceleratorPluginBreakpointHit(StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;

@@ -1074,7 +1074,7 @@ void CombineRuleBuilder::addCXXPredicate(RuleMatcher &M,
                                          const PatternAlternatives &Alts) {
   // FIXME: Hack so C++ code is executed last. May not work for more complex
   // patterns.
-  auto &IM = *std::prev(M.insnmatchers().end());
+  auto &IM = *std::prev(M.roots().end());
   auto Loc = RuleDef.getLoc();
   const auto AddComment = [&](raw_ostream &OS) {
     OS << "// Pattern Alternatives: ";
@@ -1901,7 +1901,7 @@ bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
 
   // Erase the root.
   unsigned RootInsnID =
-      M.getInsnVarID(M.getInstructionMatcher(MatchRoot->getName()));
+      M.getInstructionMatcher(MatchRoot->getName()).getInsnVarID();
   M.addAction<EraseInstAction>(RootInsnID);
 
   return true;
@@ -2566,7 +2566,7 @@ void GICombinerEmitter::emitRuleConfigImpl(raw_ostream &OS) {
 void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
   for (const RuleMatcher &Rule : Rules) {
     for (const CodeGenInstruction *I :
-         Rule.insnmatchers_front().getOpcodeMatcher().getAlternativeOpcodes())
+         Rule.roots_front().getOpcodeMatcher().getAlternativeOpcodes())
       MatchOpcodes.insert(I);
   }
 }

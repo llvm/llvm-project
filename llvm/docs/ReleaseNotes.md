@@ -130,7 +130,7 @@ Makes programs 10x faster by doing Special New Thing.
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
+  distributed ThinLTO.
 
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
@@ -231,6 +231,7 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Support for the experimental `XRivosVizip` vendor extension has been removed.
 * Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 * Adds experimental assembler support for the 'Zvvfmm` (RISC-V Floating-Point Matrix Multiply-Accumulate) extension.
 * Adds support for 'Ziccid' (Instruction/Data Coherence and Consistency) extension.

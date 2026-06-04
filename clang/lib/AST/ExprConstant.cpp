@@ -10241,7 +10241,7 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
