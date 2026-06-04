@@ -652,4 +652,3 @@ define half @fminimum3_f16(half %a, half %b, half %c) {
   %m2 = call half @llvm.minimum.f16(half %m1, half %c)
   ret half %m2
 }
-
