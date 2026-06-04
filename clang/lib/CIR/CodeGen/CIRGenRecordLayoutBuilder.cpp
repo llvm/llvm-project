@@ -713,7 +713,10 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     CharUnits baseSize = rd->isUnion()
                              ? lowering.astRecordLayout.getDataSize()
                              : lowering.astRecordLayout.getNonVirtualSize();
-    if (baseSize != lowering.astRecordLayout.getSize()) {
+    // A union whose data size is zero consists entirely of
+    // [[no_unique_address]] empty members.  There is no actual data to expose
+    // via a base subobject, so leave baseTy pointing at the complete type.
+    if (!baseSize.isZero() && baseSize != lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
@@ -882,7 +885,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
       fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType) {
+  if (!storageType || layoutSize.isZero()) {
     appendPaddingBytes(layoutSize);
     return;
   }

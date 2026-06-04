@@ -54,6 +54,9 @@ struct Outer {
 // LLVM-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
 // LLVM-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
 // LLVM-DAG: @ofup = {{(dso_local )?}}global %struct.OuterFinalUnionPad zeroinitializer, align 2
+// LLVM-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
+// LLVM-DAG: %union.UnionZeroDataSize = type { i32 }
+// LLVM-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
 // OGCG-DAG: %struct.OuterUnion = type { %union.UnionForNUA, i32 }
 // OGCG-DAG: %union.UnionForNUA = type { i64 }
 // OGCG-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
@@ -66,6 +69,9 @@ struct Outer {
 // OGCG-DAG: @of = {{(dso_local )?}}global %struct.OuterFinal zeroinitializer, align 4
 // OGCG-DAG: @oup = {{(dso_local )?}}global %struct.OuterUnionPad zeroinitializer, align 2
 // OGCG-DAG: @ofup = {{(dso_local )?}}global %struct.OuterFinalUnionPad zeroinitializer, align 2
+// OGCG-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
+// OGCG-DAG: %union.UnionZeroDataSize = type { i32 }
+// OGCG-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
@@ -158,3 +164,20 @@ OuterFinalUnionPad ofup;
 // CIR-NUA-DAG: cir.global external @oup = #cir.zero : !rec_OuterUnionPad
 // CIR-NUA-DAG: cir.global external @ofup = #cir.zero : !rec_OuterFinalUnionPad
 
+struct EmptyForNUA {};
+
+union UnionZeroDataSize {
+  [[no_unique_address]] EmptyForNUA e;
+  [[no_unique_address]] int i;
+};
+
+struct OuterZeroData {
+  [[no_unique_address]] UnionZeroDataSize u;
+  bool flag;
+};
+
+OuterZeroData ozd;
+
+// CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {!rec_EmptyForNUA, !s32i}>
+// CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {!rec_UnionZeroDataSize, !cir.bool}>
+// CIR-NUA-DAG: cir.global external @ozd = #cir.zero : !rec_OuterZeroData
