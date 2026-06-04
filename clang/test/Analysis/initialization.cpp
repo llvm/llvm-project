@@ -10,7 +10,7 @@ struct S {
 S const sarr[2] = {};
 void definit() {
   int i = 1;
-  clang_analyzer_eval(sarr[i].a); // expected-warning{{TRUE}}
+  clang_analyzer_dump(sarr[i].a); // expected-warning{{3 S32b}}
 }
 
 int const glob_arr1[3] = {};
