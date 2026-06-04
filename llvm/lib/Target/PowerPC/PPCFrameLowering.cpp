@@ -1768,6 +1768,28 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
   assert(RBReg != ScratchReg && "Should have avoided ScratchReg");
+
+  // Lambda to build MTCRF/MTOCRF instruction for restoring CR fields
+  auto BuildMoveToCR = [&](MachineBasicBlock::iterator InsertPt,
+                           Register SrcReg) {
+    if (MustSaveCRs.size() == 1) {
+      // Use MTOCRF for single CR field
+      BuildMI(MBB, InsertPt, dl, MoveToCRInst, MustSaveCRs[0])
+          .addReg(SrcReg, getKillRegState(true));
+    } else {
+      // Build CR mask for MTCRF - more efficient than multiple MTOCRF
+      unsigned CRMask = 0;
+      for (unsigned CRField : MustSaveCRs) {
+        unsigned CRNum = CRField - PPC::CR0;
+        CRMask |= (0x80 >> CRNum);
+      }
+      // Use single MTCRF to restore multi CR fields at once
+      BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
+          .addImm(CRMask)
+          .addReg(SrcReg, getKillRegState(true));
+    }
+  };
+
   // If there is no red zone, ScratchReg may be needed for holding a useful
   // value (although not the base register). Make sure it is not overwritten
   // too early.
@@ -1781,9 +1803,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, LoadWordInst, TempReg)
       .addImm(CRSaveOffset)
       .addReg(SPReg);
-    for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
-      BuildMI(MBB, MBBI, dl, MoveToCRInst, MustSaveCRs[i])
-        .addReg(TempReg, getKillRegState(i == e-1));
+    BuildMoveToCR(MBBI, TempReg);
   }
 
   // Delay restoring of the LR if ScratchReg is needed. This is ok, since
@@ -1857,9 +1877,7 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
 
   if (MustSaveCR &&
       !(SingleScratchReg && MustSaveLR))
-    for (unsigned i = 0, e = MustSaveCRs.size(); i != e; ++i)
-      BuildMI(MBB, MBBI, dl, MoveToCRInst, MustSaveCRs[i])
-        .addReg(TempReg, getKillRegState(i == e-1));
+    BuildMoveToCR(MBBI, TempReg);
 
   if (MustSaveLR) {
     // If ROP protection is required, an extra instruction is added to compute a
@@ -2545,19 +2563,28 @@ static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
   MBB.insert(MI,
              addFrameReference(BuildMI(*MF, DL, TII.get(PPC::LWZ), MoveReg),
                                CSI[CSIIndex].getFrameIdx()));
+  // Count how many CR fields need restoring
+  unsigned NumCRs =
+      (CR2Spilled ? 1 : 0) + (CR3Spilled ? 1 : 0) + (CR4Spilled ? 1 : 0);
 
-  unsigned RestoreOp = PPC::MTOCRF;
-  if (CR2Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR2)
-               .addReg(MoveReg, getKillRegState(!CR3Spilled && !CR4Spilled)));
-
-  if (CR3Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR3)
-               .addReg(MoveReg, getKillRegState(!CR4Spilled)));
-
-  if (CR4Spilled)
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(RestoreOp), PPC::CR4)
-               .addReg(MoveReg, getKillRegState(true)));
+  if (NumCRs == 1) {
+    // Use MTOCRF for single field
+    unsigned CRReg = CR2Spilled ? PPC::CR2 : (CR3Spilled ? PPC::CR3 : PPC::CR4);
+    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTOCRF), CRReg)
+                       .addReg(MoveReg, getKillRegState(true)));
+  } else if (NumCRs > 1) {
+    // Use MTCRF for multiple fields (1 instruction vs N)
+    unsigned CRMask = 0;
+    if (CR2Spilled)
+      CRMask |= 0x20;
+    if (CR3Spilled)
+      CRMask |= 0x10;
+    if (CR4Spilled)
+      CRMask |= 0x08;
+    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTCRF))
+                       .addImm(CRMask)
+                       .addReg(MoveReg, getKillRegState(true)));
+  }
 }
 
 MachineBasicBlock::iterator PPCFrameLowering::

@@ -46,8 +46,7 @@ body:             |
     ; CHECK-NEXT: $r30 = LWZ -8, $r1 :: (load (s32) from %fixed-stack.1, align 8)
     ; CHECK-NEXT: $r29 = LWZ -12, $r1 :: (load (s32) from %fixed-stack.2)
     ; CHECK-NEXT: $r12 = LWZ 4, $r1
-    ; CHECK-NEXT: $cr2 = MTOCRF $r12
-    ; CHECK-NEXT: $cr4 = MTOCRF killed $r12
+    ; CHECK-NEXT: MTCRF 40, killed $r12
 
 ...
 ---
