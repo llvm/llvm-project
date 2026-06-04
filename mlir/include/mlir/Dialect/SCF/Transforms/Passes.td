@@ -134,6 +134,23 @@ def SCFParallelForToNestedFors : Pass<"scf-parallel-for-to-nested-fors"> {
   }];
 }
 
+def SCFLowerEarlyExit : Pass<"scf-lower-early-exit"> {
+  let summary = "Lower `scf.break` region-breaking terminators";
+  let description = [{
+    Rewrites `scf.break` ops away so that the resulting IR uses only
+    `scf.yield` terminators. The transformation operates on SCF and produces
+    SCF: it threads the broken-out values (and a flag) through any
+    intermediate `scf.execute_region` / `scf.if` ops, replacing the break by
+    an equivalent dataflow that yields the same values to the target.
+
+    The pass leaves the IR in a form that contains no `scf.break` and no
+    token-bearing `scf.execute_region`. It does not change the externally
+    observable semantics of any op.
+  }];
+  let constructor = "mlir::createSCFLowerEarlyExitPass()";
+  let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
+}
+
 def SCFForToWhileLoop : Pass<"scf-for-to-while"> {
   let summary = "Convert SCF for loops to SCF while loops";
   let constructor = "mlir::createForToWhileLoopPass()";

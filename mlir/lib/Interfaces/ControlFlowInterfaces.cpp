@@ -260,14 +260,15 @@ static bool traverseRegionGraph(Region *begin,
       LDBG() << "Found " << successors.size()
              << " successors from terminator in block";
       for (RegionSuccessor successor : successors) {
-        if (!successor.isParent()) {
-          worklist.push_back(successor.getSuccessor());
-          LDBG() << "Added region #"
-                 << successor.getSuccessor()->getRegionNumber()
-                 << " to worklist";
-        } else {
-          LDBG() << "Skipping parent successor";
+        // Both "parent" and "early exit" successors leave this op; they have no
+        // region to enqueue.
+        if (successor.isParent() || successor.isEarlyExit()) {
+          LDBG() << "Skipping parent/early-exit successor";
+          continue;
         }
+        worklist.push_back(successor.getSuccessor());
+        LDBG() << "Added region #"
+               << successor.getSuccessor()->getRegionNumber() << " to worklist";
       }
     }
   };
@@ -446,10 +447,16 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
 
 SmallVector<Value>
 RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
-  SmallVector<Value> results = llvm::to_vector(
-      successor.isParent()
-          ? ValueRange(getOperation()->getResults())
-          : ValueRange(successor.getSuccessor()->getArguments()));
+  // For an early exit, the relevant values are the results of the targeted
+  // ancestor op; for "parent", the results of this op; otherwise the block
+  // arguments of the successor region.
+  ValueRange allValues =
+      successor.isEarlyExit()
+          ? ValueRange(successor.getSuccessorOp()->getResults())
+          : (successor.isParent()
+                 ? ValueRange(getOperation()->getResults())
+                 : ValueRange(successor.getSuccessor()->getArguments()));
+  SmallVector<Value> results = llvm::to_vector(allValues);
   ValueRange successorInputs = getSuccessorInputs(successor);
   if (!successorInputs.empty()) {
     unsigned inputBegin =
@@ -515,15 +522,15 @@ SmallVector<RegionBranchPoint>
 RegionBranchOpInterface::getAllRegionBranchPoints() {
   SmallVector<RegionBranchPoint> branchPoints;
   branchPoints.push_back(RegionBranchPoint::parent());
-  for (Region &region : getOperation()->getRegions()) {
-    for (Block &block : region) {
-      if (block.empty())
-        continue;
-      if (auto terminator =
-              dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
-        branchPoints.push_back(RegionBranchPoint(terminator));
-    }
-  }
+  // Collect all terminators that branch back to this op. The per-op
+  // `getRegionBranchPointTerminators` implementation decides which terminators
+  // these are (e.g. `scf.execute_region` also includes early-exit `scf.break`s
+  // that target it).
+  SmallVector<RegionBranchTerminatorOpInterface> terminators;
+  for (Region &region : getOperation()->getRegions())
+    getRegionBranchPointTerminators(region, terminators);
+  for (RegionBranchTerminatorOpInterface terminator : terminators)
+    branchPoints.push_back(RegionBranchPoint(terminator));
   return branchPoints;
 }
 

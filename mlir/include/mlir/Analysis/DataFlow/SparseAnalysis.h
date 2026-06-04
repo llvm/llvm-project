@@ -484,12 +484,12 @@ private:
                              ArrayRef<AbstractSparseLattice *> operands);
 
   /// Visit a `RegionBranchTerminatorOpInterface` to compute the lattice values
-  /// of its operands, given its parent op `branch`. The lattice value of an
-  /// operand is determined based on the corresponding arguments in
-  /// `terminator`'s region successor(s).
+  /// of its operands. The lattice value of an operand is determined based on
+  /// the corresponding successor inputs in `terminator`'s region successor(s);
+  /// the owning op of each successor is the terminator's enclosing op, or (for
+  /// an early-exit successor) the ancestor it names.
   void visitRegionSuccessorsFromTerminator(
-      RegionBranchTerminatorOpInterface terminator,
-      RegionBranchOpInterface branch);
+      RegionBranchTerminatorOpInterface terminator);
 
   /// Get the lattice element for a value, and also set up
   /// dependencies so that the analysis on the given ProgramPoint is re-invoked

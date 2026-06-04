@@ -203,8 +203,10 @@ private:
 
   /// Visit region branch edges from `predecessorOp` to a list of successors.
   /// For each edge, mark the successor program point as executable, and record
-  /// the predecessor information in its `PredecessorState`.
-  void visitRegionBranchEdges(RegionBranchOpInterface regionBranchOp,
+  /// the predecessor information in its `PredecessorState`. Region and "parent"
+  /// successors belong to `defaultBranchOp`; an early-exit successor names its
+  /// own (ancestor) owning op.
+  void visitRegionBranchEdges(Operation *defaultBranchOp,
                               Operation *predecessorOp,
                               const SmallVector<RegionSuccessor> &successors);
 
@@ -216,7 +218,7 @@ private:
   /// Visit the given terminator operation that exits a region under an
   /// operation with control-flow semantics. These are terminators with no CFG
   /// successors.
-  void visitRegionTerminator(Operation *op, RegionBranchOpInterface branch);
+  void visitRegionTerminator(RegionBranchTerminatorOpInterface terminator);
 
   /// Visit the given terminator operation that exits a callable region. These
   /// are terminators with no CFG successors.

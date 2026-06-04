@@ -143,6 +143,14 @@ std::optional<llvm::APSInt> mlir::scf::computeUbMinusLb(Value lb, Value ub,
 ///     return %idx : i32
 ///   }
 ///
+///   // Variant with a token entry block argument used to identify this op
+///   // for early exits via `scf.break`.
+///   scf.execute_region -> i32 {
+///   ^bb0(%tok: token):
+///     ...
+///     scf.yield %v : i32
+///   }
+///
 ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   if (parser.parseOptionalArrowTypeList(result.types))
@@ -151,7 +159,8 @@ ParseResult ExecuteRegionOp::parse(OpAsmParser &parser,
   if (succeeded(parser.parseOptionalKeyword("no_inline")))
     result.addAttribute("no_inline", parser.getBuilder().getUnitAttr());
 
-  // Introduce the body region and parse it.
+  // Introduce the body region and parse it. The region's entry block may
+  // optionally have a single `token`-typed block argument.
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}) ||
       parser.parseOptionalAttrDict(result.attributes))
@@ -165,8 +174,12 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p << ' ';
   if (getNoInline())
     p << "no_inline ";
+  // If the entry block has a token argument, print entry block arguments so
+  // the operation round-trips.
+  bool printEntryBlockArgs =
+      !getRegion().empty() && getRegion().front().getNumArguments() != 0;
   p.printRegion(getRegion(),
-                /*printEntryBlockArgs=*/false,
+                /*printEntryBlockArgs=*/printEntryBlockArgs,
                 /*printBlockTerminators=*/true);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
 }
@@ -174,9 +187,24 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
 LogicalResult ExecuteRegionOp::verify() {
   if (getRegion().empty())
     return emitOpError("region needs to have at least one block");
-  if (getRegion().front().getNumArguments() > 0)
-    return emitOpError("region cannot have any arguments");
+  Block &entryBlock = getRegion().front();
+  // The entry block is allowed to have zero arguments, or exactly one `token`
+  // block argument that identifies this op for region-breaking terminators.
+  unsigned numArgs = entryBlock.getNumArguments();
+  if (numArgs > 1)
+    return emitOpError("entry block may only have zero or one block argument");
+  if (numArgs == 1 && !isa<TokenType>(entryBlock.getArgument(0).getType()))
+    return emitOpError("entry block argument must be of `token` type");
   return success();
+}
+
+Value ExecuteRegionOp::getToken() {
+  if (getRegion().empty())
+    return {};
+  Block &entry = getRegion().front();
+  if (entry.getNumArguments() == 0)
+    return {};
+  return entry.getArgument(0);
 }
 
 // Inline an ExecuteRegionOp if its parent can contain multiple blocks.
@@ -225,6 +253,10 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
       return failure();
     if (!isa<FunctionOpInterface, ExecuteRegionOp>(op->getParentOp()))
       return failure();
+    // An op with a token entry block argument may be the target of an
+    // `scf.break` and cannot simply be inlined.
+    if (op.getToken())
+      return failure();
 
     Block *prevBlock = op->getBlock();
     Block *postBlock = rewriter.splitBlock(prevBlock, op->getIterator());
@@ -257,11 +289,18 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<MultiBlockExecuteInliner>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ExecuteRegionOp::getOperationName());
-  // Inline ops with a single block that are not marked as "no_inline".
+  // Inline ops with a single block that are not marked as "no_inline" and
+  // that do not have a token entry block argument (which would be the target
+  // of an `scf.break`).
   populateRegionBranchOpInterfaceInliningPattern(
       results, ExecuteRegionOp::getOperationName(),
       mlir::detail::defaultReplBuilderFn, [](Operation *op) {
-        return failure(cast<ExecuteRegionOp>(op).getNoInline());
+        auto exec = cast<ExecuteRegionOp>(op);
+        if (exec.getNoInline())
+          return failure();
+        if (exec.getToken())
+          return failure();
+        return success();
       });
 }
 
@@ -273,13 +312,124 @@ void ExecuteRegionOp::getSuccessorRegions(
     return;
   }
 
-  // Otherwise, the region branches back to the parent operation.
-  regions.push_back(RegionSuccessor::parent());
+  RegionBranchTerminatorOpInterface terminator =
+      point.getTerminatorPredecessorOrNull();
+  if (!terminator)
+    return;
+  Operation *termOp = terminator.getOperation();
+
+  // Control returns to this op only from terminators it owns: a `scf.yield`
+  // directly in its region, or an `scf.break` that targets it (i.e. a user of
+  // its token, at any nesting depth). Terminators that pass *through* this op
+  // to a further-enclosing target (foreign breaks) are that ancestor's branch
+  // points, not this op's, so they are not enumerated here.
+  bool returnsHere =
+      isa<YieldOp>(termOp) && termOp->getParentOp() == getOperation();
+  if (Value token = getToken())
+    returnsHere |= llvm::is_contained(token.getUsers(), termOp);
+  if (returnsHere)
+    regions.push_back(RegionSuccessor::parent());
 }
 
 ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  // Branching into a region forwards no successor inputs (the token block
+  // argument is not a successor input).
+  if (successor.getSuccessor())
+    return ValueRange();
+  // The only other successors of this op are control leaving it: the normal
+  // exit ("parent") or an early exit back to this op. In both cases the
+  // operands become this op's results.
+  assert(
+      (successor.isParent() || successor.getSuccessorOp() == getOperation()) &&
+      "expected the successor to be this op or one of its regions");
+  return getOperation()->getResults();
+}
+
+void ExecuteRegionOp::getRegionBranchPointTerminators(
+    Region &region,
+    SmallVectorImpl<RegionBranchTerminatorOpInterface> &terminators) {
+  // Normal returns: `scf.yield` terminators directly in this op's blocks.
+  for (Block &block : region) {
+    if (block.empty())
+      continue;
+    Operation *terminator = &block.back();
+    if (isa<YieldOp>(terminator))
+      terminators.push_back(
+          cast<RegionBranchTerminatorOpInterface>(terminator));
+  }
+  // Early exits: the `scf.break` ops that target this op are exactly the users
+  // of its token, at any nesting depth. (A break directly in one of this op's
+  // blocks is a token user too, so it is collected here rather than above.)
+  if (Value token = getToken())
+    for (Operation *user : token.getUsers())
+      if (isa<BreakOp>(user))
+        terminators.push_back(cast<RegionBranchTerminatorOpInterface>(user));
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+// `scf.break` is a region-breaking terminator: it transfers control to the
+// `scf.execute_region` identified by its token operand (a possibly
+// non-immediate ancestor), forwarding its value operands as that op's results.
+Operation *BreakOp::getTarget() {
+  // The verifier guarantees the token operand is the entry block argument of an
+  // enclosing `scf.execute_region`, so these casts always succeed.
+  auto blockArg = cast<BlockArgument>(getToken());
+  auto targetOp = cast<ExecuteRegionOp>(blockArg.getOwner()->getParentOp());
+  assert(targetOp.getToken() == blockArg &&
+         "expected the token to be the execute_region's entry block argument");
+  return targetOp;
+}
+
+MutableOperandRange
+BreakOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  // Only the value operands are forwarded to the target's results; the token
+  // operand is structural and is not a successor operand.
+  return getValuesMutable();
+}
+
+void BreakOp::getSuccessorRegions(ArrayRef<Attribute> operands,
+                                  SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.push_back(RegionSuccessor::exitingTo(getTarget()));
+}
+
+LogicalResult BreakOp::verify() {
+  // The token must be an entry block argument of an enclosing
+  // `scf.execute_region` op.
+  auto blockArg = dyn_cast<BlockArgument>(getToken());
+  if (!blockArg)
+    return emitOpError()
+           << "expects the token operand to be the entry block argument of "
+              "an enclosing 'scf.execute_region'";
+  auto targetOp =
+      dyn_cast_or_null<ExecuteRegionOp>(blockArg.getOwner()->getParentOp());
+  if (!targetOp || targetOp.getToken() != blockArg)
+    return emitOpError()
+           << "expects the token operand to be the entry block argument of "
+              "an enclosing 'scf.execute_region'";
+
+  // Note: The number and types of the value operands are checked against the
+  // target op's result types generically by the `RegionBranchOpInterface`
+  // verifier of the target `scf.execute_region` (the break is one of its region
+  // branch points), so they are not re-checked here.
+
+  // Every op on the path from this terminator up to the target op must be
+  // transparent to region-breaking terminators, i.e., it must implement the
+  // `PropagateControlFlowBreak` trait.
+  Operation *cursor = (*this)->getParentOp();
+  while (cursor && cursor != targetOp.getOperation()) {
+    if (!cursor->mightHaveTrait<OpTrait::PropagateControlFlowBreak>())
+      return emitOpError()
+             << "cannot break through '" << cursor->getName()
+             << "': op does not implement the 'PropagateControlFlowBreak' "
+                "trait";
+    cursor = cursor->getParentOp();
+  }
+  if (cursor != targetOp.getOperation())
+    return emitOpError("target 'scf.execute_region' is not an ancestor");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1931,24 +2081,17 @@ bool mlir::scf::insideMutuallyExclusiveBranches(Operation *a, Operation *b) {
   return false;
 }
 
-LogicalResult
-IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
-                       IfOp::Adaptor adaptor,
-                       SmallVectorImpl<Type> &inferredReturnTypes) {
-  if (adaptor.getRegions().empty())
-    return failure();
-  Region *r = &adaptor.getThenRegion();
-  if (r->empty())
-    return failure();
-  Block &b = r->front();
-  if (b.empty())
-    return failure();
-  auto yieldOp = llvm::dyn_cast<YieldOp>(b.back());
-  if (!yieldOp)
-    return failure();
-  TypeRange types = yieldOp.getOperandTypes();
-  llvm::append_range(inferredReturnTypes, types);
-  return success();
+/// Ensure that `region`, which belongs to an `scf.if`, terminates with an
+/// `scf.yield` if it does not already have a terminator.
+template <typename BuilderTy>
+static void ensureIfYieldTerminator(Region &region, BuilderTy &builder,
+                                    Location loc) {
+  ::mlir::impl::ensureRegionTerminator(
+      region, builder, loc, [](OpBuilder &b, Location l) -> Operation * {
+        OperationState state(l, scf::YieldOp::getOperationName());
+        scf::YieldOp::build(b, state);
+        return Operation::create(state);
+      });
 }
 
 void IfOp::build(OpBuilder &builder, OperationState &result,
@@ -1990,14 +2133,14 @@ void IfOp::build(OpBuilder &builder, OperationState &result,
   Region *thenRegion = result.addRegion();
   builder.createBlock(thenRegion);
   if (resultTypes.empty())
-    IfOp::ensureTerminator(*thenRegion, builder, result.location);
+    ensureIfYieldTerminator(*thenRegion, builder, result.location);
 
   // Build else region.
   Region *elseRegion = result.addRegion();
   if (withElseRegion) {
     builder.createBlock(elseRegion);
     if (resultTypes.empty())
-      IfOp::ensureTerminator(*elseRegion, builder, result.location);
+      ensureIfYieldTerminator(*elseRegion, builder, result.location);
   }
 }
 
@@ -2020,20 +2163,55 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
     elseBuilder(builder, result.location);
   }
 
-  // Infer result types.
-  SmallVector<Type> inferredReturnTypes;
-  MLIRContext *ctx = builder.getContext();
-  auto attrDict = DictionaryAttr::get(ctx, result.attributes);
-  if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
-                                 /*properties=*/PropertyRef{}, result.regions,
-                                 inferredReturnTypes))) {
-    result.addTypes(inferredReturnTypes);
-  }
+  // Infer result types from the first region whose fall-through terminator is
+  // `scf.yield`. Regions terminated by `scf.break` do not contribute.
+  auto tryRegion = [&](Region *r) -> std::optional<TypeRange> {
+    if (!r || r->empty())
+      return std::nullopt;
+    Block &b = r->front();
+    if (b.empty())
+      return std::nullopt;
+    if (auto y = dyn_cast<YieldOp>(b.back()))
+      return TypeRange(y.getOperandTypes());
+    return std::nullopt;
+  };
+  if (auto ts = tryRegion(thenRegion))
+    result.addTypes(*ts);
+  else if (auto ts = tryRegion(elseRegion))
+    result.addTypes(*ts);
 }
 
 LogicalResult IfOp::verify() {
   if (getNumResults() != 0 && getElseRegion().empty())
     return emitOpError("must have an else block if defining values");
+
+  // The terminator of each region must be either `scf.yield` (the regular
+  // case) or a region-breaking terminator (`scf.break`) that transfers
+  // control to an enclosing target op. The validity of region-breaking
+  // terminators is checked by their own verifiers; here we only enforce that
+  // nothing else terminates an `scf.if` region.
+  auto verifyRegionTerminator = [&](Region &region,
+                                    StringRef name) -> LogicalResult {
+    if (region.empty())
+      return success();
+    Operation &terminator = region.front().back();
+    if (isa<YieldOp, BreakOp>(terminator))
+      return success();
+    return emitOpError() << "expects '" << name
+                         << "' region to be terminated by 'scf.yield' or "
+                            "'scf.break', found '"
+                         << terminator.getName() << "'";
+  };
+  if (failed(verifyRegionTerminator(getThenRegion(), "then")))
+    return failure();
+  if (failed(verifyRegionTerminator(getElseRegion(), "else")))
+    return failure();
+
+  // Note: when a branch terminates with `scf.yield`, the per-yield-operand
+  // type matching against this op's result types is enforced by the
+  // `RegionBranchOpInterface` verifier. Branches that terminate with
+  // `scf.break` transfer control out without yielding values, so the
+  // break's own verifier handles type compatibility there.
   return success();
 }
 
@@ -2055,13 +2233,13 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the 'then' region.
   if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
-  IfOp::ensureTerminator(*thenRegion, parser.getBuilder(), result.location);
+  ensureIfYieldTerminator(*thenRegion, parser.getBuilder(), result.location);
 
   // If we find an 'else' keyword then parse the 'else' region.
   if (!parser.parseOptionalKeyword("else")) {
     if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
       return failure();
-    IfOp::ensureTerminator(*elseRegion, parser.getBuilder(), result.location);
+    ensureIfYieldTerminator(*elseRegion, parser.getBuilder(), result.location);
   }
 
   // Parse the optional attribute list.
@@ -2071,18 +2249,28 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
+  bool hasResults = !getResults().empty();
 
   p << " " << getCondition();
-  if (!getResults().empty()) {
+  if (hasResults)
     p << " -> (" << getResultTypes() << ")";
-    // Print yield explicitly if the op defines values.
-    printBlockTerminators = true;
-  }
+
+  // We must print the terminator whenever the op produces results, or when
+  // the terminator is not a plain `scf.yield` (so that region-breaking
+  // terminators round-trip).
+  auto needsExplicitTerminator = [&](Region &region) {
+    if (region.empty())
+      return false;
+    if (hasResults)
+      return true;
+    return !isa<YieldOp>(region.front().back());
+  };
+
   p << ' ';
   p.printRegion(getThenRegion(),
                 /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/printBlockTerminators);
+                /*printBlockTerminators=*/
+                needsExplicitTerminator(getThenRegion()));
 
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = getElseRegion();
@@ -2090,7 +2278,8 @@ void IfOp::print(OpAsmPrinter &p) {
     p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
-                  /*printBlockTerminators=*/printBlockTerminators);
+                  /*printBlockTerminators=*/
+                  needsExplicitTerminator(elseRegion));
   }
 
   p.printOptionalAttrDict((*this)->getAttrs());
@@ -2098,10 +2287,14 @@ void IfOp::print(OpAsmPrinter &p) {
 
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
-  // The `then` and the `else` region branch back to the parent operation or one
-  // of the recursive parent operations (early exit case).
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    Operation *terminator = point.getTerminatorPredecessorOrNull();
+    // A `scf.yield` branches back to this op. The only other valid terminator
+    // is `scf.break` and it branches back to an enclosing op. Therefore, it is
+    // not enumerated by this implementation. The owning ancestor reports that
+    // early-exit edge instead
+    if (isa<YieldOp>(terminator))
+      regions.push_back(RegionSuccessor::parent());
     return;
   }
 
@@ -2183,6 +2376,11 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
     if (op->getNumResults() == 0)
+      return failure();
+    // This pattern requires both regions to fall through with `scf.yield`.
+    if (!isa<YieldOp>(op.getThenRegion().back().getTerminator()) ||
+        op.getElseRegion().empty() ||
+        !isa<YieldOp>(op.getElseRegion().back().getTerminator()))
       return failure();
 
     auto cond = op.getCondition();
@@ -2385,6 +2583,11 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
     // Early exit if there are no results that could be replaced.
     if (op.getNumResults() == 0)
       return failure();
+    // This pattern requires both regions to fall through with `scf.yield`.
+    if (!isa<YieldOp>(op.getThenRegion().back().getTerminator()) ||
+        op.getElseRegion().empty() ||
+        !isa<YieldOp>(op.getElseRegion().back().getTerminator()))
+      return failure();
 
     auto trueYield =
         cast<scf::YieldOp>(op.getThenRegion().back().getTerminator());
@@ -2470,6 +2673,17 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
 
     auto prevIf = dyn_cast<IfOp>(nextIf->getPrevNode());
     if (!prevIf)
+      return failure();
+
+    // This pattern requires both if ops' regions to fall through with
+    // `scf.yield`.
+    auto isYieldTerminated = [](Region &region) {
+      return region.empty() || isa<YieldOp>(region.back().getTerminator());
+    };
+    if (!isYieldTerminated(prevIf.getThenRegion()) ||
+        !isYieldTerminated(prevIf.getElseRegion()) ||
+        !isYieldTerminated(nextIf.getThenRegion()) ||
+        !isYieldTerminated(nextIf.getElseRegion()))
       return failure();
 
     // Determine the logical then/else blocks when prevIf's
@@ -2631,6 +2845,14 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
+    // This pattern requires the outer if's regions to fall through with
+    // `scf.yield`.
+    if (!isa<YieldOp>(op.getThenRegion().back().getTerminator()))
+      return failure();
+    if (!op.getElseRegion().empty() &&
+        !isa<YieldOp>(op.getElseRegion().back().getTerminator()))
+      return failure();
+
     auto nestedOps = op.thenBlock()->without_terminator();
     // Nested `if` must be the only op in block.
     if (!llvm::hasSingleElement(nestedOps))
@@ -2645,6 +2867,12 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       return failure();
 
     if (nestedIf.elseBlock() && !llvm::hasSingleElement(*nestedIf.elseBlock()))
+      return failure();
+    // The nested if's regions must also fall through with `scf.yield`.
+    if (!isa<YieldOp>(nestedIf.getThenRegion().back().getTerminator()))
+      return failure();
+    if (!nestedIf.getElseRegion().empty() &&
+        !isa<YieldOp>(nestedIf.getElseRegion().back().getTerminator()))
       return failure();
 
     SmallVector<Value> thenYield(op.thenYield().getOperands());
@@ -3453,6 +3681,14 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     // TODO: support else blocks with content.
     if (!ifOp || ifOp.getCondition() != conditionOp.getCondition() ||
         (ifOp.elseBlock() && !ifOp.elseBlock()->without_terminator().empty()))
+      return failure();
+
+    // This pattern requires both regions of the ifOp to fall through with
+    // `scf.yield`.
+    if (!isa<scf::YieldOp>(ifOp.getThenRegion().back().getTerminator()))
+      return failure();
+    if (!ifOp.getElseRegion().empty() &&
+        !isa<scf::YieldOp>(ifOp.getElseRegion().back().getTerminator()))
       return failure();
 
     assert((ifOp->use_empty() || (llvm::all_equal(ifOp->getUsers()) &&

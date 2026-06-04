@@ -78,21 +78,36 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getSuccessorInputs", "getRegionBranchPointTerminators"]>,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
-    RecursiveMemoryEffects]> {
+    PropagateControlFlowBreak,
+    RecursiveMemoryEffects,
+    TokenProducerTrait]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
     The `scf.execute_region` operation is used to allow multiple blocks within SCF
     and other operations which can hold only one block.  The `scf.execute_region`
     operation executes the region held exactly once and cannot have any operands.
-    As such, its region has no arguments. All SSA values that dominate the op can
-    be accessed inside the op. The op's region can have multiple blocks and the
-    blocks can have multiple distinct terminators. Values returned from this op's
-    region define the op's results.
+    All SSA values that dominate the op can be accessed inside the op. The op's
+    region can have multiple blocks and the blocks can have multiple distinct
+    terminators. Values returned from this op's region define the op's results.
+
+    The entry block of the region may optionally have a single block argument
+    of `token` type, which identifies this `scf.execute_region` op. This token
+    can be used by `scf.break` ops nested in the region (possibly through other
+    operations that carry the `PropagateControlFlowBreak` trait) to perform an
+    early exit, transferring control directly back to this `scf.execute_region`
+    and providing its result values.
+
     The optional 'no_inline' flag can be set to request the ExecuteRegionOp to be
     preserved as much as possible and not being inlined in the parent block until
     an explicit lowering step.
+
+    Control returns to this operation either via an `scf.yield` terminator of
+    one of its own blocks, or by an early exit via an `scf.break` that targets
+    this op. In both cases, the terminator's operand types must match this
+    operation's result types.
 
     Example:
 
@@ -130,6 +145,17 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
       }
       "bar"(%v) : (i64) -> ()
     }
+
+    // Early exit using the entry block token.
+    %a = scf.execute_region -> f32 {
+    ^bb0(%tok: token):
+      %0 = "some.compute"() : () -> (i1)
+      scf.if %0 {
+        scf.break %tok, %val1 : f32
+      }
+      %1 = "some.compute"() : () -> (f32)
+      scf.yield %1 : f32
+    }
     ```
   }];
 
@@ -141,8 +167,69 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 
   let regions = (region AnyRegion:$region);
 
+  let extraClassDeclaration = [{
+    /// Returns the token entry block argument that identifies this op for
+    /// region-breaking terminators, or a null Value if the entry block has no
+    /// token argument.
+    ::mlir::Value getToken();
+  }];
+
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : SCF_Op<"break", [
+    Terminator, TokenConsumerTrait,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands", "getSuccessorRegions"]>
+  ]> {
+  let summary = "early exit from a region-bearing op identified by a token";
+  let description = [{
+    The `scf.break` operation is a region-breaking terminator that terminates
+    the enclosing op identified by its `token` operand. The operands become
+    the target op's result values; their types must match the result types of
+    the target op.
+
+    `scf.break` may appear as the terminator of any block nested inside the
+    target op, as long as every operation on the path between this `scf.break`
+    and the target op carries the `PropagateControlFlowBreak` op trait.
+
+    Example:
+
+    ```mlir
+    %a = scf.execute_region -> f32 {
+    ^bb0(%tok: token):
+      %0 = "some.compute"() : () -> (i1)
+      scf.if %0 {
+        scf.break %tok, %val1 : f32
+      }
+      %1 = "some.compute"() : () -> (f32)
+      scf.yield %1 : f32
+    }
+    ```
+  }];
+
+  let arguments = (ins Token:$token, Variadic<AnyType>:$values);
+  let builders = [OpBuilder<(ins "::mlir::Value":$token), [{
+      $_state.addOperands(token);
+    }]>];
+
+  let assemblyFormat = [{
+    $token (`,` $values^ `:` type($values))? attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the `scf.execute_region` op that this `scf.break` transfers
+    /// control to (the op that owns the entry block argument used as the token
+    /// operand).
+    ::mlir::Operation *getTarget();
+  }];
 
   let hasVerifier = 1;
 }
@@ -706,7 +793,7 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
     "getEntrySuccessorRegions", "getSuccessorInputs"]>,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
-    InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
+    PropagateControlFlowBreak, SingleBlock,
     RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
@@ -743,9 +830,16 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     block. In case the `scf.if` produces results, the "else" region must also
     have exactly 1 block.
 
-    The blocks are always terminated with `scf.yield`. If `scf.if` defines no
+    The blocks are normally terminated with `scf.yield`. If `scf.if` defines no
     values, the `scf.yield` can be left out, and will be inserted implicitly.
-    Otherwise, it must be explicit.
+    Otherwise, it must be explicit. The types of the yielded values must match
+    the result types of the `scf.if`.
+
+    A region of an `scf.if` can also be terminated with an `scf.break`. In that
+    case, it transfers the control flow to the targeted enclosing op (e.g.,
+    an `scf.execute_region`). Mixing yield and break terminators across the two
+    regions is allowed, but if `scf.if` produces results, the region that
+    reaches the join (i.e., does not break out) must yield matching values.
 
     Example:
 
@@ -754,9 +848,6 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
       ...
     }
     ```
-
-    The types of the yielded values must match the result types of the
-    `scf.if`.
   }];
   let arguments = (ins I1:$condition);
   let results = (outs Variadic<AnyType>:$results);

@@ -645,7 +645,7 @@ func.func @while_bad_terminator() {
 // -----
 
 func.func @execute_region() {
-  // expected-error @+1 {{region cannot have any arguments}}
+  // expected-error @+1 {{entry block argument must be of `token` type}}
   "scf.execute_region"() ({
   ^bb0(%i : i32):
     scf.yield
@@ -851,4 +851,68 @@ func.func @for_missing_induction_var(%arg0: index, %arg1: index) {
     "scf.yield"() : () -> ()
   }) : (index, index, index) -> ()
   return
+}
+
+// -----
+
+func.func @execute_region_too_many_args(%val: f32) -> f32 {
+  // expected-error @below {{'scf.execute_region' op entry block may only have zero or one block argument}}
+  %res = scf.execute_region -> f32 {
+  ^bb0(%t: token, %x: f32):
+    scf.yield %x : f32
+  }
+  return %res : f32
+}
+
+// -----
+
+func.func @execute_region_nontoken_arg(%val: f32) -> f32 {
+  // expected-error @below {{'scf.execute_region' op entry block argument must be of `token` type}}
+  %res = scf.execute_region -> f32 {
+  ^bb0(%x: f32):
+    scf.yield %x : f32
+  }
+  return %res : f32
+}
+
+// -----
+
+func.func @break_wrong_result_count(%val: f32) -> f32 {
+  // expected-error @below {{'scf.execute_region' op along control flow edge from Operation scf.break to parent: region branch point has 0 operands, but region successor needs 1 inputs}}
+  %res = scf.execute_region -> f32 {
+  ^bb0(%t: token):
+    // expected-note @below {{region branch point}}
+    scf.break %t
+  }
+  return %res : f32
+}
+
+// -----
+
+func.func @break_wrong_result_type(%val: i32) -> f32 {
+  // expected-error @below {{'scf.execute_region' op along control flow edge from Operation scf.break to parent: successor operand type #0 'i32' should match successor input type #0 'f32'}}
+  %res = scf.execute_region -> f32 {
+  ^bb0(%t: token):
+    // expected-note @below {{region branch point}}
+    scf.break %t, %val : i32
+  }
+  return %res : f32
+}
+
+// -----
+
+// A `scf.break` may only pass through ops that are transparent to
+// region-breaking control flow (the `PropagateControlFlowBreak` trait). Here
+// the break targets the `scf.execute_region` but is nested under a
+// `test.one_region_op`, which does not carry that trait.
+func.func @break_through_non_transparent(%val: f32) -> f32 {
+  %res = scf.execute_region -> f32 {
+  ^bb0(%tok: token):
+    "test.one_region_op"() ({
+      // expected-error @below {{'scf.break' op cannot break through 'test.one_region_op': op does not implement the 'PropagateControlFlowBreak' trait}}
+      scf.break %tok, %val : f32
+    }) : () -> ()
+    scf.yield %val : f32
+  }
+  return %res : f32
 }

@@ -192,10 +192,18 @@ using RegionBranchSuccessorMapping = DenseMap<OpOperand *, SmallVector<Value>>;
 using RegionBranchInverseSuccessorMapping =
     DenseMap<Value, SmallVector<OpOperand *>>;
 
-/// This class represents a successor of a region. A region successor can either
-/// be another region, or the parent operation (i.e., the operation that
-/// implements the `RegionBranchOpInterface`). In the latter case, the control
-/// flow branches after/out of the region branch operation.
+/// This class represents a successor of a region. A region successor can be:
+///   1. Another region of the parent operation.
+///   2. The parent operation (i.e., the operation that implements the
+///      `RegionBranchOpInterface`). In this case, the control flow branches
+///      after/out of the region branch operation.
+///   3. An "early exit" to a non-immediate `RegionBranchOpInterface` ancestor.
+///      In this case, control leaves one or more enclosing operations and
+///      resumes after that ancestor, whose results receive the successor
+///      operands. This models region-breaking terminators (e.g. `scf.break`)
+///      that target an enclosing op which is not their immediate parent.
+/// TODO: "Parent" and "early exit" should be unified into a single API. Because
+/// that's a larger API change, we're going to do that in a separate commit.
 class RegionSuccessor {
 public:
   /// Initialize a successor that branches to a region of the parent operation.
@@ -206,18 +214,40 @@ public:
   /// Initialize a successor that branches after/out of the parent operation.
   static RegionSuccessor parent() { return RegionSuccessor(); }
 
-  /// Return the given region successor. Returns nullptr if the successor is the
-  /// parent operation.
-  Region *getSuccessor() const { return successor; }
-
-  /// Return true if the successor is the parent operation.
-  bool isParent() const { return successor == nullptr; }
-
-  bool operator==(RegionSuccessor rhs) const {
-    return successor == rhs.successor;
+  /// Initialize an "early exit" successor: control leaves one or more enclosing
+  /// operations and resumes after `exitTarget`, whose results receive the
+  /// successor operands. `exitTarget` is a `RegionBranchOpInterface` ancestor
+  /// that is not necessarily the immediate parent of the branch point.
+  static RegionSuccessor exitingTo(Operation *exitTarget) {
+    assert(exitTarget && "exit target must not be null");
+    RegionSuccessor successor;
+    successor.exitTarget = exitTarget;
+    return successor;
   }
 
-  bool operator==(const Region *region) const { return successor == region; }
+  /// Return the given region successor. Returns nullptr if the successor is the
+  /// parent operation or an early exit.
+  Region *getSuccessor() const { return successor; }
+
+  /// Return the ancestor operation that control exits to for an early-exit
+  /// successor. Returns nullptr otherwise.
+  Operation *getSuccessorOp() const { return exitTarget; }
+
+  /// Return true if the successor is the (immediate) parent operation.
+  bool isParent() const {
+    return successor == nullptr && exitTarget == nullptr;
+  }
+
+  /// Return true if the successor is an early exit to a non-immediate ancestor.
+  bool isEarlyExit() const { return exitTarget != nullptr; }
+
+  bool operator==(RegionSuccessor rhs) const {
+    return successor == rhs.successor && exitTarget == rhs.exitTarget;
+  }
+
+  bool operator==(const Region *region) const {
+    return successor == region && exitTarget == nullptr;
+  }
 
   friend bool operator!=(RegionSuccessor lhs, RegionSuccessor rhs) {
     return !(lhs == rhs);
@@ -227,15 +257,22 @@ private:
   /// Private constructor to encourage the use of `RegionSuccessor::parent`.
   RegionSuccessor() : successor(nullptr) {}
 
+  /// The successor region, or null for "parent"/early-exit successors.
   Region *successor = nullptr;
+  /// For early-exit successors: the ancestor op control resumes after. Null
+  /// otherwise.
+  Operation *exitTarget = nullptr;
 };
 
 /// This class represents a point being branched from in the methods of the
 /// `RegionBranchOpInterface`.
 /// One can branch from one of two kinds of places:
 /// * The parent operation (aka the `RegionBranchOpInterface` implementation)
-/// * A RegionBranchTerminatorOpInterface inside a region within the parent
-//    operation.
+/// * A RegionBranchTerminatorOpInterface nested within the parent operation.
+///   This terminator is usually an immediately nested block terminator, but for
+///   region-breaking terminators (early exit) it may be nested deeper, with
+///   transparent ops (carrying the `PropagateControlFlowBreak` trait) in
+///   between.
 class RegionBranchPoint {
 public:
   /// Returns an instance of `RegionBranchPoint` representing the parent
@@ -425,6 +462,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      RegionSuccessor successor) {
   if (successor.isParent())
     return os << "<to parent>";
+  if (successor.isEarlyExit())
+    return os << "<early exit to "
+              << OpWithFlags(successor.getSuccessorOp(),
+                             OpPrintingFlags().skipRegions())
+              << ">";
   return os << "<to region #" << successor.getSuccessor()->getRegionNumber()
             << ">";
 }

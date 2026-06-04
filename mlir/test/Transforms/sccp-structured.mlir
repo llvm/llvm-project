@@ -229,3 +229,72 @@ func.func @while_loop_false_condition(%arg0 : index) -> index {
   // CHECK: return %[[C0]]
   func.return %1 : index
 }
+
+// -----
+
+// Both the early-exit (`scf.break`) path and the fall-through (`scf.yield`)
+// path produce the same constant, so the `scf.execute_region` result is a
+// constant. This requires sparse constant propagation to thread a value along
+// the early-exit edge modeled by RegionBranchOpInterface.
+
+// CHECK-LABEL: func @early_exit_constant(
+//       CHECK:   %[[C5:.*]] = arith.constant 5 : i32
+//       CHECK:   return %[[C5]] : i32
+func.func @early_exit_constant(%cond: i1) -> i32 {
+  %0 = scf.execute_region -> i32 {
+  ^bb0(%tok: token):
+    %c5 = arith.constant 5 : i32
+    scf.if %cond {
+      scf.break %tok, %c5 : i32
+    }
+    scf.yield %c5 : i32
+  }
+  return %0 : i32
+}
+
+// -----
+
+// The early-exit path produces 5 while the fall-through path produces 6, so
+// the result is *not* a constant. If the early-exit edge were not modeled,
+// constant propagation would only see the `scf.yield` and would incorrectly
+// fold the result to 6.
+
+// CHECK-LABEL: func @early_exit_not_constant(
+//       CHECK:   %[[R:.*]] = scf.execute_region
+//       CHECK:   return %[[R]] : i32
+func.func @early_exit_not_constant(%cond: i1) -> i32 {
+  %0 = scf.execute_region -> i32 {
+  ^bb0(%tok: token):
+    %c5 = arith.constant 5 : i32
+    %c6 = arith.constant 6 : i32
+    scf.if %cond {
+      scf.break %tok, %c5 : i32
+    }
+    scf.yield %c6 : i32
+  }
+  return %0 : i32
+}
+
+// -----
+
+// All terminators of the inner `scf.execute_region` break to the outer one, so
+// the inner result (and the outer `scf.yield` that forwards it) is on an
+// unreachable path. The outer result is therefore exactly the break's constant
+// (4): the never-produced inner result stays uninitialized and does not
+// pollute the meet.
+
+// CHECK-LABEL: func @early_exit_all_break_outer
+//       CHECK:   %[[C4:.*]] = arith.constant 4 : i32
+//       CHECK:   return %[[C4]] : i32
+func.func @early_exit_all_break_outer(%cond: i1) -> i32 {
+  %0 = scf.execute_region -> i32 {
+  ^bb0(%tok_outer: token):
+    %c4 = arith.constant 4 : i32
+    %1 = scf.execute_region -> i32 {
+    ^bb1(%tok_inner: token):
+      scf.break %tok_outer, %c4 : i32
+    }
+    scf.yield %1 : i32
+  }
+  return %0 : i32
+}

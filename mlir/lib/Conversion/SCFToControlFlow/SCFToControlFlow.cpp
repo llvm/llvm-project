@@ -402,6 +402,18 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
 
+  // Only `scf.if` ops whose regions terminate with `scf.yield` are supported.
+  // Region-breaking terminators (`scf.break`) are not yet handled by this
+  // lowering.
+  auto isYieldTerminated = [](Region &region) {
+    return region.empty() || isa<scf::YieldOp>(region.front().back());
+  };
+  if (!isYieldTerminated(ifOp.getThenRegion()) ||
+      !isYieldTerminated(ifOp.getElseRegion()))
+    return rewriter.notifyMatchFailure(
+        ifOp, "lowering of 'scf.if' with a non-'scf.yield' terminator is "
+              "not implemented yet");
+
   // Start by splitting the block containing the 'scf.if' into two parts.
   // The part before will contain the condition, the part after will be the
   // continuation point.
@@ -458,6 +470,14 @@ LogicalResult
 ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
                                        PatternRewriter &rewriter) const {
   auto loc = op.getLoc();
+
+  // An `scf.execute_region` op with a token entry block argument may be the
+  // target of an `scf.break`. This lowering does not yet handle the resulting
+  // early exits; bail out so the conversion fails cleanly.
+  if (!op.getRegion().empty() && op.getRegion().front().getNumArguments() != 0)
+    return rewriter.notifyMatchFailure(
+        op, "lowering of 'scf.execute_region' with a token block argument "
+            "is not implemented yet");
 
   auto *condBlock = rewriter.getInsertionBlock();
   auto opPosition = rewriter.getInsertionPoint();

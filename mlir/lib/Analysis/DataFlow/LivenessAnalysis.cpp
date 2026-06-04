@@ -140,7 +140,10 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // check).
   // 3. RegionBranchOpTerminatorInterface, the operand is live if the
   // surrounding RegionBranchOp is live, so we call visitOperation on the
-  // surrounding op, but with the operand that we are looking at.
+  // surrounding op, but with the operand that we are looking at. (This is a
+  // non-forwarded operand, e.g. a token; forwarded operands are handled by
+  // visitRegionSuccessorsFromTerminator, which resolves early-exit targets per
+  // successor.)
   auto *visitOp =
       isa<RegionBranchTerminatorOpInterface>(op) ? op->getParentOp() : op;
   Liveness *operandLiveness[] = {getLatticeElement(operand.get())};
