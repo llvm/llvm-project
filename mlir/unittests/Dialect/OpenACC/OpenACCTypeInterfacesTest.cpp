@@ -261,8 +261,8 @@ TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastPrivateTypeToMemref) {
   Location loc = UnknownLoc::get(&context);
   OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
   OpBuilder builder(module->getBodyRegion());
-  func::FuncOp fn = func::FuncOp::create(
-      builder, loc, "cast_private_to_memref", builder.getFunctionType({}, {}));
+  func::FuncOp fn = func::FuncOp::create(builder, loc, "cast_private_to_memref",
+                                         builder.getFunctionType({}, {}));
   Block *block = fn.addEntryBlock();
   builder.setInsertionPointToStart(block);
 
