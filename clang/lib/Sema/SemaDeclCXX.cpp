@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ComparisonCategories.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -4819,33 +4820,33 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
       return true;
   }
 
+  if (!Dependent && declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
+    return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
+
   // Check for direct and virtual base classes.
   const CXXBaseSpecifier *DirectBaseSpec = nullptr;
   const CXXBaseSpecifier *VirtualBaseSpec = nullptr;
-  if (!Dependent) {
-    if (declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
-      return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
 
-    FindBaseInitializer(*this, ClassDecl, BaseType, DirectBaseSpec,
-                        VirtualBaseSpec);
+  FindBaseInitializer(*this, ClassDecl, BaseType, DirectBaseSpec,
+                      VirtualBaseSpec);
 
-    // C++ [base.class.init]p2:
-    // Unless the mem-initializer-id names a nonstatic data member of the
-    // constructor's class or a direct or virtual base of that class, the
-    // mem-initializer is ill-formed.
-    if (!DirectBaseSpec && !VirtualBaseSpec) {
-      // If the class has any dependent bases, then it's possible that
-      // one of those types will resolve to the same type as
-      // BaseType. Therefore, just treat this as a dependent base
-      // class initialization.  FIXME: Should we try to check the
-      // initialization anyway? It seems odd.
-      if (ClassDecl->hasAnyDependentBases())
-        Dependent = true;
-      else
-        return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
-               << BaseType << Context.getCanonicalTagType(ClassDecl)
-               << BaseTInfo->getTypeLoc().getSourceRange();
-    }
+  // C++ [base.class.init]p2:
+  // Unless the mem-initializer-id names a nonstatic data member of the
+  // constructor's class or a direct or virtual base of that class, the
+  // mem-initializer is ill-formed.
+  if (!DirectBaseSpec && !VirtualBaseSpec) {
+    // If the class has any dependent bases, then it's possible that
+    // one of those types will resolve to the same type as
+    // BaseType. Therefore, just treat this as a dependent base
+    // class initialization.  FIXME: Should we try to check the
+    // initialization anyway? It seems odd.
+    if (ClassDecl->hasAnyDependentBases())
+      Dependent = true;
+    // We may have a delegating initializer
+    else if (!declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
+      return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
+             << BaseType << Context.getCanonicalTagType(ClassDecl)
+             << BaseTInfo->getTypeLoc().getSourceRange();
   }
 
   if (Dependent) {
