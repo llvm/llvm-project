@@ -1,11 +1,26 @@
+from __future__ import annotations
+
 import os
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 import lit.Test
 import lit.util
 
+# Can't import unconditionally due to circular dependency
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.TestingConfig import TestingConfig
+
 
 class TestFormat:
-    def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsForPath(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: tuple[str, ...],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         """
         Given the path to a test in the test suite, generates the Lit tests associated
         to that path. There can be zero, one or more tests. For example, some testing
@@ -17,11 +32,18 @@ class TestFormat:
         """
         yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 
+
 ###
 
 
 class FileBasedTest(TestFormat):
-    def getTestsForPath(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsForPath(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: tuple[str, ...],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         """
         Expand each path in a test suite to a Lit test using that path and assuming
         it is a file containing the test. File extensions excluded by the configuration
@@ -36,20 +58,31 @@ class FileBasedTest(TestFormat):
         if any(filename.endswith(suffix) for suffix in localConfig.suffixes):
             yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 
-    def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsInDirectory(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: tuple[str, ...],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         source_path = testSuite.getSourcePath(path_in_suite)
         for filename in os.listdir(source_path):
             filepath = os.path.join(source_path, filename)
             if not os.path.isdir(filepath):
-                for t in self.getTestsForPath(testSuite, path_in_suite + (filename,), litConfig, localConfig):
+                for t in self.getTestsForPath(
+                    testSuite, path_in_suite + (filename,), litConfig, localConfig
+                ):
                     yield t
 
 
 ###
 
+
 # Check exit code of a simple executable with no input
 class ExecutableTest(FileBasedTest):
-    def execute(self, test, litConfig):
+    def execute(
+        self, test: lit.Test.Test, litConfig: LitConfig
+    ) -> lit.Test.ResultCode | tuple[lit.Test.ResultCode, str]:
         if test.config.unsupported:
             return lit.Test.UNSUPPORTED
 
