@@ -839,14 +839,21 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // guarded-off ones. That is illegal when the inner loop relies on the guard
   // to terminate.
   //
-  // TODO: Bailing out is conservative; such a nest can be interchanged when
-  // the guard is preserved by the transform. If the guard condition is
-  // invariant across the interchanged pair, keep it wrapping the interchanged
-  // nest so the inner loop is skipped for the outer iterations the guard
-  // excludes, instead of routing the guard edge into the inner latch as
-  // adjustLoopBranches() does today. Only bail when the guard depends on the
-  // interchanged induction variables or the inner loop cannot be proven to
-  // run zero times when the guard is false. See llvm/llvm-project#201273.
+  // TODO: This is conservative approach and under some circumstances, we can
+  // still allow the interchange. e.g.
+  // for (j = 0; j < 3; j++) {
+  //  for (i = 0; i < 2; i++) {
+  //   if (j != 0)                     // guard: invariant across (i,k)
+  //     for (k = 0; ; k++) {          // inner; eq-exit needs j>=1
+  //       y[i][j][k] = x[j][k][i] + w[j][k][i];
+  //       if (k + 1 == j) break;
+  //     }
+  //  }
+  // }
+  // Here the guard (j != 0) uses only the enclosing loop's IV j, not the
+  // interchanged IVs (i and k), so it is invariant across both interchanged
+  // loops and could be hoisted to gate the whole nest; the interchange would
+  // still be legal.
   if (OuterLoopHeader->getTerminator()->getNumSuccessors() > 1 &&
       is_contained(successors(OuterLoopHeader), OuterLoopLatch)) {
     LLVM_DEBUG(dbgs() << "Outer loop header guards the inner loop\n");

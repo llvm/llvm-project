@@ -25,13 +25,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK:      Name:            Dependence
 ; CHECK-NEXT: Function:        interchange_01
 
-; %for.cond1.preheader guards the inner loop: it branches to the inner loop
-; (%for.body4) or straight to the outer latch (%for.cond.loopexit) based on
-; %cmp324 = (N-1 > 1). The inner loop exits on (inner IV == N-2), so it only
-; terminates because the guard stops it from running when N <= 2. Interchanging
-; would move the inner loop outside the guard and run it on every outer
-; iteration; with N == 2 (reachable, since the nest is entered for N > 1) the
-; inner exit is never taken and it loops forever.
+; Guarded nest: %for.cond1.preheader runs the inner loop only when
+; %cmp324 = (N-1 > 1). The inner exit (inner IV == N-2) only terminates under
+; that guard, so interchanging it loops forever for N == 2. 
 ; DELIN:      Name:            NotTightlyNested
 ; DELIN-NEXT: Function:        interchange_01
 define void @interchange_01(i32 %k, i32 %N) {

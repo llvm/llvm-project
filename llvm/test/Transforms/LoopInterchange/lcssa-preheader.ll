@@ -14,15 +14,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;   }
 ; }
 
-;; Without -da-disable-delinearization-checks this is not interchanged due to
-;; dependence. Even with that flag it must not be interchanged: %outer.header
-;; guards the inner loop by branching to it or to the outer latch based on
-;; %cmp222 = (m > 0). The inner loop exits on (iv.next != m) with a nuw IV, so
-;; it only terminates when m > 0. Interchanging would run the inner loop on
-;; every outer iteration; with m == 0 (and n > 0) the exit is never taken and
-;; it loops forever. Verified with lli: lcssa_08(1, 0) returns before
-;; interchange but hangs after it, so the CHECK-DELIN run below must also leave
-;; it un-interchanged. 
+;; Not interchanged by default (dependence). Even with
+;; -da-disable-delinearization-checks it must not be: %outer.header runs the
+;; inner loop only when %cmp222 = (m > 0), and its exit (iv.next != m, nuw)
+;; only terminates then, so interchanging it loops forever for m == 0.
 define void @lcssa_08(i32 %n, i32 %m) {;
 ; CHECK-LABEL: define void @lcssa_08(
 ; CHECK-SAME: i32 [[N:%.*]], i32 [[M:%.*]]) {
