@@ -68,6 +68,10 @@ public:
                         SmallVectorImpl<MCFixup> &Fixups,
                         const MCSubtargetInfo &STI) const;
 
+  void expandFunctionCallLpad(const MCInst &MI, SmallVectorImpl<char> &CB,
+                              SmallVectorImpl<MCFixup> &Fixups,
+                              const MCSubtargetInfo &STI) const;
+
   void expandQCLongCondBrImm(const MCInst &MI, SmallVectorImpl<char> &CB,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI, unsigned Size) const;
@@ -108,6 +112,10 @@ public:
   uint64_t getImmOpValue(const MCInst &MI, unsigned OpNo,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const;
+
+  unsigned getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
 
   unsigned getVMaskReg(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,
@@ -209,6 +217,55 @@ void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI,
   else
     // Emit JALR Ra, Ra, 0
     TmpInst = MCInstBuilder(RISCV::JALR).addReg(Ra).addReg(Ra).addImm(0);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(CB, Binary, llvm::endianness::little);
+}
+
+// Expand to AUIPC+JALR+LPAD (direct) or JALR+LPAD (indirect).
+// R_RISCV_RELAX is not emitted for the call because linker relaxation could
+// convert it to c.jal/cm.jalt, which would misalign the following LPAD.
+void RISCVMCCodeEmitter::expandFunctionCallLpad(
+    const MCInst &MI, SmallVectorImpl<char> &CB,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  bool IsIndirect = MI.getOpcode() == RISCV::PseudoCALLIndirectLpadAlign;
+  MCInst TmpInst;
+  uint32_t Binary;
+
+  if (!IsIndirect) {
+    const MCOperand &Func = MI.getOperand(0);
+    assert(Func.isExpr() && "Expected expression for call target");
+
+    // Use a STI without FeatureRelax so getImmOpValue does not mark the
+    // R_RISCV_CALL_PLT fixup as LinkerRelaxable (which would emit
+    // R_RISCV_RELAX).
+    MCSubtargetInfo NoRelaxSTI(STI);
+    if (STI.hasFeature(RISCV::FeatureRelax))
+      NoRelaxSTI.ToggleFeature(RISCV::FeatureRelax);
+
+    TmpInst =
+        MCInstBuilder(RISCV::AUIPC).addReg(RISCV::X1).addExpr(Func.getExpr());
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, NoRelaxSTI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+
+    TmpInst = MCInstBuilder(RISCV::JALR)
+                  .addReg(RISCV::X1)
+                  .addReg(RISCV::X1)
+                  .addImm(0);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+  } else {
+    TmpInst = MCInstBuilder(RISCV::JALR)
+                  .addReg(RISCV::X1)
+                  .addReg(MI.getOperand(0).getReg())
+                  .addImm(0);
+    Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+    support::endian::write(CB, Binary, llvm::endianness::little);
+  }
+
+  // LPAD is encoded as AUIPC X0, label.
+  TmpInst = MCInstBuilder(RISCV::AUIPC)
+                .addReg(RISCV::X0)
+                .addImm(MI.getOperand(1).getImm());
   Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
   support::endian::write(CB, Binary, llvm::endianness::little);
 }
@@ -486,8 +543,8 @@ void RISCVMCCodeEmitter::expandPseudoQCAccess(
   const MCOperand &AccessSymbol = MI.getOperand(3);
   assert(AccessSymbol.isExpr() && "Expected expression in PseudoQCAccess");
 
-  const auto *AccessExpr = dyn_cast<MCSpecifierExpr>(AccessSymbol.getExpr());
-  assert(AccessExpr && AccessExpr->getSpecifier() == RISCV::S_QC_ACCESS &&
+  const auto *AccessExpr = cast<MCSpecifierExpr>(AccessSymbol.getExpr());
+  assert(AccessExpr->getSpecifier() == RISCV::S_QC_ACCESS &&
          "Expected qc.access specifier on symbol");
 
   addFixup(Fixups, /*Offset=*/0, AccessExpr, FixupKind);
@@ -515,6 +572,14 @@ void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
   case RISCV::PseudoJump:
     expandFunctionCall(MI, CB, Fixups, STI);
     MCNumEmitted += 2;
+    return;
+  case RISCV::PseudoCALLLpadAlign:
+    expandFunctionCallLpad(MI, CB, Fixups, STI);
+    MCNumEmitted += 3; // AUIPC + JALR + LPAD
+    return;
+  case RISCV::PseudoCALLIndirectLpadAlign:
+    expandFunctionCallLpad(MI, CB, Fixups, STI);
+    MCNumEmitted += 2; // JALR + LPAD
     return;
   case RISCV::PseudoAddTPRel:
     expandAddTPRel(MI, CB, Fixups, STI);
@@ -855,6 +920,35 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   ++MCNumFixups;
 
   return 0;
+}
+
+unsigned
+RISCVMCCodeEmitter::getYBNDSWImmOpValue(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+  unsigned Imm = getImmOpValue(MI, OpNo, Fixups, STI);
+  assert(RISCV::isValidYBNDSWImm(Imm) && "Should have been checked before");
+  // YBNDSWI decodes to the requested length result as follows:
+  // If imm[8:0] == 0, result is 4096.
+  if (Imm == 4096)
+    return 0;
+  // If imm[8] == 0 and imm[7:0] != 0, result is imm[7:0] (1, 2, ..., 255).
+  if (Imm > 0 && Imm <= 255)
+    return Imm;
+  // If imm[8] == 1 and imm[7:5] == 0, result is
+  //   `256 | (imm[3:0] << 4) | (imm[4] << 3)` (256, 264, ..., 504).
+  if (Imm >= 256 && Imm <= 504 && (Imm % 8) == 0) {
+    // Encode the multiples of 8 in this range in odd-even buckets, setting bit
+    // 4 of the immediate to 1 for odd multiples of 8.
+    unsigned MultipleOf8 = (Imm - 256) >> 3;
+    unsigned OddMultiple = MultipleOf8 & 1;
+    unsigned Bits3To0 = MultipleOf8 >> 1;
+    return 256 | (OddMultiple << 4) | Bits3To0;
+  }
+  // Otherwise, result is imm[7:0] << 4 (512, 528, ... 4080).
+  if (Imm >= 512 && Imm <= 4080 && (Imm % 16) == 0)
+    return 256 | (Imm >> 4);
+  llvm_unreachable("Invalid immediate for YBNDSWI");
 }
 
 unsigned RISCVMCCodeEmitter::getVMaskReg(const MCInst &MI, unsigned OpNo,

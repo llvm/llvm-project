@@ -245,12 +245,6 @@ template<> struct DenseMapInfo<SDValue> {
     return V;
   }
 
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
   static unsigned getHashValue(const SDValue &Val) {
     return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
             (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
@@ -1232,7 +1226,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1893,6 +1886,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1948,12 +1947,6 @@ LLVM_ABI bool isOneConstant(SDValue V);
 
 /// Returns true if \p V is a constant min signed integer value.
 LLVM_ABI bool isMinSignedConstant(SDValue V);
-
-/// Returns true if \p V is a neutral element of Opc with Flags.
-/// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
-/// checks that V is a right identity.
-LLVM_ABI bool isNeutralConstant(unsigned Opc, SDNodeFlags Flags, SDValue V,
-                                unsigned OperandNo);
 
 /// Return the non-bitcasted source operand of \p V if it exists.
 /// If \p V is not a bitcasted value, it is returned as-is.

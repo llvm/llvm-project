@@ -70,9 +70,11 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
@@ -408,7 +410,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
@@ -1277,10 +1279,14 @@ StateType Process::GetState() {
   if (!m_current_private_state_thread_sp)
     return eStateUnloaded;
 
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return GetPrivateState();
+
   if (CurrentThreadPosesAsPrivateStateThread())
     return GetPrivateState();
-  else
-    return GetPublicState();
+
+  return GetPublicState();
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
@@ -1563,8 +1569,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    llvm::consumeError(
-        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
+    llvm::consumeError(ExecuteBreakpointSiteAction(
+        *bp_site, BreakpointAction::Disable, /*forbid_delay=*/false));
   });
 }
 
@@ -1582,8 +1588,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1593,7 +1599,17 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                                 BreakpointAction action) {
+                                                 BreakpointAction action,
+                                                 bool forbid_delay) {
+  // Breakpoints immediately affect running processes, so do not delay them.
+  forbid_delay |= StateIsRunningState(GetPrivateState());
+
+  if (forbid_delay)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
   auto site_sp = site.shared_from_this();
   std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
@@ -1601,7 +1617,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (ShouldUseDelayedBreakpoints()) {
+  if (!forbid_delay && ShouldUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
@@ -1624,8 +1640,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Enable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1761,11 +1777,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   bool bp_from_address =
       constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
       BreakpointResolver::ResolverTy::AddressResolver;
-  bool should_be_eager = use_hardware || bp_from_address;
+  bool forbid_delay = use_hardware || bp_from_address;
 
-  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
-                               : Status::FromError(ExecuteBreakpointSiteAction(
-                                     *bp_site_sp, BreakpointAction::Enable));
+  auto error = Status::FromError(ExecuteBreakpointSiteAction(
+      *bp_site_sp, BreakpointAction::Enable, forbid_delay));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
@@ -1790,8 +1805,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      llvm::consumeError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      llvm::consumeError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -2057,6 +2072,19 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
+  fixed_ranges.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges)
+    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
+                              range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
+  return DoReadMemoryRanges(fixed_ranges, buffer);
+}
+
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                            llvm::MutableArrayRef<uint8_t> buffer) {
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
@@ -4065,6 +4093,15 @@ bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
   return m_private_state_thread.EqualsThread(thread);
 }
 
+ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return m_private_run_lock;
+  if (IsOnThread(Host::GetCurrentThread()))
+    return m_private_run_lock;
+  return m_public_run_lock;
+}
+
 bool Process::StartPrivateStateThread(
     lldb::StateType state, bool run_lock_is_running,
     std::shared_ptr<PrivateStateThread> *backup_ptr) {
@@ -4320,14 +4357,12 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_local bool PrivateStateThreadGuard::g_is_private_state_thread = false;
-
 thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // Override PSTs exist solely to service RunThreadPlan expression evaluation.
   // They must see parent frames, not provider-augmented frames.
-  std::optional<PrivateStateThreadGuard> pst_guard;
+  std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    pst_guard.emplace();
+    policy_guard.emplace(Policy::PrivateState());
 
   bool control_only = true;
 
@@ -5525,9 +5560,9 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
 
     // If we spawned an override PST, mark the current (original) PST so
     // GetStackFrameList returns parent frames during event processing.
-    std::optional<PrivateStateThreadGuard> private_state_thread_guard;
+    std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      private_state_thread_guard.emplace();
+      policy_guard.emplace(Policy::PrivateState());
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5929,7 +5964,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       }
     } // END WAIT LOOP
 
-    private_state_thread_guard.reset();
+    policy_guard.reset();
 
     // If we had to start up a temporary private state thread to run this
     // thread plan, shut it down now.
@@ -6140,7 +6175,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -6152,8 +6187,11 @@ void Process::GetStatus(Stream &strm) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
+          core_args->Format(strm);
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());

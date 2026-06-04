@@ -31,6 +31,7 @@ public:
 private:
   const bool IgnoreMacros;
   const bool IgnoreTypeAliases;
+  const bool IgnoreImplicitCasts;
 };
 
 } // namespace clang::tidy::readability

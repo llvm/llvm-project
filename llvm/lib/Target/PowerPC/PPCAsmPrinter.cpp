@@ -125,9 +125,6 @@ struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
   static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
-  static inline TOCKey getTombstoneKey() {
-    return {(const MCSymbol *)1, PPC::S_None};
-  }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
         DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),
@@ -3235,7 +3232,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL8:
   case PPC::BL:
   case PPC::BL8_NOP:
-  case PPC::BL_NOP: {
+  case PPC::BL_NOP:
+  case PPC::BL_LWZinto_toc:
+  case PPC::BL_LWZinto_toc_RM:
+  case PPC::BL8_LDinto_toc:
+  case PPC::BL8_LDinto_toc_RM: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
       auto *S = static_cast<MCSymbolXCOFF *>(

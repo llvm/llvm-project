@@ -38,8 +38,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -81,8 +80,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -189,8 +187,7 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -250,8 +247,7 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -414,8 +410,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
+; CHECK-UNORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 1
@@ -482,8 +477,7 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
+; CHECK-ORDERED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    [[TMP7:%.*]] = shl i64 [[N_VEC]], 1
@@ -648,8 +642,7 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -705,8 +698,7 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -848,8 +840,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -903,8 +894,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-ORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1043,8 +1033,7 @@ define float @fadd_multiple(ptr noalias nocapture %a, ptr noalias nocapture %b, 
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-UNORDERED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -1178,8 +1167,7 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -1249,8 +1237,7 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -1427,8 +1414,7 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-UNORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-UNORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-UNORDERED:       vector.ph:
-; CHECK-UNORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-UNORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-UNORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-UNORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-UNORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -1498,8 +1484,7 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-ORDERED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-ORDERED:       vector.ph:
-; CHECK-ORDERED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-ORDERED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-ORDERED-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-ORDERED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-ORDERED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]

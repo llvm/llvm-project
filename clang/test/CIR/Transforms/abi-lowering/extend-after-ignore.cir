@@ -1,0 +1,44 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+
+// Direct(0), Ignore(1), Extend-signed(2): the Ignore slot drops from the
+// signature and the Extend slot shifts to position 1.  llvm.signext must
+// land on the shifted position, not the original one.
+#direct_ignore_extend = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" },
+             { kind = "ignore" },
+             { kind = "extend",
+               coerced_type = !s32i,
+               sign_extend = true } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  cir.func @callee(%arg0: !s32i, %arg1: !s32i, %arg2: !s8i) -> !s32i
+      attributes { test_classify = #direct_ignore_extend } {
+    cir.return %arg0 : !s32i
+  }
+
+  // Ignore slot drops; Extend shifts to position 1 and gets llvm.signext.
+  // CHECK:      cir.func{{.*}} @callee(%arg0: !s32i, %arg1: !s8i {llvm.signext}) -> !s32i
+  // CHECK-NEXT:   cir.return %arg0 : !s32i
+
+  cir.func @caller(%arg0: !s32i, %arg1: !s32i, %arg2: !s8i) -> !s32i
+      attributes { test_classify = #direct_ignore_extend } {
+    %0 = cir.call @callee(%arg0, %arg1, %arg2) : (!s32i, !s32i, !s8i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @caller(%arg0: !s32i, %arg1: !s8i {llvm.signext}) -> !s32i
+  // CHECK-NEXT:   %[[R:.*]] = cir.call @callee(%arg0, %arg1) : (!s32i, !s8i {llvm.signext}) -> !s32i
+  // CHECK-NEXT:   cir.return %[[R]] : !s32i
+
+}

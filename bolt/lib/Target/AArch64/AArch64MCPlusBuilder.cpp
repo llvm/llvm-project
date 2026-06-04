@@ -22,6 +22,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
+#include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -715,12 +716,10 @@ public:
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
-  bool isLDRWl(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::LDRWl;
-  }
-
-  bool isLDRXl(const MCInst &Inst) const override {
-    return Inst.getOpcode() == AArch64::LDRXl;
+  bool isLoadLiteralGPR(const MCInst &Inst) const override {
+    unsigned OpCode = Inst.getOpcode();
+    return OpCode == AArch64::LDRWl || OpCode == AArch64::LDRXl ||
+           OpCode == AArch64::LDRSWl;
   }
 
   MCPhysReg getADRReg(const MCInst &Inst) const {
@@ -744,16 +743,36 @@ public:
 
   InstructionListType createAdrpLdr(const MCInst &LDRInst,
                                     MCContext *Ctx) const override {
-    assert((isLDRXl(LDRInst) || isLDRWl(LDRInst)) &&
-           "LDR (literal, 32 or 64-bit integer load) instruction expected");
+    assert(isLoadLiteralGPR(LDRInst) &&
+           "LDR (literal) or LDRSW (literal) expected");
     assert(LDRInst.getOperand(0).isReg() &&
            "unexpected operand in LDR instruction");
     const MCPhysReg DataReg = LDRInst.getOperand(0).getReg();
-    const MCPhysReg AddrReg =
-        isLDRXl(LDRInst) ? DataReg
-                         : (MCPhysReg)RegInfo->getMatchingSuperReg(
-                               DataReg, AArch64::sub_32,
-                               &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+    MCPhysReg AddrReg;
+    unsigned OpCode;
+    uint32_t RelType;
+    switch (LDRInst.getOpcode()) {
+    case AArch64::LDRWl:
+      AddrReg = (MCPhysReg)RegInfo->getMatchingSuperReg(
+          DataReg, AArch64::sub_32,
+          &RegInfo->getRegClass(AArch64::GPR64RegClassID));
+      OpCode = AArch64::LDRWui;
+      RelType = ELF::R_AARCH64_LDST32_ABS_LO12_NC;
+      break;
+    case AArch64::LDRXl:
+      AddrReg = DataReg;
+      OpCode = AArch64::LDRXui;
+      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      break;
+    case AArch64::LDRSWl:
+      AddrReg = DataReg;
+      OpCode = AArch64::LDRSWui;
+      RelType = ELF::R_AARCH64_LDST64_ABS_LO12_NC;
+      break;
+    default:
+      llvm_unreachable("LDR (literal) or LDRSW (literal) expected");
+    }
+
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
 
@@ -764,15 +783,13 @@ public:
     Insts[0].addOperand(MCOperand::createImm(0));
     setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
                           ELF::R_AARCH64_NONE);
-    Insts[1].setOpcode(isLDRXl(LDRInst) ? AArch64::LDRXui : AArch64::LDRWui);
+    Insts[1].setOpcode(OpCode);
     Insts[1].clear();
     Insts[1].addOperand(MCOperand::createReg(DataReg));
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx,
-                          isLDRXl(LDRInst) ? ELF::R_AARCH64_LDST64_ABS_LO12_NC
-                                           : ELF::R_AARCH64_LDST32_ABS_LO12_NC);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
     return Insts;
   }
 
@@ -2029,6 +2046,25 @@ public:
     exit(1);
   }
 
+  unsigned getInvertedCC(unsigned Opcode) const {
+    // clang-format off
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Failed to invert condition code");
+      return Opcode;
+    // Compare register with immediate and branch.
+    case AArch64::CBGTWri:  return AArch64CC::LE;
+    case AArch64::CBGTXri:  return AArch64CC::LE;
+    case AArch64::CBLTWri:  return AArch64CC::GE;
+    case AArch64::CBLTXri:  return AArch64CC::GE;
+    case AArch64::CBHIWri:  return AArch64CC::LS;
+    case AArch64::CBHIXri:  return AArch64CC::LS;
+    case AArch64::CBLOWri:  return AArch64CC::HS;
+    case AArch64::CBLOXri:  return AArch64CC::HS;
+    }
+    // clang-format on
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     // clang-format off
     switch (Opcode) {
@@ -2155,38 +2191,78 @@ public:
     }
   }
 
-  bool isReversibleBranch(const MCInst &Inst) const override {
+  bool isReversibleBranch(const MCInst &Inst,
+                          DataflowInfoManager *DIM = nullptr) const override {
     if (isCompAndBranch(Inst)) {
+      bool MayClobberFlags =
+          DIM ? DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
+              : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
+          MayClobberFlags)
         return false;
-      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
+          MayClobberFlags)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
-                              MCContext *Ctx) const override {
-    if (!isReversibleBranch(Inst)) {
-      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
-      exit(1);
-    }
+  void
+  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                         const MCSymbol *TBB, MCContext *Ctx,
+                         DataflowInfoManager *DIM = nullptr) const override {
+    assert(isReversibleBranch(Inst, DIM) && "Irreversible branch");
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
+      bool ImmediateOutOfBounds = false;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      Inst.setOpcode(InvertedOpcode);
-      assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
+      assert(InvertedOpcode != 0 && "Invalid branch instruction");
       // The FEAT_CMPBR compare-and-branch instructions cannot encode all
       // the possible condition codes, therefore we either have to adjust
       // the immediate value by +-1, or to swap the register operands
       // when reversing the branch condition.
       if (needsRegSwap(InvertedOpcode))
         std::swap(Inst.getOperand(0), Inst.getOperand(1));
-      else if (needsImmDec(InvertedOpcode))
-        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
-      else if (needsImmInc(InvertedOpcode))
-        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
+      else if (needsImmDec(InvertedOpcode)) {
+        if (Inst.getOperand(1).getImm() == 0)
+          ImmediateOutOfBounds = true;
+        else
+          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      } else if (needsImmInc(InvertedOpcode)) {
+        if (Inst.getOperand(1).getImm() == 63)
+          ImmediateOutOfBounds = true;
+        else
+          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
+      }
+      if (ImmediateOutOfBounds) {
+        auto is32BitVariant = [](unsigned Opcode) {
+          switch (Opcode) {
+          default:
+            return false;
+          case AArch64::CBGTWri:
+          case AArch64::CBLTWri:
+          case AArch64::CBHIWri:
+          case AArch64::CBLOWri:
+            return true;
+          }
+        };
+        InstructionListType Code;
+        MCInstBuilder Cmp =
+            is32BitVariant(InvertedOpcode)
+                ? MCInstBuilder(AArch64::SUBSWri).addReg(AArch64::WZR)
+                : MCInstBuilder(AArch64::SUBSXri).addReg(AArch64::XZR);
+        Cmp.addReg(Inst.getOperand(0).getReg())
+            .addImm(Inst.getOperand(1).getImm())
+            .addImm(0);
+        Code.emplace_back(std::move(Cmp));
+        Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                              .addImm(getInvertedCC(Inst.getOpcode()))
+                              .addExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
+        Parent->replaceInstruction(Parent->findInstruction(&Inst), Code);
+        return;
+      }
+      Inst.setOpcode(InvertedOpcode);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));
@@ -2851,6 +2927,26 @@ public:
     uint64_t Offset = 8;
     TargetAddress = DE.getUnsigned(&Offset, CodePointerSize);
 
+    return true;
+  }
+
+  /// Match Cortex-A53 erratum 843419 workaround veneer: one BB, two
+  /// instructions (load/store then branch back).
+  bool matchE843419Veneer(const BinaryFunction &BF) const override {
+    StringRef Name = BF.getOneName();
+    if (!Name.starts_with("e843419") && !Name.starts_with("__CortexA53843419_"))
+      return false;
+    if (BF.size() != 1)
+      return false;
+    const BinaryBasicBlock &BB = BF.front();
+    if (BB.size() != 2)
+      return false;
+    const MCInst &First = BB.getInstructionAtIndex(0);
+    const MCInst &Second = BB.getInstructionAtIndex(1);
+    if (!(mayLoad(First) || mayStore(First)))
+      return false;
+    if (!isTailCall(Second))
+      return false;
     return true;
   }
 

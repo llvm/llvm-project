@@ -1,6 +1,7 @@
 @AUTO_GEN_COMMENT@
 
 config.library_dir = "@LIBOMPTARGET_LIBRARY_DIR@"
+config.unittest_dir = "@OFFLOAD_UNITTEST_DIR@"
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
 
 # Let the main config do the real work.

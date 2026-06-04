@@ -75,6 +75,25 @@ protected:
     impl().printOperand(MI, OpNum + M68k::PCRelIndex, O);
     O << ')';
   }
+
+  template <size_t IndexSize>
+  void printPCIBDMem(const InstTy *MI, uint64_t Address, unsigned OpNum,
+                     raw_ostream &O) {
+    static_assert(IndexSize == 16 || IndexSize == 32, "unsupported index size");
+
+    O << '(';
+    impl().printDisp(MI, OpNum + M68k::PCRelDisp, O);
+    O << ",%pc";
+    std::string RegStr;
+    raw_string_ostream SS(RegStr);
+    impl().printOperand(MI, OpNum + M68k::PCRelIndex, SS);
+    if (!RegStr.empty()) {
+      O << "," << RegStr;
+      O << (IndexSize == 16 ? ".W" : ".L");
+    }
+    impl().printScale(MI, OpNum + M68k::PCRelScale, O);
+    O << ')';
+  }
 };
 } // end namespace llvm
 #endif

@@ -71,6 +71,7 @@ protected:
   friend class Type;              // For LLVMCtx.
   friend class PointerType;       // For LLVMCtx.
   friend class IntegerType;       // For LLVMCtx.
+  friend class ByteType;          // For LLVMCtx.
   friend class StructType;        // For LLVMCtx.
   friend class Region;            // For LLVMCtx.
   friend class IRSnapshotChecker; // To snapshot LLVMModuleToModuleMap.
@@ -240,7 +241,7 @@ protected:
 
 public:
   LLVM_ABI Context(LLVMContext &LLVMCtx);
-  LLVM_ABI ~Context();
+  LLVM_ABI virtual ~Context();
   /// Clears function-level state.
   LLVM_ABI void clear();
 
@@ -248,9 +249,9 @@ public:
   /// Convenience function for `getTracker().save()`
   void save() { IRTracker.save(); }
   /// Convenience function for `getTracker().revert()`
-  void revert() { IRTracker.revert(); }
+  void revert(bool RevertAll = false) { IRTracker.revert(RevertAll); }
   /// Convenience function for `getTracker().accept()`
-  void accept() { IRTracker.accept(); }
+  void accept(bool AcceptAll = false) { IRTracker.accept(AcceptAll); }
 
   LLVM_ABI sandboxir::Value *getValue(llvm::Value *V) const;
   const sandboxir::Value *getValue(const llvm::Value *V) const {
@@ -319,9 +320,6 @@ template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
 
   static CallbackID getEmptyKey() {
     return CallbackID{ReprInfo::getEmptyKey()};
-  }
-  static CallbackID getTombstoneKey() {
-    return CallbackID{ReprInfo::getTombstoneKey()};
   }
   static unsigned getHashValue(const CallbackID &ID) {
     return ReprInfo::getHashValue(ID.Val);

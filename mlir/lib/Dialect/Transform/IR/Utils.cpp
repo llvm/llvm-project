@@ -148,7 +148,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
 
       LDBG() << "    collision found for @" << name.getValue();
 
-      // Collisions are fine if both opt are functions and can be merged.
+      // Collisions are fine if both ops are functions and can be merged.
       if (auto funcOp = dyn_cast<FunctionOpInterface>(op),
           collidingFuncOp =
               dyn_cast<FunctionOpInterface>(collidingOp.getOperation());
@@ -213,59 +213,61 @@ transform::detail::mergeSymbolsInto(Operation *target,
   //
   // Move all ops from `other` into target and merge public symbols.
   LDBG() << "moving all symbols into target";
-  {
-    SmallVector<SymbolOpInterface> opsToMove;
-    for (Operation &op : other->getRegion(0).front()) {
-      if (auto symbol = dyn_cast<SymbolOpInterface>(op))
-        opsToMove.push_back(symbol);
+  SmallVector<SymbolOpInterface> processedSymbols;
+  for (Operation &op : other->getRegion(0).front()) {
+    if (auto symbol = dyn_cast<SymbolOpInterface>(op))
+      processedSymbols.push_back(symbol);
+  }
+
+  for (SymbolOpInterface &op : processedSymbols) {
+    // Remember potentially colliding op in the target module.
+    auto collidingOp = cast_or_null<SymbolOpInterface>(
+        targetSymbolTable.lookup(op.getNameAttr()));
+
+    // Move op even if we get a collision.
+    LDBG() << "  moving @" << op.getName();
+    op->moveBefore(&target->getRegion(0).front(),
+                   target->getRegion(0).front().end());
+
+    // If there is no collision, we are done -- keep the target symbol
+    // table in sync with the moved op so that subsequent lookups (and the
+    // post-merge validation below) remain efficient.
+    if (!collidingOp) {
+      LDBG() << " without collision";
+      targetSymbolTable.insert(op);
+      continue;
     }
 
-    for (SymbolOpInterface op : opsToMove) {
-      // Remember potentially colliding op in the target module.
-      auto collidingOp = cast_or_null<SymbolOpInterface>(
-          targetSymbolTable.lookup(op.getNameAttr()));
+    // The two colliding ops must both be functions because we have already
+    // emitted errors otherwise earlier.
+    auto funcOp = cast<FunctionOpInterface>(op.getOperation());
+    auto collidingFuncOp =
+        cast<FunctionOpInterface>(collidingOp.getOperation());
 
-      // Move op even if we get a collision.
-      LDBG() << "  moving @" << op.getName();
-      op->moveBefore(&target->getRegion(0).front(),
-                     target->getRegion(0).front().end());
-
-      // If there is no collision, we are done -- keep the target symbol
-      // table in sync with the moved op so that subsequent lookups (and the
-      // post-merge validation below) remain efficient.
-      if (!collidingOp) {
-        LDBG() << " without collision";
-        targetSymbolTable.insert(op);
-        continue;
-      }
-
-      // The two colliding ops must both be functions because we have already
-      // emitted errors otherwise earlier.
-      auto funcOp = cast<FunctionOpInterface>(op.getOperation());
-      auto collidingFuncOp =
-          cast<FunctionOpInterface>(collidingOp.getOperation());
-
-      // Both ops are in the target module now and can be treated
-      // symmetrically, so w.l.o.g. we can reduce to merging `funcOp` into
-      // `collidingFuncOp`.
-      if (!canMergeInto(funcOp, collidingFuncOp)) {
-        std::swap(funcOp, collidingFuncOp);
-      }
-      assert(canMergeInto(funcOp, collidingFuncOp));
-
-      LDBG() << " with collision, trying to keep op at "
-             << collidingFuncOp.getLoc() << ":\n"
-             << collidingFuncOp;
-
-      // Update symbol table. This works with or without the previous `swap`.
-      targetSymbolTable.remove(funcOp);
-      targetSymbolTable.insert(collidingFuncOp);
-      assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
-
-      // Do the actual merging.
-      if (failed(mergeInto(funcOp, collidingFuncOp)))
-        return failure();
+    // Both ops are in the target module now and can be treated
+    // symmetrically, so w.l.o.g. we can reduce to merging `funcOp` into
+    // `collidingFuncOp`.
+    if (!canMergeInto(funcOp, collidingFuncOp)) {
+      std::swap(funcOp, collidingFuncOp);
     }
+    assert(canMergeInto(funcOp, collidingFuncOp));
+
+    LDBG() << " with collision, trying to keep op at "
+           << collidingFuncOp.getLoc() << ":\n"
+           << collidingFuncOp;
+
+    // Update symbol table. This works with or without the previous `swap`.
+    targetSymbolTable.remove(funcOp);
+    targetSymbolTable.insert(collidingFuncOp);
+    assert(targetSymbolTable.lookup(funcOp.getName()) == collidingFuncOp);
+
+    // Do the actual merging.
+    if (failed(mergeInto(funcOp, collidingFuncOp)))
+      return failure();
+
+    // After merging, only collidingFuncOp exists, update the list to reflect
+    // this.
+    op = collidingFuncOp;
   }
 
   // Symbol merging only moves callable ops between symbol tables; it does not
@@ -307,6 +309,10 @@ transform::detail::mergeSymbolsInto(Operation *target,
     }
 
     if (!callable)
+      return WalkResult::advance();
+
+    // Only check symbols that we actually moved.
+    if (!llvm::is_contained(processedSymbols, callable))
       return WalkResult::advance();
     if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
       InFlightDiagnostic diag =

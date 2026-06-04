@@ -416,6 +416,7 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
 
     BlockFrequency BlockFreqForDirectSucc;
     SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+    SmallPtrSet<BasicBlock *, 8> SeenSrcs;
     if (DTU)
       DTUpdates.reserve(OtherPreds.size() * 2 + 1);
     for (BasicBlock *Pred : OtherPreds) {
@@ -426,7 +427,10 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
       if (ShouldUpdateAnalysis)
         BlockFreqForDirectSucc += BFI->getBlockFreq(Src) *
             BPI->getEdgeProbability(Src, DirectSucc);
-      if (DTU) {
+      // A predecessor may appear multiple times in OtherPreds (e.g., a CondBr
+      // with both targets pointing to the same block). Only emit one pair of
+      // DomTree updates per unique source.
+      if (DTU && SeenSrcs.insert(Src).second) {
         DTUpdates.push_back({DominatorTree::Insert, Src, DirectSucc});
         DTUpdates.push_back({DominatorTree::Delete, Src, Target});
       }

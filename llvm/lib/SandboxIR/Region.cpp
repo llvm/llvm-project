@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Region.h"
-#include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
 
@@ -114,43 +113,8 @@ void Region::dump() const {
 #endif // NDEBUG
 
 SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
-  SmallVector<std::unique_ptr<Region>> Regions;
-  DenseMap<MDNode *, Region *> MDNToRegion;
-  auto &Ctx = F.getContext();
-  for (BasicBlock &BB : F) {
-    for (Instruction &Inst : BB) {
-      auto *LLVMI = cast<llvm::Instruction>(Inst.Val);
-      Region *R = nullptr;
-      if (auto *MDN = LLVMI->getMetadata(MDKind)) {
-        auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
-        if (Inserted) {
-          Regions.push_back(std::make_unique<Region>(Ctx));
-          R = Regions.back().get();
-          It->second = R;
-        } else {
-          R = It->second;
-        }
-        R->addRaw(&Inst);
-      }
-      if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
-        llvm::Constant *IdxC =
-            dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
-        auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
-        if (R == nullptr) {
-          errs() << "No region specified for Aux: '" << *LLVMI << "'\n";
-          reportFatalUsageError("No region specified for Aux!");
-        }
-        R->setAux(Idx, &Inst);
-      }
-    }
-  }
-#ifndef NDEBUG
-  // Check that there are no gaps in the Aux vector.
-  for (auto &RPtr : Regions)
-    for (auto *I : RPtr->getAux())
-      assert(I != nullptr && "Gap in Aux!");
-#endif
-  return Regions;
+  return Region::createRegionsFromMD<Region>(
+      F, [&F]() { return std::make_unique<Region>(F.getContext()); });
 }
 
 } // namespace llvm::sandboxir

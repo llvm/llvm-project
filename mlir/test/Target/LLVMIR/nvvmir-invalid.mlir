@@ -1,12 +1,5 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = "foo"} {
   llvm.return
@@ -618,9 +611,9 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 
 // -----
 
-// Test that nvvm.barrier0 at module scope (outside any function) produces a
+// Test that nvvm.barrier at module scope (outside any function) produces a
 // proper error instead of crashing with a null dereference in
 // createIntrinsicCall. See https://github.com/llvm/llvm-project/issues/186642
-// expected-error @+2 {{'nvvm.barrier0' op cannot be translated to LLVM IR without an active insertion point}}
-// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier0}}
-nvvm.barrier0
+// expected-error @+2 {{'nvvm.barrier' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier}}
+nvvm.barrier
