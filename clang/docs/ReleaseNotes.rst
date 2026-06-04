@@ -822,6 +822,10 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
+- Fixed a bug where host-device ambiguities in CUDA/HIP when retrieving the
+  address of specializations of templated functions that have overloads for both
+  host and device. (#GH199299)
+
 AIX Support
 ^^^^^^^^^^^
 

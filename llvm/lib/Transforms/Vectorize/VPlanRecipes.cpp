@@ -1390,20 +1390,41 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
-  case Instruction::FCmp:
-  case Instruction::ICmp: {
-    // FIXME: We don't handle scalar compares inside the loop here yet, as loop
-    // exit conditions are handled by the legacy cost model and avoiding all
-    // scalar compares is the simplest way to avoid double-counting compares
-    // that compute the loop exit condition.
-    bool IsScalar = vputils::onlyFirstLaneUsed(this);
-    const VPRegionBlock *Region = getRegion();
-    if (IsScalar && Region &&
-        Region == Region->getPlan()->getVectorLoopRegion())
-      return 0;
-    return getCostForRecipeWithOpcode(
-        getOpcode(), IsScalar ? ElementCount::getFixed(1) : VF, Ctx);
+  case VPInstruction::Not: {
+    Type *ValTy = this->getScalarType();
+    // InstCombine will fold `xor` to the conditional branch.
+    if (auto *U = const_cast<VPUser *>(getSingleUser()))
+      if (match(U, m_BranchOnCond(m_VPValue())))
+        return 0;
+    if (!vputils::onlyFirstLaneUsed(this))
+      ValTy = toVectorTy(ValTy, VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, ValTy,
+                                          Ctx.CostKind);
   }
+  case VPInstruction::BranchOnCount: {
+    // If TC <= VF then this is just a branch.
+    // FIXME: Removing the branch happens in simplifyBranchConditionForVFAndUF
+    // where it checks TC <= VF * UF, but we don't know UF yet. This means in
+    // some cases we get a cost that's too high due to counting a cmp that
+    // later gets removed.
+    // FIXME: The compare could also be removed if TC = M * vscale,
+    // VF = N * vscale, and M <= N. Detecting that would require having the
+    // trip count as a SCEV though.
+    Value *TC = getParent()->getPlan()->getTripCount()->getUnderlyingValue();
+    ConstantInt *TCConst = dyn_cast_if_present<ConstantInt>(TC);
+    if (TCConst && TCConst->getValue().ule(VF.getKnownMinValue()))
+      return 0;
+    // Otherwise BranchOnCount generates ICmpEQ followed by a branch.
+    Type *ValTy = getOperand(0)->getScalarType();
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy,
+                                      CmpInst::makeCmpResultType(ValTy),
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+    return getCostForRecipeWithOpcode(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
@@ -3266,11 +3287,14 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   unsigned Opcode = RecurrenceDescriptor::getOpcode(
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
+  case ExpressionTypes::NegatedExtendedReduction:
+    assert((Opcode == Instruction::Add || Opcode == Instruction::FAdd) &&
+           "Unexpected opcode");
+    Opcode = Opcode == Instruction::Add ? Instruction::Sub : Instruction::FSub;
+    [[fallthrough]];
   case ExpressionTypes::ExtendedReduction: {
-    unsigned Opcode = RecurrenceDescriptor::getOpcode(
-        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
-    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
+    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
 
     if (RedR->isPartialReduction())
       return Ctx.TTI.getPartialReductionCost(
@@ -3360,11 +3384,17 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
 
   switch (ExpressionType) {
+  case ExpressionTypes::NegatedExtendedReduction:
   case ExpressionTypes::ExtendedReduction: {
-    getOperand(1)->printAsOperand(O, SlotTracker);
+    bool Negated = ExpressionType == ExpressionTypes::NegatedExtendedReduction;
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(Opcode) << " (";
+    if (Negated)
+      O << (Opcode == Instruction::Add ? "sub (0, " : "fneg(");
     getOperand(0)->printAsOperand(O, SlotTracker);
+    if (Negated)
+      O << ")";
     Red->printFlags(O);
 
     auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);

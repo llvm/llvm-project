@@ -19,6 +19,7 @@ unittest("AMDGPUTests") {
     "//llvm/unittests/CodeGen",
   ]
   sources = [
+    "AMDGPUMCExprTest.cpp",
     "AMDGPUUnitTests.cpp",
     "CSETest.cpp",
     "DwarfRegMappings.cpp",
