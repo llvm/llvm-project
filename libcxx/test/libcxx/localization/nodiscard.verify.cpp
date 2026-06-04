@@ -30,6 +30,7 @@ void test() {
     l.combine<std::messages<char> >(l);
     l.name(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 26 && _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     l.encoding();
 #endif
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
