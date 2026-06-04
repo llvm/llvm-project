@@ -229,8 +229,8 @@ foreach Ext = ZfhminDExts in {
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasHalfFPLoadStoreMove] in {
-def : InstAlias<"flh $rd, (${rs1})",  (FLH FPR16:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsh $rs2, (${rs1})", (FSH FPR16:$rs2, GPR:$rs1, 0), 0>;
+def : InstAlias<"flh $rd, (${rs1})",  (FLH FPR16:$rd,  BasePtr:$rs1, 0), 0>;
+def : InstAlias<"fsh $rs2, (${rs1})", (FSH FPR16:$rs2, BasePtr:$rs1, 0), 0>;
 } // Predicates = [HasStdExtZfhmin]
 
 let Predicates = [HasStdExtZfh] in {

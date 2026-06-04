@@ -332,9 +332,9 @@ def : CompressPat<(SH_INX GPRF16C:$rs2, GPRCMem:$rs1, uimm2_lsb0:$imm),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZcb] in {
-def : InstAlias<"c.lbu $rd, (${rs1})",(C_LBU GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.lhu $rd, (${rs1})",(C_LHU GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.lh $rd, (${rs1})", (C_LH GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.sb $rd, (${rs1})", (C_SB GPRC:$rd, GPRC:$rs1, 0), 0>;
-def : InstAlias<"c.sh $rd, (${rs1})", (C_SH GPRC:$rd, GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.lbu $rd, (${rs1})",(C_LBU GPRC:$rd, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.lhu $rd, (${rs1})",(C_LHU GPRC:$rd, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.lh $rd, (${rs1})", (C_LH GPRC:$rd, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.sb $rd, (${rs1})", (C_SB GPRC:$rd, GPRCMem:$rs1, 0), 0>;
+def : InstAlias<"c.sh $rd, (${rs1})", (C_SH GPRC:$rd, GPRCMem:$rs1, 0), 0>;
 }

@@ -225,7 +225,7 @@ def ZeroOffsetMemOpOperand : AsmOperandClass {
   let ParserMethod = "parseZeroOffsetMemOp";
 }
 
-class MemOperand<RegisterClass regClass> : RegisterOperand<regClass>{
+class MemOperand<RegisterClassLike regClass> : RegisterOperand<regClass> {
   let OperandType = "OPERAND_MEMORY";
 }
 
@@ -235,10 +235,12 @@ def GPRMemZeroOffset : MemOperand<GPR> {
 }
 
 def GPRMem : MemOperand<GPR>;
-
+def BasePtr : MemOperand<BasePtrRegClass>;
 def SPMem : MemOperand<SP>;
 
-def GPRCMem : MemOperand<GPRC>;
+// Note: despite the GPRC name, GPRCMem can be a YGPRC in RVY mode.
+// Alternatively, we could rename it to BasePtrC.
+def GPRCMem : MemOperand<BasePtrCRegClass>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -652,8 +654,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins GPRMem:$rs1, simm12_lo:$imm12),
+class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR,
+              RISCVOpcode opcode = OPC_LOAD>
+    : RVInstI<funct3, opcode, (outs rty:$rd), (ins BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -667,9 +670,10 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 // reflecting the order these fields are specified in the instruction
 // encoding.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstS<funct3, OPC_STORE, (outs),
-              (ins rty:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
+class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR,
+                RISCVOpcode opcode = OPC_STORE>
+    : RVInstS<funct3, opcode, (outs),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>
@@ -1175,22 +1179,22 @@ def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
-                (LB  GPR:$rd, GPR:$rs1, 0)>;
+                (LB  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"lh $rd, (${rs1})",
-                (LH  GPR:$rd, GPR:$rs1, 0)>;
+                (LH  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"lw $rd, (${rs1})",
-                (LW  GPR:$rd, GPR:$rs1, 0)>;
+                (LW  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"lbu $rd, (${rs1})",
-                (LBU  GPR:$rd, GPR:$rs1, 0)>;
+                (LBU  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"lhu $rd, (${rs1})",
-                (LHU  GPR:$rd, GPR:$rs1, 0)>;
+                (LHU  GPR:$rd, BasePtr:$rs1, 0)>;
 
 def : InstAlias<"sb $rs2, (${rs1})",
-                (SB  GPR:$rs2, GPR:$rs1, 0)>;
+                (SB  GPR:$rs2, BasePtr:$rs1, 0)>;
 def : InstAlias<"sh $rs2, (${rs1})",
-                (SH  GPR:$rs2, GPR:$rs1, 0)>;
+                (SH  GPR:$rs2, BasePtr:$rs1, 0)>;
 def : InstAlias<"sw $rs2, (${rs1})",
-                (SW  GPR:$rs2, GPR:$rs1, 0)>;
+                (SW  GPR:$rs2, BasePtr:$rs1, 0)>;
 
 def : InstAlias<"add $rd, $rs1, $imm12",
                 (ADDI  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
@@ -1208,11 +1212,11 @@ def : InstAlias<"sra $rd, $rs1, $shamt",
                 (SRAI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 let Predicates = [IsRV64] in {
 def : InstAlias<"lwu $rd, (${rs1})",
-                (LWU  GPR:$rd, GPR:$rs1, 0)>;
+                (LWU  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"ld $rd, (${rs1})",
-                (LD  GPR:$rd, GPR:$rs1, 0)>;
+                (LD  GPR:$rd, BasePtr:$rs1, 0)>;
 def : InstAlias<"sd $rs2, (${rs1})",
-                (SD  GPR:$rs2, GPR:$rs1, 0)>;
+                (SD  GPR:$rs2, BasePtr:$rs1, 0)>;
 
 def : InstAlias<"addw $rd, $rs1, $imm12",
                 (ADDIW  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
