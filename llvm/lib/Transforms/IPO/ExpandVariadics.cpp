@@ -62,6 +62,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -887,7 +888,13 @@ bool ExpandVariadics::expandVAIntrinsicCall(IRBuilder<> &Builder,
     // to it, then create a va_copy. When vaCopyIsMemcpy(), this optimises to a
     // store to the VaStartArg.
     assert(ABI->vaCopyIsMemcpy());
-    Builder.CreateStore(PassedVaList, VaStartArg);
+    // The va_list parameter may be passed in a different address space than
+    // the va_list object iterates in (e.g. NVPTX passes a local pointer but
+    // stores a generic cursor). Cast it to the type va_arg expects to load.
+    Value *Cursor = PassedVaList;
+    if (Cursor->getType() != VaStartArg->getType())
+      Cursor = Builder.CreateAddrSpaceCast(Cursor, VaStartArg->getType());
+    Builder.CreateStore(Cursor, VaStartArg);
   } else {
 
     // Otherwise emit a vacopy to pick up target-specific handling if any
@@ -1008,7 +1015,7 @@ struct NVPTX final : public VariadicABIInfo {
   }
 
   Type *vaListParameterType(Module &M) override {
-    return PointerType::getUnqual(M.getContext());
+    return PointerType::get(M.getContext(), NVPTXAS::ADDRESS_SPACE_LOCAL);
   }
 
   Value *initializeVaList(Module &M, LLVMContext &Ctx, IRBuilder<> &Builder,
