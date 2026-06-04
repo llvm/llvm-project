@@ -1832,6 +1832,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   assert(!cir::MissingFeatures::opGlobalCtorPriority());
 
   SmallString<256> fnName;
+  cir::GlobalLinkageKind linkage;
   // Include the filename in the symbol name. Including "sub_" matches gcc
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority (TBD).  Module implementation units behave the same
@@ -1844,17 +1845,18 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
         astCtx->createMangleContext());
     cast<clang::ItaniumMangleContext>(*mangleCtx)
         .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
+    linkage = cir::GlobalLinkageKind::ExternalLinkage;
   } else {
     fnName += "_GLOBAL__sub_I_";
     fnName += getTransformedFileName(mlirModule);
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp f =
-      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
-                           cir::GlobalLinkageKind::ExternalLinkage);
+  cir::FuncOp f = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
+                                       fnType, linkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (cir::FuncOp &f : dynamicInitializers)
     builder.createCallOp(f.getLoc(), f, {});
@@ -2378,9 +2380,9 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // Create the fatbin wrapper struct:
   //    struct { int magic; int version; void *fatbin; void *unused; };
-  auto fatbinWrapperType = RecordType::get(
+  auto fatbinWrapperType = cir::StructType::get(
       &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
-      /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
+      /*packed=*/false, /*padded=*/false, /*is_class=*/false);
   std::string fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(

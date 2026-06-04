@@ -87,8 +87,12 @@ struct Outer {
 // OGCG: [[INIT_END]]:
 
 
-// CIR: cir.func private @_GLOBAL__sub_I_static_members.cpp()
+// CIR: cir.func internal private @_GLOBAL__sub_I_static_members.cpp()
 // CIR:   cir.call @__cxx_global_var_init()
 
-// LLVM: define void @_GLOBAL__sub_I_static_members.cpp()
+// LLVM: define internal void @_GLOBAL__sub_I_static_members.cpp()
 // LLVM:   call void @__cxx_global_var_init()
+
+// Note: OGCG doesn't actually generate this function, and just adds these to
+// the `llvm.global_ctors` instead. It isn't clear whether that is meaningful
+// or important.

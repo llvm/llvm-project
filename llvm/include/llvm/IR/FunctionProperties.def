@@ -43,64 +43,73 @@ FUNCTION_PROPERTY(StoreInstCount, "Store Instruction Count")
 FUNCTION_PROPERTY(MaxLoopDepth, "Maximum Loop Depth in the Function")
 FUNCTION_PROPERTY(TopLevelLoopCount,
                   "Number of Top Level Loops in the Function")
-FUNCTION_PROPERTY(TotalInstructionCount,
-                  "Number of instructions (of all types)")
+FUNCTION_PROPERTY(TotalInstructionCount, "Number of instructions of all types")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithSingleSuccessor,
-                  "Basic blocks with one successors")
+                           "Basic blocks with one successors")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithTwoSuccessors,
-                  "Basic blocks with two successors")
+                           "Basic blocks with two successors")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithMoreThanTwoSuccessors,
-                  "Basic blocks with more than two successors")
+                           "Basic blocks with more than two successors")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithSinglePredecessor,
-                  "Basic blocks with one predecessors")
+                           "Basic blocks with one predecessors")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithTwoPredecessors,
-                  "Basic blocks with two predecessors")
+                           "Basic blocks with two predecessors")
 DETAILED_FUNCTION_PROPERTY(BasicBlocksWithMoreThanTwoPredecessors,
-                  "Basic blocks with more than two predecessors")
+                           "Basic blocks with more than two predecessors")
 DETAILED_FUNCTION_PROPERTY(BigBasicBlocks, "Number of big basic blocks")
 DETAILED_FUNCTION_PROPERTY(MediumBasicBlocks, "Number of medium basic blocks")
 DETAILED_FUNCTION_PROPERTY(SmallBasicBlocks, "Number of small basic blocks")
-DETAILED_FUNCTION_PROPERTY(CastInstructionCount,
-                  "The number of cast instructions inside the function")
+DETAILED_FUNCTION_PROPERTY(
+    CastInstructionCount, "The number of cast instructions inside the function")
 DETAILED_FUNCTION_PROPERTY(
     FloatingPointInstructionCount,
     "The number of floating point instructions inside the function")
-DETAILED_FUNCTION_PROPERTY(IntegerInstructionCount,
-                  "The number of integer instructions inside the function")
-DETAILED_FUNCTION_PROPERTY(ConstantIntOperandCount, "Constant Int Operand Count")
+DETAILED_FUNCTION_PROPERTY(
+    IntegerInstructionCount,
+    "The number of integer instructions inside the function")
+DETAILED_FUNCTION_PROPERTY(ConstantIntOperandCount,
+                           "Constant Int Operand Count")
 DETAILED_FUNCTION_PROPERTY(ConstantFPOperandCount, "Constant FP Operand Count")
 DETAILED_FUNCTION_PROPERTY(ConstantOperandCount, "Constant Operand Count")
 DETAILED_FUNCTION_PROPERTY(InstructionOperandCount, "Instruction Operand Count")
 DETAILED_FUNCTION_PROPERTY(BasicBlockOperandCount, "Basic Block Operand Count")
-DETAILED_FUNCTION_PROPERTY(GlobalValueOperandCount, "Global Value Operand Count")
+DETAILED_FUNCTION_PROPERTY(GlobalValueOperandCount,
+                           "Global Value Operand Count")
 DETAILED_FUNCTION_PROPERTY(InlineAsmOperandCount, "Inline Asm Operand Count")
 DETAILED_FUNCTION_PROPERTY(ArgumentOperandCount, "Argument Operand Count")
 DETAILED_FUNCTION_PROPERTY(UnknownOperandCount, "Unknown Operand Count")
 DETAILED_FUNCTION_PROPERTY(CriticalEdgeCount, "Critical Edge Count")
-DETAILED_FUNCTION_PROPERTY(ControlFlowEdgeCount, "Number of basic block successors")
+DETAILED_FUNCTION_PROPERTY(ControlFlowEdgeCount,
+                           "Number of basic block successors")
 DETAILED_FUNCTION_PROPERTY(UnconditionalBranchCount,
-                  "Number of unconditional branch instructions")
+                           "Number of unconditional branch instructions")
 DETAILED_FUNCTION_PROPERTY(ConditionalBranchCount,
-                  "Number of conditional branch instructions")
-DETAILED_FUNCTION_PROPERTY(BranchInstructionCount, "Number of branch instructions")
+                           "Number of conditional branch instructions")
+DETAILED_FUNCTION_PROPERTY(BranchInstructionCount,
+                           "Number of branch instructions")
 DETAILED_FUNCTION_PROPERTY(BranchSuccessorCount, "Number of branch successors")
-DETAILED_FUNCTION_PROPERTY(SwitchInstructionCount, "Number of switch instructions")
+DETAILED_FUNCTION_PROPERTY(SwitchInstructionCount,
+                           "Number of switch instructions")
 DETAILED_FUNCTION_PROPERTY(SwitchSuccessorCount, "Number of switch successors")
 DETAILED_FUNCTION_PROPERTY(IntrinsicCount, "Intrinsic Count")
 DETAILED_FUNCTION_PROPERTY(NoReturnCallCount, "No Return Call Count")
 DETAILED_FUNCTION_PROPERTY(DirectCallCount, "Direct Call Count")
 DETAILED_FUNCTION_PROPERTY(IndirectCallCount, "Indirect Call Count")
-DETAILED_FUNCTION_PROPERTY(CallReturnsIntegerCount, "Call Returns Integer Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsIntegerCount,
+                           "Call Returns Integer Count")
 DETAILED_FUNCTION_PROPERTY(CallReturnsFloatCount, "Call Returns Float Count")
-DETAILED_FUNCTION_PROPERTY(CallReturnsPointerCount, "Call Returns Pointer Count")
-DETAILED_FUNCTION_PROPERTY(CallReturnsVectorIntCount, "Call Returns Vector Int Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsPointerCount,
+                           "Call Returns Pointer Count")
+DETAILED_FUNCTION_PROPERTY(CallReturnsVectorIntCount,
+                           "Call Returns Vector Int Count")
 DETAILED_FUNCTION_PROPERTY(CallReturnsVectorFloatCount,
-                  "Call Returns Vector Float Count")
+                           "Call Returns Vector Float Count")
 DETAILED_FUNCTION_PROPERTY(CallReturnsVectorPointerCount,
-                  "Call Returns Vector Pointer Count")
-DETAILED_FUNCTION_PROPERTY(CallWithManyArgumentsCount, "Call With Many Arguments Count")
+                           "Call Returns Vector Pointer Count")
+DETAILED_FUNCTION_PROPERTY(CallWithManyArgumentsCount,
+                           "Call With Many Arguments Count")
 DETAILED_FUNCTION_PROPERTY(CallWithPointerArgumentCount,
-                  "Call With Pointer Argument Count")
+                           "Call With Pointer Argument Count")
 
 #undef FUNCTION_PROPERTY
 #undef DETAILED_FUNCTION_PROPERTY

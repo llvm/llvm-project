@@ -226,16 +226,24 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     It issues an instruction to prefetch a block of data from continuous
     memory regions to each level of the cache based on their cache policy.
 
+    The tensor descriptor can be n-dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the prefetch_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The number of offset
+    indices must match the rank of the tensor descriptor.
+
     This operation serves as an anchor through which users assign a layout attribute
     to govern computation distribution.
 
     Arguments:
     - `TensorDesc`: A tensor descriptor specifying the base nd-region of
-      memory and tensor tile to be prefetched.
+      memory and tensor tile to be prefetched. Can be 1D, 2D, 3D, or higher
+      dimensional where leading dimensions are batch dimensions.
 
     - `offsets`: index values representing per-dimension offsets from the
       base position encoded in `TensorDesc`. It is encoded via "offsets"
-      and "const_offsets".
+      and "const_offsets". The number of offsets must match the tensor descriptor rank.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] An cache-hint attribute
       indicating the desired behavior at the L1, L2, and L3 cache levels.
@@ -243,7 +251,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand.
        Only valid at the workgroup and subgroup levels.
 
-    Example (Workgroup level):
+    Example 1 (Workgroup level, 2D):
     ```mlir
       %c0 = arith.constant 0 : index
       %c1 = arith.constant 1 : index
@@ -252,6 +260,13 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
                                 l3_hint = #xegpu.cache_hint<cached>,
                                 layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]> }
         : !xegpu.tensor_desc<32x256xf16>
+    ```
+
+    Example 2 (3D with batch dimension):
+    ```mlir
+      // Prefetch 4 independent 8x16 blocks
+      xegpu.prefetch_nd %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>}>
+        : !xegpu.tensor_desc<4x8x16xf16>
     ```
 
   }];
@@ -321,6 +336,14 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     hints for each level of cache, L1, L2 and L3. If hardware does not have a
     correspoding cache, Corresponding cache hint attribute will be masked.
 
+    The tensor descriptor can be 1D, 2D, 3D, or higher dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the load_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The result vector
+    has the same shape as the tensor descriptor. The number of offset indices
+    must match the rank of the tensor descriptor.
+
     On Intel GPUs, hardware-supported packing rearranges data elements during
     the load of the B operand when the element bit-width is less than 32 bits
     (for example, fp16). The transpose feature reorders data during the load
@@ -336,10 +359,12 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     Arguments:
 
     - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory
-      and the tensor tile to be loaded.
+      and the tensor tile to be loaded. Can be 1D, 2D, 3D, or higher dimensional
+      where leading dimensions are batch dimensions.
 
     - `offsets`: Index values representing per-dimension offsets from the base position
       encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+      The number of offsets must match the tensor descriptor rank.
 
     - `packed`: [optional] A unit attribute indicating that packing is applied
       during the load when supported by the hardware. Only valid at lane level.
@@ -352,7 +377,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as the result of the load (they are identical). Only valid at workgroup and subgroup levels.
 
-    Example 1 (Workgroup level):
+    Example 1 (Workgroup level, 2D):
     ```mlir
       xegpu.load_nd %1 {transpose = [1, 0],
                         l1_hint = #xegpu.cache_hint<cached>,
@@ -361,13 +386,20 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
                         layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
               : !xegpu.tensor_desc<32x256xf32> -> vector<32x256xf32>
     ```
-    Example 2 (lane level):
+
+    Example 2 (lane level, 2D):
     ```mlir
       xegpu.load_nd %1 {l1_hint = #xegpu.cache_hint<cached>,
                         l2_hint = #xegpu.cache_hint<uncached>}>
         : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
     ```
 
+    Example 3 (3D with batch dimension):
+    ```mlir
+      // Load 4 independent 8x16 blocks
+      %result = xegpu.load_nd %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<cached>}>
+        : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
+    ```
 
   }];
 
@@ -436,7 +468,7 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
 def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
   AllElementTypesMatch<["value", "TensorDesc"]>, MemoryEffects<[MemWrite]>, AnchorLayoutInterface
   ]> {
-  let summary = "stores a n-D block register region back to memory, currently only supports 2D";
+  let summary = "stores a n-D block register region back to memory";
 
   let description = [{
     StoreNdOp essentially mimics the hardware block write instruction io
@@ -444,7 +476,14 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     by the TensorDesc. It takes a set of optional cache hints for each level
     of cache, L1, L2 and L3. If hardware does not have a correspoding cache,
     Corresponding cache hint attribute will be masked.
-    It is only available to 1D or 2D blocked tensor_desc.
+
+    The tensor descriptor can be 1D, 2D, 3D, or higher dimensional. When the
+    tensor descriptor has more than 2 dimensions, the leading dimensions are
+    treated as **batch dimensions** that are unrolled to unit dimensions during
+    lowering. At the subgroup level, the store_nd operation executes at 2D
+    granularity to match the 2D block IO hardware support. The value vector
+    must have the same shape as the tensor descriptor. The number of offset
+    indices must match the rank of the tensor descriptor.
 
     At lane level, the input vector represents the data to be stored by each lane.
 
@@ -453,13 +492,16 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
 
     Arguments:
 
-    - `value`: A vector value representing the tensor tile to be stored.
+    - `value`: A vector value representing the tensor tile to be stored. Can be
+      1D, 2D, 3D, or higher dimensional where leading dimensions are batch dimensions.
 
     - `TensorDesc`: A tensor descriptor specifying the base nd-region of memory and
-      the tensor tile to be stored.
+      the tensor tile to be stored. Can be 1D, 2D, 3D, or higher dimensional
+      where leading dimensions are batch dimensions.
 
     - `offsets`: Index values representing per-dimension offsets from the base position
       encoded in `TensorDesc`. They are encoded via `offsets` and `const_offsets`.
+      The number of offsets must match the tensor descriptor rank.
 
     - `l1_hint`, `l2_hint`, `l3_hint`: [optional] Cache-hint attributes indicating the
       desired behavior at the L1, L2, and L3 cache levels.
@@ -467,7 +509,7 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     - `layout`: [optional] Describes the expected layout of the `tensor_desc` operand as well as
       the value to be stored (they are identical). Only valid at workgroup and subgroup levels.
 
-    Example 1 (Workgroup level):
+    Example 1 (Workgroup level, 2D):
     ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
@@ -475,7 +517,8 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 32]>}
                              : vector<32x256xf16>, !xegpu.tensor_desc<32x256xf16>
     ```
-    Example 2 (lane level):
+
+    Example 2 (lane level, 2D):
     ```mlir
       xegpu.store_nd %3, %2 {l1_hint = #xegpu.cache_hint<uncached>,
                              l2_hint = #xegpu.cache_hint<write_back>,
@@ -483,6 +526,12 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              : vector<8xf16>, !xegpu.tensor_desc<8x16xf16>
     ```
 
+    Example 3 (3D with batch dimension):
+    ```mlir
+      // Store 4 independent 8x16 blocks
+      xegpu.store_nd %value, %tdesc[0, 0, 0] <{l1_hint = #xegpu.cache_hint<write_back>}>
+        : vector<4x8x16xf16>, !xegpu.tensor_desc<4x8x16xf16>
+    ```
 
   }];
 

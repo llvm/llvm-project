@@ -188,11 +188,12 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // We treat TokenType as state update marker to represent side-effects of
   // async computations
-  bool isStateful = isa<TokenType>(func.getResultTypes().front());
+  bool isStateful = isa<async::TokenType>(func.getResultTypes().front());
 
   std::optional<Value> retToken;
   if (isStateful)
-    retToken.emplace(RuntimeCreateOp::create(builder, TokenType::get(ctx)));
+    retToken.emplace(
+        RuntimeCreateOp::create(builder, async::TokenType::get(ctx)));
 
   llvm::SmallVector<Value, 4> retValues;
   ArrayRef<Type> resValueTypes =
@@ -673,8 +674,9 @@ private:
 };
 
 /// Lowering for `async.await` with a token operand.
-class AwaitTokenOpLowering : public AwaitOpLoweringBase<AwaitOp, TokenType> {
-  using Base = AwaitOpLoweringBase<AwaitOp, TokenType>;
+class AwaitTokenOpLowering
+    : public AwaitOpLoweringBase<AwaitOp, async::TokenType> {
+  using Base = AwaitOpLoweringBase<AwaitOp, async::TokenType>;
 
 public:
   using Base::Base;
