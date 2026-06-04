@@ -54,9 +54,16 @@ atomicrmw_func = Template(
 """
 )
 
+# atomicrmw fadd's lowering depends on the function's FTZ (denormal) mode, so we
+# check codegen both with and without it. Lines common to both runs collapse to
+# the SM${sm} prefix; only the FTZ-sensitive ops diverge into SM${sm}-NOFTZ /
+# SM${sm}-FTZ. (-nvptx-allow-ftz-atomics is covered separately in
+# atomicrmw-allow-ftz-atomics.ll.)
 run_statement = Template(
-    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
+    """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefixes=SM${sm},SM${sm}-NOFTZ
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | FileCheck %s --check-prefixes=SM${sm},SM${sm}-FTZ
 ; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} -denormal-fp-math-f32=preserve-sign | %ptxas-verify -arch=sm_${sm} %}
 """
 )
 

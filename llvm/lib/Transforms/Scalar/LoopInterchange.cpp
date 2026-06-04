@@ -1472,23 +1472,28 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   }
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : *BB)
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // Functions which don't access memory do not prevent interchanging.
-        if (CI->doesNotAccessMemory() || isa<PseudoProbeInst>(CI))
-          continue;
-        LLVM_DEBUG(
-            dbgs() << "Loops with call instructions cannot be interchanged "
-                   << "safely.");
-        ORE->emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
-                                          CI->getParent())
-                 << "Cannot interchange loops due to call instruction.";
-        });
+    for (Instruction &I : *BB) {
+      // Loads and stores are checked separately, so we can skip them here.
+      if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
+        continue;
 
-        return false;
-      }
+      // We cannot ignore potential memory reads, e.g., loads inside the called
+      // function.
+      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
+        continue;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Loops contain instructions that cannot be safely interchanged\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                        I.getDebugLoc(), I.getParent())
+               << "Cannot interchange loops due to instruction that is "
+                  "potentially unsafe to interchange.";
+      });
+
+      return false;
+    }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
     LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
@@ -2224,12 +2229,14 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     assert(all_of(P.users(),
                   [OuterHeader, OuterExit, IncI, InnerHeader](User *U) {
+                    if (!isa<PHINode>(U))
+                      return true;
                     return (cast<PHINode>(U)->getParent() == OuterHeader &&
                             IncI->getParent() == InnerHeader) ||
                            cast<PHINode>(U)->getParent() == OuterExit;
                   }) &&
-           "Can only replace phis iff the uses are in the loop nest exit or "
-           "the incoming value is defined in the inner header (it will "
+           "Can only replace phis iff the phi-uses are in the loop nest exit "
+           "or the incoming value is defined in the inner header (it will "
            "dominate all loop blocks after interchanging)");
     P.replaceAllUsesWith(IncI);
     P.eraseFromParent();

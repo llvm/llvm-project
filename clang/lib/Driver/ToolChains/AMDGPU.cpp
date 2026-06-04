@@ -609,9 +609,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (C.getDriver().isUsingLTO()) {
-    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
+  if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None) {
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
+                  LTO == LTOK_Thin);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +

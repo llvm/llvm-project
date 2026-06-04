@@ -130,7 +130,7 @@ Makes programs 10x faster by doing Special New Thing.
   ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
   there are still issues with invalid compiler reasoning about some functions
   in bitcode, e.g. `malloc`. Not yet supported on MachO or when using
-  distributed ThinLTO. 
+  distributed ThinLTO.
 
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
