@@ -175,6 +175,9 @@ public:
   /// Remove register from copy maps.
   void invalidateRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                           const TargetInstrInfo &TII, bool UseCopyInstr) {
+    if (Copies.empty())
+      return;
+
     // Since Reg might be a subreg of some registers, only invalidate Reg is not
     // enough. We have to find the COPY defines Reg or registers defined by Reg
     // and invalidate all of them. Similarly, we must invalidate all of the
@@ -262,6 +265,9 @@ public:
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                        const TargetInstrInfo &TII, bool UseCopyInstr) {
+    if (Copies.empty())
+      return;
+
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
       clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
     }
