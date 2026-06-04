@@ -110,6 +110,423 @@ define float @copysign_sign_arg_mixed(float %x, float %y, float %z) {
   ret float %r
 }
 
+define float @copysign_conditional_olt(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_olt(
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.000000e+00, float 1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ogt(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ogt(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[TMP1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ogt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.000000e+00, float 1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_uge(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_uge(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[TMP1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp uge float %y, 0.000000e+00
+  %and  = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.000000e+00, float 1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ule(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ule(
+; CHECK-NEXT:    [[Y:%.*]] = fneg float [[Y1:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ule float %y, 0.000000e+00
+  %and  = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.000000e+00, float 1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_olt_inverse(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_olt_inverse(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[Y1:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[AND]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.000000e+00, float -1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ogt_inverse(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ogt_inverse(
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ogt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.000000e+00, float -1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ule_inverse(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ule_inverse(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[Y1:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[AND]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ule float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.000000e+00, float -1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_uge_inverse(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_uge_inverse(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[Y1:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[AND]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = tail call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp uge float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.000000e+00, float -1.000000e+00
+  %res = tail call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ogt(i1 noundef zeroext %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_ogt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = fneg fast float [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ogt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float -1.000000e+00, float 1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_olt(i1 noundef zeroext %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_olt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast olt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float -1.000000e+00, float 1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ugt(i1 %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_ugt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = fneg fast float [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ugt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float -1.000000e+00, float 1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ule(i1 %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_ule(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = fneg fast float [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ule float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float -1.000000e+00, float 1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_olt_inverse(i1 %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_olt_inverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND1:%.*]] = fneg fast float [[X:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast olt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float 1.000000e+00, float -1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ugt_inverse(i1 %cond, float %x, float  %val) {
+;
+; CHECK-LABEL: @copysign_conditional_fast_ugt_inverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ugt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float 1.000000e+00, float -1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ule_inverse(i1 %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_ule_inverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast ule float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    [[COND1:%.*]] = select fast i1 [[SEL]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ule float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1 = select fast i1 %sel, float 1.000000e+00, float -1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_fast_ogt_inverse(i1 %cond, float %x, float  %val) {
+; CHECK-LABEL: @copysign_conditional_fast_ogt_inverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @llvm.copysign.f32(float [[VAL:%.*]], float [[COND1:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %cmp = fcmp fast ogt float %x, 0.000000e+00
+  %sel = select i1 %cond, i1 %cmp, i1 false
+  %cond1= select fast i1 %sel, float 1.000000e+00, float -1.000000e+00
+  %res = tail call fast float @llvm.copysign.f32(float %val, float %cond1)
+  ret float %res
+}
+
+define float @copysign_conditional_ole(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ole(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float -1.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ole float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ole_inverse(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ole_inverse(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ole float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.0, float -1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ult_nnan(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ult_nnan(
+; CHECK-NEXT:    [[RES:%.*]] = call nnan float @llvm.copysign.f32(float [[Z:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ult float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select nnan i1 %and, float -1.0, float 1.0
+  %res = call nnan float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ult_no_nnan(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ult_no_nnan(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float -1.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ult float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_bad_constants(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_bad_constants(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float -2.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -2.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_commuted(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[TMP1]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float 0.000000e+00, %y
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_no_and(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_no_and(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], float -1.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %sel = select i1 %x, float -1.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_nonzero_cmp(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_nonzero_cmp(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[Y:%.*]], 1.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float -1.000000e+00, float 1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp olt float %y, 1.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float -1.0, float 1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_inverse_no_nsz(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_inverse_no_nsz(
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ogt float %y, 0.000000e+00
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.0, float -1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_uge_inverse_strict(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_uge_inverse_strict(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[Y:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[AND]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp uge float %y, 0.0
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.0, float -1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ult_inverse_fast(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ult_inverse_fast(
+; CHECK-NEXT:    [[SEL:%.*]] = fneg fast float [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = call fast float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp fast ult float %y, 0.0
+  %and = and i1 %cmp, %x
+  %sel = select fast i1 %and, float 1.0, float -1.0
+  %res = call fast float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_inverse_with_nsz(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_inverse_with_nsz(
+; CHECK-NEXT:    [[RES:%.*]] = call nsz float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp nsz ogt float %y, 0.0
+  %and = and i1 %cmp, %x
+  %sel = select nsz i1 %and, float 1.0, float -1.0
+  %res = call nsz float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+define float @copysign_conditional_ugt_nnan(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_conditional_ugt_nnan(
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan float [[Y:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = call nnan float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ugt float %y, 0.0
+  %and = and i1 %cmp, %x
+  %sel = select nnan i1 %and, float -1.0, float 1.0
+  %res = call nnan float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
+
+define float @copysign_signed_zero_sensitive(i1 %x, float %y, float %z) {
+; CHECK-LABEL: @copysign_signed_zero_sensitive(
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.copysign.f32(float [[Z:%.*]], float [[SEL:%.*]])
+; CHECK-NEXT:    ret float [[RES]]
+;
+  %cmp = fcmp ogt float %y, 0.0
+  %and = and i1 %cmp, %x
+  %sel = select i1 %and, float 1.0, float -1.0
+  %res = call float @llvm.copysign.f32(float %z, float %sel)
+  ret float %res
+}
+
 define float @fneg_mag(float %x, float %y) {
 ; CHECK-LABEL: @fneg_mag(
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
@@ -133,7 +550,10 @@ define float @fabs_mag(float %x, float %y) {
 ; Issue 177932
 define float @copysign_simplify_demanded_bits_sign(float %mag, float %sign) {
 ; CHECK-LABEL: @copysign_simplify_demanded_bits_sign(
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[SIGN:%.*]])
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast float [[SIGN1:%.*]] to i32
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and i32 [[SIGN_INT]], -2147483648
+; CHECK-NEXT:    [[SIGN:%.*]] = bitcast i32 [[AND_SIGN]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[SIGN]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %sign.int = bitcast float %sign to i32
@@ -145,7 +565,10 @@ define float @copysign_simplify_demanded_bits_sign(float %mag, float %sign) {
 
 define <2 x float> @copysign_simplify_demanded_bits_sign_vector(<2 x float> %mag, <2 x float> %sign) {
 ; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_vector(
-; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[MAG:%.*]], <2 x float> [[SIGN:%.*]])
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast <2 x float> [[SIGN1:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and <2 x i32> [[SIGN_INT]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[SIGN:%.*]] = bitcast <2 x i32> [[AND_SIGN]] to <2 x float>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[MAG:%.*]], <2 x float> [[SIGN]])
 ; CHECK-NEXT:    ret <2 x float> [[RESULT]]
 ;
   %sign.int = bitcast <2 x float> %sign to <2 x i32>
@@ -253,7 +676,10 @@ define float @copysign_simplify_demanded_bits_sign_not_elementwise_1(float %mag,
 
 define ppc_fp128 @copysign_simplify_demanded_bits_sign_ppcfp128(ppc_fp128 %mag, ppc_fp128 %sign) {
 ; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_ppcfp128(
-; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 [[MAG:%.*]], ppc_fp128 [[SIGN:%.*]])
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast ppc_fp128 [[SIGN1:%.*]] to i128
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and i128 [[SIGN_INT]], -170141183460469231731687303715884105728
+; CHECK-NEXT:    [[SIGN:%.*]] = bitcast i128 [[AND_SIGN]] to ppc_fp128
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 [[MAG:%.*]], ppc_fp128 [[SIGN]])
 ; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
 ;
   %sign.int = bitcast ppc_fp128 %sign to i128

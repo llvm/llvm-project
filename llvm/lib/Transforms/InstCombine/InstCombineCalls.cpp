@@ -3118,6 +3118,84 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    /* Match select ?, TC, FC where the constants are equal but negated.
+    * Check for these conditions:
+    *
+    * olt/ule
+    * copysign(Mag, B & (A < 0.0) ? -TC : TC)
+    *     -> copysign(Mag, A) B->true, A<0. // no sign change
+    * copysign(Mag, B & (A < 0.0) ? -TC : TC)
+    *     -> copysign(Mag, A) B->true, A>0. // no sign change
+    * copysign(Mag, B & (A < 0.0) ? -TC : TC)
+    *     -> copysign(Mag, A) B->false, A>0. // no sign change
+    * copysign(Mag, B & (A < 0.0) ? -TC : TC)
+    *     -> copysign(Mag, -A) B->false, A<0.
+    */
+
+    Value *A, *B;
+    Value *SignVal = nullptr;
+    Value *Cond = nullptr;
+    CmpPredicate Pred;
+    const APFloat *TC, *FC;
+
+    if (!match(Sign, m_Select(m_Value(Cond), m_APFloat(TC),
+                              m_APFloat(FC))))
+      return nullptr;
+
+    if (!match(Cond,
+              m_CombineOr(
+                  m_And(m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                        m_Value(B)),
+                  m_Select(m_Value(B),
+                            m_FCmp(Pred, m_Value(A), m_PosZeroFP()),
+                            m_Zero()))))
+      return nullptr;
+
+    const auto *FPOp = dyn_cast<FPMathOperator>(Sign);
+
+    bool IsStandard = TC->isNegative() && !FC->isNegative() &&
+                      abs(*TC).bitwiseIsEqual(abs(*FC));
+
+    bool IsInverse = !TC->isNegative() && FC->isNegative() &&
+                    abs(*TC).bitwiseIsEqual(abs(*FC));
+
+    if (!(IsStandard || IsInverse))
+      return nullptr;
+
+    FCmpInst::Predicate Predicate =
+        static_cast<FCmpInst::Predicate>(Pred);
+
+    if (Predicate == FCmpInst::FCMP_OLT ||
+        ((FPOp && FPOp->hasNoNaNs()) &&
+        Predicate == FCmpInst::FCMP_ULT)) {
+      if (IsStandard)
+        SignVal = A;
+      else if (FPOp && FPOp->hasNoSignedZeros())
+        SignVal = Builder.CreateFNeg(A);
+
+    } else if (Predicate == FCmpInst::FCMP_OGT ||
+              ((FPOp && FPOp->hasNoNaNs()) &&
+                Predicate == FCmpInst::FCMP_UGT)) {
+      if (IsInverse)
+        SignVal = A;
+      else
+        SignVal = Builder.CreateFNeg(A);
+
+    } else if (Predicate == FCmpInst::FCMP_ULE ||
+              Predicate == FCmpInst::FCMP_UGE) {
+      if (IsStandard)
+        SignVal = Builder.CreateFNeg(A);
+    }
+
+    if (!SignVal)
+      return nullptr;
+
+    if (auto *NewInst = dyn_cast<Instruction>(SignVal))
+      if (FPOp)
+        NewInst->copyFastMathFlags(FPOp->getFastMathFlags());
+
+        return replaceOperand(*II, 1, SignVal);
+
     Type *SignEltTy = Sign->getType()->getScalarType();
 
     Value *CastSrc;
@@ -3131,7 +3209,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                SQ))
         return II;
     }
-
     break;
   }
   case Intrinsic::fabs: {
