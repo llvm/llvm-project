@@ -2566,7 +2566,8 @@ static bool isArtificialGlobal(StringRef Name) {
   return isUseListGlobal(Name) || Name == "llvm.global.annotations";
 }
 
-// Returns true if every use of GV traces back to llvm.compiler.used or llvm.used.
+// Returns true if every use of GV traces back to llvm.compiler.used or
+// llvm.used.
 static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
   SmallPtrSet<const Value *, 8> Visited;
   SmallVector<const Value *> Stack(GV.users());
