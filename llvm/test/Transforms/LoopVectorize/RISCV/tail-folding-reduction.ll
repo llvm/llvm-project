@@ -12,10 +12,11 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
@@ -29,10 +30,9 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP14]])
-; IF-EVL-NEXT:    [[TMP7:%.*]] = add i32 [[TMP17]], [[START:%.*]]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    ret i32 [[TMP7]]
+; IF-EVL-NEXT:    ret i32 [[TMP17]]
 ;
 ; NO-VP-LABEL: @add(
 ; NO-VP-NEXT:  entry:
@@ -206,10 +206,11 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
@@ -223,10 +224,9 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP14]])
-; IF-EVL-NEXT:    [[TMP7:%.*]] = or i32 [[TMP17]], [[START:%.*]]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    ret i32 [[TMP7]]
+; IF-EVL-NEXT:    ret i32 [[TMP17]]
 ;
 ; NO-VP-LABEL: @or(
 ; NO-VP-NEXT:  entry:
@@ -293,10 +293,11 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> splat (i32 -1), i32 [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ insertelement (<vscale x 4 x i32> splat (i32 -1), i32 -1, i32 0), [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
@@ -310,10 +311,9 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.and.nxv4i32(<vscale x 4 x i32> [[TMP14]])
-; IF-EVL-NEXT:    [[TMP7:%.*]] = and i32 [[TMP17]], [[START:%.*]]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    ret i32 [[TMP7]]
+; IF-EVL-NEXT:    ret i32 [[TMP17]]
 ;
 ; NO-VP-LABEL: @and(
 ; NO-VP-NEXT:  entry:
@@ -380,10 +380,11 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
+; IF-EVL-NEXT:    [[TMP9:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START:%.*]], i32 0
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP9]], [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[AVL:%.*]] = phi i64 [ [[N:%.*]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[EVL_BASED_IV]]
@@ -397,10 +398,9 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; IF-EVL:       middle.block:
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP14]])
-; IF-EVL-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP17]], [[START:%.*]]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.end:
-; IF-EVL-NEXT:    ret i32 [[TMP7]]
+; IF-EVL-NEXT:    ret i32 [[TMP17]]
 ;
 ; NO-VP-LABEL: @xor(
 ; NO-VP-NEXT:  entry:

@@ -31,10 +31,11 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
+; IF-EVL-OUTLOOP-NEXT:    [[TMP10:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.body:
 ; IF-EVL-OUTLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], [[FOR_BODY]] ]
-; IF-EVL-OUTLOOP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
+; IF-EVL-OUTLOOP-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ [[TMP10]], [[ENTRY]] ], [ [[TMP19:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP11:%.*]] = phi i64 [ [[N]], [[ENTRY]] ], [ [[AVL_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP12:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP11]], i32 4, i1 true)
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[EVL_BASED_IV]]
@@ -48,8 +49,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; IF-EVL-OUTLOOP-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL-OUTLOOP:       middle.block:
 ; IF-EVL-OUTLOOP-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP19]])
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = add i32 [[TMP23]], [[START]]
-; IF-EVL-OUTLOOP-NEXT:    store i32 [[TMP8]], ptr [[ADDR]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
+; IF-EVL-OUTLOOP-NEXT:    store i32 [[TMP23]], ptr [[ADDR]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_END:%.*]]
 ; IF-EVL-OUTLOOP:       scalar.ph:
 ; IF-EVL-OUTLOOP-NEXT:    br label [[FOR_BODY1:%.*]]

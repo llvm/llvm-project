@@ -38,16 +38,17 @@ define i32 @test_remove_iv(i32 %start) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> splat (i32 3), <vscale x 4 x i32> zeroinitializer, i32 6)
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <vscale x 4 x i32> [[TMP2]], splat (i32 3)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP2]], i32 6)
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP5]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP6]], [[START]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
   br label %loop

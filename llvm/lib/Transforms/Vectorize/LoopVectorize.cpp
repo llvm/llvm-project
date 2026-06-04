@@ -7096,29 +7096,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createScalarCast(ExtendOpc, FinalReductionResult, PhiTy, {});
     }
 
-    RecurKind RK = PhiR->getRecurrenceKind();
-    bool SimplifyInit = false;
-    if (!PhiR->isInLoop() && CM.foldTailWithEVL() &&
-        (RK == RecurKind::Add || RK == RecurKind::Sub || RK == RecurKind::And ||
-         RK == RecurKind::Or || RK == RecurKind::Xor ||
-         RK == RecurKind::AddChainWithSubs)) {
-      VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
-      VPValue *Start = PhiR->getStartValue();
-      if (Start != Iden) {
-        if (RK == RecurKind::Xor)
-          FinalReductionResult = Builder.createNaryOp(
-              Instruction::BinaryOps::Xor, {FinalReductionResult, Start});
-        else if (RK == RecurKind::And)
-          FinalReductionResult = Builder.createAnd(FinalReductionResult, Start);
-        else if (RK == RecurKind::Or)
-          FinalReductionResult = Builder.createOr(FinalReductionResult, Start);
-        else
-          FinalReductionResult = Builder.createAdd(FinalReductionResult, Start);
-        SimplifyInit = true;
-      }
-    }
-
     // Update all users outside the vector region. Also replace redundant
     // extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
@@ -7142,6 +7119,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
     }
 
+    RecurKind RK = PhiR->getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
@@ -7150,14 +7128,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
-      VPValue *StartV;
-      if (SimplifyInit)
-        StartV = PHBuilder.createNaryOp(VPInstruction::ReductionStartVector,
-                                        {Iden, Iden, ScaleFactorVPV}, *PhiR);
-      else
-        StartV = PHBuilder.createNaryOp(
-            VPInstruction::ReductionStartVector,
-            {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
+      VPValue *StartV = PHBuilder.createNaryOp(
+          VPInstruction::ReductionStartVector,
+          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }
