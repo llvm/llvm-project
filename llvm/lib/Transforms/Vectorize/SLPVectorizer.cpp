@@ -30245,30 +30245,33 @@ private:
     } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      // e.g. Consider vector reduce add.
+      // Initial reduction is
+      // clang-format off
+      // %add0 = add <4 x i32> zeroinitializer, %A
+      // %add1 = add <4 x i32> %add0, %B
+      //
+      // where,
+      // %A = <a, b, c, d>
+      // %B = <e, f, g, h>
+      // %add1 = A + B = <a + e, b + f, c + g, d + h>
+      //
+      // After revectorization with VF=2 and Vec = <a, b, c, d, e, f, g, h>,
+      // the reduction can be expressed as:
+      // %A = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+      // %B = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+      // %add0 = add <4 x i32> zeroinitializer, %A
+      // %add1 = add <4 x i32> %add0, %B
+      // clang-format on
       Rdx = nullptr;
-      /*
-        e.g. Consider vector reduce add.
-
-        RdxVal[0] = [a, b, c, d]
-        RdxVal[1] = [e, f, g, h]
-        Add0 = zeroinitializer + RdxVal[0]
-        Add1 = Add0 + RdxVal[1]
-
-        After revectorization with VF=2 and Vec = [a, b, c, d, e, f, g, h],
-        the reduction can be expressed as:
-        RdxVal[0] = ExtractVector(Vec, 0, 3) = [a, b, c, d]
-        RdxVal[1] = ExtractVector(Vec, 4, 7) = [e, f, g, h]
-        Add = RdxVal[0] + RdxVal[1]
-      */
       for (auto I : seq<unsigned>(VF)) {
         auto Position = I * DestTyNumElements;
         Value *SubVec =
             createExtractVector(Builder, Vec, DestTyNumElements, Position);
-        if (!Rdx) {
+        if (!Rdx)
           Rdx = SubVec;
-        } else {
+        else
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
-        }
       }
     } else {
       Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
