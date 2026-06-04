@@ -166,15 +166,15 @@ struct Ctx {
     // __tls_base
     // Global that holds the address of the base of the current thread's
     // TLS block.
-    GlobalSymbol *tlsBase;
+    DefinedGlobal *tlsBase;
 
     // __tls_size
     // Symbol whose value is the size of the TLS block.
-    GlobalSymbol *tlsSize;
+    DefinedGlobal *tlsSize;
 
-    // __tls_size
+    // __tls_align
     // Symbol whose value is the alignment of the TLS block.
-    GlobalSymbol *tlsAlign;
+    DefinedGlobal *tlsAlign;
 
     // __rodata_start/__rodata_end
     // Symbols marking the start/end of readonly data

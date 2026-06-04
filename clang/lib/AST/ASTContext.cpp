@@ -13048,6 +13048,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     External = GVA_DiscardableODR;
     break;
@@ -13064,7 +13065,8 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
 
     // GNU or C99 inline semantics. Determine whether this symbol should be
     // externally visible.
-    if (FD->isInlineDefinitionExternallyVisible())
+    if (auto *Def = FD->getDefinition();
+        Def && Def->isInlineDefinitionExternallyVisible())
       return External;
 
     // C99 inline semantics, where the symbol is not externally visible.
@@ -13236,6 +13238,7 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return GVA_DiscardableODR;
   }

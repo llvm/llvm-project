@@ -263,9 +263,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   if (C.getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {

@@ -3291,10 +3291,21 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
   if (!isTriviallyVectorizable(IID))
     return false;
 
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
-    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI) &&
-        II0->getArgOperand(I) != II1->getArgOperand(I))
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
+    Value *Arg0 = II0->getArgOperand(I);
+    Value *Arg1 = II1->getArgOperand(I);
+    if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
+      // Scalar operands must be identical.
+      if (Arg0 != Arg1)
+        return false;
+    } else if (Arg0->getType() != Arg1->getType()) {
+      // The corresponding vector operands are shuffled together, so they must
+      // share the same type. For intrinsics overloaded on their operand type
+      // (e.g. llvm.fptosi.sat), two calls can produce the same result type
+      // from different operand types; shuffling those would be invalid.
       return false;
+    }
+  }
 
   InstructionCost OldCost =
       CostII0 + CostII1 +
@@ -4003,6 +4014,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   InstWorklist.push(VecOpEE);
 
   bool IsPartialReduction = false;
+  bool HasLaneDuplication = false;
 
   while (!InstWorklist.empty()) {
     Value *CI = InstWorklist.front();
@@ -4122,6 +4134,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       // Update mask values.
       ShuffleMaskHalf *= 2;
       ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      HasLaneDuplication |= (ExpectedParityMask & 1) != 0;
       ExpectedParityMask >>= 1;
 
       OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
@@ -4151,6 +4164,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // Full reduction pattern should end with a shuffle op.
   // Partial reduction ends when the source vector is reached.
   if (ShouldBeCallOrBinInst && !IsPartialReduction)
+    return false;
+
+  // If the parity masks duplicated any lane, the fold only preserves semantics
+  // for idempotent ops.
+  if (HasLaneDuplication && CommonBinOp &&
+      !Instruction::isIdempotent(*CommonBinOp))
     return false;
 
   assert(VecSize != -1 && "Expected Match for Vector Size");

@@ -488,11 +488,11 @@ define <8 x i32> @partial_masked_load() {
   ret <8 x i32> %masked.load
 }
 
-define <8 x i32> @masked_load_undef_mask(ptr %V) {
-; CHECK-LABEL: @masked_load_undef_mask(
+define <8 x i32> @masked_load_poison_mask(ptr %V) {
+; CHECK-LABEL: @masked_load_poison_mask(
 ; CHECK-NEXT:    ret <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
 ;
-  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %V, i32 4, <8 x i1> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
+  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr %V, i32 4, <8 x i1> poison, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
   ret <8 x i32> %masked.load
 }
 

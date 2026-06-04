@@ -180,7 +180,8 @@ private:
     uint32_t m_count;
     lldb::addr_t m_first_ptr;
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<ivar_list_t> Read(Process *process,
+                                            lldb::addr_t addr);
   };
 
   struct ivar_t {
@@ -203,16 +204,17 @@ private:
              + sizeof(uint32_t); // uint32_t size;
     }
 
-    bool Read(Process *process, lldb::addr_t addr);
+    static llvm::Expected<ivar_t> Read(Process *process, lldb::addr_t addr);
   };
 
   struct relative_list_entry_t {
     uint16_t m_image_index;
     int64_t m_list_offset;
-
-    static llvm::Expected<relative_list_entry_t> Read(Process *process,
-                                                      lldb::addr_t addr);
   };
+
+  static llvm::Expected<
+      llvm::SmallVector<ClassDescriptorV2::relative_list_entry_t>>
+  ReadRelativeListEntries(Process &process, llvm::ArrayRef<lldb::addr_t> addrs);
 
   struct relative_list_list_t {
     uint32_t m_entsize;
