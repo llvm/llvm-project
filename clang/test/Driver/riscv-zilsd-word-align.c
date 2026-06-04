@@ -1,5 +1,3 @@
-
-
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=ZILSD-WORD-ALIGN
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-ZILSD-WORD-ALIGN
 
