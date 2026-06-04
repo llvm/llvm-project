@@ -3030,9 +3030,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(9, 000)
         // clang-format on
-        case RISCVOp::OPERAND_UIMM3_NONZERO:
-          Ok = isUInt<3>(Imm) && (Imm != 0);
-          break;
         case RISCVOp::OPERAND_UIMM5_NONZERO:
           Ok = isUInt<5>(Imm) && (Imm != 0);
           break;

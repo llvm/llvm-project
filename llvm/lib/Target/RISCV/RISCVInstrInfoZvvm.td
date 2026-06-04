@@ -28,8 +28,8 @@ def TileLambdaOp : RISCVOp {
   let ParserMatchClass = TileLambdaAsmOperand;
   let PrintMethod = "printTileLambda";
   let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmNonZeroOperand<3>";
-  let OperandType = "OPERAND_UIMM3_NONZERO";
+  let DecoderMethod = "decodeUImmOperand<3>";
+  let OperandType = "OPERAND_UIMM3";
 }
 
 def VScaleAsmOperand : AsmOperandClass {
@@ -103,25 +103,11 @@ class VTileStoreBase<bits<2> mop, dag ins, string opcodestr, string argstr>
 }
 
 class VTileLoad<bits<2> mop, string opcodestr>
-    : VTileLoadBase<mop, (ins GPRMemZeroOffset:$rs1, GPR:$rs2, VMaskOp:$vm),
-                    opcodestr, "$vd, $rs1, $rs2$vm"> {
-  let vlambda = 0;
-}
-
-class VTileLoadLambda<bits<2> mop, string opcodestr>
     : VTileLoadBase<mop, (ins GPRMemZeroOffset:$rs1, GPR:$rs2,
                               TileLambdaOp:$vlambda, VMaskOp:$vm),
                     opcodestr, "$vd, $rs1, $rs2$vlambda$vm">;
 
 class VTileStore<bits<2> mop, string opcodestr>
-    : VTileStoreBase<mop,
-                     (ins VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2,
-                          VMaskOp:$vm),
-                     opcodestr, "$vs3, $rs1, $rs2$vm"> {
-  let vlambda = 0;
-}
-
-class VTileStoreLambda<bits<2> mop, string opcodestr>
     : VTileStoreBase<mop,
                      (ins VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2,
                           TileLambdaOp:$vlambda, VMaskOp:$vm),
@@ -207,15 +193,23 @@ let Predicates = [HasStdExtZvvfmm] in {
 } // Predicates = [HasStdExtZvvfmm]
 
 let Predicates = [HasStdExtZvvmtls] in {
-  def VMTL_V_L : VTileLoadLambda<0b00, "vmtl.v">;
   def VMTL_V : VTileLoad<0b00, "vmtl.v">;
-  def VMTS_V_L : VTileStoreLambda<0b00, "vmts.v">;
   def VMTS_V : VTileStore<0b00, "vmts.v">;
+  def : InstAlias<"vmtl.v $vd, $rs1, $rs2$vm",
+                  (VMTL_V VR:$vd, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                          VMaskOp:$vm), 0>;
+  def : InstAlias<"vmts.v $vs3, $rs1, $rs2$vm",
+                  (VMTS_V VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                          VMaskOp:$vm), 0>;
 } // Predicates = [HasStdExtZvvmtls]
 
 let Predicates = [HasStdExtZvvmttls] in {
-  def VMTTL_V_L : VTileLoadLambda<0b01, "vmttl.v">;
   def VMTTL_V : VTileLoad<0b01, "vmttl.v">;
-  def VMTTS_V_L : VTileStoreLambda<0b01, "vmtts.v">;
   def VMTTS_V : VTileStore<0b01, "vmtts.v">;
+  def : InstAlias<"vmttl.v $vd, $rs1, $rs2$vm",
+                  (VMTTL_V VR:$vd, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                           VMaskOp:$vm), 0>;
+  def : InstAlias<"vmtts.v $vs3, $rs1, $rs2$vm",
+                  (VMTTS_V VR:$vs3, GPRMemZeroOffset:$rs1, GPR:$rs2, 0,
+                           VMaskOp:$vm), 0>;
 } // Predicates = [HasStdExtZvvmttls]
