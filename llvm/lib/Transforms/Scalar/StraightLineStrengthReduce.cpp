@@ -983,10 +983,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   // doing this early we avoid calling canReuseInstruction repeatedly for the
   // same instruction. The DropList is stored on the Candidate so
   // candidatePredicate can drop the flags when a rewrite is being done.
-  if (!EnablePoisonReuseGuard) {
-    CandidateDict.add(Candidates.back());
-  } else if (SE->canReuseInstruction(SE->getSCEV(I), I,
-                                     Candidates.back().DropList)) {
+  if (!EnablePoisonReuseGuard ||
+      SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
   }
 }
