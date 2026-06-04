@@ -7,7 +7,7 @@
 ; RUN: not llc -O0 -mtriple=spirv64-- %t/store-vector.ll -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL-STORE-VEC %s
 
 ; FAIL-LOAD-VEC: error:{{.*}}atomic load is only allowed for integer or floating point types
-; FAIL-STORE-VEC: error:{{.*}}atomic store is only allowed for integer or floating point types
+; FAIL-STORE-VEC: error:{{.*}}atomic store is only allowed for integer, floating point or pointer types
 
 ;--- load-vector.ll
 define <2 x i32> @load_vector_acquire(ptr addrspace(1) %ptr) {

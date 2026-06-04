@@ -2052,9 +2052,9 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
   if (!PointeeType.isTypeIntOrFloat() && !PointeeType.isTypePtr())
-    return diagnoseUnsupported(I,
-                               "Lowering to SPIR-V of atomic store is only "
-                               "allowed for integer or floating point types");
+    return diagnoseUnsupported(
+        I, "Lowering to SPIR-V of atomic store is only "
+           "allowed for integer, floating point or pointer types");
 
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
@@ -2076,7 +2076,8 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   if (PointeeType.isTypePtr()) {
     auto PtrSize = GR.getPointerSize();
-    SPIRVTypeInst SpirvType = GR.getOrCreateSPIRVIntegerType(PtrSize, I, TII);
+    SPIRVTypeInst SpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
 
     Register NewVRegVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
