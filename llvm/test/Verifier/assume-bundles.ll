@@ -22,10 +22,14 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i32 4, i32 4)]
 ; CHECK: first argument should be a pointer
   call void @llvm.assume(i1 true) ["align"(i32 %P1, ptr %P2)]
-; CHECK: second argument should be an integer
+; CHECK: second argument should be an integer with a maximum width of 64 bits
   call void @llvm.assume(i1 true) ["align"(ptr %P, ptr %P2)]
-; CHECK: third argument should be an integer if present
+; CHECK: second argument should be an integer with a maximum width of 64 bits
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i65 1)]
+; CHECK: third argument should be an integer with a maximum width of 64 bits if present
   call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, ptr %P2)]
+; CHECK: third argument should be an integer with a maximum width of 64 bits if present
+  call void @llvm.assume(i1 true) ["align"(ptr %P, i32 %P1, i65 1)]
 
 ; Cold checks
 ;

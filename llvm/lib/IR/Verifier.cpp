@@ -6120,10 +6120,17 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "alignment assumptions should have 2 or 3 arguments", Call);
         Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
               Call);
-        Check(GetTypeAt(1)->isIntegerTy(),
-              "second argument should be an integer", Call);
-        Check(OBU.Inputs.size() < 3 || GetTypeAt(2)->isIntegerTy(),
-              "third argument should be an integer if present", Call);
+        Check(GetTypeAt(1)->isIntegerTy() &&
+                  GetTypeAt(1)->getIntegerBitWidth() <= 64,
+              "second argument should be an integer with a maximum width of 64 "
+              "bits",
+              Call);
+        Check(OBU.Inputs.size() < 3 ||
+                  GetTypeAt(2)->isIntegerTy() &&
+                      GetTypeAt(2)->getIntegerBitWidth() <= 64,
+              "third argument should be an integer with a maximum width of 64 "
+              "bits if present",
+              Call);
         break;
       case BundleAttr::Cold:
         Check(OBU.Inputs.size() == 0,
