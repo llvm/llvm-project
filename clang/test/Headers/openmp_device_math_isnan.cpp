@@ -30,7 +30,7 @@ double math(float f, double d) {
   // INT_RETURN: call noundef i32 @__nv_isnanf(float
   // AMD_INT_RETURN_SAFE: call i1 @llvm.is.fpclass.f32(float{{.*}}, i32 3)
   // AMD_INT_RETURN_FAST: sitofp fast i32 {{.*}} to double
-  // SPIRV_INT_RETURN: call spir_func noundef i32 @_Z5isnanf(float
+  // SPIRV_INT_RETURN: call spir_func zeroext i1 @_Z13__spirv_IsNanf(float
   // BOOL_RETURN: call noundef i32 @__nv_isnanf(float
   // SPIRV_BOOL_RETURN: call spir_func zeroext i1 @_Z13__spirv_IsNanf(float
   // AMD_BOOL_RETURN_SAFE: call i1 @llvm.is.fpclass.f32(float{{.*}}, i32 3)
