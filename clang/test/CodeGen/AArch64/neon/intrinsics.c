@@ -26,6 +26,7 @@
 
 //===------------------------------------------------------===//
 // 2.1.1.13.5  Maximum across vector (IEEE754)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#maximum-across-vector-ieee754
 //===------------------------------------------------------===//
 
 //ALL-LABEL: @test_vmaxnmv_f32(
