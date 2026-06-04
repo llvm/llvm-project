@@ -36,8 +36,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -85,8 +84,7 @@ define void @simple_histogram_inc_param(ptr noalias %buckets, ptr readonly %indi
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INCVAL]], i64 0
@@ -137,8 +135,7 @@ define void @simple_histogram_sub(ptr noalias %buckets, ptr readonly %indices, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -186,8 +183,7 @@ define void @conditional_histogram(ptr noalias %buckets, ptr readonly %indices, 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -244,17 +240,16 @@ define void @histogram_8bit(ptr noalias %buckets, ptr readonly %indices, i64 %N)
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP5]], 3
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[TMP2]], 3
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC1:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -428,8 +423,7 @@ define void @simple_histogram_user_interleave(ptr noalias %buckets, ptr readonly
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
@@ -487,8 +481,7 @@ define void @histogram_array_3op_gep(i64 noundef %N) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -540,8 +533,7 @@ define void @histogram_array_4op_gep_nonzero_const_idx(i64 noundef %N, ptr reado
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -752,8 +744,7 @@ define void @simple_histogram_64b(ptr noalias %buckets, ptr readonly %indices, i
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -832,6 +823,54 @@ for.exit:
   ret void
 }
 
+define void @simple_histogram_metadata(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @simple_histogram_metadata(
+; CHECK-SAME: ptr noalias [[BUCKETS:%.*]], ptr readonly [[INDICES:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP2]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP3]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP4]]
+; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP5]], i32 1, <vscale x 4 x i1> splat (i1 true)), !alias.scope [[META32:![0-9]+]], !noalias [[META27]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4, !alias.scope !6, !noalias !9
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4, !alias.scope !11, !noalias !6
+  %inc = add nsw i32 %l.bucket, 1
+  store i32 %inc, ptr %gep.bucket, align 4, !alias.scope !11, !noalias !6
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body, !llvm.loop !4
+
+for.exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}
@@ -840,3 +879,11 @@ attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 !3 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.interleave.count", i32 1}
+!6 = !{!7}
+!7 = distinct !{!7, !8, !"scope-index"}
+!8 = distinct !{!8, !"scopes-indices"}
+!9 = !{!10}
+!10 = distinct !{!10, !8, !"scope-bucket"}
+!11 = !{!10, !12}
+!12 = distinct !{!12, !13, !"scope-bucket-2"}
+!13 = distinct !{!13, !"scopes-buckets"}

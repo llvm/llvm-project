@@ -88,8 +88,10 @@ void DWARFLinkerImpl::setEstimatedObjfilesAmount(unsigned ObjFilesNum) {
 }
 
 Error DWARFLinkerImpl::link() {
-  // reset compile unit unique ID counter.
-  UniqueUnitID = 0;
+  // UniqueUnitID is initialized by the constructor and must not be reset
+  // here. addObjectFile() may have already handed out IDs to clang module
+  // CUs loaded from .pcm files, and the IDs handed out below must stay
+  // disjoint from those.
 
   if (Error Err = validateAndUpdateOptions())
     return Err;
@@ -787,7 +789,7 @@ Error DWARFLinkerImpl::LinkContext::scanFrameData() {
   }
 
   StringRef FrameBytes = Scan->FrameData;
-  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian(), 0);
+  DataExtractor Data(FrameBytes, InputDWARFObj.isLittleEndian());
   uint64_t InputOffset = 0;
   const unsigned SrcAddrSize = Scan->AddressSize;
   // Width of the CIE_pointer field at the start of every FDE (and of the

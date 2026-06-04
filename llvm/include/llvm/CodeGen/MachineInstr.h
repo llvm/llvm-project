@@ -1921,10 +1921,7 @@ public:
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.
-  void setDebugLoc(DebugLoc DL) {
-    DbgLoc = std::move(DL);
-    assert(DbgLoc.hasTrivialDestructor() && "Expected trivial destructor");
-  }
+  void setDebugLoc(DebugLoc DL) { DbgLoc = std::move(DL); }
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
@@ -2133,16 +2130,11 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
     return nullptr;
   }
 
-  static inline MachineInstr *getTombstoneKey() {
-    return reinterpret_cast<MachineInstr*>(-1);
-  }
-
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
   static bool isEqual(const MachineInstr* const &LHS,
                       const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
+    if (RHS == getEmptyKey() || LHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }

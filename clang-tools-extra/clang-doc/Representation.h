@@ -104,19 +104,15 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
   return llvm::ArrayRef<T>(Allocated, V.size());
 }
 
-// An abstraction for owned pointers. Initially mapped to OwnedPtr,
-// to be eventually transitioned to bare pointers in an arena.
-template <typename T> using OwnedPtr = T *;
-
-// An abstraction for vectors that are populated and read sequentially.
-// To be eventually transitioned to llvm::ArrayRef for arena storage.
-template <typename T> using OwningArray = std::vector<T>;
-
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
-template <typename T, typename... Args>
-OwnedPtr<T> allocatePtr(Args &&...args) {
+template <typename T, typename... Args> T *allocateTransient(Args &&...args) {
   return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+}
+
+// A helper function to create memory allocated in the TransientArena.
+template <typename T, typename... Args> T *allocatePersistent(Args &&...args) {
+  return new (PersistentArena.Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // An overload to explicitly allocate on an arena, returning a bare pointer.
@@ -124,10 +120,6 @@ template <typename T, typename... Args>
 T *allocatePtr(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
   return new (Alloc.Allocate<T>()) T(std::forward<Args>(args)...);
 }
-
-// A helper function to access the underlying pointer from an owned pointer,
-// abstracting away the pointer dereferencing mechanism.
-template <typename T> T *getPtr(const OwnedPtr<T> &O) { return O; }
 
 template <typename T> struct InfoNode : public llvm::ilist_node<InfoNode<T>> {
   InfoNode(T *P) : Ptr(P) {}
@@ -187,15 +179,7 @@ template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
 // To be eventually transitioned to llvm::simple_ilist.
-template <typename T> using OwningVec = llvm::simple_ilist<InfoNode<T>>;
-
-// An abstraction for dynamic lists of owned pointers.
-// To be eventually transitioned to llvm::simple_ilist<T*> or similar.
-template <typename T> using OwningPtrVec = std::vector<OwnedPtr<T>>;
-
-// An abstraction for arrays of owned pointers.
-// To be eventually transitioned to arena-allocated arrays of bare pointers.
-template <typename T> using OwningPtrArray = std::vector<OwnedPtr<T>>;
+template <typename T> using DocList = llvm::simple_ilist<InfoNode<T>>;
 
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
@@ -275,28 +259,41 @@ struct CommentInfo {
   // the vector.
   bool operator<(const CommentInfo &Other) const;
 
-  llvm::ArrayRef<CommentInfo> Children =
-      {};                   // List of child comments for this CommentInfo.
-  StringRef Direction = {}; // Parameter direction (for (T)ParamCommand).
-  StringRef Name = {};      // Name of the comment (for Verbatim and HTML).
-  StringRef ParamName = {}; // Parameter name (for (T)ParamCommand).
-  StringRef CloseName = {}; // Closing tag name (for VerbatimBlock).
-  StringRef Text = {};      // Text of the comment.
-  llvm::ArrayRef<StringRef> AttrKeys = {}; // List of attribute keys (for HTML).
-  llvm::ArrayRef<StringRef> AttrValues =
-      {}; // List of attribute values for each key (for HTML).
-  llvm::ArrayRef<StringRef> Args =
-      {}; // List of arguments to commands (for InlineCommand).
-  CommentKind Kind = CommentKind::
-      CK_Unknown; // Kind of comment (FullComment, ParagraphComment,
-                  // TextComment, InlineCommandComment, HTMLStartTagComment,
-                  // HTMLEndTagComment, BlockCommandComment,
-                  // ParamCommandComment, TParamCommandComment,
-                  // VerbatimBlockComment, VerbatimBlockLineComment,
-                  // VerbatimLineComment).
-  bool SelfClosing = false; // Indicates if tag is self-closing (for HTML).
-  bool Explicit = false;    // Indicates if the direction of a param is explicit
-                            // (for (T)ParamCommand).
+  // List of child comments for this CommentInfo.
+  ArrayRef<CommentInfo> Children = {};
+
+  // Parameter direction (for (T)ParamCommand).
+  StringRef Direction = {};
+
+  // Name of the comment (for Verbatim and HTML).
+  StringRef Name = {};
+
+  // Parameter name (for (T)ParamCommand).
+  StringRef ParamName = {};
+
+  // Closing tag name (for VerbatimBlock).
+  StringRef CloseName = {};
+
+  // Text of the comment.
+  StringRef Text = {};
+
+  // List of attribute keys (for HTML).
+  ArrayRef<StringRef> AttrKeys = {};
+
+  // List of attribute values for each key (for HTML).
+  ArrayRef<StringRef> AttrValues = {};
+
+  // List of arguments to commands (for InlineCommand).
+  ArrayRef<StringRef> Args = {};
+
+  // Type of comment. Unknown by default.
+  CommentKind Kind = CommentKind::CK_Unknown;
+
+  // Indicates if tag is self-closing (for HTML).
+  bool SelfClosing = false;
+
+  // Indicates if the direction of a param is explicit (for (T)ParamCommand).
+  bool Explicit = false;
 };
 
 struct Reference {
@@ -375,13 +372,13 @@ struct ScopeChildren {
   //
   // Namespaces are not syntactically valid as children of records, but making
   // this general for all possible container types reduces code complexity.
-  OwningVec<Reference> Namespaces = {};
-  OwningVec<Reference> Records = {};
-  OwningVec<FunctionInfo> Functions = {};
-  OwningVec<EnumInfo> Enums = {};
-  OwningVec<TypedefInfo> Typedefs = {};
-  OwningVec<ConceptInfo> Concepts = {};
-  OwningVec<VarInfo> Variables = {};
+  DocList<Reference> Namespaces = {};
+  DocList<Reference> Records = {};
+  DocList<FunctionInfo> Functions = {};
+  DocList<EnumInfo> Enums = {};
+  DocList<TypedefInfo> Typedefs = {};
+  DocList<ConceptInfo> Concepts = {};
+  DocList<VarInfo> Variables = {};
 
   void sort();
 };
@@ -491,7 +488,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
                       Other.Description.begin(), Other.Description.end());
   }
 
-  OwningVec<CommentInfo> Description;
+  DocList<CommentInfo> Description;
 
   // Access level associated with this info (public, protected, private, none).
   // AS_public is set as default because the bitcode writer requires the enum
@@ -576,7 +573,7 @@ struct Info {
   InfoType IT = InfoType::IT_default;
 
   // Comment description of this decl.
-  OwningVec<CommentInfo> Description = {};
+  DocList<CommentInfo> Description = {};
 };
 
 inline Context::Context(const Info &I)
@@ -617,7 +614,7 @@ struct SymbolInfo : public Info {
   }
 
   std::optional<Location> DefLoc;     // Location where this decl is defined.
-  OwningVec<Location> Loc;            // Locations where this decl is declared.
+  DocList<Location> Loc = {};         // Locations where this decl is declared.
   StringRef MangledName = {};
   bool IsStatic = false;
 };
@@ -775,7 +772,7 @@ struct EnumValueInfo {
   StringRef ValueExpr = {};
 
   /// Comment description of this field.
-  OwningVec<CommentInfo> Description;
+  DocList<CommentInfo> Description;
 };
 
 // TODO: Expand to allow for documenting templating.
@@ -831,12 +828,11 @@ struct Index : public Reference {
 // A standalone function to call to merge a vector of infos into one.
 // This assumes that all infos in the vector are of the same type, and will fail
 // if they are different.
-llvm::Expected<OwnedPtr<Info>> mergeInfos(OwningPtrArray<Info> &Values);
+llvm::Expected<Info *> mergeInfos(SmallVectorImpl<Info *> &Values);
 
 // Merges a single new Info into an existing Reduced Info (allocating it if
 // needed).
-llvm::Error mergeSingleInfo(doc::OwnedPtr<doc::Info> &Reduced,
-                            doc::OwnedPtr<doc::Info> &&NewInfo,
+llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
                             llvm::BumpPtrAllocator &Arena);
 
 struct ClangDocContext {
@@ -845,7 +841,7 @@ struct ClangDocContext {
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
                   clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
-                  bool FTimeTrace = false);
+                  bool FTimeTrace = false, bool Pretty = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -873,6 +869,7 @@ struct ClangDocContext {
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
+  bool Pretty;     // Indicates if JSON is emitted with whitespace.
 };
 
 // Ensure arena allocated types remain safe to allocate in the arena.

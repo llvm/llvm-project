@@ -94,14 +94,14 @@ extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
-extern llvm::cl::opt<std::string> PerfData;
+extern llvm::cl::list<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
 extern llvm::cl::opt<bool> UpdateBranchProtection;
 extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;
