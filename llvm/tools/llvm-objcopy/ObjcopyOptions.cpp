@@ -1148,6 +1148,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
   Config.ExtractMainPartition =
       InputArgs.hasArg(OBJCOPY_extract_main_partition);
   ELFConfig.LocalizeHidden = InputArgs.hasArg(OBJCOPY_localize_hidden);
+  Config.Verbose = InputArgs.hasArg(OBJCOPY_verbose);
   Config.Weaken = InputArgs.hasArg(OBJCOPY_weaken);
   if (auto *Arg =
           InputArgs.getLastArg(OBJCOPY_discard_all, OBJCOPY_discard_locals)) {
@@ -1682,6 +1683,7 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                         STRIP_disable_deterministic_archives, /*default=*/true);
 
   Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
+  Config.Verbose = InputArgs.hasArg(STRIP_verbose);
   Config.InputFormat = FileFormat::Unspecified;
   Config.OutputFormat = FileFormat::Unspecified;
 

@@ -70,7 +70,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
+  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
@@ -261,7 +261,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }

@@ -1,19 +1,19 @@
-// RUN: llvm-mc --triple=riscv32 --mattr=+c,+zcb,+rvy-int-mode --riscv-no-aliases --show-encoding --show-inst < %s \
-// RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-ASM-AND-OBJ %s
-// RUN: llvm-mc --triple=riscv32 --mattr=+c,+zcb,+experimental-y --defsym=RVY=1 --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN: llvm-mc --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+d,+zfh,+rvy-int-mode --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-32,CHECK-INT-ASM-AND-OBJ %s
+// RUN: llvm-mc --triple=riscv32 --mattr=+zca,+zcb,+zcd,+d,+zfh,+experimental-y --defsym=RVY=1 --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-CAP,CHECK-CAP-32,CHECK-CAP-ASM-AND-OBJ %s
-// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+c,+zcb,+rvy-int-mode --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
-// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+c,+zcb,+experimental-y --defsym=RVY=1 --riscv-add-build-attributes < %s \
+// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+d,+zfh,+rvy-int-mode --riscv-add-build-attributes < %s \
+// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-32-OBJ,CHECK-INT-ASM-AND-OBJ
+// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+zca,+zcb,+zcd,+d,+zfh,+experimental-y --defsym=RVY=1 --riscv-add-build-attributes < %s \
 // RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-CAP-ASM-AND-OBJ
 
-// RUN: llvm-mc --triple=riscv64 --mattr=+c,+zcb,+rvy-int-mode --riscv-no-aliases --show-encoding --show-inst < %s \
-// RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-ASM-AND-OBJ %s
-// RUN: llvm-mc --triple=riscv64 --mattr=+c,+zcb,+experimental-y --defsym=RVY=1 --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN: llvm-mc --triple=riscv64 --mattr=+zca,+zcb,+zcd,+d,+zfh,+rvy-int-mode --defsym=RV64=1 --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-64,CHECK-INT-64-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ %s
+// RUN: llvm-mc --triple=riscv64 --mattr=+zca,+zcb,+d,+zfh,+experimental-y --defsym=RVY=1 --defsym=RV64=1 --defsym=RV64_CAP=1 --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-CAP,CHECK-CAP-64,CHECK-CAP-ASM-AND-OBJ %s
-// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+c,+zcb,+rvy-int-mode --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
-// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+c,+zcb,+experimental-y --defsym=RVY=1 --riscv-add-build-attributes < %s \
+// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+zca,+zcb,+zcd,+d,+zfh,+rvy-int-mode --defsym=RV64=1 --riscv-add-build-attributes < %s \
+// RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-64-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
+// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+zca,+zcb,+d,+zfh,+experimental-y --defsym=RVY=1 --defsym=RV64=1 --defsym=RV64_CAP=1 --riscv-add-build-attributes < %s \
 // RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-CAP-ASM-AND-OBJ
 
 c.lbu a0, 1(a1)
@@ -73,11 +73,106 @@ c.sw a0, 16(a1)
 // CHECK-CAP-NEXT: #  <MCOperand Reg:X11_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:16>>
 //
+/// Compressed Floating Point load & store (RV32 and RV64)
+//
+.ifndef RV64
+.ifndef RVY
+c.flw fa5, 0(a0)
+// CHECK-INT-32: c.flw	fa5, 0(a0)
+// CHECK-INT-32-OBJ-NEXT: c.ly	a5, 0(a0)
+// CHECK-INT-32-SAME: # encoding: [0x1c,0x61]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FLW{{$}}
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:X10>
+// CHECK-INT-32-NEXT: #  <MCOperand Imm:0>>
+c.fsw fa5, 0(a0)
+// CHECK-INT-32-NEXT: c.fsw	fa5, 0(a0)
+// CHECK-INT-32-OBJ-NEXT: c.sy	a5, 0(a0)
+// CHECK-INT-32-SAME: # encoding: [0x1c,0xe1]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FSW{{$}}
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:X10>
+// CHECK-INT-32-NEXT: #  <MCOperand Imm:0>>
+c.flwsp fa5, 0(sp)
+// CHECK-INT-32-NEXT: c.flwsp	fa5, 0(sp)
+// CHECK-INT-32-OBJ-NEXT: c.lysp	a5, 0(sp)
+// CHECK-INT-32-SAME: # encoding: [0x82,0x67]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FLWSP{{$}}
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:X2>
+// CHECK-INT-32-NEXT: #  <MCOperand Imm:0>>
+c.fswsp fa5, 0(sp)
+// CHECK-INT-32-NEXT: c.fswsp	fa5, 0(sp)
+// CHECK-INT-32-OBJ-NEXT: c.sysp	a5, 0(sp)
+// CHECK-INT-32-SAME: # encoding: [0x3e,0xe0]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FSWSP{{$}}
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-32-NEXT: #  <MCOperand Reg:X2>
+// CHECK-INT-32-NEXT: #  <MCOperand Imm:0>>
+.endif
+.endif
+
+.ifndef RV64_CAP
+c.fld fa5, 0(a0)
+// CHECK-INT-ASM-AND-OBJ: c.fld	fa5, 0(a0)
+// CHECK-CAP-32: c.fld	fa5, 0(a0)
+// CHECK-INT-SAME: # encoding: [0x1c,0x21]
+// CHECK-CAP-32-SAME: # encoding: [0x1c,0x21]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FLD{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FLD{{$}}
+// CHECK-INT-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-INT-NEXT: #  <MCOperand Imm:0>>
+// CHECK-CAP-32-NEXT: #  <MCOperand Imm:0>>
+c.fsd fa5, 0(a0)
+// CHECK-INT-ASM-AND-OBJ-NEXT: c.fsd	fa5, 0(a0)
+// CHECK-CAP-32-NEXT: c.fsd	fa5, 0(a0)
+// CHECK-INT-SAME: # encoding: [0x1c,0xa1]
+// CHECK-CAP-32-SAME: # encoding: [0x1c,0xa1]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FSD{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FSD{{$}}
+// CHECK-INT-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-INT-NEXT: #  <MCOperand Imm:0>>
+// CHECK-CAP-32-NEXT: #  <MCOperand Imm:0>>
+c.fldsp fa5, 0(sp)
+// CHECK-INT-ASM-AND-OBJ-NEXT: c.fldsp	fa5, 0(sp)
+// CHECK-CAP-32-NEXT: c.fldsp	fa5, 0(sp)
+// CHECK-INT-SAME: # encoding: [0x82,0x27]
+// CHECK-CAP-32-SAME: # encoding: [0x82,0x27]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FLDSP{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FLDSP{{$}}
+// CHECK-INT-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-INT-NEXT: #  <MCOperand Imm:0>>
+// CHECK-CAP-32-NEXT: #  <MCOperand Imm:0>>
+c.fsdsp fa5, 0(sp)
+// CHECK-INT-ASM-AND-OBJ-NEXT: c.fsdsp	fa5, 0(sp)
+// CHECK-CAP-32-NEXT: c.fsdsp	fa5, 0(sp)
+// CHECK-INT-SAME: # encoding: [0x3e,0xa0]
+// CHECK-CAP-32-SAME: # encoding: [0x3e,0xa0]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FSDSP{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FSDSP{{$}}
+// CHECK-INT-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-32-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-INT-NEXT: #  <MCOperand Imm:0>>
+// CHECK-CAP-32-NEXT: #  <MCOperand Imm:0>>
+.endif
+
+//
 /// Compressed Capability load & store (only in RVY mode)
 //
 .ifdef RVY
 c.ly a0, 16(a1)
-// CHECK-CAP-ASM-AND-OBJ-NEXT: c.ly	a0, 16(a1)
+// CHECK-CAP-ASM-AND-OBJ: c.ly	a0, 16(a1)
 // CHECK-CAP-32-SAME: # encoding: [0x88,0x69]
 // CHECK-CAP-64-SAME: # encoding: [0x88,0x29]
 // CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_LY_RV32{{$}}
@@ -187,8 +282,8 @@ sw a0, 16(a1)
 /// Capability load & store
 //
 ly a0, 16(a1)
-// CHECK-CAP-ASM-AND-OBJ-NEXT: c.ly	a0, 16(a1)
-// CHECK-INT-ASM-AND-OBJ-NEXT: ly	a0, 16(a1)
+// CHECK-CAP-ASM-AND-OBJ: c.ly	a0, 16(a1)
+// CHECK-INT-ASM-AND-OBJ: ly	a0, 16(a1)
 // CHECK-INT-SAME: # encoding: [0x7b,0x95,0x05,0x01]
 // CHECK-CAP-32-SAME: # encoding: [0x88,0x69]
 // CHECK-CAP-64-SAME: # encoding: [0x88,0x29]
@@ -216,7 +311,7 @@ sy a0, 16(a1)
 /// Test c.l*sp/c.s*sp compress patters (the *y ones only compress in RVY mode):
 //
 lw a0, 16(sp)
-// CHECK-ASM-AND-OBJ-NEXT: c.lwsp	a0, 16(sp)
+// CHECK-ASM-AND-OBJ: c.lwsp	a0, 16(sp)
 // CHECK-ASM-SAME: # encoding: [0x42,0x45]
 // CHECK-ASM-NEXT: # <MCInst #[[#]] C_LWSP{{$}}
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X10>
@@ -232,8 +327,8 @@ sw a0, 16(sp)
 // CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:16>>
 ly a0, 16(sp)
-// CHECK-INT-ASM-AND-OBJ-NEXT: ly	a0, 16(sp)
-// CHECK-CAP-ASM-AND-OBJ-NEXT: c.lysp	a0, 16(sp)
+// CHECK-INT-ASM-AND-OBJ: ly	a0, 16(sp)
+// CHECK-CAP-ASM-AND-OBJ: c.lysp	a0, 16(sp)
 // CHECK-INT-SAME: # encoding: [0x7b,0x15,0x01,0x01]
 // CHECK-CAP-32-SAME: # encoding: [0x42,0x65]
 // CHECK-CAP-64-SAME: # encoding: [0x42,0x25]
@@ -257,16 +352,125 @@ sy a0, 16(sp)
 // CHECK-INT-NEXT: #  <MCOperand Reg:X2>
 // CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:16>>
-
-// TODO: Test the pseudo expansions using AUIPC:
-// lb a0, sym
-// lbu a0, sym
-// lh a0, sym
-// lhu a0, sym
-// lw a0, sym
-// ly a0, sym
 //
-// sb a0, sym, t0
-// sh a0, sym, t0
-// sw a0, sym, t0
-// sy a0, sym, t0
+/// Memory-relative float compress patterns
+//
+flw fa5, 0(a0)
+// CHECK-INT-32: c.flw	fa5, 0(a0)
+// CHECK-INT-32-OBJ: c.ly	a5, 0(a0)
+// CHECK-CAP-ASM-AND-OBJ: flw	fa5, 0(a0)
+// CHECK-INT-64-ASM-AND-OBJ: flw	fa5, 0(a0)
+// CHECK-INT-32-SAME: # encoding: [0x1c,0x61]
+// CHECK-CAP-SAME: # encoding: [0x87,0x27,0x05,0x00]
+// CHECK-INT-64-SAME: # encoding: [0x87,0x27,0x05,0x00]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FLW{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] FLW{{$}}
+// CHECK-INT-64-NEXT: # <MCInst #[[#]] FLW{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fsw fa5, 0(a0)
+// CHECK-INT-32-NEXT: c.fsw	fa5, 0(a0)
+// CHECK-INT-32-OBJ-NEXT: c.sy	a5, 0(a0)
+// CHECK-CAP-ASM-AND-OBJ-NEXT: fsw	fa5, 0(a0)
+// CHECK-INT-64-ASM-AND-OBJ-NEXT: fsw	fa5, 0(a0)
+// CHECK-INT-32-SAME: # encoding: [0x1c,0xe1]
+// CHECK-CAP-SAME: # encoding: [0x27,0x20,0xf5,0x00]
+// CHECK-INT-64-SAME: # encoding: [0x27,0x20,0xf5,0x00]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FSW{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] FSW{{$}}
+// CHECK-INT-64-NEXT: # <MCInst #[[#]] FSW{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fld fa5, 0(a0)
+// CHECK-INT-ASM-AND-OBJ: c.fld	fa5, 0(a0)
+// CHECK-CAP-32: c.fld	fa5, 0(a0)
+// CHECK-CAP-64: fld	fa5, 0(a0)
+// CHECK-INT-SAME: # encoding: [0x1c,0x21]
+// CHECK-CAP-32-SAME: # encoding: [0x1c,0x21]
+// CHECK-CAP-64-SAME: # encoding: [0x87,0x37,0x05,0x00]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FLD{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FLD{{$}}
+// CHECK-CAP-64-NEXT: # <MCInst #[[#]] FLD{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fsd fa5, 0(a0)
+// CHECK-INT-ASM-AND-OBJ-NEXT: c.fsd	fa5, 0(a0)
+// CHECK-CAP-32-NEXT: c.fsd	fa5, 0(a0)
+// CHECK-CAP-64-NEXT: fsd	fa5, 0(a0)
+// CHECK-INT-SAME: # encoding: [0x1c,0xa1]
+// CHECK-CAP-32-SAME: # encoding: [0x1c,0xa1]
+// CHECK-CAP-64-SAME: # encoding: [0x27,0x30,0xf5,0x00]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FSD{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FSD{{$}}
+// CHECK-CAP-64-NEXT: # <MCInst #[[#]] FSD{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X10>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X10_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+//
+/// Stack-relative float compress patterns
+//
+flw fa5, 0(sp)
+// CHECK-INT-32: c.flwsp	fa5, 0(sp)
+// CHECK-INT-32-OBJ: c.lysp	a5, 0(sp)
+// CHECK-CAP-ASM-AND-OBJ: flw	fa5, 0(sp)
+// CHECK-INT-64-ASM-AND-OBJ: flw	fa5, 0(sp)
+// CHECK-INT-32-SAME: # encoding: [0x82,0x67]
+// CHECK-CAP-SAME: # encoding: [0x87,0x27,0x01,0x00]
+// CHECK-INT-64-SAME: # encoding: [0x87,0x27,0x01,0x00]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FLWSP{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] FLW{{$}}
+// CHECK-INT-64-NEXT: # <MCInst #[[#]] FLW{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fsw fa5, 0(sp)
+// CHECK-INT-32-NEXT: c.fswsp	fa5, 0(sp)
+// CHECK-INT-32-OBJ-NEXT: c.sysp	a5, 0(sp)
+// CHECK-CAP-ASM-AND-OBJ-NEXT: fsw	fa5, 0(sp)
+// CHECK-INT-64-ASM-AND-OBJ-NEXT: fsw	fa5, 0(sp)
+// CHECK-INT-32-SAME: # encoding: [0x3e,0xe0]
+// CHECK-CAP-SAME: # encoding: [0x27,0x20,0xf1,0x00]
+// CHECK-INT-64-SAME: # encoding: [0x27,0x20,0xf1,0x00]
+// CHECK-INT-32-NEXT: # <MCInst #[[#]] C_FSWSP{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] FSW{{$}}
+// CHECK-INT-64-NEXT: # <MCInst #[[#]] FSW{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_F>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fld fa5, 0(sp)
+// CHECK-INT-ASM-AND-OBJ: c.fldsp	fa5, 0(sp)
+// CHECK-CAP-32: c.fldsp	fa5, 0(sp)
+// CHECK-CAP-64: fld	fa5, 0(sp)
+// CHECK-INT-SAME: # encoding: [0x82,0x27]
+// CHECK-CAP-32-SAME: # encoding: [0x82,0x27]
+// CHECK-CAP-64-SAME: # encoding: [0x87,0x37,0x01,0x00]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FLDSP{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FLDSP{{$}}
+// CHECK-CAP-64-NEXT: # <MCInst #[[#]] FLD{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>
+fsd fa5, 0(sp)
+// CHECK-INT-ASM-AND-OBJ-NEXT: c.fsdsp	fa5, 0(sp)
+// CHECK-CAP-32-NEXT: c.fsdsp	fa5, 0(sp)
+// CHECK-CAP-64-NEXT: fsd	fa5, 0(sp)
+// CHECK-INT-SAME: # encoding: [0x3e,0xa0]
+// CHECK-CAP-32-SAME: # encoding: [0x3e,0xa0]
+// CHECK-CAP-64-SAME: # encoding: [0x27,0x30,0xf1,0x00]
+// CHECK-INT-NEXT: # <MCInst #[[#]] C_FSDSP{{$}}
+// CHECK-CAP-32-NEXT: # <MCInst #[[#]] C_FSDSP{{$}}
+// CHECK-CAP-64-NEXT: # <MCInst #[[#]] FSD{{$}}
+// CHECK-ASM-NEXT: #  <MCOperand Reg:F15_D>
+// CHECK-INT-NEXT: #  <MCOperand Reg:X2>
+// CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-ASM-NEXT: #  <MCOperand Imm:0>>

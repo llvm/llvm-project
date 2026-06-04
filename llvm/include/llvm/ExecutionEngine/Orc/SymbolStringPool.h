@@ -333,10 +333,6 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
     return orc::SymbolStringPtr::getEmptyVal();
   }
 
-  static orc::SymbolStringPtr getTombstoneKey() {
-    return orc::SymbolStringPtr::getTombstoneVal();
-  }
-
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<orc::SymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
   }
@@ -351,10 +347,6 @@ template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
 
   static orc::NonOwningSymbolStringPtr getEmptyKey() {
     return orc::NonOwningSymbolStringPtr::getEmptyVal();
-  }
-
-  static orc::NonOwningSymbolStringPtr getTombstoneKey() {
-    return orc::NonOwningSymbolStringPtr::getTombstoneVal();
   }
 
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {

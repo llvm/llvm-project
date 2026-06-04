@@ -896,8 +896,8 @@ cc_binary(
             "utils/TableGen/Basic/*.h",
             "utils/TableGen/Common/*.cpp",
             "utils/TableGen/Common/*.h",
-            "utils/TableGen/Common/GlobalISel/*.cpp",
-            "utils/TableGen/Common/GlobalISel/*.h",
+            "utils/TableGen/Common/GlobalISel/**/*.cpp",
+            "utils/TableGen/Common/GlobalISel/**/*.h",
 
             # Some tablegen sources include headers from MC, so these have to be
             # listed here. MC uses headers produced by tablegen, so it cannot be a
@@ -2104,6 +2104,13 @@ cc_library(
     ],
 )
 
+genrule(
+    name = "instrumentor_variables_gen",
+    srcs = ["include/llvm/Transforms/IPO/InstrumentorRuntimeHelper.h"],
+    outs = ["include/llvm/Transforms/IPO/InstrumentorVariables.inc"],
+    cmd = "printf 'constexpr char InstrumentorRuntimeHelper[] = R\"(' > $@ && cat $(SRCS) >> $@ && echo ')\";' >> $@",
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
@@ -2115,6 +2122,9 @@ cc_library(
         "include/llvm/Transforms/IPO.h",
     ],
     copts = llvm_copts,
+    textual_hdrs = [
+        "include/llvm/Transforms/IPO/InstrumentorVariables.inc",
+    ],
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
@@ -4154,7 +4164,7 @@ cc_library(
 
 cc_library(
     name = "DTLTO",
-    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    srcs = glob(["lib/DTLTO/*.cpp"]),
     hdrs = ["include/llvm/DTLTO/DTLTO.h"],
     copts = llvm_copts,
     deps = [
@@ -5608,6 +5618,7 @@ cc_binary(
         ":BitReader",
         ":CodeGen",
         ":Core",
+        ":DTLTO",
         ":LTO",
         ":Passes",
         ":Plugins",
