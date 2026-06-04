@@ -249,7 +249,10 @@ define i1 @test_align_with_constant_offset_8(ptr %ptr) {
 define i1 @test_align_with_variable_offset(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @test_align_with_variable_offset(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 [[OFFSET:%.*]]) ]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[INTPTR:%.*]] = ptrtoint ptr [[PTR]] to i64
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[INTPTR]], 7
+; CHECK-NEXT:    [[IS_ALIGNED:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    ret i1 [[IS_ALIGNED]]
 ;
   call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 8, i64 %offset)]
   %intptr = ptrtoint ptr %ptr to i64
