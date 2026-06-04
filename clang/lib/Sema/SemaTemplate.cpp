@@ -2247,9 +2247,10 @@ DeclResult Sema::CheckClassTemplate(
     NewTemplate->setModulePrivate();
 
   if (IsMemberSpecialization) {
-    assert(PrevClassTemplate &&
+    assert((PrevClassTemplate || Invalid) &&
            "Member specialization without a primary template?");
-    NewTemplate->setMemberSpecialization();
+    if (PrevClassTemplate)
+      NewTemplate->setMemberSpecialization();
   }
 
   // Set the access specifier.
