@@ -3422,6 +3422,39 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
       if (Value *V = simplifyICmpInst(Pred, Y, Z, Q, MaxRecurse - 1))
         return V;
     }
+
+    // icmp ult/ule (LBase nuw+ CA), (RBase nuw+ CB) --> true
+    // when LBase <=u RBase and CA <=u CB (strict ult also needs CA < CB or
+    // LBase <u RBase).
+    //
+    // nuw on the RHS add gives RBase+CB < 2^n, so CB <= 2^n-1-RBase.
+    // CA <=u CB then forces RBase+CA to also be in range.  From LBase <=u RBase
+    // we get LBase+CA <=u RBase+CA (unsigned, no overflow), and from CA <=u CB
+    // we get RBase+CA <=u RBase+CB.  Combining: LBase+CA <=u RBase+CB.
+    if (LBO && RBO && LBO->getOpcode() == Instruction::Add &&
+        RBO->getOpcode() == Instruction::Add &&
+        (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE) &&
+        Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(LBO)) &&
+        Q.IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(RBO))) {
+      Value *LBase, *RBase;
+      const APInt *CA, *CB;
+      if (match(LBO, m_c_Add(m_Value(LBase), m_APInt(CA))) &&
+          match(RBO, m_c_Add(m_Value(RBase), m_APInt(CB))) && CA->ule(*CB)) {
+        if (Value *IsLE = simplifyICmpInst(ICmpInst::ICMP_ULE, LBase, RBase, Q,
+                                           MaxRecurse - 1)) {
+          if (match(IsLE, m_One())) {
+            Type *CmpTy = getCompareTy(LHS);
+            if (Pred == ICmpInst::ICMP_ULE || CA->ult(*CB))
+              return getTrue(CmpTy);
+            // ult with CA == CB: strict ordering requires LBase <u RBase.
+            if (Value *IsLT = simplifyICmpInst(ICmpInst::ICMP_ULT, LBase, RBase,
+                                               Q, MaxRecurse - 1))
+              if (match(IsLT, m_One()))
+                return getTrue(CmpTy);
+          }
+        }
+      }
+    }
   }
 
   if (LBO)
