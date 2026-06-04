@@ -10,7 +10,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -40,48 +39,30 @@ public:
 
 namespace {
 
-class FakeStatCache : public FileSystemStatCache {
-  llvm::StringMap<llvm::vfs::Status, llvm::BumpPtrAllocator> StatCalls;
-
-public:
-  void InjectFile(StringRef Path, uint64_t File) {
-    StatCalls[Path] = llvm::vfs::Status(
-        Path, llvm::sys::fs::UniqueID(1, File), /*MTime=*/{},
-        /*User=*/0, /*Group=*/0, /*Size=*/0,
-        llvm::sys::fs::file_type::regular_file, llvm::sys::fs::perms::all_all);
-  }
-
-  void InjectDirectory(StringRef Path, uint64_t File) {
-    StatCalls[Path] =
-        llvm::vfs::Status(Path, llvm::sys::fs::UniqueID(1, File), /*MTime=*/{},
-                          /*User=*/0, /*Group=*/0, /*Size=*/0,
-                          llvm::sys::fs::file_type::directory_file,
-                          llvm::sys::fs::perms::all_all);
-  }
-
-  std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
-                          bool isFile, std::unique_ptr<llvm::vfs::File> *F,
-                          llvm::vfs::FileSystem &FS) override {
-    auto It = StatCalls.find(Path);
-    if (It == StatCalls.end())
-      return std::make_error_code(std::errc::no_such_file_or_directory);
-    Status = It->second;
-    return std::error_code();
-  }
-};
-
 // The test fixture.
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-      : FileMgr(FileMgrOpts),
+      : FileMgr(FileMgrOpts, FS),
         Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
+  void AddFile(StringRef Path) {
+    ASSERT_TRUE(FS->addFile(Path, /*ModificationTime=*/0,
+                            llvm::MemoryBuffer::getMemBuffer("x\n")));
+  }
+
+  void AddHardLink(StringRef NewLink, StringRef Target) {
+    ASSERT_TRUE(FS->addHardLink(NewLink, Target));
+  }
+
   FileSystemOptions FileMgrOpts;
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>(
+          /*UseNormalizedPaths=*/false);
   FileManager FileMgr;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
@@ -451,20 +432,15 @@ TEST_F(SourceManagerTest, getLineNumber) {
 
 TEST_F(SourceManagerTest, aliasedFilesKeepRequestedNamesPerFileID) {
 #ifdef _WIN32
-  constexpr StringRef DirPath = "dir";
-  constexpr StringRef FooPath = "dir\\foo.h";
-  constexpr StringRef BarPath = "dir\\bar.h";
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef BarPath = "C:\\dir\\bar.h";
 #else
-  constexpr StringRef DirPath = "dir";
-  constexpr StringRef FooPath = "dir/foo.h";
-  constexpr StringRef BarPath = "dir/bar.h";
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef BarPath = "/dir/bar.h";
 #endif
 
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory(DirPath, 40);
-  StatCache->InjectFile(FooPath, 41);
-  StatCache->InjectFile(BarPath, 41);
-  FileMgr.setStatCache(std::move(StatCache));
+  AddFile(FooPath);
+  AddHardLink(BarPath, FooPath);
 
   auto FooOrErr = FileMgr.getFileRef(FooPath);
   auto BarOrErr = FileMgr.getFileRef(BarPath);
@@ -490,25 +466,17 @@ TEST_F(SourceManagerTest, aliasedFilesKeepRequestedNamesPerFileID) {
   EXPECT_STREQ(BarPath.data(), SourceMgr.getPresumedLoc(BarLoc).getFilename());
 }
 
-TEST_F(SourceManagerTest, equivalentPathSpellingsReuseOriginalFileName) {
+TEST_F(SourceManagerTest, dotPathSpellingsKeepRequestedNamesPerFileID) {
 #ifdef _WIN32
-  constexpr StringRef DirPath = "dir";
-  constexpr StringRef DotDirPath = ".\\dir";
-  constexpr StringRef FooPath = "dir\\foo.h";
-  constexpr StringRef DotFooPath = ".\\dir\\foo.h";
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef DotFooPath = "C:\\.\\dir\\foo.h";
 #else
-  constexpr StringRef DirPath = "dir";
-  constexpr StringRef DotDirPath = "./dir";
-  constexpr StringRef FooPath = "dir/foo.h";
-  constexpr StringRef DotFooPath = "./dir/foo.h";
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef DotFooPath = "/./dir/foo.h";
 #endif
 
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory(DirPath, 40);
-  StatCache->InjectDirectory(DotDirPath, 40);
-  StatCache->InjectFile(FooPath, 41);
-  StatCache->InjectFile(DotFooPath, 41);
-  FileMgr.setStatCache(std::move(StatCache));
+  AddFile(FooPath);
+  AddHardLink(DotFooPath, FooPath);
 
   auto FooOrErr = FileMgr.getFileRef(FooPath);
   auto DotFooOrErr = FileMgr.getFileRef(DotFooPath);
@@ -530,24 +498,59 @@ TEST_F(SourceManagerTest, equivalentPathSpellingsReuseOriginalFileName) {
   SourceLocation DotFooLoc = SourceMgr.getLocForStartOfFile(DotFooID);
 
   EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
-  EXPECT_EQ(FooPath, SourceMgr.getFilename(DotFooLoc));
+  EXPECT_EQ(DotFooPath, SourceMgr.getFilename(DotFooLoc));
   EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
-  EXPECT_STREQ(FooPath.data(),
+  EXPECT_STREQ(DotFooPath.data(),
                SourceMgr.getPresumedLoc(DotFooLoc).getFilename());
-  EXPECT_EQ(FooPath, *SourceMgr.getNonBuiltinFilenameForID(DotFooID));
+  EXPECT_EQ(DotFooPath, *SourceMgr.getNonBuiltinFilenameForID(DotFooID));
+}
+
+TEST_F(SourceManagerTest, dotDotPathSpellingsKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef BPath = "C:\\a\\b\\..\\c.h";
+  constexpr StringRef XPath = "C:\\a\\x\\..\\c.h";
+#else
+  constexpr StringRef BPath = "/a/b/../c.h";
+  constexpr StringRef XPath = "/a/x/../c.h";
+#endif
+
+  AddFile(BPath);
+  AddHardLink(XPath, BPath);
+
+  auto BOrErr = FileMgr.getFileRef(BPath);
+  auto XOrErr = FileMgr.getFileRef(XPath);
+  ASSERT_TRUE(static_cast<bool>(BOrErr));
+  ASSERT_TRUE(static_cast<bool>(XOrErr));
+
+  FileEntryRef B = *BOrErr;
+  FileEntryRef X = *XOrErr;
+  EXPECT_FALSE(B.isSameRef(X));
+  EXPECT_EQ(B, X);
+
+  SourceMgr.overrideFileContents(B, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID BID = SourceMgr.createFileID(B, SourceLocation(), SrcMgr::C_User);
+  FileID XID = SourceMgr.createFileID(X, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation BLoc = SourceMgr.getLocForStartOfFile(BID);
+  SourceLocation XLoc = SourceMgr.getLocForStartOfFile(XID);
+
+  EXPECT_EQ(BPath, SourceMgr.getFilename(BLoc));
+  EXPECT_EQ(XPath, SourceMgr.getFilename(XLoc));
+  EXPECT_STREQ(BPath.data(), SourceMgr.getPresumedLoc(BLoc).getFilename());
+  EXPECT_STREQ(XPath.data(), SourceMgr.getPresumedLoc(XLoc).getFilename());
+  EXPECT_EQ(XPath, *SourceMgr.getNonBuiltinFilenameForID(XID));
 }
 
 #ifdef _WIN32
-TEST_F(SourceManagerTest, windowsEquivalentPathSpellingsReuseOriginalFileName) {
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory("dir", 40);
-  StatCache->InjectDirectory(".\\DIR", 40);
-  StatCache->InjectFile("dir/foo.h", 41);
-  StatCache->InjectFile(".\\DIR\\foo.h", 41);
-  FileMgr.setStatCache(std::move(StatCache));
+TEST_F(SourceManagerTest, windowsSeparatorSpellingsReuseOriginalFileName) {
+  constexpr StringRef FooPath = "C:/dir/foo.h";
+  constexpr StringRef WinFooPath = "C:\\dir\\foo.h";
 
-  auto FooOrErr = FileMgr.getFileRef("dir/foo.h");
-  auto WinFooOrErr = FileMgr.getFileRef(".\\DIR\\foo.h");
+  AddFile(FooPath);
+
+  auto FooOrErr = FileMgr.getFileRef(FooPath);
+  auto WinFooOrErr = FileMgr.getFileRef(WinFooPath);
   ASSERT_TRUE(static_cast<bool>(FooOrErr));
   ASSERT_TRUE(static_cast<bool>(WinFooOrErr));
 
@@ -565,11 +568,12 @@ TEST_F(SourceManagerTest, windowsEquivalentPathSpellingsReuseOriginalFileName) {
   SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
   SourceLocation WinFooLoc = SourceMgr.getLocForStartOfFile(WinFooID);
 
-  EXPECT_EQ("dir/foo.h", SourceMgr.getFilename(FooLoc));
-  EXPECT_EQ("dir/foo.h", SourceMgr.getFilename(WinFooLoc));
-  EXPECT_STREQ("dir/foo.h", SourceMgr.getPresumedLoc(FooLoc).getFilename());
-  EXPECT_STREQ("dir/foo.h", SourceMgr.getPresumedLoc(WinFooLoc).getFilename());
-  EXPECT_EQ("dir/foo.h", *SourceMgr.getNonBuiltinFilenameForID(WinFooID));
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(WinFooLoc));
+  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ(FooPath.data(),
+               SourceMgr.getPresumedLoc(WinFooLoc).getFilename());
+  EXPECT_EQ(FooPath, *SourceMgr.getNonBuiltinFilenameForID(WinFooID));
 }
 #endif
 
