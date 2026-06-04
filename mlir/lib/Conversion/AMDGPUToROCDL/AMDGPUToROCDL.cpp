@@ -491,6 +491,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bit 0: GLC = 0 (atomics drop value, less coherency)
     // bits 1-2: SLC, DLC = 0 (similarly)
     // bit 3: swizzled (0 for raw)
+    // Note: atomic ret/no-ret bit set by backend based on actual usage.
     args.push_back(createI32Constant(rewriter, loc, 0));
 
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
@@ -2167,8 +2168,9 @@ struct TransposeLoadOpLowering
   LogicalResult
   matchAndRewrite(TransposeLoadOp op, TransposeLoadOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (chipset != kGfx950)
-      return op.emitOpError("Non-gfx950 chipset not supported");
+    if (chipset != kGfx950 && chipset < kGfx1250)
+      return op.emitOpError(
+          "transpose_load is only supported on gfx950 and gfx1250+");
 
     Location loc = op.getLoc();
     auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
@@ -2191,43 +2193,104 @@ struct TransposeLoadOpLowering
     size_t elementTypeSize =
         resultType.getElementType().getIntOrFloatBitWidth();
 
-    // ROCDL transpose load intrinsics return vectors of 32-bit integers, if
-    // the element size is smaller than 16 bits.
-    Type rocdlResultType = VectorType::get((numElements * elementTypeSize) / 32,
-                                           rewriter.getIntegerType(32));
     Type llvmResultType = typeConverter->convertType(resultType);
+    // ROCDL transpose load intrinsics return vectors of 32-bit integers for
+    // sub-16-bit element types, and otherwise return the converted result type.
+    Type rocdlResultType =
+        elementTypeSize < 16
+            ? VectorType::get((numElements * elementTypeSize) / 32,
+                              rewriter.getIntegerType(32))
+            : llvmResultType;
 
-    switch (elementTypeSize) {
-    case 4: {
-      assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
-      break;
+    auto emitNumElementsError = [&](size_t expected, StringRef chipsetName) {
+      return op.emitOpError()
+             << elementTypeSize << "-bit transpose_load requires " << expected
+             << " elements on " << chipsetName;
+    };
+
+    Value intrinsic;
+    if (chipset >= kGfx1250) {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr4_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr6_B96::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic =
+            ROCDL::DsLoadTr8_B64::create(rewriter, loc, rocdlResultType, srcPtr)
+                .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx1250+");
+        intrinsic = ROCDL::DsLoadTr16_B128::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
+    } else {
+      switch (elementTypeSize) {
+      case 4: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 6: {
+        if (numElements != 16)
+          return emitNumElementsError(16, "gfx950");
+        intrinsic = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 8: {
+        if (numElements != 8)
+          return emitNumElementsError(8, "gfx950");
+        intrinsic = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
+                                                   rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      case 16: {
+        if (numElements != 4)
+          return emitNumElementsError(4, "gfx950");
+        intrinsic = ROCDL::ds_read_tr16_b64::create(rewriter, loc,
+                                                    rocdlResultType, srcPtr)
+                        .getResult();
+        break;
+      }
+      default:
+        return op.emitOpError("Unsupported element size for transpose load");
+      }
     }
-    case 6: {
-      assert(numElements == 16);
-      auto rocdlOp = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
-      break;
+
+    assert(intrinsic && "expected ROCDL transpose load intrinsic");
+    if (intrinsic.getType() == llvmResultType) {
+      rewriter.replaceOp(op, intrinsic);
+      return success();
     }
-    case 8: {
-      assert(numElements == 8);
-      auto rocdlOp = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
-                                                    rocdlResultType, srcPtr);
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
-      break;
-    }
-    case 16: {
-      assert(numElements == 4);
-      rewriter.replaceOpWithNewOp<ROCDL::ds_read_tr16_b64>(op, llvmResultType,
-                                                           srcPtr);
-      break;
-    }
-    default:
-      return op.emitOpError("Unsupported element size for transpose load");
-    }
+    rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, intrinsic);
     return success();
   }
 };
@@ -3221,6 +3284,51 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       Value vdstNew =
           LLVM::SelectOp::create(rewriter, loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
+    }
+
+    Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+struct AMDGPUPermlaneVarLowering
+    : public ConvertOpToLLVMPattern<PermlaneVarOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  AMDGPUPermlaneVarLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<PermlaneVarOp>(converter), chipset(chipset) {}
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(PermlaneVarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1200)
+      return op->emitOpError("permlane_var is only supported on GFX12+");
+
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+    Value src = adaptor.getSrc();
+    Value selector = adaptor.getSelector();
+    bool cross = op.getCross();
+    bool fi = op.getFetchInactive();
+    bool boundCtrl = op.getBoundCtrl();
+
+    SmallVector<Value> decomposed;
+    if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed)))
+      return rewriter.notifyMatchFailure(op,
+                                         "failed to decompose value to i32");
+
+    SmallVector<Value> permuted;
+    for (Value v : decomposed) {
+      Value res;
+      if (cross)
+        res = ROCDL::PermlaneX16VarOp::create(rewriter, loc, i32, v, v,
+                                              selector, fi, boundCtrl);
+      else
+        res = ROCDL::Permlane16VarOp::create(rewriter, loc, i32, v, v, selector,
+                                             fi, boundCtrl);
+      permuted.emplace_back(res);
     }
 
     Value result = LLVM::composeValue(rewriter, loc, permuted, src.getType());
@@ -4407,6 +4515,10 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
         }
         llvm_unreachable("unknown address space enum value");
       });
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return LLVM::LLVMPointerType::get(
+        type.getContext(), ROCDL::ROCDLDialect::kSharedMemoryAddressSpace);
+  });
 }
 
 void mlir::populateAMDGPUTypeAndAttributeConversions(
@@ -4493,7 +4605,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
            GlobalTransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           AMDGPUPermlaneVarLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

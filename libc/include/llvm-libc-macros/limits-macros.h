@@ -261,4 +261,11 @@
 #define IOV_MAX 1024
 #endif // IOV_MAX
 
+#ifndef SSIZE_MAX
+#ifdef __PTRDIFF_MAX__
+/// The maximum value that can be stored in an object of type ssize_t.
+#define SSIZE_MAX __PTRDIFF_MAX__
+#endif
+#endif
+
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

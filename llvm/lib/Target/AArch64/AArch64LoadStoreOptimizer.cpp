@@ -65,6 +65,8 @@ STATISTIC(NumFailedAlignmentCheck, "Number of load/store pair transformation "
                                    "not passed the alignment check");
 STATISTIC(NumConstOffsetFolded,
           "Number of const offset of index address folded");
+STATISTIC(NumUMOVFoldedToFPRStore,
+          "Number of UMOV + GPR stores folded to FPR stores");
 
 DEBUG_COUNTER(RegRenamingCounter, DEBUG_TYPE "-reg-renaming",
               "Controls which pairs are considered for renaming");
@@ -82,6 +84,11 @@ static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
 // when we form index address load/store instructions.
 static cl::opt<unsigned> LdStConstLimit("aarch64-load-store-const-scan-limit",
                                         cl::init(10), cl::Hidden);
+
+// The UMOVFoldLimit limits how far back we scan from a GPR store to find a
+// UMOV that can be folded into a direct FPR store.
+static cl::opt<unsigned> UMOVFoldLimit("aarch64-umov-fold-scan-limit",
+                                       cl::init(16), cl::Hidden);
 
 // Enable register renaming to find additional store pairing opportunities.
 static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
@@ -218,6 +225,9 @@ struct AArch64LoadStoreOpt {
 
   // Find and merge an index ldr/st instruction into a base ld/st instruction.
   bool tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI, int Scale);
+
+  // Replace a UMOV (lane 0) + GPR store with a direct FPR sub-register store.
+  bool tryToReplaceUMOVStore(MachineBasicBlock::iterator &MBBI);
 
   bool optimizeBlock(MachineBasicBlock &MBB, bool EnableNarrowZeroStOpt);
 
@@ -2923,6 +2933,16 @@ bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
   MachineBasicBlock::iterator E = MI.getParent()->end();
   MachineBasicBlock::iterator Update;
 
+  // Do not form post-inc addressing mode for volatile accesses. Instructions
+  // performing register writeback do not set a valid instruction syndrome,
+  // making it impossible to handle MMIO in protected hypervisors.
+  // Exclude accesses based on the stack pointer, as these can't be MMIO.
+  // Also exclude MTE tag store instructions.
+  if (MBBI->hasOrderedMemoryRef() &&
+      AArch64InstrInfo::getLdStBaseOp(MI).getReg() != AArch64::SP &&
+      !isTagStore(MI) && MI.getOpcode() != AArch64::STGPi)
+    return false;
+
   // Look forward to try to form a post-index instruction. For example,
   // ldr x0, [x20]
   // add x20, x20, #32
@@ -3012,12 +3032,157 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
   return false;
 }
 
+// Map a GPR store opcode to its FPR equivalent at the same data width.
+// Returns 0 if no mapping exists.
+static unsigned getGPRToFPRStoreOpcode(unsigned GPRStoreOpc) {
+  switch (GPRStoreOpc) {
+  // Unsigned immediate.
+  case AArch64::STRBBui:
+    return AArch64::STRBui;
+  case AArch64::STRHHui:
+    return AArch64::STRHui;
+  case AArch64::STRWui:
+    return AArch64::STRSui;
+  case AArch64::STRXui:
+    return AArch64::STRDui;
+  // Unscaled immediate.
+  case AArch64::STURBBi:
+    return AArch64::STURBi;
+  case AArch64::STURHHi:
+    return AArch64::STURHi;
+  case AArch64::STURWi:
+    return AArch64::STURSi;
+  case AArch64::STURXi:
+    return AArch64::STURDi;
+  // Register offset.
+  case AArch64::STRBBroW:
+    return AArch64::STRBroW;
+  case AArch64::STRBBroX:
+    return AArch64::STRBroX;
+  case AArch64::STRHHroW:
+    return AArch64::STRHroW;
+  case AArch64::STRHHroX:
+    return AArch64::STRHroX;
+  case AArch64::STRWroW:
+    return AArch64::STRSroW;
+  case AArch64::STRWroX:
+    return AArch64::STRSroX;
+  case AArch64::STRXroW:
+    return AArch64::STRDroW;
+  case AArch64::STRXroX:
+    return AArch64::STRDroX;
+  default:
+    return 0;
+  }
+}
+
+// Given a UMOV-lane-0 opcode, return the sub-register index to extract from
+// the vector register, or 0 if the opcode is not a supported UMOV.
+static unsigned getUMOVSubRegIdx(unsigned UMOVOpc) {
+  switch (UMOVOpc) {
+  case AArch64::UMOVvi8_idx0:
+    return AArch64::bsub;
+  case AArch64::UMOVvi16_idx0:
+    return AArch64::hsub;
+  case AArch64::UMOVvi32_idx0:
+    return AArch64::ssub;
+  case AArch64::UMOVvi64_idx0:
+    return AArch64::dsub;
+  default:
+    return 0;
+  }
+}
+
+bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
+    MachineBasicBlock::iterator &MBBI) {
+  MachineInstr &StoreMI = *MBBI;
+
+  unsigned FPRStoreOpc = getGPRToFPRStoreOpcode(StoreMI.getOpcode());
+  if (!FPRStoreOpc)
+    return false;
+
+  if (StoreMI.hasOrderedMemoryRef())
+    return false;
+
+  MachineBasicBlock *MBB = StoreMI.getParent();
+  MCPhysReg StoreValReg = StoreMI.getOperand(0).getReg();
+
+  if (!StoreMI.getOperand(0).isKill())
+    return false;
+
+  // Bail out if the store uses the value register elsewhere (e.g., as the base
+  // address in `str w8, [x8, #0]`).
+  for (unsigned I = 1, E = StoreMI.getNumExplicitOperands(); I < E; ++I)
+    if (StoreMI.getOperand(I).isReg() &&
+        TRI->regsOverlap(StoreMI.getOperand(I).getReg(), StoreValReg))
+      return false;
+
+  // Scan backward to find the UMOV that defines the store's value register.
+  MachineInstr *UMOVMI = nullptr;
+  MachineBasicBlock::iterator B = MBB->begin();
+  unsigned SubRegIdx = 0;
+  unsigned Count = 0;
+  for (auto It = MBBI; It != B;) {
+    MachineInstr &MI = *--It;
+    if (MI.isDebugInstr())
+      continue;
+    if (++Count > UMOVFoldLimit)
+      return false;
+    if (MI.readsRegister(StoreValReg, TRI))
+      return false;
+    if (MI.modifiesRegister(StoreValReg, TRI)) {
+      SubRegIdx = getUMOVSubRegIdx(MI.getOpcode());
+      if (!SubRegIdx)
+        return false;
+      UMOVMI = &MI;
+      break;
+    }
+  }
+  if (!UMOVMI)
+    return false;
+  MCPhysReg VecReg = UMOVMI->getOperand(1).getReg();
+
+  // Check that no instruction between UMOV and store clobbers the vector
+  // register.  Also track whether VecReg is killed anywhere from the UMOV
+  // (inclusive) through the intervening instructions -- we need this to decide
+  // whether the FPR sub-register can be marked killed on the new store.
+  bool VecRegKilled = UMOVMI->killsRegister(VecReg, TRI);
+  for (auto It = std::next(UMOVMI->getIterator()); It != MBBI; ++It) {
+    if (It->modifiesRegister(VecReg, TRI))
+      return false;
+    if (!VecRegKilled && It->killsRegister(VecReg, TRI))
+      VecRegKilled = true;
+  }
+
+  // Safe to proceed. Clear kill flags on the vector register between UMOV and
+  // the new store so the FPR sub-register stays live.
+  UMOVMI->clearRegisterKills(VecReg, TRI);
+  for (auto It = std::next(UMOVMI->getIterator()); It != MBBI; ++It)
+    It->clearRegisterKills(VecReg, TRI);
+
+  LLVM_DEBUG(dbgs() << "Folding UMOV + store: " << *UMOVMI << "  + "
+                    << StoreMI);
+
+  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
+  auto MIB = BuildMI(*MBB, MBBI, StoreMI.getDebugLoc(), TII->get(FPRStoreOpc))
+                 .addReg(FPRReg, getKillRegState(VecRegKilled));
+  for (unsigned I = 1, E = StoreMI.getNumExplicitOperands(); I < E; ++I)
+    MIB.add(StoreMI.getOperand(I));
+  MIB.setMemRefs(StoreMI.memoperands());
+
+  MBBI = MBB->erase(MBBI);
+  UMOVMI->eraseFromParent();
+
+  ++NumUMOVFoldedToFPRStore;
+  return true;
+}
+
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
   bool Modified = false;
-  // Four transformations to do here:
+  // Six transformations to do here:
   // 1) Find loads that directly read from stores and promote them by
   //    replacing with mov instructions. If the store is wider than the load,
   //    the load will be replaced with a bitfield extract.
@@ -3109,6 +3274,20 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
        MBBI != E;) {
     int Scale;
     if (isMergeableIndexLdSt(*MBBI, Scale) && tryToMergeIndexLdSt(MBBI, Scale))
+      Modified = true;
+    else
+      ++MBBI;
+  }
+
+  // 6) Replace UMOV (lane 0) + GPR store with a direct FPR sub-register store.
+  //      e.g.,
+  //        umov w8, v0.h[0]
+  //        strh w8, [x0]
+  //        ; becomes
+  //        str h0, [x0]
+  for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+       MBBI != E;) {
+    if (tryToReplaceUMOVStore(MBBI))
       Modified = true;
     else
       ++MBBI;

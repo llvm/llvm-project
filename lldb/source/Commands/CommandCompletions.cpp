@@ -335,7 +335,7 @@ void CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
   SourceFileCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -549,7 +549,7 @@ void CommandCompletions::Modules(CommandInterpreter &interpreter,
   ModuleCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -581,7 +581,7 @@ void CommandCompletions::Symbols(CommandInterpreter &interpreter,
   SymbolCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -652,7 +652,7 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
 void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
                                      CompletionRequest &request,
                                      SearchFilter *searcher) {
-  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  lldb::TargetSP target = interpreter.GetSelectedTarget();
   if (!target)
     return;
 
@@ -683,7 +683,7 @@ void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
 void CommandCompletions::BreakpointNames(CommandInterpreter &interpreter,
                                          CompletionRequest &request,
                                          SearchFilter *searcher) {
-  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  lldb::TargetSP target = interpreter.GetSelectedTarget();
   if (!target)
     return;
 

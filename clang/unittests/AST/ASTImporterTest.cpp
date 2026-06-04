@@ -527,11 +527,13 @@ TEST_P(ImportExpr, ImportInitListExpr) {
              "                        [0].x = 1.0 }; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
              functionDecl(hasDescendant(initListExpr(
+                 unless(isImplicit()),
                  has(cxxConstructExpr(requiresZeroInitialization())),
                  has(initListExpr(
-                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
+                     isImplicit(), hasType(asString("point")),
+                     has(floatLiteral(equals(1.0))),
                      has(implicitValueInitExpr(hasType(asString("double")))))),
-                 has(initListExpr(hasType(asString("point")),
+                 has(initListExpr(isImplicit(), hasType(asString("point")),
                                   has(floatLiteral(equals(2.0))),
                                   has(floatLiteral(equals(1.0)))))))));
 }
@@ -5287,11 +5289,13 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX03);
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU,
       functionDecl(hasName("f"), isExplicitTemplateSpecialization()));
-  ASSERT_EQ(FromD->getTemplateParameterLists().size(), 1u);
+  ASSERT_EQ(FromD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 
   auto *ToD = Import(FromD, Lang_CXX03);
   // The template parameter list should exist.
-  EXPECT_EQ(ToD->getTemplateParameterLists().size(), 1u);
+  ASSERT_EQ(ToD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 }
 
 const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>

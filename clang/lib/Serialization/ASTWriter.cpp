@@ -246,30 +246,17 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   }
 
   // Handle textually-included headers that belong to other modules.
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Modular header, handled in the above module-based loop.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Non-modular header not included locally is not affecting.
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
-
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
-
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
-
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Modular header, handled in the above module-based loop.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Non-modular header not included locally is not affecting.
-
-    for (const auto &KH : HS.findResolvedModulesForHeader(*File))
-      if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
-  }
+        for (const auto &KH : HS.findResolvedModulesForHeader(File))
+          if (const Module *M = KH.getModule())
+            CollectModuleMapsForHierarchy(M, AR_TextualHeader);
+      });
 
   // FIXME: This algorithm is not correct for module map hierarchies where
   // module map file defining a (sub)module of a top-level module X includes
@@ -1570,7 +1557,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1604,9 +1591,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(M.Signature ? 0 : M.Size);
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
 
+        Record.push_back(M.FileName.getRawKind());
+
         llvm::append_range(Blob, M.Signature);
 
-        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -2251,46 +2239,36 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Header file info is tracked by the owning module file.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Header file info is tracked by the including module file.
 
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
+        // Massage the file path into an appropriate form.
+        StringRef Filename = File.getName();
+        SmallString<128> FilenameTmp(Filename);
+        if (PreparePathForOutput(FilenameTmp)) {
+          // If we performed any translation on the file name at all, we need to
+          // save this string, since the generator will refer to it later.
+          Filename = StringRef(strdup(FilenameTmp.c_str()));
+          SavedStrings.push_back(Filename.data());
+        }
 
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
+        bool Included = HFI.IsLocallyIncluded || PP->alreadyIncluded(File);
 
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Header file info is tracked by the including module file.
-
-    // Massage the file path into an appropriate form.
-    StringRef Filename = File->getName();
-    SmallString<128> FilenameTmp(Filename);
-    if (PreparePathForOutput(FilenameTmp)) {
-      // If we performed any translation on the file name at all, we need to
-      // save this string, since the generator will refer to it later.
-      Filename = StringRef(strdup(FilenameTmp.c_str()));
-      SavedStrings.push_back(Filename.data());
-    }
-
-    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
-
-    HeaderFileInfoTrait::key_type Key = {
-        Filename, File->getSize(),
-        getTimestampForOutput(File->getModificationTime())};
-    HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
-    };
-    Generator.insert(Key, Data, GeneratorTrait);
-    ++NumHeaderSearchEntries;
-  }
+        HeaderFileInfoTrait::key_type Key = {
+            Filename, File.getSize(),
+            getTimestampForOutput(File.getModificationTime())};
+        HeaderFileInfoTrait::data_type Data = {
+            HFI,
+            Included,
+            HS.getModuleMap().findResolvedModulesForHeader(File),
+            {}};
+        Generator.insert(Key, Data, GeneratorTrait);
+        ++NumHeaderSearchEntries;
+      });
 
   // Create the on-disk hash table in a buffer.
   SmallString<4096> TableData;

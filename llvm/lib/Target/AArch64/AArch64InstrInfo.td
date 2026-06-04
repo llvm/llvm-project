@@ -522,11 +522,7 @@ def SDT_AArch64vshiftinsert : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<3>,
                                                  SDTCisSameAs<0,1>,
                                                  SDTCisSameAs<0,2>]>;
 
-def SDT_AArch64unvec : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
-def SDT_AArch64fcmpz : SDTypeProfile<1, 1, []>;
 def SDT_AArch64fcmp  : SDTypeProfile<1, 2, [SDTCisSameAs<1,2>]>;
-def SDT_AArch64binvec : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                                           SDTCisSameAs<0,2>]>;
 def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<0,3>]>;
@@ -535,9 +531,6 @@ def SDT_AArch64PREFETCH : SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>]
 def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrTy<1>, SDTCisVT<2, i64>]>;
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
-
-def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
-                                                 SDTCisPtrTy<1>]>;
 
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
@@ -1408,6 +1401,15 @@ def PROBED_STACKALLOC_DYN : Pseudo<(outs),
 
 } // Defs = [SP, NZCV], Uses = [SP] in
 } // hasSideEffects = 1, isCodeGenOnly = 1
+
+// Read of an allocatable register by name (e.g. the MSVC __getReg/__getRegFp
+// intrinsics, lowered from llvm.read[_volatile]_register).
+let hasSideEffects = 1, mayLoad = 1, Size = 4, isCodeGenOnly = 1 in {
+def READ_REGISTER_GPR64 : Pseudo<(outs GPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+def READ_REGISTER_FPR64 : Pseudo<(outs FPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+}
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat
@@ -2895,9 +2897,9 @@ def : Pat<(i64 (mul (ineg GPR64:$Rn), GPR64:$Rm)),
 } // AddedComplexity = 5
 
 let AddedComplexity = 5 in {
-def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add, sext>;
+def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add_like, sext>;
 def SMSUBLrrr : WideMulAccum<1, 0b001, "smsubl", sub, sext>;
-def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add, zext>;
+def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add_like, zext>;
 def UMSUBLrrr : WideMulAccum<1, 0b101, "umsubl", sub, zext>;
 
 def : Pat<(i64 (mul (sext_inreg GPR64:$Rn, i32), (sext_inreg GPR64:$Rm, i32))),
@@ -2934,11 +2936,11 @@ def : Pat<(i64 (ineg (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)))),
           (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), XZR)>;
 
-def : Pat<(i64 (add (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
           (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
           (UMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
+def : Pat<(i64 (add_like (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
                     GPR64:$Ra)),
           (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
@@ -2957,9 +2959,9 @@ def : Pat<(i64 (smullwithsignbits GPR64:$Rn, GPR64:$Rm)),
 def : Pat<(i64 (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm))),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (smullwithsignbits GPR64:$Rn, GPR64:$Rm))),
@@ -2977,9 +2979,9 @@ def : Pat<(i64 (mul top32Zero:$Rn, top32Zero:$Rm)),
 def : Pat<(i64 (mul top32Zero:$Rn, (zext GPR32:$Rm))),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (mul top32Zero:$Rn, top32Zero:$Rm))),
@@ -5560,6 +5562,13 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(bf16 (fabs (bf16 FPR16:$Rn))),
+            (bf16 (FABSHr (bf16 FPR16:$Rn)))>;
+  def : Pat<(bf16 (fneg (bf16 FPR16:$Rn))),
+            (bf16 (FNEGHr (bf16 FPR16:$Rn)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5987,6 +5996,17 @@ def : InstAlias<"mvn{ $Vd.8b, $Vn.8b|.8b $Vd, $Vn}",
                 (NOTv8i8 V64:$Vd, V64:$Vn)>;
 def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
+}
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v4bf16 (fabs (v4bf16 V64:$Rn))),
+            (v4bf16 (FABSv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fabs (v8bf16 V128:$Rn))),
+            (v8bf16 (FABSv8f16 (v8bf16 V128:$Rn)))>;
+  def : Pat<(v4bf16 (fneg (v4bf16 V64:$Rn))),
+            (v4bf16 (FNEGv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fneg (v8bf16 V128:$Rn))),
+            (v8bf16 (FNEGv8f16 (v8bf16 V128:$Rn)))>;
 }
 
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
@@ -6675,6 +6695,9 @@ defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
 defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
+
+def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),
+          (i32 (UQXTNv1i32 FPR64:$Rn))>;
 
 // ssub_sat(0, R) -> sqneg(R)
 def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),

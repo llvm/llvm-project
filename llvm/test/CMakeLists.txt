@@ -251,6 +251,10 @@ if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   list(APPEND LLVM_TEST_DEPENDS spirv-link)
 endif()
 
+if(LLVM_IR2VEC_TEST_PYTHON_BINDINGS)
+  list(APPEND LLVM_TEST_DEPENDS ir2vec)
+endif()
+
 add_custom_target(llvm-test-depends DEPENDS ${LLVM_TEST_DEPENDS} UnitTests)
 set_target_properties(llvm-test-depends PROPERTIES FOLDER "LLVM/Tests")
 

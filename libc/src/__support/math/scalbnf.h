@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float scalbnf(float x, int n) {
+LIBC_INLINE constexpr float scalbnf(float x, int n) {
   return fputil::ldexp(x, n);
 }
 

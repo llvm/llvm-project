@@ -201,6 +201,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
+    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
+    cl::desc("Limit number of blocks a define in a threaded block is allowed "
+             "to be live in"));
+
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 } // end namespace llvm
@@ -3439,8 +3444,27 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   return true;
 }
 
+using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
+
+// Return false if number of blocks searched is too much.
+static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
+                         BlocksSet &ReachesNonLocalUses) {
+  if (BB == DefBB)
+    return true;
+  if (!ReachesNonLocalUses.insert(BB).second)
+    return true;
+
+  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
+    return false;
+  for (BasicBlock *Pred : predecessors(BB))
+    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
+      return false;
+  return true;
+}
+
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               BlocksSet &NonLocalUseBlocks) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3460,12 +3484,16 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
         return false; // Don't clone large BB's.
     }
 
-    // We can only support instructions that do not define values that are
-    // live outside of the current basic block.
+    // Record blocks with non-local uses of values defined in the current basic
+    // block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      if (UI->getParent() != BB || isa<PHINode>(UI))
-        return false;
+      BasicBlock *UsedInBB = UI->getParent();
+      if (UsedInBB == BB) {
+        if (isa<PHINode>(UI))
+          return false;
+      } else
+        NonLocalUseBlocks.insert(UsedInBB);
     }
 
     // Looks ok, continue checking.
@@ -3524,18 +3552,37 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and values defined in the block are
-  // not used outside of it.
-  if (!blockIsSimpleEnoughToThreadThrough(BB))
+  // Check that the block is small enough and record which non-local blocks use
+  // values defined in the block.
+
+  BlocksSet NonLocalUseBlocks;
+  BlocksSet ReachesNonLocalUseBlocks;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
     return false;
 
+  // Jump-threading can only be done to destinations where no values defined
+  // in BB are live.
+
+  // Quickly check if both destinations have uses.  If so, jump-threading cannot
+  // be done.
+  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
+      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
+    return false;
+
+  // Search backward from NonLocalUseBlocks to find which blocks
+  // reach non-local uses.
+  for (BasicBlock *UseBB : NonLocalUseBlocks)
+    // Give up if too many blocks are searched.
+    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
+      return false;
+
   for (const auto &Pair : KnownValues) {
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
@@ -3543,6 +3590,10 @@ foldCondBranchOnValueKnownInPredecessorImpl(CondBrInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
+      continue;
+
+    // Only revector to RealDest if no values defined in BB are live.
+    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({
@@ -4273,6 +4324,8 @@ static bool mergeConditionalStoreToAddress(
 
   // Now check the stores are compatible.
   if (!QStore->isUnordered() || !PStore->isUnordered() ||
+      PStore->getOrdering() != QStore->getOrdering() ||
+      PStore->getSyncScopeID() != QStore->getSyncScopeID() ||
       PStore->getValueOperand()->getType() !=
           QStore->getValueOperand()->getType())
     return false;
@@ -4424,6 +4477,9 @@ static bool mergeConditionalStoreToAddress(
   // stores executes.  And we don't know it's safe to take the alignment from a
   // store that doesn't execute.
   SI->setAlignment(std::min(PStore->getAlign(), QStore->getAlign()));
+
+  if (QStore->isAtomic())
+    SI->setAtomic(QStore->getOrdering(), QStore->getSyncScopeID());
 
   QStore->eraseFromParent();
   PStore->eraseFromParent();
@@ -7037,11 +7093,12 @@ bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
 
-static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
+static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange, bool OptSize) {
   // 40% is the default density for building a jump table in optsize/minsize
-  // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
-  // function was based on.
-  const uint64_t MinDensity = 40;
+  // mode, 10% is the default density for jump tables. See also
+  // TargetLoweringBase::isSuitableForJumpTable(), which this function was based
+  // on.
+  const uint64_t MinDensity = OptSize ? 40 : 10;
 
   if (CaseRange >= UINT64_MAX / 100)
     return false; // Avoid multiplication overflows below.
@@ -7049,17 +7106,18 @@ static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   return NumCases * 100 >= CaseRange * MinDensity;
 }
 
-static bool isSwitchDense(ArrayRef<int64_t> Values) {
+static bool isSwitchDense(ArrayRef<int64_t> Values, bool OptSize) {
   uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
   uint64_t Range = Diff + 1;
   if (Range < Diff)
     return false; // Overflow.
 
-  return isSwitchDense(Values.size(), Range);
+  return isSwitchDense(Values.size(), Range, OptSize);
 }
 
 static std::optional<unsigned>
-getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base) {
+getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base,
+                                  bool OptSize) {
   assert(Values.size() > 1 && "expected multiple switch cases");
   if (!llvm::all_of(Values, [Base](int64_t V) { return V >= Base; }))
     return std::nullopt;
@@ -7086,7 +7144,7 @@ getDenseSwitchRangeReductionShift(ArrayRef<int64_t> Values, int64_t Base) {
     for (auto &V : ReducedValues)
       V = (int64_t)((uint64_t)V >> Shift);
 
-  if (!isSwitchDense(ReducedValues))
+  if (!isSwitchDense(ReducedValues, OptSize))
     return std::nullopt;
 
   return Shift;
@@ -7130,7 +7188,8 @@ static bool shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
   if (HasIllegalType)
     return false;
 
-  return isSwitchDense(SI->getNumCases(), TableSize);
+  return isSwitchDense(SI->getNumCases(), TableSize,
+                       SI->getFunction()->hasOptSize());
 }
 
 static bool shouldUseSwitchConditionAsTableIndex(
@@ -7613,7 +7672,8 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   llvm::sort(Values);
 
   // If the switch is already dense, there's nothing useful to do here.
-  if (isSwitchDense(Values))
+  bool OptSize = SI->getFunction()->hasOptSize();
+  if (isSwitchDense(Values, OptSize))
     return false;
 
   // Find a Base and corresponding Shift that results in a dense switch range.
@@ -7623,10 +7683,10 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // Prefer Base=0 when the case values are still dense after shifting out their
   // common low zero bits without subtracting a base. This avoids creating an
   // unnecessary `(condition - local_min)` expression.
-  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0)))
+  if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0, OptSize)))
     Base = 0;
   else if (Base != 0)
-    Shift = getDenseSwitchRangeReductionShift(Values, Base);
+    Shift = getDenseSwitchRangeReductionShift(Values, Base, OptSize);
 
   if (!Shift)
     return false;
@@ -7783,8 +7843,10 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
 
   // isSwichDense requires case values to be sorted.
   llvm::sort(Values);
-  if (!isSwitchDense(Values.size(), llvm::countr_zero(Values.back()) -
-                                        llvm::countr_zero(Values.front()) + 1))
+  if (!isSwitchDense(Values.size(),
+                     llvm::countr_zero(Values.back()) -
+                         llvm::countr_zero(Values.front()) + 1,
+                     SI->getFunction()->hasOptSize()))
     // Transform is unable to generate dense switch.
     return false;
 
@@ -8025,10 +8087,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   static const EqualBBWrapper *getEmptyKey() {
     return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
   }
-  static const EqualBBWrapper *getTombstoneKey() {
-    return static_cast<EqualBBWrapper *>(
-        DenseMapInfo<void *>::getTombstoneKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8049,8 +8107,7 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
     auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
-    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
+    if (LHS == EKey || RHS == EKey)
       return LHS == RHS;
 
     BasicBlock *A = LHS->BB;

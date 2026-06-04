@@ -1,0 +1,56 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s
+
+! Under -gpu=mem:unified, a device-attributed dummy that carries
+! !dir$ ignore_tkr(m) opts out of the relaxation that lets an
+! unattributed host actual bind to a device dummy. Such dummies act
+! purely as overload discriminators -- the (m) indicates they should
+! only be selected when the actual has an explicit
+! device/managed/unified attribute. When the same generic also has a
+! plain host-typed specific, that host specific must therefore be
+! selected for an unattributed host actual.
+!
+! For comparison, a device specific without ignore_tkr(m) still wins
+! over a host specific for an unattributed host actual under
+! -gpu=mem:unified (this is what cuf14.cuf already covers, and is
+! reproduced here for contrast).
+
+module m
+  interface gen_pair
+    module procedure sub_host
+    module procedure sub_device_ignore_m
+  end interface
+
+  interface gen_pair_no_ignore
+    module procedure sub_host
+    module procedure sub_device_plain
+  end interface
+
+contains
+  subroutine sub_host(x)
+    real :: x
+  end subroutine
+
+  subroutine sub_device_ignore_m(x)
+    real, device :: x
+    !dir$ ignore_tkr(m) x
+  end subroutine
+
+  subroutine sub_device_plain(x)
+    real, device :: x
+  end subroutine
+end module
+
+subroutine caller
+  use m
+  real :: a, b
+  ! ignore_tkr(m) on sub_device_ignore_m's dummy opts that specific
+  ! out of accepting an unattributed host actual -> sub_host wins.
+  call gen_pair(a)
+  ! No ignore_tkr(m); the device specific accepts the host actual and
+  ! is preferred over the host specific (this case is unchanged).
+  call gen_pair_no_ignore(b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPcaller
+! CHECK: fir.call @_QMmPsub_host
+! CHECK: fir.call @_QMmPsub_device_plain
