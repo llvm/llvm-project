@@ -491,40 +491,6 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // BinaryOp creation helpers
-  //===--------------------------------------------------------------------===//
-  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::SubOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::AddOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::MulOp::create(*this, loc, lhs, rhs);
-  }
-  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::DivOp::create(*this, loc, lhs, rhs);
-  }
-
-  //===--------------------------------------------------------------------===//
   // CastOp creation helpers
   //===--------------------------------------------------------------------===//
 
