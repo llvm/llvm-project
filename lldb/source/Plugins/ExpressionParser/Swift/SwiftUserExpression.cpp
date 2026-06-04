@@ -743,12 +743,14 @@ SwiftUserExpression::GetTextAndSetExpressionParser(
 /// This supports casting expressions users may try when wanting the object
 /// represented by a raw address.
 static std::optional<std::string> ApplyLLDBCastFixIts(StringRef expr_text) {
-  static llvm::Regex cast_regex("(0[xX][0-9a-fA-F]{4,})"
-                                "[[:space:]]+"
-                                "as[?!]?[[:space:]]+"
-                                "([[:alpha:]_][[:alnum:]_.]*)");
+  static llvm::Regex cast_regex(
+      "(^|[^[:alnum:]_])"      // capture 1: boundary preceeding address
+      "(0[xX][0-9a-fA-F]{4,})" // capture 2: address
+      "[[:space:]]+"
+      "as[?!]?[[:space:]]+"
+      "([[:alpha:]_][[:alnum:]_.]*)"); // capture 3: class name
 
-  llvm::SmallVector<StringRef, 3> matches;
+  llvm::SmallVector<StringRef, 4> matches;
   if (!cast_regex.match(expr_text, &matches))
     return std::nullopt;
 
@@ -756,12 +758,13 @@ static std::optional<std::string> ApplyLLDBCastFixIts(StringRef expr_text) {
       "Int",     "Int8",    "Int16",   "Int32",  "Int64",  "UInt",
       "UInt8",   "UInt16",  "UInt32",  "UInt64", "Float",  "Float16",
       "Float32", "Float64", "Float80", "Double", "CGFloat"};
-  StringRef type_name = matches[2];
+  StringRef type_name = matches[3];
   if (llvm::is_contained(swift_numeric_type_names, type_name))
     // Don't rewrite valid casts such as `0xABCDEF as UInt32`
     return std::nullopt;
 
-  return cast_regex.sub("unsafeBitCast(\\1, to: \\2.self)", expr_text);
+  // The substitution must preserve the boundary character (capture group 1).
+  return cast_regex.sub("\\1unsafeBitCast(\\2, to: \\3.self)", expr_text);
 }
 
 /// If `sc` represents a "closure-like" function according to `lang`, and
