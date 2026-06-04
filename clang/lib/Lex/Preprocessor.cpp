@@ -828,6 +828,9 @@ bool Preprocessor::HandleDollarIdentifier(Token &Identifier) {
                                    CurLexer->isLexingRawMode())))
     return true;
 
+  if (Identifier.isAnnotation())
+    return true;
+
   IdentifierInfo *II = Identifier.getIdentifierInfo();
 
   // Emit error for $identifiers in configurations that do not allow them to
