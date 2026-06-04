@@ -976,6 +976,16 @@ void xegpu::cleanupUnrealizedConversionCasts(
   //                                     to vector<16xf32>
   // becomes:
   //   %2 = vector.shape_cast %0 : vector<16x1xf32> to vector<16xf32>
+  //
+  // For unpaired casts that emulate a pack (1:N) or unpack (N:1) between a
+  // single large VectorType and N identically-typed smaller VectorTypes,
+  // lower to vector.extract_strided_slice / vector.insert_strided_slice.
+  auto hasIdenticalVectorTypes = [](ValueRange values) {
+    auto types = values.getTypes();
+    return !types.empty() && llvm::all_of(types, [&](Type type) {
+      return isa<VectorType>(type) && type == types.front();
+    });
+  };
   OpBuilder builder(root);
   root->walk([&](UnrealizedConversionCastOp op) {
     if (existingCasts.contains(op))
@@ -1002,6 +1012,17 @@ void xegpu::cleanupUnrealizedConversionCasts(
         } else {
           op.replaceAllUsesWith(ValueRange{orig});
         }
+        return;
+      }
+      // Unpaired N:1 cast emulating unpack: stitch inputs into the output
+      // shape via vector.insert_strided_slice.
+      auto outputTy = dyn_cast<VectorType>(op.getResult(0).getType());
+      if (op.getNumOperands() > 1 && outputTy &&
+          hasIdenticalVectorTypes(op.getInputs())) {
+        builder.setInsertionPoint(op);
+        Value result = xegpu::createVectorWithShapeFromValues(
+            builder, op.getLoc(), op.getInputs(), outputTy.getShape());
+        op->replaceAllUsesWith(ValueRange(result));
       }
       return;
     }
@@ -1015,6 +1036,16 @@ void xegpu::cleanupUnrealizedConversionCasts(
           llvm::equal(ValueRange(defOp.getInputs()).getTypes(),
                       op->getResultTypes())) {
         op.replaceAllUsesWith(defOp.getInputs());
+        return;
+      }
+      // Unpaired 1:N cast emulating pack: split the input into the output
+      // tile shape via vector.extract_strided_slice.
+      auto tileTy = dyn_cast<VectorType>(op.getResult(0).getType());
+      if (tileTy && hasIdenticalVectorTypes(op.getResults())) {
+        builder.setInsertionPoint(op);
+        SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+            builder, op.getLoc(), op.getInputs()[0], tileTy.getShape());
+        op->replaceAllUsesWith(results);
       }
       return;
     }

@@ -262,9 +262,12 @@ void addVectorTypeConversion(TypeConverter &converter,
                              DenseMap<Value, SmallVector<Type>> loopArgTypes);
 
 /// Cleans up UnrealizedConversionCastOps inserted during SCF structural type
-/// conversion. Folds cancelling N:1->1:N and 1:N->N:1 cast chains (inserting
-/// vector.shape_cast when shapes differ but element counts match), and
-/// erases dead casts. Casts in `existingCasts` are preserved.
+/// conversion and/or XeGPU unrolling. Folds cancelling N:1->1:N and 1:N->N:1
+/// cast chains (inserting vector.shape_cast when shapes differ but element
+/// counts match). Unpaired pack (1:N) and unpack (N:1) casts between a single
+/// large VectorType and N identically-typed smaller VectorTypes are lowered
+/// to vector.extract_strided_slice / vector.insert_strided_slice. Dead casts
+/// are erased. Casts in `existingCasts` are preserved.
 void cleanupUnrealizedConversionCasts(
     Operation *root,
     const llvm::SmallSetVector<UnrealizedConversionCastOp, 8> &existingCasts);
