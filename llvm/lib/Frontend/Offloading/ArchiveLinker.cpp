@@ -226,7 +226,7 @@ resolveArchiveMembers(const Inputs &In,
       break;
     }
     default:
-      return createStringError("Unsupported file type");
+      return createStringError("Unsupported file type: '" + *Filename + "'");
     }
   }
 

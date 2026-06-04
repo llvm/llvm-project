@@ -208,6 +208,16 @@ getInput(const ArgList &Args) {
                     ? offloading::InputDesc::KindTy::Library
                     : offloading::InputDesc::KindTy::File;
     Desc.WholeArchive = WholeArchive;
+
+    // Validate positional file inputs exist before passing to resolveArchiveMembers
+    // (which silently skips non-existent paths)
+    if (Desc.Kind == offloading::InputDesc::KindTy::File) {
+      if (!sys::fs::exists(Desc.Value))
+        return createStringError("input file not found: '" + Desc.Value + "'");
+      if (sys::fs::is_directory(Desc.Value))
+        return createStringError("'" + Desc.Value + "': Is a directory");
+    }
+
     InputDescs.push_back(Desc);
   }
 
@@ -284,6 +294,12 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
   Linker L(*LinkerOutput);
 
   for (const auto &Buffer : InputBuffers) {
+    // Check file type before attempting to parse as bitcode
+    file_magic Magic = identify_magic(Buffer->getBuffer());
+    if (Magic != file_magic::bitcode)
+      return createStringError("Unsupported file type: '" +
+                               Buffer->getBufferIdentifier() + "'");
+
     auto ModOrErr = parseBitcodeFile(Buffer->getMemBufferRef(), C);
     if (!ModOrErr)
       return ModOrErr.takeError();

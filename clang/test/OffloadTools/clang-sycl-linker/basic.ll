@@ -20,6 +20,10 @@
 ; RUN: not clang-sycl-linker -o %t.out 2>&1 | FileCheck %s --check-prefix=NO-INPUT
 ; NO-INPUT: No input files provided
 ;
+; Test non-existent input file
+; RUN: not clang-sycl-linker %t-missing.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=MISSING
+; MISSING: input file not found: '{{.*}}-missing.bc'
+;
 ; Test the dry run of a simple case to link two input files.
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
@@ -69,7 +73,7 @@
 ; RUN: touch %t/dummy.o
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=FILETYPEERROR
-; FILETYPEERROR: Unsupported file type
+; FILETYPEERROR: Unsupported file type: '{{.*}}dummy.o'
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs -l device -l nonexistent -o a.spv 2>&1 \
