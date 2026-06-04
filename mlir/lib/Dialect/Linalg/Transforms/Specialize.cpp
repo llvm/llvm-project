@@ -480,7 +480,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   // Only contractions that can be represented by named linalg ops are
   // eligible for specialization:
   //   - mul + add    (floating-point, integer, complex)
-  //   - and + or     (i1)
+  //   - and + or     (bool)
   if (!mlir::linalg::detail::isContractionBody(*genericOp.getBlock(),
                                                isSupportedContractionPair))
     return failure();
