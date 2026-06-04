@@ -3568,10 +3568,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           }
 
           if (NewC.has_value()) {
-            Value *NewOp = Builder.CreateBinOp(
+            Value *NewOp = Builder.CreateExactBinOp(
                 static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
-                ConstantInt::get(V->getType(), *NewC));
-            cast<BinaryOperator>(NewOp)->setIsExact();
+                ConstantInt::get(V->getType(), *NewC), /*IsExact=*/true);
             return GetElementPtrInst::Create(Builder.getInt8Ty(),
                                              GEP.getPointerOperand(), NewOp,
                                              GEP.getNoWrapFlags());
