@@ -227,7 +227,7 @@ end
 * The `ISO_C_BINDING` module exports the named
   constants `c_float128` and `c_float128_complex` (both with the value 16),
   the kind parameter for 128-bit (quad precision) real and complex C
-  interoperable types. These are not defined by the Fortran standard.
+  interoperable types. These extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement
