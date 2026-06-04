@@ -511,9 +511,7 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
 
   LLT t = MRI.getType(dst);
   bool IsSupportedTy = t == LLT::scalar(32) ||
-                       (t == LLT::scalar(16) && STI.hasMin3Max3_16()) ||
-                       (t.isVector() && t.getScalarSizeInBits() == 32);
-
+                       (t == LLT::scalar(16) && STI.hasMin3Max3_16());
   if (!IsSupportedTy)
     return false;
 
