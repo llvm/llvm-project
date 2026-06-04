@@ -13,6 +13,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
@@ -49,6 +50,24 @@ static bool isParenthesized(const Fortran::evaluate::Expr<T> &expr) {
     return Fortran::common::visit(
         [&](const auto &x) { return isParenthesized(x); }, expr.u);
   }
+}
+
+/// Return true if \p expr references the intrinsic function PRESENT. Used to
+/// recognize the `PRESENT(x) .AND. <expr using x>` (and `.OR.`) guard idiom so
+/// the guarded operand can be lowered with short-circuit semantics, avoiding an
+/// unconditional descriptor read on an argument that is only known to be
+/// present once the presence test is true.
+template <typename A>
+static bool exprReferencesPresent(const A &expr) {
+  struct PresentFinder : public Fortran::evaluate::AnyTraverse<PresentFinder> {
+    PresentFinder() : Fortran::evaluate::AnyTraverse<PresentFinder>(*this) {}
+    using Fortran::evaluate::AnyTraverse<PresentFinder>::operator();
+    bool
+    operator()(const Fortran::evaluate::SpecificIntrinsic &intrinsic) const {
+      return intrinsic.name == "present";
+    }
+  } finder;
+  return finder(expr);
 }
 
 /// Lower Designators to HLFIR.
@@ -1697,12 +1716,74 @@ private:
     return hlfir::EntityWithAttributes{elemental};
   }
 
+  /// Lower a scalar `.AND.`/`.OR.` with short-circuit semantics: the right
+  /// operand is evaluated inside an `fir.if` so that, for `.AND.`, it only runs
+  /// when the left operand is true (and for `.OR.`, only when it is false).
+  /// This is used for the `PRESENT(x) .AND. <expr using x>` guard idiom, so the
+  /// descriptor read in the right operand is not emitted on a path where the
+  /// optional argument may be absent. Fortran does not mandate short-circuit
+  /// evaluation, but the standard permits not evaluating an operand whose value
+  /// is not needed (F2023 10.1.7).
+  template <typename D, typename R, typename LO, typename RO>
+  hlfir::EntityWithAttributes
+  genShortCircuitLogicalOp(const Fortran::evaluate::Operation<D, R, LO, RO> &op,
+                           Fortran::evaluate::LogicalOperator logicalOp) {
+    fir::FirOpBuilder &builder = getBuilder();
+    mlir::Location loc = getLoc();
+    mlir::Type resultType = Fortran::lower::getFIRType(
+        builder.getContext(), R::category, R::kind, /*params=*/{});
+
+    hlfir::Entity left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
+    mlir::Value cond = builder.createConvert(loc, builder.getI1Type(), left);
+
+    auto genRhs = [&]() {
+      hlfir::Entity right =
+          hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
+      fir::ResultOp::create(builder, loc,
+                            builder.createConvert(loc, resultType, right));
+    };
+    auto genConst = [&](bool value) {
+      fir::ResultOp::create(
+          builder, loc,
+          builder.createConvert(loc, resultType,
+                                builder.createBool(loc, value)));
+    };
+
+    // .AND.: left true  -> result is rhs, left false -> result is .false.
+    // .OR. : left true  -> result is .true., left false -> result is rhs.
+    const bool isAnd = logicalOp == Fortran::evaluate::LogicalOperator::And;
+    mlir::Value result = isAnd ? builder
+                                     .genIfOp(loc, {resultType}, cond,
+                                              /*withElseRegion=*/true)
+                                     .genThen([&]() { genRhs(); })
+                                     .genElse([&]() { genConst(false); })
+                                     .getResults()[0]
+                               : builder
+                                     .genIfOp(loc, {resultType}, cond,
+                                              /*withElseRegion=*/true)
+                                     .genThen([&]() { genConst(true); })
+                                     .genElse([&]() { genRhs(); })
+                                     .getResults()[0];
+    return hlfir::EntityWithAttributes{result};
+  }
+
   template <typename D, typename R, typename LO, typename RO>
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::Operation<D, R, LO, RO> &op) {
     auto &builder = getBuilder();
     mlir::Location loc = getLoc();
     const int rank = op.Rank();
+    if constexpr (R::category == Fortran::common::TypeCategory::Logical &&
+                  std::is_same_v<
+                      D, Fortran::evaluate::LogicalOperation<R::kind>>) {
+      const Fortran::evaluate::LogicalOperator logicalOp =
+          op.derived().logicalOperator;
+      if (rank == 0 &&
+          (logicalOp == Fortran::evaluate::LogicalOperator::And ||
+           logicalOp == Fortran::evaluate::LogicalOperator::Or) &&
+          exprReferencesPresent(op.left()))
+        return genShortCircuitLogicalOp(op, logicalOp);
+    }
     BinaryOp<D> binaryOp;
     auto left = hlfir::loadTrivialScalar(loc, builder, gen(op.left()));
     auto right = hlfir::loadTrivialScalar(loc, builder, gen(op.right()));
