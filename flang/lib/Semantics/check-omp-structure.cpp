@@ -4284,7 +4284,7 @@ void OmpStructureChecker::CheckVarIsNotPartOfAnotherVar(
     if (IsStructureComponent(*symbol)) {
       kind = "A structure component";
     } else if (IsSubstring(object, &context_)) {
-      kind = "A substrincg";
+      kind = "A substring";
     } else if (IsArrayElement(object, &context_)) {
       kind = "An array element";
     }
