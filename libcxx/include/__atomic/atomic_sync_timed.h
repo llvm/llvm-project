@@ -54,7 +54,7 @@ struct __atomic_wait_timed_backoff_impl {
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
   using __value_type _LIBCPP_NODEBUG      = typename __waitable_traits::__value_type;
 
-  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
+  __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = const_cast<const void*>(
           static_cast<const volatile void*>(__waitable_traits::__atomic_contention_address(__a_)));
@@ -90,7 +90,7 @@ struct __atomic_wait_timed_backoff_impl {
 // `false`, it must set the argument to its current understanding of the atomic
 // value. The predicate function must not return `false` spuriously.
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
-_LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
+bool __atomic_wait_unless_with_timeout(
     const _AtomicWaitable& __a,
     memory_order __order,
     _Poll&& __poll,
@@ -113,7 +113,7 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
 #  elif _LIBCPP_HAS_THREADS // _LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_NEW_SYNC
 
 template <class _AtomicWaitable, class _Poll, class _Rep, class _Period>
-_LIBCPP_HIDE_FROM_ABI bool __atomic_wait_unless_with_timeout(
+bool __atomic_wait_unless_with_timeout(
     const _AtomicWaitable& __a,
     memory_order __order,
     _Poll&& __poll,

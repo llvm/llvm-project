@@ -31,7 +31,7 @@ template <class _AlgPolicy,
           class _InIter,
           class _OutIter,
           __enable_if_t<__has_random_access_iterator_category<_InIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
   return std::__copy(__first, __first + __n, std::move(__result));
 }
@@ -40,7 +40,7 @@ template <class _AlgPolicy,
           class _InIter,
           class _OutIter,
           __enable_if_t<!__has_random_access_iterator_category<_InIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
   while (__n != 0) {
     *__result = *__first;
@@ -59,8 +59,7 @@ template <class _InputIterator,
           class _Size,
           class _OutputIterator,
           __enable_if_t<__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
   if (__converted > 0) {
@@ -79,8 +78,7 @@ template <class _InputIterator,
           class _Size,
           class _OutputIterator,
           __enable_if_t<!__has_exactly_input_iterator_category<_InputIterator>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
-copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
   return std::__copy_n<_ClassicAlgPolicy>(__first, __iterator_difference_type<_InputIterator>(__converted), __result)

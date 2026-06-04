@@ -41,12 +41,12 @@ private:
 public:
   using result_type = invoke_result_t<_Gen&>;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto min() { return __remove_cvref_t<_Gen>::min(); }
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto max() { return __remove_cvref_t<_Gen>::max(); }
+  static constexpr auto min() { return __remove_cvref_t<_Gen>::min(); }
+  static constexpr auto max() { return __remove_cvref_t<_Gen>::max(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit _ClassicGenAdaptor(_Gen& __g) : __gen_(__g) {}
+  constexpr explicit _ClassicGenAdaptor(_Gen& __g) : __gen_(__g) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()() const { return __gen_(); }
+  constexpr auto operator()() const { return __gen_(); }
 };
 
 _LIBCPP_END_NAMESPACE_STD

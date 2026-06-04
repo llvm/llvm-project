@@ -32,8 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct __none_of {
   template <class _Iter, class _Sent, class _Proj, class _Pred>
-  _LIBCPP_HIDE_FROM_ABI constexpr static bool
-  __none_of_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+  constexpr static bool __none_of_impl(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
     for (; __first != __last; ++__first) {
       if (std::invoke(__pred, std::invoke(__proj, *__first)))
         return false;
@@ -45,16 +44,14 @@ struct __none_of {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
+  [[nodiscard]] constexpr bool operator()(_Iter __first, _Sent __last, _Pred __pred = {}, _Proj __proj = {}) const {
     return __none_of_impl(std::move(__first), std::move(__last), __pred, __proj);
   }
 
   template <input_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
+  [[nodiscard]] constexpr bool operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
     return __none_of_impl(ranges::begin(__range), ranges::end(__range), __pred, __proj);
   }
 };

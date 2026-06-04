@@ -47,8 +47,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // generic implementation
 template <class _Iter, class _Sent, class _Tp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__find_generic(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __find_generic(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_if(
       std::move(__first),
       std::move(__last),
@@ -57,14 +56,13 @@ __find_generic(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
 }
 
 template <class _Iter, class _Sent, class _Tp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
-__find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter __find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
   return std::__find_generic(std::move(__first), std::move(__last), __value, __proj);
 }
 
 #if _LIBCPP_VECTORIZE_ALGORITHMS
 template <class _Tp, class _Up>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]]
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, _Up __value) {
   if (!__libcpp_is_constant_evaluated()) {
     constexpr size_t __unroll_count = 4;
@@ -120,7 +118,7 @@ template <class _Tp,
           class _Up,
           class _Proj,
           __enable_if_t<__is_identity<_Proj>::value && __is_trivially_equality_comparable_v<_Tp, _Up>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
   if constexpr (sizeof(_Tp) == 1) {
     if (auto __ret = std::__constexpr_memchr(__first, __value, __last - __first))
       return __ret;
@@ -154,8 +152,7 @@ template <class _Tp,
                             is_integral<_Tp>::value && is_integral<_Up>::value &&
                             is_signed<_Tp>::value == is_signed<_Up>::value,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp*
-__find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
   if (__value < numeric_limits<_Tp>::min() || __value > numeric_limits<_Tp>::max())
     return __last;
   return std::__find(__first, __last, _Tp(__value), __proj);
@@ -163,7 +160,7 @@ __find(_Tp* __first, _Tp* __last, const _Up& __value, _Proj& __proj) {
 
 // __bit_iterator implementation
 template <bool _ToFind, class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
 __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_type_traits<_Cp>::size_type __n) {
   using _It            = __bit_iterator<_Cp, _IsConst>;
   using __storage_type = typename _It::__storage_type;
@@ -199,7 +196,7 @@ __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_ty
 }
 
 template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
 __find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (static_cast<bool>(__value))
     return std::__find_bool<true>(
@@ -214,7 +211,7 @@ template <class _SegmentedIterator,
           class _Tp,
           class _Proj,
           __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
 __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value, _Proj& __proj) {
   using __local_iterator = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
   return std::__find_segment_if(
@@ -226,7 +223,7 @@ __find(_SegmentedIterator __first, _SegmentedIterator __last, const _Tp& __value
 
 // public API
 template <class _InputIterator, class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__rewrap_iter(

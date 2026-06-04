@@ -23,59 +23,53 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 enum class byte : unsigned char {};
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte operator|(byte __lhs, byte __rhs) noexcept {
+inline constexpr byte operator|(byte __lhs, byte __rhs) noexcept {
   return static_cast<byte>(
       static_cast<unsigned char>(static_cast<unsigned int>(__lhs) | static_cast<unsigned int>(__rhs)));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept {
-  return __lhs = __lhs | __rhs;
-}
+inline constexpr byte& operator|=(byte& __lhs, byte __rhs) noexcept { return __lhs = __lhs | __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte operator&(byte __lhs, byte __rhs) noexcept {
+inline constexpr byte operator&(byte __lhs, byte __rhs) noexcept {
   return static_cast<byte>(
       static_cast<unsigned char>(static_cast<unsigned int>(__lhs) & static_cast<unsigned int>(__rhs)));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept {
-  return __lhs = __lhs & __rhs;
-}
+inline constexpr byte& operator&=(byte& __lhs, byte __rhs) noexcept { return __lhs = __lhs & __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte operator^(byte __lhs, byte __rhs) noexcept {
+inline constexpr byte operator^(byte __lhs, byte __rhs) noexcept {
   return static_cast<byte>(
       static_cast<unsigned char>(static_cast<unsigned int>(__lhs) ^ static_cast<unsigned int>(__rhs)));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept {
-  return __lhs = __lhs ^ __rhs;
-}
+inline constexpr byte& operator^=(byte& __lhs, byte __rhs) noexcept { return __lhs = __lhs ^ __rhs; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr byte operator~(byte __b) noexcept {
+inline constexpr byte operator~(byte __b) noexcept {
   return static_cast<byte>(static_cast<unsigned char>(~static_cast<unsigned int>(__b)));
 }
 
 template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr byte& operator<<=(byte& __lhs, _Integer __shift) noexcept {
+constexpr byte& operator<<=(byte& __lhs, _Integer __shift) noexcept {
   return __lhs = __lhs << __shift;
 }
 
 template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr byte operator<<(byte __lhs, _Integer __shift) noexcept {
+constexpr byte operator<<(byte __lhs, _Integer __shift) noexcept {
   return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) << __shift));
 }
 
 template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr byte& operator>>=(byte& __lhs, _Integer __shift) noexcept {
+constexpr byte& operator>>=(byte& __lhs, _Integer __shift) noexcept {
   return __lhs = __lhs >> __shift;
 }
 
 template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr byte operator>>(byte __lhs, _Integer __shift) noexcept {
+constexpr byte operator>>(byte __lhs, _Integer __shift) noexcept {
   return static_cast<byte>(static_cast<unsigned char>(static_cast<unsigned int>(__lhs) >> __shift));
 }
 
 template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Integer to_integer(byte __b) noexcept {
+[[nodiscard]] constexpr _Integer to_integer(byte __b) noexcept {
   return static_cast<_Integer>(__b);
 }
 

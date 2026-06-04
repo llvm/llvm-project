@@ -34,8 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Iter, class _Sent, class _Proj, class _Comp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Iter
-__is_sorted_until_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+constexpr _Iter __is_sorted_until_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
   if (__first == __last)
     return __first;
   auto __i = __first;
@@ -52,15 +51,14 @@ struct __is_sorted_until {
             sentinel_for<_Iter> _Sent,
             class _Proj                                               = identity,
             indirect_strict_weak_order<projected<_Iter, _Proj>> _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter
-  operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
+  [[nodiscard]] constexpr _Iter operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     return ranges::__is_sorted_until_impl(std::move(__first), std::move(__last), __comp, __proj);
   }
 
   template <forward_range _Range,
             class _Proj                                                            = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range>
+  [[nodiscard]] constexpr borrowed_iterator_t<_Range>
   operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
     return ranges::__is_sorted_until_impl(ranges::begin(__range), ranges::end(__range), __comp, __proj);
   }

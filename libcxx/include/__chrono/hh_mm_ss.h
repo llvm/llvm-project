@@ -32,45 +32,45 @@ private:
   static_assert(__is_duration_v<_Duration>, "template parameter of hh_mm_ss must be a std::chrono::duration");
   using __CommonType _LIBCPP_NODEBUG = common_type_t<_Duration, chrono::seconds>;
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr uint64_t __pow10(unsigned __exp) {
+  static constexpr uint64_t __pow10(unsigned __exp) {
     uint64_t __ret = 1;
     for (unsigned __i = 0; __i < __exp; ++__i)
       __ret *= 10U;
     return __ret;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned __width(uint64_t __n, uint64_t __d = 10, unsigned __w = 0) {
+  static constexpr unsigned __width(uint64_t __n, uint64_t __d = 10, unsigned __w = 0) {
     if (__n >= 2 && __d != 0 && __w < 19)
       return 1 + __width(__n, __d % __n * 10, __w + 1);
     return 0;
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI static unsigned constexpr fractional_width =
+  static unsigned constexpr fractional_width =
       __width(__CommonType::period::den) < 19 ? __width(__CommonType::period::den) : 6u;
   using precision = duration<typename __CommonType::rep, ratio<1, __pow10(fractional_width)>>;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr hh_mm_ss() noexcept : hh_mm_ss{_Duration::zero()} {}
+  constexpr hh_mm_ss() noexcept : hh_mm_ss{_Duration::zero()} {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit hh_mm_ss(_Duration __d) noexcept
+  constexpr explicit hh_mm_ss(_Duration __d) noexcept
       : __is_neg_(__d < _Duration(0)),
         __h_(chrono::duration_cast<chrono::hours>(chrono::abs(__d))),
         __m_(chrono::duration_cast<chrono::minutes>(chrono::abs(__d) - hours())),
         __s_(chrono::duration_cast<chrono::seconds>(chrono::abs(__d) - hours() - minutes())),
         __f_(chrono::duration_cast<precision>(chrono::abs(__d) - hours() - minutes() - seconds())) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative() const noexcept { return __is_neg_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours() const noexcept { return __h_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes minutes() const noexcept { return __m_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds seconds() const noexcept { return __s_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr precision subseconds() const noexcept { return __f_; }
+  [[nodiscard]] constexpr bool is_negative() const noexcept { return __is_neg_; }
+  [[nodiscard]] constexpr chrono::hours hours() const noexcept { return __h_; }
+  [[nodiscard]] constexpr chrono::minutes minutes() const noexcept { return __m_; }
+  [[nodiscard]] constexpr chrono::seconds seconds() const noexcept { return __s_; }
+  [[nodiscard]] constexpr precision subseconds() const noexcept { return __f_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr precision to_duration() const noexcept {
+  [[nodiscard]] constexpr precision to_duration() const noexcept {
     auto __dur = __h_ + __m_ + __s_ + __f_;
     return __is_neg_ ? -__dur : __dur;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit operator precision() const noexcept { return to_duration(); }
+  constexpr explicit operator precision() const noexcept { return to_duration(); }
 
 private:
   bool __is_neg_;
@@ -81,14 +81,10 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_am(const hours& __h) noexcept {
-  return __h >= hours(0) && __h < hours(12);
-}
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_pm(const hours& __h) noexcept {
-  return __h >= hours(12) && __h < hours(24);
-}
+[[nodiscard]] inline constexpr bool is_am(const hours& __h) noexcept { return __h >= hours(0) && __h < hours(12); }
+[[nodiscard]] inline constexpr bool is_pm(const hours& __h) noexcept { return __h >= hours(12) && __h < hours(24); }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr hours make12(const hours& __h) noexcept {
+[[nodiscard]] inline constexpr hours make12(const hours& __h) noexcept {
   if (__h == hours(0))
     return hours(12);
   else if (__h <= hours(12))
@@ -97,7 +93,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
     return __h - hours(12);
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr hours make24(const hours& __h, bool __is_pm) noexcept {
+[[nodiscard]] inline constexpr hours make24(const hours& __h, bool __is_pm) noexcept {
   if (__is_pm)
     return __h == hours(12) ? __h : __h + hours(12);
   else

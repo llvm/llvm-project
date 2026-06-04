@@ -41,7 +41,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
+inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
   using __ratio       = ratio_divide<_Period, nano>;
   using __ns_rep      = nanoseconds::rep;
@@ -61,7 +61,7 @@ inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::
 }
 
 template <class _Rep, class _Period, __enable_if_t<!is_floating_point<_Rep>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
+inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
   if (__d.count() == 0) {
     return nanoseconds(0);
@@ -91,7 +91,7 @@ class _LIBCPP_EXPORTED_FROM_ABI condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
+  _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
 
 #  if _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
   ~condition_variable() = default;
@@ -108,14 +108,13 @@ public:
   void wait(unique_lock<mutex>& __lk) _NOEXCEPT;
 
   template <class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI void wait(unique_lock<mutex>& __lk, _Predicate __pred) {
+  void wait(unique_lock<mutex>& __lk, _Predicate __pred) {
     while (!__pred())
       wait(__lk);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI cv_status
-  wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t) {
+  cv_status wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t) {
     using namespace chrono;
     using __clock_tp_ns = time_point<_Clock, nanoseconds>;
 
@@ -130,8 +129,7 @@ public:
   }
 
   template <class _Clock, class _Duration, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI bool
-  wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
+  bool wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
     while (!__pred()) {
       if (wait_until(__lk, __t) == cv_status::timeout)
         return __pred();
@@ -140,7 +138,7 @@ public:
   }
 
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
+  cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
     using namespace chrono;
     if (__d <= __d.zero())
       return cv_status::timeout;
@@ -167,22 +165,20 @@ public:
   }
 
   template <class _Rep, class _Period, class _Predicate>
-  bool _LIBCPP_HIDE_FROM_ABI
-  wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
+  bool wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
   typedef __libcpp_condvar_t* native_handle_type;
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__cv_; }
+  [[__nodiscard__]] native_handle_type native_handle() { return &__cv_; }
 
 private:
   void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::system_clock, chrono::nanoseconds>) _NOEXCEPT;
 #  if _LIBCPP_HAS_COND_CLOCKWAIT
-  _LIBCPP_HIDE_FROM_ABI void
+  void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::steady_clock, chrono::nanoseconds>) _NOEXCEPT;
 #  endif
   template <class _Clock>
-  _LIBCPP_HIDE_FROM_ABI void
-  __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<_Clock, chrono::nanoseconds>) _NOEXCEPT;
+  void __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<_Clock, chrono::nanoseconds>) _NOEXCEPT;
 };
 #endif // _LIBCPP_HAS_THREADS
 

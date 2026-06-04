@@ -22,8 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _Iter
-__find_if(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX17 _Iter __find_if(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
   std::__assume_valid_range(__first, __last);
 
   for (; __first != __last; ++__first)
@@ -33,7 +32,7 @@ __find_if(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
 }
 
 template <class _InputIterator, class _Predicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find_if(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   return std::__find_if(__first, __last, __pred, __identity());
 }

@@ -21,8 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter, class _Sent, class _Proj, class _Pred>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-__any_of(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 bool __any_of(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
   for (; __first != __last; ++__first) {
     if (std::__invoke(__pred, std::__invoke(__proj, *__first)))
       return true;
@@ -31,7 +30,7 @@ __any_of(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
 }
 
 template <class _InputIterator, class _Predicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 any_of(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   __identity __proj;
   return std::__any_of(__first, __last, __pred, __proj);

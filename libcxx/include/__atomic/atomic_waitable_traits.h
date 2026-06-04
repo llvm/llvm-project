@@ -68,7 +68,7 @@ concept __atomic_waitable = requires(const _Tp __t, memory_order __order) {
 #  if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __has_native_atomic_wait_impl() {
+constexpr bool __has_native_atomic_wait_impl() {
   if (alignof(_Tp) % sizeof(_Tp) != 0)
     return false;
   switch (sizeof(_Tp)) {

@@ -69,71 +69,71 @@ enum class __flags {
   __clock = __date_time | __time_zone
 };
 
-_LIBCPP_HIDE_FROM_ABI constexpr __flags operator&(__flags __lhs, __flags __rhs) {
+constexpr __flags operator&(__flags __lhs, __flags __rhs) {
   return static_cast<__flags>(static_cast<unsigned>(__lhs) & static_cast<unsigned>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_second(__flags __flags) {
+constexpr void __validate_second(__flags __flags) {
   if ((__flags & __flags::__second) != __flags::__second)
     std::__throw_format_error("The supplied date time doesn't contain a second");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_minute(__flags __flags) {
+constexpr void __validate_minute(__flags __flags) {
   if ((__flags & __flags::__minute) != __flags::__minute)
     std::__throw_format_error("The supplied date time doesn't contain a minute");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_hour(__flags __flags) {
+constexpr void __validate_hour(__flags __flags) {
   if ((__flags & __flags::__hour) != __flags::__hour)
     std::__throw_format_error("The supplied date time doesn't contain an hour");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_time(__flags __flags) {
+constexpr void __validate_time(__flags __flags) {
   if ((__flags & __flags::__time) != __flags::__time)
     std::__throw_format_error("The supplied date time doesn't contain a time");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_day(__flags __flags) {
+constexpr void __validate_day(__flags __flags) {
   if ((__flags & __flags::__day) != __flags::__day)
     std::__throw_format_error("The supplied date time doesn't contain a day");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_month(__flags __flags) {
+constexpr void __validate_month(__flags __flags) {
   if ((__flags & __flags::__month) != __flags::__month)
     std::__throw_format_error("The supplied date time doesn't contain a month");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_year(__flags __flags) {
+constexpr void __validate_year(__flags __flags) {
   if ((__flags & __flags::__year) != __flags::__year)
     std::__throw_format_error("The supplied date time doesn't contain a year");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_date(__flags __flags) {
+constexpr void __validate_date(__flags __flags) {
   if ((__flags & __flags::__date) != __flags::__date)
     std::__throw_format_error("The supplied date time doesn't contain a date");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_date_or_duration(__flags __flags) {
+constexpr void __validate_date_or_duration(__flags __flags) {
   if (((__flags & __flags::__date) != __flags::__date) && ((__flags & __flags::__duration) != __flags::__duration))
     std::__throw_format_error("The supplied date time doesn't contain a date or duration");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_date_time(__flags __flags) {
+constexpr void __validate_date_time(__flags __flags) {
   if ((__flags & __flags::__date_time) != __flags::__date_time)
     std::__throw_format_error("The supplied date time doesn't contain a date and time");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_weekday(__flags __flags) {
+constexpr void __validate_weekday(__flags __flags) {
   if ((__flags & __flags::__weekday) != __flags::__weekday)
     std::__throw_format_error("The supplied date time doesn't contain a weekday");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_duration(__flags __flags) {
+constexpr void __validate_duration(__flags __flags) {
   if ((__flags & __flags::__duration) != __flags::__duration)
     std::__throw_format_error("The supplied date time doesn't contain a duration");
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __validate_time_zone(__flags __flags) {
+constexpr void __validate_time_zone(__flags __flags) {
   if ((__flags & __flags::__time_zone) != __flags::__time_zone)
     std::__throw_format_error("The supplied date time doesn't contain a time zone");
 }
@@ -144,8 +144,7 @@ class __parser_chrono {
 
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator
-  __parse(_ParseContext& __ctx, __fields __fields, __flags __flags) {
+  constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields, __flags __flags) {
     _ConstIterator __begin = __parser_.__parse(__ctx, __fields);
     _ConstIterator __end   = __ctx.end();
     if (__begin == __end)
@@ -161,8 +160,7 @@ public:
   basic_string_view<_CharT> __chrono_specs_;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr _ConstIterator
-  __parse_chrono_specs(_ConstIterator __begin, _ConstIterator __end, __flags __flags) {
+  constexpr _ConstIterator __parse_chrono_specs(_ConstIterator __begin, _ConstIterator __end, __flags __flags) {
     _LIBCPP_ASSERT_INTERNAL(__begin != __end,
                             "When called with an empty input the function will cause "
                             "undefined behavior by evaluating data not in the input");
@@ -194,8 +192,7 @@ private:
 
   /// \pre *__begin == '%'
   /// \post __begin points at the end parsed conversion-spec
-  _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_conversion_spec(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
+  constexpr void __parse_conversion_spec(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing a conversion specifier");
@@ -310,8 +307,7 @@ private:
 
   /// \pre *__begin == 'E'
   /// \post __begin is incremented by one.
-  _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_modifier_E(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
+  constexpr void __parse_modifier_E(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing the modifier E");
@@ -350,8 +346,7 @@ private:
 
   /// \pre *__begin == 'O'
   /// \post __begin is incremented by one.
-  _LIBCPP_HIDE_FROM_ABI constexpr void
-  __parse_modifier_O(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
+  constexpr void __parse_modifier_O(_ConstIterator& __begin, _ConstIterator __end, __flags __flags) {
     ++__begin;
     if (__begin == __end)
       std::__throw_format_error("End of input while parsing the modifier O");

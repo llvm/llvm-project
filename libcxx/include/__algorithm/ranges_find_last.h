@@ -38,8 +38,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
-__find_last_impl(_Iter __first, _Sent __last, _Pred __pred, _Proj& __proj) {
+constexpr subrange<_Iter> __find_last_impl(_Iter __first, _Sent __last, _Pred __pred, _Proj& __proj) {
   if (__first == __last) {
     return subrange<_Iter>(__first, __first);
   }
@@ -78,21 +77,21 @@ struct __find_last {
   struct __op {
     const _Type& __value;
     template <class _Elem>
-    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return std::forward<_Elem>(__elem) == __value;
     }
   };
 
   template <forward_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type*>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+  [[nodiscard]] constexpr static subrange<_Iter>
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Proj __proj = {}) {
     return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Type>{__value}, __proj);
   }
 
   template <forward_range _Range, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
+  [[nodiscard]] constexpr static borrowed_subrange_t<_Range>
   operator()(_Range&& __range, const _Type& __value, _Proj __proj = {}) {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Type>{__value}, __proj);
   }
@@ -103,7 +102,7 @@ struct __find_last_if {
   struct __op {
     _Pred& __pred;
     template <class _Elem>
-    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return std::invoke(__pred, std::forward<_Elem>(__elem));
     }
   };
@@ -112,7 +111,7 @@ struct __find_last_if {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+  [[nodiscard]] constexpr static subrange<_Iter>
   operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) {
     return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Pred>{__pred}, __proj);
   }
@@ -120,7 +119,7 @@ struct __find_last_if {
   template <forward_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
+  [[nodiscard]] constexpr static borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
   }
@@ -131,7 +130,7 @@ struct __find_last_if_not {
   struct __op {
     _Pred& __pred;
     template <class _Elem>
-    _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator()(_Elem&& __elem) const {
+    constexpr decltype(auto) operator()(_Elem&& __elem) const {
       return !std::invoke(__pred, std::forward<_Elem>(__elem));
     }
   };
@@ -140,7 +139,7 @@ struct __find_last_if_not {
             sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
+  [[nodiscard]] constexpr static subrange<_Iter>
   operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) {
     return ranges::__find_last_impl(std::move(__first), std::move(__last), __op<_Pred>{__pred}, __proj);
   }
@@ -148,7 +147,7 @@ struct __find_last_if_not {
   template <forward_range _Range,
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
+  [[nodiscard]] constexpr static borrowed_subrange_t<_Range>
   operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) {
     return ranges::__find_last_impl(ranges::begin(__range), ranges::end(__range), __op<_Pred>{__pred}, __proj);
   }

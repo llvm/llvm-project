@@ -40,7 +40,7 @@ namespace chrono {
 class nonexistent_local_time : public runtime_error {
 public:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time(const local_time<_Duration>& __time, const local_info& __info)
+  nonexistent_local_time(const local_time<_Duration>& __time, const local_info& __info)
       : runtime_error{__create_message(__time, __info)} {
     // [time.zone.exception.nonexist]/2
     //   Preconditions: i.result == local_info::nonexistent is true.
@@ -49,14 +49,14 @@ public:
                             "creating an nonexistent_local_time from a local_info that is not non-existent");
   }
 
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time(const nonexistent_local_time&)            = default;
-  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
+  nonexistent_local_time(const nonexistent_local_time&)            = default;
+  nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~nonexistent_local_time() override; // exported as key function
 
 private:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
+  string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
     return std::format(
         R"({} is in a gap between
 {} {} and
@@ -72,7 +72,7 @@ private:
 };
 
 template <class _Duration>
-[[noreturn]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_nonexistent_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB void __throw_nonexistent_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   throw nonexistent_local_time(__time, __info);
@@ -84,7 +84,7 @@ template <class _Duration>
 class ambiguous_local_time : public runtime_error {
 public:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time(const local_time<_Duration>& __time, const local_info& __info)
+  ambiguous_local_time(const local_time<_Duration>& __time, const local_info& __info)
       : runtime_error{__create_message(__time, __info)} {
     // [time.zone.exception.ambig]/2
     //   Preconditions: i.result == local_info::ambiguous is true.
@@ -93,14 +93,14 @@ public:
                             "creating an ambiguous_local_time from a local_info that is not ambiguous");
   }
 
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time(const ambiguous_local_time&)            = default;
-  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
+  ambiguous_local_time(const ambiguous_local_time&)            = default;
+  ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~ambiguous_local_time() override; // exported as key function
 
 private:
   template <class _Duration>
-  _LIBCPP_HIDE_FROM_ABI string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
+  string __create_message(const local_time<_Duration>& __time, const local_info& __info) {
     return std::format(
         // There are two spaces after the full-stop; this has been verified
         // in the sources of the Standard.
@@ -116,7 +116,7 @@ private:
 };
 
 template <class _Duration>
-[[noreturn]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI void __throw_ambiguous_local_time(
+[[noreturn]] _LIBCPP_AVAILABILITY_TZDB void __throw_ambiguous_local_time(
     [[maybe_unused]] const local_time<_Duration>& __time, [[maybe_unused]] const local_info& __info) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   throw ambiguous_local_time(__time, __info);

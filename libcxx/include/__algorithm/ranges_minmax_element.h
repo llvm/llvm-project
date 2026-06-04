@@ -45,7 +45,7 @@ struct __minmax_element {
             sentinel_for<_Ip> _Sp,
             class _Proj                                             = identity,
             indirect_strict_weak_order<projected<_Ip, _Proj>> _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_element_result<_Ip>
+  [[nodiscard]] constexpr ranges::minmax_element_result<_Ip>
   operator()(_Ip __first, _Sp __last, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__minmax_element_impl(std::move(__first), std::move(__last), __comp, __proj);
     return {__ret.first, __ret.second};
@@ -54,7 +54,7 @@ struct __minmax_element {
   template <forward_range _Rp,
             class _Proj                                                         = identity,
             indirect_strict_weak_order<projected<iterator_t<_Rp>, _Proj>> _Comp = ranges::less>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_element_result<borrowed_iterator_t<_Rp>>
+  [[nodiscard]] constexpr ranges::minmax_element_result<borrowed_iterator_t<_Rp>>
   operator()(_Rp&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __ret = std::__minmax_element_impl(ranges::begin(__r), ranges::end(__r), __comp, __proj);
     return {__ret.first, __ret.second};

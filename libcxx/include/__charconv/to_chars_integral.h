@@ -41,11 +41,11 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type);
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type) {
   auto __x = std::__to_unsigned_like(__value);
   if (__value < 0 && __first != __last) {
@@ -57,7 +57,7 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, true_type) {
 }
 
 template <typename _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result
 __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type) {
   using __tx  = __itoa::__traits<_Tp>;
   auto __diff = __last - __first;
@@ -68,10 +68,10 @@ __to_chars_itoa(char* __first, char* __last, _Tp __value, false_type) {
     return {__last, errc::value_too_large};
 }
 
-#  if _LIBCPP_HAS_INT128
+#if _LIBCPP_HAS_INT128
 template <>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
-__to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23
+__to_chars_result __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {
   // When the value fits in 64-bits use the 64-bit code path. This reduces
   // the number of expensive calculations on 128-bit values.
   //
@@ -87,14 +87,14 @@ __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {
   else
     return {__last, errc::value_too_large};
 }
-#  endif
+#endif
 
 template <class _Tp, __enable_if_t<!is_signed<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
-__to_chars_integral(char* __first, char* __last, _Tp __value, int __base);
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23
+__to_chars_result __to_chars_integral(char* __first, char* __last, _Tp __value, int __base);
 
 template <class _Tp, __enable_if_t<is_signed<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base) {
   auto __x = std::__to_unsigned_like(__value);
   if (__value < 0 && __first != __last) {
@@ -113,15 +113,14 @@ struct _LIBCPP_HIDDEN __integral;
 template <>
 struct _LIBCPP_HIDDEN __integral<2> {
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
+  static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
     // effect since the code scans for the most significant bit set.
     return numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1);
   }
 
   template <typename _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI static __to_chars_result
-  __to_chars(char* __first, char* __last, _Tp __value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 static __to_chars_result __to_chars(char* __first, char* __last, _Tp __value) {
     ptrdiff_t __cap = __last - __first;
     int __n         = __width(__value);
     if (__n > __cap)
@@ -148,15 +147,14 @@ struct _LIBCPP_HIDDEN __integral<2> {
 template <>
 struct _LIBCPP_HIDDEN __integral<8> {
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
+  static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
     // effect since the code scans for the most significat bit set.
     return ((numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1)) + 2) / 3;
   }
 
   template <typename _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI static __to_chars_result
-  __to_chars(char* __first, char* __last, _Tp __value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 static __to_chars_result __to_chars(char* __first, char* __last, _Tp __value) {
     ptrdiff_t __cap = __last - __first;
     int __n         = __width(__value);
     if (__n > __cap)
@@ -183,15 +181,14 @@ struct _LIBCPP_HIDDEN __integral<8> {
 template <>
 struct _LIBCPP_HIDDEN __integral<16> {
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
+  static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
     // effect since the code scans for the most significat bit set.
     return (numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1) + 3) / 4;
   }
 
   template <typename _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI static __to_chars_result
-  __to_chars(char* __first, char* __last, _Tp __value) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX23 static __to_chars_result __to_chars(char* __first, char* __last, _Tp __value) {
     ptrdiff_t __cap = __last - __first;
     int __n         = __width(__value);
     if (__n > __cap)
@@ -219,29 +216,27 @@ struct _LIBCPP_HIDDEN __integral<16> {
 } // namespace __itoa
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) >= sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 int __to_chars_integral_width(_Tp __value) {
   return __itoa::__integral<_Base>::__width(__value);
 }
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) < sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 int __to_chars_integral_width(_Tp __value) {
   return std::__to_chars_integral_width<_Base>(static_cast<unsigned>(__value));
 }
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) >= sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
-__to_chars_integral(char* __first, char* __last, _Tp __value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result __to_chars_integral(char* __first, char* __last, _Tp __value) {
   return __itoa::__integral<_Base>::__to_chars(__first, __last, __value);
 }
 
 template <unsigned _Base, typename _Tp, __enable_if_t<(sizeof(_Tp) < sizeof(unsigned)), int> = 0>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
-__to_chars_integral(char* __first, char* __last, _Tp __value) {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result __to_chars_integral(char* __first, char* __last, _Tp __value) {
   return std::__to_chars_integral<_Base>(__first, __last, static_cast<unsigned>(__value));
 }
 
 template <typename _Tp>
-_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value, unsigned __base) {
+_LIBCPP_CONSTEXPR_SINCE_CXX23 int __to_chars_integral_width(_Tp __value, unsigned __base) {
   _LIBCPP_ASSERT_INTERNAL(__value >= 0, "The function requires a non-negative value.");
 
   unsigned __base_2 = __base * __base;
@@ -267,7 +262,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_widt
 }
 
 template <class _Tp, __enable_if_t<!is_signed<_Tp>::value, int> >
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 __to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base) {
   if (__base == 10) [[likely]]
     return std::__to_chars_itoa(__first, __last, __value, false_type());
@@ -296,7 +291,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base) {
   return {__last, errc(0)};
 }
 
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 char __hex_to_upper(char __c) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX14 char __hex_to_upper(char __c) {
   switch (__c) {
   case 'a':
     return 'A';
@@ -319,16 +314,14 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 char __hex_to_upper(c
 to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
-to_chars(char* __first, char* __last, _Tp __value) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 to_chars_result to_chars(char* __first, char* __last, _Tp __value) {
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
   static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
   return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
-to_chars(char* __first, char* __last, _Tp __value, int __base) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23 to_chars_result to_chars(char* __first, char* __last, _Tp __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
 
   using _Type = __make_32_64_or_128_bit_t<_Tp>;

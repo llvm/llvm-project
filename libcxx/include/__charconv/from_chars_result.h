@@ -25,10 +25,10 @@ struct from_chars_result {
   const char* ptr;
   errc ec;
 #  if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI friend bool operator==(const from_chars_result&, const from_chars_result&) = default;
+  friend bool operator==(const from_chars_result&, const from_chars_result&) = default;
 #  endif
 #  if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return ec == errc{}; }
+  constexpr explicit operator bool() const noexcept { return ec == errc{}; }
 #  endif
 };
 

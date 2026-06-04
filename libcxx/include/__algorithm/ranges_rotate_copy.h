@@ -37,7 +37,7 @@ using rotate_copy_result = in_out_result<_InIter, _OutIter>;
 struct __rotate_copy {
   template <forward_iterator _InIter, sentinel_for<_InIter> _Sent, weakly_incrementable _OutIter>
     requires indirectly_copyable<_InIter, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr rotate_copy_result<_InIter, _OutIter>
+  constexpr rotate_copy_result<_InIter, _OutIter>
   operator()(_InIter __first, _InIter __middle, _Sent __last, _OutIter __result) const {
     auto __res1 = ranges::copy(__middle, __last, std::move(__result));
     auto __res2 = ranges::copy(__first, __middle, std::move(__res1.out));
@@ -46,7 +46,7 @@ struct __rotate_copy {
 
   template <forward_range _Range, weakly_incrementable _OutIter>
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
-  _LIBCPP_HIDE_FROM_ABI constexpr rotate_copy_result<borrowed_iterator_t<_Range>, _OutIter>
+  constexpr rotate_copy_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __range, iterator_t<_Range> __middle, _OutIter __result) const {
     return (*this)(ranges::begin(__range), std::move(__middle), ranges::end(__range), std::move(__result));
   }
