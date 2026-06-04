@@ -7817,7 +7817,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
           return false;
         if (includesPoison(Kind) && C->containsPoisonElement())
           return false;
-        return !match(C, m_ConstantExpr());
+        return !match(C,
+                      m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
       }
     }
   }

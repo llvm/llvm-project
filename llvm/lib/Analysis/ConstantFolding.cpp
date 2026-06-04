@@ -51,7 +51,6 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -65,7 +64,6 @@
 #include <cstdint>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 static cl::opt<bool> DisableFPCallFolding(
     "disable-fp-call-folding",
