@@ -256,3 +256,24 @@ TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastLLVMIntToPtrFromIndex) {
   ASSERT_TRUE(intToPtr);
   EXPECT_TRUE(isa<arith::IndexCastUIOp>(intToPtr.getArg().getDefiningOp()));
 }
+
+TEST_F(OpenACCTypeInterfacesTest, PointerLikeGenCastPrivateTypeToMemref) {
+  Location loc = UnknownLoc::get(&context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder builder(module->getBodyRegion());
+  func::FuncOp fn = func::FuncOp::create(
+      builder, loc, "cast_private_to_memref", builder.getFunctionType({}, {}));
+  Block *block = fn.addEntryBlock();
+  builder.setInsertionPointToStart(block);
+
+  Type privateTy = PrivateType::get(&context, builder.getI8Type());
+  Type memrefTy = MemRefType::get({ShapedType::kDynamic}, builder.getI8Type());
+  Value handle = UndefOp::create(builder, loc, privateTy);
+  auto ptrLike = cast<PointerLikeType>(privateTy);
+  Value out = ptrLike.genCast(builder, loc, handle, memrefTy);
+  ASSERT_TRUE(out);
+  EXPECT_EQ(out.getType(), memrefTy);
+  auto unwrap = dyn_cast<UnwrapPrivateOp>(out.getDefiningOp());
+  ASSERT_TRUE(unwrap);
+  EXPECT_EQ(unwrap.getHandle(), handle);
+}
