@@ -64,4 +64,31 @@ gpu.module @load_store_check {
             : vector<8xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<memory_space = global>>
         gpu.return
     }
+
+    // A plain 8-bit block load with no VNNI/pack and no transpose is not a valid
+    // hardware message. Since VNNI and non-VNNI loads yield the same data, the
+    // conversion forces the VNNI (pack_register) path on for 8-bit elements:
+    // the payload is loaded as i32 and bitcast back to the requested 8-bit type.
+    // CHECK-LABEL: gpu.func @load_nd_8bit(
+    gpu.func @load_nd_8bit(%src: memref<8x16xi8, 1>, %dst: memref<8x16xi8, 1>) kernel {
+        // CHECK: %[[ZERO:.*]] = arith.constant 0 : i32
+        // CHECK: %[[H:.*]] = arith.constant 8 : i32
+        // CHECK: %[[W:.*]] = arith.constant 16 : i32
+        %srcce = memref.memory_space_cast %src : memref<8x16xi8, 1> to memref<8x16xi8>
+        %dstte = memref.memory_space_cast %dst : memref<8x16xi8, 1> to memref<8x16xi8>
+
+        %src_tdesc = xegpu.create_nd_tdesc %srcce : memref<8x16xi8> -> !xegpu.tensor_desc<8x16xi8>
+
+        // CHECK: %[[LOADED:.*]] = xevm.blockload2d %{{.*}}, %[[W]], %[[H]], %[[W]], %[[ZERO]], %[[ZERO]]
+        // CHECK-SAME: <{cache_control = #xevm.load_cache_control<L1c_L2uc_L3c>, elem_size_in_bits = 8 : i32,
+        // CHECK-SAME:   pack_register = true, tile_height = 8 : i32, tile_width = 16 : i32, transpose = false,
+        // CHECK-SAME:   v_blocks = 1 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<2xi32>
+        // CHECK: vector.bitcast %[[LOADED]] : vector<2xi32> to vector<8xi8>
+        %loaded = xegpu.load_nd %src_tdesc[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}>
+            : !xegpu.tensor_desc<8x16xi8> -> vector<8xi8>
+
+        %c0 = arith.constant 0 : index
+        vector.store %loaded, %dstte[%c0, %c0] : memref<8x16xi8>, vector<8xi8>
+        gpu.return
+    }
 }

@@ -431,10 +431,18 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter.eraseOp(op);
         } else {
           VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
-          const bool vnni = op.getPacked().value_or(false);
+          bool vnni = op.getPacked().value_or(false);
           auto transposeValue = op.getTranspose();
           bool transpose =
               transposeValue.has_value() && transposeValue.value()[0] == 1;
+          // Handle special case of plain 8bit element load
+          // with no vnni, no transpose, no vblocks
+          // Turn on vnni since non vnni load is not valid.
+          // vnni and non vnni yields the same output so they can
+          // be interchanged.
+          if (elemBitSize == 8 && !vnni && !transpose) {
+            vnni = true;
+          }
           VectorType loadedTy = encodeVectorTypeTo(
               dstVecTy, vnni ? rewriter.getI32Type()
                              : rewriter.getIntegerType(elemBitSize));
