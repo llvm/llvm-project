@@ -1894,19 +1894,20 @@ class PatPSh1Add<RVInst Inst, ValueType vt>
     : Pat<(vt (add (riscv_pshl (vt GPR:$rs1), (XLenVT 1)), (vt GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
 class PatPSh1AddPair<RVInst Inst, ValueType vt>
-    : Pat<(vt (add (riscv_pshl (vt GPRPair:$rs1), (XLenVT 1)),
-                   (vt GPRPair:$rs2))),
+    : Pat<(vt (add (riscv_pshl (vt GPRPair:$rs1), (XLenVT 1)), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
-// Signed-saturating (rs1 << 1) then signed-saturating add rs2; a saturating
-// left-shift-by-1 is a saturating add of the operand with itself.
+// Vector sshlsat is custom-lowered to riscv_pssha before isel; saddsat(a, a)
+// is an equivalent shape via the signed sshlsat(a, 1) identity.
+def saturating_shl1 : PatFrags<(ops node:$a),
+                               [(riscv_pssha node:$a, (XLenVT 1)),
+                                (saddsat node:$a, node:$a)]>;
+
 class PatPSSh1SAdd<RVInst Inst, ValueType vt>
-    : Pat<(vt (saddsat (saddsat (vt GPR:$rs1), (vt GPR:$rs1)),
-                       (vt GPR:$rs2))),
+    : Pat<(vt (saddsat (saturating_shl1 (vt GPR:$rs1)), (vt GPR:$rs2))),
           (Inst GPR:$rs1, GPR:$rs2)>;
 class PatPSSh1SAddPair<RVInst Inst, ValueType vt>
-    : Pat<(vt (saddsat (saddsat (vt GPRPair:$rs1), (vt GPRPair:$rs1)),
-                       (vt GPRPair:$rs2))),
+    : Pat<(vt (saddsat (saturating_shl1 (vt GPRPair:$rs1)), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
 let Predicates = [HasStdExtP] in {
@@ -2096,7 +2097,10 @@ let append Predicates = [IsRV32] in {
   def : PatGprUimmLog2XLen<sshlsat, SSLAI>;
   // No SSLLI
 
-  def : PatPSSh1SAdd<SSH1SADD, XLenVT>;
+  def : Pat<(XLenVT (saddsat (sshlsat GPR:$rs1, (XLenVT 1)), GPR:$rs2)),
+            (SSH1SADD GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (saddsat (saddsat GPR:$rs1, GPR:$rs1), GPR:$rs2)),
+            (SSH1SADD GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, AADD, i32>;
