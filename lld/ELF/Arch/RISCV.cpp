@@ -222,7 +222,6 @@ void RISCV::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 void RISCV::writePltHeader(uint8_t *buf) const {
-
   if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) {
     // 1:  auipc  t3, %pcrel_hi(.got.plt)
     //     sub    t1, t1, t2
@@ -268,7 +267,6 @@ void RISCV::writePltHeader(uint8_t *buf) const {
 
 void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t pltEntryAddr) const {
-
   if (ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED) {
     //     lpad 0
     // 1:  auipc   t2, %pcrel_hi(function@.got.plt)
