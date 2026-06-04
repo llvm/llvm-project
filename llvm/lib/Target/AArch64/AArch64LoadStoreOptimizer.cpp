@@ -3112,7 +3112,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   MachineBasicBlock::iterator B = MBB->begin();
   unsigned SubRegIdx = 0;
   unsigned Count = 0;
-  for (auto It = MBBI; It != B && !UMOVMI;) {
+  for (auto It = MBBI; It != B;) {
     MachineInstr &MI = *--It;
     if (MI.isDebugInstr())
       continue;
@@ -3125,6 +3125,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
       if (!SubRegIdx)
         return false;
       UMOVMI = &MI;
+      break;
     }
   }
   if (!UMOVMI)
