@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -475,16 +477,6 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be false or undef.  That is, return true if all
-/// lanes can be assumed inactive.
-LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if all
-/// lanes can be assumed active.
-LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
-
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
@@ -552,9 +544,8 @@ public:
       return false;
     int32_t Key = *MaybeKey;
 
-    // Skip if the key is used for either the tombstone or empty special values.
-    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
-        DenseMapInfo<int32_t>::getEmptyKey() == Key)
+    // Skip if the key is used for the empty special value.
+    if (DenseMapInfo<int32_t>::getEmptyKey() == Key)
       return false;
 
     // Skip if there is already a member with the same index.
@@ -593,6 +584,15 @@ public:
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
     return Members.lookup(Key);
+  }
+
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
   }
 
   /// Get the index for the given member. Unlike the key in the member

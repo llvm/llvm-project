@@ -106,7 +106,7 @@ define float @fdiv_cosf_sinf_reassoc(float %a) {
 define fp128 @fdiv_cosfp128_sinfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: @fdiv_cosfp128_sinfp128_reassoc(
 ; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc fp128 0xL00000000000000003FFF000000000000, [[TANL]]
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv reassoc fp128 1.000000e+00, [[TANL]]
 ; CHECK-NEXT:    ret fp128 [[DIV]]
 ;
   %1 = call reassoc fp128 @llvm.cos.fp128(fp128 %a)

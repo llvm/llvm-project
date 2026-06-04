@@ -122,6 +122,17 @@ bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
   return false;
 }
 
+bool OutlineRematerializationModel<
+    fir::ConvertOp>::isRematerializationCandidate(mlir::Operation *op) const {
+  auto convertOp = mlir::cast<fir::ConvertOp>(op);
+  mlir::Type inTy = convertOp.getValue().getType();
+  mlir::Type outTy = convertOp.getType();
+  // Only pointer-to-integer-like converts are rematerialization candidates so
+  // that addresses stay live-in instead of the scalar values.
+  return fir::ConvertOp::isPointerCompatible(inTy) &&
+         fir::ConvertOp::isIntegerCompatible(outTy);
+}
+
 // Helper to recursively process address-of operations in derived type
 // descriptors and collect all needed fir.globals.
 static void processAddrOfOpInDerivedTypeDescriptor(

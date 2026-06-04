@@ -164,6 +164,90 @@ enum class CXX11AttributeKind {
   InvalidAttributeSpecifier
 };
 
+/// [class.mem]p1: "... the class is regarded as complete within
+/// - function bodies
+/// - default arguments
+/// - exception-specifications (TODO: C++0x)
+/// - and brace-or-equal-initializers for non-static data members
+/// (including such things in nested classes)."
+/// LateParsedDeclarations build the tree of those elements so they can
+/// be parsed after parsing the top-level class.
+class LateParsedDeclaration {
+public:
+  virtual ~LateParsedDeclaration();
+
+  virtual void ParseLexedMethodDeclarations();
+  virtual void ParseLexedMemberInitializers();
+  virtual void ParseLexedMethodDefs();
+  virtual void ParseLexedAttributes();
+  virtual void ParseLexedPragmas();
+};
+
+/// Contains the lexed tokens of an attribute with arguments that
+/// may reference member variables and so need to be parsed at the
+/// end of the class declaration after parsing all other member
+/// member declarations.
+/// FIXME: Perhaps we should change the name of LateParsedDeclaration to
+/// LateParsedTokens.
+struct LateParsedAttribute : public LateParsedDeclaration {
+
+  enum class Kind {
+    Declaration,
+    Type,
+  };
+
+  Parser *Self;
+  CachedTokens Toks;
+  IdentifierInfo &AttrName;
+  IdentifierInfo *MacroII = nullptr;
+  SourceLocation AttrNameLoc;
+  SmallVector<Decl *, 2> Decls;
+
+private:
+  Kind K;
+
+protected:
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc, Kind K)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc), K(K) {}
+
+public:
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc)
+      : LateParsedAttribute(P, Name, Loc, Kind::Declaration) {}
+
+  void ParseLexedAttributes() override;
+
+  void addDecl(Decl *D) { Decls.push_back(D); }
+
+  Kind getKind() const { return K; }
+
+  static bool classof(const LateParsedAttribute *LA) { return true; }
+};
+
+/// A late-parsed attribute that will be applied as a type attribute.
+/// Unlike LateParsedAttribute (which applies to declarations via
+/// ActOnFinishDelayedAttribute), this stores cached tokens that are
+/// parsed during type construction when the placeholder LateParsedAttrType
+/// is replaced with a concrete type (e.g., CountAttributedType).
+struct LateParsedTypeAttribute : public LateParsedAttribute {
+
+  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
+                                   SourceLocation Loc)
+      : LateParsedAttribute(P, Name, Loc, Kind::Type) {}
+
+  void ParseLexedAttributes() override;
+
+  /// Parse this late-parsed type attribute and store results in OutAttrs.
+  /// This method can be called from Sema during type transformation to
+  /// parse the cached tokens and produce the final attribute.
+  void ParseInto(ParsedAttributes &OutAttrs);
+
+  static bool classof(const LateParsedAttribute *LA) {
+    return LA->getKind() == Kind::Type;
+  }
+};
+
 /// Parser - This implements a parser for the C family of languages.  After
 /// parsing units of the grammar, productions are invoked to handle whatever has
 /// been read.
@@ -955,7 +1039,6 @@ private:
   void SkipFunctionBody();
 
   struct ParsedTemplateInfo;
-  class LateParsedAttrList;
 
   /// ParseFunctionDefinition - We parsed and verified that the specified
   /// Declarator is well formed.  If this is a K&R-style function, read the
@@ -1123,26 +1206,10 @@ private:
   ///@{
 
 private:
+  friend struct LateParsedAttribute;
+  friend struct LateParsedTypeAttribute;
+
   struct ParsingClass;
-
-  /// [class.mem]p1: "... the class is regarded as complete within
-  /// - function bodies
-  /// - default arguments
-  /// - exception-specifications (TODO: C++0x)
-  /// - and brace-or-equal-initializers for non-static data members
-  /// (including such things in nested classes)."
-  /// LateParsedDeclarations build the tree of those elements so they can
-  /// be parsed after parsing the top-level class.
-  class LateParsedDeclaration {
-  public:
-    virtual ~LateParsedDeclaration();
-
-    virtual void ParseLexedMethodDeclarations();
-    virtual void ParseLexedMemberInitializers();
-    virtual void ParseLexedMethodDefs();
-    virtual void ParseLexedAttributes();
-    virtual void ParseLexedPragmas();
-  };
 
   /// Inner node of the LateParsedDeclaration tree that parses
   /// all its members recursively.
@@ -1166,29 +1233,6 @@ private:
     ParsingClass *Class;
   };
 
-  /// Contains the lexed tokens of an attribute with arguments that
-  /// may reference member variables and so need to be parsed at the
-  /// end of the class declaration after parsing all other member
-  /// member declarations.
-  /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
-  /// LateParsedTokens.
-  struct LateParsedAttribute : public LateParsedDeclaration {
-    Parser *Self;
-    CachedTokens Toks;
-    IdentifierInfo &AttrName;
-    IdentifierInfo *MacroII = nullptr;
-    SourceLocation AttrNameLoc;
-    SmallVector<Decl *, 2> Decls;
-
-    explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
-                                 SourceLocation Loc)
-        : Self(P), AttrName(Name), AttrNameLoc(Loc) {}
-
-    void ParseLexedAttributes() override;
-
-    void addDecl(Decl *D) { Decls.push_back(D); }
-  };
-
   /// Contains the lexed tokens of a pragma with arguments that
   /// may reference member variables and so need to be parsed at the
   /// end of the class declaration after parsing all other member
@@ -1207,26 +1251,6 @@ private:
     AccessSpecifier getAccessSpecifier() const { return AS; }
 
     void ParseLexedPragmas() override;
-  };
-
-  // A list of late-parsed attributes.  Used by ParseGNUAttributes.
-  class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
-  public:
-    LateParsedAttrList(bool PSoon = false,
-                       bool LateAttrParseExperimentalExtOnly = false)
-        : ParseSoon(PSoon),
-          LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly) {}
-
-    bool parseSoon() { return ParseSoon; }
-    /// returns true iff the attribute to be parsed should only be late parsed
-    /// if it is annotated with `LateAttrParseExperimentalExt`
-    bool lateAttrParseExperimentalExtOnly() {
-      return LateAttrParseExperimentalExtOnly;
-    }
-
-  private:
-    bool ParseSoon; // Are we planning to parse these shortly after creation?
-    bool LateAttrParseExperimentalExtOnly;
   };
 
   /// Contains the lexed tokens of a member function definition
@@ -1494,7 +1518,7 @@ private:
                                 const char *&PrevSpec, unsigned &DiagID,
                                 bool &isInvalid);
 
-  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
+  void ParseLexedCAttributeList(LateParsedAttrList &LA,
                                 ParsedAttributes *OutAttrs = nullptr);
 
   /// Finish parsing an attribute for which parsing was delayed.
@@ -1502,8 +1526,22 @@ private:
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
-  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
+  void ParseLexedCAttribute(LateParsedAttribute &LA,
                             ParsedAttributes *OutAttrs = nullptr);
+
+  void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
+                               ParsedAttributes &OutAttrs);
+
+  /// Parse cached tokens for a late-parsed attribute and return the parsed
+  /// attributes. Shared implementation used by both ParseLexedCAttribute and
+  /// ParseLexedTypeAttribute.
+  ParsedAttributes ParseLexedCAttributeTokens(LateParsedAttribute &LA);
+
+  /// Helper function to move LateParsedTypeAttribute pointers from one list
+  /// to another. Filters type attributes from \p From and appends them to \p
+  /// To.
+  static void TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
+                                         LateParsedAttrList &From);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
@@ -1704,13 +1742,13 @@ private:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_template_param:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_conv_operator:
       return ImplicitTypenameContext::Yes;
 
     case DeclSpecContext::DSC_normal:
     case DeclSpecContext::DSC_objc_method_result:
     case DeclSpecContext::DSC_condition:
     case DeclSpecContext::DSC_template_arg:
-    case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_association:
       return ImplicitTypenameContext::No;
     }
@@ -2962,6 +3000,7 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
+  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
@@ -4467,8 +4506,7 @@ private:
 
   //===--------------------------------------------------------------------===//
   // C++ Expressions
-  ExprResult tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOperand,
-                                     Token &Replacement);
+  ExprResult tryParseCXXIdExpression(CXXScopeSpec &SS, bool isAddressOfOperand);
 
   ExprResult tryParseCXXPackIndexingExpression(ExprResult PackIdExpression);
   ExprResult ParseCXXPackIndexingExpression(ExprResult PackIdExpression);
@@ -4997,16 +5035,12 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
-  /// \param EnterForConditionScope If true, enter a continue/break scope at the
-  /// appropriate moment for a 'for' loop.
-  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
                                           bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+                                          ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 

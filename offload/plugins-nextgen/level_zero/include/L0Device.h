@@ -17,11 +17,11 @@
 
 #include "PerThreadTable.h"
 
-#include "AsyncQueue.h"
+#include "L0CmdListManager.h"
 #include "L0Context.h"
 #include "L0Program.h"
+#include "L0Queue.h"
 #include "PluginInterface.h"
-#include "TLS.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -74,109 +74,6 @@ struct L0DeviceIdTy {
       : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
 };
 
-class L0DeviceTLSTy {
-  /// Command list for each device.
-  ze_command_list_handle_t CmdList = nullptr;
-
-  /// Main copy command list for each device.
-  ze_command_list_handle_t CopyCmdList = nullptr;
-
-  /// Command queue for each device.
-  ze_command_queue_handle_t CmdQueue = nullptr;
-
-  /// Main copy command queue for each device.
-  ze_command_queue_handle_t CopyCmdQueue = nullptr;
-
-  /// Immediate command list for each device.
-  ze_command_list_handle_t ImmCmdList = nullptr;
-
-  /// Immediate copy command list for each device.
-  ze_command_list_handle_t ImmCopyCmdList = nullptr;
-
-public:
-  L0DeviceTLSTy() = default;
-  ~L0DeviceTLSTy() {
-    // assert all fields are nullptr on destruction.
-    assert(!CmdList && !CopyCmdList && !CmdQueue && !CopyCmdQueue &&
-           !ImmCmdList && !ImmCopyCmdList &&
-           "L0DeviceTLSTy destroyed without clearing resources");
-  }
-
-  L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy(L0DeviceTLSTy &&Other) {
-    CmdList = std::exchange(Other.CmdList, nullptr);
-    CopyCmdList = std::exchange(Other.CopyCmdList, nullptr);
-    CmdQueue = std::exchange(Other.CmdQueue, nullptr);
-    CopyCmdQueue = std::exchange(Other.CopyCmdQueue, nullptr);
-    ImmCmdList = std::exchange(Other.ImmCmdList, nullptr);
-    ImmCopyCmdList = std::exchange(Other.ImmCopyCmdList, nullptr);
-  }
-
-  Error deinit() {
-    // destroy all lists and queues.
-    if (CmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
-    if (CopyCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, CopyCmdList);
-    if (ImmCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
-    if (ImmCopyCmdList)
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCopyCmdList);
-    if (CmdQueue)
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CmdQueue);
-    if (CopyCmdQueue)
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CopyCmdQueue);
-
-    CmdList = nullptr;
-    CopyCmdList = nullptr;
-    CmdQueue = nullptr;
-    CopyCmdQueue = nullptr;
-    ImmCmdList = nullptr;
-    ImmCopyCmdList = nullptr;
-
-    return Plugin::success();
-  }
-
-  L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
-
-  ze_command_list_handle_t getCmdList() const { return CmdList; }
-  void setCmdList(ze_command_list_handle_t _CmdList) { CmdList = _CmdList; }
-
-  ze_command_list_handle_t getCopyCmdList() const { return CopyCmdList; }
-  void setCopyCmdList(ze_command_list_handle_t _CopyCmdList) {
-    CopyCmdList = _CopyCmdList;
-  }
-
-  ze_command_list_handle_t getImmCmdList() const { return ImmCmdList; }
-  void setImmCmdList(ze_command_list_handle_t ImmCmdListIn) {
-    ImmCmdList = ImmCmdListIn;
-  }
-
-  ze_command_list_handle_t getImmCopyCmdList() const { return ImmCopyCmdList; }
-  void setImmCopyCmdList(ze_command_list_handle_t ImmCopyCmdListIn) {
-    ImmCopyCmdList = ImmCopyCmdListIn;
-  }
-
-  ze_command_queue_handle_t getCmdQueue() const { return CmdQueue; }
-  void setCmdQueue(ze_command_queue_handle_t CmdQueueIn) {
-    CmdQueue = CmdQueueIn;
-  }
-
-  ze_command_queue_handle_t getCopyCmdQueue() const { return CopyCmdQueue; }
-  void setCopyCmdQueue(ze_command_queue_handle_t CopyCmdQueueIn) {
-    CopyCmdQueue = CopyCmdQueueIn;
-  }
-};
-
-struct L0DeviceTLSTableTy
-    : public PerThreadContainer<std::vector<L0DeviceTLSTy>, 8> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0DeviceTLSTy &Entry) { return Entry.deinit(); });
-  }
-};
-
 class L0DeviceTy final : public GenericDeviceTy {
   // Level Zero Context for this Device.
   L0ContextTy &l0Context;
@@ -188,6 +85,7 @@ class L0DeviceTy final : public GenericDeviceTy {
   ze_device_compute_properties_t ComputeProperties{};
   ze_device_memory_properties_t MemoryProperties{};
   ze_device_cache_properties_t CacheProperties{};
+  ze_device_module_properties_t ModuleProperties{};
 
   /// Devices' default target allocation kind for internal allocation.
   int32_t AllocKind = TARGET_ALLOC_DEVICE;
@@ -209,13 +107,12 @@ class L0DeviceTy final : public GenericDeviceTy {
   static constexpr uint32_t MaxOrdinal =
       std::numeric_limits<decltype(MaxOrdinal)>::max();
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
-  /// Command queue group ordinals for copying.
-  std::pair<uint32_t, uint32_t> CopyOrdinal{MaxOrdinal, 0};
 
   /// Command queue index for each device.
   uint32_t ComputeIndex = 0;
 
-  bool IsAsyncEnabled = false;
+  /// Whether the device supports cooperative kernels.
+  bool SupportsCooperativeKernels = false;
 
   /// Lock for this device.
   std::mutex Mutex;
@@ -230,17 +127,20 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// MemAllocator for this device.
   MemAllocatorTy MemAllocator;
 
+  /// Cache of queues for this device.
+  L0QueueCacheTy QueueCache;
+
   DeviceArchTy computeArch() const;
 
   /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
   std::pair<uint32_t, uint32_t> findComputeOrdinal();
 
-  /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
-  std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
-
   /// Helper function to call global constructors or destructors.
   Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
                                  bool IsCtor);
+
+  /// Check if device supports cooperative kernels.
+  bool checkCooperativeKernelSupport();
 
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
@@ -248,7 +148,7 @@ public:
              const std::string_view zeId, int32_t ComputeIndex)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
         l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
-        ComputeIndex(ComputeIndex) {
+        ComputeIndex(ComputeIndex), QueueCache(*this) {
     DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
     DeviceProperties.pNext = nullptr;
     ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
@@ -257,6 +157,8 @@ public:
     MemoryProperties.pNext = nullptr;
     CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     CacheProperties.pNext = nullptr;
+    ModuleProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+    ModuleProperties.pNext = nullptr;
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -266,12 +168,12 @@ public:
     return reinterpret_cast<LevelZeroPluginTy &>(Plugin);
   }
 
-  L0DeviceTLSTy &getTLS();
-
   Error setContext() override { return Plugin::success(); }
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
   ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -385,6 +287,26 @@ public:
     return DeviceProperties.maxMemAllocSize;
   }
 
+  bool supportsFP64() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP64;
+  }
+
+  bool supportsFP16() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP16;
+  }
+
+  ze_device_fp_flags_t getFP64Flags() const {
+    return ModuleProperties.fp64flags;
+  }
+
+  ze_device_fp_flags_t getFP16Flags() const {
+    return ModuleProperties.fp16flags;
+  }
+
+  ze_device_fp_flags_t getFP32Flags() const {
+    return ModuleProperties.fp32flags;
+  }
+
   int32_t getAllocKind() const { return AllocKind; }
   DeviceArchTy getDeviceArch() const { return DeviceArch; }
   bool isDeviceArch(DeviceArchTy Arch) const { return DeviceArch == Arch; }
@@ -418,49 +340,7 @@ public:
   uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
   uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
 
-  bool hasMainCopyEngine() const { return CopyOrdinal.first != MaxOrdinal; }
-  uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
-
-  bool deviceRequiresImmCmdList() const {
-    constexpr uint32_t BMGIP = 0x05004000;
-    return isDeviceIPorNewer(BMGIP);
-  }
-  bool asyncEnabled() const { return IsAsyncEnabled; }
-  bool useImmForCompute() const { return true; }
-  bool useImmForCopy() const { return true; }
-  bool useImmForInterop() const { return true; }
-
   void reportDeviceInfo() const;
-
-  // Command queues related functions.
-  /// Create a command list with given ordinal and flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, ze_command_list_flags_t Flags,
-                const std::string_view DeviceIdStr);
-
-  /// Create a command list with default flags.
-  Expected<ze_command_list_handle_t>
-  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
-                uint32_t Ordinal, const std::string_view DeviceIdStr);
-
-  Expected<ze_command_list_handle_t> getCmdList();
-
-  /// Create a command queue with given ordinal and flags.
-  Expected<ze_command_queue_handle_t>
-  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
-                 uint32_t Ordinal, uint32_t Index,
-                 ze_command_queue_flags_t Flags,
-                 const std::string_view DeviceIdStr);
-
-  /// Create a command queue with default flags.
-  Expected<ze_command_queue_handle_t>
-  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
-                 uint32_t Ordinal, uint32_t Index,
-                 const std::string_view DeviceIdStr, bool InOrder = false);
-
-  /// Create a new command queue for the given OpenMP device ID.
-  Expected<ze_command_queue_handle_t> createCommandQueue(bool InOrder = false);
 
   /// Create an immediate command list.
   Expected<ze_command_list_handle_t>
@@ -471,26 +351,60 @@ public:
     return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
   }
 
-  /// Create an immediate command list for copying.
-  Expected<ze_command_list_handle_t> createImmCopyCmdList();
-  Expected<ze_command_queue_handle_t> getCmdQueue();
-  Expected<ze_command_list_handle_t> getCopyCmdList();
-  Expected<ze_command_queue_handle_t> getCopyCmdQueue();
-  Expected<ze_command_list_handle_t> getImmCmdList();
-  Expected<ze_command_list_handle_t> getImmCopyCmdList();
+  /// Release an immediate command list.
+  Error releaseImmCmdList(ze_command_list_handle_t CmdList) {
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    return Plugin::success();
+  }
 
-  /// Enqueue copy command.
+  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    return new L0CmdListManagerTy(*CmdListOrErr);
+  }
+
+  Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
+    if (CmndListMngr) {
+      auto CmdList = CmndListMngr->getCmdList();
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+      delete CmndListMngr;
+    }
+    return Plugin::success();
+  }
+
+  /// Enqueue non-blocking memory copy.
   Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                       __tgt_async_info *AsyncInfo = nullptr,
-                       bool UseCopyEngine = true);
+                       __tgt_async_info *AsyncInfo) {
+    auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+    if (!QueueOrErr)
+      return QueueOrErr.takeError();
+    L0QueueTy *Queue = *QueueOrErr;
+    return Queue->memoryCopy(Dst, Src, Size);
+  }
 
-  /// Enqueue asynchronous copy command.
-  Error enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
-                            __tgt_async_info *AsyncInfo, bool CopyTo = true);
+  Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
 
   /// Enqueue fill command.
   Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                       size_t Size);
+                       size_t Size, __tgt_async_info *AsyncInfo);
+  Error enqueueMemFillAndSync(void *Ptr, const void *Pattern,
+                              size_t PatternSize, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err =
+            enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
 
   /// Driver related functions.
 
@@ -518,6 +432,11 @@ public:
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
 
   bool supportsLargeMem() const { return l0Context.supportsLargeMem(); }
+
+  /// Returns the Queue from an async info object, or creates a new one if
+  /// the async info does not have a queue yet.
+  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
   // Allocation related routines.
 
@@ -610,12 +529,14 @@ public:
     return true;
   }
 
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
 

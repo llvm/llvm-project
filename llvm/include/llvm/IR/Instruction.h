@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -588,23 +589,22 @@ public:
   LLVM_ABI void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating attribute.
-  LLVM_ABI bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
+  LLVM_ABI bool hasPoisonGeneratingAttributes() const LLVM_READONLY;
 
-  /// Drops return attributes that may generate poison.
-  LLVM_ABI void dropPoisonGeneratingReturnAttributes();
+  /// Drops attributes that may generate poison.
+  LLVM_ABI void dropPoisonGeneratingAttributes();
 
   /// Return true if this instruction has poison-generating flags,
-  /// return attributes or metadata.
+  /// attributes or metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() ||
-           hasPoisonGeneratingReturnAttributes() ||
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttributes() ||
            hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags, return attributes and metadata that may generate poison.
+  /// Drops flags, attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
-    dropPoisonGeneratingReturnAttributes();
+    dropPoisonGeneratingAttributes();
     dropPoisonGeneratingMetadata();
   }
 
@@ -706,6 +706,10 @@ public:
   /// operator which supports these flags. See LangRef.html for the meaning of
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
+
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
 
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
@@ -836,6 +840,10 @@ public:
     return Opcode == Xor;
   }
 
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
+
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
 
@@ -859,6 +867,10 @@ public:
 
   /// Return true if this instruction has a volatile memory access.
   LLVM_ABI bool isVolatile() const LLVM_READONLY;
+
+  /// Return true if this instruction may synchronize, in the sense that it
+  /// may introduce a synchronizes-with edge.
+  LLVM_ABI bool maySynchronize() const LLVM_READONLY;
 
   /// Return the type this instruction accesses in memory, if any.
   LLVM_ABI Type *getAccessType() const LLVM_READONLY;

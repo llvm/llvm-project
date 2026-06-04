@@ -515,6 +515,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_neon_fmmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfdot : AdvSIMD_Dot_Intrinsic;
+  def int_aarch64_neon_fdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfmmla
     : DefaultAttrsIntrinsic<[llvm_v4f32_ty],
                 [llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v8bf16_ty],
@@ -1048,6 +1049,7 @@ def llvm_nxv4i1_ty  : LLVMType<nxv4i1>;
 def llvm_nxv8i1_ty  : LLVMType<nxv8i1>;
 def llvm_nxv16i1_ty : LLVMType<nxv16i1>;
 def llvm_nxv16i8_ty : LLVMType<nxv16i8>;
+def llvm_nxv8i16_ty : LLVMType<nxv8i16>;
 def llvm_nxv4i32_ty : LLVMType<nxv4i32>;
 def llvm_nxv2i64_ty : LLVMType<nxv2i64>;
 def llvm_nxv8f16_ty : LLVMType<nxv8f16>;
@@ -2458,6 +2460,8 @@ def int_aarch64_sve_stnt1_scatter_scalar_offset  : AdvSIMD_ScatterStore_VS_Intri
 //
 
 def int_aarch64_sve_saba          : AdvSIMD_3VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_sabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_uabal         : SVE2_3VectorArg_Long_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_shsub_u       : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
@@ -2561,6 +2565,10 @@ def int_aarch64_sve_sminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable
 def int_aarch64_sve_umaxp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 def int_aarch64_sve_uminp   : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
 
+def int_aarch64_sve_addqp   : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_addsubp : AdvSIMD_2VectorArg_Intrinsic<[IntrSpeculatable]>;
+def int_aarch64_sve_subp    : AdvSIMD_Pred2VectorArg_Intrinsic<[IntrSpeculatable]>;
+
 //
 // SVE2 - Widening pairwise arithmetic
 //
@@ -2606,6 +2614,19 @@ def int_aarch64_sve_fmlslb        : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_fmlslb_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
 def int_aarch64_sve_fmlslt        : SVE2_3VectorArg_Long_Intrinsic;
 def int_aarch64_sve_fmlslt_lane   : SVE2_3VectorArgIndexed_Long_Intrinsic;
+
+//
+// SVE2 - Multi-vector narrowing convert to floating point
+//
+
+def int_aarch64_sve_scvtfb
+    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty], [IntrNoMem]>;
+def int_aarch64_sve_scvtft
+    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty], [IntrNoMem]>;
+def int_aarch64_sve_ucvtfb
+    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty], [IntrNoMem]>;
+def int_aarch64_sve_ucvtft
+    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty], [IntrNoMem]>;
 
 //
 // SVE2 - Floating-point integer binary logarithm
@@ -2842,8 +2863,6 @@ def int_aarch64_sve_fp8_fmmla
 def int_aarch64_sve_bfdot   : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalb : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalt : SVE_4Vec_BF16;
-
-def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
 
 def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;
@@ -3776,6 +3795,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqcvtun_x4 : SVE2_CVT_VG4_SINGLE_Intrinsic;
 
   //
+  // Multi-vector saturating shift right narrow and interleave
+  //
+  def int_aarch64_sve_sqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_uqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_sqshrun_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+
+  //
   // Multi-Single add/sub
   //
 
@@ -4007,6 +4033,12 @@ let TargetPrefix = "aarch64" in {
                              LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>, LLVMVectorOfBitcastsToInt<0>],
                             [IntrNoMem]>;
 
+
+   //
+   // SVE2.3/SME2.3 - Multi-vector narrowing convert to floating point
+   //
+   def int_aarch64_sve_fcvtzsn_x2: AdvSIMD_2Arg_FloatCompare_Intrinsic;
+   def int_aarch64_sve_fcvtzun_x2: AdvSIMD_2Arg_FloatCompare_Intrinsic;
 }
 
 // SVE2.1 - ZIPQ1, ZIPQ2, UZPQ1, UZPQ2
@@ -4290,4 +4322,3 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
-

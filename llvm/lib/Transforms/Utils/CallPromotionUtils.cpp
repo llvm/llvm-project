@@ -477,6 +477,27 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
     }
   }
 
+  // Check target feature compatibility. This is also needed to avoid incorrect
+  // inlining if the callee has the always_inline attribute. An always_inline
+  // function can be incorrectly inlined via two paths: either it is directly
+  // called and inlined, or it is indirectly called, promoted, and then inlined.
+  // The check here only prevents the latter case.
+  auto CalleeFeatures =
+      Callee->getFnAttribute("target-features").getValueAsString();
+  auto CallerFeatures =
+      CB.getCaller()->getFnAttribute("target-features").getValueAsString();
+  SmallVector<StringRef, 8> CalleeFeats;
+  CalleeFeatures.split(CalleeFeats, ',');
+  for (auto Feat : CalleeFeats) {
+    if (Feat.starts_with("+")) {
+      if (!CallerFeatures.contains(Feat)) {
+        if (FailureReason)
+          *FailureReason = "Incompatible target features";
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 

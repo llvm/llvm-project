@@ -383,9 +383,8 @@ public:
 
   using TargetInstrInfo::foldMemoryOperandImpl;
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex, MachineInstr *&CopyMI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
@@ -583,6 +582,9 @@ public:
   /// Insert a `PAUTH_EPILOGUE` pseudo before the first terminator in \p MBB to
   /// authenticate the return address. Adds an implicit def of X16 when the
   /// branch protection uses PAuthLR but the subtarget lacks PAuthLR
+  /// instructions. If the epilogue has callee-popped argument stack to restore,
+  /// it additionally implicit defines X15 and X17 to cover clobbered registers
+  /// for the required sequence on subtargets both with and without PAuthLR
   /// instructions.
   void createPauthEpilogueInstr(MachineBasicBlock &MBB, DebugLoc DL) const;
 
@@ -599,8 +601,6 @@ protected:
   isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///

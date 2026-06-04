@@ -12,8 +12,8 @@
 #include <arm_fp16.h>
 
 // COMMON-LABEL: test_vceqzh_f16
-// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp oeq half %a, 0xH0000
-// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half 0xH0000, metadata !"oeq", metadata !"fpexcept.strict")
+// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp oeq half %a, 0.000000e+00
+// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict")
 // COMMONIR:       [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // COMMONIR:       ret i16 [[TMP2]]
 uint16_t test_vceqzh_f16(float16_t a) {
@@ -21,8 +21,8 @@ uint16_t test_vceqzh_f16(float16_t a) {
 }
 
 // COMMON-LABEL: test_vcgezh_f16
-// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp oge half %a, 0xH0000
-// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0xH0000, metadata !"oge", metadata !"fpexcept.strict")
+// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp oge half %a, 0.000000e+00
+// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0.000000e+00, metadata !"oge", metadata !"fpexcept.strict")
 // COMMONIR:       [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // COMMONIR:       ret i16 [[TMP2]]
 uint16_t test_vcgezh_f16(float16_t a) {
@@ -30,8 +30,8 @@ uint16_t test_vcgezh_f16(float16_t a) {
 }
 
 // COMMON-LABEL: test_vcgtzh_f16
-// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp ogt half %a, 0xH0000
-// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0xH0000, metadata !"ogt", metadata !"fpexcept.strict")
+// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp ogt half %a, 0.000000e+00
+// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0.000000e+00, metadata !"ogt", metadata !"fpexcept.strict")
 // COMMONIR:       [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // COMMONIR:       ret i16 [[TMP2]]
 uint16_t test_vcgtzh_f16(float16_t a) {
@@ -39,8 +39,8 @@ uint16_t test_vcgtzh_f16(float16_t a) {
 }
 
 // COMMON-LABEL: test_vclezh_f16
-// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp ole half %a, 0xH0000
-// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0xH0000, metadata !"ole", metadata !"fpexcept.strict")
+// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp ole half %a, 0.000000e+00
+// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0.000000e+00, metadata !"ole", metadata !"fpexcept.strict")
 // COMMONIR:       [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // COMMONIR:       ret i16 [[TMP2]]
 uint16_t test_vclezh_f16(float16_t a) {
@@ -48,8 +48,8 @@ uint16_t test_vclezh_f16(float16_t a) {
 }
 
 // COMMON-LABEL: test_vcltzh_f16
-// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp olt half %a, 0xH0000
-// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0xH0000, metadata !"olt", metadata !"fpexcept.strict")
+// UNCONSTRAINED:  [[TMP1:%.*]] = fcmp olt half %a, 0.000000e+00
+// CONSTRAINED:    [[TMP1:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict")
 // COMMONIR:       [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
 // COMMONIR:       ret i16 [[TMP2]]
 uint16_t test_vcltzh_f16(float16_t a) {
@@ -105,42 +105,48 @@ float16_t test_vcvth_f16_u64 (uint64_t a) {
 }
 
 // COMMON-LABEL: test_vcvth_s16_f16
-// COMMONIR:       [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i16 @llvm.fptosi.sat.i16.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half %a)
 // COMMONIR:       ret i16 [[VCVT]]
 int16_t test_vcvth_s16_f16 (float16_t a) {
   return vcvth_s16_f16(a);
 }
 
 // COMMON-LABEL: test_vcvth_s32_f16
-// COMMONIR:       [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i32 @llvm.fptosi.sat.i32.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzs.i32.f16(half %a)
 // COMMONIR:       ret i32 [[VCVT]]
 int32_t test_vcvth_s32_f16 (float16_t a) {
   return vcvth_s32_f16(a);
 }
 
 // COMMON-LABEL: test_vcvth_s64_f16
-// COMMONIR:       [[VCVT:%.*]] = call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i64 @llvm.fptosi.sat.i64.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
 // COMMONIR:       ret i64 [[VCVT]]
 int64_t test_vcvth_s64_f16 (float16_t a) {
   return vcvth_s64_f16(a);
 }
 
 // COMMON-LABEL: test_vcvth_u16_f16
-// COMMONIR:       [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i16 @llvm.fptoui.sat.i16.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
 // COMMONIR:       ret i16 [[VCVT]]
 uint16_t test_vcvth_u16_f16 (float16_t a) {
   return vcvth_u16_f16(a);
 }
 
 // COMMON-LABEL: test_vcvth_u32_f16
-// COMMONIR:       [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i32 @llvm.fptoui.sat.i32.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i32 @llvm.aarch64.neon.fcvtzu.i32.f16(half %a)
 // COMMONIR:       ret i32 [[VCVT]]
 uint32_t test_vcvth_u32_f16 (float16_t a) {
   return vcvth_u32_f16(a);
 }
 
 // COMMON-LABEL: test_vcvth_u64_f16
-// COMMONIR:       [[VCVT:%.*]] = call i64 @llvm.aarch64.neon.fcvtzu.i64.f16(half %a)
+// UNCONSTRAINED:  [[VCVT:%.*]] = call i64 @llvm.fptoui.sat.i64.f16(half %a)
+// CONSTRAINED:    [[VCVT:%.*]] = call i64 @llvm.aarch64.neon.fcvtzu.i64.f16(half %a)
 // COMMONIR:       ret i64 [[VCVT]]
 uint64_t test_vcvth_u64_f16 (float16_t a) {
   return vcvth_u64_f16(a);

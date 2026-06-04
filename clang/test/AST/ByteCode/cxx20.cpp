@@ -775,7 +775,7 @@ namespace FailingDestructor {
     }
   };
   template<D d>
-  void f() {} // both-note {{invalid explicitly-specified argument}}
+  void f() {} // both-note {{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, false}>(); // both-error {{no matching function}}
@@ -1286,7 +1286,7 @@ namespace PointerCmp {
   };
   constexpr K2 k2{1,2, 3};
   static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
- /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);
   static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
   static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
 
@@ -1353,4 +1353,22 @@ namespace ConstIntPotentialConstantExpr {
     a = 20; // both-error {{cannot assign to variable 'a' with const-qualified type 'const int'}}
     return 1;
   }
+}
+
+namespace IndirectFieldInitializer {
+  struct A {
+    struct {
+      union {
+        int x = x = 3;
+      };
+    };
+    constexpr A() {}
+  };
+  static_assert(A().x == 3, "");
+
+}
+
+namespace InvalidOMPRequiredSimdAlign {
+  typedef decltype(sizeof(int)) T;
+  constexpr T foo(T x) { return __builtin_omp_required_simd_align * 42; } // both-error {{indirection requires pointer operand}}
 }

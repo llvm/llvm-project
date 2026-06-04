@@ -497,6 +497,8 @@ inline cst_pred_ty<is_all_ones, false> m_AllOnesForbidPoison() {
   return cst_pred_ty<is_all_ones, false>();
 }
 
+inline auto m_AllOnesOrPoison() { return m_CombineOr(m_AllOnes(), m_Poison()); }
+
 struct is_maxsignedvalue {
   bool isValue(const APInt &C) const { return C.isMaxSignedValue(); }
 };
@@ -587,6 +589,8 @@ struct is_zero {
 /// Match any null constant or a vector with all elements equal to 0.
 /// For vectors, this includes constants with undefined elements.
 inline is_zero m_Zero() { return is_zero(); }
+
+inline auto m_ZeroOrPoison() { return m_CombineOr(m_Zero(), m_Poison()); }
 
 struct is_power2 {
   bool isValue(const APInt &C) const { return C.isPowerOf2(); }
@@ -2927,6 +2931,10 @@ template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_BSwap(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::bswap>(Op0);
 }
+template <typename Opnd0>
+inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Ctpop(const Opnd0 &Op0) {
+  return m_Intrinsic<Intrinsic::ctpop>(Op0);
+}
 
 template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FAbs(const Opnd0 &Op0) {
@@ -2936,6 +2944,18 @@ inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FAbs(const Opnd0 &Op0) {
 template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_FCanonicalize(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::canonicalize>(Op0);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Ctlz(const Opnd0 &Op0,
+                                                        const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::ctlz>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Cttz(const Opnd0 &Op0,
+                                                        const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::cttz>(Op0, Op1);
 }
 
 template <typename Opnd0, typename Opnd1>

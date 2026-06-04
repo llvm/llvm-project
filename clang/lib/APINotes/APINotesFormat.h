@@ -24,7 +24,8 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 39; // BoundsSafety
+const uint16_t VERSION_MINOR = 40; // 39 for BoundsSafety;
+                                   // 40 for UnsafeBufferUsageAttr
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;
@@ -365,11 +366,6 @@ template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
                                                 {}};
   }
 
-  static inline clang::api_notes::StoredObjCSelector getTombstoneKey() {
-    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getTombstoneKey(),
-                                                {}};
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::StoredObjCSelector &Selector) {
     auto hash = llvm::hash_value(Selector.NumArgs);
@@ -392,13 +388,6 @@ template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
     return clang::api_notes::ContextTableKey();
   }
 
-  static inline clang::api_notes::ContextTableKey getTombstoneKey() {
-    return clang::api_notes::ContextTableKey{
-        DenseMapInfo<uint32_t>::getTombstoneKey(),
-        DenseMapInfo<uint8_t>::getTombstoneKey(),
-        DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const clang::api_notes::ContextTableKey &value) {
     return value.hashValue();
   }
@@ -412,12 +401,6 @@ template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
 template <> struct DenseMapInfo<clang::api_notes::SingleDeclTableKey> {
   static inline clang::api_notes::SingleDeclTableKey getEmptyKey() {
     return clang::api_notes::SingleDeclTableKey();
-  }
-
-  static inline clang::api_notes::SingleDeclTableKey getTombstoneKey() {
-    return clang::api_notes::SingleDeclTableKey{
-        DenseMapInfo<uint32_t>::getTombstoneKey(),
-        DenseMapInfo<uint32_t>::getTombstoneKey()};
   }
 
   static unsigned

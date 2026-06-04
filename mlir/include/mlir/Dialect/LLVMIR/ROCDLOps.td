@@ -536,6 +536,19 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDL_WaveBarrierOp : ROCDL_ConcreteNonMemIntrOp<"wave.barrier", [], 0> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    Insert a wave-level (subgroup) barrier. Synchronizes lanes within a
+    single wave/wavefront without any memory ordering guarantees.
+
+    Example:
+    ```mlir
+    rocdl.wave.barrier
+    ```
+  }];
+}
+
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
@@ -1426,6 +1439,125 @@ def ROCDL_wmma_scale16_f32_32x16x128_f4     : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.s
 
 
 //===---------------------------------------------------------------------===//
+// Dot product intrinsics (v_dot*)
+class ROCDL_Dot_IntrOp<string mnemonic, ROCDL_NamedType A, ROCDL_NamedType B,
+                       ROCDL_NamedType C> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [3], ["clamp"]>,
+  Arguments<(ins A:$a, B:$b, C:$c,
+                 DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs C:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Packed intra-lane dot-product with optional result clamping (`clamp`).
+    Computes `res = sum_i a[i]*b[i] + c`, where `a` and `b` hold packed
+    4/8/16-bit data (for `dot2`,`dot4`,`dot8`).
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c {clamp = true} :
+         (}] # A.typeName # [{, }] # B.typeName # [{, }] # C.typeName # [{) -> }]
+         # C.typeName # [{
+    ```
+  }];
+}
+
+class ROCDL_Dot_NoClamp_IntrOp<string mnemonic, ROCDL_NamedType A,
+                               ROCDL_NamedType B, ROCDL_NamedType C> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [], []>,
+  Arguments<(ins A:$a, B:$b, C:$c)> {
+  let results = (outs C:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Packed intra-lane dot-product with no clamp control.
+    Computes `res = sum_i a[i]*b[i] + c`. Covers the full-f16/bf16
+    accumulator forms (`fdot2.f16.f16`, `fdot2.bf16.bf16`) and the
+    FP8/BF8 `dot4.f32.*` variants, whose hardware instructions have no
+    CLAMP bit in their modifier word.
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c : (}] # A.typeName # [{, }]
+         # B.typeName # [{, }] # C.typeName # [{) -> }] # C.typeName # [{
+    ```
+  }];
+}
+
+class ROCDL_Sudot_IntrOp<string mnemonic> :
+    ROCDL_ConcreteNonMemIntrOp<mnemonic, [Pure], 1, [0, 2, 5],
+                               ["signA", "signB", "clamp"]>,
+  Arguments<(ins DefaultValuedAttr<I1Attr, "0">:$signA,
+                 I32:$a,
+                 DefaultValuedAttr<I1Attr, "0">:$signB,
+                 I32:$b,
+                 I32:$c,
+                 DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs I32:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Mixed-signedness packed dot-product with per-operand sign controls.
+    Computes `res = sum_i a[i]*b[i] + c`. Each lane of `a` is treated as
+    signed when `signA = true`; when `signA = false`, the unsigned lane
+    value is zero-extended into a wider signed integer. `signB` controls
+    the same for `b`. `clamp` controls result clamping.
+
+    These ops correspond to RDNA's unified mixed-sign `v_dot4_i32_iu8`
+    and `v_dot8_i32_iu4` instructions (gfx11+). 
+
+    Example:
+    ```mlir
+    %r = rocdl.}] # mnemonic # [{ %a, %b, %c
+           {signA = true, signB = false, clamp = true} :
+         (i32, i32, i32) -> i32
+    ```
+  }];
+}
+
+// Available from gfx906.
+def ROCDL_fdot2 : ROCDL_Dot_IntrOp<"fdot2",
+    ROCDL_V2F16Type, ROCDL_V2F16Type, ROCDL_Scalar<F32>>;
+def ROCDL_sdot2 : ROCDL_Dot_IntrOp<"sdot2",
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
+def ROCDL_udot2 : ROCDL_Dot_IntrOp<"udot2",
+    ROCDL_V2I16Type, ROCDL_V2I16Type, ROCDL_Scalar<I32>>;
+def ROCDL_sdot4 : ROCDL_Dot_IntrOp<"sdot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot4 : ROCDL_Dot_IntrOp<"udot4",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_sdot8 : ROCDL_Dot_IntrOp<"sdot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+def ROCDL_udot8 : ROCDL_Dot_IntrOp<"udot8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<I32>>;
+
+// Available from gfx11.
+def ROCDL_fdot2_f16_f16   : ROCDL_Dot_NoClamp_IntrOp<"fdot2.f16.f16",
+    ROCDL_V2F16Type,  ROCDL_V2F16Type,  ROCDL_Scalar<F16>>;
+def ROCDL_fdot2_bf16_bf16 : ROCDL_Dot_NoClamp_IntrOp<"fdot2.bf16.bf16",
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<BF16>>;
+def ROCDL_sudot4 : ROCDL_Sudot_IntrOp<"sudot4">;
+def ROCDL_sudot8 : ROCDL_Sudot_IntrOp<"sudot8">;
+
+// Available from gfx11 and gfx950.
+def ROCDL_fdot2_f32_bf16 : ROCDL_Dot_IntrOp<"fdot2.f32.bf16",
+    ROCDL_V2BF16Type, ROCDL_V2BF16Type, ROCDL_Scalar<F32>>;
+
+// Available from gfx12.
+def ROCDL_dot4_f32_fp8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.fp8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_fp8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.fp8.bf8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_bf8_fp8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.fp8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+def ROCDL_dot4_f32_bf8_bf8 : ROCDL_Dot_NoClamp_IntrOp<"dot4.f32.bf8.bf8",
+    ROCDL_Scalar<I32>, ROCDL_Scalar<I32>, ROCDL_Scalar<F32>>;
+
+
+//===---------------------------------------------------------------------===//
 // SWMMAC intrinsics
 class ROCDL_SWMMAC_V0_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
     [0], [0, 1, 3], [], 1, 0, 0, 0, [], []>,
@@ -1799,6 +1931,44 @@ foreach bitsVal = [8, 32, 64, 128] in {
   }
 }
 
+//===---------------------------------------------------------------------===//
+// Async store from LDS intrinsic (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_GlobalStoreAsyncFromLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"global.store.async.from.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "aux"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemWrite]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemRead]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$aux);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
+      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+    }];
+    let description = [{
+      Asynchronously stores }] # !cast<string>(bitsVal) # [{ bits of data from a Local Data Share (LDS)
+      pointer to a global memory pointer.
+
+      Available on gfx1250+.
+
+      Example:
+      ```mlir
+      // Async }] # !cast<string>(bitsVal) # [{-bit store from LDS to global.
+      rocdl.global.store.async.from.lds.}] # bitsStr # [{ %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+      ```
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
+}
+
 foreach bitsVal = [8, 32, 64, 128] in {
   defvar bitsStr = "b" # !cast<string>(bitsVal);
   def ROCDL_ClusterLoadAsyncToLDS # !toupper(bitsStr) # Op :
@@ -1995,15 +2165,16 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
   }];
 }
 
-class ROCDL_RawPtrBufferAtomicNoRet<string op> :
-  ROCDL_IntrOp<"raw.ptr.buffer.atomic." # op, [], [0], [], 0, 0, 1> {
+class ROCDL_RawPtrBufferAtomicRet<string op> :
+  ROCDL_IntrOp<"raw.ptr.buffer.atomic." # op, [0], [],
+               [AllTypesMatch<["res", "vdata"]>], 1, 0, 1> {
   dag args = (ins LLVM_Type:$vdata,
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
                   I32:$aux);
   let arguments = !con(args, baseArgs);
-  let assemblyFormat = "operands attr-dict `:` type($vdata)";
+  let assemblyFormat = "operands attr-dict `:` type($res)";
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc()};
@@ -2011,11 +2182,11 @@ class ROCDL_RawPtrBufferAtomicNoRet<string op> :
   }];
 }
 
-def ROCDL_RawPtrBufferAtomicFmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"fmax">;
-def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"smax">;
-def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
+def ROCDL_RawPtrBufferAtomicFmaxOp : ROCDL_RawPtrBufferAtomicRet<"fmax">;
+def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicRet<"smax">;
+def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicRet<"umin">;
 // Note: not supported on all architectures
-def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
+def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicRet<"fadd">;
 
 //===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
@@ -2161,7 +2332,8 @@ def ROCDL_DsAtomicAsyncBarrierArriveOp :
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 
 def ROCDL_RawBufferAtomicFAddOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.fadd", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.fadd", [0], [],
+               [AllTypesMatch<["res", "vdata"]>], 1>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -2174,7 +2346,8 @@ def ROCDL_RawBufferAtomicFAddOp :
 // Buffer atomic floating point max intrinsic. GFX9 does not support fp32.
 
 def ROCDL_RawBufferAtomicFMaxOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.fmax", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.fmax", [0], [],
+               [AllTypesMatch<["res", "vdata"]>], 1>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -2187,7 +2360,8 @@ def ROCDL_RawBufferAtomicFMaxOp :
 // Buffer atomic signed integer max intrinsic.
 
 def ROCDL_RawBufferAtomicSMaxOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.smax", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.smax", [0], [],
+               [AllTypesMatch<["res", "vdata"]>], 1>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -2200,7 +2374,8 @@ def ROCDL_RawBufferAtomicSMaxOp :
 // Buffer atomic unsigned integer min intrinsic.
 
 def ROCDL_RawBufferAtomicUMinOp :
-  ROCDL_IntrOp<"raw.buffer.atomic.umin", [], [0], [], 0>,
+  ROCDL_IntrOp<"raw.buffer.atomic.umin", [0], [],
+               [AllTypesMatch<["res", "vdata"]>], 1>,
   Arguments<(ins LLVM_Type:$vdata,
                  LLVM_Type:$rsrc,
                  LLVM_Type:$offset,
@@ -2301,6 +2476,69 @@ def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
     ```mlir
     // Swap lanes between groups of 32 threads.
     %res = rocdl.permlane32.swap %src, %src, 0, -1 : (i32, i32) -> !llvm.struct<(i32, i32)>
+    ```
+  }];
+}
+
+// Permlane16 variable intrinsic operation (GFX12+)
+//
+// Per-lane variable-selector intra-row (within each 16-lane row) permutation.
+// Unlike `permlane16`, the source-lane indices come from a per-lane VGPR
+// (`$src1`) rather than from immediate SGPR fields, allowing arbitrary
+// per-lane intra-row permutations.
+def ROCDL_Permlane16VarOp : ROCDL_IntrOp<"permlane16.var", [], [],
+    [], 1, 0, 0, 0,
+    [3, 4], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src0, I32:$src1,
+             I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs I32:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Performs a `permlane16.var` operation: a per-lane variable-selector
+    intra-row permutation (within each 16-lane row). Maps to
+    `llvm.amdgcn.permlane16.var`.
+
+    Each destination lane within a 16-lane row reads its value from the
+    source lane whose index is given by the corresponding per-lane entry
+    in `$src1` (a VGPR). `$fi` and `$boundControl` are immediate i1 attrs
+    matching the underlying intrinsic's modifiers.
+
+    Example:
+    ```mlir
+    %res = rocdl.permlane16.var %old, %src, %selector, false, true : (i32, i32, i32) -> i32
+    ```
+  }];
+}
+
+// PermlaneX16 variable intrinsic operation (GFX12+)
+//
+// Per-lane variable-selector cross-row permutation (each lane in row R reads
+// from a per-lane-chosen source lane in the opposite 16-lane row).
+def ROCDL_PermlaneX16VarOp : ROCDL_IntrOp<"permlanex16.var", [], [],
+    [], 1, 0, 0, 0,
+    [3, 4], ["fi", "boundControl"]>,
+  Arguments<(ins I32:$old, I32:$src0, I32:$src1,
+             I1Attr:$fi, I1Attr:$boundControl)> {
+  let results = (outs I32:$res);
+  let assemblyFormat = [{
+    attr-dict $old `,` $src0 `,` $src1 `,` $fi `,` $boundControl `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Performs a `permlanex16.var` operation: a per-lane variable-selector
+    cross-row permutation (each lane in one 16-lane row reads from a
+    per-lane-chosen source lane in the opposite row). Maps to
+    `llvm.amdgcn.permlanex16.var`.
+
+    With per-lane "identity" selectors this realises an XOR-16 swap pattern
+    in pure VALU; with arbitrary selectors it enables general per-lane
+    cross-half-wave permutations. `$fi` and `$boundControl` are immediate
+    i1 attrs matching the underlying intrinsic's modifiers.
+
+    Example:
+    ```mlir
+    %res = rocdl.permlanex16.var %old, %src, %selector, false, true : (i32, i32, i32) -> i32
     ```
   }];
 }

@@ -633,9 +633,9 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (!bp_site->IsEnabled()) {
+    if (!IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       if (m_comm.SendRequestBreakpoint(true, bp_site->GetLoadAddress())) {
-        bp_site->SetEnabled(true);
+        SetBreakpointSiteEnabled(*bp_site);
         bp_site->SetType(BreakpointSite::eExternal);
       } else {
         return Status::FromErrorString("KDP set breakpoint failed");
@@ -649,15 +649,15 @@ Status ProcessKDP::EnableBreakpointSite(BreakpointSite *bp_site) {
 Status ProcessKDP::DisableBreakpointSite(BreakpointSite *bp_site) {
   if (m_comm.LocalBreakpointsAreSupported()) {
     Status error;
-    if (bp_site->IsEnabled()) {
+    if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
       BreakpointSite::Type bp_type = bp_site->GetType();
       if (bp_type == BreakpointSite::eExternal) {
         if (m_destroy_in_process && m_comm.IsRunning()) {
           // We are trying to destroy our connection and we are running
-          bp_site->SetEnabled(false);
+          SetBreakpointSiteEnabled(*bp_site, false);
         } else {
           if (m_comm.SendRequestBreakpoint(false, bp_site->GetLoadAddress()))
-            bp_site->SetEnabled(false);
+            SetBreakpointSiteEnabled(*bp_site, false);
           else
             return Status::FromErrorString("KDP remove breakpoint failed");
         }

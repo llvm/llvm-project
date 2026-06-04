@@ -78,10 +78,11 @@ enum TokenKey : unsigned {
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
   KEYDEFERTS = 0x20000000,
-  KEYMAX = KEYDEFERTS, // The maximum key
+  KEYNOHLSL = 0x40000000,
+  KEYMAX = KEYNOHLSL, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
-           ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL & ~KEYNOZOS &
+           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, KEYNOZOS, KEYNOHLSL excluded.
 };
 
 /// How a keyword is treated in the selected standard. This enum is ordered
@@ -1188,10 +1189,6 @@ public:
     return Selector(uintptr_t(-1));
   }
 
-  static Selector getTombstoneMarker() {
-    return Selector(uintptr_t(-2));
-  }
-
   static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
 };
 
@@ -1274,10 +1271,6 @@ template <>
 struct DenseMapInfo<clang::Selector> {
   static clang::Selector getEmptyKey() {
     return clang::Selector::getEmptyMarker();
-  }
-
-  static clang::Selector getTombstoneKey() {
-    return clang::Selector::getTombstoneMarker();
   }
 
   static unsigned getHashValue(clang::Selector S);

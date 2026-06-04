@@ -19,7 +19,8 @@ define linkonce_odr noundef i64 @_ZNK4llvm9StringRef4sizeEv() align 2 !dbg !340 
 !6 = !{i32 7, !"frame-pointer", i32 1}
 !7 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !8, sdk: "MacOSX14.0.sdk")
 !8 = !DIFile(filename: "file.cpp", directory: "/Users/Dev", checksumkind: CSK_MD5, checksum: "ed7ae158f20f7914bc5fb843291e80da")
-!12 = distinct !DISubprogram(unit: !7, retainedNodes: !36)
+!12 = distinct !DISubprogram(unit: !7, retainedNodes: !36, type: !400)
 !36 = !{}
 !284 = distinct !{}
-!340 = distinct !DISubprogram(unit: !7, retainedNodes: !36)
+!340 = distinct !DISubprogram(unit: !7, retainedNodes: !36, type: !400)
+!400 = !DISubroutineType(types: !36)

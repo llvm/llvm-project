@@ -64,6 +64,8 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
       {"fixup_loongarch_abs64_hi12", 10, 12, 0},
+      {"fixup_loongarch_dtprel32", 0, 32, 0},
+      {"fixup_loongarch_dtprel64", 0, 64, 0},
   };
 
   static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
@@ -98,6 +100,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_4:
   case FK_Data_8:
   case FK_Data_leb128:
+  case LoongArch::fixup_loongarch_dtprel32:
+  case LoongArch::fixup_loongarch_dtprel64:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
@@ -282,7 +286,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F) const {
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+    unsigned PtrSize = C.getAsmInfo().getCodePointerSize();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
     PCBytes = PtrSize;
     OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
@@ -319,7 +323,7 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCFragment &F) const {
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
+  assert(getContext().getAsmInfo().getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
     F.clearVarContents();
@@ -403,6 +407,11 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
+    // It's possible for Target to have (SymB != nullptr && SymA == nullptr).
+    // Go to the fallback path when we encounter this. See also #196927.
+    if (!Target.getAddSym())
+      return Fallback();
+
     assert(Target.getSpecifier() == 0 &&
            "relocatable SymA-SymB cannot have relocation specifier");
     std::pair<MCFixupKind, MCFixupKind> FK;

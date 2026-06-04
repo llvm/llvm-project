@@ -12,11 +12,13 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
@@ -42,13 +44,15 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
       /* do_deref */ false);
 }
 
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+static llvm::Expected<lldb::TypeSystemSP> GetTypeSystemFromCU(StackFrame &ctx) {
   SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+      ctx.GetSymbolContext(lldb::eSymbolContextCompUnit);
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {}",
+                                    ctx.GetFunctionName());
 
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+  symbol_context = ctx.GetSymbolContext(lldb::eSymbolContextModule);
   return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
 
@@ -58,7 +62,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 location);
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -82,7 +86,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       llvm::Expected<uint64_t> uint_bit_size =
           uint_type.GetBitSize(m_exe_ctx_scope.get());
       if (!uint_bit_size)
-        return int_bit_size.takeError();
+        return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
           (in_type.IsSigned() && bitfield_size == *int_bit_size))
         return valobj->CastToBasicType(int_type);
@@ -184,7 +188,7 @@ Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
 
     if (*rhs_size == *lhs_size) {
       llvm::Expected<lldb::TypeSystemSP> type_system =
-          GetTypeSystemFromCU(m_exe_ctx_scope);
+          GetTypeSystemFromCU(*m_exe_ctx_scope);
       if (!type_system)
         return type_system.takeError();
       CompilerType r_type_unsigned = GetBasicType(
@@ -357,13 +361,38 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     // Try looking for an instance variable (class member).
     SymbolContext sc = stack_frame->GetSymbolContext(
         lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
-    llvm::StringRef ivar_name = sc.GetInstanceVariableName();
-    value_sp = stack_frame->FindVariable(ConstString(ivar_name));
+    llvm::StringRef instance_name = sc.GetInstanceName();
+    value_sp = stack_frame->FindVariable(ConstString(instance_name));
     if (value_sp)
       value_sp = value_sp->GetChildMemberWithName(name_ref);
 
     if (value_sp)
       return value_sp;
+  }
+  return nullptr;
+}
+
+lldb::ValueObjectSP LookupEnumValue(llvm::StringRef name_ref,
+                                    ExecutionContextScope &ctx_scope) {
+  if (name_ref.contains("::")) {
+    llvm::StringRef enum_typename, enumerator_name;
+    // FIXME: Change this to a structured binding for lambda capturing
+    // once we have C++20.
+    std::tie(enum_typename, enumerator_name) = name_ref.rsplit("::");
+    CompilerType enum_type = ResolveTypeByName(enum_typename.str(), ctx_scope);
+    lldb::ValueObjectSP result;
+    enum_type.ForEachEnumerator([&](const CompilerType &integer_type,
+                                    ConstString name,
+                                    const llvm::APSInt &value) -> bool {
+      if (name == enumerator_name) {
+        Scalar scalar(value);
+        result = ValueObject::CreateValueObjectFromScalar(ctx_scope, scalar,
+                                                          enum_type, "result");
+        return false; // Stop iterating
+      }
+      return true;
+    });
+    return result;
   }
   return nullptr;
 }
@@ -376,17 +405,17 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
 
   const bool check_ptr_vs_member =
       (options & StackFrame::eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & StackFrame::eExpressionPathOptionsNoFragileObjcIvar) != 0;
   const bool no_synth_child =
       (options & StackFrame::eExpressionPathOptionsNoSyntheticChildren) != 0;
   const bool allow_var_updates =
       (options & StackFrame::eExpressionPathOptionsAllowVarUpdates) != 0;
+  const bool disallow_globals =
+      (options & StackFrame::eExpressionPathOptionsDisallowGlobals) != 0;
 
   m_use_synthetic = !no_synth_child;
-  m_fragile_ivar = !no_fragile_ivar;
   m_check_ptr_vs_member = check_ptr_vs_member;
   m_allow_var_updates = allow_var_updates;
+  m_allow_globals = !disallow_globals;
 }
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
@@ -424,9 +453,13 @@ Interpreter::Visit(const IdentifierNode &node) {
   lldb::ValueObjectSP identifier =
       LookupIdentifier(node.GetName(), m_exe_ctx_scope, use_dynamic);
 
-  if (!identifier)
+  if (!identifier && m_allow_globals)
     identifier = LookupGlobalIdentifier(node.GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
+
+  if (!identifier)
+    identifier = LookupEnumValue(node.GetName(), *m_exe_ctx_scope);
+
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
@@ -603,6 +636,12 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::Shl:
+    return value_object(l << r);
+  case BinaryOpKind::Shr:
+    return value_object(l >> r);
+  default:
+    break;
   }
   return llvm::make_error<DILDiagnosticError>(
       m_expr, "invalid arithmetic operation", location);
@@ -703,7 +742,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinarySubtraction(
     diff /= item_size;
 
     llvm::Expected<lldb::TypeSystemSP> type_system =
-        GetTypeSystemFromCU(m_exe_ctx_scope);
+        GetTypeSystemFromCU(*m_exe_ctx_scope);
     if (!type_system)
       return type_system.takeError();
     CompilerType ptrdiff_type = type_system.get()->GetPointerDiffType(true);
@@ -800,6 +839,101 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryRemainder(
   return EvaluateScalarOp(BinaryOpKind::Rem, lhs, rhs, result_type, location);
 }
 
+static bool HasFloatingRepresentation(CompilerType ct) {
+  return ct.GetTypeInfo() & lldb::eTypeIsFloat;
+}
+
+static llvm::Expected<bool> VerifyAssignmentTypes(CompilerType lhs_type,
+                                                  CompilerType rhs_type) {
+  // Make sure lhs is a legal type for DIL assignment.
+  if (!lhs_type.IsInteger() && !lhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(lhs_type) && !lhs_type.IsPointerType() &&
+      !lhs_type.IsScalarType())
+    return llvm::createStringError(
+        "Illegal type for lhs of assignment (not scalar numeric type)");
+
+  // Make sure rhs is a legal type for DIL assignment.
+  if (!rhs_type.IsInteger() && !rhs_type.IsUnscopedEnumerationType() &&
+      !HasFloatingRepresentation(rhs_type) && !rhs_type.IsPointerType())
+    return llvm::createStringError(
+        "Illegal type for rhs of assignment (not scalar numeric type)");
+
+  // Only allow assigning pointers to pointers.
+  if ((lhs_type.IsPointerType() && !rhs_type.IsPointerType()) ||
+      (!lhs_type.IsPointerType() && rhs_type.IsPointerType()))
+    return llvm::createStringError(
+        "Invalid assignment: Can only assign pointers to pointers");
+
+  // For "real numbers", the types must match exactly.
+  if ((HasFloatingRepresentation(rhs_type) ||
+       HasFloatingRepresentation(lhs_type)) &&
+      lhs_type != rhs_type) {
+    std::string err_msg =
+        llvm::formatv("Incompatible types for assignment: Cannot assign {0} "
+                      "to {1}",
+                      rhs_type.TypeDescription(), lhs_type.TypeDescription());
+    return llvm::createStringError(err_msg);
+  }
+
+  return true;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
+                                lldb::ValueObjectSP rhs, uint32_t location) {
+
+  auto all_ok =
+      VerifyAssignmentTypes(lhs->GetCompilerType(), rhs->GetCompilerType());
+  if (!all_ok)
+    return all_ok.takeError();
+
+  if (llvm::Error e = lhs->SetValueFromInteger(rhs, m_allow_var_updates))
+    return e;
+
+  return lhs;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                 lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'>>', '<<'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  CompilerType orig_lhs_type = lhs->GetCompilerType();
+  CompilerType orig_rhs_type = rhs->GetCompilerType();
+  auto lhs_or_err = UnaryConversion(lhs, location);
+  if (!lhs_or_err)
+    return lhs_or_err.takeError();
+  lhs = *lhs_or_err;
+  auto rhs_or_err = UnaryConversion(rhs, location);
+  if (!rhs_or_err)
+    return rhs_or_err.takeError();
+  rhs = *rhs_or_err;
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+  if (!lhs_type.IsInteger() || !rhs_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  bool success;
+  uint64_t amount = rhs->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "could not get the shift amount as an integer", location);
+  llvm::Expected<uint64_t> lhs_size =
+      lhs_type.GetBitSize(m_exe_ctx_scope.get());
+  if (!lhs_size)
+    return lhs_size.takeError();
+  if (amount >= *lhs_size)
+    return llvm::make_error<DILDiagnosticError>(m_expr, "invalid shift amount",
+                                                location);
+
+  return EvaluateScalarOp(kind, lhs, rhs, lhs_type, location);
+}
+
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BinaryOpNode &node) {
   auto lhs_or_err = EvaluateAndDereference(node.GetLHS());
@@ -824,14 +958,31 @@ Interpreter::Visit(const BinaryOpNode &node) {
   switch (node.GetKind()) {
   case BinaryOpKind::Add:
     return EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::AddAssign: {
+    auto ret_or_err = EvaluateBinaryAddition(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
+  case BinaryOpKind::Assign:
+    return EvaluateAssignment(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Sub:
     return EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::SubAssign: {
+    auto ret_or_err = EvaluateBinarySubtraction(lhs, rhs, node.GetLocation());
+    if (!ret_or_err)
+      return ret_or_err;
+    return EvaluateAssignment(lhs, *ret_or_err, node.GetLocation());
+  }
   case BinaryOpKind::Mul:
     return EvaluateBinaryMultiplication(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Div:
     return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::Shl:
+  case BinaryOpKind::Shr:
+    return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());
   }
 
   return llvm::make_error<DILDiagnosticError>(
@@ -848,19 +999,6 @@ Interpreter::Visit(const MemberOfNode &node) {
 
   // Perform some basic type & correctness checking.
   if (node.GetIsArrow()) {
-    if (!m_fragile_ivar) {
-      // Make sure we aren't trying to deref an objective
-      // C ivar if this is not allowed
-      const uint32_t pointer_type_flags =
-          base->GetCompilerType().GetTypeInfo(nullptr);
-      if ((pointer_type_flags & lldb::eTypeIsObjC) &&
-          (pointer_type_flags & lldb::eTypeIsPointer)) {
-        // This was an objective C object pointer and it was requested we
-        // skip any fragile ivars so return nothing here
-        return lldb::ValueObjectSP();
-      }
-    }
-
     // If we have a non-pointer type with a synthetic value then lets check
     // if we have a synthetic dereference specified.
     if (!base->IsPointerType() && base->HasSyntheticValue()) {
@@ -1190,7 +1328,7 @@ Interpreter::PickIntegerType(lldb::TypeSystemSP type_system,
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IntegerLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -1206,7 +1344,11 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
       type->GetBitSize(m_exe_ctx_scope.get());
   if (!type_bitsize)
     return type_bitsize.takeError();
+  // Literal itself cannot be a negative value, so we do an unsigned extension.
   scalar.TruncOrExtendTo(*type_bitsize, false);
+  // If the picked compiler type is signed, make the scalar signed as well.
+  if (type->IsSigned())
+    scalar.MakeSigned();
   return ValueObject::CreateValueObjectFromScalar(m_exe_ctx_scope, scalar,
                                                   *type, "result");
 }
@@ -1214,7 +1356,7 @@ Interpreter::Visit(const IntegerLiteralNode &node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const FloatLiteralNode &node) {
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
 
@@ -1237,7 +1379,7 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const BooleanLiteralNode &node) {
   bool value = node.GetValue();
   llvm::Expected<lldb::TypeSystemSP> type_system =
-      GetTypeSystemFromCU(m_exe_ctx_scope);
+      GetTypeSystemFromCU(*m_exe_ctx_scope);
   if (!type_system)
     return type_system.takeError();
   return ValueObject::CreateValueObjectFromBool(m_exe_ctx_scope, *type_system,
@@ -1271,6 +1413,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          target_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           target_type.TypeDescription().length());
@@ -1281,6 +1425,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          source_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           source_type.TypeDescription().length());

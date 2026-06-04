@@ -85,6 +85,10 @@ public:
 
   const FileAction *GetFileActionForFD(int fd) const;
 
+  /// Returns true if fd has an explicit file action, or is the destination of a
+  /// duplicate action.
+  bool IsFDRedirected(int fd) const;
+
   Flags &GetFlags() { return m_flags; }
 
   const Flags &GetFlags() const { return m_flags; }

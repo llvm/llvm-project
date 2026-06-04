@@ -148,6 +148,7 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES = 0x1,
   ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES = 0x3,
   ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES = 0x4,
+  ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES = 0x5,
   ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES = 0x6,
   ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES = 0x7,
   ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES = 0x9,
@@ -165,8 +166,9 @@ typedef enum _ze_structure_type_t {
   ZE_STRUCTURE_TYPE_KERNEL_DESC = 0x1d,
   ZE_STRUCTURE_TYPE_KERNEL_PROPERTIES = 0x1e,
   ZE_STRUCTURE_TYPE_KERNEL_PREFERRED_GROUP_SIZE_PROPERTIES = 0x21,
-  ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x00020001,
-  ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 0x00030001,
+  ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
+  ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC = 0x00020036,
+  ZE_STRUCTURE_TYPE_RELAXED_ALLOCATION_LIMITS_EXP_DESC = 0x00020001,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 } ze_structure_type_t;
 
@@ -234,6 +236,7 @@ typedef uint32_t ze_command_queue_flags_t;
 typedef enum _ze_command_queue_flag_t {
   ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY = ZE_BIT(0),
   ZE_COMMAND_QUEUE_FLAG_IN_ORDER = ZE_BIT(1),
+  ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT = ZE_BIT(2),
   ZE_COMMAND_QUEUE_FLAG_FORCE_UINT32 = 0x7fffffff
 } ze_command_queue_flag_t;
 
@@ -399,6 +402,53 @@ typedef struct _ze_device_cache_properties_t {
   size_t cacheSize;
 } ze_device_cache_properties_t;
 
+/* Native kernel UUID */
+#ifndef ZE_MAX_NATIVE_KERNEL_UUID_SIZE
+#define ZE_MAX_NATIVE_KERNEL_UUID_SIZE 16
+#endif
+
+typedef struct _ze_native_kernel_uuid_t {
+  uint8_t id[ZE_MAX_NATIVE_KERNEL_UUID_SIZE];
+} ze_native_kernel_uuid_t;
+
+/* Device module flags */
+typedef uint32_t ze_device_module_flags_t;
+typedef enum _ze_device_module_flag_t {
+  ZE_DEVICE_MODULE_FLAG_FP16 = ZE_BIT(0),
+  ZE_DEVICE_MODULE_FLAG_FP64 = ZE_BIT(1),
+  ZE_DEVICE_MODULE_FLAG_INT64_ATOMICS = ZE_BIT(2),
+  ZE_DEVICE_MODULE_FLAG_DP4A = ZE_BIT(3),
+  ZE_DEVICE_MODULE_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_device_module_flag_t;
+
+/* Floating-point capability flags */
+typedef uint32_t ze_device_fp_flags_t;
+typedef enum _ze_device_fp_flag_t {
+  ZE_DEVICE_FP_FLAG_DENORM = ZE_BIT(0),
+  ZE_DEVICE_FP_FLAG_INF_NAN = ZE_BIT(1),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST = ZE_BIT(2),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO = ZE_BIT(3),
+  ZE_DEVICE_FP_FLAG_ROUND_TO_INF = ZE_BIT(4),
+  ZE_DEVICE_FP_FLAG_FMA = ZE_BIT(5),
+  ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT = ZE_BIT(6),
+  ZE_DEVICE_FP_FLAG_SOFT_FLOAT = ZE_BIT(7),
+  ZE_DEVICE_FP_FLAG_FORCE_UINT32 = 0x7fffffff
+} ze_device_fp_flag_t;
+
+/* Device module properties */
+typedef struct _ze_device_module_properties_t {
+  ze_structure_type_t stype;
+  void *pNext;
+  uint32_t spirvVersionSupported;
+  ze_device_module_flags_t flags;
+  ze_device_fp_flags_t fp16flags;
+  ze_device_fp_flags_t fp32flags;
+  ze_device_fp_flags_t fp64flags;
+  uint32_t maxArgumentsSize;
+  uint32_t printfBufferSize;
+  ze_native_kernel_uuid_t nativeKernelSupported;
+} ze_device_module_properties_t;
+
 /* Device IP version (extension) */
 typedef struct _ze_device_ip_version_ext_t {
   ze_structure_type_t stype;
@@ -440,6 +490,12 @@ typedef struct _ze_group_count_t {
   uint32_t groupCountY;
   uint32_t groupCountZ;
 } ze_group_count_t;
+
+typedef struct _ze_group_size_t {
+  uint32_t groupSizeX;
+  uint32_t groupSizeY;
+  uint32_t groupSizeZ;
+} ze_group_size_t;
 
 /* Memory allocation properties */
 typedef struct _ze_memory_allocation_properties_t {
@@ -612,6 +668,9 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeDeviceGetComputeProperties(
     ze_device_handle_t hDevice,
     ze_device_compute_properties_t *pComputeProperties);
 ZE_APIEXPORT ze_result_t ZE_APICALL
+zeDeviceGetModuleProperties(ze_device_handle_t hDevice,
+                            ze_device_module_properties_t *pModuleProperties);
+ZE_APIEXPORT ze_result_t ZE_APICALL
 zeDeviceGetMemoryProperties(ze_device_handle_t hDevice, uint32_t *pCount,
                             ze_device_memory_properties_t *pMemProperties);
 ZE_APIEXPORT ze_result_t ZE_APICALL
@@ -679,6 +738,18 @@ ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendLaunchKernel(
 ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendLaunchCooperativeKernel(
     ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
     const ze_group_count_t *pLaunchFuncArgs, ze_event_handle_t hSignalEvent,
+    uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
+typedef struct _ze_command_list_append_launch_kernel_param_cooperative_desc_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  ze_bool_t isCooperative;
+} ze_command_list_append_launch_kernel_param_cooperative_desc_t;
+
+ZE_APIEXPORT ze_result_t ZE_APICALL
+zeCommandListAppendLaunchKernelWithArguments(
+    ze_command_list_handle_t hCommandList, ze_kernel_handle_t hKernel,
+    const ze_group_count_t groupCounts, const ze_group_size_t groupSizes,
+    void **pArguments, const void *pNext, ze_event_handle_t hSignalEvent,
     uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents);
 ZE_APIEXPORT ze_result_t ZE_APICALL zeCommandListAppendMemoryCopy(
     ze_command_list_handle_t hCommandList, void *dstptr, const void *srcptr,

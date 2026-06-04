@@ -58,6 +58,9 @@ enum UniformityLLTOpPredicateID {
   DivS64,
   DivS128,
 
+  // any LLT, divergent-check only predicate
+  DivAnyTy,
+
   // pointers
   P0,
   P1,
@@ -148,6 +151,10 @@ enum RegBankLLTMappingApplyID {
   IntrId,
   Imm,
   Vcc,
+
+  // any LLT, bank-only apply IDs
+  VgprAnyTy,
+  AgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -286,6 +293,7 @@ enum LoweringMethodID {
   SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
+  CtPop64To32,
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
@@ -297,6 +305,7 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
+  ApplyBVH_INTERSECT_RAY,
   SplitBitCount64To32,
   ExtrVecEltToSel,
   ExtrVecEltTo32,
