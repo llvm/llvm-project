@@ -4242,13 +4242,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BIstdc_memreverse8:
   case Builtin::BI__builtin_stdc_memreverse8: {
-    Value *N = EmitScalarExpr(E->getArg(0));
-    Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
-
-    if (auto *CI = dyn_cast<ConstantInt>(N)) {
-      uint64_t Size = CI->getZExtValue();
+    Expr::EvalResult R;
+    if (E->getArg(0)->EvaluateAsInt(R, getContext())) {
+      uint64_t Size = R.Val.getInt().getZExtValue();
       if (Size == 2 || Size == 4 || Size == 8) {
         llvm::Type *IntTy = Builder.getIntNTy(Size * 8);
+        Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
         Address Addr = PtrAddr.withElementType(IntTy);
         Value *Val = Builder.CreateLoad(Addr);
         Function *F = CGM.getIntrinsic(Intrinsic::bswap, IntTy);
