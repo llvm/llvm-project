@@ -3758,7 +3758,7 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
-bool isLegalCmpImmed(APInt C) {
+bool isLegalCmpImmed(const APInt &C) {
   // Works for negative immediates too, as it can be written as an ADDS
   // instruction with a negated immediate.
   return isLegalArithImmed(C.abs().getZExtValue());
@@ -3855,19 +3855,13 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     Opcode = AArch64ISD::ADDS;
     LHS = LHS.getOperand(1);
   } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC)) {
-    if (LHS.getOpcode() == ISD::AND) {
+    if (LHS.getOpcode() == ISD::AND && LHS.hasOneUse()) {
       // Similarly, (CMP (and X, Y), 0) can be implemented with a TST
-      // (a.k.a. ANDS) except that the flags are only guaranteed to work for one
-      // of the signed comparisons.
-      const SDValue ANDSNode =
-          DAG.getNode(AArch64ISD::ANDS, DL, DAG.getVTList(VT, FlagsVT),
-                      LHS.getOperand(0), LHS.getOperand(1));
-      // Replace all users of (and X, Y) with newly generated (ands X, Y)
-      DAG.ReplaceAllUsesWith(LHS, ANDSNode);
-      return ANDSNode.getValue(1);
-    } else if (LHS.getOpcode() == AArch64ISD::ANDS) {
-      // Use result of ANDS
-      return LHS.getValue(1);
+      // (a.k.a. ANDS) except that the flags are only guaranteed to work for
+      // signed comparisons.
+      Opcode = AArch64ISD::ANDS;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
     }
   }
 
@@ -4229,9 +4223,10 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
 // emitComparison() converts comparison with one or negative one to comparison
 // with 0. Note that this only works for signed comparisons because of how ANDS
 // works.
-static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
-  // Only works for ANDS and AND.
-  if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
+static bool shouldBeAdjustedToZero(SDValue LHS, const APInt &C,
+                                   ISD::CondCode &CC) {
+  // Only works for AND.
+  if (LHS.getOpcode() != ISD::AND)
     return false;
 
   if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
