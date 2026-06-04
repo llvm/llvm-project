@@ -3,17 +3,35 @@
 
 #ifndef TEST_C2Y_LIB_SPELLINGS
 
-// N=0 and N=1: fall back to library call.
+// N=0 and N=1: no-op, no library call or bswap emitted.
 // CHECK-LABEL: test_memreverse8_const0
-// CHECK: call void @stdc_memreverse8(
+// CHECK-NOT: call void @stdc_memreverse8
 void test_memreverse8_const0(unsigned char *p) {
   __builtin_stdc_memreverse8(0, p);
 }
 
 // CHECK-LABEL: test_memreverse8_const1
-// CHECK: call void @stdc_memreverse8(
+// CHECK-NOT: call void @stdc_memreverse8
 void test_memreverse8_const1(unsigned char *p) {
   __builtin_stdc_memreverse8(1, p);
+}
+
+// N=0 and N=1 with side effects: pointer argument is evaluated but no reversal.
+// CHECK-LABEL: test_memreverse8_sideeffect_n0
+// CHECK: getelementptr
+// CHECK: store ptr
+// CHECK-NOT: call void @stdc_memreverse8
+unsigned char *gp;
+void test_memreverse8_sideeffect_n0(void) {
+  __builtin_stdc_memreverse8(0, gp++);
+}
+
+// CHECK-LABEL: test_memreverse8_sideeffect_n1
+// CHECK: getelementptr
+// CHECK: store ptr
+// CHECK-NOT: call void @stdc_memreverse8
+void test_memreverse8_sideeffect_n1(void) {
+  __builtin_stdc_memreverse8(1, gp++);
 }
 
 // N=2, 4, 8: lowered to a single bswap with unaligned load/store.

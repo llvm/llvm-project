@@ -4245,6 +4245,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Expr::EvalResult R;
     if (E->getArg(0)->EvaluateAsInt(R, getContext())) {
       uint64_t Size = R.Val.getInt().getZExtValue();
+      if (Size <= 1) {
+        EmitIgnoredExpr(E->getArg(1));
+        return RValue::get(nullptr);
+      }
       if (Size == 2 || Size == 4 || Size == 8) {
         llvm::Type *IntTy = Builder.getIntNTy(Size * 8);
         Address PtrAddr = EmitPointerWithAlignment(E->getArg(1));
