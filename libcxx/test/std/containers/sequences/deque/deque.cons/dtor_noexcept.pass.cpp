@@ -39,7 +39,7 @@ struct NonTrivial {
   constexpr ~NonTrivial() {}
 };
 
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   std::deque<NonTrivial> d;
   for (int i = 0; i != 50; ++i)
     d.emplace_back(i);
@@ -52,8 +52,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   {

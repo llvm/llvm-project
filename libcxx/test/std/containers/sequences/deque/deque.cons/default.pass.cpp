@@ -34,7 +34,7 @@ void test() {
 }
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   std::deque<int> d;
   assert(d.empty());
   assert(d.begin() == d.end());
@@ -44,8 +44,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   test<int, std::allocator<int> >();

@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   std::deque<int> a = {1, 2, 3};
   std::deque<int> b = {1, 2, 4};
   assert((a <=> b) < 0);
@@ -32,8 +32,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   assert(test_sequence_container_spaceship<std::deque>());

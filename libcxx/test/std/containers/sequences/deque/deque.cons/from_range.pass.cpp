@@ -19,7 +19,7 @@
 //   deque(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23; constexpr since C++26
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   int input[] = {1, 2, 3};
   std::deque<int> d(std::from_range, input);
   assert((d == std::deque<int>{1, 2, 3}));
@@ -29,8 +29,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   for_all_iterators_and_allocators<int>([]<class Iter, class Sent, class Alloc>() {

@@ -104,7 +104,7 @@ void test_emplacable_concept() {
 }
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   int input[] = {1, 2, 3};
   std::deque<int> d(input, input + 3);
   assert(d.size() == 3);
@@ -115,8 +115,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   basic_test();

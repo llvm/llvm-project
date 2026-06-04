@@ -25,7 +25,7 @@
 // - an exception is thrown when copying the elements or when allocating new elements.
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   int input[]       = {1, 2};
   std::deque<int> d = {3};
   d.prepend_range(input);
@@ -36,8 +36,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   static_assert(test_constraints_prepend_range<std::deque, int, double>());

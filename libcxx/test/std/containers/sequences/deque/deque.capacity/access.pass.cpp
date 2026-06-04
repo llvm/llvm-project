@@ -8,19 +8,17 @@
 
 // <deque>
 
-// constexpr since C++26
-
-//       reference operator[](size_type __i);
-// const_reference operator[](size_type __i) const;
+//       constexpr reference operator[](size_type __i);             // constexpr since C++26
+// constexpr const_reference operator[](size_type __i) const;       // constexpr since C++26
 //
-//       reference at(size_type __i);
-// const_reference at(size_type __i) const;
+//       constexpr reference at(size_type __i);                     // constexpr since C++26
+// constexpr const_reference at(size_type __i) const;               // constexpr since C++26
 //
-//       reference front();
-// const_reference front() const;
+//       constexpr reference front();                               // constexpr since C++26
+// constexpr const_reference front() const;                         // constexpr since C++26
 //
-//       reference back();
-// const_reference back() const;
+//       constexpr reference back();                                // constexpr since C++26
+// constexpr const_reference back() const;                          // constexpr since C++26
 // libc++ marks these as 'noexcept'
 
 #include "asan_testing.h"
@@ -50,7 +48,7 @@ C make(int size, int start = 0) {
 }
 
 #if TEST_STD_VER >= 26
-TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+constexpr bool test() {
   std::deque<int> d = {1, 2, 3};
   assert(d[0] == 1);
   assert(d.at(2) == 3);
@@ -62,8 +60,8 @@ TEST_CONSTEXPR_CXX26 bool test_constexpr() {
 
 int main(int, char**) {
 #if TEST_STD_VER >= 26
-  assert(test_constexpr());
-  static_assert(test_constexpr());
+  test();
+  static_assert(test());
 #endif
 
   {
