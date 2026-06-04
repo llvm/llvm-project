@@ -519,10 +519,10 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     return false;
 
   Register R0, R1, R2;
-  auto P1 = m_BinOp(Opc, m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R0), m_Reg(R1))),
+  auto P1 = m_CommutativeBinOp(Opc, m_OneNonDBGUse(m_CommutativeBinOp(Opc, m_Reg(R0), m_Reg(R1))),
                     m_Reg(R2));
-  auto P2 = m_BinOp(Opc, m_Reg(R0),
-                    m_OneNonDBGUse(m_BinOp(Opc, m_Reg(R1), m_Reg(R2))));
+  auto P2 = m_CommutativeBinOp(Opc, m_Reg(R0),
+                    m_OneNonDBGUse(m_CommutativeBinOp(Opc, m_Reg(R1), m_Reg(R2))));
   if (!mi_match(MI, MRI, m_any_of(P1, P2))) {
     return false;
   }
