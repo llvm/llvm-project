@@ -4728,7 +4728,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           // If the new formula has a constant in a register, and adding the
           // constant value to the immediate would produce a value closer to
           // zero than the immediate itself, then the formula isn't worthwhile.
-          for (size_t R = 0; R < NewF.BaseRegs.size(); ++R) {
+          for (auto [R, NewReg] : llvm::enumerate(NewF.BaseRegs)) {
             if (const SCEVConstant *C =
                     dyn_cast<SCEVConstant>(NewF.BaseRegs[R])) {
               if (NewF.BaseOffset.isNonZero() && NewF.BaseOffset.isScalable())
