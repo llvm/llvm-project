@@ -1245,15 +1245,14 @@ evaluateUserCondition(semantics::SemanticsContext &semaCtx,
 
 /// Process user={condition(...)} trait properties. Constant conditions are
 /// resolved to user_condition_true/false. Non-constant conditions are marked
-/// as user_condition_unknown and the expression pointer is returned via
-/// \p dynamicCondExpr.
-static void processUserConditionTrait(
+/// as user_condition_unknown and returned for later use in fir.if lowering.
+static std::optional<DynamicUserCondition> processUserConditionTrait(
     llvm::omp::VariantMatchInfo &vmi,
     const std::optional<parser::OmpTraitSelector::Properties> &props,
-    semantics::SemanticsContext &semaCtx,
-    const parser::ScalarExpr *&dynamicCondExpr, llvm::APInt *scorePtr) {
+    semantics::SemanticsContext &semaCtx, llvm::APInt *scorePtr) {
+  std::optional<DynamicUserCondition> dynamicCond;
   if (!props)
-    return;
+    return dynamicCond;
 
   for (const auto &prop :
        std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
@@ -1268,10 +1267,12 @@ static void processUserConditionTrait(
       continue;
     }
 
-    dynamicCondExpr = scalarExpr;
+    dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
     vmi.addTrait(llvm::omp::TraitProperty::user_condition_unknown,
                  "<condition>", scorePtr);
   }
+
+  return dynamicCond;
 }
 
 /// Extract the optional score value from trait properties.
@@ -1301,14 +1302,13 @@ getTraitScore(const std::optional<parser::OmpTraitSelector::Properties> &props,
 
 /// Populate a VariantMatchInfo from context selector.
 /// For user conditions, attempts constant folding. Non-constant conditions
-/// are recorded as user_condition_unknown and the expression pointer is
-/// returned via \p dynamicCondExpr for later use in fir.if lowering.
-void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
-                          const parser::modifier::OmpContextSelector &ctxSel,
-                          semantics::SemanticsContext &semaCtx,
-                          mlir::Location loc,
-                          const parser::ScalarExpr *&dynamicCondExpr) {
-  dynamicCondExpr = nullptr;
+/// are recorded as user_condition_unknown and returned for later use in
+/// fir.if lowering.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc) {
+  std::optional<DynamicUserCondition> dynamicCond;
 
   for (const auto &traitSet : ctxSel.v) {
     using TSSName = parser::OmpTraitSetSelectorName;
@@ -1333,8 +1333,9 @@ void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
       llvm::APInt *scorePtr = getTraitScore(props, semaCtx, score);
 
       if (selector == llvm::omp::TraitSelector::user_condition) {
-        processUserConditionTrait(vmi, props, semaCtx, dynamicCondExpr,
-                                  scorePtr);
+        if (std::optional<DynamicUserCondition> userCond =
+                processUserConditionTrait(vmi, props, semaCtx, scorePtr))
+          dynamicCond = userCond;
         continue;
       }
 
@@ -1350,6 +1351,8 @@ void makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
         vmi.addTrait(set, propKind, selectorName.ToString(), scorePtr);
     }
   }
+
+  return dynamicCond;
 }
 
 } // namespace omp

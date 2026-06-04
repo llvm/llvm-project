@@ -8,12 +8,12 @@ target triple = "aarch64"
 ; but that a scalable VF is still chosen (due to the `-scalable-vectorization=always` flag)
 define i32 @cost_prefers_fixed_width_vf_but_force_scalable_vf(ptr noalias %dst, ptr noalias %src, i64 %n) "target-cpu"="neoverse-n2" {
 ; CHECK-LABEL: 'cost_prefers_fixed_width_vf_but_force_scalable_vf'
-; CHECK:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
-; CHECK:  Cost for VF 4: 7 (Estimated cost per lane: 1.8)
-; CHECK:  Cost for VF 8: 9 (Estimated cost per lane: 1.1)
+; CHECK:  Cost for VF 2: 12 (Estimated cost per lane: 6.0)
+; CHECK:  Cost for VF 4: 8 (Estimated cost per lane: 2.0)
+; CHECK:  Cost for VF 8: 10 (Estimated cost per lane: 1.2)
 ; CHECK:  Cost for VF vscale x 1: Invalid (Estimated cost per lane: Invalid)
-; CHECK:  Cost for VF vscale x 2: 8 (Estimated cost per lane: 4.0)
-; CHECK:  Cost for VF vscale x 4: 7 (Estimated cost per lane: 1.8)
+; CHECK:  Cost for VF vscale x 2: 9 (Estimated cost per lane: 4.5)
+; CHECK:  Cost for VF vscale x 4: 8 (Estimated cost per lane: 2.0)
 ; CHECK:  LV: Selecting VF: vscale x 4.
 ; CHECK:  VPlan 'Final VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={2}' {
 ;

@@ -8878,6 +8878,18 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       }
     }
 
+    // Special case: clmul(X, ~0) is equivalent to a "parallel prefix XOR" or
+    // "bitwise parity" operation.
+    if (isAllOnesOrAllOnesSplat(Y)) {
+      SDValue R = X;
+      for (unsigned I = 1; I < BW; I <<= 1) {
+        SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
+        SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
+        R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+      }
+      return R;
+    }
+
     // NOTE: If you change this expansion, please update the cost model
     // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
     // Intrinsic::clmul.
