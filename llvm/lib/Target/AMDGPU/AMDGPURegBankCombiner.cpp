@@ -527,7 +527,7 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     return false;
   }
 
-  auto GetAMDGPUOp = [](unsigned Opc) -> unsigned {
+  auto getAMDGPUOp = [](unsigned Opc) -> unsigned {
     switch (Opc) {
     case AMDGPU::G_SMAX:
       return AMDGPU::G_AMDGPU_SMAX3;
@@ -551,7 +551,7 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
       return 0;
     }
   };
-  unsigned AMDGPUOpc = GetAMDGPUOp(Opc);
+  unsigned AMDGPUOpc = getAMDGPUOp(Opc);
   if (!AMDGPUOpc)
     return false;
 
@@ -575,7 +575,7 @@ bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
     }
   }
 
-  MatchInfo = {GetAMDGPUOp(Opc), R0, R1, R2};
+  MatchInfo = {AMDGPUOpc, R0, R1, R2};
   return true;
 }
 
