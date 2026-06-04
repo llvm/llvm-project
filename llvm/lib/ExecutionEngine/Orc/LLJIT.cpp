@@ -22,11 +22,15 @@
 #endif
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#endif
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
+#ifndef EJIT_BARE_METAL
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#endif
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
@@ -956,6 +960,7 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   if (S.CreateObjectLinkingLayer)
     return S.CreateObjectLinkingLayer(ES);
 
+#ifndef EJIT_BARE_METAL
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
   auto GetMemMgr = [](const MemoryBuffer &) {
@@ -978,6 +983,12 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
   //        just return ObjLinkingLayer) once those bots are upgraded.
   return std::unique_ptr<ObjectLayer>(std::move(Layer));
+#else
+  return make_error<StringError>(
+      "Bare-metal: No ObjectLinkingLayer configured. "
+      "JITLink should be set up via prepareForConstruction.",
+      inconvertibleErrorCode());
+#endif
 }
 
 Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
