@@ -12,7 +12,11 @@ ATTR(Dereferenceable, dereferenceable)
 ATTR(DereferenceableOrNull, dereferenceable_or_null)
 ATTR(Ignore, ignore)
 ATTR(NonNull, nonnull)
-ATTR(NoUndef, noundef) // FIXME: Is this actually useful? It's currently exclusively emitted through tests.
+
+// FIXME: Is this actually useful?
+// It's currently exclusively emitted through tests.
+ATTR(NoUndef, noundef)
+
 ATTR(SeparateStorage, separate_storage)
 
 #undef ATTR

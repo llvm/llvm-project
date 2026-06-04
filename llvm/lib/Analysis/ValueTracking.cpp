@@ -1091,9 +1091,9 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
         assert(Ptr == V);
-        if (!Alignment || !isPowerOf2_64(*Alignment))
+        if (!Alignment || !Offset || !isPowerOf2_64(*Alignment))
           continue;
-        auto AlignVal = MinAlign(Offset.value_or(0), *Alignment);
+        auto AlignVal = MinAlign(*Offset, *Alignment);
         if (isValidAssumeForContext(I, Q))
           Known.Zero.setLowBits(Log2_64(AlignVal));
       }

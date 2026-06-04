@@ -40,6 +40,8 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
   if (OBU.Inputs.size() == 3) {
     if (auto *Offset = dyn_cast<ConstantInt>(OBU.Inputs[2]))
       Ret.OffsetVal = Offset->getZExtValue();
+  } else {
+    Ret.OffsetVal = 0;
   }
   return Ret;
 }

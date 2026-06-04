@@ -45,7 +45,7 @@ LLVM_ABI
 AssumeDereferenceableInfo getAssumeDereferenceableInfo(OperandBundleUse);
 
 struct AssumeNonNullInfo {
-  Value *Ptr;
+  const Use &Ptr;
 };
 
 LLVM_ABI AssumeNonNullInfo getAssumeNonNullInfo(OperandBundleUse);
