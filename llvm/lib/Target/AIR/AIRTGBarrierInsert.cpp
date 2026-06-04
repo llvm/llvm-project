@@ -212,6 +212,27 @@ static bool tgBarrierInsert(Module &M) {
         Changed = true;
       }
     }
+
+    for (BasicBlock &BB : F) {
+      Instruction *PrevBarrier = nullptr;
+      SmallVector<Instruction *, 8> ToErase;
+      for (Instruction &I : BB) {
+        if (isBarrierCall(&I)) {
+          if (PrevBarrier)
+            ToErase.push_back(&I);
+          else
+            PrevBarrier = &I;
+          continue;
+        }
+        if (isTGStore(&I) || isTGLoad(&I) || isa<CallInst>(I) ||
+            I.mayReadOrWriteMemory())
+          PrevBarrier = nullptr;
+      }
+      for (Instruction *I : ToErase) {
+        I->eraseFromParent();
+        Changed = true;
+      }
+    }
   }
 
   return Changed;
