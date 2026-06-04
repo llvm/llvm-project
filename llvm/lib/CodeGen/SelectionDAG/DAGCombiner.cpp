@@ -27182,8 +27182,9 @@ static SDValue getSubVectorSrc(SDValue V, unsigned Index, EVT SubVT) {
   return SDValue();
 }
 
-static SDValue narrowInsertExtractVectorBinOp(EVT SubVT, SDValue BinOp,
-                                              unsigned Index, const SDLoc &DL,
+static SDValue narrowInsertExtractVectorBinOp(SDNode *N, EVT SubVT,
+                                              SDValue BinOp, unsigned Index,
+                                              const SDLoc &DL,
                                               SelectionDAG &DAG,
                                               bool LegalOperations) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -27207,10 +27208,13 @@ static SDValue narrowInsertExtractVectorBinOp(EVT SubVT, SDValue BinOp,
   if (!Sub0 || !Sub1)
     return SDValue();
 
-  // Every user of the wide binop must be an EXTRACT_SUBVECTOR; otherwise the
-  // wide binop will still be needed and this transform would not eliminate it.
+  // Every other user of the wide binop must be an EXTRACT_SUBVECTOR that is
+  // still on the combiner worklist; otherwise the wide binop may remain needed.
   for (SDNode *User : BinOp->users()) {
-    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    if (User == N)
+      continue;
+    if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+        User->getCombinerWorklistIndex() < 0)
       return SDValue();
   }
 
@@ -27222,13 +27226,14 @@ static SDValue narrowInsertExtractVectorBinOp(EVT SubVT, SDValue BinOp,
 
 /// If we are extracting a subvector produced by a wide binary operator try
 /// to use a narrow binary operator and/or avoid concatenation and extraction.
-static SDValue narrowExtractedVectorBinOp(EVT VT, SDValue Src, unsigned Index,
-                                          const SDLoc &DL, SelectionDAG &DAG,
+static SDValue narrowExtractedVectorBinOp(SDNode *N, EVT VT, SDValue Src,
+                                          unsigned Index, const SDLoc &DL,
+                                          SelectionDAG &DAG,
                                           bool LegalOperations) {
   // TODO: Refactor with the caller (visitEXTRACT_SUBVECTOR), so we can share
   // some of these bailouts with other transforms.
 
-  if (SDValue V = narrowInsertExtractVectorBinOp(VT, Src, Index, DL, DAG,
+  if (SDValue V = narrowInsertExtractVectorBinOp(N, VT, Src, Index, DL, DAG,
                                                  LegalOperations))
     return V;
 
@@ -27694,8 +27699,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
           NVT, V, ExtIdx, DL, DAG, LegalOperations))
     return Shuffle;
 
-  if (SDValue NarrowBOp =
-          narrowExtractedVectorBinOp(NVT, V, ExtIdx, DL, DAG, LegalOperations))
+  if (SDValue NarrowBOp = narrowExtractedVectorBinOp(N, NVT, V, ExtIdx, DL, DAG,
+                                                     LegalOperations))
     return NarrowBOp;
 
   V = peekThroughBitcasts(V);
