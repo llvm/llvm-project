@@ -69,8 +69,8 @@ char3 vec4_to_vec_3(char4 x) {
 }
 
 // CIR: cir.func {{.*}} @vec4_to_vec_3
-// CIR:   %[[X_ADDR:.*]] = cir.alloca !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>, ["x", init]
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !cir.vector<3 x !s8i>, !cir.ptr<!cir.vector<3 x !s8i>>, ["__retval"]
+// CIR:   %[[X_ADDR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.vector<4 x !s8i>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<3 x !s8i>>
 // CIR:   cir.store %{{.*}}, %[[X_ADDR]] : !cir.vector<4 x !s8i>, !cir.ptr<!cir.vector<4 x !s8i>>
 // CIR:   %[[TMP_X:.*]] = cir.load {{.*}} %[[X_ADDR]] : !cir.ptr<!cir.vector<4 x !s8i>>, !cir.vector<4 x !s8i>
 // CIR:   %[[POISON:.*]] = cir.const #cir.poison : !cir.vector<4 x !s8i>

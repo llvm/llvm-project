@@ -54,13 +54,13 @@ void vla_bool_size(_Bool len) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@vla_bool_size
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast bool_to_int %[[LEN]] : !cir.bool -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN_SIZE_T]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[LEN_SIZE_T]]) : !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 //

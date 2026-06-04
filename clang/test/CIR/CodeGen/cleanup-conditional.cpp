@@ -884,9 +884,9 @@ void test_lifetime_ext_cond_ref(bool c) {
   const LE &r = c ? LE(1) : LE(2);
 }
 // CIR-LABEL: @_Z26test_lifetime_ext_cond_refb
-// CIR:   %[[TMP:.*]] = cir.alloca !rec_LE, !cir.ptr<!rec_LE>, ["ref.tmp0"]
-// CIR:   %[[R:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["r", init, const]
-// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["tmp.exprcleanup"]
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LE>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
 // CIR:   cir.if %{{.*}} {
 // CIR:     cir.call @_ZN2LEC1Ei(%[[TMP]], %{{.*}})
 // CIR:   } else {
@@ -934,12 +934,12 @@ void test_combined_cleanups(bool c) {
   const LE &r = LE((S().get(), c ? B().get() : 0));
 }
 // CIR-LABEL: @_Z22test_combined_cleanupsb
-// CIR:   %[[TMP_LE:.*]] = cir.alloca !rec_LE, !cir.ptr<!rec_LE>, ["ref.tmp0"]
-// CIR:   %[[R:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["r", init, const]
-// CIR:   %[[TMP_S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp1"]
-// CIR:   %[[TMP_B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp2"]
-// CIR:   %[[ACT_B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!rec_LE>, !cir.ptr<!cir.ptr<!rec_LE>>, ["tmp.exprcleanup"]
+// CIR:   %[[TMP_LE:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LE>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   %[[TMP_S:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[TMP_B:.*]] = cir.alloca "ref.tmp2" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACT_B:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.call @_ZN1SC1Ev(%[[TMP_S]])
 // CIR:     cir.cleanup.scope {
