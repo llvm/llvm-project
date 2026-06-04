@@ -454,9 +454,9 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
   return AMDGPUMCExpr::create(AMDGPUMCExpr::AGVK_Occupancy,
                               {CreateExpr(MaxWaves), CreateExpr(Granule),
                                CreateExpr(TargetTotalNumVGPRs),
-                               CreateExpr(InitOcc), SGPRArg, NumVGPRs,
-                               CreateExpr(SGPRTotal), CreateExpr(SGPRGranule),
-                               CreateExpr(SGPRTrapReserve)},
+                               CreateExpr(InitOcc), CreateExpr(SGPRTotal),
+                               CreateExpr(SGPRGranule),
+                               CreateExpr(SGPRTrapReserve), SGPRArg, NumVGPRs},
                               Ctx);
 }
 

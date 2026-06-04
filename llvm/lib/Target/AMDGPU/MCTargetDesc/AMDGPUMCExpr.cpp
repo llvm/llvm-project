@@ -56,6 +56,7 @@ const AMDGPUMCExpr *AMDGPUMCExpr::create(VariantKind Kind,
 unsigned AMDGPUMCExpr::getNumExpectedArgs(VariantKind Kind) {
   switch (Kind) {
   case AGVK_None:
+    llvm_unreachable("AGVK_None is not a valid AMDGPUMCExpr kind.");
   case AGVK_Or:
   case AGVK_Max:
   case AGVK_Min:
@@ -195,19 +196,18 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
   uint64_t InitOccupancy, MaxWaves, Granule, TargetTotalNumVGPRs, NumSGPRs,
       NumVGPRs, SGPRTotal, SGPRGranule, SGPRTrapReserve;
 
+  // Leading operands are known constants (wave/VGPR caps + the SGPR budget
+  // total/granule/trap reserve baked in by createOccupancy); only NumSGPRs and
+  // NumVGPRs can still be symbolic. The SGPR budget makes the SGPR-limited
+  // occupancy match getMaxNumSGPRs().
   bool Success =
-      evaluateMCExprs(Args.slice(0, 4), Asm,
-                      {MaxWaves, Granule, TargetTotalNumVGPRs, InitOccupancy});
+      evaluateMCExprs(Args.slice(0, 7), Asm,
+                      {MaxWaves, Granule, TargetTotalNumVGPRs, InitOccupancy,
+                       SGPRTotal, SGPRGranule, SGPRTrapReserve});
 
-  assert(Success && "Arguments 1 to 4 for Occupancy should be known constants");
+  assert(Success && "Arguments 1 to 7 for Occupancy should be known constants");
 
-  if (!Success || !evaluateMCExprs(Args.slice(4, 2), Asm, {NumSGPRs, NumVGPRs}))
-    return false;
-
-  // Trailing operands carry the codegen SGPR budget (total, granule, trap
-  // reserve) so the SGPR-limited occupancy matches getMaxNumSGPRs().
-  if (!evaluateMCExprs(Args.slice(6, 3), Asm,
-                       {SGPRTotal, SGPRGranule, SGPRTrapReserve}))
+  if (!Success || !evaluateMCExprs(Args.slice(7, 2), Asm, {NumSGPRs, NumVGPRs}))
     return false;
 
   unsigned Occupancy = InitOccupancy;

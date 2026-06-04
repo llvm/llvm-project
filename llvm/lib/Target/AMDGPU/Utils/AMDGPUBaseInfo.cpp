@@ -1340,9 +1340,10 @@ static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
 }
 
 // Per-wave SGPR budget (before the addressable clamp): take off the trap
-// reserve, round down to \p Granule. Single source of truth shared by
-// getMinNumSGPRs()/getMaxNumSGPRs() and the occupancy inverse, so they cannot
-// drift apart.
+// reserve, round down to \p Granule. Shared by getMinNumSGPRs() and
+// getMaxNumSGPRs(); getOccupancyWithNumSGPRs() is the closed-form algebraic
+// inverse of this same budget (it does not call this helper), so the two encode
+// one model.
 static unsigned getSGPRBudgetPerWave(unsigned TotalNumSGPRs,
                                      unsigned WavesPerEU, unsigned TrapReserve,
                                      unsigned Granule) {

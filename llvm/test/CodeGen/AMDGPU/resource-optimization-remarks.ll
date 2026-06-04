@@ -146,7 +146,7 @@ define void @empty_func() !dbg !8 {
 ; STDERR-NEXT: remark: foo.cl:64:0:     AGPRs: .Ltest_indirect_call.num_agpr
 ; STDERR-NEXT: remark: foo.cl:64:0:     ScratchSize [bytes/lane]: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 10, max(.Ltest_indirect_call.numbered_sgpr+extrasgprs(.Ltest_indirect_call.uses_vcc, .Ltest_indirect_call.uses_flat_scratch, 1), 1, 0), max(totalnumvgprs(.Ltest_indirect_call.num_agpr, .Ltest_indirect_call.num_vgpr), 1, 0), 800, 16, 16)
+; STDERR-NEXT: remark: foo.cl:64:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 10, 800, 16, 16, max(.Ltest_indirect_call.numbered_sgpr+extrasgprs(.Ltest_indirect_call.uses_vcc, .Ltest_indirect_call.uses_flat_scratch, 1), 1, 0), max(totalnumvgprs(.Ltest_indirect_call.num_agpr, .Ltest_indirect_call.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:64:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:64:0:     LDS Size [bytes/block]: 0
@@ -164,7 +164,7 @@ define amdgpu_kernel void @test_indirect_call() !dbg !9 {
 ; STDERR-NEXT: remark: foo.cl:74:0:     AGPRs: .Ltest_indirect_w_static_stack.num_agpr
 ; STDERR-NEXT: remark: foo.cl:74:0:     ScratchSize [bytes/lane]: 144
 ; STDERR-NEXT: remark: foo.cl:74:0:     Dynamic Stack: True
-; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 10, max(.Ltest_indirect_w_static_stack.numbered_sgpr+extrasgprs(.Ltest_indirect_w_static_stack.uses_vcc, .Ltest_indirect_w_static_stack.uses_flat_scratch, 1), 1, 0), max(totalnumvgprs(.Ltest_indirect_w_static_stack.num_agpr, .Ltest_indirect_w_static_stack.num_vgpr), 1, 0), 800, 16, 16)
+; STDERR-NEXT: remark: foo.cl:74:0:     Occupancy [waves/SIMD]: occupancy(10, 4, 256, 10, 800, 16, 16, max(.Ltest_indirect_w_static_stack.numbered_sgpr+extrasgprs(.Ltest_indirect_w_static_stack.uses_vcc, .Ltest_indirect_w_static_stack.uses_flat_scratch, 1), 1, 0), max(totalnumvgprs(.Ltest_indirect_w_static_stack.num_agpr, .Ltest_indirect_w_static_stack.num_vgpr), 1, 0))
 ; STDERR-NEXT: remark: foo.cl:74:0:     SGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     VGPRs Spill: 0
 ; STDERR-NEXT: remark: foo.cl:74:0:     LDS Size [bytes/block]: 0
