@@ -3364,6 +3364,15 @@ OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataAsValueOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a metadata-as-value operation to its wrapped metadata attribute.
+OpFoldResult LLVM::MetadataAsValueOp::fold(FoldAdaptor) {
+  return getMetadataAttr();
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -4697,6 +4706,10 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+          LLVM::MDNodeAttr>(value))
+    if (isa<LLVM::LLVMMetadataType>(type))
+      return LLVM::MetadataAsValueOp::create(builder, loc, type, value);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

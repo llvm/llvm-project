@@ -642,6 +642,24 @@ std::error_code FileManager::getStatValue(StringRef Path,
   return std::error_code();
 }
 
+void FileManager::GetUniqueIDMapping(
+    SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const {
+  UIDToFiles.clear();
+  UIDToFiles.resize(NextFileUID);
+
+  for (const auto &Entry : SeenFileEntries) {
+    // Only return files that exist and are not redirected.
+    if (!Entry.getValue() || !isa<FileEntry *>(Entry.getValue()->V))
+      continue;
+    FileEntryRef FE(Entry);
+    // Add this file if it's the first one with the UID, or if its name is
+    // better than the existing one.
+    OptionalFileEntryRef &ExistingFE = UIDToFiles[FE.getUID()];
+    if (!ExistingFE || FE.getName() < ExistingFE->getName())
+      ExistingFE = FE;
+  }
+}
+
 StringRef FileManager::getCanonicalName(DirectoryEntryRef Dir) {
   return getCanonicalName(Dir, Dir.getName());
 }

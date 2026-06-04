@@ -625,6 +625,17 @@ public:
            VK == ELF::R_RISCV_TLSDESC_CALL;
   }
 
+  bool isQCAccessSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    if (!isExpr() || evaluateConstantExpr(getExpr(), Imm))
+      return false;
+
+    RISCV::Specifier VK = RISCV::S_None;
+    return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
+           VK == RISCV::S_QC_ACCESS;
+  }
+
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
   // If the last operand of the vsetvli/vsetvli instruction is a constant
