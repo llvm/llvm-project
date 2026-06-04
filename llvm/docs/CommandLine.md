@@ -905,6 +905,7 @@ This section describes the basic attributes that you can specify on options.
 ```cpp
 cl::opt<bool> Quiet("quiet");
 ```
+
 (cl::desc(...))=
 
 * The **cl::desc** attribute specifies a description for the option to be
@@ -930,6 +931,7 @@ must specify **cl::location** first, so that when the command-line parser
 sees **cl::init**, it knows where to put the initial value. (You will get an
 error at runtime if you don't put them in the right order.)
 ```
+
 (cl::location)=
 
 * The **cl::location** attribute where to store the value for a parsed command
@@ -1001,6 +1003,7 @@ cl::list<std::string, cl::list<std::string>> List(
       OptA = true;
   }));
 ```
+
 ### Option Modifiers
 
 Option modifiers are the flags and expressions that you pass into the

@@ -3,9 +3,11 @@
 ```{contents}
 :local:
 ```
+
 ```{toctree}
 :hidden:
 ```
+
 ## Introduction
 
 This document describes extensions to tools and formats LLVM seeks compatibility
@@ -22,12 +24,14 @@ hexadecimal format instead of decimal if desired.
 .section .data
 .float 0x1c2.2ap3
 ```
+
 ### `.prefalign` directive
 
 ```gas
 .prefalign <log2_align>, <end_sym>, nop
 .prefalign <log2_align>, <end_sym>, <fill_byte>
 ```
+
 The `.prefalign` directive pads the current location so that the code
 between the directive and `end_sym` starts at an alignment that depends
 on the size of that code (currently only supported with ELF).
@@ -68,6 +72,7 @@ fun:
   .long (fun@imgrel + 0x3F)
   .long $unwind$fun@imgrel
 ```
+
 **.secrel32** generates a relocation that corresponds to the COFF relocation
 types `IMAGE_REL_I386_SECREL` (32-bit) or `IMAGE_REL_AMD64_SECREL` (64-bit).
 
@@ -84,6 +89,7 @@ the target.  It corresponds to the COFF relocation types
   .secidx   _function_name
   ...
 ```
+
 #### `.linkonce` Directive
 
 Syntax:
@@ -125,6 +131,7 @@ Supported COMDAT types:
 .linkonce
   ...
 ```
+
 #### `.section` Directive
 
 MC supports passing the information in `.linkonce` at the end of
@@ -136,6 +143,7 @@ MC supports passing the information in `.linkonce` at the end of
 Symbol1:
 .long 1
 ```
+
 ```gas
 .section secName, "dr"
 .linkonce discard
@@ -143,6 +151,7 @@ Symbol1:
 Symbol1:
 .long 1
 ```
+
 Note that in the combined form the COMDAT symbol is explicit. This
 extension exists to support multiple sections with the same name in
 different COMDATs:
@@ -159,6 +168,7 @@ Symbol1:
 Symbol2:
 .long 1
 ```
+
 In addition to the types allowed with `.linkonce`, `.section` also accepts
 `associative`. The meaning is that the section is linked  if a certain other
 COMDAT section is linked. This other section is indicated by the comdat symbol
@@ -177,6 +187,7 @@ and `.bar` is associated with `.foo`.
 	.section	.foo,"bw",discard, "sym"
 	.section	.bar,"rd",associative, "sym"
 ```
+
 MC supports these flags in the COFF `.section` directive:
 
   - `b`: BSS section (`IMAGE_SCN_CNT_INITIALIZED_DATA`)
@@ -215,6 +226,7 @@ type `IMAGE_REL_ARM64_SECREL_HIGH12A`.
   ...
 
 ```
+
 ### ELF-Dependent
 
 #### `.section` Directive
@@ -231,6 +243,7 @@ For example, the following code creates two sections named `.text`.
       nop
 
 ```
+
 The unique number is not present in the resulting object at all. It is just used
 in the assembler to differentiate the sections.
 
@@ -243,12 +256,14 @@ must be given that identifies the section to be placed in the
       .Ltmp:
       .section .bar,"ao",@progbits,.Ltmp
 ```
+
 which is equivalent to:
 
 ```gas
       .section .foo,"a",@progbits
       .section .bar,"ao",@progbits,.foo
 ```
+
 #### `.linker-options` Section (linker options)
 
 In order to support passing linker options from the frontend to the linker, a
@@ -274,6 +289,7 @@ This would be equivalent to the following raw assembly:
 .asciz "option 2"
 .asciz "value 2"
 ```
+
 The following directives are specified:
 
   - `lib`
@@ -303,6 +319,7 @@ For example:
 .asciz "library specifier 1"
 .asciz "library specifier 2"
 ```
+
 The interpretation of the library specifiers is defined by the consuming linker.
 
 #### `SHT_LLVM_CALL_GRAPH_PROFILE` Section (Call Graph Profile)
@@ -325,6 +342,7 @@ typedef struct {
   Elf_Xword cgp_weight;
 } Elf_CGProfile;
 ```
+
 - `cgp_from`
 
   The symbol index of the source of the edge.
@@ -342,6 +360,7 @@ This is represented in assembly as:
 ```gas
 .cg_profile from, to, 42
 ```
+
 `.cg_profile` directives are processed at the end of the file.  It is an error
 if either `from` or `to` are undefined temporary symbols.  If either symbol
 is a temporary symbol, then the section symbol is used instead.  If either
@@ -368,12 +387,14 @@ There are two associated assembly directives:
 ```gas
 .addrsig
 ```
+
 This instructs the assembler to emit an address-significance table. Without
 this directive, all symbols are considered address-significant.
 
 ```gas
 .addrsig_sym sym
 ```
+
 If `sym` is not otherwise referenced or defined anywhere else in the file,
 this directive is a no-op. Otherwise, mark `sym` as address-significant.
 
@@ -389,6 +410,7 @@ the symbol that belongs to the partition. It may be constructed as follows:
 .asciz "libpartition.so"
 .word symbol_in_partition
 ```
+
 [partition]: https://lld.llvm.org/Partitions.html
 
 #### `SHT_LLVM_BB_ADDR_MAP` Section (basic block address map)
@@ -444,6 +466,7 @@ Example:
  .byte     y                            # BB_1 metadata
  .quad     2363478788702666771          # BB_1 hash
 ```
+
 Version 3: Capable of encoding callsite offsets. Enabled by the 6th bit
 of the feature byte.
 
@@ -470,6 +493,7 @@ Example:
  .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
  .byte     y                            # BB_1 metadata
 ```
+
 Version 2: Capable of encoding split functions. Enabled by the 4th bit of the
 feature byte. The base address of each split range is stored as a full address.
 The first range corresponds to the function entry.
@@ -498,6 +522,7 @@ Example:
   .uleb128  .LBB_END0_1-func.part.1      # BB_1 size
   .byte     1                            # BB_1 metadata
 ```
+
 ##### PGO Analysis Map
 
 PGO related analysis data can be emitted after each function within the
@@ -587,6 +612,7 @@ Example of BBAddrMap with PGO data:
  .uleb128  1000                         # BB_3 basic block frequency (only when enabled)
  .uleb128  0                            # BB_3 successors count (only enabled with branch probabilities)
 ```
+
 #### `SHT_LLVM_OFFLOADING` Section (offloading data)
 This section stores the binary data used to perform offloading device linking
 and execution, creating a fat binary. This section is emitted during compilation
@@ -651,6 +677,7 @@ For example:
 .quad   3498816979441845844
 .quad   8646233951371320954
 ```
+
 This indicates that `ball` calls `foo`, `bar` and `baz` directly;
 `ball` indirectly calls functions whose types are `4524972987496481828`,
 `3498816979441845844` and `8646233951371320954`.
@@ -726,6 +753,7 @@ For example:
 ```gas
 cmpq $foo@ABS8, %rdi
 ```
+
 This causes the assembler to select the form of the 64-bit `cmpq` instruction
 that takes an 8-bit immediate operand that is sign extended to 64 bits, as
 opposed to `cmpq $foo, %rdi` which takes a 32-bit immediate operand. This
@@ -748,6 +776,7 @@ movw r4, #constant
 bl __chkstk
 sub.w sp, sp, r4
 ```
+
 However, this has the limitation of 32 MiB (±16MiB).  In order to accommodate
 larger binaries, LLVM supports the use of `-mcmodel=large` to allow a 4GiB
 range via a slight deviation.  It will generate an indirect jump as follows:
@@ -759,6 +788,7 @@ movt r12, :upper16:__chkstk
 blx r12
 sub.w sp, sp, r4
 ```
+
 #### Variable Length Arrays
 
 The reference implementation (Microsoft Visual Studio 2012) does not permit the
@@ -784,6 +814,7 @@ mov x15, #constant
 bl __chkstk
 sub sp, sp, x15, lsl #4
 ```
+
 However, this has the limitation of 256 MiB (±128MiB).  In order to accommodate
 larger binaries, LLVM supports the use of `-mcmodel=large` to allow an 8GiB
 (±4GiB) range via a slight deviation.  It will generate an indirect jump as

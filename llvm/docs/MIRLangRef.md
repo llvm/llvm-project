@@ -165,6 +165,7 @@ Here is an example of a YAML document that contains an LLVM module:
      ret i32 %1
    }
 ```
+
 [YAML block literal string]: http://www.yaml.org/spec/1.2/spec.html#id2795688
 
 ### Machine Functions
@@ -192,6 +193,7 @@ of such a YAML document:
      RETQ $eax
  ...
 ```
+
 The document above consists of attributes that represent the various
 properties and data structures in a machine function.
 
@@ -225,6 +227,7 @@ bb.0:
 bb.1:
   <instructions>
 ```
+
 A machine basic block can also have a name. It should be specified after the ID
 in the block's definition:
 
@@ -232,6 +235,7 @@ in the block's definition:
 bb.0.entry:       ; This block's name is "entry"
    <instructions>
 ```
+
 The block's name should be identical to the name of the IR block that this
 machine block is based on.
 
@@ -245,22 +249,26 @@ blocks are referenced using the following syntax:
 ```text
 %bb.<id>
 ```
+
 Example:
 
 ```llvm
 %bb.0
 ```
+
 The following syntax is also supported, but the former syntax is preferred for
 block references:
 
 ```text
 %bb.<id>[.<name>]
 ```
+
 Example:
 
 ```llvm
 %bb.1.then
 ```
+
 #### Successors
 
 The machine basic block's successors must be specified before any of the
@@ -275,6 +283,7 @@ bb.1.then:
 bb.2.else:
   <instructions>
 ```
+
 The branch weights can be specified in parentheses after the successor blocks.
 The example below defines a block that has two successors with branch weights
 of 32 and 16:
@@ -283,6 +292,7 @@ of 32 and 16:
 bb.0.entry:
   successors: %bb.1.then(32), %bb.2.else(16)
 ```
+
 (bb-liveins)=
 
 #### Live In Registers
@@ -294,6 +304,7 @@ its instructions:
 bb.0.entry:
   liveins: $edi, $esi
 ```
+
 The list of live in registers and successors can be empty. The language also
 allows multiple live in register and successor lists; they are combined into
 one list by the parser.
@@ -335,6 +346,7 @@ operand:
 ```text
 RETQ $eax
 ```
+
 However, if the machine instruction has one or more explicitly defined register
 operands, the instruction's name has to be specified after them. The example
 below shows an instance of the AArch64 `LDPXpost` instruction with three
@@ -343,6 +355,7 @@ defined register operands:
 ```text
 $sp, $fp, $lr = LDPXpost $sp, 2
 ```
+
 The instruction names are serialized using the exact definitions from the
 target's `*InstrInfo.td` files, and they are case sensitive. This means that
 similar instruction names like `TSTri` and `tSTRi` represent different
@@ -358,9 +371,11 @@ instruction's name:
 ```text
 $fp = frame-setup ADDXri $sp, 0, 0
 ```
+
 ```text
 $x21, $x20 = frame-destroy LDPXi $sp
 ```
+
 (registers)=
 
 #### Bundled Instructions
@@ -373,6 +388,7 @@ BUNDLE implicit-def $r0, implicit-def $r1, implicit $r2 {
   $r1 = ANOTHER_OP internal $r0
 }
 ```
+
 The first instruction is often a bundle header. The instructions between `{`
 and `}` are bundled with the first instruction.
 
@@ -392,6 +408,7 @@ They use the following syntax:
 ```text
 $<name>
 ```
+
 The example below shows three X86 physical registers:
 
 ```text
@@ -399,17 +416,20 @@ $eax
 $r15
 $eflags
 ```
+
 The virtual registers are identified by their ID number and by the '%' sigil.
 They use the following syntax:
 
 ```text
 %<id>
 ```
+
 Example:
 
 ```text
 %0
 ```
+
 The null registers are represented using an underscore ('`_`'). They can also be
 represented using a '`$noreg`' named register, although the former syntax
 is preferred.
@@ -430,6 +450,7 @@ immediate machine operand `-42`:
 ```text
 $eax = MOV32ri -42
 ```
+
 An immediate operand is also used to represent a subregister index when the
 machine instruction has one of the following opcodes:
 
@@ -450,6 +471,7 @@ In `AArch64RegisterInfo.td`:
 ```text
 def sub_32 : SubRegIndex<32>;
 ```
+
 If the second operand is an immediate with the value `15` (a target-dependent
 value), based on the instruction's opcode and the operand's index the operand
 will be printed as `%subreg.sub_32`:
@@ -457,6 +479,7 @@ will be printed as `%subreg.sub_32`:
 ```text
 %1:gpr64 = SUBREG_TO_REG %0, %subreg.sub_32
 ```
+
 For integers larger than 64 bits, we use a special machine operand, `MO_CImmediate`,
 which stores the immediate in a `ConstantInt` using an `APInt` (LLVM's
 arbitrary-precision integers).
@@ -477,12 +500,14 @@ The full syntax of a register operand is shown below:
 ```text
 [<flags>] <register> [ .<subregister-idx-name> ] [ :<register-class> ] [ (tied-def <tied-op>) ] [ (<type>) ]
 ```
+
 This example shows an instance of the X86 `XOR32rr` instruction that has
 5 register operands with different register flags:
 
 ```text
 dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-def $al
 ```
+
 Note that subregister-index, register-class and type cannot be specified for
 physical registers. Additionally, tied-def can only be specified for a use.
 
@@ -520,6 +545,7 @@ lower bits from the 32-bit virtual register 0 to the 8-bit virtual register 1:
 ```text
 %1 = COPY %0.sub_8bit
 ```
+
 The names of the subregister indices are target specific, and are typically
 defined in the target's `*RegisterInfo.td` file.
 
@@ -533,11 +559,13 @@ For example, a CPI with the index 1 and offset 8:
 ```text
 %1:gr64 = MOV64ri %const.1 + 8
 ```
+
 For a CPI with the index 0 and offset -12:
 
 ```text
 %1:gr64 = MOV64ri %const.0 - 12
 ```
+
 A constant pool entry is bound to an LLVM IR `Constant` or a target-specific
 `MachineConstantPoolValue`. When serializing all the function's constants, the
 following format is used:
@@ -549,6 +577,7 @@ constants:
     alignment:        <alignment>
     isTargetSpecific: <target-specific>
 ```
+
 where:
   - `<index>` is a 32-bit unsigned integer;
   - `<value>` is a [LLVM IR Constant](https://www.llvm.org/docs/LangRef.html#constants);
@@ -568,6 +597,7 @@ constants:
     alignment:        4
     isTargetSpecific: true
 ```
+
 #### Global Value Operands
 
 The global value machine operands reference the global values from the
@@ -578,6 +608,7 @@ a global value operand named `G`:
 ```text
 $rax = MOV64rm $rip, 1, _, @G, _
 ```
+
 The named global values are represented using an identifier with the `@` prefix.
 If the identifier doesn't match the regular expression
 `[-a-zA-Z$._][-a-zA-Z$._0-9]*`, then this identifier must be quoted.
@@ -598,6 +629,7 @@ and the offset 8:
 ```text
 $sgpr2 = S_ADD_U32 _, target-index(amdgpu-constdata-start) + 8, implicit-def _, implicit-def _
 ```
+
 #### Jump-table Index Operands
 
 A jump-table index operand with the index 0 is printed as follows:
@@ -605,6 +637,7 @@ A jump-table index operand with the index 0 is printed as follows:
 ```text
 tBR_JTr killed $r0, %jump-table.0
 ```
+
 A machine jump-table entry contains a list of `MachineBasicBlocks`. When serializing all the function's jump-table entries, the following format is used:
 
 ```text
@@ -614,6 +647,7 @@ jumpTable:
     - id:             <index>
       blocks:         [ <bbreference>, <bbreference>, ... ]
 ```
+
 where `<kind>` describes how the jump table is represented and emitted (plain address, relocations, PIC, etc.), and each `<index>` is a 32-bit unsigned integer and `blocks` contains a list of {ref}`machine basic block references <block-references>`.
 
 Example:
@@ -627,6 +661,7 @@ jumpTable:
     - id:             1
       blocks:         [ '%bb.7', '%bb.7', '%bb.4.d3', '%bb.5' ]
 ```
+
 #### External Symbol Operands
 
 An external symbol operand is represented using an identifier with the `&`
@@ -638,6 +673,7 @@ Example:
 ```text
 CALL64pcrel32 &__stack_chk_fail, csr_64, implicit $rsp, implicit-def $rsp
 ```
+
 #### MCSymbol Operands
 
 An `MCSymbol` operand holds a pointer to an `MCSymbol`. For the limitations
@@ -648,6 +684,7 @@ The syntax is:
 ```text
 EH_LABEL <mcsymbol Ltmp1>
 ```
+
 #### Debug Instruction Reference Operands
 
 A debug instruction reference operand is a pair of indices, referring to an
@@ -659,6 +696,7 @@ The example below uses a reference to Instruction 1, Operand 0:
 ```text
 DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
 ```
+
 #### CFIIndex Operands
 
 A CFI Index operand holds an index into a per-function side-table,
@@ -672,11 +710,13 @@ The syntax is:
 ```text
 CFI_INSTRUCTION offset $w30, -16
 ```
+
 which may be emitted later in the MC layer as:
 
 ```text
 .cfi_offset w30, -16
 ```
+
 #### IntrinsicID Operands
 
 An Intrinsic ID operand contains a generic intrinsic ID or a target-specific ID.
@@ -686,6 +726,7 @@ The syntax for the `returnaddress` intrinsic is:
 ```text
 $x0 = COPY intrinsic(@llvm.returnaddress)
 ```
+
 #### Predicate Operands
 
 A Predicate operand contains an IR predicate from `CmpInst::Predicate`, like
@@ -696,6 +737,7 @@ For an int eq predicate `ICMP_EQ`, the syntax is:
 ```text
 %2:gpr(s32) = G_ICMP intpred(eq), %0, %1
 ```
+
 #### LaneMask Operands
 
 A LaneMask operand contains a LaneBitmask struct representing the covering of a
@@ -737,6 +779,7 @@ definitions, i.e. the `always` and `eq` condition codes:
 dead renamable $r2, $cpsr = tEOR killed renamable $r2, renamable $r1, 14 /* CC::always */, $noreg
 t2Bcc %bb.4, 0 /* CC:eq */, killed $cpsr
 ```
+
 As these annotations are comments, they are ignored by the MI parser.
 Comments can be added or customized by overriding InstrInfo's hook
 `createMIROperandComment()`.
@@ -756,6 +799,7 @@ memory operands:
 ```text
 $rbp = MOV64rr $rdi, debug-location !12
 ```
+
 The source location attachment is synonymous with the `!dbg` metadata
 attachment in LLVM-IR. The absence of a source location attachment will be
 represented by an empty `DebugLoc` object in the machine instruction.
@@ -772,6 +816,7 @@ any qualifying location modifier are provided:
  4  debug-info-variable: '!1', debug-info-expression: '!DIExpression()',
     debug-info-location: '!2' }
 ```
+
 Where:
 
 - `debug-info-variable` identifies a DILocalVariable metadata node,
@@ -792,6 +837,7 @@ with the `DBG_VALUE`  meta machine instruction. It is synonymous with the
 ```text
 DBG_VALUE $rax, $noreg, !123, !DIExpression(), debug-location !456
 ```
+
 The operands to which respectively:
 
 1. Identifies a machine location such as a register, immediate, or frame index,
@@ -821,6 +867,7 @@ instruction number and operand number. Consider the example below:
 $rbp = MOV64ri 0, debug-instr-number 1, debug-location !12
 DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
 ```
+
 Instruction numbers are directly attached to machine instructions with an
 optional `debug-instr-number` attachment, before the optional
 `debug-location` attachment. The value defined in `$rbp` in the code

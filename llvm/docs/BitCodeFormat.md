@@ -4,6 +4,7 @@
 :local:
 
 ```
+
 ## Abstract
 
 This document describes the LLVM bitstream file format and the encoding of the
@@ -114,6 +115,7 @@ represent the following characters with the following 6-bit values:
        '_' --- 63
 
 ```
+
 This encoding is only suitable for encoding characters and strings that consist
 only of the above characters.  It is completely incapable of encoding characters
 not in the set.
@@ -337,6 +339,7 @@ following abbrev entry:
 [0, Char6]
 
 ```
+
 When emitting a record with this abbreviation, the above entry would be emitted
 as:
 
@@ -383,6 +386,7 @@ The currently specified records are:
 [SETRECORDNAME, RecordID, ...name...]
 
 ```
+
 The `SETBID` record (code 1) indicates which block ID is being described.
 `SETBID` records can occur multiple times throughout the block to change which
 block ID is being described.  There must be a `SETBID` record prior to any
@@ -562,6 +566,7 @@ For example, instead of
 br #n+1, label #(bb1), label #(bb2)
 
 ```
+
 version 1 will encode the instructions as
 
 ```
@@ -570,6 +575,7 @@ version 1 will encode the instructions as
 br #1, label #(bb1), label #(bb2)
 
 ```
+
 Note in the example that operands which are constants also use
 the relative encoding, while operands like basic block labels
 do not use the relative encoding.
@@ -866,6 +872,7 @@ earlier. It is guaranteed to be understood by the current LLVM version, as
 specified in the {ref}`IR backwards compatibility` policy.
 
 ```
+
 `[ENTRY, paramidx0, attr0, paramidx1, attr1...]`
 
 The `ENTRY` record (code 1) contains an even number of values describing a
@@ -959,6 +966,7 @@ enum AttributeKindCodes {
   }
 
 ```
+
 Correspond to:
 
 * code 1: `align(<n>)`
@@ -974,6 +982,7 @@ arguments, which are 32-bit integers, are packed into one 64-bit integer value
 the sentinel value -1 if it is not specified.
 
 ```
+
 ```{note}
 The `vscale_range` attribute has a special encoding for its arguments. Its two
 arguments, which are 32-bit integers, are packed into one 64-bit integer value
@@ -981,6 +990,7 @@ arguments, which are 32-bit integers, are packed into one 64-bit integer value
 it is not specified.
 
 ```
+
 (TYPE_BLOCK)=
 
 ### TYPE_BLOCK Contents
@@ -1080,6 +1090,7 @@ earlier. It is guaranteed to be understood by the current LLVM version, as
 specified in the {ref}`IR backwards compatibility` policy.
 
 ```
+
 `[FUNCTION_OLD, vararg, ignored, retty, ...paramty... ]`
 
 The `FUNCTION_OLD` record (code 9) adds a function type to the type table.

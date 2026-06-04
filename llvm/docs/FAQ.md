@@ -10,9 +10,10 @@
 ### Can I modify LLVM source code and redistribute the modified source?
 
 Yes.  The modified source distribution must retain the copyright notice and
-follow the conditions listed in the [Apache License v2.0 with LLVM Exceptions].
+follow the conditions listed in the [Apache License v2.0 with LLVM
+Exceptions][llvm-license].
 
-[Apache License v2.0 with LLVM Exceptions]: https://github.com/llvm/llvm-project/blob/main/llvm/LICENSE.TXT
+[llvm-license]: https://github.com/llvm/llvm-project/blob/main/llvm/LICENSE.TXT
 
 
 ### Can I modify the LLVM source code and redistribute binaries or other tools based on it, without redistributing the source?

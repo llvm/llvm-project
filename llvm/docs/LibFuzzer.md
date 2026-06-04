@@ -51,6 +51,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;  // Values other than 0 and -1 are reserved for future use.
 }
 ```
+
 Note that this fuzz target does not depend on libFuzzer in any way
 and so it is possible and even desirable to use it with other fuzzing engines
 e.g. [AFL] and/or [Radamsa].
@@ -82,6 +83,7 @@ also build with [MemorySanitizer] (MSAN), but support is experimental:
  clang -g -O1 -fsanitize=fuzzer,signed-integer-overflow mytarget.c # Builds the fuzz target with a part of UBSAN
  clang -g -O1 -fsanitize=fuzzer,memory                  mytarget.c # Builds the fuzz target with MSAN
 ```
+
 This will perform the necessary instrumentation, as well as linking with the libFuzzer library.
 Note that `-fsanitize=fuzzer` links in the libFuzzer's `main()` symbol.
 
@@ -92,6 +94,7 @@ instrumentation without linking:
 ```
  clang -fsanitize=fuzzer-no-link mytarget.c
 ```
+
 Then libFuzzer can be linked to the desired driver by passing in
 `-fsanitize=fuzzer` during the linking stage.
 
@@ -124,12 +127,14 @@ is to use the `-merge=1` flag:
 mkdir NEW_CORPUS_DIR  # Store minimized corpus here.
 ./my_fuzzer -merge=1 NEW_CORPUS_DIR FULL_CORPUS_DIR
 ```
+
 You may use the same flag to add more interesting items to an existing corpus.
 Only the inputs that trigger new coverage will be added to the first corpus.
 
 ```console
 ./my_fuzzer -merge=1 CURRENT_CORPUS_DIR NEW_POTENTIALLY_INTERESTING_INPUTS_DIR
 ```
+
 ### Running
 
 To run the fuzzer, first create a [Corpus](#libfuzzer-corpus) directory that holds the
@@ -139,11 +144,13 @@ initial "seed" sample inputs:
 mkdir CORPUS_DIR
 cp /some/input/samples/* CORPUS_DIR
 ```
+
 Then run the fuzzer on the corpus directory:
 
 ```console
 ./my_fuzzer CORPUS_DIR  # -max_len=1000 -jobs=20 ...
 ```
+
 As the fuzzer discovers new interesting test cases (i.e. test cases that
 trigger coverage of new paths through the code under test), those test cases
 will be added to the corpus directory.
@@ -219,6 +226,7 @@ MERGE-OUTER: non-empty control file provided: 'SomeLocalPath'
 MERGE-OUTER: control file ok, 32 files total, first not processed file 20
 ...
 ```
+
 ## Options
 
 To run the fuzzer, pass zero or more corpus directories as command line
@@ -229,6 +237,7 @@ back to the first corpus directory:
 ```console
 ./fuzzer [-flag1=val1 [-flag2=val2 ...] ] [dir1 [dir2 ...] ]
 ```
+
 If a list of files (rather than directories) are passed to the fuzzer program,
 then it will re-run those files as test inputs but will not perform any fuzzing.
 In this mode the fuzzer binary can be used as a regression test (e.g. on a
@@ -351,6 +360,7 @@ INFO: A corpus is not provided, starting from an empty corpus
 #1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
 ...
 ```
+
 The early parts of the output include information about the fuzzer options and
 configuration, including the current random seed (in the `Seed:` line; this
 can be overridden with the `-seed=N` flag).
@@ -437,6 +447,7 @@ clang++ -fsanitize=address,fuzzer test_fuzzer.cc
 # Run the fuzzer with no corpus.
 ./a.out
 ```
+
 You should get an error pretty quickly:
 
 ```
@@ -461,6 +472,7 @@ HI!
 artifact_prefix='./'; Test unit written to ./crash-7a8dc3985d2a90fb6e62e94910fc11d31949c348
 Base64: SEkh
 ```
+
 ### More examples
 
 Examples of real-life fuzz targets and the bugs they find can be found
@@ -493,6 +505,7 @@ kw3="\xF7\xF8"
 # the name of the keyword followed by '=' may be omitted:
 "foo\x0Abar"
 ```
+
 ### Tracing CMP instructions
 
 With an additional compiler flag `-fsanitize-coverage=trace-cmp`
@@ -545,6 +558,7 @@ void MyInitPRNG() {
 #endif
 }
 ```
+
 ### AFL compatibility
 LibFuzzer can be used together with [AFL] on the same test corpus.
 Both fuzzers expect the test corpus to reside in a directory, one file per input.
@@ -554,6 +568,7 @@ You can run both fuzzers on the same corpus, one after another:
 ./afl-fuzz -i testcase_dir -o findings_dir /path/to/program @@
 ./llvm-fuzz testcase_dir findings_dir  # Will write new tests to testcase_dir
 ```
+
 Periodically restart both fuzzers so that they can use each other's findings.
 Currently, there is no simple way to run both fuzzing engines in parallel while sharing the same corpus dir.
 
@@ -589,6 +604,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   static bool Initialized = DoInitialization();
   ...
 ```
+
 Alternatively, you may define an optional init function and it will receive
 the program arguments that you can read and modify. Do this **only** if you
 really need to access `argv`/`argc`.
@@ -599,6 +615,7 @@ really need to access `argv`/`argc`.
   return 0;
  }
 ```
+
 ### Using libFuzzer as a library
 If the code being fuzzed must provide its own `main`, it's possible to
 invoke libFuzzer as a library. Be sure to pass `-fsanitize=fuzzer-no-link`
@@ -608,12 +625,14 @@ libFuzzer. On Linux installations, this is typically located at:
 ```bash
 /usr/lib/<llvm-version>/lib/clang/<clang-version>/lib/linux/libclang_rt.fuzzer_no_main-<architecture>.a
 ```
+
 If building libFuzzer from source, this is located at the following path
 in the build output directory:
 
 ```bash
 lib/linux/libclang_rt.fuzzer_no_main-<architecture>.a
 ```
+
 From here, the code can do whatever setup it requires, and when it's ready
 to start fuzzing, it can call `LLVMFuzzerRunDriver`, passing in the program
 arguments and a callback. This callback is invoked just like
@@ -623,6 +642,7 @@ arguments and a callback. This callback is invoked just like
 extern "C" int LLVMFuzzerRunDriver(int *argc, char ***argv,
                   int (*UserCb)(const uint8_t *Data, size_t Size));
 ```
+
 ### Rejecting unwanted inputs
 
 It may be desirable to reject some inputs, i.e. to not add them to the corpus.
@@ -644,6 +664,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return -1;  // Reject; The input will not be added to the corpus.
 }
 ```
+
 ### Leaks
 
 Binaries built with [AddressSanitizer] or [LeakSanitizer] will try to detect
@@ -675,6 +696,7 @@ which was configured with `-DCOMPILER_RT_INCLUDE_TESTS=ON` flag.
 ```console
   ninja check-fuzzer
 ```
+
 ## FAQ
 
 ### Q. Why doesn't libFuzzer use any of the LLVM support?

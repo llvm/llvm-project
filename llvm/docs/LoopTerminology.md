@@ -457,8 +457,6 @@ expression is at most in one loop).  You can now just use
 and which of these two llvm::Instructions you pass to it disambiguates
 the context / scope / relative loop.
 
-## Footnotes
-
 [^lcssa-construction]: To insert these loop-closing PHI nodes, one has to
   (re-)compute dominance frontiers (if the loop has multiple exits).
 
@@ -481,7 +479,6 @@ the context / scope / relative loop.
   but we can still insert a PHI (as we do with LCSSA PHI nodes) *and*
   use the original value afterwards (in which case the two live ranges overlap,
   although in LCSSA (the whole point is that) we never do that).
-
 
 [^def-use-chain]: A property of SSA is that there exists a def-use chain
   for each definition, which is a list of all the uses of this definition.

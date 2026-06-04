@@ -60,6 +60,7 @@ or indirectly. For example in:
   d = MemoryDef(c)
 
 ```
+
 `d` is connected directly with `c` and indirectly with `b`.
 This means that `d` potentially clobbers (see below) `c` *or*
 `b` *or* both. This in turn implies that without the use of [The walker](#the-walker),
@@ -149,6 +150,7 @@ the value is the new version of the memory after the operation.
   }
 
 ```
+
 The `MemorySSA` IR is shown in comments that precede the instructions they map
 to (if such an instruction exists). For example, `1 = MemoryDef(liveOnEntry)`
 is a `MemoryAccess` (specifically, a `MemoryDef`), and it describes the LLVM
@@ -215,6 +217,7 @@ given:
   }
 
 ```
+
 The store to `%a` is clearly not a clobber for the store to `%b`. It would
 be the walker's goal to figure this out, and return `liveOnEntry` when queried
 for the clobber of `MemoryAccess` `2`.
@@ -297,6 +300,7 @@ A code snippet for such a walk looks like this:
   }
 
 ```
+
 When `MemoryUse`s are optimized, for a given store,  you can find all loads
 clobbered by that store by walking the immediate and transitive uses of
 the store.
@@ -320,6 +324,7 @@ the store.
   }
 
 ```
+
 An example of similar traversals can be found in the DeadStoreElimination pass.
 
 ### Invalidation and updating
@@ -371,6 +376,7 @@ example, consider:
   }
 
 ```
+
 Because we removed the stores from `if.then` and `if.else`, a `MemoryPhi`
 for `if.end` would be pointless, so we don't place one. So, if you need to
 place a `MemoryDef` in `if.then` or `if.else`, you'll need to also create
@@ -405,6 +411,7 @@ to reason about atomic or volatile operations, as in:
   }
 
 ```
+
 Going solely by `MemorySSA`'s analysis, hoisting the `load` to `entry` may
 seem legal. Because it's a volatile load, though, it's not.
 
