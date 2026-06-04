@@ -13145,6 +13145,9 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
+if the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
+
 
 Example:
 """"""""
@@ -13191,6 +13194,9 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
+
+if the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
 
 Example:
 """"""""
