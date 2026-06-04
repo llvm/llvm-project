@@ -1,7 +1,9 @@
 //===-- EJitCompileDriver.cpp - Compilation Scheduler ---------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+#ifndef EJIT_FREESTANDING
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
+#endif
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #ifndef EJIT_FREESTANDING
 #include <chrono>
@@ -17,7 +19,11 @@ EJitCompileDriver::EJitCompileDriver(const Config &config,
                                      EJitModuleLoader &loader,
                                      EJitLogger *logger)
     : config_(config), cache_(cache), periodReg_(periodReg),
-      runtimeState_(runtimeState), loader_(loader), logger_(logger) {}
+  runtimeState_(runtimeState), loader_(loader)
+#ifndef EJIT_FREESTANDING
+  , logger_(logger)
+#endif
+{}
 
 EJitCompileDriver::~EJitCompileDriver() = default;
 
@@ -46,10 +52,12 @@ void *EJitCompileDriver::getOrCompile(
   // Verify time-window state
   for (unsigned i = 0; i < count; ++i) {
     if (!runtimeState_.isActive(dims[i].first, dims[i].second)) {
+#ifndef EJIT_FREESTANDING
       if (logger_)
         logger_->log(ErrorCode::TimeWindowNotActive,
                      "Time window not active for " + dims[i].first,
                      funcName, std::to_string(cacheKey));
+#endif
       return nullptr;
     }
   }
@@ -57,9 +65,11 @@ void *EJitCompileDriver::getOrCompile(
   // Get bitcode
   auto bitcodeOrErr = loader_.getBitcode(funcName);
   if (!bitcodeOrErr) {
+#ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(ErrorCode::BitcodeNotFound,
                    "No bitcode for function", funcName, std::to_string(cacheKey));
+#endif
     return nullptr;
   }
 
@@ -75,10 +85,12 @@ void *EJitCompileDriver::getOrCompile(
 
   // Sync compile
   if (!syncEngine_) {
+#ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(ErrorCode::NotActive,
                    "Sync engine not initialized", funcName,
                    std::to_string(cacheKey));
+#endif
     return nullptr;
   }
 
@@ -92,9 +104,13 @@ void *EJitCompileDriver::getOrCompile(
   // symbol renaming (each specialization gets a unique symbol).
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
+#ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,
                    "Failed to load bitcode module", funcName, std::to_string(cacheKey));
+#else
+    consumeError(std::move(Err));
+#endif
     return nullptr;
   }
 
@@ -102,9 +118,13 @@ void *EJitCompileDriver::getOrCompile(
   syncEngine_->setActiveContext(nullptr);
 
   if (!addrOrErr) {
+#ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(ErrorCode::CompilationFailed,
                    "Failed to look up compiled function", funcName, std::to_string(cacheKey));
+#else
+    consumeError(addrOrErr.takeError());
+#endif
     return nullptr;
   }
 

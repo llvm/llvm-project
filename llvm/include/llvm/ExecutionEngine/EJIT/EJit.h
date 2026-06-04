@@ -80,7 +80,9 @@ private:
   std::unique_ptr<EJitRuntimeState> runtimeState_;
   std::unique_ptr<EJitModuleLoader> moduleLoader_;
   std::unique_ptr<EJitCache> cache_;
+#ifndef EJIT_FREESTANDING
   std::unique_ptr<EJitLogger> logger_;
+#endif
   std::unique_ptr<EJitCompileDriver> compileDriver_;
 };
 
