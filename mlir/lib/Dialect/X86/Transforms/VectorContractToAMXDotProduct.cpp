@@ -264,17 +264,34 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        auto vec1 = vector::LoadOp::create(
-            rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            ValueRange(subviewOffset));
+        auto flatTy = VectorType::get({2, (16 * (offset / 2))}, ipType);
+        if (ipType.isBF16())
+          flatTy = VectorType::get((16 * offset), ipType);
+
+        int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
+        Value padding = ub::PoisonOp::create(rewriter, loc, ipType);
+        auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                                  rewriter.getContext());
+        SmallVector<bool> inBounds(flatTy.getRank(), true);
+        Value vec1 = vector::TransferReadOp::create(rewriter, loc, flatTy, matB,
+                                                    ValueRange(subviewOffset),
+                                                    padding, map, inBounds);
+
+        if (!ipType.isBF16())
+          vec1 = vector::ShapeCastOp::create(
+              rewriter, loc, VectorType::get((16 * offset), ipType), vec1);
 
         // Increment the iv by 1 or 2 based on the type to load the next 32/64
         // elements
         Value incIV = arith::AddIOp::create(rewriter, loc, offsetIndx, iv);
         subviewOffset[subviewOffset.size() - 2] = incIV;
-        auto vec2 = vector::LoadOp::create(
-            rewriter, loc, VectorType::get((16 * offset), ipType), matB,
-            ValueRange(subviewOffset));
+
+        Value vec2 = vector::TransferReadOp::create(rewriter, loc, flatTy, matB,
+                                                    ValueRange(subviewOffset),
+                                                    padding, map, inBounds);
+        if (!ipType.isBF16())
+          vec2 = vector::ShapeCastOp::create(
+              rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
         vector::ShuffleOp shuffle1;
         vector::ShuffleOp shuffle2;
