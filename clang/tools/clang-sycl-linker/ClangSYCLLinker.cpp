@@ -204,14 +204,14 @@ getInput(const ArgList &Args) {
 
     offloading::InputDesc Desc;
     Desc.Value = Arg->getValue();
-    Desc.Kind = Arg->getOption().matches(OPT_library)
-                    ? offloading::InputDesc::KindTy::Library
-                    : offloading::InputDesc::KindTy::File;
+    Desc.InputKind = Arg->getOption().matches(OPT_library)
+                         ? offloading::InputDesc::Kind::Library
+                         : offloading::InputDesc::Kind::File;
     Desc.WholeArchive = WholeArchive;
 
     // Validate positional file inputs exist before passing to resolveArchiveMembers
     // (which silently skips non-existent paths)
-    if (Desc.Kind == offloading::InputDesc::KindTy::File) {
+    if (Desc.InputKind == offloading::InputDesc::Kind::File) {
       if (!sys::fs::exists(Desc.Value))
         return createStringError("input file not found: '" + Desc.Value + "'");
       if (sys::fs::is_directory(Desc.Value))

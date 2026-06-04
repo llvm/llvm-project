@@ -344,9 +344,9 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
 
     offloading::InputDesc Desc;
     Desc.Value = Arg->getValue();
-    Desc.Kind = Arg->getOption().matches(OPT_library)
-                    ? offloading::InputDesc::KindTy::Library
-                    : offloading::InputDesc::KindTy::File;
+    Desc.InputKind = Arg->getOption().matches(OPT_library)
+                         ? offloading::InputDesc::Kind::Library
+                         : offloading::InputDesc::Kind::File;
     Desc.WholeArchive = WholeArchive;
     InputDescs.push_back(Desc);
   }
