@@ -8149,17 +8149,25 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+      for (unsigned I = 0; I != Record.size(); I += 2) {
+        StringRef Name(Strtab.data() + Record[I],
+                       static_cast<size_t>(Record[I + 1]));
+        GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+            GlobalValue::dropLLVMManglingEscape(Name));
+        CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+      }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+      for (unsigned I = 0; I != Record.size(); I += 2) {
+        StringRef Name(Strtab.data() + Record[I],
+                       static_cast<size_t>(Record[I + 1]));
+        GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+            GlobalValue::dropLLVMManglingEscape(Name));
+        CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+      }
       break;
     }
 

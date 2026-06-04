@@ -417,6 +417,7 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
           Visit(Redecl);
         DumpedAny = true;
         break;
+      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }
