@@ -354,6 +354,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvdot4a8i``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.
 
+``experimental-zvqwdota8i``, ``experimental-zvqwdota16i``, ``experimental-zvfwdota16bf``, ``experimental-zvfqwdota8f``
+  LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
+
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
 

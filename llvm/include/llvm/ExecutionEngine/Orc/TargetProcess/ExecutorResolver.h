@@ -23,7 +23,7 @@ namespace llvm::orc {
 
 class ExecutorResolver {
 public:
-  using ResolveResult = Expected<std::vector<std::optional<ExecutorSymbolDef>>>;
+  using ResolveResult = Expected<std::vector<std::optional<ExecutorAddr>>>;
   using YieldResolveResultFn = unique_function<void(ResolveResult)>;
 
   virtual ~ExecutorResolver() = default;
