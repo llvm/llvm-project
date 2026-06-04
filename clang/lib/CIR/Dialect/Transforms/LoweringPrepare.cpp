@@ -507,7 +507,7 @@ struct LoweringPreparePass
 
   void setASTContext(clang::ASTContext *c) {
     astCtx = c;
-    cxxABI = cir::LoweringPrepareCXXABI::create(*c);
+    cxxABI = cir::LoweringPrepareCXXABI::create(c->getTargetInfo().getTriple());
   }
 };
 

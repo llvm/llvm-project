@@ -14,8 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoweringPrepareCXXABI.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/TargetParser/Triple.h"
@@ -181,8 +179,7 @@ mlir::LogicalResult LoweringPrepareX86_64CXXABI::lowerAggregateVAArg(
 } // namespace
 
 std::unique_ptr<LoweringPrepareCXXABI>
-LoweringPrepareCXXABI::create(clang::ASTContext &astCtx) {
-  const llvm::Triple &triple = astCtx.getTargetInfo().getTriple();
+LoweringPrepareCXXABI::create(const llvm::Triple &triple) {
   if (triple.getArch() == llvm::Triple::x86_64)
     return std::make_unique<LoweringPrepareX86_64CXXABI>();
 

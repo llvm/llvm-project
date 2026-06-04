@@ -20,11 +20,8 @@
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/TargetParser/Triple.h"
 #include <memory>
-
-namespace clang {
-class ASTContext;
-} // namespace clang
 
 namespace cir {
 
@@ -33,11 +30,11 @@ namespace cir {
 /// per-target ABI logic in `clang/lib/CodeGen/TargetInfo.cpp`.
 class LoweringPrepareCXXABI {
 public:
-  /// Build the implementation for the target described by `astCtx`.  Targets
+  /// Build the implementation for the given target triple.  Targets
   /// without a specialized implementation get a base instance whose hooks
   /// report the requested lowering as not-yet-implemented.
   static std::unique_ptr<LoweringPrepareCXXABI>
-  create(clang::ASTContext &astCtx);
+  create(const llvm::Triple &triple);
 
   virtual ~LoweringPrepareCXXABI();
 
