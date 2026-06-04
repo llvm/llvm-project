@@ -21,6 +21,7 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -224,6 +225,8 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       isConstant(ultimate), var.isTarget(), dataAttr,
       /*setDefaultAlignment=*/!isBindC);
   attachAccDeclareAttribute(builder, global, sym);
+  Fortran::lower::declareExternalAccModuleDeclareActionRecipes(converter,
+                                                               builder, sym);
   return global;
 }
 
