@@ -31571,8 +31571,9 @@ bool AArch64TargetLowering::
 }
 
 TargetLoweringBase::CondMergingParams
-AArch64TargetLowering::getJumpConditionMergingParams(
-    Instruction::BinaryOps Opc, const Value *Lhs, const Value *Rhs) const {
+AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
+                                                     const Value *Lhs,
+                                                     const Value *Rhs) const {
   int BaseCost = BrMergingBaseCostThresh.getValue();
   // CCMP is always available on AArch64.
   if (BaseCost >= 0)
