@@ -19,6 +19,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -206,6 +207,19 @@ static bool omitRegionTerm(mlir::Region &r) {
     return y && y.getArgs().empty();
   };
   return singleNonEmptyBlock && yieldsNothing();
+}
+
+// Verifies that the given operand is produced by an operation of type
+// ExpectedProducerOp.
+template <typename ExpectedProducerOp>
+static LogicalResult verifyProducedBy(Operation *op, Value operand,
+                                      StringRef operandName) {
+  Operation *producer = operand.getDefiningOp();
+  if (!producer || !isa<ExpectedProducerOp>(producer))
+    return op->emitOpError()
+           << "operand '" << operandName << "' must be produced by '"
+           << ExpectedProducerOp::getOperationName() << "'";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -611,12 +625,22 @@ LogicalResult cir::CastOp::verify() {
                               "address space of the operand";
     }
 
-  if (mlir::isa<cir::VectorType>(srcType) &&
-      mlir::isa<cir::VectorType>(resType)) {
+  cir::CastKind kind = getKind();
+  auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
+  auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
+  if (srcVTy && resVTy) {
+    if ((kind == cir::CastKind::int_to_float ||
+         kind == cir::CastKind::float_to_int) &&
+        srcVTy.getSize() != resVTy.getSize()) {
+      return emitOpError()
+             << "vector float-to-int and int-to-float casts require "
+                "source and destination vectors to have the same number of "
+                "elements";
+    }
     // Use the element type of the vector to verify the cast kind. (Except for
     // bitcast, see below.)
-    srcType = mlir::dyn_cast<cir::VectorType>(srcType).getElementType();
-    resType = mlir::dyn_cast<cir::VectorType>(resType).getElementType();
+    srcType = srcVTy.getElementType();
+    resType = resVTy.getElementType();
   }
 
   switch (getKind()) {
@@ -4380,6 +4404,18 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// LifetimeStartOp & LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LifetimeStartOp::verify() {
+  return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
+}
+
+LogicalResult cir::LifetimeEndOp::verify() {
+  return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
 }
 
 //===----------------------------------------------------------------------===//

@@ -124,18 +124,10 @@ template <> struct DenseMapInfo<MemOpKey> {
                     PtrInfo::getEmptyKey());
   }
 
-  static inline MemOpKey getTombstoneKey() {
-    return MemOpKey(PtrInfo::getTombstoneKey(), PtrInfo::getTombstoneKey(),
-                    PtrInfo::getTombstoneKey(), PtrInfo::getTombstoneKey(),
-                    PtrInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const MemOpKey &Val) {
     // Checking any field of MemOpKey is enough to determine if the key is
-    // empty or tombstone.
+    // empty.
     assert(Val.Disp != PtrInfo::getEmptyKey() && "Cannot hash the empty key");
-    assert(Val.Disp != PtrInfo::getTombstoneKey() &&
-           "Cannot hash the tombstone key");
 
     hash_code Hash = hash_combine(*Val.Operands[0], *Val.Operands[1],
                                   *Val.Operands[2], *Val.Operands[3]);
@@ -175,11 +167,9 @@ template <> struct DenseMapInfo<MemOpKey> {
 
   static bool isEqual(const MemOpKey &LHS, const MemOpKey &RHS) {
     // Checking any field of MemOpKey is enough to determine if the key is
-    // empty or tombstone.
+    // empty.
     if (RHS.Disp == PtrInfo::getEmptyKey())
       return LHS.Disp == PtrInfo::getEmptyKey();
-    if (RHS.Disp == PtrInfo::getTombstoneKey())
-      return LHS.Disp == PtrInfo::getTombstoneKey();
     return LHS == RHS;
   }
 };

@@ -403,6 +403,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
+    "enable-early-exit-vectorization-with-side-effects", cl::init(false),
+    cl::Hidden,
+    cl::desc("Enable vectorization of early exit loops with uncountable exits "
+             "and side effects"));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -2046,10 +2052,6 @@ struct CSEDenseMapInfo {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
 
-  static inline Instruction *getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(),
@@ -2057,8 +2059,7 @@ struct CSEDenseMapInfo {
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
-    if (LHS == getEmptyKey() || RHS == getEmptyKey() ||
-        LHS == getTombstoneKey() || RHS == getTombstoneKey())
+    if (LHS == getEmptyKey() || RHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(RHS);
   }
@@ -2454,8 +2455,9 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (Legal->blockNeedsPredication(I->getParent()))
     return true;
 
-  // If we're not folding the tail by masking, predication is unnecessary.
-  if (!foldTailByMasking())
+  // If we're not folding the tail by masking and not vectorizing a loop with
+  // uncountable exits and side effects, predication is unnecessary.
+  if (!foldTailByMasking() && !Legal->hasUncountableExitWithSideEffects())
     return false;
 
   // All that remain are instructions with side-effects originally executed in
@@ -3262,7 +3264,6 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
-  VPTypeAnalysis TypeInfo(Plan);
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
@@ -3342,7 +3343,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // operand.
       VPValue *ToCheck =
           R.getNumDefinedValues() >= 1 ? R.getVPValue(0) : R.getOperand(1);
-      Type *ScalarTy = TypeInfo.inferScalarType(ToCheck);
+      Type *ScalarTy = ToCheck->getScalarType();
       if (!Visited.insert({ScalarTy}).second)
         continue;
       Type *WideTy = toVectorizedTy(ScalarTy, VF);
@@ -5685,45 +5686,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     }
   }
 
-  /// Compute the cost of all exiting conditions of the loop using the legacy
-  /// cost model. This is to match the legacy behavior, which adds the cost of
-  /// all exit conditions. Note that this over-estimates the cost, as there will
-  /// be a single condition to control the vector loop.
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<CondBrInst>(EB->getTerminator());
-    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      ExitInstrs.insert(CondI);
-    }
-  }
-  // Compute the cost of all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    if (!OrigLoop->contains(CondI) ||
-        !CostCtx.SkipCostComputation.insert(CondI).second)
-      continue;
-    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
-    LLVM_DEBUG({
-      dbgs() << "Cost of " << CondICost << " for VF " << VF
-             << ": exit condition instruction " << *CondI << "\n";
-    });
-    Cost += CondICost;
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs](User *U) {
-            return !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
-    }
-  }
-
   // Pre-compute the costs for branches except for the backedge, as the number
   // of replicate regions in a VPlan may not directly match the number of
   // branches, which would lead to different decisions.
@@ -6029,8 +5991,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
-                         OrigLoop->getParentLoop(),
-                         Legal->getWidestInductionType());
+                         OrigLoop->getParentLoop());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -6392,9 +6353,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       // if tail folded.
       if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
         Val = Blend;
-      assert(VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val)
-                     ->getBackedgeValue() == Val &&
-             "Store isn't backedge value?");
+      [[maybe_unused]] auto *Rdx =
+          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+      assert((!Rdx || Rdx->getBackedgeValue() == Val) &&
+             "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
           SI, {Val, Addr}, true /* IsUniform */, nullptr /*Mask*/, *VPI, *VPI,
           VPI->getDebugLoc());
@@ -6591,8 +6553,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
   }
 
-  RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
-                 CM.foldTailByMasking());
+  // If we're handling uncountable exits in the scalar tail after a vector
+  // loop with an in-loop mask, then the middle check has already been
+  // created to compare against the actual number of lanes executed.
+  if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
+    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
+                   CM.foldTailByMasking());
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
@@ -6842,8 +6808,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
                    Range);
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
@@ -6857,15 +6821,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                  InterleaveGroups, CM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
-  // legal and profitable. Use a new VPCostContext to ensure type inference
-  // reflects the current plan state.
-  // TODO: Remove this VPCostContext scope once VPTypeAnalysis is removed.
-  {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
-                          OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
-                   *OrigLoop, CostCtx, Range);
-  }
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
+                 *OrigLoop, CostCtx, Range);
 
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
@@ -6894,7 +6852,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   using namespace VPlanPatternMatch;
-  VPTypeAnalysis TypeInfo(*Plan);
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
@@ -6910,7 +6867,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
-    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+    Type *PhiTy = PhiR->getScalarType();
 
     // Convert a VPBlendRecipe backedge to a select.
     if (auto *Blend = dyn_cast<VPBlendRecipe>(PhiR->getBackedgeValue())) {
@@ -7487,7 +7444,9 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       });
   VPPhi *ResumePhi = nullptr;
   if (ResumePhiIter == MainScalarPH->phis().end()) {
-    Type *Ty = VPTypeAnalysis(MainPlan).inferScalarType(VectorTC);
+    assert(MainPlan.getVectorLoopRegion()->getCanonicalIV() &&
+           "canonical IV must exist");
+    Type *Ty = VectorTC->getScalarType();
     VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
     ResumePhi = ScalarPHBuilder.createScalarPhi(
         {VectorTC, MainPlan.getZero(Ty)}, {}, "vec.epilog.resume.val");
@@ -7930,6 +7889,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
+    if (LVL.hasUncountableExitWithSideEffects() &&
+        !EnableEarlyExitVectorizationWithSideEffects) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit and side effects is not enabled",
+                                 "UncountableEarlyExitSideEffectLoopsDisabled",
+                                 ORE, L);
+      return false;
+    }
   }
 
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
@@ -8192,6 +8159,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {
         "PartialAliasingVectorization",
         "Unable to interleave due to partial aliasing vectorization."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
+  // FIXME: Enable interleaving for EE-with-side-effects.
+  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
+    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
+                  "Unable to interleave due to early exit with side effects."};
     InterleaveLoop = false;
     IC = 1;
   }

@@ -63,6 +63,11 @@ private:
   const MemoryCache &operator=(const MemoryCache &) = delete;
 
   lldb::DataBufferSP GetL2CacheLine(lldb::addr_t addr, Status &error);
+
+  // If the entire range [addr, addr+len) is covered by a single L1 entry,
+  // returns a pointer into that entry's data at the correct offset. Returns
+  // nullptr on a miss. Caller must hold m_mutex.
+  const uint8_t *FindL1CacheEntry(lldb::addr_t addr, size_t len) const;
 };
 
     

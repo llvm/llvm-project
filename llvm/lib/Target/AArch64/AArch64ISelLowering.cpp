@@ -1776,7 +1776,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // SVE supports truncating stores of 64 and 128-bit vectors
     setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);
-    setTruncStoreAction(MVT::v2i64, MVT::v2i32, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i32, MVT::v2i16, Custom);
 
@@ -13136,18 +13135,22 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 #define GET_REGISTER_MATCHER
 #include "AArch64GenAsmMatcher.inc"
 
+Register AArch64TargetLowering::matchRegisterName(StringRef RegName) const {
+  return MatchRegisterName(RegName);
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
-  Register Reg = MatchRegisterName(RegName);
-  if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
-    unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
-        !MRI->isReservedReg(MF, Reg))
-      Reg = Register();
-  }
+  Register Reg = matchRegisterName(RegName);
+  // llvm.read_register / llvm.write_register instrisinc handled through the
+  // generic SelectionDAG path can only access a register that is not
+  // allocatable: reading one would use an undefined physical register, and its
+  // contents are not meaningful. Reject anything allocatable here so the
+  // generic path diagnoses rather than emitting invalid code.
+  if (Reg && !Subtarget->getRegisterInfo()->isReservedReg(MF, Reg))
+    Reg = Register();
   return Reg;
 }
 

@@ -492,7 +492,6 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   // Iteratively lower each constant element of the array.
   if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts())) {
     for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
-      mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
       mlir::Value init = visit(elt);
       result =
           mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
@@ -4186,6 +4185,21 @@ mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
     cir::StackRestoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMLifetimeStartOpLowering::matchAndRewrite(
+    cir::LifetimeStartOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeStartOp>(op,
+                                                           adaptor.getPtr());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMLifetimeEndOpLowering::matchAndRewrite(
+    cir::LifetimeEndOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeEndOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 

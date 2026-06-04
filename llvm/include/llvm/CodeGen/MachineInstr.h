@@ -2130,16 +2130,11 @@ struct MachineInstrExpressionTrait : DenseMapInfo<MachineInstr*> {
     return nullptr;
   }
 
-  static inline MachineInstr *getTombstoneKey() {
-    return reinterpret_cast<MachineInstr*>(-1);
-  }
-
   LLVM_ABI static unsigned getHashValue(const MachineInstr *const &MI);
 
   static bool isEqual(const MachineInstr* const &LHS,
                       const MachineInstr* const &RHS) {
-    if (RHS == getEmptyKey() || RHS == getTombstoneKey() ||
-        LHS == getEmptyKey() || LHS == getTombstoneKey())
+    if (RHS == getEmptyKey() || LHS == getEmptyKey())
       return LHS == RHS;
     return LHS->isIdenticalTo(*RHS, MachineInstr::IgnoreVRegDefs);
   }
