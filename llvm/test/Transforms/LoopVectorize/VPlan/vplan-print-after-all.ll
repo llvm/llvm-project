@@ -30,6 +30,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToStridedAccesses
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyReductionInitValue
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths

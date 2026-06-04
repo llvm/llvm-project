@@ -115,7 +115,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT: Live-in ir<%n> = original trip-count
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP:      vector.ph:
-; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<%start>, ir<0>, ir<1>
+; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX_START:%.]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; NO-VP-OUTLOOP-NEXT: Successor(s): vector loop
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: <x1> vector loop: {
@@ -136,17 +136,18 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: middle.block:
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[RDX:%.+]]> = compute-reduction-result (add) ir<[[ADD]]>
+; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[INIT:%.+]]> = add vp<[[RDX]]>, ir<%start>
 ; NO-VP-OUTLOOP-NEXT:   EMIT vp<[[BOC:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; NO-VP-OUTLOOP-NEXT:   EMIT branch-on-cond vp<[[BOC]]>
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: ir-bb<for.end>:
-; NO-VP-OUTLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[RDX]]> from middle.block)
+; NO-VP-OUTLOOP-NEXT:  IR %add.lcssa = phi i32 [ %add, %for.body ] (extra operand: vp<[[INIT]]> from middle.block)
 ; NO-VP-OUTLOOP-NEXT: No successors
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: scalar.ph:
 ; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[IV_RESUME:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RDX]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; NO-VP-OUTLOOP-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[INIT]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; NO-VP-OUTLOOP-NEXT: Successor(s): ir-bb<for.body>
 ; NO-VP-OUTLOOP-EMPTY:
 ; NO-VP-OUTLOOP-NEXT: ir-bb<for.body>:

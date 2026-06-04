@@ -239,6 +239,10 @@ struct VPlanTransforms {
   /// was unsuccessful.
   static bool handleFindLastReductions(VPlan &Plan);
 
+  /// Try to scalar the initial value when the insertelement is expensive.
+  static void simplifyReductionInitValue(VPlan &Plan, VPCostContext &Ctx,
+                                         VFRange &Range);
+
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
 
