@@ -226,7 +226,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", [AnchorLayoutInterface]> {
     It issues an instruction to prefetch a block of data from continuous
     memory regions to each level of the cache based on their cache policy.
 
-    The tensor descriptor can be 1D, 2D, 3D, or higher dimensional. When the
+    The tensor descriptor can be n-dimensional. When the
     tensor descriptor has more than 2 dimensions, the leading dimensions are
     treated as **batch dimensions** that are unrolled to unit dimensions during
     lowering. At the subgroup level, the prefetch_nd operation executes at 2D
