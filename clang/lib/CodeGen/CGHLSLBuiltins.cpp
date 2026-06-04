@@ -462,8 +462,16 @@ getHandleAttributedType(QualType HandleQT) {
   if (const auto *RT = HandleQT->getAs<HLSLAttributedResourceType>())
     return RT;
   // If the expr is a texture/sampler record (or similar), peel to __handle.
-  return HLSLAttributedResourceType::findHandleTypeOnResource(
-      HandleQT.getTypePtr());
+  if (const HLSLAttributedResourceType *RT =
+          HLSLAttributedResourceType::findHandleTypeOnResource(
+              HandleQT.getTypePtr()))
+    return RT;
+  llvm_unreachable("attributed handle type not found");
+}
+
+static const HLSLAttributedResourceType *
+getRequiredHandleType(const CallExpr *E, unsigned ArgNo) {
+  return getHandleAttributedType(E->getArg(ArgNo)->getType());
 }
 
 static llvm::Type *getOffsetType(CodeGenModule &CGM,
@@ -620,9 +628,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
@@ -647,9 +653,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *BiasOp = EmitScalarExpr(E->getArg(3));
     if (BiasOp->getType() != Builder.getFloatTy())
       BiasOp = Builder.CreateFPCast(BiasOp, Builder.getFloatTy());
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleBias
     Args.push_back(HandleOp);
@@ -673,9 +677,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *DDXOp = EmitScalarExpr(E->getArg(3));
     Value *DDYOp = EmitScalarExpr(E->getArg(4));
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 7> Args;
     Args.push_back(HandleOp);
@@ -703,9 +705,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *LODOp = EmitScalarExpr(E->getArg(3));
     if (LODOp->getType() != Builder.getFloatTy())
       LODOp = Builder.CreateFPCast(LODOp, Builder.getFloatTy());
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args; // Max 5 arguments for SampleLevel
     Args.push_back(HandleOp);
@@ -735,9 +735,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Builder.CreateShuffleVector(CoordLODOp, Mask, "hlsl.load.coord");
     Value *LODOp =
         Builder.CreateExtractElement(CoordLODOp, NumElts - 1, "hlsl.load.lod");
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 4> Args;
     Args.push_back(HandleOp);
@@ -756,9 +754,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
     if (CmpOp->getType() != Builder.getFloatTy())
       CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleCmp
     Args.push_back(HandleOp);
@@ -784,9 +780,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
     if (CmpOp->getType() != Builder.getFloatTy())
       CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
@@ -827,9 +821,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (ComponentOp->getType() != Builder.getInt32Ty())
       ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
                                           /*isSigned=*/false);
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
     Args.push_back(HandleOp);
@@ -864,9 +856,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       Args.push_back(ComponentOp);
     }
 
-    const HLSLAttributedResourceType *RT =
-        getHandleAttributedType(E->getArg(0)->getType());
-    assert(RT && "resource builtin requires attributed handle type");
+    const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
     Args.push_back(emitHlslOffset(*this, E, 5, getOffsetType(CGM, RT)));
 
     llvm::Type *RetTy = ConvertType(E->getType());
