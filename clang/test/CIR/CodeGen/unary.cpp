@@ -222,6 +222,24 @@ int inc2() {
 // OGCG:   store i32 %[[A_LOAD]], ptr %[[B]], align 4
 // OGCG:   %[[B_TO_OUTPUT:.*]] = load i32, ptr %[[B]], align 4
 
+void chars(char c) {
+// CHECK: cir.func{{.*}} @_Z5charsc
+
+  int c1 = +c;
+  // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
+  int c2 = -c;
+  // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
+  // CHECK: cir.minus nsw %[[PROMO]] : !s32i
+
+  // Chars can go through some integer promotion codegen paths even when not promoted.
+  // These should not have nsw attributes because the intermediate promotion makes the
+  // overflow defined behavior.
+  ++c; // CHECK: cir.inc %{{.+}} : !s8i
+  --c; // CHECK: cir.dec %{{.+}} : !s8i
+  c++; // CHECK: cir.inc %{{.+}} : !s8i
+  c--; // CHECK: cir.dec %{{.+}} : !s8i
+}
+
 float fpPlus() {
   float a = 1.0f;
   return +a;
@@ -404,64 +422,677 @@ float fpPostInc2() {
 // OGCG:   store float %[[A_LOAD]], ptr %[[B]], align 4
 // OGCG:   %[[B_TO_OUTPUT:.*]] = load float, ptr %[[B]], align 4
 
-void chars(char c) {
-// CHECK: cir.func{{.*}} @_Z5charsc
-
-  int c1 = +c;
-  // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
-  int c2 = -c;
-  // CHECK: %[[PROMO:.*]] = cir.cast integral %{{.+}} : !s8i -> !s32i
-  // CHECK: cir.minus nsw %[[PROMO]] : !s32i
-
-  // Chars can go through some integer promotion codegen paths even when not promoted.
-  // These should not have nsw attributes because the intermediate promotion makes the
-  // overflow defined behavior.
-  ++c; // CHECK: cir.inc %{{.+}} : !s8i
-  --c; // CHECK: cir.dec %{{.+}} : !s8i
-  c++; // CHECK: cir.inc %{{.+}} : !s8i
-  c--; // CHECK: cir.dec %{{.+}} : !s8i
-}
-
-_Float16 fp16UPlus(_Float16 f) {
+// double unary operations
+double doubleUPlus(double f) {
   return +f;
 }
 
-// CHECK: cir.func{{.*}} @_Z9fp16UPlusDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK: cir.func{{.*}} @_Z11doubleUPlusd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+
+// LLVM: define{{.*}} double @_Z11doubleUPlusd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+
+// OGCG: define{{.*}} double @_Z11doubleUPlusd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+
+double doubleUMinus(double f) {
+  return -f;
+}
+
+// CHECK: cir.func{{.*}} @_Z12doubleUMinusd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+// CHECK:   %[[DBL_NEGATED:.*]] = cir.minus %[[DBL_LOAD]]
+
+// LLVM: define{{.*}} double @_Z12doubleUMinusd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// LLVM:   %[[DBL_NEGATED:.*]] = fneg double %[[DBL_LOAD]]
+
+// OGCG: define{{.*}} double @_Z12doubleUMinusd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// OGCG:   %[[DBL_NEGATED:.*]] = fneg double %[[DBL_LOAD]]
+
+double doubleUPreInc(double f) {
+  return ++f;
+}
+
+// CHECK: cir.func{{.*}} @_Z13doubleUPreIncd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+// CHECK:   %[[DBL_INC:.*]] = cir.inc %[[DBL_LOAD]] : !cir.double
+
+// LLVM: define{{.*}} double @_Z13doubleUPreIncd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// LLVM:   %[[DBL_INC:.*]] = fadd double 1.000000e+00, %[[DBL_LOAD]]
+
+// OGCG: define{{.*}} double @_Z13doubleUPreIncd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// OGCG:   %[[DBL_INC:.*]] = fadd double %[[DBL_LOAD]], 1.000000e+00
+
+double doubleUPreDec(double f) {
+  return --f;
+}
+
+// CHECK: cir.func{{.*}} @_Z13doubleUPreDecd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+// CHECK:   %[[DBL_DEC:.*]] = cir.dec %[[DBL_LOAD]] : !cir.double
+
+// LLVM: define{{.*}} double @_Z13doubleUPreDecd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// LLVM:   %[[DBL_DEC:.*]] = fadd double -1.000000e+00, %[[DBL_LOAD]]
+
+// OGCG: define{{.*}} double @_Z13doubleUPreDecd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// OGCG:   %[[DBL_DEC:.*]] = fadd double %[[DBL_LOAD]], -1.000000e+00
+
+double doubleUPostInc(double f) {
+  return f++;
+}
+
+// CHECK: cir.func{{.*}} @_Z14doubleUPostIncd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+// CHECK:   %[[DBL_INC:.*]] = cir.inc %[[DBL_LOAD]] : !cir.double
+
+// LLVM: define{{.*}} double @_Z14doubleUPostIncd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// LLVM:   %[[DBL_INC:.*]] = fadd double 1.000000e+00, %[[DBL_LOAD]]
+
+// OGCG: define{{.*}} double @_Z14doubleUPostIncd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// OGCG:   %[[DBL_INC:.*]] = fadd double %[[DBL_LOAD]], 1.000000e+00
+
+double doubleUPostDec(double f) {
+  return f--;
+}
+
+// CHECK: cir.func{{.*}} @_Z14doubleUPostDecd({{.*}}) -> (!cir.double{{.*}})
+// CHECK:   %[[DBL_F:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["f", init]
+// CHECK:   %[[DBL_LOAD:.*]] = cir.load{{.*}} %[[DBL_F]]
+// CHECK:   %[[DBL_DEC:.*]] = cir.dec %[[DBL_LOAD]] : !cir.double
+
+// LLVM: define{{.*}} double @_Z14doubleUPostDecd({{.*}})
+// LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// LLVM:   %[[DBL_DEC:.*]] = fadd double -1.000000e+00, %[[DBL_LOAD]]
+
+// OGCG: define{{.*}} double @_Z14doubleUPostDecd({{.*}})
+// OGCG:   %[[DBL_LOAD:.*]] = load double, ptr %{{.*}}, align 8
+// OGCG:   %[[DBL_DEC:.*]] = fadd double %[[DBL_LOAD]], -1.000000e+00
+
+// long double unary operations
+long double ldUPlus(long double f) {
+  return +f;
+}
+
+// CHECK: cir.func{{.*}} @_Z7ldUPluse({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+
+// LLVM: define{{.*}} x86_fp80 @_Z7ldUPluse({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+
+// OGCG: define{{.*}} x86_fp80 @_Z7ldUPluse({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+
+long double ldUMinus(long double f) {
+  return -f;
+}
+
+// CHECK: cir.func{{.*}} @_Z8ldUMinuse({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+// CHECK:   %[[LD_NEGATED:.*]] = cir.minus %[[LD_LOAD]]
+
+// LLVM: define{{.*}} x86_fp80 @_Z8ldUMinuse({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// LLVM:   %[[LD_NEGATED:.*]] = fneg x86_fp80 %[[LD_LOAD]]
+
+// OGCG: define{{.*}} x86_fp80 @_Z8ldUMinuse({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// OGCG:   %[[LD_NEGATED:.*]] = fneg x86_fp80 %[[LD_LOAD]]
+
+long double ldUPreInc(long double f) {
+  return ++f;
+}
+
+// CHECK: cir.func{{.*}} @_Z9ldUPreInce({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+// CHECK:   %[[LD_INC:.*]] = cir.inc %[[LD_LOAD]] : !cir.long_double<!cir.f80>
+
+// LLVM: define{{.*}} x86_fp80 @_Z9ldUPreInce({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// LLVM:   %[[LD_INC:.*]] = fadd x86_fp80 0xK3FFF8000000000000000, %[[LD_LOAD]]
+
+// OGCG: define{{.*}} x86_fp80 @_Z9ldUPreInce({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// OGCG:   %[[LD_INC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 0xK3FFF8000000000000000
+
+long double ldUPreDec(long double f) {
+  return --f;
+}
+
+// CHECK: cir.func{{.*}} @_Z9ldUPreDece({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+// CHECK:   %[[LD_DEC:.*]] = cir.dec %[[LD_LOAD]] : !cir.long_double<!cir.f80>
+
+// LLVM: define{{.*}} x86_fp80 @_Z9ldUPreDece({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// LLVM:   %[[LD_DEC:.*]] = fadd x86_fp80 0xKBFFF8000000000000000, %[[LD_LOAD]]
+
+// OGCG: define{{.*}} x86_fp80 @_Z9ldUPreDece({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// OGCG:   %[[LD_DEC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 0xKBFFF8000000000000000
+
+long double ldUPostInc(long double f) {
+  return f++;
+}
+
+// CHECK: cir.func{{.*}} @_Z10ldUPostInce({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+// CHECK:   %[[LD_INC:.*]] = cir.inc %[[LD_LOAD]] : !cir.long_double<!cir.f80>
+
+// LLVM: define{{.*}} x86_fp80 @_Z10ldUPostInce({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// LLVM:   %[[LD_INC:.*]] = fadd x86_fp80 0xK3FFF8000000000000000, %[[LD_LOAD]]
+
+// OGCG: define{{.*}} x86_fp80 @_Z10ldUPostInce({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// OGCG:   %[[LD_INC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 0xK3FFF8000000000000000
+
+long double ldUPostDec(long double f) {
+  return f--;
+}
+
+// CHECK: cir.func{{.*}} @_Z10ldUPostDece({{.*}}) -> (!cir.long_double<!cir.f80>{{.*}})
+// CHECK:   %[[LD_F:.*]] = cir.alloca !cir.long_double<!cir.f80>, !cir.ptr<!cir.long_double<!cir.f80>>, ["f", init]
+// CHECK:   %[[LD_LOAD:.*]] = cir.load{{.*}} %[[LD_F]]
+// CHECK:   %[[LD_DEC:.*]] = cir.dec %[[LD_LOAD]] : !cir.long_double<!cir.f80>
+
+// LLVM: define{{.*}} x86_fp80 @_Z10ldUPostDece({{.*}})
+// LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// LLVM:   %[[LD_DEC:.*]] = fadd x86_fp80 0xKBFFF8000000000000000, %[[LD_LOAD]]
+
+// OGCG: define{{.*}} x86_fp80 @_Z10ldUPostDece({{.*}})
+// OGCG:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %{{.*}}, align 16
+// OGCG:   %[[LD_DEC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 0xKBFFF8000000000000000
+
+// __float128 unary operations
+__float128 f128UPlus(__float128 f) {
+  return +f;
+}
+
+// CHECK: cir.func{{.*}} @_Z9f128UPlusg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+
+// LLVM: define{{.*}} fp128 @_Z9f128UPlusg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+
+// OGCG: define{{.*}} fp128 @_Z9f128UPlusg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+
+__float128 f128UMinus(__float128 f) {
+  return -f;
+}
+
+// CHECK: cir.func{{.*}} @_Z10f128UMinusg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+// CHECK:   %[[F128_NEG:.*]] = cir.minus %[[F128_LOAD]]
+
+// LLVM: define{{.*}} fp128 @_Z10f128UMinusg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// LLVM:   %[[F128_NEG:.*]] = fneg fp128 %[[F128_LOAD]]
+
+// OGCG: define{{.*}} fp128 @_Z10f128UMinusg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// OGCG:   %[[F128_NEG:.*]] = fneg fp128 %[[F128_LOAD]]
+
+__float128 f128UPreInc(__float128 f) {
+  return ++f;
+}
+
+// CHECK: cir.func{{.*}} @_Z11f128UPreIncg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+// CHECK:   %[[F128_INC:.*]] = cir.inc %[[F128_LOAD]] : !cir.f128
+
+// LLVM: define{{.*}} fp128 @_Z11f128UPreIncg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// LLVM:   %[[F128_INC:.*]] = fadd fp128 0xL00000000000000003FFF000000000000, %[[F128_LOAD]]
+
+// OGCG: define{{.*}} fp128 @_Z11f128UPreIncg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// OGCG:   %[[F128_INC:.*]] = fadd fp128 %[[F128_LOAD]], 0xL00000000000000003FFF000000000000
+
+__float128 f128UPreDec(__float128 f) {
+  return --f;
+}
+
+// CHECK: cir.func{{.*}} @_Z11f128UPreDecg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+// CHECK:   %[[F128_DEC:.*]] = cir.dec %[[F128_LOAD]] : !cir.f128
+
+// LLVM: define{{.*}} fp128 @_Z11f128UPreDecg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// LLVM:   %[[F128_DEC:.*]] = fadd fp128 0xL0000000000000000BFFF000000000000, %[[F128_LOAD]]
+
+// OGCG: define{{.*}} fp128 @_Z11f128UPreDecg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// OGCG:   %[[F128_DEC:.*]] = fadd fp128 %[[F128_LOAD]], 0xL0000000000000000BFFF000000000000
+
+__float128 f128UPostInc(__float128 f) {
+  return f++;
+}
+
+// CHECK: cir.func{{.*}} @_Z12f128UPostIncg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+// CHECK:   %[[F128_INC:.*]] = cir.inc %[[F128_LOAD]] : !cir.f128
+
+// LLVM: define{{.*}} fp128 @_Z12f128UPostIncg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// LLVM:   %[[F128_INC:.*]] = fadd fp128 0xL00000000000000003FFF000000000000, %[[F128_LOAD]]
+
+// OGCG: define{{.*}} fp128 @_Z12f128UPostIncg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// OGCG:   %[[F128_INC:.*]] = fadd fp128 %[[F128_LOAD]], 0xL00000000000000003FFF000000000000
+
+__float128 f128UPostDec(__float128 f) {
+  return f--;
+}
+
+// CHECK: cir.func{{.*}} @_Z12f128UPostDecg({{.*}}) -> (!cir.f128{{.*}})
+// CHECK:   %[[F128_F:.*]] = cir.alloca !cir.f128, !cir.ptr<!cir.f128>, ["f", init]
+// CHECK:   %[[F128_LOAD:.*]] = cir.load{{.*}} %[[F128_F]]
+// CHECK:   %[[F128_DEC:.*]] = cir.dec %[[F128_LOAD]] : !cir.f128
+
+// LLVM: define{{.*}} fp128 @_Z12f128UPostDecg({{.*}})
+// LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// LLVM:   %[[F128_DEC:.*]] = fadd fp128 0xL0000000000000000BFFF000000000000, %[[F128_LOAD]]
+
+// OGCG: define{{.*}} fp128 @_Z12f128UPostDecg({{.*}})
+// OGCG:   %[[F128_LOAD:.*]] = load fp128, ptr %{{.*}}, align 16
+// OGCG:   %[[F128_DEC:.*]] = fadd fp128 %[[F128_LOAD]], 0xL0000000000000000BFFF000000000000
+
+// Float16 unary operations
+_Float16 Float16UPlus(_Float16 f) {
+  return +f;
+}
+
+// CHECK: cir.func{{.*}} @_Z12Float16UPlusDF16_({{.*}}) -> (!cir.f16{{.*}})
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[F:.*]]
 // CHECK:   %[[PROMOTED:.*]] = cir.cast floating %[[INPUT]] : !cir.f16 -> !cir.float
 // CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[PROMOTED]] : !cir.float -> !cir.f16
 
-// LLVM: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
+// LLVM: define{{.*}} half @_Z12Float16UPlusDF16_({{.*}})
 // LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
 
-// OGCG: define{{.*}} half @_Z9fp16UPlusDF16_({{.*}})
+// OGCG: define{{.*}} half @_Z12Float16UPlusDF16_({{.*}})
 // OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[PROMOTED]] to half
 
-_Float16 fp16UMinus(_Float16 f) {
+_Float16 Float16UMinus(_Float16 f) {
   return -f;
 }
 
-// CHECK: cir.func{{.*}} @_Z10fp16UMinusDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK: cir.func{{.*}} @_Z13Float16UMinusDF16_({{.*}}) -> (!cir.f16{{.*}})
 // CHECK:   %[[INPUT:.*]] = cir.load{{.*}} %[[F:.*]]
 // CHECK:   %[[PROMOTED:.*]] = cir.cast floating %[[INPUT]] : !cir.f16 -> !cir.float
 // CHECK:   %[[RESULT:.*]] = cir.minus %[[PROMOTED]]
 // CHECK:   %[[UNPROMOTED:.*]] = cir.cast floating %[[RESULT]] : !cir.float -> !cir.f16
 
-// LLVM: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
+// LLVM: define{{.*}} half @_Z13Float16UMinusDF16_({{.*}})
 // LLVM:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // LLVM:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // LLVM:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
 // LLVM:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
 
-// OGCG: define{{.*}} half @_Z10fp16UMinusDF16_({{.*}})
+// OGCG: define{{.*}} half @_Z13Float16UMinusDF16_({{.*}})
 // OGCG:   %[[F_LOAD:.*]] = load half, ptr %{{.*}}, align 2
 // OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // OGCG:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
 // OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
+
+_Float16 Float16UPreInc(_Float16 f) {
+  return ++f;
+}
+
+// CHECK: cir.func{{.*}} @_Z14Float16UPreIncDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK:   %[[PREINC_F:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["f", init]
+// CHECK:   %[[PREINC_INPUT:.*]] = cir.load{{.*}} %[[PREINC_F]]
+// CHECK:   %[[PREINC_RESULT:.*]] = cir.inc %[[PREINC_INPUT]] : !cir.f16
+
+// LLVM: define{{.*}} half @_Z14Float16UPreIncDF16_({{.*}})
+// LLVM:   %[[PREINC_F_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:   %[[PREINC_INPUT:.*]] = load half, ptr %[[PREINC_F_ADDR]], align 2
+// LLVM:   %[[PREINC_RESULT:.*]] = fadd half 0xH3C00, %[[PREINC_INPUT]]
+
+// OGCG: define{{.*}} half @_Z14Float16UPreIncDF16_({{.*}})
+// OGCG:   %[[PREINC_F_ADDR:.*]] = alloca half, align 2
+// OGCG:   %[[PREINC_INPUT:.*]] = load half, ptr %[[PREINC_F_ADDR]], align 2
+// OGCG:   %[[PREINC_RESULT:.*]] = fadd half %[[PREINC_INPUT]], 0xH3C00
+
+_Float16 Float16UPreDec(_Float16 f) {
+  return --f;
+}
+
+// CHECK: cir.func{{.*}} @_Z14Float16UPreDecDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK:   %[[PREDEC_F:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["f", init]
+// CHECK:   %[[PREDEC_INPUT:.*]] = cir.load{{.*}} %[[PREDEC_F]]
+// CHECK:   %[[PREDEC_RESULT:.*]] = cir.dec %[[PREDEC_INPUT]] : !cir.f16
+
+// LLVM: define{{.*}} half @_Z14Float16UPreDecDF16_({{.*}})
+// LLVM:   %[[PREDEC_F_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:   %[[PREDEC_INPUT:.*]] = load half, ptr %[[PREDEC_F_ADDR]], align 2
+// LLVM:   %[[PREDEC_RESULT:.*]] = fadd half 0xHBC00, %[[PREDEC_INPUT]]
+
+// OGCG: define{{.*}} half @_Z14Float16UPreDecDF16_({{.*}})
+// OGCG:   %[[PREDEC_F_ADDR:.*]] = alloca half, align 2
+// OGCG:   %[[PREDEC_INPUT:.*]] = load half, ptr %[[PREDEC_F_ADDR]], align 2
+// OGCG:   %[[PREDEC_RESULT:.*]] = fadd half %[[PREDEC_INPUT]], 0xHBC00
+
+_Float16 Float16UPostInc(_Float16 f) {
+  return f++;
+}
+
+// CHECK: cir.func{{.*}} @_Z15Float16UPostIncDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK:   %[[POSTINC_F:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["f", init]
+// CHECK:   %[[POSTINC_INPUT:.*]] = cir.load{{.*}} %[[POSTINC_F]]
+// CHECK:   %[[POSTINC_RESULT:.*]] = cir.inc %[[POSTINC_INPUT]] : !cir.f16
+
+// LLVM: define{{.*}} half @_Z15Float16UPostIncDF16_({{.*}})
+// LLVM:   %[[POSTINC_F_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:   %[[POSTINC_INPUT:.*]] = load half, ptr %[[POSTINC_F_ADDR]], align 2
+// LLVM:   %[[POSTINC_RESULT:.*]] = fadd half 0xH3C00, %[[POSTINC_INPUT]]
+
+// OGCG: define{{.*}} half @_Z15Float16UPostIncDF16_({{.*}})
+// OGCG:   %[[POSTINC_F_ADDR:.*]] = alloca half, align 2
+// OGCG:   %[[POSTINC_INPUT:.*]] = load half, ptr %[[POSTINC_F_ADDR]], align 2
+// OGCG:   %[[POSTINC_RESULT:.*]] = fadd half %[[POSTINC_INPUT]], 0xH3C00
+
+_Float16 Float16UPostDec(_Float16 f) {
+  return f--;
+}
+
+// CHECK: cir.func{{.*}} @_Z15Float16UPostDecDF16_({{.*}}) -> (!cir.f16{{.*}})
+// CHECK:   %[[POSTDEC_F:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["f", init]
+// CHECK:   %[[POSTDEC_INPUT:.*]] = cir.load{{.*}} %[[POSTDEC_F]]
+// CHECK:   %[[POSTDEC_RESULT:.*]] = cir.dec %[[POSTDEC_INPUT]] : !cir.f16
+
+// LLVM: define{{.*}} half @_Z15Float16UPostDecDF16_({{.*}})
+// LLVM:   %[[POSTDEC_F_ADDR:.*]] = alloca half, i64 1, align 2
+// LLVM:   %[[POSTDEC_INPUT:.*]] = load half, ptr %[[POSTDEC_F_ADDR]], align 2
+// LLVM:   %[[POSTDEC_RESULT:.*]] = fadd half 0xHBC00, %[[POSTDEC_INPUT]]
+
+// OGCG: define{{.*}} half @_Z15Float16UPostDecDF16_({{.*}})
+// OGCG:   %[[POSTDEC_F_ADDR:.*]] = alloca half, align 2
+// OGCG:   %[[POSTDEC_INPUT:.*]] = load half, ptr %[[POSTDEC_F_ADDR]], align 2
+// OGCG:   %[[POSTDEC_RESULT:.*]] = fadd half %[[POSTDEC_INPUT]], 0xHBC00
+
+// __fp16 unary operations
+void fp16PtrUPlus(__fp16 *f) {
+  *f = +(*f);
+}
+
+// CHECK: cir.func{{.*}} @_Z12fp16PtrUPlusPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_PROMOTED]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z12fp16PtrUPlusPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_PROMOTED]] to half
+
+// OGCG: define{{.*}} void @_Z12fp16PtrUPlusPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_PROMOTED]] to half
+
+void fp16PtrUMinus(__fp16 *f) {
+  *f = -(*f);
+}
+
+// CHECK: cir.func{{.*}} @_Z13fp16PtrUMinusPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_NEGATED:.*]] = cir.minus %[[FPTR_PROMOTED]]
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_NEGATED]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z13fp16PtrUMinusPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_NEGATED:.*]] = fneg float %[[FPTR_PROMOTED]]
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_NEGATED]] to half
+
+// OGCG: define{{.*}} void @_Z13fp16PtrUMinusPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_NEGATED:.*]] = fneg float %[[FPTR_PROMOTED]]
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_NEGATED]] to half
+
+void fp16PtrUPreInc(__fp16 *f) {
+ ++(*f);
+}
+
+// CHECK: cir.func{{.*}} @_Z14fp16PtrUPreIncPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_INC:.*]] = cir.inc %[[FPTR_PROMOTED]] : !cir.float
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_INC]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z14fp16PtrUPreIncPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_INC:.*]] = fadd float 1.000000e+00, %[[FPTR_PROMOTED]]
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_INC]] to half
+
+// OGCG: define{{.*}} void @_Z14fp16PtrUPreIncPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_INC:.*]] = fadd float %[[FPTR_PROMOTED]], 1.000000e+00
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_INC]] to half
+
+void fp16PtrUPreDec(__fp16 *f) {
+  --(*f);
+}
+
+// CHECK: cir.func{{.*}} @_Z14fp16PtrUPreDecPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_DEC:.*]] = cir.dec %[[FPTR_PROMOTED]] : !cir.float
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_DEC]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z14fp16PtrUPreDecPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_DEC:.*]] = fadd float -1.000000e+00, %[[FPTR_PROMOTED]]
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_DEC]] to half
+
+// OGCG: define{{.*}} void @_Z14fp16PtrUPreDecPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_DEC:.*]] = fadd float %[[FPTR_PROMOTED]], -1.000000e+00
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_DEC]] to half
+
+void fp16PtrUPostInc(__fp16 *f) {
+  (*f)++;
+}
+
+// CHECK: cir.func{{.*}} @_Z15fp16PtrUPostIncPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_INC:.*]] = cir.inc %[[FPTR_PROMOTED]] : !cir.float
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_INC]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z15fp16PtrUPostIncPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_INC:.*]] = fadd float 1.000000e+00, %[[FPTR_PROMOTED]]
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_INC]] to half
+
+// OGCG: define{{.*}} void @_Z15fp16PtrUPostIncPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_INC:.*]] = fadd float %[[FPTR_PROMOTED]], 1.000000e+00
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_INC]] to half
+
+void fp16PtrUPostDec(__fp16 *f) {
+  (*f)--;
+}
+
+// CHECK: cir.func{{.*}} @_Z15fp16PtrUPostDecPDh({{.*}})
+// CHECK:   %[[FPTR_F:.*]] = cir.alloca !cir.ptr<!cir.f16>, !cir.ptr<!cir.ptr<!cir.f16>>, ["f", init]
+// CHECK:   %[[FPTR_DEREF:.*]] = cir.load deref{{.*}} %[[FPTR_F]]
+// CHECK:   %[[FPTR_LOAD:.*]] = cir.load{{.*}} %[[FPTR_DEREF]]
+// CHECK:   %[[FPTR_PROMOTED:.*]] = cir.cast floating %[[FPTR_LOAD]] : !cir.f16 -> !cir.float
+// CHECK:   %[[FPTR_DEC:.*]] = cir.dec %[[FPTR_PROMOTED]] : !cir.float
+// CHECK:   %[[FPTR_UNPROMOTED:.*]] = cir.cast floating %[[FPTR_DEC]] : !cir.float -> !cir.f16
+
+// LLVM: define{{.*}} void @_Z15fp16PtrUPostDecPDh({{.*}})
+// LLVM:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// LLVM:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// LLVM:   %[[FPTR_DEC:.*]] = fadd float -1.000000e+00, %[[FPTR_PROMOTED]]
+// LLVM:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_DEC]] to half
+
+// OGCG: define{{.*}} void @_Z15fp16PtrUPostDecPDh({{.*}})
+// OGCG:   %[[FPTR_LOAD:.*]] = load half, ptr %{{.*}}, align 2
+// OGCG:   %[[FPTR_PROMOTED:.*]] = fpext half %[[FPTR_LOAD]] to float
+// OGCG:   %[[FPTR_DEC:.*]] = fadd float %[[FPTR_PROMOTED]], -1.000000e+00
+// OGCG:   %[[FPTR_UNPROMOTED:.*]] = fptrunc float %[[FPTR_DEC]] to half
+
+// __bf16 unary operations
+__bf16 bf16UPlus(__bf16 f) {
+  return +f;
+}
+
+// CHECK: cir.func{{.*}} @_Z9bf16UPlusDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_PROMOTED:.*]] = cir.cast floating %[[BF16_LOAD]] : !cir.bf16 -> !cir.float
+// CHECK:   %[[BF16_UNPROMOTED:.*]] = cir.cast floating %[[BF16_PROMOTED]] : !cir.float -> !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z9bf16UPlusDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_PROMOTED:.*]] = fpext bfloat %[[BF16_LOAD]] to float
+// LLVM:   %[[BF16_UNPROMOTED:.*]] = fptrunc float %[[BF16_PROMOTED]] to bfloat
+
+// OGCG: define{{.*}} bfloat @_Z9bf16UPlusDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_PROMOTED:.*]] = fpext bfloat %[[BF16_LOAD]] to float
+// OGCG:   %[[BF16_UNPROMOTED:.*]] = fptrunc float %[[BF16_PROMOTED]] to bfloat
+
+__bf16 bf16UMinus(__bf16 f) {
+  return -f;
+}
+
+// CHECK: cir.func{{.*}} @_Z10bf16UMinusDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_PROMOTED:.*]] = cir.cast floating %[[BF16_LOAD]] : !cir.bf16 -> !cir.float
+// CHECK:   %[[BF16_NEGATED:.*]] = cir.minus %[[BF16_PROMOTED]]
+// CHECK:   %[[BF16_UNPROMOTED:.*]] = cir.cast floating %[[BF16_NEGATED]] : !cir.float -> !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z10bf16UMinusDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_PROMOTED:.*]] = fpext bfloat %[[BF16_LOAD]] to float
+// LLVM:   %[[BF16_NEGATED:.*]] = fneg float %[[BF16_PROMOTED]]
+// LLVM:   %[[BF16_UNPROMOTED:.*]] = fptrunc float %[[BF16_NEGATED]] to bfloat
+
+// OGCG: define{{.*}} bfloat @_Z10bf16UMinusDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_PROMOTED:.*]] = fpext bfloat %[[BF16_LOAD]] to float
+// OGCG:   %[[BF16_NEGATED:.*]] = fneg float %[[BF16_PROMOTED]]
+// OGCG:   %[[BF16_UNPROMOTED:.*]] = fptrunc float %[[BF16_NEGATED]] to bfloat
+
+__bf16 bf16UPreInc(__bf16 f) {
+  return ++f;
+}
+
+// CHECK: cir.func{{.*}} @_Z11bf16UPreIncDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_INC:.*]] = cir.inc %[[BF16_LOAD]] : !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z11bf16UPreIncDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_INC:.*]] = fadd bfloat 0xR3F80, %[[BF16_LOAD]]
+
+// OGCG: define{{.*}} bfloat @_Z11bf16UPreIncDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_INC:.*]] = fadd bfloat %[[BF16_LOAD]], 0xR3F80
+
+__bf16 bf16UPreDec(__bf16 f) {
+  return --f;
+}
+
+// CHECK: cir.func{{.*}} @_Z11bf16UPreDecDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_DEC:.*]] = cir.dec %[[BF16_LOAD]] : !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z11bf16UPreDecDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_DEC:.*]] = fadd bfloat 0xRBF80, %[[BF16_LOAD]]
+
+// OGCG: define{{.*}} bfloat @_Z11bf16UPreDecDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_DEC:.*]] = fadd bfloat %[[BF16_LOAD]], 0xRBF80
+
+__bf16 bf16UPostInc(__bf16 f) {
+  return f++;
+}
+
+// CHECK: cir.func{{.*}} @_Z12bf16UPostIncDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_INC:.*]] = cir.inc %[[BF16_LOAD]] : !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z12bf16UPostIncDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_INC:.*]] = fadd bfloat 0xR3F80, %[[BF16_LOAD]]
+
+// OGCG: define{{.*}} bfloat @_Z12bf16UPostIncDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_INC:.*]] = fadd bfloat %[[BF16_LOAD]], 0xR3F80
+
+__bf16 bf16UPostDec(__bf16 f) {
+  return f--;
+}
+
+// CHECK: cir.func{{.*}} @_Z12bf16UPostDecDF16b({{.*}}) -> (!cir.bf16{{.*}})
+// CHECK:   %[[BF16_F:.*]] = cir.alloca !cir.bf16, !cir.ptr<!cir.bf16>, ["f", init]
+// CHECK:   %[[BF16_LOAD:.*]] = cir.load{{.*}} %[[BF16_F]]
+// CHECK:   %[[BF16_DEC:.*]] = cir.dec %[[BF16_LOAD]] : !cir.bf16
+
+// LLVM: define{{.*}} bfloat @_Z12bf16UPostDecDF16b({{.*}})
+// LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// LLVM:   %[[BF16_DEC:.*]] = fadd bfloat 0xRBF80, %[[BF16_LOAD]]
+
+// OGCG: define{{.*}} bfloat @_Z12bf16UPostDecDF16b({{.*}})
+// OGCG:   %[[BF16_LOAD:.*]] = load bfloat, ptr %{{.*}}, align 2
+// OGCG:   %[[BF16_DEC:.*]] = fadd bfloat %[[BF16_LOAD]], 0xRBF80
 
 void test_logical_not() {
   int a = 5;
