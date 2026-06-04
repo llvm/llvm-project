@@ -7,20 +7,34 @@ define void @callbr_inline_asm(ptr %src, ptr %dst1, ptr %dst2, i32 %c) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v0, v[0:1]
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_cmp_gt_i32 vcc v6, 42; s_cbranch_vccnz .LBB0_2
+; CHECK-NEXT:    v_cmp_gt_i32 vcc v6, 42; s_cbranch_vccnz .LBB0_7
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  ; %bb.1: ; %fallthrough
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    flat_store_dword v[2:3], v0
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-; CHECK-NEXT:  .LBB0_2: ; Inline asm indirect target
-; CHECK-NEXT:    ; %indirect
-; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:  ; %bb.1: ; %.target.fallthrough
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
+; CHECK-NEXT:  .LBB0_2: ; %Flow
+; CHECK-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
+; CHECK-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
+; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_execz .LBB0_4
+; CHECK-NEXT:  ; %bb.3: ; %indirect
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dword v[4:5], v0
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:  .LBB0_4: ; %Flow1
+; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; CHECK-NEXT:    s_cbranch_execz .LBB0_6
+; CHECK-NEXT:  ; %bb.5: ; %fallthrough
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_store_dword v[2:3], v0
+; CHECK-NEXT:  .LBB0_6: ; %ret
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:  .LBB0_7: ; Inline asm indirect target
+; CHECK-NEXT:    ; %.target.indirect
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_branch .LBB0_2
 	%a = load i32, ptr %src, align 4
 	callbr void asm "v_cmp_gt_i32 vcc $0, 42; s_cbranch_vccnz ${1:l}", "r,!i"(i32 %c) to label %fallthrough [label %indirect]
 fallthrough:
@@ -41,10 +55,14 @@ define void @callbr_self_loop(i1 %c) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_branch .LBB1_1
-; CHECK-NEXT:  .LBB1_2: ; Inline asm indirect target
-; CHECK-NEXT:    ; %callbr.target.ret
+; CHECK-NEXT:  ; %bb.2: ; %callbr.target.callbr
+; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
+; CHECK-NEXT:    s_branch .LBB1_4
+; CHECK-NEXT:  .LBB1_3: ; Inline asm indirect target
+; CHECK-NEXT:    ; %callbr.target.callbr.target.ret
 ; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:  .LBB1_4: ; %ret
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   br label %callbr
 callbr:
