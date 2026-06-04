@@ -109,6 +109,10 @@ void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
 FunctionPass *createRISCVZacasABIFixPass();
 void initializeRISCVZacasABIFixPass(PassRegistry &);
 
+FunctionPass *createRISCVLiveVariablesPass(RISCVTargetMachine &TM,
+                                           bool PreRegAlloc);
+void initializeRISCVLiveVariablesPass(PassRegistry &);
+
 InstructionSelector *
 createRISCVInstructionSelector(const RISCVTargetMachine &,
                                const RISCVSubtarget &,

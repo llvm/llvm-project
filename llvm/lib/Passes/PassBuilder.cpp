@@ -173,6 +173,7 @@
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/SparseLiveVariables.h"
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"

@@ -5,6 +5,8 @@
 
 declare void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8>, <vscale x 16 x ptr>, i32 immarg, <vscale x 16 x i1>)
 
+; MachineLICM uses SparseLiveVariables to hoist the unpack instructions out
+; of the loop body, while keeping the masked scatter instruction inside the loop.
 define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK-LABEL: allocno_reload_assign:
 ; CHECK:       // %bb.0:
@@ -18,14 +20,28 @@ define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mvn w8, w8
+; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    uunpkhi z2.h, z0.b
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    uunpklo z3.s, z1.h
+; CHECK-NEXT:    uunpkhi z4.s, z1.h
+; CHECK-NEXT:    uunpklo z6.s, z2.h
+; CHECK-NEXT:    uunpkhi z16.s, z2.h
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p2.h, p1.b
 ; CHECK-NEXT:    punpkhi p4.h, p1.b
+; CHECK-NEXT:    uunpklo z1.d, z3.s
+; CHECK-NEXT:    uunpkhi z2.d, z3.s
 ; CHECK-NEXT:    punpklo p6.h, p0.b
+; CHECK-NEXT:    uunpklo z3.d, z4.s
+; CHECK-NEXT:    uunpkhi z4.d, z4.s
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    uunpklo z5.d, z6.s
+; CHECK-NEXT:    uunpkhi z6.d, z6.s
+; CHECK-NEXT:    uunpklo z7.d, z16.s
+; CHECK-NEXT:    uunpkhi z16.d, z16.s
 ; CHECK-NEXT:    punpklo p1.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpklo p3.h, p4.b
@@ -35,28 +51,14 @@ define fastcc i8 @allocno_reload_assign(ptr %p) {
 ; CHECK-NEXT:    punpklo p7.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:  .LBB0_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    uunpklo z1.h, z0.b
-; CHECK-NEXT:    uunpklo z2.s, z1.h
-; CHECK-NEXT:    uunpkhi z1.s, z1.h
-; CHECK-NEXT:    uunpklo z3.d, z2.s
-; CHECK-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEXT:    st1b { z3.d }, p1, [z0.d]
+; CHECK-NEXT:    st1b { z1.d }, p1, [z0.d]
 ; CHECK-NEXT:    st1b { z2.d }, p2, [z0.d]
-; CHECK-NEXT:    uunpklo z2.d, z1.s
-; CHECK-NEXT:    uunpkhi z1.d, z1.s
-; CHECK-NEXT:    st1b { z2.d }, p3, [z0.d]
-; CHECK-NEXT:    uunpkhi z2.h, z0.b
-; CHECK-NEXT:    uunpklo z3.s, z2.h
-; CHECK-NEXT:    uunpkhi z2.s, z2.h
-; CHECK-NEXT:    st1b { z1.d }, p4, [z0.d]
-; CHECK-NEXT:    uunpklo z1.d, z3.s
-; CHECK-NEXT:    st1b { z1.d }, p5, [z0.d]
-; CHECK-NEXT:    uunpkhi z1.d, z3.s
-; CHECK-NEXT:    st1b { z1.d }, p6, [z0.d]
-; CHECK-NEXT:    uunpklo z1.d, z2.s
-; CHECK-NEXT:    st1b { z1.d }, p7, [z0.d]
-; CHECK-NEXT:    uunpkhi z1.d, z2.s
-; CHECK-NEXT:    st1b { z1.d }, p0, [z0.d]
+; CHECK-NEXT:    st1b { z3.d }, p3, [z0.d]
+; CHECK-NEXT:    st1b { z4.d }, p4, [z0.d]
+; CHECK-NEXT:    st1b { z5.d }, p5, [z0.d]
+; CHECK-NEXT:    st1b { z6.d }, p6, [z0.d]
+; CHECK-NEXT:    st1b { z7.d }, p7, [z0.d]
+; CHECK-NEXT:    st1b { z16.d }, p0, [z0.d]
 ; CHECK-NEXT:    str p8, [x0]
 ; CHECK-NEXT:    b .LBB0_1
   br label %1

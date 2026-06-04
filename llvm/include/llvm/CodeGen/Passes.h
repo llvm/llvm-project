@@ -155,6 +155,9 @@ LLVM_ABI extern char &EdgeBundlesWrapperLegacyID;
 /// variable is life and sets machine operand kill flags.
 LLVM_ABI extern char &LiveVariablesID;
 
+/// SparseLiveVariables - Sparse Live Variable Analysis.
+LLVM_ABI extern char &SparseLiveVariablesID;
+
 /// PHIElimination - This pass eliminates machine instruction PHI nodes
 /// by inserting copy instructions.  This destroys SSA information, but is the
 /// desired input for some register allocators.  This pass is "required" by

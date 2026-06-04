@@ -92,6 +92,7 @@ MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis()
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
+MACHINE_FUNCTION_ANALYSIS("sparse-live-variables", SparseLiveVariablesAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
