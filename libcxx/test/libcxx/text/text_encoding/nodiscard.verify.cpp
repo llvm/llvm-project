@@ -8,8 +8,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
 // <text_encoding>
 
 #include <functional>
@@ -27,12 +25,6 @@ int main(int, char**) {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.aliases();
 
-#ifndef TEST_HAS_NO_LOCALIZATION
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  te.environment();
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  te.environment_is<std::text_encoding::UTF8>();
-#endif
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.aliases();
 

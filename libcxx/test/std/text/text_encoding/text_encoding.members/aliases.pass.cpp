@@ -10,31 +10,26 @@
 
 // <text_encoding>
 
-// text_encoding::aliases_view::end()
+// constexpr text_encoding::aliases()
 
 #include <cassert>
+#include <string_view>
 #include <text_encoding>
 
 #include "test_macros.h"
 
 constexpr bool test() {
-  {
-    std::text_encoding a_other = std::text_encoding("foobar");
+  static_assert(noexcept(std::text_encoding().aliases()));
+  ASSERT_SAME_TYPE(decltype(std::text_encoding().aliases()), std::text_encoding::aliases_view);
 
-    std::text_encoding::aliases_view other_aliases = a_other.aliases();
+  // 2 aliases
+  std::text_encoding utf8 = std::text_encoding::UTF8;
 
-    // 1. begin() of an aliases_view of "other" is equal to end()
-    ASSERT_NOEXCEPT(other_aliases.end());
-    assert(other_aliases.begin() == other_aliases.end());
-  }
+  auto aliases = utf8.aliases();
 
-  {
-    std::text_encoding utf8 = std::text_encoding(std::text_encoding::UTF8);
-
-    std::text_encoding::aliases_view aliases = utf8.aliases();
-
-    assert(aliases.begin() != aliases.end());
-  }
+  assert(aliases.size() == 2);
+  assert(std::string_view(aliases[0]) == "UTF-8");
+  assert(std::string_view(aliases[1]) == "csUTF8");
 
   return true;
 }

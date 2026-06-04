@@ -12,10 +12,11 @@
 
 // constexpr implementation-defined text_encoding::aliases_view::begin() const;
 
-#include "test_macros.h"
 #include <cassert>
 #include <ranges>
 #include <text_encoding>
+
+#include "test_macros.h"
 
 constexpr bool test() {
   // 1. begin() of an aliases_view from a single text_encoding object are the same.
@@ -52,6 +53,15 @@ constexpr bool test() {
 
     assert(!(view1.begin() == view2.begin()));
     assert(!(std::ranges::begin(view1) == std::ranges::begin(view2)));
+  }
+
+  {
+    // 2 aliases
+    std::text_encoding te = std::text_encoding(std::text_encoding::UTF8);
+
+    std::text_encoding::aliases_view view = te.aliases();
+
+    assert(view.begin() + 2 == view.end());
   }
 
   return true;

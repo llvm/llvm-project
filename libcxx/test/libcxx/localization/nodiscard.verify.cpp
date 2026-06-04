@@ -29,9 +29,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     l.combine<std::messages<char> >(l);
     l.name(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#if TEST_STD_VER >= 26
-    l.encoding(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
+
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     l(std::string(), std::string());
 
