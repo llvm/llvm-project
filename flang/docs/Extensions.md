@@ -224,7 +224,7 @@ end
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
-* The `ISO_C_BINDING` module exports the gfortran-compatible extension named
+* The `ISO_C_BINDING` module exports the named
   constants `c_float128` and `c_float128_complex` (both with the value 16),
   the kind parameter for 128-bit (quad precision) real and complex C
   interoperable types. These are not defined by the Fortran standard.
