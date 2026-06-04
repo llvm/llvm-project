@@ -49,10 +49,14 @@ LIBC_INLINE float expm1f(float x) {
   }
 #if !defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
   if (LIBC_UNLIKELY(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+    return -0x1.71c884p-4f;
+#else
     int round_mode = fputil::quick_get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_DOWNWARD)
       return -0x1.71c884p-4f;
     return -0x1.71c882p-4f;
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
   }
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS

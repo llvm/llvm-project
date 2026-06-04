@@ -200,27 +200,33 @@ LIBC_INLINE float exp10m1f(float x) {
     case 0x40e00000U: // x = 7.0f
       return 9'999'999.0f;
     case 0x41000000U: { // x = 8.0f
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      return 100'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 100'000'000.0f;
-#endif
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       return 99'999'992.0f;
     }
     case 0x41100000U: { // x = 9.0f
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      return 1'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 1'000'000'000.0f;
-#endif
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       return 999'999'936.0f;
     }
     case 0x41200000U: { // x = 10.0f
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+      return 10'000'000'000.0f;
+#else
       int rounding = fputil::quick_get_round();
       if (rounding == FE_UPWARD || rounding == FE_TONEAREST)
         return 10'000'000'000.0f;
-#endif
+#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       return 9'999'998'976.0f;
     }
     }

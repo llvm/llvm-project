@@ -96,8 +96,10 @@ LIBC_INLINE float exp2f(float x) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
+#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
       if (fputil::fenv_is_round_up())
         return FPBits::min_subnormal().get_val();
+#endif
       if (x != 0.0f) {
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_UNDERFLOW);
