@@ -1372,9 +1372,13 @@ void addOpAccessChainReqs(const MachineInstr &Instr,
   bool IsNonUniform =
       hasNonUniformDecoration(Instr.getOperand(0).getReg(), MRI);
 
-  auto FirstIndexReg = Instr.getOperand(3).getReg();
-  bool FirstIndexIsConstant =
-      Subtarget.getInstrInfo()->isConstantInstr(*MRI.getVRegDef(FirstIndexReg));
+  // Guard against lack of index operands.
+  bool FirstIndexIsConstant = true;
+  if (Instr.getNumOperands() > 3) {
+    Register FirstIndexReg = Instr.getOperand(3).getReg();
+    FirstIndexIsConstant = Subtarget.getInstrInfo()->isConstantInstr(
+        *MRI.getVRegDef(FirstIndexReg));
+  }
 
   if (StorageClass == SPIRV::StorageClass::StorageClass::StorageBuffer) {
     if (IsNonUniform)
