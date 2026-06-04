@@ -6012,6 +6012,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         assert(NewFunction && "Failed to instantiate function template");
         assert(NewFunction != Function && "Expected a new specialization");
         assert(declaresSameEntity(NewFunction, Function));
+        if (TemplateSpecializationKind TSK =
+                Info->getTemplateSpecializationKind();
+            TSK == TSK_ExplicitInstantiationDefinition ||
+            TSK == TSK_ExplicitInstantiationDeclaration)
+          NewFunction->setTemplateSpecializationKind(
+              TSK, Info->getPointOfInstantiation());
         Function = NewFunction;
       }
     } else {
