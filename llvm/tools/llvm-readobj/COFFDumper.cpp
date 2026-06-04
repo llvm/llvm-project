@@ -17,6 +17,7 @@
 #include "Win64EHDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -42,6 +43,7 @@
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFCxxModuleMetadata.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -100,6 +102,7 @@ public:
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
+  void printCOFFCxxModuleMetadata() override;
   void printCodeViewDebugInfo() override;
   void mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
                           llvm::codeview::MergingTypeTableBuilder &CVTypes,
@@ -2557,4 +2560,75 @@ void COFFDumper::printCOFFTLSDirectory(
   W.printFlags("Characteristics", TlsTable->Characteristics,
                ArrayRef(ImageSectionCharacteristics),
                COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
+}
+
+void COFFDumper::printCOFFCxxModuleMetadata() {
+  SectionRef Sect;
+  for (const SectionRef &S : Obj->sections()) {
+    StringRef SectionName = unwrapOrError(Obj->getFileName(), S.getName());
+    if (SectionName == ".modmeta") {
+      Sect = S;
+      break;
+    }
+  }
+  if (Sect == SectionRef())
+    return;
+
+  StringRef Contents = unwrapOrError(Obj->getFileName(), Sect.getContents());
+  COFFCxxModuleMetadata ModMap =
+      unwrapOrError(Obj->getFileName(), parseCOFFCxxModuleMetadata(Contents));
+
+  DictScope D(W, "CxxModuleMetadata");
+  W.printNumber("Version", ModMap.Version);
+  W.printNumber("Reserved", ModMap.Reserved);
+  W.printNumber("ModuleIndexWidth", ModMap.ModuleIndexWidth);
+  W.printNumber("SymbolIndexWidth", ModMap.SymbolIndexWidth);
+
+  COFFCxxModuleMetadataReader Reader(ModMap);
+
+  SmallSet<uint32_t, 8> HeaderUnits;
+  Error Err = Reader.readModuleList(makeVisitor([&](auto A) {
+    for (auto V : A)
+      HeaderUnits.insert(V);
+  }));
+  if (Err)
+    reportError(std::move(Err), Obj->getFileName());
+
+  ListScope L(W, "Modules");
+  while (Reader.hasModuleData()) {
+    uint32_t ModuleID =
+        unwrapOrError(Obj->getFileName(), Reader.readModuleID());
+    if (ModuleID == std::numeric_limits<uint32_t>::max())
+      break;
+
+    DictScope D(W, "CxxModule");
+    StringRef Name;
+    if (ModuleID != 0)
+      Name = unwrapOrError(Obj->getFileName(), Reader.readModuleName());
+    W.printHex("ID", ModuleID);
+    W.printString("Name", Name);
+    W.printBoolean("IsHeaderUnit", HeaderUnits.contains(ModuleID));
+
+    Err = Reader.readModuleList([&](auto A) {
+      W.printList("Dependents", A, [&](auto &OS, auto V) { OS << W.hex(V); });
+    });
+    if (Err)
+      reportError(std::move(Err), Obj->getFileName());
+
+    Err = Reader.readSymbolList([&](auto A) {
+      W.printList("Symbols", A, [&](auto &OS, auto V) {
+        OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
+      });
+    });
+    if (Err)
+      reportError(std::move(Err), Obj->getFileName());
+
+    Err = Reader.readSymbolList([&](auto A) {
+      W.printList("Exports", A, [&](auto &OS, auto V) {
+        OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
+      });
+    });
+    if (Err)
+      reportError(std::move(Err), Obj->getFileName());
+  }
 }

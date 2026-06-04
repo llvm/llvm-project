@@ -1,0 +1,220 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t | FileCheck %s
+
+# CHECK:      CxxModuleMetadata {
+# CHECK-NEXT:   Version: 1
+# CHECK-NEXT:   Reserved: 0
+# CHECK-NEXT:   ModuleIndexWidth: 1
+# CHECK-NEXT:   SymbolIndexWidth: 1
+# CHECK-NEXT:   Modules [
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x1
+# CHECK-NEXT:       Name: m
+# CHECK-NEXT:       IsHeaderUnit: No
+# CHECK-NEXT:       Dependents: [0x3]
+# CHECK-NEXT:       Symbols: [?nonExported2@@3HA::<!m> (9), ?notExported@@YAHXZ::<!m> (12)]
+# CHECK-NEXT:       Exports: [?munge@@YAHHH@Z::<!m> (13), ?anotherFunction@@YAHXZ::<!m> (15)]
+# CHECK-NEXT:     }
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x3
+# CHECK-NEXT:       Name: o
+# CHECK-NEXT:       IsHeaderUnit: No
+# CHECK-NEXT:       Dependents: []
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT:       Exports: [?getO@@YAHXZ::<!o> (14)]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+
+# This was created with the following commands and inputs:
+
+# cl o.ixx /std:c++20 /c
+# cl m.ixx /std:c++20 /c
+
+# o.ixx:
+# export module o;
+# int nonExportedO() { return 1; }
+# export int getO() { return 42; }
+
+# m.ixx:
+# export module m;
+# import o;
+# int notExported() { return 42; }
+# int nonExported2 = 43;
+# export int munge(int a, int b) { return a + b + getO(); }
+# export int anotherFunction() { return 0; }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0100010118000000FF0103FF090CFF0D0FFF03FFFF0EFFFF006D006F00
+    SizeOfRawData:   29
+symbols:
+  - Name:            '@comp.id'
+    Value:           17140626
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@feat.00'
+    Value:           2147549584
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@vol.md'
+    Value:           3
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          47
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          108
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .data
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1999841343
+      Number:          0
+  - Name:            '?nonExported2@@3HA::<!m>'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          83
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        3042698026
+      Number:          0
+  - Name:            '?notExported@@YAHXZ::<!m>'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?munge@@YAHHH@Z::<!m>'
+    Value:           16
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?getO@@YAHXZ::<!o>'
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?anotherFunction@@YAHXZ::<!m>'
+    Value:           80
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '$LN3'
+    Value:           16
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_LABEL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3251837369
+      Number:          0
+  - Name:            '$unwind$?munge@@YAHHH@Z::<!m>'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        3975966820
+      Number:          0
+  - Name:            '$pdata$?munge@@YAHHH@Z::<!m>'
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .modmeta
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          29
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .chks64
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          64
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+...

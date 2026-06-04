@@ -165,6 +165,7 @@ static bool COFFImports;
 static bool COFFLoadConfig;
 static bool COFFResources;
 static bool COFFTLSDirectory;
+static bool COFFCxxModuleMetadata;
 
 // XCOFF specific options.
 static bool XCOFFAuxiliaryHeader;
@@ -320,6 +321,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::COFFLoadConfig = Args.hasArg(OPT_coff_load_config);
   opts::COFFResources = Args.hasArg(OPT_coff_resources);
   opts::COFFTLSDirectory = Args.hasArg(OPT_coff_tls_directory);
+  opts::COFFCxxModuleMetadata = Args.hasArg(OPT_coff_cxx_modmeta);
 
   // XCOFF specific options.
   opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
@@ -516,6 +518,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
       Dumper->printCOFFLoadConfig();
     if (opts::CGProfile)
       Dumper->printCGProfile();
+    if (opts::COFFCxxModuleMetadata)
+      Dumper->printCOFFCxxModuleMetadata();
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::CodeView)

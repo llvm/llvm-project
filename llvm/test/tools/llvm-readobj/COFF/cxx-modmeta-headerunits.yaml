@@ -1,0 +1,253 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t | FileCheck %s
+
+# CHECK:      CxxModuleMetadata {
+# CHECK-NEXT:   Version: 1
+# CHECK-NEXT:   Reserved: 0
+# CHECK-NEXT:   ModuleIndexWidth: 1
+# CHECK-NEXT:   SymbolIndexWidth: 1
+# CHECK-NEXT:   Modules [
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x0
+# CHECK-NEXT:       Name: 
+# CHECK-NEXT:       IsHeaderUnit: No
+# CHECK-NEXT:       Dependents: [0x1, 0x3, 0x25]
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT:       Exports: []
+# CHECK-NEXT:     }
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x1
+# CHECK-NEXT:       Name: o
+# CHECK-NEXT:       IsHeaderUnit: No
+# CHECK-NEXT:       Dependents: []
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT:       Exports: [?getO@@YAHXZ::<!o> (16)]
+# CHECK-NEXT:     }
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x3
+# CHECK-NEXT:       Name: {{.*}}/unit.hpp
+# CHECK-NEXT:       IsHeaderUnit: Yes
+# CHECK-NEXT:       Dependents: []
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT:       Exports: [?diff@@YAHHH@Z (14)]
+# CHECK-NEXT:     }
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x25
+# CHECK-NEXT:       Name: {{.*}}/unit2.hpp
+# CHECK-NEXT:       IsHeaderUnit: Yes
+# CHECK-NEXT:       Dependents: []
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT:       Exports: [?sum@@YAHHH@Z (15)]
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# CHECK-NEXT: }
+
+# This was created with the following commands and inputs:
+
+# cl unit.hpp /exportHeader /Founit.hpp.obj /std:c++20 /c
+# cl unit2.hpp /exportHeader /Founit2.hpp.obj /std:c++20 /c
+# cl o.ixx /std:c++20 /c                                   
+# cl /headerUnit unit.hpp=unit.hpp.ifc /headerUnit unit2.hpp=unit2.hpp.ifc main.cpp /std:c++20 /c
+
+# unit.hpp:
+# inline int diff(int a, int b) { return a - b; }
+
+# unit2.hpp:
+# inline int sum(int a, int b) { return a + b; }
+
+# o.ixx:
+# export module o;
+# int foo = 42;
+# export int getO() { return foo; }
+
+# main.cpp:
+# import "unit.hpp";
+# import "unit2.hpp";
+# import o;
+# int main() {
+#   int d = diff(2, 3);
+#   return sum(1, d) + getO();
+# }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     01000101220000000325FF00010325FFFFFF01FFFF10FF03FFFF0EFF25FFFF0FFFFF006F00463A2F4465762F64756D6D792F686561646572756E6974732F756E69742E68707000463A2F4465762F64756D6D792F686561646572756E6974732F756E6974322E68707000
+    SizeOfRawData:   106
+symbols:
+  - Name:            '@comp.id'
+    Value:           17140626
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@feat.00'
+    Value:           2147549584
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            '@vol.md'
+    Value:           3
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          47
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          116
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          59
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        3944583797
+      Number:          0
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          21
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2168134607
+      Number:          0
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          21
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1888124682
+      Number:          0
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            main
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?diff@@YAHHH@Z'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?sum@@YAHHH@Z'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?getO@@YAHXZ::<!o>'
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '$LN3'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_LABEL
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        931692337
+      Number:          0
+  - Name:            '$unwind$main'
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        3634843435
+      Number:          0
+  - Name:            '$pdata$main'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .modmeta
+    Value:           0
+    SectionNumber:   8
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          106
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .chks64
+    Value:           0
+    SectionNumber:   9
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          72
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+...
