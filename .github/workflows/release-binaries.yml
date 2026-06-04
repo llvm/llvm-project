@@ -301,6 +301,12 @@ jobs:
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
 
+    - name: Install zstd on windows-11-arm
+      if: inputs.runs-on == 'windows-11-arm'
+      run: |
+        choco install -y zstandard --version=1.5.7.20250308
+        zstd --version
+
     - name: Create zstd compressed tarball
       shell: bash
       env:
