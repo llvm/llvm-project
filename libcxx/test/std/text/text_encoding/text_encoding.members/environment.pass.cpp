@@ -40,7 +40,8 @@ int main(int, char**) {
 #endif
 
     std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding::environment();
-    bool fail             = false;
+
+    bool fail = false;
     if (te != expected_id) {
       std::cerr << std::format(
           "Environment mismatch: Expected ID {}, received: {{{},{}}}\n", int(expected_id), int(te.mib()), te.name());
