@@ -146,6 +146,9 @@ struct {
 #define ZIFENCEI_BITMASK (1ULL << 11)
 #define ZMMUL_GROUPID 1
 #define ZMMUL_BITMASK (1ULL << 12)
+// NOTE: Bits 13-26 are reserved per RISC-V C API doc PR #185.
+#define ZICFISS_GROUPID 1
+#define ZICFISS_BITMASK (1ULL << 27)
 
 #if defined(__linux__)
 
