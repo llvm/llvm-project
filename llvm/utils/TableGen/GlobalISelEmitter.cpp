@@ -2222,7 +2222,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
       M.addAction<ConstrainOperandToRegClassAction>(0, 0, RC);
 
       // Erase the root.
-      unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+      unsigned RootInsnID = InsnMatcher.getInsnVarID();
       M.addAction<EraseInstAction>(RootInsnID);
 
       // We're done with this pattern!  It's eligible for GISel emission; return
@@ -2305,7 +2305,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     return std::move(Error);
 
   // Erase the root.
-  unsigned RootInsnID = M.getInsnVarID(InsnMatcher);
+  unsigned RootInsnID = InsnMatcher.getInsnVarID();
   M.addAction<EraseInstAction>(RootInsnID);
 
   // We're done with this pattern!  It's eligible for GISel emission; return it.
