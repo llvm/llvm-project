@@ -624,11 +624,13 @@ private:
                          "determining the difference between trip counts\n");
 
     // Currently only considering loops with a single exit point
-    // and a non-constant trip count. Note that the return value 
+    // and a non-constant trip count. Note that the return value
     // of getSmallConstantTripCount is a 32 bit number, based on
     // the existing implementation.
-    const int64_t TC0 = static_cast<int64_t>(SE.getSmallConstantTripCount(FC0.L));
-    const int64_t TC1 = static_cast<int64_t>(SE.getSmallConstantTripCount(FC1.L));
+    const int64_t TC0 =
+        static_cast<int64_t>(SE.getSmallConstantTripCount(FC0.L));
+    const int64_t TC1 =
+        static_cast<int64_t>(SE.getSmallConstantTripCount(FC1.L));
 
     // If any of the tripcounts are zero that means that loop(s) do not have
     // a single exit or a constant tripcount.
@@ -746,10 +748,10 @@ private:
         bool WillPeel = false;
         if (FC0.AbleToPeel && TCDifference > 0 &&
             TCDifference <= static_cast<int64_t>(FusionPeelMaxCount)) {
-            // Dependent on peeling being performed on the first loop, and
-            // assuming all other conditions for fusion return true.
-            WillPeel = true;
-          }
+          // Dependent on peeling being performed on the first loop, and
+          // assuming all other conditions for fusion return true.
+          WillPeel = true;
+        }
 
         if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
