@@ -46,6 +46,10 @@ struct HighlightStyle {
 
     /// Sets the prefix and suffix strings.
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
+
+    explicit operator bool() const {
+      return !m_prefix.empty() && !m_suffix.empty();
+    }
   };
 
   /// The style for the token which is below the cursor of the user. Note that
@@ -153,9 +157,6 @@ namespace llvm {
 /// \{
 template <> struct DenseMapInfo<lldb::LanguageType> {
   static inline lldb::LanguageType getEmptyKey() {
-    return lldb::eNumLanguageTypes;
-  }
-  static inline lldb::LanguageType getTombstoneKey() {
     return lldb::eNumLanguageTypes;
   }
   static unsigned getHashValue(lldb::LanguageType language_type) {

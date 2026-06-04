@@ -18,11 +18,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
@@ -269,6 +271,8 @@ struct ValueInfo {
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   LLVM_ABI bool canAutoHide() const;
+
+  LLVM_ABI bool noRenameOnPromotion() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ValueInfo &VI) {
@@ -301,13 +305,7 @@ template <> struct DenseMapInfo<ValueInfo> {
     return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
   }
 
-  static inline ValueInfo getTombstoneKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-16);
-  }
-
-  static inline bool isSpecialKey(ValueInfo V) {
-    return V == getTombstoneKey() || V == getEmptyKey();
-  }
+  static inline bool isSpecialKey(ValueInfo V) { return V == getEmptyKey(); }
 
   static bool isEqual(ValueInfo L, ValueInfo R) {
     // We are not supposed to mix ValueInfo(s) with different HaveGVs flag
@@ -509,15 +507,25 @@ public:
     /// summary. The value is interpreted as 'ImportKind' enum defined above.
     unsigned ImportType : 1;
 
+    /// This symbol was promoted. Thinlink stages need to be aware of this
+    /// transition
+    unsigned Promoted : 1;
+
+    /// This field is written by the ThinLTO prelink stage to decide whether
+    /// a particular static global value should be promoted or not.
+    unsigned NoRenameOnPromotion : 1;
+
     /// Convenience Constructors
     explicit GVFlags(GlobalValue::LinkageTypes Linkage,
                      GlobalValue::VisibilityTypes Visibility,
                      bool NotEligibleToImport, bool Live, bool IsLocal,
-                     bool CanAutoHide, ImportKind ImportType)
+                     bool CanAutoHide, ImportKind ImportType,
+                     bool NoRenameOnPromotion)
         : Linkage(Linkage), Visibility(Visibility),
           NotEligibleToImport(NotEligibleToImport), Live(Live),
           DSOLocal(IsLocal), CanAutoHide(CanAutoHide),
-          ImportType(static_cast<unsigned>(ImportType)) {}
+          ImportType(static_cast<unsigned>(ImportType)), Promoted(false),
+          NoRenameOnPromotion(NoRenameOnPromotion) {}
   };
 
 private:
@@ -584,10 +592,26 @@ public:
     return static_cast<GlobalValue::LinkageTypes>(Flags.Linkage);
   }
 
+  bool wasPromoted() const { return Flags.Promoted; }
+
+  void promote() {
+    assert(GlobalValue::isLocalLinkage(linkage()) &&
+           "unexpected (re-)promotion of non-local symbol");
+    assert(!Flags.Promoted);
+    Flags.Promoted = true;
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
+  }
+
   /// Sets the linkage to the value determined by global summary-based
   /// optimization. Will be applied in the ThinLTO backends.
   void setLinkage(GlobalValue::LinkageTypes Linkage) {
+    assert(!wasPromoted());
+    assert(!GlobalValue::isExternalLinkage(Linkage) && "use `promote` instead");
     Flags.Linkage = Linkage;
+  }
+
+  void setExternalLinkageForTest() {
+    Flags.Linkage = GlobalValue::LinkageTypes::ExternalLinkage;
   }
 
   /// Return true if this global value can't be imported.
@@ -610,6 +634,12 @@ public:
   }
 
   void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
+
+  void setNoRenameOnPromotion(bool NoRenameOnPromotion) {
+    Flags.NoRenameOnPromotion = NoRenameOnPromotion;
+  }
+
+  bool noRenameOnPromotion() const { return Flags.NoRenameOnPromotion; }
 
   GlobalValueSummary::ImportKind importType() const {
     return static_cast<ImportKind>(Flags.ImportType);
@@ -879,7 +909,8 @@ public:
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             GlobalValue::DefaultVisibility,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false,
-            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition),
+            /*CanAutoHide=*/false, GlobalValueSummary::ImportKind::Definition,
+            /*NoRenameOnPromotion=*/false),
         /*NumInsts=*/0, FunctionSummary::FFlags{}, SmallVector<ValueInfo, 0>(),
         std::move(Edges), std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
@@ -1067,16 +1098,22 @@ public:
     return *Callsites;
   }
 
-  void addCallsite(CallsiteInfo &Callsite) {
+  void addCallsite(CallsiteInfo &&Callsite) {
     if (!Callsites)
       Callsites = std::make_unique<CallsitesTy>();
-    Callsites->push_back(Callsite);
+    Callsites->push_back(std::move(Callsite));
   }
 
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
     return {};
+  }
+
+  void addAlloc(AllocInfo &&Alloc) {
+    if (!Allocs)
+      Allocs = std::make_unique<AllocsTy>();
+    Allocs->push_back(std::move(Alloc));
   }
 
   AllocsTy &mutableAllocs() {
@@ -1090,10 +1127,6 @@ public:
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
   static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
 
-  static FunctionSummary::VFuncId getTombstoneKey() {
-    return {0, uint64_t(-2)};
-  }
-
   static bool isEqual(FunctionSummary::VFuncId L, FunctionSummary::VFuncId R) {
     return L.GUID == R.GUID && L.Offset == R.Offset;
   }
@@ -1104,10 +1137,6 @@ template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
 template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
   static FunctionSummary::ConstVCall getEmptyKey() {
     return {{0, uint64_t(-1)}, {}};
-  }
-
-  static FunctionSummary::ConstVCall getTombstoneKey() {
-    return {{0, uint64_t(-2)}, {}};
   }
 
   static bool isEqual(FunctionSummary::ConstVCall L,
@@ -1290,72 +1319,77 @@ struct TypeIdSummary {
   std::map<uint64_t, WholeProgramDevirtResolution> WPDRes;
 };
 
+/// Encapsulate the names of CFI target functions. It interfaces with ThinLTO to
+/// determine efficiently which of the names need to be exported for a
+/// particular module.
 class CfiFunctionIndex {
-  DenseMap<GlobalValue::GUID, std::set<std::string, std::less<>>> Index;
-  using IndexIterator =
-      DenseMap<GlobalValue::GUID,
-               std::set<std::string, std::less<>>>::const_iterator;
-  using NestedIterator = std::set<std::string, std::less<>>::const_iterator;
+  // `Names` is the authoritative source of data. `ThinLTOToNamesIndex` is there
+  // just to efficiently retrieve which names in this index need exporting for
+  // a particular module index. We cannot guarantee the ThinLTO GUIDs are
+  // collision - free, so we associate a collection to a guid. Functions with
+  // the same name may have different GUIDs, too. So we index a list of names
+  // with the same GUID under that GUID key. We don't need the reverse because
+  // the queries from ThinLTO use GUIDs as key.
+  // Note that StringSet rehashing doesn't move keys, so we can safely store the
+  // StringRef value inserted in `Names` in ThinLTOToNamesIndex, and avoid
+  // copies.
+  // Design note: we could do away with Names and use ThinLTOToNamesIndex as
+  // index and data source, but opted against, for a small heap penalty, to
+  // avoid confusion wrt the role GUIDs play in this case: they are an artifact
+  // of the need to interface with ThinLTO, not otherwise necessary to CFI.
+  StringSet<> Names;
+
+  using InternalIndexGroup = SetVector<StringRef>;
+  DenseMap<GlobalValue::GUID, InternalIndexGroup> ThinLTOToNamesIndex;
+
+  using NestedIterator = InternalIndexGroup::const_iterator;
 
 public:
-  // Iterates keys of the DenseMap.
-  class GUIDIterator : public iterator_adaptor_base<GUIDIterator, IndexIterator,
-                                                    std::forward_iterator_tag,
-                                                    GlobalValue::GUID> {
-    using base = GUIDIterator::iterator_adaptor_base;
-
-  public:
-    GUIDIterator() = default;
-    explicit GUIDIterator(IndexIterator I) : base(I) {}
-
-    GlobalValue::GUID operator*() const { return this->wrapped()->first; }
-  };
-
   CfiFunctionIndex() = default;
-  template <typename It> CfiFunctionIndex(It B, It E) {
-    for (; B != E; ++B)
-      emplace(*B);
-  }
+  CfiFunctionIndex(const CfiFunctionIndex &) = delete;
+  CfiFunctionIndex(CfiFunctionIndex &&) = default;
 
-  std::vector<StringRef> symbols() const {
-    std::vector<StringRef> Symbols;
-    for (auto &[GUID, Syms] : Index) {
-      (void)GUID;
-      llvm::append_range(Symbols, Syms);
-    }
+  /// API used for serialization, e.g. YAML.
+  std::vector<std::pair<StringRef, GlobalValue::GUID>>
+  getSortedSymbols() const {
+    std::vector<std::pair<StringRef, GlobalValue::GUID>> Symbols;
+    for (auto &[GUID, Names] : ThinLTOToNamesIndex)
+      for (auto Name : Names)
+        Symbols.emplace_back(Name, GUID);
+    llvm::sort(Symbols);
     return Symbols;
   }
 
-  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
-  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
-  iterator_range<GUIDIterator> guids() const {
-    return make_range(guid_begin(), guid_end());
+  /// get the set of GUIDs that should also be exported because they are the
+  /// GUIDs of the cfi functions encapsulated here.
+  auto getExportedThinLTOGUIDs() const {
+    return map_range(ThinLTOToNamesIndex, [](auto I) { return I.first; });
   }
 
-  iterator_range<NestedIterator> forGuid(GlobalValue::GUID GUID) const {
-    auto I = Index.find(GUID);
-    if (I == Index.end())
+  /// get the name(s) associated with a given ThinLTO GUID. This enables
+  /// efficient identification of the subset of names that should be included in
+  /// a module summary.
+  auto getNamesForGUID(GlobalValue::GUID GUID) const {
+    auto I = ThinLTOToNamesIndex.find(GUID);
+    if (I == ThinLTOToNamesIndex.end())
       return make_range(NestedIterator{}, NestedIterator{});
     return make_range(I->second.begin(), I->second.end());
   }
 
-  template <typename... Args> void emplace(Args &&...A) {
-    StringRef S(std::forward<Args>(A)...);
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    Index[GUID].emplace(S);
+  /// Add the function name and the GUID that ThinLTO uses for it.
+  void addSymbolWithThinLTOGUID(StringRef Name, GlobalValue::GUID GUID) {
+    auto [Iter, _] = Names.insert(Name);
+    ThinLTOToNamesIndex[GUID].insert(Iter->first());
   }
 
-  size_t count(StringRef S) const {
-    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::dropLLVMManglingEscape(S));
-    auto I = Index.find(GUID);
-    if (I == Index.end())
-      return 0;
-    return I->second.count(S);
+  bool contains(StringRef Name) const {
+    return Names.find(Name) != Names.end();
   }
 
-  bool empty() const { return Index.empty(); }
+  bool empty() const {
+    assert(Names.empty() == ThinLTOToNamesIndex.empty());
+    return Names.empty();
+  }
 };
 
 /// 160 bits SHA1
@@ -1539,7 +1573,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 12;
+  static constexpr uint64_t BitcodeSummaryVersion = 13;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

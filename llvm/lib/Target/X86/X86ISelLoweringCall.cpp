@@ -126,7 +126,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return MVT::i32;
 
   if (isTypeLegal(MVT::f16)) {
-    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    if (VT.isVectorOf(MVT::bf16))
       return getRegisterTypeForCallingConv(
           Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -165,8 +165,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(
         Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -177,8 +176,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break wide or odd vXi1 vectors into scalars to match avx2 behavior.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      Subtarget.hasAVX512() &&
+  if (VT.isVectorOf(MVT::i1) && Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() == 64 && !Subtarget.hasBWI()) ||
        VT.getVectorNumElements() > 64)) {
@@ -198,8 +196,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -785,7 +782,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);
@@ -946,10 +943,10 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  X86ISD::NodeType opcode = X86ISD::RET_GLUE;
+  unsigned RetOpcode = X86ISD::RET_GLUE;
   if (CallConv == CallingConv::X86_INTR)
-    opcode = X86ISD::IRET;
-  return DAG.getNode(opcode, dl, MVT::Other, RetOps);
+    RetOpcode = X86ISD::IRET;
+  return DAG.getNode(RetOpcode, dl, MVT::Other, RetOps);
 }
 
 bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
@@ -1689,6 +1686,19 @@ SDValue X86TargetLowering::LowerFormalArguments(
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
+  // On x86_64 with x87 disabled, x86_fp80 cannot be handled: the type would
+  // need to be returned/passed in x87 registers (FP0/FP1) which are
+  // unavailable. Emit a clear diagnostic instead of crashing later with
+  // "Cannot select: build_pair".
+  if (Is64Bit && !Subtarget.hasX87()) {
+    if (F.getReturnType()->isX86_FP80Ty() ||
+        any_of(F.args(), [](const Argument &Arg) {
+          return Arg.getType()->isX86_FP80Ty();
+        }))
+      reportFatalUsageError(
+          "cannot use x86_fp80 type with x87 disabled on x86_64 target");
+  }
+
   assert(
       !(IsVarArg && canGuaranteeTCO(CallConv)) &&
       "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
@@ -2078,8 +2088,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     report_fatal_error("X86 interrupts may not be called directly");
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
@@ -2225,6 +2234,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         SDValue CopyChain =
             CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, dl);
         ByValCopyChains.push_back(CopyChain);
+        ByValTemporaries[ArgIdx] = Temp;
       }
     }
     if (!ByValCopyChains.empty())

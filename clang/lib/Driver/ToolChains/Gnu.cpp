@@ -306,9 +306,6 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!D.SysRoot.empty())
     CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
 
-  if (Args.hasArg(options::OPT_s))
-    CmdArgs.push_back("-s");
-
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
@@ -375,6 +372,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  Args.addAllArgs(CmdArgs, {options::OPT_s, options::OPT_t, options::OPT_u});
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
                    options::OPT_r)) {
     if (!isAndroid && !IsIAMCU) {
@@ -435,13 +434,12 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           Args.MakeArgString(ToolChain.GetFilePath("crt_pad_segment.o")));
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+  Args.addAllArgs(CmdArgs, {options::OPT_L});
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -579,7 +577,10 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_T, options::OPT_t});
+  // Emit -T after -L paths so that INPUT()/GROUP() directives in the linker
+  // script resolve against the user-supplied and toolchain search paths in GNU
+  // ld.
+  Args.addAllArgs(CmdArgs, {options::OPT_T});
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
   C.addCommand(std::make_unique<Command>(JA, *this,
@@ -1609,7 +1610,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
 ///     atomic operation can't work together correctly.
 static bool
 selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
-                    StringRef Arch, const Multilib::flags_list &Flags,
+                    const Multilib::flags_list &Flags,
                     llvm::SmallVectorImpl<Multilib> &SelectedMultilibs) {
   // Try to find the perfect matching multi-lib first.
   if (RISCVMultilibSet.select(D, Flags, SelectedMultilibs))
@@ -1617,6 +1618,17 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   Multilib::flags_list NewFlags;
   std::vector<MultilibBuilder> NewMultilibs;
+
+  // Collect all flags and extract Arch from march
+  StringRef Arch;
+  for (StringRef Flag : Flags) {
+    if (Flag.consume_front("-march=")) {
+      Arch = Flag;
+      continue;
+    }
+
+    NewFlags.push_back(Flag.str());
+  }
 
   llvm::Expected<std::unique_ptr<llvm::RISCVISAInfo>> ParseResult =
       llvm::RISCVISAInfo::parseArchString(
@@ -1630,14 +1642,6 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   addMultilibFlag(ISAInfo->getXLen() == 32, "-m32", NewFlags);
   addMultilibFlag(ISAInfo->getXLen() == 64, "-m64", NewFlags);
-
-  // Collect all flags except march=*
-  for (StringRef Flag : Flags) {
-    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
-      continue;
-
-    NewFlags.push_back(Flag.str());
-  }
 
   llvm::StringSet<> AllArchExts;
   // Reconstruct multi-lib list, and break march option into separated
@@ -1756,21 +1760,12 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
           });
 
   Multilib::flags_list Flags;
-  llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
-  for (auto Element : RISCVMultilibSet) {
-    addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str(), Flags);
-    if (!Added_ABIs.count(Element.mabi)) {
-      Added_ABIs.insert(Element.mabi);
-      addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str(), Flags);
-    }
-  }
+  Flags.push_back("-march=" + MArch);
+  Flags.push_back("-mabi=" + ABIName.str());
 
-  if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
-                          Result.SelectedMultilibs))
+  if (selectRISCVMultilib(D, RISCVMultilibs, Flags, Result.SelectedMultilibs))
     Result.Multilibs = std::move(RISCVMultilibs);
 }
 
@@ -3072,6 +3067,7 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   switch (getArch()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
+  case llvm::Triple::amdgcn:
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
@@ -3141,22 +3137,21 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
                                    path_list &Paths) {
   // Add the multilib suffixed paths where they are available.
   if (GCCInstallation.isValid()) {
-    assert(!SelectedMultilibs.empty());
+    const Multilib &GCCMultilib = GCCInstallation.getMultilib();
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
 
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
-    if (const auto &PathsCallback = Multilibs.filePathsCallback())
-      for (const auto &Path : PathsCallback(SelectedMultilibs.back()))
+    if (const auto &PathsCallback =
+            GCCInstallation.getMultilibs().filePathsCallback())
+      for (const auto &Path : PathsCallback(GCCMultilib))
         addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
 
     // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
-    addPathIfExists(D,
-                    GCCInstallation.getInstallPath() +
-                        SelectedMultilibs.back().gccSuffix(),
-                    Paths);
+    addPathIfExists(
+        D, GCCInstallation.getInstallPath() + GCCMultilib.gccSuffix(), Paths);
 
     // Add lib/gcc/$triple/$libdir
     // For GCC built with --enable-version-specific-runtime-libs.
@@ -3183,7 +3178,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // Clang diverges from GCC's behavior.
     addPathIfExists(D,
                     LibPath + "/../" + GCCTriple.str() + "/lib/../" + OSLibDir +
-                        SelectedMultilibs.back().osSuffix(),
+                        GCCMultilib.osSuffix(),
                     Paths);
 
     // If the GCC installation we found is inside of the sysroot, we want to
@@ -3227,7 +3222,7 @@ void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
                               Twine(LibPath) + "/../" + GCCTriple.str() +
                                   "/include");
 
-  const auto &Callback = Multilibs.includeDirsCallback();
+  const auto &Callback = GCCInstallation.getMultilibs().includeDirsCallback();
   if (Callback) {
     for (const auto &Path : Callback(GCCInstallation.getMultilib()))
       addExternCSystemIncludeIfExists(DriverArgs, CC1Args,

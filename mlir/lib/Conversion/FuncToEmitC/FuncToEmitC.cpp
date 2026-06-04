@@ -24,7 +24,8 @@ namespace {
 
 /// Implement the interface to convert Func to EmitC.
 struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
-  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+  FuncToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
 
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
@@ -58,6 +59,17 @@ public:
     if (callOp.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
           callOp, "only functions with zero or one result can be converted");
+
+    if (callOp.getNumResults() == 1) {
+      Type resultType =
+          getTypeConverter()->convertType(callOp.getResult(0).getType());
+      if (!resultType)
+        return rewriter.notifyMatchFailure(callOp,
+                                           "result type conversion failed");
+      if (isa<emitc::ArrayType>(resultType))
+        return rewriter.notifyMatchFailure(
+            callOp, "function calls returning arrays are not supported");
+    }
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
                                                adaptor.getOperands(),
@@ -96,6 +108,9 @@ public:
       if (!resultType)
         return rewriter.notifyMatchFailure(funcOp,
                                            "result type conversion failed");
+      if (isa<emitc::ArrayType>(resultType))
+        return rewriter.notifyMatchFailure(
+            funcOp, "functions returning arrays are not supported");
     }
 
     // Create the converted `emitc.func` op.
@@ -148,6 +163,10 @@ public:
     if (returnOp.getNumOperands() > 1)
       return rewriter.notifyMatchFailure(
           returnOp, "only zero or one operand is supported");
+    if (returnOp.getNumOperands() == 1 &&
+        isa<emitc::ArrayType>(adaptor.getOperands()[0].getType()))
+      return rewriter.notifyMatchFailure(returnOp,
+                                         "returning arrays is not supported");
 
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
         returnOp,

@@ -404,9 +404,14 @@ define float @vpreduce_fadd_fpext_vp_nxv1f16_nxv1f32(float %s, <vscale x 1 x hal
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+<<<<<<< HEAD
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v9, v10, v9, v0.t
+=======
+; CHECK-NEXT:    vfwredusum.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+>>>>>>> origin/main
 ; CHECK-NEXT:    vfmv.f.s fa0, v9
 ; CHECK-NEXT:    ret
   %w = call <vscale x 1 x float> @llvm.vp.fpext(<vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 %evl)
@@ -420,9 +425,14 @@ define float @vpreduce_ord_fadd_fpext_vp_fpext_nxv1f16_nxv1f32(float %s, <vscale
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+<<<<<<< HEAD
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v9, v10, v9, v0.t
+=======
+; CHECK-NEXT:    vfwredosum.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
+>>>>>>> origin/main
 ; CHECK-NEXT:    vfmv.f.s fa0, v9
 ; CHECK-NEXT:    ret
   %w = call <vscale x 1 x float> @llvm.vp.fpext(<vscale x 1 x half> %v, <vscale x 1 x i1> %m, i32 %evl)
@@ -436,9 +446,14 @@ define double @vpreduce_fadd_fpext_vp_nxv1f32_nxv1f64(double %s, <vscale x 1 x f
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+<<<<<<< HEAD
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v9, v10, v9, v0.t
+=======
+; CHECK-NEXT:    vfwredusum.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+>>>>>>> origin/main
 ; CHECK-NEXT:    vfmv.f.s fa0, v9
 ; CHECK-NEXT:    ret
   %w = call <vscale x 1 x double> @llvm.vp.fpext(<vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 %evl)
@@ -452,9 +467,14 @@ define double @vpreduce_ord_fadd_fpext_vp_fpext_nxv1f32_nxv1f64(double %s, <vsca
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+<<<<<<< HEAD
 ; CHECK-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v9, v10, v9, v0.t
+=======
+; CHECK-NEXT:    vfwredosum.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+>>>>>>> origin/main
 ; CHECK-NEXT:    vfmv.f.s fa0, v9
 ; CHECK-NEXT:    ret
   %w = call <vscale x 1 x double> @llvm.vp.fpext(<vscale x 1 x float> %v, <vscale x 1 x i1> %m, i32 %evl)

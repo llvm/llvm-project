@@ -39,11 +39,14 @@ module bar {
 #--- commands.input
 run
 ## Make sure expression fails so the 'note' diagnostics get printed.
-expr @import Foo; @import Bar
+expr @import Foo
+expr @import Bar
 expr @import foo
 
 # CHECK: error: while importing modules:
 # CHECK-NEXT: header search couldn't locate module 'Foo'
+#
+# CHECK: error: while importing modules:
 # CHECK-NEXT: header search couldn't locate module 'Bar'
 #
 # CHECK: expr @import foo

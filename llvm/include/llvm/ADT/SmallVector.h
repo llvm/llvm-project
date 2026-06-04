@@ -38,10 +38,13 @@ template <typename T> class ArrayRef;
 
 template <typename IteratorT> class iterator_range;
 
+template <class Iterator, class Tag>
+using HasIteratorTag = std::is_convertible<
+    typename std::iterator_traits<Iterator>::iterator_category, Tag>;
+
 template <class Iterator>
-using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
-    typename std::iterator_traits<Iterator>::iterator_category,
-    std::input_iterator_tag>::value>;
+using EnableIfConvertibleToInputIterator =
+    std::enable_if_t<HasIteratorTag<Iterator, std::input_iterator_tag>::value>;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -134,7 +137,7 @@ protected:
   }
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
-  SmallVectorTemplateCommon(size_t Size) : Base(getFirstEl(), Size) {}
+  SmallVectorTemplateCommon(size_t SizeArg) : Base(getFirstEl(), SizeArg) {}
 
   void grow_pod(size_t MinSize, size_t TSize) {
     Base::grow_pod(getFirstEl(), MinSize, TSize);
@@ -339,7 +342,8 @@ protected:
   static constexpr bool TakesParamByValue = false;
   using ValueParamT = const T &;
 
-  SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+  SmallVectorTemplateBase(size_t SizeArg)
+      : SmallVectorTemplateCommon<T>(SizeArg) {}
 
   static void destroy_range(T *S, T *E) {
     while (S != E) {
@@ -490,14 +494,15 @@ protected:
   /// parameters by value.
   using ValueParamT = std::conditional_t<TakesParamByValue, T, const T &>;
 
-  SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
+  SmallVectorTemplateBase(size_t SizeArg)
+      : SmallVectorTemplateCommon<T>(SizeArg) {}
 
   // No need to do a destroy loop for POD's.
   static void destroy_range(T *, T *) {}
 
   /// Move the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
-  template<typename It1, typename It2>
+  template <typename It1, typename It2>
   static void uninitialized_move(It1 I, It1 E, It2 Dest) {
     // Just do a copy.
     uninitialized_copy(I, E, Dest);
@@ -684,11 +689,17 @@ public:
   /// Add the specified range to the end of the SmallVector.
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   void append(ItTy in_start, ItTy in_end) {
-    this->assertSafeToAddRange(in_start, in_end);
-    size_type NumInputs = std::distance(in_start, in_end);
-    this->reserve(this->size() + NumInputs);
-    this->uninitialized_copy(in_start, in_end, this->end());
-    this->set_size(this->size() + NumInputs);
+    if constexpr (HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      this->assertSafeToAddRange(in_start, in_end);
+      size_type NumInputs = std::distance(in_start, in_end);
+      this->reserve(this->size() + NumInputs);
+      this->uninitialized_copy(in_start, in_end, this->end());
+      this->set_size(this->size() + NumInputs);
+    } else {
+      // Input iterator, we can't know ahead how many elements we'll add.
+      for (; in_start != in_end; ++in_start)
+        this->emplace_back(*in_start);
+    }
   }
 
   /// Append \p NumInputs copies of \p Elt to the end.
@@ -888,6 +899,15 @@ public:
     if (I == this->end()) {  // Important special case for empty vector.
       append(From, To);
       return this->begin()+InsertElt;
+    }
+
+    if constexpr (!HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      // For input iterators, we don't know the number of elements to insert.
+      size_t OldSize = this->size();
+      append(From, To);
+      I = this->begin() + InsertElt; // Uninvalidate the iterator.
+      std::rotate(I, this->begin() + OldSize, this->end());
+      return I;
     }
 
     assert(this->isReferenceToStorage(I) && "Insertion iterator is out of bounds.");
@@ -1211,14 +1231,12 @@ public:
     this->destroy_range(this->begin(), this->end());
   }
 
-  explicit SmallVector(size_t Size)
-    : SmallVectorImpl<T>(N) {
-    this->resize(Size);
+  explicit SmallVector(size_t SizeArg) : SmallVectorImpl<T>(N) {
+    this->resize(SizeArg);
   }
 
-  SmallVector(size_t Size, const T &Value)
-    : SmallVectorImpl<T>(N) {
-    this->assign(Size, Value);
+  SmallVector(size_t SizeArg, const T &Value) : SmallVectorImpl<T>(N) {
+    this->assign(SizeArg, Value);
   }
 
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
@@ -1305,20 +1323,22 @@ using ValueTypeFromRangeType =
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
 SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>, Size>(adl_begin(Range),
+                                                      adl_end(Range));
 }
 template <typename R>
 SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<ValueTypeFromRangeType<R>>(adl_begin(Range),
+                                                adl_end(Range));
 }
 
 template <typename Out, unsigned Size, typename R>
 SmallVector<Out, Size> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out, Size>(adl_begin(Range), adl_end(Range));
 }
 
 template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
-  return {adl_begin(Range), adl_end(Range)};
+  return SmallVector<Out>(adl_begin(Range), adl_end(Range));
 }
 
 // Explicit instantiations
@@ -1331,10 +1351,6 @@ extern template class llvm::SmallVectorBase<uint64_t>;
 template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
   static SmallVector<T, N> getEmptyKey() {
     return {DenseMapInfo<T>::getEmptyKey()};
-  }
-
-  static SmallVector<T, N> getTombstoneKey() {
-    return {DenseMapInfo<T>::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const SmallVector<T, N> &V) {

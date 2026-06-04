@@ -123,6 +123,9 @@ size_t __scudo_get_region_info_size(void);
 const char *__scudo_get_ring_buffer_addr(void);
 size_t __scudo_get_ring_buffer_size(void);
 
+void __scudo_get_fault_error_info(uintptr_t fault_addr,
+                                  struct scudo_error_info *error_info);
+
 #ifndef M_DECAY_TIME
 #define M_DECAY_TIME -100
 #endif

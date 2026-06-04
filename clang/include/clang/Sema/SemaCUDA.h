@@ -72,13 +72,14 @@ public:
   /// same deferred diag twice.
   llvm::DenseSet<FunctionDeclAndLoc> LocsWithCUDACallDiags;
 
-  /// An inverse call graph, mapping known-emitted functions to one of their
+  /// An inverse call graph, mapping known-emitted functions to their
   /// known-emitted callers (plus the location of the call).
   ///
   /// Functions that we can tell a priori must be emitted aren't added to this
-  /// map.
+  /// map. A function may have multiple callers that force it into device
+  /// context, so we store all of them to produce complete diagnostics.
   llvm::DenseMap</* Callee = */ CanonicalDeclPtr<const FunctionDecl>,
-                 /* Caller = */ FunctionDeclAndLoc>
+                 /* Callers = */ llvm::SmallVector<FunctionDeclAndLoc, 1>>
       DeviceKnownEmittedFns;
 
   /// Creates a SemaDiagnosticBuilder that emits the diagnostic if the current
@@ -283,6 +284,9 @@ public:
   void recordPotentialODRUsedVariable(MultiExprArg Args,
                                       OverloadCandidateSet &CandidateSet);
 
+  /// Null-tolerant wrapper for FunctionDecl::isImplicitHDExplicitInstantiation.
+  static bool isImplicitHDExplicitInstantiation(const FunctionDecl *FD);
+
 private:
   unsigned ForceHostDeviceDepth = 0;
 
@@ -302,10 +306,6 @@ template <> struct DenseMapInfo<clang::SemaCUDA::FunctionDeclAndLoc> {
 
   static FunctionDeclAndLoc getEmptyKey() {
     return {FDBaseInfo::getEmptyKey(), clang::SourceLocation()};
-  }
-
-  static FunctionDeclAndLoc getTombstoneKey() {
-    return {FDBaseInfo::getTombstoneKey(), clang::SourceLocation()};
   }
 
   static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {

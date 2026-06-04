@@ -112,6 +112,7 @@ private:
   friend bool operator>=(const UUID &LHS, const UUID &RHS) {
     return !(LHS < RHS);
   }
+  friend struct llvm::DenseMapInfo<UUID>;
 };
 } // namespace lldb_private
 
@@ -121,9 +122,6 @@ namespace llvm {
 /// \{
 template <> struct DenseMapInfo<lldb_private::UUID> {
   static inline lldb_private::UUID getEmptyKey() {
-    return lldb_private::UUID();
-  }
-  static inline lldb_private::UUID getTombstoneKey() {
     return lldb_private::UUID();
   }
   static unsigned getHashValue(lldb_private::UUID uuid) {

@@ -5,8 +5,8 @@
 define <2 x i7> @vtrunc_v2i7_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i7_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i7> @llvm.vp.trunc.v2i7.v2i16(<2 x i16> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i7> %v
@@ -15,8 +15,8 @@ define <2 x i7> @vtrunc_v2i7_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i15(<2 x i15> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.trunc.v2i8.v2i15(<2 x i15> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i8> %v
@@ -25,8 +25,8 @@ define <2 x i8> @vtrunc_v2i8_v2i15(<2 x i15> %a, <2 x i1> %m, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.trunc.v2i8.v2i16(<2 x i16> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i8> %v
@@ -35,7 +35,7 @@ define <2 x i8> @vtrunc_v2i8_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.trunc.v2i8.v2i16(<2 x i16> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
@@ -45,6 +45,7 @@ define <2 x i8> @vtrunc_v2i8_v2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
 define <128 x i7> @vtrunc_v128i7_v128i16(<128 x i16> %a, <128 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v128i7_v128i16:
 ; CHECK:       # %bb.0:
+<<<<<<< HEAD
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vslidedown.vi v12, v0, 8
@@ -61,11 +62,16 @@ define <128 x i7> @vtrunc_v128i7_v128i16(<128 x i16> %a, <128 x i1> %m, i32 zero
 ; CHECK-NEXT:    sltu a0, a0, a3
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a3
+=======
+; CHECK-NEXT:    li a0, 64
+>>>>>>> origin/main
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v24, v16, 0, v0.t
-; CHECK-NEXT:    li a0, 128
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a1
+; CHECK-NEXT:    vnsrl.wi v24, v16, 0
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
+; CHECK-NEXT:    li a1, 128
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; CHECK-NEXT:    vslideup.vx v16, v24, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <128 x i7> @llvm.vp.trunc.v128i7.v128i16(<128 x i16> %a, <128 x i1> %m, i32 %vl)
   ret <128 x i7> %v
@@ -74,10 +80,10 @@ define <128 x i7> @vtrunc_v128i7_v128i16(<128 x i16> %a, <128 x i1> %m, i32 zero
 define <2 x i8> @vtrunc_v2i8_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.trunc.v2i8.v2i32(<2 x i32> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i8> %v
@@ -86,7 +92,7 @@ define <2 x i8> @vtrunc_v2i8_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
@@ -98,12 +104,12 @@ define <2 x i8> @vtrunc_v2i8_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.trunc.v2i8.v2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i8> %v
@@ -112,7 +118,7 @@ define <2 x i8> @vtrunc_v2i8_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 define <2 x i8> @vtrunc_v2i8_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i8_v2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
@@ -126,8 +132,8 @@ define <2 x i8> @vtrunc_v2i8_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 define <2 x i16> @vtrunc_v2i16_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i16_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.vp.trunc.v2i16.v2i32(<2 x i32> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i16> %v
@@ -136,7 +142,7 @@ define <2 x i16> @vtrunc_v2i16_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl)
 define <2 x i16> @vtrunc_v2i16_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i16_v2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.vp.trunc.v2i16.v2i32(<2 x i32> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
@@ -146,10 +152,10 @@ define <2 x i16> @vtrunc_v2i16_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
 define <2 x i16> @vtrunc_v2i16_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i16_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.vp.trunc.v2i16.v2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i16> %v
@@ -158,7 +164,7 @@ define <2 x i16> @vtrunc_v2i16_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl)
 define <2 x i16> @vtrunc_v2i16_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i16_v2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
@@ -170,10 +176,10 @@ define <2 x i16> @vtrunc_v2i16_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 define <15 x i16> @vtrunc_v15i16_v15i64(<15 x i64> %a, <15 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v15i16_v15i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v16, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v16, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v16, 0
 ; CHECK-NEXT:    ret
   %v = call <15 x i16> @llvm.vp.trunc.v15i16.v15i64(<15 x i64> %a, <15 x i1> %m, i32 %vl)
   ret <15 x i16> %v
@@ -182,8 +188,8 @@ define <15 x i16> @vtrunc_v15i16_v15i64(<15 x i64> %a, <15 x i1> %m, i32 zeroext
 define <2 x i32> @vtrunc_v2i32_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i32_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.vp.trunc.v2i32.v2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i32> %v
@@ -192,7 +198,7 @@ define <2 x i32> @vtrunc_v2i32_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl)
 define <2 x i32> @vtrunc_v2i32_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v2i32_v2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.vp.trunc.v2i32.v2i64(<2 x i64> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
@@ -200,6 +206,7 @@ define <2 x i32> @vtrunc_v2i32_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
 }
 
 define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 zeroext %vl) {
+<<<<<<< HEAD
 ; RV32-LABEL: vtrunc_v128i32_v128i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -32
@@ -849,6 +856,112 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 ; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
+=======
+; CHECK-LABEL: vtrunc_v128i32_v128i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    li a3, 40
+; CHECK-NEXT:    mul a2, a2, a3
+; CHECK-NEXT:    sub sp, sp, a2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 40 * vlenb
+; CHECK-NEXT:    addi a2, a1, 512
+; CHECK-NEXT:    addi a3, a1, 640
+; CHECK-NEXT:    addi a4, a1, 256
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 5
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a5, a1, 384
+; CHECK-NEXT:    vle64.v v24, (a3)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    li a3, 24
+; CHECK-NEXT:    mul a2, a2, a3
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    li a2, 32
+; CHECK-NEXT:    vnsrl.wi v24, v16, 0
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v24, 16
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    addi a1, a1, 128
+; CHECK-NEXT:    vle64.v v8, (a4)
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 3
+; CHECK-NEXT:    add a3, sp, a3
+; CHECK-NEXT:    addi a3, a3, 16
+; CHECK-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vle64.v v24, (a1)
+; CHECK-NEXT:    vle64.v v8, (a5)
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vse32.v v16, (a0)
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v0, 0
+; CHECK-NEXT:    vnsrl.wi v16, v24, 0
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v16, 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v24, v8, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v16, v24, 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    li a3, 24
+; CHECK-NEXT:    mul a1, a1, a3
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v24, v8, 0
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 5
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vnsrl.wi v0, v8, 0
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vslideup.vi v0, v24, 16
+; CHECK-NEXT:    addi a1, a0, 384
+; CHECK-NEXT:    vse32.v v0, (a1)
+; CHECK-NEXT:    addi a1, a0, 256
+; CHECK-NEXT:    vse32.v v16, (a1)
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 4
+; CHECK-NEXT:    add a1, sp, a1
+; CHECK-NEXT:    addi a1, a1, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 40
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+>>>>>>> origin/main
   %v = call <128 x i32> @llvm.vp.trunc.v128i32.v128i64(<128 x i64> %a, <128 x i1> %m, i32 %vl)
   ret <128 x i32> %v
 }
@@ -856,6 +969,7 @@ define <128 x i32> @vtrunc_v128i32_v128i64(<128 x i64> %a, <128 x i1> %m, i32 ze
 define <32 x i32> @vtrunc_v32i32_v32i64(<32 x i64> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_v32i32_v32i64:
 ; CHECK:       # %bb.0:
+<<<<<<< HEAD
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv8r.v v24, v8
 ; CHECK-NEXT:    vslidedown.vi v12, v0, 2
@@ -874,9 +988,15 @@ define <32 x i32> @vtrunc_v32i32_v32i64(<32 x i64> %a, <32 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    and a0, a0, a2
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v24, v16, 0, v0.t
+=======
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vnsrl.wi v24, v16, 0
+; CHECK-NEXT:    vnsrl.wi v16, v8, 0
+>>>>>>> origin/main
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v24, 16
+; CHECK-NEXT:    vslideup.vi v16, v24, 16
+; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <32 x i32> @llvm.vp.trunc.v32i32.v32i64(<32 x i64> %a, <32 x i1> %m, i32 %vl)
   ret <32 x i32> %v
@@ -889,3 +1009,6 @@ define <2 x i7> @vtrunc_v2i7_v2i8(<2 x i8> %a, <2 x i1> %m, i32 zeroext %vl) {
   %v = call <2 x i7> @llvm.vp.trunc.v2i7.v2i8(<2 x i8> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i7> %v
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32: {{.*}}
+; RV64: {{.*}}

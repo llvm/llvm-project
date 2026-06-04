@@ -92,6 +92,9 @@ LogicalResult spirv::Deserializer::deserialize() {
     }
   }
 
+  if (failed(resolveDeferredIdDecorations()))
+    return failure();
+
   attachVCETriple();
 
   LLVM_DEBUG(logger.startLine()
@@ -234,8 +237,8 @@ static LogicalResult deserializeCacheControlDecoration(
     DenseMap<uint32_t, NamedAttrList> &decorations, ArrayRef<uint32_t> words,
     StringAttr symbol, StringRef decorationName, StringRef cacheControlKind) {
   if (words.size() != 4) {
-    return emitError(loc, "OpDecoration with ")
-           << decorationName << "needs a cache control integer literal and a "
+    return emitError(loc, "OpDecorate with ")
+           << decorationName << " needs a cache control integer literal and a "
            << cacheControlKind << " cache control literal";
   }
   unsigned cacheLevel = words[2];
@@ -285,6 +288,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::DescriptorSet:
   case spirv::Decoration::Binding:
+  case spirv::Decoration::Location:
+  case spirv::Decoration::SpecId:
+  case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single integer literal";
@@ -348,20 +357,10 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Patch:
   case spirv::Decoration::Coherent:
     if (words.size() != 2) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single target <id>";
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName << " needs a single target <id>";
     }
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
-    break;
-  case spirv::Decoration::Location:
-  case spirv::Decoration::SpecId:
-  case spirv::Decoration::Index:
-    if (words.size() != 3) {
-      return emitError(unknownLoc, "OpDecoration with ")
-             << decorationName << "needs a single integer literal";
-    }
-    decorations[words[0]].set(
-        symbol, opBuilder.getI32IntegerAttr(static_cast<int32_t>(words[2])));
     break;
   case spirv::Decoration::CacheControlLoadINTEL: {
     LogicalResult res = deserializeCacheControlDecoration<
@@ -381,8 +380,64 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
       return res;
     break;
   }
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer:
+    if (words.size() != 3) {
+      return emitError(unknownLoc, "OpDecorateId with ")
+             << decorationName << " needs a single <id> operand";
+    }
+    pendingIdDecorations.push_back({words[0],
+                                    static_cast<spirv::Decoration>(words[1]),
+                                    words[2], unknownLoc});
+    break;
   default:
     return emitError(unknownLoc, "unhandled Decoration : '") << decorationName;
+  }
+  return success();
+}
+
+LogicalResult spirv::Deserializer::resolveDeferredIdDecorations() {
+  for (const DeferredIdDecoration &entry : pendingIdDecorations) {
+    StringRef decorationName = stringifyDecoration(entry.decoration);
+    StringAttr symbol = getSymbolDecoration(decorationName);
+
+    // Resolve the operand <id> to a symbol name. The operand must reference a
+    // module-scope symbol op (global variable or specialization constant).
+    StringRef operandSymName;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.operandID))
+      operandSymName = varOp.getSymName();
+    else if (spirv::SpecConstantOp specOp =
+                 specConstMap.lookup(entry.operandID))
+      operandSymName = specOp.getSymName();
+    else
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references <id> " << entry.operandID
+             << " which is not a global variable or specialization constant";
+
+    auto symRef = FlatSymbolRefAttr::get(context, operandSymName);
+
+    // Resolve the decoration target. By the time this method runs, all
+    // instructions have been processed, so every defined <id> must appear in
+    // one of these maps; an unresolved target indicates malformed input.
+    Operation *targetOp = nullptr;
+    if (spirv::GlobalVariableOp varOp =
+            globalVariableMap.lookup(entry.targetID))
+      targetOp = varOp;
+    else if (spirv::SpecConstantOp specOp = specConstMap.lookup(entry.targetID))
+      targetOp = specOp;
+    else if (spirv::FuncOp fnOp = funcMap.lookup(entry.targetID))
+      targetOp = fnOp;
+    else if (Value v = valueMap.lookup(entry.targetID))
+      targetOp = v.getDefiningOp();
+
+    if (!targetOp)
+      return emitError(entry.loc, "OpDecorateId with ")
+             << decorationName << " references unknown target <id> "
+             << entry.targetID;
+
+    targetOp->setAttr(symbol, symRef);
   }
   return success();
 }
@@ -1026,17 +1081,18 @@ LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(unknownLoc, "OpName needs at least 2 operands");
   }
-  if (!nameMap.lookup(operands[0]).empty()) {
-    return emitError(unknownLoc, "duplicate name found for result <id> ")
-           << operands[0];
-  }
+
   unsigned wordIndex = 1;
   StringRef name = decodeStringLiteral(operands, wordIndex);
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
                      "unexpected trailing words in OpName instruction");
   }
-  nameMap[operands[0]] = name;
+
+  // In SPIRV it's valid for multiple OpName instructions to refer to the same
+  // <id>. Use a "last one wins" approach to resolve such cases.
+  nameMap.emplace_or_assign(operands[0], name);
+
   return success();
 }
 
@@ -1154,6 +1210,10 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeImage:
     return processImageType(operands);
+  case spirv::Opcode::OpTypeSampler:
+    return processSamplerType(operands);
+  case spirv::Opcode::OpTypeNamedBarrier:
+    return processNamedBarrierType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1638,6 +1698,24 @@ spirv::Deserializer::processSampledImageType(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult
+spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeSampler must have no parameters");
+
+  typeMap[operands[0]] = spirv::SamplerType::get(context);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 1)
+    return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
+
+  typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Constant
 //===----------------------------------------------------------------------===//
@@ -1834,7 +1912,7 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, shapedType);
-  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
+  } else if (isa<spirv::ArrayType, spirv::StructType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -2887,10 +2965,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
-  for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
-       it != e; ++it) {
-    auto &[block, mergeInfo] = *it;
-
+  for (auto [block, mergeInfo] : blockMergeInfoCopy) {
     // Skip processing loop regions. For loop regions continueBlock is non-null.
     if (mergeInfo.continueBlock)
       continue;

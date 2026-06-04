@@ -119,15 +119,13 @@ __host__ __device__ float __Four(float f) { return 2.0f * f; }
 __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
 //.
-// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "uniform-work-group-size" }
 //.
-// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 //.
-// HOST: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// HOST: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// HOST: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.
 // DEVICE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // DEVICE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
-// DEVICE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// DEVICE: [[META3:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// DEVICE: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

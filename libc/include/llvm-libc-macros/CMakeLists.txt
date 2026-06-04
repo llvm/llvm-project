@@ -3,15 +3,19 @@ function(add_macro_header name)
   cmake_parse_arguments(
     "MACRO_HEADER"
     "" # Optional arguments
-    "HDR" # Single value arguments
+    "HDR;DEST_HDR" # Single value arguments
     "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
+  if (MACRO_HEADER_DEST_HDR)
+    set(dest_header_arg DEST_HDR ${MACRO_HEADER_DEST_HDR})
+  endif()
   if(TARGET libc.include.llvm-libc-macros.${LIBC_TARGET_OS}.${name})
     add_header(
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
         ${MACRO_HEADER_DEPENDS}
@@ -21,6 +25,7 @@ function(add_macro_header name)
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      ${dest_header_arg}
       DEPENDS
         ${MACRO_HEADER_DEPENDS}
     )
@@ -41,6 +46,12 @@ add_macro_header(
   assert_macros
   HDR
     assert-macros.h
+)
+
+add_macro_header(
+  byteswap_macros
+  HDR
+    byteswap-macros.h
 )
 
 add_macro_header(
@@ -227,6 +238,18 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_ipc_macros
+  HDR
+    sys-ipc-macros.h
+)
+
+add_macro_header(
+  sys_sem_macros
+  HDR
+    sys-sem-macros.h
+)
+
+add_macro_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h
@@ -236,6 +259,20 @@ add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
+)
+
+add_macro_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_macro_header(
+  sys_param_macros
+  HDR
+    sys-param-macros.h
+  DEPENDS
+    .limits_macros
 )
 
 add_macro_header(
@@ -308,6 +345,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  inet_address_macros
+  HDR
+    inet-address-macros.h
+)
+
+add_macro_header(
   inttypes_macros
   HDR
     inttypes-macros.h
@@ -354,7 +397,7 @@ add_macro_header(
 add_macro_header(
   nl_types_macros
   HDR
-    nl-types-macros.h
+    nl_types-macros.h
 )
 
 add_macro_header(
@@ -372,6 +415,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  regex_macros
+  HDR
+    regex-macros.h
+)
+
+add_macro_header(
   EFIAPI_macros
   HDR
     EFIAPI-macros.h
@@ -383,3 +432,18 @@ add_macro_header(
     sysexits-macros.h
 )
 
+if (LIBC_CONF_PRINTF_MODULAR)
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+else()
+  add_macro_header(
+    _LIBC_MODULAR_FORMAT_PRINTF
+    HDR
+      _LIBC_MODULAR_FORMAT_PRINTF-disable.h
+      DEST_HDR
+      _LIBC_MODULAR_FORMAT_PRINTF.h
+  )
+endif()

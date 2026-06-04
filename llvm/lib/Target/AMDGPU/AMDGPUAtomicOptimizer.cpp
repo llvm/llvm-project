@@ -154,6 +154,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   // Scan option None disables the Pass
   if (ScanImpl == ScanOptions::None)
     return false;
+  if (ST.isSingleLaneExecution(F))
+    return false;
 
   visit(F);
   if (ToReplace.empty())
@@ -221,11 +223,11 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // If the pointer operand is divergent, then each lane is doing an atomic
   // operation on a different address, and we cannot optimize that.
-  if (UA.isDivergentUse(I.getOperandUse(PtrIdx))) {
+  if (UA.isDivergentAtUse(I.getOperandUse(PtrIdx))) {
     return;
   }
 
-  bool ValDivergent = UA.isDivergentUse(I.getOperandUse(ValIdx));
+  bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -309,7 +311,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
 
   const unsigned ValIdx = 0;
 
-  const bool ValDivergent = UA.isDivergentUse(I.getOperandUse(ValIdx));
+  const bool ValDivergent = UA.isDivergentAtUse(I.getOperandUse(ValIdx));
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
@@ -326,7 +328,7 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   // If any of the other arguments to the intrinsic are divergent, we can't
   // optimize the operation.
   for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
-    if (UA.isDivergentUse(I.getOperandUse(Idx)))
+    if (UA.isDivergentAtUse(I.getOperandUse(Idx)))
       return;
   }
 
@@ -400,7 +402,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
   }
 
   // Reduce within each pair of rows (i.e. 32 lanes).
-  assert(ST.hasPermLaneX16());
+  assert(ST.hasPermlane16Insts());
   Value *Permlanex16Call =
       B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
                         {PoisonValue::get(AtomicTy), V, B.getInt32(0),
@@ -461,7 +463,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
-    assert(ST.hasPermLaneX16());
+    assert(ST.hasPermlane16Insts());
     Value *PermX =
         B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
                           {PoisonValue::get(AtomicTy), V, B.getInt32(-1),
@@ -736,7 +738,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       // that they can correctly contribute to the final result.
       NewV =
           B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-      if (!NeedResult && ST.hasPermLaneX16()) {
+      if (!NeedResult && ST.hasPermlane16Insts()) {
         // On GFX10 the permlanex16 instruction helps us build a reduction
         // without too many readlanes and writelanes, which are generally bad
         // for performance.
@@ -838,7 +840,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     //
     // OriginalBB is known to have a branch as terminator because
     // SplitBlockAndInsertIfThen will have inserted one.
-    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
+    CondBrInst *Terminator = cast<CondBrInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);

@@ -1492,14 +1492,6 @@ bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
 }
 
-void Scop::buildContext() {
-  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
-  Context = isl::set::universe(Space);
-  InvalidContext = isl::set::empty(Space);
-  AssumedContext = isl::set::universe(Space);
-  DefinedBehaviorContext = isl::set::universe(Space);
-}
-
 void Scop::addParameterBounds() {
   unsigned PDim = 0;
   for (auto *Parameter : Parameters) {
@@ -1630,8 +1622,20 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
                         IslParseFlags);
 
   if (IslOnErrorAbort)
-    isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
-  buildContext();
+    isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+
+  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
+  Context = isl::set::universe(Space);
+  InvalidContext = isl::set::empty(Space);
+  AssumedContext = isl::set::universe(Space);
+  DefinedBehaviorContext = isl::set::universe(Space);
+}
+
+std::unique_ptr<Scop> Scop::makeScop(Region &R, ScalarEvolution &SE,
+                                     LoopInfo &LI, DominatorTree &DT,
+                                     ScopDetection::DetectionContext &DC,
+                                     OptimizationRemarkEmitter &ORE, int ID) {
+  return std::unique_ptr<Scop>{new Scop(R, SE, LI, DT, DC, ORE, ID)};
 }
 
 Scop::~Scop() = default;
@@ -2169,13 +2173,14 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions) {
+                                 RecordedAssumptionsTy *RecordedAssumptions,
+                                 bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
+  PWACtx PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption
@@ -2579,73 +2584,30 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
                    AssumptionCache &AC, OptimizationRemarkEmitter &ORE)
-    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {
-  recompute();
-}
+    : DL(DL), SD(SD), SE(SE), LI(LI), AA(AA), DT(DT), AC(AC), ORE(ORE) {}
 
-void ScopInfo::recompute() {
-  RegionToScopMap.clear();
-  /// Create polyhedral description of scops for all the valid regions of a
-  /// function.
-  for (auto &It : SD) {
-    Region *R = const_cast<Region *>(It);
-    if (!SD.isMaxRegionInScop(*R))
-      continue;
+Scop *ScopInfo::getScop(const Region *R) {
+  auto &&[It, Inserted] = RegionToScopMap.try_emplace(R);
+  if (Inserted && SD.isMaxRegionInScop(*R)) {
+    ScopBuilder SB(const_cast<Region *>(R), AC, AA, DL, DT, LI, SD, SE, ORE);
+    It->second = SB.getScop();
+    Scop *S = It->second.get();
 
-    ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
-    std::unique_ptr<Scop> S = SB.getScop();
-    if (!S)
-      continue;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-    ScopDetection::LoopStats Stats =
-        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats, S->getStatistics());
+    if (S) {
+      ScopDetection::LoopStats Stats =
+          ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
+      updateLoopCountStatistic(Stats, S->getStatistics());
+    }
 #endif
-    bool Inserted = RegionToScopMap.insert({R, std::move(S)}).second;
-    assert(Inserted && "Building Scop for the same region twice!");
-    (void)Inserted;
+
+    return S;
   }
+
+  return It->second.get();
 }
 
-bool ScopInfo::invalidate(Function &F, const PreservedAnalyses &PA,
-                          FunctionAnalysisManager::Invalidator &Inv) {
-  // Check whether the analysis, all analyses on functions have been preserved
-  // or anything we're holding references to is being invalidated
-  auto PAC = PA.getChecker<ScopInfoAnalysis>();
-  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>()) ||
-         Inv.invalidate<ScopAnalysis>(F, PA) ||
-         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
-         Inv.invalidate<LoopAnalysis>(F, PA) ||
-         Inv.invalidate<AAManager>(F, PA) ||
-         Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
-         Inv.invalidate<AssumptionAnalysis>(F, PA);
-}
-
-AnalysisKey ScopInfoAnalysis::Key;
-
-ScopInfoAnalysis::Result ScopInfoAnalysis::run(Function &F,
-                                               FunctionAnalysisManager &FAM) {
-  auto &SD = FAM.getResult<ScopAnalysis>(F);
-  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
-  auto &LI = FAM.getResult<LoopAnalysis>(F);
-  auto &AA = FAM.getResult<AAManager>(F);
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
-  auto &AC = FAM.getResult<AssumptionAnalysis>(F);
-  auto &DL = F.getParent()->getDataLayout();
-  auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  return {DL, SD, SE, LI, AA, DT, AC, ORE};
-}
-
-PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
-                                           FunctionAnalysisManager &FAM) {
-  auto &SI = FAM.getResult<ScopInfoAnalysis>(F);
-  // Since the legacy PM processes Scops in bottom up, we print them in reverse
-  // order here to keep the output persistent
-  for (auto &It : reverse(SI)) {
-    if (It.second)
-      It.second->print(Stream, PollyPrintInstructions);
-    else
-      Stream << "Invalid Scop!\n";
-  }
-  return PreservedAnalyses::all();
+void ScopInfo::invalidate() {
+  // Recompute all SCoPs on-demand
+  RegionToScopMap.clear();
 }

@@ -71,7 +71,7 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 // CHECK: failed to satisfy constraint: optional non-empty array of non-negative int64_
 
 // CHECK-LABEL: ::llvm::LogicalResult OpWithPredicatesAdaptor::verify
-// Note: comprehensive emission of verifiers is tested in verifyINvariantsImpl() below
+// Note: comprehensive emission of verifiers is tested in verifyInvariantsImpl() below
 // CHECK: int64_t tblgen_scalar = this->getScalar();
 // CHECK: if (!((tblgen_scalar >= 0)))
 // CHECK: return emitError(loc, "'test.op_with_predicates' op property 'scalar' failed to satisfy constraint: non-negative int64_t");

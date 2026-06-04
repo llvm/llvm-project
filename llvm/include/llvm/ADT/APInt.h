@@ -443,7 +443,7 @@ public:
       assert(BitWidth && "zero width values not allowed");
       return isPowerOf2_64(U.VAL);
     }
-    return countPopulationSlowCase() == 1;
+    return isPowerOf2SlowCase();
   }
 
   /// Check if this APInt's negated value is a power of two greater than zero.
@@ -1268,6 +1268,14 @@ public:
     return isSubsetOfSlowCase(RHS);
   }
 
+  /// This operation checks if all bits are set in either this or RHS.
+  bool isInverseOf(const APInt &RHS) const {
+    assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
+    if (isSingleWord())
+      return (U.VAL ^ RHS.U.VAL) == llvm::maskTrailingOnes<WordType>(BitWidth);
+    return isInverseOfSlowCase(RHS);
+  }
+
   /// @}
   /// \name Resizing Operators
   /// @{
@@ -2085,11 +2093,17 @@ private:
   /// out-of-line slow case for countPopulation
   LLVM_ABI unsigned countPopulationSlowCase() const LLVM_READONLY;
 
+  /// out-of-line slow case for isPowerOf2
+  LLVM_ABI bool isPowerOf2SlowCase() const LLVM_READONLY;
+
   /// out-of-line slow case for intersects.
   LLVM_ABI bool intersectsSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for isSubsetOf.
   LLVM_ABI bool isSubsetOfSlowCase(const APInt &RHS) const LLVM_READONLY;
+
+  /// out-of-line slow case for isInverseOf.
+  LLVM_ABI bool isInverseOfSlowCase(const APInt &RHS) const LLVM_READONLY;
 
   /// out-of-line slow case for setBits.
   LLVM_ABI void setBitsSlowCase(unsigned loBit, unsigned hiBit);
@@ -2475,19 +2489,39 @@ LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
 /// clmulh(a, b) = clmulr(a, b) >> 1
 LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 
+/// Perform a "compress" operation, also known as pext or bext.
+///
+/// Selects the bits from /p Val at the positions where /p Mask has a 1-bit,
+/// and packs them contiguously into the least significant bits of the result.
+///
+/// Examples:
+/// (1) compressBits(i8 0b1010'1010, i8 0b1100'1100) = 0b0000'1010
+/// (2) compressBits(i8 0b1111'1111, i8 0b1010'1010) = 0b0000'1111
+LLVM_ABI APInt compressBits(const APInt &Val, const APInt &Mask);
+
+/// Perform an "expand" operation, also known as pdep or bdep.
+///
+/// Places the least significant bits of /p Val at the positions where /p Mask
+/// has a 1-bit, and zeros the remaining bits.
+///
+/// Examples:
+/// (1) expandBits(i8 0b0000'1010, i8 0b1100'1100) = 0b1000'1000
+/// (2) expandBits(i8 0b0000'1111, i8 0b1010'1010) = 0b1010'1010
+LLVM_ABI APInt expandBits(const APInt &Val, const APInt &Mask);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in
 // order to compile LLVM with IBM xlC compiler.
 LLVM_ABI hash_code hash_value(const APInt &Arg);
 
-/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
-/// with the integer held in IntVal.
+/// Fills the StoreBytes bytes of memory starting from Dst with the integer held
+/// in IntVal.
 LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
                                unsigned StoreBytes);
 
-/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
-/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+/// Loads the integer stored in the LoadBytes bytes starting from Src into
+/// IntVal, which is assumed to be wide enough and to hold zero.
 LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
                                 unsigned LoadBytes);
 
@@ -2496,12 +2530,6 @@ template <> struct DenseMapInfo<APInt, void> {
   static inline APInt getEmptyKey() {
     APInt V(nullptr, 0);
     V.U.VAL = ~0ULL;
-    return V;
-  }
-
-  static inline APInt getTombstoneKey() {
-    APInt V(nullptr, 0);
-    V.U.VAL = ~1ULL;
     return V;
   }
 

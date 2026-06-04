@@ -130,12 +130,34 @@ static bool isDereferenceableAndAlignedPointer(
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
     if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                    CheckForFreed)) ||
-        CheckForFreed)
+                                                    CheckForFreed)))
       return false;
     if (CheckForNonNull &&
         !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
       return false;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (CheckForFreed) {
+      const Instruction *DefI;
+      if (I) {
+        // We don't want to consider frees by the instruction producing the
+        // pointer, so skip it if we can.
+        if (auto *II = dyn_cast<InvokeInst>(V)) {
+          DefI = &II->getNormalDest()->front();
+        } else if (!I->isTerminator()) {
+          DefI = I->getNextNode();
+        } else {
+          DefI = I;
+        }
+      } else {
+        // For arguments, check frees from the start of the entry block.
+        DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
+      }
+
+      if (!willNotFreeBetween(DefI, CtxI))
+        return false;
+    }
+
     // When using something like !dereferenceable on a load, the
     // dereferenceability may only be valid on a specific control-flow path.
     // If the instruction doesn't dominate the context instruction, we're
@@ -144,7 +166,6 @@ static bool isDereferenceableAndAlignedPointer(
     // in which case we don't know if the dereferenceability info still holds.
     // We don't bother handling allocas here, as they aren't speculatable
     // anyway.
-    auto *I = dyn_cast<Instruction>(V);
     if (I && !isa<AllocaInst>(I))
       return CtxI && isValidAssumeForContext(I, CtxI, DT);
     return true;
@@ -161,7 +182,8 @@ static bool isDereferenceableAndAlignedPointer(
 
 
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+    if (auto *RP = getArgumentAliasingToReturnedPointer(
+            Call, /*MustPreserveOffset=*/true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
                                                 AC, DT, TLI, Visited, MaxDepth);
 
@@ -289,9 +311,9 @@ static bool AreEquivalentAddressValues(const Value *A, const Value *B) {
 bool llvm::isDereferenceableAndAlignedInLoop(
     LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC, SmallVectorImpl<const SCEVPredicate *> *Predicates) {
-  const Align Alignment = LI->getAlign();
   auto &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
+  const SCEV *PtrSCEV = SE.getSCEV(Ptr);
   APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getType()),
                 DL.getTypeStoreSize(LI->getType()).getFixedValue());
 
@@ -299,11 +321,19 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // access is safe within the loop w/o needing predication.
   if (L->isLoopInvariant(Ptr))
     return isDereferenceableAndAlignedPointer(
-        Ptr, Alignment, EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(), AC,
-        &DT);
+        Ptr, LI->getAlign(), EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(),
+        AC, &DT);
 
-  const SCEV *PtrScev = SE.getSCEV(Ptr);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrScev);
+  const SCEV *EltSizeSCEV = SE.getConstant(EltSize);
+  return isDereferenceableAndAlignedInLoop(PtrSCEV, LI->getAlign(), EltSizeSCEV,
+                                           L, SE, DT, AC, Predicates);
+}
+
+bool llvm::isDereferenceableAndAlignedInLoop(
+    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
+    ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
 
   // Check to see if we have a repeating access pattern and it's possible
   // to prove all accesses are well aligned.
@@ -314,6 +344,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (!Step)
     return false;
 
+  const APInt &EltSize = cast<SCEVConstant>(EltSizeSCEV)->getAPInt();
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
   // TODO: generalize if a case found which warrants
@@ -333,9 +364,11 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
   std::optional<ScalarEvolution::LoopGuards> LoopGuards;
+
+  auto &DL = L->getHeader()->getDataLayout();
   const auto &[AccessStart, AccessEnd] =
-      getStartAndEndForAccess(L, PtrScev, LI->getType(), BECount, MaxBECount,
-                              &SE, nullptr, &DT, AC, LoopGuards);
+      getStartAndEndForAccess(L, PtrSCEV, EltSizeSCEV, BECount, MaxBECount, &SE,
+                              nullptr, &DT, AC, LoopGuards);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -357,7 +390,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *AccessSizeSCEV = nullptr;
   if (const SCEVUnknown *NewBase = dyn_cast<SCEVUnknown>(AccessStart)) {
     Base = NewBase->getValue();
-    AccessSize = MaxPtrDiff;
+    AccessSize = std::move(MaxPtrDiff);
     AccessSizeSCEV = PtrDiff;
   } else if (auto *MinAdd = dyn_cast<SCEVAddExpr>(AccessStart)) {
     if (MinAdd->getNumOperands() != 2)
@@ -392,7 +425,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
 
   Instruction *CtxI = &*L->getHeader()->getFirstNonPHIIt();
   if (BasicBlock *LoopPred = L->getLoopPredecessor()) {
-    if (isa<BranchInst>(LoopPred->getTerminator()))
+    if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
   return isDereferenceableAndAlignedPointerViaAssumption(
@@ -563,6 +596,8 @@ static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
                                               const DataLayout &DL) {
   APInt LoadOffset(DL.getIndexTypeSizeInBits(LoadPtr->getType()), 0);
   APInt StoreOffset(DL.getIndexTypeSizeInBits(StorePtr->getType()), 0);
+  if (LoadOffset.getBitWidth() != StoreOffset.getBitWidth())
+    return false;
   const Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
       DL, LoadOffset, /* AllowNonInbounds */ false);
   const Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
@@ -827,13 +862,16 @@ static bool isPointerUseReplacable(const Use &U, bool HasNonAddressBits) {
   return Limit != 0;
 }
 
-// Returns true if `To` is a null pointer, constant dereferenceable pointer or
-// both pointers have the same underlying objects.
 static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
                                        const DataLayout &DL) {
   // This is not strictly correct, but we do it for now to retain important
   // optimizations.
   if (isa<ConstantPointerNull>(To))
+    return true;
+  // Conversely, replacing null in the default address space with destination
+  // pointer is always valid.
+  if (isa<ConstantPointerNull>(From) &&
+      From->getType()->getPointerAddressSpace() == 0)
     return true;
   if (isa<Constant>(To) && To->getType()->isPointerTy() &&
       isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))

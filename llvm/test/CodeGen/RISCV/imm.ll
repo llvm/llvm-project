@@ -4785,3 +4785,88 @@ define i64 @imm64_0x1FFFFFF08() {
 ; RV64-REMAT-NEXT:    ret
   ret i64 8589934344 ; 0x1FFFFFF08
 }
+
+; The constant 0xffff8000ffff8000is materializable as lui+slli+add.uw using 2
+; registers for RV64+Zba, but SimplifyDemandedBits may clear bit 31. Make sure
+; we recover it.
+define i64 @imm64_same_lo_hi_negative_demanded(i63 zeroext %x) {
+; RV32I-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 1048568
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    lui a2, 524280
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    ret
+;
+; RV32IXQCILI-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV32IXQCILI:       # %bb.0:
+; RV32IXQCILI-NEXT:    lui a2, 1048568
+; RV32IXQCILI-NEXT:    and a0, a0, a2
+; RV32IXQCILI-NEXT:    lui a2, 524280
+; RV32IXQCILI-NEXT:    and a1, a1, a2
+; RV32IXQCILI-NEXT:    ret
+;
+; RV64I-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1015809
+; RV64I-NEXT:    slli a1, a1, 5
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    slli a1, a1, 15
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IZBA-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64IZBA:       # %bb.0:
+; RV64IZBA-NEXT:    lui a1, 1048568
+; RV64IZBA-NEXT:    slli a2, a1, 32
+; RV64IZBA-NEXT:    add.uw a1, a1, a2
+; RV64IZBA-NEXT:    and a0, a0, a1
+; RV64IZBA-NEXT:    ret
+;
+; RV64IZBB-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64IZBB:       # %bb.0:
+; RV64IZBB-NEXT:    lui a1, 1015809
+; RV64IZBB-NEXT:    slli a1, a1, 5
+; RV64IZBB-NEXT:    addi a1, a1, -1
+; RV64IZBB-NEXT:    slli a1, a1, 15
+; RV64IZBB-NEXT:    and a0, a0, a1
+; RV64IZBB-NEXT:    ret
+;
+; RV64IZBS-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64IZBS:       # %bb.0:
+; RV64IZBS-NEXT:    lui a1, 1015809
+; RV64IZBS-NEXT:    slli a1, a1, 5
+; RV64IZBS-NEXT:    addi a1, a1, -1
+; RV64IZBS-NEXT:    slli a1, a1, 15
+; RV64IZBS-NEXT:    and a0, a0, a1
+; RV64IZBS-NEXT:    ret
+;
+; RV64IXTHEADBB-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64IXTHEADBB:       # %bb.0:
+; RV64IXTHEADBB-NEXT:    lui a1, 1015809
+; RV64IXTHEADBB-NEXT:    slli a1, a1, 5
+; RV64IXTHEADBB-NEXT:    addi a1, a1, -1
+; RV64IXTHEADBB-NEXT:    slli a1, a1, 15
+; RV64IXTHEADBB-NEXT:    and a0, a0, a1
+; RV64IXTHEADBB-NEXT:    ret
+;
+; RV32-REMAT-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV32-REMAT:       # %bb.0:
+; RV32-REMAT-NEXT:    lui a2, 1048568
+; RV32-REMAT-NEXT:    and a0, a0, a2
+; RV32-REMAT-NEXT:    lui a2, 524280
+; RV32-REMAT-NEXT:    and a1, a1, a2
+; RV32-REMAT-NEXT:    ret
+;
+; RV64-REMAT-LABEL: imm64_same_lo_hi_negative_demanded:
+; RV64-REMAT:       # %bb.0:
+; RV64-REMAT-NEXT:    lui a1, 1015809
+; RV64-REMAT-NEXT:    slli a1, a1, 5
+; RV64-REMAT-NEXT:    addi a1, a1, -1
+; RV64-REMAT-NEXT:    slli a1, a1, 15
+; RV64-REMAT-NEXT:    and a0, a0, a1
+; RV64-REMAT-NEXT:    ret
+  %a = zext i63 %x to i64
+  %b = and i64 %a, u0xffff8000ffff8000
+  ret i64 %b
+}

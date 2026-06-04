@@ -30,43 +30,35 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
                                    const Pointer &BasePtr, const Record *R);
 
 static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
-                                  const Pointer &BasePtr,
-                                  const ConstantArrayType *CAT) {
-  size_t NumElems = CAT->getZExtSize();
+                                  const Pointer &BasePtr) {
+  const Descriptor *BaseDesc = BasePtr.getFieldDesc();
+  assert(BaseDesc->isArray());
+  size_t NumElems = BaseDesc->getNumElems();
 
   if (NumElems == 0)
     return true;
 
   bool Result = true;
-  QualType ElemType = CAT->getElementType();
 
-  if (ElemType->isRecordType()) {
-    const Record *R = BasePtr.getElemRecord();
+  if (BaseDesc->isPrimitiveArray()) {
+    if (BasePtr.allElementsInitialized())
+      return true;
+    DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+    return false;
+  }
+  const Descriptor *ElemDesc = BaseDesc->ElemDesc;
+
+  if (ElemDesc->isRecord()) {
+    const Record *R = ElemDesc->ElemRecord;
     for (size_t I = 0; I != NumElems; ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
     }
-  } else if (const auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
+  } else {
+    assert(ElemDesc->isArray());
     for (size_t I = 0; I != NumElems; ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
-      Result &= CheckArrayInitialized(S, Loc, ElemPtr, ElemCAT);
-    }
-  } else {
-    // Primitive arrays.
-    if (S.getContext().canClassify(ElemType)) {
-      if (BasePtr.allElementsInitialized()) {
-        return true;
-      } else {
-        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-        return false;
-      }
-    }
-
-    for (size_t I = 0; I != NumElems; ++I) {
-      if (!BasePtr.isElementInitialized(I)) {
-        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-        Result = false;
-      }
+      Result &= CheckArrayInitialized(S, Loc, ElemPtr);
     }
   }
 
@@ -80,22 +72,22 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   // Check all fields of this record are initialized.
   for (const Record::Field &F : R->fields()) {
     Pointer FieldPtr = BasePtr.atField(F.Offset);
-    QualType FieldType = F.Decl->getType();
 
     // Don't check inactive union members.
     if (R->isUnion() && !FieldPtr.isActive())
       continue;
 
-    if (FieldType->isRecordType()) {
+    QualType FieldType = F.Decl->getType();
+    const Descriptor *FieldDesc = FieldPtr.getFieldDesc();
+
+    if (FieldDesc->isRecord()) {
       Result &= CheckFieldsInitialized(S, Loc, FieldPtr, FieldPtr.getRecord());
     } else if (FieldType->isIncompleteArrayType()) {
       // Nothing to do here.
     } else if (F.Decl->isUnnamedBitField()) {
       // Nothing do do here.
-    } else if (FieldType->isArrayType()) {
-      const auto *CAT =
-          cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());
-      Result &= CheckArrayInitialized(S, Loc, FieldPtr, CAT);
+    } else if (FieldDesc->isArray()) {
+      Result &= CheckArrayInitialized(S, Loc, FieldPtr);
     } else if (!FieldPtr.isInitialized()) {
       DiagnoseUninitializedSubobject(S, Loc, F.Decl);
       Result = false;
@@ -150,11 +142,19 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   if (const Record *R = Ptr.getRecord())
     return CheckFieldsInitialized(S, InitLoc, Ptr, R);
 
-  if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(
-          Ptr.getType()->getAsArrayTypeUnsafe()))
-    return CheckArrayInitialized(S, InitLoc, Ptr, CAT);
+  if (isa_and_nonnull<ConstantArrayType>(Ptr.getType()->getAsArrayTypeUnsafe()))
+    return CheckArrayInitialized(S, InitLoc, Ptr);
 
   return true;
+}
+
+static bool isOrHasPtr(const Descriptor *D) {
+  if ((D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() == PT_Ptr)
+    return true;
+
+  if (D->ElemRecord)
+    return D->ElemRecord->hasPtrField();
+  return false;
 }
 
 static void collectBlocks(const Pointer &Ptr,
@@ -173,26 +173,29 @@ static void collectBlocks(const Pointer &Ptr,
   if (!Desc)
     return;
 
-  if (const Record *R = Desc->ElemRecord) {
+  if (const Record *R = Desc->ElemRecord; R && R->hasPtrField()) {
+
     for (const Record::Field &F : R->fields()) {
-      const Pointer &FieldPtr = Ptr.atField(F.Offset);
+      if (!isOrHasPtr(F.Desc))
+        continue;
+      Pointer FieldPtr = Ptr.atField(F.Offset);
       assert(FieldPtr.block() == Ptr.block());
       collectBlocks(FieldPtr, Blocks);
     }
   } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
-    const Pointer &Pointee = Ptr.deref<Pointer>();
+    Pointer Pointee = Ptr.deref<Pointer>();
     if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
       collectBlocks(Pointee, Blocks);
 
   } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPointee = Ptr.elem<Pointer>(I);
+      Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee, Blocks);
     }
-  } else if (Desc->isCompositeArray()) {
+  } else if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPtr = Ptr.atIndex(I).narrow();
+      Pointer ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
     }
   }

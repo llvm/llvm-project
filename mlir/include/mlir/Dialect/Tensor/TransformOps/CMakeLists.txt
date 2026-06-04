@@ -3,4 +3,4 @@ mlir_tablegen(TensorTransformOps.h.inc -gen-op-decls)
 mlir_tablegen(TensorTransformOps.cpp.inc -gen-op-defs)
 add_mlir_dialect_tablegen_target(MLIRTensorTransformOpsIncGen)
 
-add_mlir_doc(TensorTransformOps TensorTransformOps Dialects/ -gen-op-doc)
+add_mlir_doc(TensorTransformOps TensorTransformOps Dialects/ -gen-op-doc -dialect=transform)

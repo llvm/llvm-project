@@ -11,13 +11,6 @@ if(LLDB_ENABLE_PYTHON)
     # inside an extern "C" block.
     remove_module_flags()
   endif()
-  get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
-  set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
-endif()
-
-if(LLDB_ENABLE_LUA)
-  get_target_property(lua_bindings_dir swig_wrapper_lua BINARY_DIR)
-  set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
 # Generate SBLanguages.h from Dwarf.def.
@@ -123,8 +116,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
   SystemInitializerFull.cpp
-  ${lldb_python_wrapper}
-  ${lldb_lua_wrapper}
 
   ADDITIONAL_HEADER_DIRS
     ${LLDB_INCLUDE_DIR}/lldb/API
@@ -151,52 +142,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
-# lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
-# which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
-# (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
-# that _lldb.so can be loaded from Python.
-if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
-endif()
-
-if(Python3_RPATH)
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
-  set_property(TARGET liblldb APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
-endif()
-
-
-if(LLDB_ENABLE_PYTHON)
-  add_dependencies(liblldb swig_wrapper_python)
-
-  if (MSVC)
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-  else()
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+if (NOT LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if (LLDB_ENABLE_PYTHON)
+    add_python_wrapper(liblldb)
   endif()
 
-  set_source_files_properties(${lldb_python_wrapper} PROPERTIES GENERATED ON)
-  if (CLANG_CL)
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -Wno-unused-function")
+  if(LLDB_ENABLE_LUA)
+    add_lua_wrapper(liblldb)
   endif()
-  if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND
-      NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set_property(SOURCE ${lldb_python_wrapper} APPEND_STRING
-      PROPERTY COMPILE_FLAGS " -Wno-sequence-point -Wno-cast-qual")
-  endif ()
-endif()
-
-if(LLDB_ENABLE_LUA)
-  add_dependencies(liblldb swig_wrapper_lua)
-  target_include_directories(liblldb PRIVATE ${LUA_INCLUDE_DIR})
-
-  if (MSVC)
-    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
-  else()
-    set_property(SOURCE ${lldb_lua_wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
-  endif()
-
-  set_source_files_properties(${lldb_lua_wrapper} PROPERTIES GENERATED ON)
 endif()
 
 set_target_properties(liblldb
@@ -206,7 +159,34 @@ set_target_properties(liblldb
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  if (NOT LLDB_EXPORT_ALL_SYMBOLS)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS AND NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+    # Each script interpreter plugin contributes a list of its undefined
+    # LLDB symbols. Concatenating those with liblldb.exports yields the
+    # smallest export set that satisfies dynamically loaded plugins.
+    get_property(plugin_symbol_files GLOBAL
+      PROPERTY LLDB_DYNAMIC_SCRIPTINTERPRETER_SYMBOL_FILES)
+    set(generated_exports_file
+      ${CMAKE_CURRENT_BINARY_DIR}/liblldb-script-interpreter.exports)
+    add_custom_command(
+      OUTPUT ${generated_exports_file}
+      COMMAND ${CMAKE_COMMAND} -P
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${generated_exports_file}
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      DEPENDS
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      VERBATIM
+      COMMENT "Merging script interpreter export lists for liblldb"
+    )
+    add_custom_target(liblldb-script-interpreter-exports
+      DEPENDS ${generated_exports_file})
+    message(STATUS "Symbols (liblldb): exporting the lldb namespace plus "
+                   "script interpreter dependencies")
+    lldb_apply_exports_file(liblldb ${generated_exports_file})
+  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS)
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
@@ -265,7 +245,7 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
 endif()
 
-if (NOT MSVC)
+if(NOT WIN32 OR MINGW)
   set_target_properties(liblldb
     PROPERTIES
     OUTPUT_NAME lldb
@@ -342,7 +322,7 @@ foreach(header
   add_custom_command(
     OUTPUT ${staged_header}
     COMMAND ${copy_command}
-    DEPENDS ${header}     
+    DEPENDS ${header}
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 
   list(APPEND lldb_staged_headers ${staged_header})

@@ -150,7 +150,7 @@ generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
 
 bool LLVMArrayType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType>(type);
+                    LLVMFunctionType, TokenType>(type);
 }
 
 LLVMArrayType LLVMArrayType::get(Type elementType, uint64_t numElements) {
@@ -208,6 +208,9 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 //===----------------------------------------------------------------------===//
 
 bool LLVMFunctionType::isValidArgumentType(Type type) {
+  if (auto structType = dyn_cast<LLVMStructType>(type))
+    return !structType.isOpaque();
+
   return !llvm::isa<LLVMVoidType, LLVMFunctionType>(type);
 }
 
@@ -232,11 +235,18 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
 
 LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
                                          TypeRange results) const {
-  if (results.size() != 1 || !isValidResultType(results[0]))
+  // LLVM functions have exactly one return type. An empty results range
+  // corresponds to a void return type (as FunctionOpInterface represents void
+  // functions with 0 results). More than one result is not valid.
+  if (results.size() > 1)
+    return {};
+  Type resultType =
+      results.empty() ? LLVMVoidType::get(getContext()) : results[0];
+  if (!isValidResultType(resultType))
     return {};
   if (!llvm::all_of(inputs, isValidArgumentType))
     return {};
-  return get(results[0], llvm::to_vector(inputs), isVarArg());
+  return get(resultType, llvm::to_vector(inputs), isVarArg());
 }
 
 ArrayRef<Type> LLVMFunctionType::getReturnTypes() const {
@@ -425,7 +435,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
 
 bool LLVMStructType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType>(type);
+                    LLVMFunctionType, TokenType>(type);
 }
 
 LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
@@ -733,10 +743,10 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMPPCFP128Type,
       LLVMPointerType,
       LLVMStructType,
-      LLVMTokenType,
       LLVMTargetExtType,
       LLVMVoidType,
-      LLVMX86AMXType
+      LLVMX86AMXType,
+      TokenType
     >(type)) {
     // clang-format on
     return true;
@@ -793,9 +803,9 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMLabelType,
             LLVMMetadataType,
             LLVMPPCFP128Type,
-            LLVMTokenType,
             LLVMVoidType,
-            LLVMX86AMXType
+            LLVMX86AMXType,
+            TokenType
           >([](Type) { return true; })
           // clang-format on
           .Case<PtrLikeTypeInterface>(
@@ -907,11 +917,11 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                               elementSize.isScalable());
       })
       .Default([](Type ty) {
-        assert((llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                          LLVMTokenType, LLVMStructType, LLVMArrayType,
-                          LLVMPointerType, LLVMFunctionType, LLVMTargetExtType>(
-                   ty)) &&
-               "unexpected missing support for primitive type");
+        assert(
+            (llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType, TokenType,
+                       LLVMStructType, LLVMArrayType, LLVMPointerType,
+                       LLVMFunctionType, LLVMTargetExtType>(ty)) &&
+            "unexpected missing support for primitive type");
         return llvm::TypeSize::getFixed(0);
       });
 }

@@ -108,20 +108,19 @@ ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-size_t ObjectFileJSON::GetModuleSpecifications(
-    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!extractor_sp ||
-      !MagicBytesMatch(extractor_sp->GetSubsetExtractorSP(data_offset)))
-    return 0;
+ModuleSpecList
+ObjectFileJSON::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!extractor_sp || !MagicBytesMatch(extractor_sp))
+    return {};
 
   // Update the data to contain the entire file if it doesn't already.
   if (extractor_sp->GetByteSize() < length) {
     if (DataBufferSP file_data_sp = MapFileData(file, length, file_offset))
       extractor_sp->SetData(file_data_sp);
     if (!extractor_sp->HasData())
-      return 0;
-    data_offset = 0;
+      return {};
   }
 
   Log *log = GetLog(LLDBLog::Symbols);
@@ -132,7 +131,7 @@ size_t ObjectFileJSON::GetModuleSpecifications(
   if (!json) {
     LLDB_LOG_ERROR(log, json.takeError(),
                    "failed to parse JSON object file: {0}");
-    return 0;
+    return {};
   }
 
   json::Path::Root root;
@@ -140,7 +139,7 @@ size_t ObjectFileJSON::GetModuleSpecifications(
   if (!fromJSON(*json, header, root)) {
     LLDB_LOG_ERROR(log, root.getError(),
                    "failed to parse JSON object file header: {0}");
-    return 0;
+    return {};
   }
 
   ArchSpec arch(header.triple);
@@ -149,8 +148,9 @@ size_t ObjectFileJSON::GetModuleSpecifications(
 
   ModuleSpec spec(file, std::move(arch));
   spec.GetUUID() = std::move(uuid);
+  ModuleSpecList specs;
   specs.Append(spec);
-  return 1;
+  return specs;
 }
 
 ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp,
@@ -264,10 +264,9 @@ bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
   for (const SectionSP &section_sp : *m_sections_up) {
     addr_t section_load_addr = section_sp->GetFileAddress();
     if (section_load_addr != LLDB_INVALID_ADDRESS) {
-      LLDB_LOGF(
-          log,
-          "ObjectFileJSON::SetLoadAddress section %s to load addr 0x%" PRIx64,
-          section_sp->GetName().AsCString(), section_load_addr + slide);
+      LLDB_LOG(log,
+               "ObjectFileJSON::SetLoadAddress section {0} to load addr {1:x}",
+               section_sp->GetName(), section_load_addr + slide);
       target.SetSectionLoadAddress(section_sp, section_load_addr + slide,
                                    /*warn_multiple=*/true);
     }

@@ -94,14 +94,14 @@ extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
-extern llvm::cl::opt<std::string> PerfData;
+extern llvm::cl::list<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
 extern llvm::cl::opt<bool> UpdateBranchProtection;
 extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
-enum ProfileFormatKind { PF_Fdata, PF_YAML };
+enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
 extern llvm::cl::opt<bool> ShowDensity;
@@ -124,15 +124,37 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
 
+// Option to control whether liveness analysis should be used by
+// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
+extern llvm::cl::opt<bool> LivenessAnalysis;
+
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 
 /// Return true if we should dump dot graphs for the given function.
 bool shouldDumpDot(const llvm::bolt::BinaryFunction &Function);
 
-enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+/// Bitmask representing a subset of possible gadget kinds.
+enum GadgetKindBitmask : unsigned {
+  /// Scan for unprotected backward control-flow (return instructions).
+  GS_PTRAUTH_RETURN_TARGETS = (1 << 0),
+  /// Scan for tail calls performed with untrusted link register.
+  GS_PTRAUTH_TAIL_CALLS = (1 << 1),
+  /// Scan for unprotected forward control-flow (branch and call instructions).
+  GS_PTRAUTH_BRANCH_AND_CALL_TARGETS = (1 << 2),
+  /// Scan for signing oracles.
+  GS_PTRAUTH_SIGN_ORACLES = (1 << 3),
+  /// Scan for authentication oracles.
+  GS_PTRAUTH_AUTH_ORACLES = (1 << 4),
 
-extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
+  /// Scan for all Pointer Authentication issues.
+  GS_PTRAUTH_ALL_MASK = GS_PTRAUTH_RETURN_TARGETS | GS_PTRAUTH_TAIL_CALLS |
+                        GS_PTRAUTH_BRANCH_AND_CALL_TARGETS |
+                        GS_PTRAUTH_SIGN_ORACLES | GS_PTRAUTH_AUTH_ORACLES,
+
+  /// Run all implemented scanners.
+  GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
+};
 
 } // namespace opts
 

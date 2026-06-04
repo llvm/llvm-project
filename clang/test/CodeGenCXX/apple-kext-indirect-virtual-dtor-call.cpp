@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
+// CHECK: @_ZTV5TemplIiE = internal constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
 struct B1 { 
   virtual ~B1(); 
@@ -12,10 +12,10 @@ void DELETE(B1 *pb1) {
   pb1->B1::~B1();
 }
 // CHECK-LABEL: define{{.*}} void @_ZN2B1D0Ev
-// CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @_ZTV2B1, i64 16)
 // CHECK-NEXT: call void [[T1]](ptr {{[^,]*}} [[T2:%.*]])
 // CHECK-LABEL: define{{.*}} void @_Z6DELETEP2B1
-// CHECK: [[T3:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK: [[T3:%.*]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @_ZTV2B1, i64 16)
 // CHECK-NEXT:  call void [[T3]](ptr {{[^,]*}} [[T4:%.*]])
 
 template<class T>
@@ -42,7 +42,7 @@ void f(SubTempl<int>* t) {
   t->Templ::~Templ();
 }
 
-// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: getelementptr inbounds nuw (i8, ptr @_ZTV5TemplIiE, i64 16)
 // CHECK: declare void @_ZN5TemplIiED0Ev(ptr {{[^,]*}})
 // CHECK: define internal void @_ZN5TemplIiE1fEv(ptr {{[^,]*}} %this)
 // CHECK: define internal void @_ZN5TemplIiE1gEv(ptr {{[^,]*}} %this)

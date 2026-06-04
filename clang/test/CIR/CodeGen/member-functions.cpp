@@ -6,7 +6,7 @@ struct C {
   void f2(int a, int b);
 };
 
-// CIR: !rec_C = !cir.record<struct "C" padded {!u8i}>
+// CIR: !rec_C = !cir.struct<"C" padded {!u8i}>
 
 void C::f() {}
 
@@ -38,9 +38,9 @@ void test1() {
 
 // CIR: cir.func{{.*}} @_Z5test1v()
 // CIR-NEXT:   %[[C_ADDR:.*]] = cir.alloca !rec_C, !cir.ptr<!rec_C>, ["c"]
-// CIR-NEXT:   cir.call @_ZN1C1fEv(%[[C_ADDR]]) : (!cir.ptr<!rec_C>) -> ()
+// CIR-NEXT:   cir.call @_ZN1C1fEv(%[[C_ADDR]]) : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-NEXT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR-NEXT:   cir.call @_ZN1C2f2Eii(%[[C_ADDR]], %[[ONE]], %[[TWO]]) : (!cir.ptr<!rec_C>, !s32i, !s32i) -> ()
+// CIR-NEXT:   cir.call @_ZN1C2f2Eii(%[[C_ADDR]], %[[ONE]], %[[TWO]]) : (!cir.ptr<!rec_C> {{.*}}, !s32i {{.*}}, !s32i {{.*}}) -> ()
 // CIR-NEXT:   cir.return
 // CIR-NEXT: }

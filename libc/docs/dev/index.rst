@@ -9,14 +9,16 @@ Navigate to the links below for information on the respective topics:
 .. toctree::
    :maxdepth: 1
 
+   building_docs
    code_style
    source_tree_layout
    entrypoints
-   cmake_build_rules
+   implementing_a_function
    config_options
-   clang_tidy_checks
    fuzzing
    header_generation
    implementation_standard
    undefined_behavior
    printf_behavior
+   syscall_wrapper_refactor
+   modular_format

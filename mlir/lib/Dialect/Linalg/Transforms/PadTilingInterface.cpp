@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -235,7 +235,7 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
       paddingValue = complex::ConstantOp::create(builder, opToPad.getLoc(),
                                                  complexTy, complexAttr);
     }
-  } else if (isa<ub::PoisonAttr>(paddingValueAttr)) {
+  } else if (matchPattern(paddingValueAttr, ub::m_Poison())) {
     paddingValue = ub::PoisonOp::create(builder, opToPad.getLoc(),
                                         getElementTypeOrSelf(v.getType()));
   } else if (auto typedAttr = dyn_cast<TypedAttr>(paddingValueAttr)) {

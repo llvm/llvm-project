@@ -20,14 +20,11 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
-
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, nullptr, LaneBitmask(~0u), nullptr,
-                           nullptr) {
+      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+                           LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
   }
@@ -63,6 +60,11 @@ public:
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
+  }
+
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
   }
 
   Register getFrameRegister(const MachineFunction &MF) const override {
@@ -118,7 +120,17 @@ public:
       : CodeGenTargetMachineImpl(
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide
+    // default MC{AsmInfo,RegisterInfo,SubtargetInfo} so MCContext can be
+    // created.
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+    MRI = std::make_unique<MCRegisterInfo>();
+    STI = std::make_unique<MCSubtargetInfo>(
+        Triple(""), "", "", "", ArrayRef<StringRef>{},
+        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr);
+  }
 
   ~BogusTargetMachine() override = default;
 

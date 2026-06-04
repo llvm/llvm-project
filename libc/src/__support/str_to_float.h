@@ -1093,7 +1093,7 @@ hexadecimal_string_to_float(const CharType *__restrict src,
 }
 
 template <typename T, typename CharType>
-LIBC_INLINE typename fputil::FPBits<T>::StorageType
+LIBC_INLINE constexpr typename fputil::FPBits<T>::StorageType
 nan_mantissa_from_ncharseq(const CharType *str, size_t len) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
@@ -1221,7 +1221,8 @@ strtofloatingpoint(const CharType *__restrict src) {
   return {result.get_val(), static_cast<ptrdiff_t>(index), error};
 }
 
-template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
+template <class T>
+LIBC_INLINE constexpr StrToNumResult<T> strtonan(const char *arg) {
   using FPBits = typename fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
 

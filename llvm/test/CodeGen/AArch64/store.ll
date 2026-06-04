@@ -39,6 +39,29 @@ define void @store_i64(i64 %a, ptr %ptr){
     ret void
 }
 
+define i32 @store_i112(ptr %p) {
+; CHECK-SD-LABEL: store_i112:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x8, x0
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    str xzr, [x8]
+; CHECK-SD-NEXT:    strh wzr, [x8, #12]
+; CHECK-SD-NEXT:    str wzr, [x8, #8]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: store_i112:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    mov w0, wzr
+; CHECK-GI-NEXT:    str xzr, [x8]
+; CHECK-GI-NEXT:    str wzr, [x8, #8]
+; CHECK-GI-NEXT:    strh wzr, [x8, #12]
+; CHECK-GI-NEXT:    ret
+  store i112 0, ptr %p, align 16
+  ret i32 0
+}
+
+
 ; ===== Legal Vector Types =====
 
 define void @store_v8i8(<8 x i8> %a, ptr %ptr){

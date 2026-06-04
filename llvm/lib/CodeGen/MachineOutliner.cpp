@@ -65,6 +65,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -244,9 +245,7 @@ struct InstructionMapper {
       report_fatal_error("Instruction mapping overflow!");
 
     assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
+           "Tried to assign DenseMap empty key to instruction.");
 
     // Statistics.
     ++NumLegalInUnsignedVec;
@@ -284,10 +283,7 @@ struct InstructionMapper {
            "Instruction mapping overflow!");
 
     assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
+           "IllegalInstrNumber cannot be DenseMap empty key!");
 
     return MINumber;
   }
@@ -422,8 +418,6 @@ struct InstructionMapper {
     // changed.
     static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
                   static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
   }
 };
 
@@ -971,6 +965,12 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
+      // Also clear debug locations on any bundled instructions.
+      if (NewMI.isBundledWithSucc()) {
+        auto BundleEnd = getBundleEnd(NewMI.getIterator());
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+          I->setDebugLoc(DL);
+      }
     }
   }
 
@@ -1151,6 +1151,8 @@ bool MachineOutliner::outline(
                  Last = std::next(CallInst.getReverse());
              Iter != Last; Iter++) {
           MachineInstr *MI = &*Iter;
+          if (MI->isDebugInstr())
+            continue;
           SmallSet<Register, 2> InstrUseRegs;
           for (MachineOperand &MOP : MI->operands()) {
             // Skip over anything that isn't a register.

@@ -71,7 +71,7 @@ struct vderived : public vbase {
 
 template struct vderived<void>;
 
-// CHECK: @_ZTV8vderivedIvE = weak_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } zeroinitializer, comdat, align 8
+// CHECK: @_ZTV8vderivedIvE = weak_odr addrspace(1) constant { [4 x ptr addrspace(1)] } zeroinitializer, comdat, align 8
 
 // Check support for pure and deleted virtual functions
 struct base {
@@ -90,8 +90,8 @@ struct derived:base {
 __device__ void test_vf() {
     derived d;
 }
-// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN7derived2pvEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
-// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
+// CHECK: @_ZTV7derived = linkonce_odr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN7derived2pvEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
+// CHECK: @_ZTV4base = linkonce_odr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
 // CHECK: define{{.*}}void @__cxa_pure_virtual()
 // CHECK: define{{.*}}void @__cxa_deleted_virtual()
 
@@ -169,7 +169,7 @@ __device__ double test_isnan() {
 // MALLOC:  call i64 @__ockl_dm_alloc
 // NOMALLOC:  call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}ptr @malloc(i64
-// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call ptr @llvm.returnaddress.p0(i32 0)
 // MALLOC-ASAN:  call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_malloc(void *a) {
   a = malloc(42);
@@ -183,7 +183,7 @@ __device__ void test_malloc(void *a) {
 // MALLOC:  call void @__ockl_dm_dealloc
 // NOMALLOC: call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}void @free(ptr
-// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call ptr @llvm.returnaddress.p0(i32 0)
 // MALLOC-ASAN:  call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_free(void *a) {
   free(a);

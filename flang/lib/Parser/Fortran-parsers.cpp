@@ -167,7 +167,8 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // N.B. It is critical to distribute "parenthesized()" over the alternatives
 // for TYPE (...), rather than putting the alternatives within it, which
 // would fail on "TYPE(real_derived)" with a misrecognition of "real" as an
@@ -176,6 +177,12 @@ TYPE_CONTEXT_PARSER("type spec"_en_US,
 // type (BYTE or DOUBLECOMPLEX), not the extension intrinsic type.
 TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
     construct<DeclarationTypeSpec>(intrinsicTypeSpec) ||
+        "TYPEOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::TypeOf>(indirect(dataRef)))) ||
+        "CLASSOF" >>
+            parenthesized(construct<DeclarationTypeSpec>(
+                construct<DeclarationTypeSpec::ClassOf>(indirect(dataRef)))) ||
         "TYPE" >>
             (parenthesized(construct<DeclarationTypeSpec>(
                  !"DOUBLECOMPLEX"_tok >> !"BYTE"_tok >> intrinsicTypeSpec)) ||
@@ -732,7 +739,8 @@ TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
     "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
-    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified) ||
+    "VALUE" >> pure(common::CUDADataAttr::Value))
 
 // R804 object-name -> name
 constexpr auto objectName{name};
@@ -1338,8 +1346,11 @@ constexpr auto forceinlineDir{
     "FORCEINLINE" >> construct<CompilerDirective::ForceInline>()};
 constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
+constexpr auto inlinealwaysDir{
+    "INLINEALWAYS" >> construct<CompilerDirective::InlineAlways>(maybe(name))};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
+constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1354,7 +1365,9 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(nounroll) ||
                 construct<CompilerDirective>(noinlineDir) ||
                 construct<CompilerDirective>(forceinlineDir) ||
+                construct<CompilerDirective>(inlinealwaysDir) ||
                 construct<CompilerDirective>(inlineDir) ||
+                construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(

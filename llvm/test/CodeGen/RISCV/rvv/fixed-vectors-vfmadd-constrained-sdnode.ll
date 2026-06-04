@@ -391,11 +391,20 @@ define <32 x half> @vfmadd_vf_v32f16(<32 x half> %va, <32 x half> %vb, half %c) 
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    li a0, 32
 ; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+<<<<<<< HEAD
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v8
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFA-NEXT:    vmv.v.x v8, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v8
+=======
+; ZVFBFA-NEXT:    vmv4r.v v4, v12
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vmv.v.x v12, a0
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v24, v4
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v0, v12
+>>>>>>> origin/main
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFBFA-NEXT:    vfmadd.vv v0, v16, v24
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, m4, ta, ma

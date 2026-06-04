@@ -536,12 +536,6 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
-  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
-    buf += encodeULEB128(crelHeader, buf);
-    memcpy(buf, crelBody.data(), crelBody.size());
-    return;
-  }
-
   auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {
@@ -625,7 +619,7 @@ static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
   // new size. The content will be rewritten in InputSection::copyShtGroup.
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
-  for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
+  for (auto &idx : section->getDataAs<std::array<char, 4>>().slice(1))
     if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);

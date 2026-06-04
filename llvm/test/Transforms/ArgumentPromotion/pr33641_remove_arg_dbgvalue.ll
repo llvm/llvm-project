@@ -15,7 +15,7 @@ define void @foo() {
 
 define internal void @bar(ptr %p) {
 ; CHECK-LABEL: define {{.*}}void @bar()
-; CHECK-NEXT:    #dbg_value(ptr poison, !3, !DIExpression(), !5
+; CHECK-NEXT:    #dbg_value(ptr poison, !3, !DIExpression(), !7
   call void @llvm.dbg.value(metadata ptr %p, metadata !3, metadata !DIExpression()), !dbg !5
   ret void
 }
@@ -31,5 +31,7 @@ attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
 !1 = !DIFile(filename: "test.c", directory: "")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "p", scope: !4)
-!4 = distinct !DISubprogram(name: "bar", scope: null, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "bar", scope: null, spFlags: DISPFlagDefinition, unit: !0, type: !6)
 !5 = !DILocation(line: 1, column: 1, scope: !4)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}

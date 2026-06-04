@@ -456,6 +456,20 @@ public:
   }
 };
 
+/// This represents the llvm.coro.dead instruction.
+class CoroDeadInst : public IntrinsicInst {
+public:
+  Value *getFrame() const { return getArgOperand(0); }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_dead;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This class represents the llvm.coro.begin or llvm.coro.begin.custom.abi
 /// instructions.
 class CoroBeginInst : public IntrinsicInst {

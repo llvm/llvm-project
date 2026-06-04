@@ -37,6 +37,12 @@ struct ParamOffset {
   bool IsPtr;
 };
 
+struct FuncParam {
+  unsigned Index;
+  bool IsPtr;
+};
+
+class EvalIDScope;
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:
@@ -61,6 +67,9 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
                              APValue &Result);
+
+  /// Evaluates the destruction of a variable.
+  bool evaluateDestruction(State &Parent, const VarDecl *VD, APValue Value);
 
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
@@ -167,6 +176,7 @@ public:
   static bool isUnevaluatedBuiltin(unsigned ID);
 
 private:
+  friend class EvalIDScope;
   /// Runs a function.
   bool Run(State &Parent, const Function *Func);
 
@@ -187,6 +197,18 @@ private:
   unsigned IntWidth;
   unsigned LongWidth;
   unsigned LongLongWidth;
+};
+
+class EvalIDScope {
+public:
+  EvalIDScope(Context &Ctx) : Ctx(Ctx), OldID(Ctx.EvalID) { ++Ctx.EvalID; }
+  ~EvalIDScope() { Ctx.EvalID = OldID; }
+  EvalIDScope(const EvalIDScope &) = delete;
+  EvalIDScope &operator=(const EvalIDScope &) = delete;
+
+private:
+  Context &Ctx;
+  const unsigned OldID;
 };
 
 } // namespace interp

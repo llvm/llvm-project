@@ -81,11 +81,17 @@ define void @f3(i32 %x) !type !8 {
 ; SUMMARY-NEXT:     WPDRes:
 
 ; SUMMARY:      CfiFunctionDefs:
-; SUMMARY-NEXT:   - f
-; SUMMARY-NEXT:   - f2
-; SUMMARY-NEXT:   - g
-; SUMMARY-NEXT:   - h
+; SUMMARY-NEXT:   - Name:            f
+; SUMMARY-NEXT:     GUID:            14740650423002898831
+; SUMMARY-NEXT:   - Name:            f2
+; SUMMARY-NEXT:     GUID:            8471399308421654326
+; SUMMARY-NEXT:   - Name:            g
+; SUMMARY-NEXT:     GUID:            13146401226427987378
+; SUMMARY-NEXT:   - Name:            h
+; SUMMARY-NEXT:     GUID:            8124147457056772133
 ; SUMMARY-NEXT: CfiFunctionDecls:
-; SUMMARY-NEXT:   - external
-; SUMMARY-NEXT:   - external_weak
+; SUMMARY-NEXT:   - Name:            external
+; SUMMARY-NEXT:     GUID:            5224464028922159466
+; SUMMARY-NEXT:   - Name:            external_weak
+; SUMMARY-NEXT:     GUID:            5227079976482001346
 ; SUMMARY-NEXT: ...

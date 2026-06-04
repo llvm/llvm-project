@@ -60,10 +60,10 @@ public:
     return *TheTargetMachine->getMCInstrInfo();
   }
   const MCRegisterInfo &getRegInfo() const {
-    return *TheTargetMachine->getMCRegisterInfo();
+    return TheTargetMachine->getMCRegisterInfo();
   }
   const MCSubtargetInfo &getSubtargetInfo() const {
-    return *TheTargetMachine->getMCSubtargetInfo();
+    return TheTargetMachine->getMCSubtargetInfo();
   }
 
   const RegisterAliasingTrackerCache &getRATC() const { return *RATC; }
