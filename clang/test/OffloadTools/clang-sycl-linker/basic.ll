@@ -24,39 +24,46 @@
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
-; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
+; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SIMPLE-FO-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; SIMPLE-FO-NOT:  {{.+}}
 ;
-; Test the dry run of a simple case with device library files specified.
+; Test the dry run of a simple case with device library archive specified using --whole-archive.
 ; RUN: mkdir -p %t/libs
-; RUN: touch %t/libs/lib1.bc
-; RUN: touch %t/libs/lib2.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc -o a.spv 2>&1 \
+; RUN: llvm-as %t/lib1.ll -o %t/libs/lib1.bc
+; RUN: llvm-as %t/lib2.ll -o %t/libs/lib2.bc
+; RUN: rm -f %t/libs/libdevice.a
+; RUN: llvm-ar rc %t/libs/libdevice.a %t/libs/lib1.bc %t/libs/lib2.bc
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
-; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
+; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, lib1.bc, lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 ; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; DEVLIBS-NOT:  {{.+}}
 ;
-; Test -L short form (joined) and --bc-library= joined form.
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --bc-library=lib1.bc -o a.spv 2>&1 \
+; Test -L short form (joined) and -l with archive using --whole-archive.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-SHORT
-; DEVLIBS-SHORT: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
+; DEVLIBS-SHORT: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc  output: {{.*}}.bc
 ;
-; Test that search continues past the first -L when the library is not found there. lib1.bc exists only in %t/libs (the second -L).
+; Test that search continues past the first -L when the library is not found there. libdevice.a exists only in %t/libs (the second -L).
 ; RUN: mkdir -p %t/empty
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --bc-library lib1.bc -o a.spv 2>&1 \
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/empty -L %t/libs --whole-archive -l device -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-FALLTHROUGH
-; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs{{[/\\]}}lib1.bc  output: {{.*}}.bc
+; DEVLIBS-FALLTHROUGH: link: inputs: {{.*}}.bc, lib1.bc, lib2.bc  output: {{.*}}.bc
 ;
 ; Test that -L paths are searched in order: when the same name exists in multiple -L dirs, the first one wins.
 ; RUN: mkdir -p %t/libs2
-; RUN: touch %t/libs/shadow.bc %t/libs2/shadow.bc
-; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --bc-library shadow.bc -o a.spv 2>&1 \
+; RUN: llvm-as %t/lib1.ll -o %t/libs/shadow.bc
+; RUN: llvm-as %t/lib2.ll -o %t/libs2/shadow.bc
+; RUN: rm -f %t/libs/libshadow.a %t/libs2/libshadow.a
+; RUN: llvm-ar rc %t/libs/libshadow.a %t/libs/shadow.bc
+; RUN: llvm-ar rc %t/libs2/libshadow.a %t/libs2/shadow.bc
+; RUN: clang-sycl-linker --dry-run --module-split-mode=none %t/input1.bc -L %t/libs2 -L %t/libs --whole-archive -l shadow -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS-ORDER
-; DEVLIBS-ORDER: link: inputs: {{.*}}.bc  libfiles: {{.*}}libs2{{[/\\]}}shadow.bc  output: {{.*}}.bc
+; DEVLIBS-ORDER: define {{.*}}lib2_func
+; DEVLIBS-ORDER-NOT: define {{.*}}lib1_func
 ;
 ; Test a simple case with a random file (not bitcode) as input.
 ; RUN: touch %t/dummy.o
@@ -65,29 +72,29 @@
 ; FILETYPEERROR: Unsupported file type
 ;
 ; Test to see if device library related errors are emitted.
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs -l device -l nonexistent -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBSERR
-; DEVLIBSERR: '{{.*}}lib3.bc' library file not found
+; DEVLIBSERR: unable to find library -lnonexistent
 ;
-; Test that there is no implicit CWD search: a bare bitcode name without any -L
+; Test that there is no implicit CWD search: a bare library name without any -L
 ; must fail to resolve, even if a same-named file exists in the CWD.
-; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc --bc-library input1.bc -o a.spv 2>&1 \
+; RUN: cd %t && not clang-sycl-linker --dry-run input1.bc -l input1 -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-CWD-SEARCH
-; NO-CWD-SEARCH: 'input1.bc' library file not found
+; NO-CWD-SEARCH: unable to find library -linput1
 ;
 ; Test that a directory matching the requested name is not accepted as a library:
-; %t/libs is a directory created above; resolving --bc-library libs against -L %t
-; would otherwise pick it up and fail later with a confusing bitcode-reader error.
-; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t --bc-library libs -o a.spv 2>&1 \
+; %t/libs is a directory created above; resolving -l:libs against -L %t
+; would detect it's a directory and error with the filename in the message.
+; RUN: not clang-sycl-linker --dry-run %t/input1.bc -L %t -l :libs -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-DIR-AS-LIB
-; NO-DIR-AS-LIB: 'libs' library file not found
+; NO-DIR-AS-LIB: '{{.*}}libs': Is a directory
 ;
 ; Test AOT compilation for an Intel GPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
-; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 ; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: bmg_g21
@@ -98,7 +105,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
-; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
+; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc  output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 ; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: graniterapids
@@ -159,4 +166,20 @@ target triple = "spirv64"
 
 define spir_func i32 @helper() {
   ret i32 0
+}
+
+;--- lib1.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv64"
+
+define spir_func i32 @lib1_func() {
+  ret i32 1
+}
+
+;--- lib2.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv64"
+
+define spir_func i32 @lib2_func() {
+  ret i32 2
 }

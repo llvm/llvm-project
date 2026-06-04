@@ -40,13 +40,6 @@ def u : JoinedOrSeparate<["-"], "u">, MetaVarName<"<symbol>">,
   HelpText<"Force undefined symbol during linking">;
 def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
-def bc_library : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
-  HelpText<"Add LLVM bitcode library <name> (with extension) to the link. A "
-          "relative <name> is resolved against -L paths; an absolute path is "
-          "taken as-is.">;
-def bc_library_EQ : Joined<["--", "-"], "bc-library=">, Flags<[HelpHidden]>,
-  Alias<bc_library>;
-
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
               MetaVarName<"<arch>">,

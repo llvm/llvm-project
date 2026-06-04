@@ -7,6 +7,11 @@
 ; RUN: llvm-as %t/bar.ll -o %t/bar.bc
 ; RUN: llvm-as %t/baz.ll -o %t/baz.bc
 ; RUN: llvm-as %t/libfoo.ll -o %t/libfoo.bc
+; RUN: llvm-as %t/addFive.ll -o %t/addFive.bc
+; RUN: llvm-as %t/unusedFunc.ll -o %t/unusedFunc.bc
+; RUN: rm -f %t/libfoo.a %t/libdevice.a
+; RUN: llvm-ar rc %t/libfoo.a %t/libfoo.bc
+; RUN: llvm-ar rc %t/libdevice.a %t/addFive.bc %t/unusedFunc.bc
 ;
 ; Test linking two input files.
 ; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --dry-run -o a.spv --print-linked-module 2>&1 \
@@ -22,18 +27,35 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-MULTIPLE-DEFS
 ; CHECK-MULTIPLE-DEFS: error: Linking globals named {{.*}}bar_func1{{.*}} symbol multiply defined!
 ;
-; Test linking with a BC library file resolved through -L.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library libfoo.bc -L %t --dry-run -o a.spv --print-linked-module 2>&1 \
+; Test lazy linking with an archive library: only needed members are extracted.
+; foo.bc references addFive, so addFive.bc is extracted from libdevice.a.
+; unusedFunc.bc is not needed, so it should NOT be extracted.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc -l device -L %t --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-LAZY-LINK
+; CHECK-LAZY-LINK: define {{.*}}foo_func1{{.*}}
+; CHECK-LAZY-LINK: define {{.*}}foo_func2{{.*}}
+; CHECK-LAZY-LINK: define {{.*}}bar_func1{{.*}}
+; CHECK-LAZY-LINK: define {{.*}}addFive{{.*}}
+; CHECK-LAZY-LINK-NOT: define {{.*}}unusedFunc{{.*}}
+;
+; Test linking with an archive library file using -l:libname.a syntax.
+; Archive linking extracts members at file granularity, so all functions in libfoo.bc are included.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc -l :libfoo.a -L %t --dry-run -o a.spv --print-linked-module 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}foo_func2{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}bar_func1{{.*}}
 ; CHECK-DEVICE-LIB: define {{.*}}addFive{{.*}}
-; CHECK-DEVICE-LIB-NOT: define {{.*}}unusedFunc{{.*}}
+; CHECK-DEVICE-LIB: define {{.*}}unusedFunc{{.*}}
 ;
-; Test that an absolute path to --bc-library is taken as-is, with no -L required.
-; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc --bc-library %t/libfoo.bc --dry-run -o a.spv --print-linked-module 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB
+; Test that an absolute path as a positional argument includes all archive members.
+; RUN: clang-sycl-linker %t/foo.bc %t/bar.bc %t/libfoo.a --dry-run -o a.spv --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CHECK-DEVICE-LIB-ALL
+; CHECK-DEVICE-LIB-ALL: define {{.*}}foo_func1{{.*}}
+; CHECK-DEVICE-LIB-ALL: define {{.*}}foo_func2{{.*}}
+; CHECK-DEVICE-LIB-ALL: define {{.*}}bar_func1{{.*}}
+; CHECK-DEVICE-LIB-ALL: define {{.*}}addFive{{.*}}
+; CHECK-DEVICE-LIB-ALL: define {{.*}}unusedFunc{{.*}}
 
 ;--- foo.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
@@ -87,6 +109,26 @@ entry:
   %res = add nsw i32 %a, 5
   ret i32 %res
 }
+
+define spir_func i32 @unusedFunc(i32 %a) {
+entry:
+  %res = mul nsw i32 %a, 5
+  ret i32 %res
+}
+
+;--- addFive.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv64"
+
+define spir_func i32 @addFive(i32 %a) {
+entry:
+  %res = add nsw i32 %a, 5
+  ret i32 %res
+}
+
+;--- unusedFunc.ll
+target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv64"
 
 define spir_func i32 @unusedFunc(i32 %a) {
 entry:
