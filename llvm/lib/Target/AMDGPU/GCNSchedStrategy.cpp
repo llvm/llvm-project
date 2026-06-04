@@ -1557,6 +1557,10 @@ bool PreRARematStage::initGCNSchedStage() {
     // if it uses registers that aren't available at its use. This ensures that
     // we are not extending any live range while rematerializing.
     MachineInstr *UseMI = *CandReg.Uses.begin()->getSecond().begin();
+    // Cannot insert instructions before PHIs.
+    if (UseMI->isPHI())
+      continue;
+
     const MachineOperand &UseMO = UseMI->getOperand(0);
     if (UseMO.isReg() && MarkedRegs.contains(UseMO.getReg()))
       continue;
