@@ -380,8 +380,7 @@ class FunctionInstrumenter final {
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
     return DisableValueProfiling ||
-           InstrumentationType == PGOInstrumentationType::CTXPROF ||
-           M.getTargetTriple().isGPU();
+           InstrumentationType == PGOInstrumentationType::CTXPROF;
   }
 
   bool shouldInstrumentEntryBB() const {

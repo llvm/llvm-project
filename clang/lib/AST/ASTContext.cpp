@@ -13048,6 +13048,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     External = GVA_DiscardableODR;
     break;
@@ -13237,6 +13238,7 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   case TSK_ExplicitInstantiationDeclaration:
     return GVA_AvailableExternally;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return GVA_DiscardableODR;
   }
