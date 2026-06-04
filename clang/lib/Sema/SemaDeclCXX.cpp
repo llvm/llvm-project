@@ -4820,7 +4820,8 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
       return true;
   }
 
-  if (!Dependent && declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
+  if (!Dependent &&
+      declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
     return BuildDelegatingInitializer(BaseTInfo, Init, ClassDecl);
 
   // Check for direct and virtual base classes.
@@ -4835,14 +4836,15 @@ Sema::BuildBaseInitializer(QualType BaseType, TypeSourceInfo *BaseTInfo,
   // constructor's class or a direct or virtual base of that class, the
   // mem-initializer is ill-formed.
   if (!DirectBaseSpec && !VirtualBaseSpec) {
-    // If the class has any dependent bases, then it's possible that
-    // one of those types will resolve to the same type as
-    // BaseType. Therefore, just treat this as a dependent base
-    // class initialization.  FIXME: Should we try to check the
-    // initialization anyway? It seems odd.
+    // If the class has any dependent bases, then it's possible that one of
+    // those types will resolve to the same type as BaseType. Therefore, just
+    // treat this as a dependent base class initialization.
+    // FIXME: Should we try to check the initialization anyway? It seems odd.
     if (ClassDecl->hasAnyDependentBases())
       Dependent = true;
-    // We may have a delegating initializer
+    // We may have a delegating initializer here, since that is also a type,
+    // that isn't a direct or virtual base of the instantiated type. That will
+    // be handled later.
     else if (!declaresSameEntity(ClassDecl, BaseType->getAsCXXRecordDecl()))
       return Diag(BaseLoc, diag::err_not_direct_base_or_virtual)
              << BaseType << Context.getCanonicalTagType(ClassDecl)
