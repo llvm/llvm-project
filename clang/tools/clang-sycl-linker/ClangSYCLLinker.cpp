@@ -212,8 +212,7 @@ getInput(const ArgList &Args) {
   }
 
   if (InputDescs.empty())
-    return createStringError(inconvertibleErrorCode(),
-                             "No input files provided");
+    return createStringError("No input files provided");
 
   // Gather search paths and forced undefined symbols
   SmallVector<StringRef> LibraryPaths;
@@ -238,8 +237,7 @@ getInput(const ArgList &Args) {
     return ResolvedOrErr.takeError();
 
   if (ResolvedOrErr->Buffers.empty())
-    return createStringError(inconvertibleErrorCode(),
-                             "No input files could be resolved");
+    return createStringError("No input files could be resolved");
 
   return std::move(ResolvedOrErr->Buffers);
 }
@@ -297,7 +295,6 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
         TripleSource = Buffer->getBufferIdentifier();
       } else {
         return createStringError(
-            inconvertibleErrorCode(),
             "conflicting target triples: '" + TargetTriple.str() + "' (from " +
                 TripleSource + ") vs '" + T.str() + "' (from " +
                 Buffer->getBufferIdentifier() + ")");
@@ -305,12 +302,11 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
     }
 
     if (L.linkInModule(std::move(*ModOrErr)))
-      return createStringError(inconvertibleErrorCode(), "Could not link IR");
+      return createStringError("Could not link IR");
   }
 
   if (TargetTriple.empty())
     return createStringError(
-        inconvertibleErrorCode(),
         "Target triple must be specified or inferable from inputs");
 
   // Dump linked output for testing.
