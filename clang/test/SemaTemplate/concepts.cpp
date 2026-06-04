@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
-// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -fexceptions -fcxx-exceptions -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -fexceptions -fcxx-exceptions -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -2022,7 +2022,7 @@ auto x = quantity<reference<int>{}, int>{};
 
 } // namespace ShouldResolve
 
-namespace CannotResolve {
+namespace CannotResolve0 {
 
 template<class>
 struct reference {};
@@ -2042,6 +2042,25 @@ auto x = quantity<reference<char>{}, char>{};
 // expected-note-re@-7  {{because 'decltype({{.*}})' (aka 'char') does not satisfy 'repr_impl'}}
 // expected-note@-10  {{because 'sizeof(char) > sizeof(char)' (1 > 1) evaluated to false}}
 
-} // namespace CannotResolve
+} // namespace CannotResolve0
+
+namespace CannotResolve1 {
+
+template<class>
+struct reference {};
+template<class Q>
+consteval Q get_spec(reference<Q>) { throw; }
+
+template<class T>
+concept repr_impl = sizeof(T) > 0;
+template<class, auto V>
+concept representation_of = repr_impl<decltype(V)>;
+template<auto V, representation_of<get_spec(V)>>
+struct quantity {};
+
+auto x = quantity<reference<int>{}, int>{};
+// expected-error@-1 {{constraints not satisfied for class template 'quantity' [with V = reference<int>{}, $1 = int]}}
+
+} // namespace CannotResolve1
 
 } // namespace GH175831
