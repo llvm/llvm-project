@@ -1757,6 +1757,10 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
     ReductionIID = Intrinsic::vector_reduce_add;
   if (ReductionIID == Intrinsic::not_intrinsic)
     return false;
+  // FP reductions have a start-value operand that this fold doesn't handle.
+  if (ReductionIID == Intrinsic::vector_reduce_fadd ||
+      ReductionIID == Intrinsic::vector_reduce_fmul)
+    return false;
 
   auto checkIntrinsicAndGetItsArgument = [](Value *V,
                                             Intrinsic::ID IID) -> Value * {
@@ -4192,13 +4196,6 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   Intrinsic::ID ReducedOp =
       (CommonCallOp ? getMinMaxReductionIntrinsicID(*CommonCallOp)
                     : getReductionForBinop(*CommonBinOp));
-  // getReductionForBinop only covers integer ops; handle FP here.
-  if (ReducedOp == Intrinsic::not_intrinsic && CommonBinOp) {
-    if (*CommonBinOp == Instruction::FAdd)
-      ReducedOp = Intrinsic::vector_reduce_fadd;
-    else if (*CommonBinOp == Instruction::FMul)
-      ReducedOp = Intrinsic::vector_reduce_fmul;
-  }
   if (!ReducedOp)
     return false;
 
