@@ -175,6 +175,8 @@ public:
   /// Remove register from copy maps.
   void invalidateRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                           const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
     if (Copies.empty())
       return;
 
@@ -265,6 +267,8 @@ public:
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                        const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
     if (Copies.empty())
       return;
 
