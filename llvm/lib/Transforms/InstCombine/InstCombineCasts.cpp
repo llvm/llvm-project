@@ -977,19 +977,18 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
 /// creating a shuffle type that targets may not be able to lower effectively.
 static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
                                        InstCombiner::BuilderTy &Builder) {
-  Value *ShufVec;
+  Value *Shuf = Trunc.getOperand(0), *ShufVec;
   ArrayRef<int> SplatMask;
-  if (match(Trunc.getOperand(0),
-            m_OneUse(
-                m_Shuffle(m_Value(ShufVec), m_Poison(),
-                          m_CombineAnd(m_SplatMask(), m_Mask(SplatMask))))) &&
+  if (match(Shuf, m_OneUse(m_Shuffle(m_Value(ShufVec), m_Poison(),
+                                     m_Mask(SplatMask)))) &&
+      match(SplatMask, m_SplatMask()) &&
       ElementCount::isKnownGE(
-          cast<VectorType>(Trunc.getOperand(0)->getType())->getElementCount(),
+          cast<VectorType>(Shuf->getType())->getElementCount(),
           cast<VectorType>(ShufVec->getType())->getElementCount())) {
     // trunc (shuf X, poison, SplatMask) --> shuf (trunc X), poison, SplatMask
-    Value *NarrowOp = Builder.CreateTrunc(
-        ShufVec,
-        ShufVec->getType()->getWithNewType(Trunc.getType()->getScalarType()));
+    Type *NewTruncTy =
+        ShufVec->getType()->getWithNewType(Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(ShufVec, NewTruncTy);
     return new ShuffleVectorInst(NarrowOp, SplatMask);
   }
 
