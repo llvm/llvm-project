@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;; Not interchanged by default (dependence). Even with
 ;; -da-disable-delinearization-checks it must not be: %outer.header runs the
-;; inner loop only when %cmp222 = (m > 0), and its exit (iv.next != m, nuw)
+;; inner loop only when %cmp222 = (m >s 0), and its exit (iv.next != m)
 ;; only terminates then, so interchanging it loops forever for m == 0.
 define void @lcssa_08(i32 %n, i32 %m) {;
 ; CHECK-LABEL: define void @lcssa_08(

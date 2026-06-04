@@ -824,41 +824,27 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
                     << "' and '" << InnerLoop->getName()
                     << "' are tightly nested\n");
 
-  // A perfectly nested loop will not have any branch in between the outer and
-  // inner block i.e. outer header will branch to either inner preheader and
-  // outerloop latch.
-  for (BasicBlock *Succ : successors(OuterLoopHeader))
-    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader() &&
-        Succ != OuterLoopLatch)
-      return false;
-
-  // Reject nests where the outer-loop header conditionally branches to the
-  // outer latch. Such a branch guards the inner loop, so it runs only on a
-  // subset of the outer iterations. If interchanged, the inner loop would move
-  // outside the guard and run on every outer iteration, including the
-  // guarded-off ones. That is illegal when the inner loop relies on the guard
-  // to terminate.
+  // In a perfectly nested loop the outer header branches only into the inner
+  // loop. If it can also reach the outer latch, it conditionally guards the
+  // inner loop (an imperfect nest), so the inner loop runs on only a subset of
+  // the outer iterations. Interchanging such a nest would run the inner loop on
+  // every outer iteration, including the guarded-off ones, which is illegal
+  // when the inner loop relies on the guard to terminate (e.g. an eq/ne exit
+  // whose trip count is degenerate once the guard is false). Reject by allowing
+  // the outer header to branch only into the inner loop.
   //
-  // TODO: This is conservative approach and under some circumstances, we can
-  // still allow the interchange. e.g.
-  // for (j = 0; j < 3; j++) {
-  //  for (i = 0; i < 2; i++) {
-  //   if (j != 0)                     // guard: invariant across (i,k)
-  //     for (k = 0; ; k++) {          // inner; eq-exit needs j>=1
-  //       y[i][j][k] = x[j][k][i] + w[j][k][i];
-  //       if (k + 1 == j) break;
-  //     }
-  //  }
-  // }
-  // Here the guard (j != 0) uses only the enclosing loop's IV j, not the
-  // interchanged IVs (i and k), so it is invariant across both interchanged
-  // loops and could be hoisted to gate the whole nest; the interchange would
-  // still be legal.
-  if (OuterLoopHeader->getTerminator()->getNumSuccessors() > 1 &&
-      is_contained(successors(OuterLoopHeader), OuterLoopLatch)) {
-    LLVM_DEBUG(dbgs() << "Outer loop header guards the inner loop\n");
-    return false;
-  }
+  // TODO: This is conservative. A guarded nest is still safe to interchange
+  // when the inner loop has a computable trip count that is empty exactly when
+  // the guard is false, e.g.:
+  //   for (i = 0; i < N; i++)
+  //     if (M > 0)                  // loop-invariant guard
+  //       for (j = 0; j < M; j++)   // empty when M <= 0
+  //         A[j][i] = ...;
+  // Interchanging is legal here because the inner loop runs zero times on the
+  // guarded-off iterations.
+  for (BasicBlock *Succ : successors(OuterLoopHeader))
+    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader())
+      return false;
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
 
