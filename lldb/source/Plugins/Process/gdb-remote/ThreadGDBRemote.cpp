@@ -271,6 +271,9 @@ void ThreadGDBRemote::WillResume(StateType resume_state) {
 }
 
 void ThreadGDBRemote::RefreshStateAfterStop() {
+  // Mark this thread as stopped. ThreadList::DidStop only transitions
+  // threads from a running state to stopped.
+  SetState(eStateStopped);
   // Invalidate all registers in our register context. We don't set "force" to
   // true because the stop reply packet might have had some register values
   // that were expedited and these will already be copied into the register
