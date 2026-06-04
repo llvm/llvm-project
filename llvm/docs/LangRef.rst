@@ -16328,7 +16328,6 @@ The '``llvm.asm.constraint.br``' allows the back-end to choose the best
 constraint rather than restricting the preferred constraint to one that may
 produce substandard code or cannot be handled by the register allocators.
 
-
 It can be called only by the '``callbr``' instruction. The default destination
 of the ``callbr`` contains a call to the preferred inline asm, while the single
 indirect destination contains a call to the pessimal inline asm.
