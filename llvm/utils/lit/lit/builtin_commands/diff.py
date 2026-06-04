@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import difflib
 import functools
 import getopt
@@ -8,6 +10,14 @@ import re
 import sys
 
 import util
+from typing import TYPE_CHECKING
+
+# A directory tree node: (dirname, child_trees).
+# child_trees is None for a file, [] for an empty dir, or a list of nodes.
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
+    DirTree: TypeAlias = "tuple[str, list[DirTree] | None]"
 
 
 class DiffFlags:
@@ -25,7 +35,7 @@ class DiffFlags:
         "strip_trailing_cr",
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.ignore_all_space = False
         self.ignore_space_change = False
         self.ignore_matching_lines = False
@@ -36,10 +46,10 @@ class DiffFlags:
         self.strip_trailing_cr = False
 
 
-def getDirTree(path, basedir=""):
+def getDirTree(path: str, basedir: str = "") -> DirTree:
     # Tree is a tuple of form (dirname, child_trees).
     # An empty dir has child_trees = [], a file has child_trees = None.
-    child_trees = []
+    child_trees: list[DirTree] = []
     for dirname, child_dirs, files in os.walk(os.path.join(basedir, path)):
         for child_dir in child_dirs:
             child_trees.append(getDirTree(child_dir, dirname))
@@ -48,8 +58,8 @@ def getDirTree(path, basedir=""):
         return path, sorted(child_trees)
 
 
-def compareTwoFiles(flags, filepaths):
-    filelines = []
+def compareTwoFiles(flags: DiffFlags, filepaths: list[str]) -> int:
+    filelines: list[list[bytes]] = []
     for file in filepaths:
         if file == "-":
             stdin_fileno = sys.stdin.fileno()
@@ -70,7 +80,9 @@ def compareTwoFiles(flags, filepaths):
             return compareTwoBinaryFiles(flags, filepaths, filelines)
 
 
-def compareTwoBinaryFiles(flags, filepaths, filelines):
+def compareTwoBinaryFiles(
+    flags: DiffFlags, filepaths: list[str], filelines: list[list[bytes]]
+) -> int:
     exitCode = 0
     diffs = difflib.diff_bytes(
         difflib.unified_diff,
@@ -87,8 +99,13 @@ def compareTwoBinaryFiles(flags, filepaths, filelines):
     return exitCode
 
 
-def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
-    filelines = []
+def compareTwoTextFiles(
+    flags: DiffFlags,
+    filepaths: list[str],
+    filelines_bin: list[list[bytes]],
+    encoding: str,
+) -> int:
+    filelines: list[list[str]] = []
     for lines_bin in filelines_bin:
         lines = []
         for line_bin in lines_bin:
@@ -134,7 +151,7 @@ def compareTwoTextFiles(flags, filepaths, filelines_bin, encoding):
     return exitCode
 
 
-def printDirVsFile(dir_path, file_path):
+def printDirVsFile(dir_path: str, file_path: str) -> None:
     if os.path.getsize(file_path):
         msg = "File %s is a directory while file %s is a regular file"
     else:
@@ -142,7 +159,7 @@ def printDirVsFile(dir_path, file_path):
     sys.stdout.write(msg % (dir_path, file_path) + "\n")
 
 
-def printFileVsDir(file_path, dir_path):
+def printFileVsDir(file_path: str, dir_path: str) -> None:
     if os.path.getsize(file_path):
         msg = "File %s is a regular file while file %s is a directory"
     else:
@@ -150,11 +167,15 @@ def printFileVsDir(file_path, dir_path):
     sys.stdout.write(msg % (file_path, dir_path) + "\n")
 
 
-def printOnlyIn(basedir, path, name):
+def printOnlyIn(basedir: str, path: str, name: str) -> None:
     sys.stdout.write("Only in %s: %s\n" % (os.path.join(basedir, path), name))
 
 
-def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
+def compareDirTrees(
+    flags: DiffFlags,
+    dir_trees: list[DirTree],
+    base_paths: list[str] = ["", ""],
+) -> int:
     # Dirnames of the trees are not checked, it's caller's responsibility,
     # as top-level dirnames are always different. Base paths are important
     # for doing os.walk, but we don't put it into tree's dirname in order
@@ -225,7 +246,7 @@ def compareDirTrees(flags, dir_trees, base_paths=["", ""]):
     return exitCode
 
 
-def main(argv):
+def main(argv: list[str]) -> None:
     if sys.platform == "win32":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, newline="\n")
 
@@ -237,7 +258,8 @@ def main(argv):
         sys.exit(1)
 
     flags = DiffFlags()
-    filelines, filepaths, dir_trees = ([] for i in range(3))
+    filepaths: list[str] = []
+    dir_trees: list[DirTree] = []
     for o, a in opts:
         if o == "-w":
             flags.ignore_all_space = True

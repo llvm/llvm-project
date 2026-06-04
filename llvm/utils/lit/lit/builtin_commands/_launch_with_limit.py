@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import subprocess
 import resource
@@ -6,7 +8,7 @@ import os
 ULIMIT_ENV_VAR_PREFIX = "LIT_INTERNAL_ULIMIT_"
 
 
-def main(argv):
+def main(argv: list[str]) -> None:
     command_args = argv[1:]
     for env_var in os.environ:
         if env_var.startswith(ULIMIT_ENV_VAR_PREFIX):
