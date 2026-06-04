@@ -13,7 +13,7 @@
 ; the intrinsic declaration, but not call-site attributes.
 define amdgpu_ps <2 x float> @image_l_to_lz_shrink(<8 x i32> inreg %rsrc, float %s, <4 x i32> inreg %samp) {
 ; CHECK-LABEL: @image_l_to_lz_shrink(
-; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0)
+; CHECK-NEXT:    [[V4:%.*]] = call <2 x float> @llvm.amdgcn.image.sample.lz.1d.v2f32.f32.v8i32.v4i32(i32 3, float [[S:%.*]], <8 x i32> [[RSRC:%.*]], <4 x i32> [[SAMP:%.*]], i1 false, i32 0, i32 0) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret <2 x float> [[V4]]
 ;
   %v4 = call <4 x float> @llvm.amdgcn.image.sample.l.1d.v4f32.f32.v8i32.v4i32(i32 15, float %s, float 0.0, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0) #1
