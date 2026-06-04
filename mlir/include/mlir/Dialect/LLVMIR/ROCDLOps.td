@@ -1690,7 +1690,7 @@ def ROCDL_LoadToLDSOp :
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
-                 ROCDL_DefaultCachePolicyAttr:$aux);
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
@@ -1710,7 +1710,7 @@ def ROCDL_LoadAsyncToLDSOp :
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
-                 ROCDL_DefaultCachePolicyAttr:$aux);
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
@@ -1757,7 +1757,7 @@ def ROCDL_GlobalLoadLDSOp :
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
-                 ROCDL_DefaultCachePolicyAttr:$aux);
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
@@ -1777,7 +1777,7 @@ def ROCDL_GlobalLoadAsyncLDSOp :
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                  I32Attr:$size,
                  I32Attr:$offset,
-                 ROCDL_DefaultCachePolicyAttr:$aux);
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
     $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,`
@@ -1819,7 +1819,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
-                   ROCDL_DefaultCachePolicyAttr:$aux);
+                   ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$aux);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,`
@@ -1858,7 +1858,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemWrite]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemRead]>:$ldsPtr,
                    I32Attr:$offset,
-                   ROCDL_DefaultCachePolicyAttr:$aux);
+                   ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$aux);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
       $globalPtr `,`  $ldsPtr `,` $offset `,`
@@ -1893,7 +1893,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
     dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
                    Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
                    I32Attr:$offset,
-                   ROCDL_DefaultCachePolicyAttr:$cpol,
+                   ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$cpol,
                    I32:$mask);
     let arguments = !con(args, baseArgs);
     let assemblyFormat = [{
@@ -1931,7 +1931,7 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
   dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
                   ROCDL_V4I32Type:$dgroup2, ROCDL_V4I32Type:$dgroup3,
                   ROCDL_V8I32Type:$dgroup4,
-                  ROCDL_DefaultCachePolicyAttr:$cachePolicy);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let summary = "Base class for ROCDL tensor load/store to/from LDS.";
   let description = [{
@@ -1989,7 +1989,7 @@ def ROCDL_RawPtrBufferLoadOp :
   dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
   let extraClassDefinition = [{
@@ -2007,7 +2007,7 @@ def ROCDL_RawPtrBufferLoadLdsOp :
                   I32:$voffset,
                   I32:$soffset,
                   I32:$offset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) attr-dict";
   let extraClassDefinition = [{
@@ -2025,7 +2025,7 @@ def ROCDL_RawPtrBufferLoadAsyncLdsOp :
                   I32:$voffset,
                   I32:$soffset,
                   I32:$offset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_PreGfx12CachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$rsrc `,` $ldsPtr `,` $size `,` $voffset `,` $soffset `,` $offset `,` custom<CachePolicy>($aux) attr-dict";
   let extraClassDefinition = [{
@@ -2057,7 +2057,7 @@ def ROCDL_RawPtrBufferStoreOp :
                   Arg<ROCDLBufferRsrc, "", [MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
@@ -2076,7 +2076,7 @@ def ROCDL_RawPtrBufferAtomicCmpSwap :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
   let extraClassDefinition = [{
@@ -2093,7 +2093,7 @@ class ROCDL_RawPtrBufferAtomicRet<string op> :
                   Arg<ROCDLBufferRsrc, "", [MemRead, MemWrite]>:$rsrc,
                   I32:$offset,
                   I32:$soffset,
-                  ROCDL_DefaultCachePolicyAttr:$aux);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
   let extraClassDefinition = [{
@@ -2117,7 +2117,7 @@ def ROCDL_RawBufferLoadOp :
   Arguments<(ins ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)> {
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)> {
   let assemblyFormat = "$rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
 }
 
@@ -2127,7 +2127,7 @@ def ROCDL_RawBufferStoreOp :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2139,7 +2139,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = [{
     attr-dict `(` $src `,` $cmp `,` $rsrc `,` $offset `,` $soffset `,`
     custom<CachePolicy>($aux) `)` `:` type($res) `,` type($rsrc)
@@ -2152,7 +2152,7 @@ def ROCDL_RawBufferAtomicCmpSwap :
 def ROCDL_GlobalPrefetchOp :
   ROCDL_IntrOp<"global.prefetch", [], [], [], 0, 0, 1, 0, [1], ["cachePolicy"]> {
   dag args = (ins Arg<LLVM_PointerInAddressSpace<1>, "", [MemWrite, MemRead]>:$ptr,
-                  ROCDL_DefaultCachePolicyAttr:$cachePolicy);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let description = [{
     Prefetches 1 byte of data per lane from global memory into the WGP-cache or L2-cache.
@@ -2176,7 +2176,7 @@ def ROCDL_GlobalPrefetchOp :
 def ROCDL_FlatPrefetchOp :
   ROCDL_IntrOp<"flat.prefetch", [], [], [], 0, 0, 1, 0, [1], ["cachePolicy"]> {
   dag args = (ins Arg<LLVM_PointerInAddressSpace<0>, "", [MemWrite, MemRead]>:$ptr,
-                  ROCDL_DefaultCachePolicyAttr:$cachePolicy);
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_Gfx12NonAtomicCachePolicyCompatAttr>:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let description = [{
     Prefetches 1 byte of data per lane using flat-memory addresses into the WGP-cache or L2-cache.
@@ -2261,7 +2261,7 @@ def ROCDL_RawBufferAtomicFAddOp :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2275,7 +2275,7 @@ def ROCDL_RawBufferAtomicFMaxOp :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2289,7 +2289,7 @@ def ROCDL_RawBufferAtomicSMaxOp :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 
@@ -2303,7 +2303,7 @@ def ROCDL_RawBufferAtomicUMinOp :
                  ROCDL_V4I32Type:$rsrc,
                  I32:$offset,
                  I32:$soffset,
-                 ROCDL_DefaultCachePolicyAttr:$aux)>{
+                 ROCDL_DefaultCachePolicyAttr<ROCDL_AtomicBufferCachePolicyCompatAttr>:$aux)>{
   let assemblyFormat = "$vdata `,` $rsrc `,` $offset `,` $soffset `,` custom<CachePolicy>($aux) attr-dict `:` type($vdata)";
 }
 

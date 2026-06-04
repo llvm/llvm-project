@@ -244,8 +244,10 @@ def ROCDL_Gfx12CachePolicy : ROCDL_I32BitEnum<"Gfx12CachePolicy",
 }
 
 def ROCDL_Gfx12AtomicCachePolicyNone : I32BitEnumCaseNone<"none">;
+// Note: this bit **will** be set automatically by the backend, you do
+// **not** need to include it in the policy, it's included for readability.
 def ROCDL_Gfx12AtomicCachePolicyReturn
-    : I32BitEnumCaseBit<"return_policy", 0, "return">;
+    : I32BitEnumCaseBit<"keep_return", 0, "return">;
 def ROCDL_Gfx12AtomicCachePolicyNT : I32BitEnumCaseBit<"nt", 1>;
 def ROCDL_Gfx12AtomicCachePolicyCascade
     : I32BitEnumCaseBit<"cascade", 2>;

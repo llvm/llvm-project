@@ -68,17 +68,33 @@ def ROCDL_Gfx12AtomicCachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_Gfx12AtomicCachePolicy,
                                      "gfx12_atomic_cache_policy">;
 
-def ROCDL_CachePolicyAttr : AnyAttrOf<[
-      ROCDL_PreGfx12CachePolicyAttr, ROCDL_Gfx942CachePolicyAttr,
-      ROCDL_Gfx12CachePolicyAttr, ROCDL_Gfx12AtomicCachePolicyAttr, I32Attr],
-    "AMDGPU cache policy attribute"> {
+class ROCDL_CachePolicyAttrOf<list<Attr> policyAttrs, string summary>
+    : AnyAttrOf<!listconcat(policyAttrs, [I32Attr]), summary> {
   let storageType = "::mlir::Attribute";
   let returnType = "::mlir::Attribute";
   let convertFromStorage = "$_self";
   let constBuilderCall = "$0";
 }
 
-def ROCDL_DefaultCachePolicyAttr : DefaultValuedAttr<ROCDL_CachePolicyAttr,
-    "$_builder.getI32IntegerAttr(0)">;
+class ROCDL_DefaultCachePolicyAttr<Attr policyAttr>
+    : DefaultValuedAttr<policyAttr, "$_builder.getI32IntegerAttr(0)">;
+
+def ROCDL_PreGfx12CachePolicyCompatAttr : ROCDL_CachePolicyAttrOf<[
+      ROCDL_PreGfx12CachePolicyAttr, ROCDL_Gfx942CachePolicyAttr],
+    "pre-gfx12 or gfx942 AMDGPU cache policy attribute">;
+
+def ROCDL_Gfx12NonAtomicCachePolicyCompatAttr : ROCDL_CachePolicyAttrOf<[
+      ROCDL_Gfx12CachePolicyAttr],
+    "gfx12 non-atomic AMDGPU cache policy attribute">;
+
+def ROCDL_NonAtomicBufferCachePolicyCompatAttr : ROCDL_CachePolicyAttrOf<[
+      ROCDL_PreGfx12CachePolicyAttr, ROCDL_Gfx942CachePolicyAttr,
+      ROCDL_Gfx12CachePolicyAttr],
+    "non-atomic AMDGPU buffer cache policy attribute">;
+
+def ROCDL_AtomicBufferCachePolicyCompatAttr : ROCDL_CachePolicyAttrOf<[
+      ROCDL_PreGfx12CachePolicyAttr, ROCDL_Gfx942CachePolicyAttr,
+      ROCDL_Gfx12AtomicCachePolicyAttr],
+    "atomic AMDGPU buffer cache policy attribute">;
 
 #endif // ROCDLIR_ATTRS

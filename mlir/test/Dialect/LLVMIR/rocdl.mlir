@@ -941,12 +941,14 @@ llvm.func @rocdl.cachepolicy.enums(%rsrc : vector<4xi32>, %offset : i32,
   // CHECK: rocdl.raw.buffer.load %{{.*}}, %{{.*}}, %{{.*}}, gfx942<sc0|nt> : i32
   // CHECK: rocdl.global.prefetch %{{.*}}, gfx12<nt_rt|scope_se> : !llvm.ptr<1>
   // CHECK: rocdl.global.prefetch %{{.*}}, gfx12<scope_sys|scal> : !llvm.ptr<1>
-  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, gfx12_atomic<return|nv> : i32
+  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, gfx12_atomic<nv> : i32
+  // CHECK: rocdl.raw.buffer.atomic.smax %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, 2 : i32
   %r = rocdl.raw.buffer.load %rsrc, %offset, %soffset, pre_gfx12<glc|slc> : i32
   %r942 = rocdl.raw.buffer.load %rsrc, %offset, %soffset, gfx942<sc0|nt> : i32
   rocdl.global.prefetch %ptr, gfx12<nt_rt|scope_se> : !llvm.ptr<1>
   rocdl.global.prefetch %ptr, gfx12<scope_sys|scal> : !llvm.ptr<1>
-  rocdl.raw.buffer.atomic.smax %vdata, %rsrc, %offset, %soffset, gfx12_atomic<return|nv> : i32
+  rocdl.raw.buffer.atomic.smax %vdata, %rsrc, %offset, %soffset, gfx12_atomic<nv> : i32
+  rocdl.raw.buffer.atomic.smax %vdata, %rsrc, %offset, %soffset, 2 : i32
   llvm.return
 }
 
