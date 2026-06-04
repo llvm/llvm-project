@@ -684,6 +684,9 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   addSourceLocation(TL.getKWLoc());
 }
+void TypeLocWriter::VisitWebAssemblyTableTypeLoc(WebAssemblyTableTypeLoc TL) {
+  addSourceLocation(TL.getKWLoc());
+}
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }

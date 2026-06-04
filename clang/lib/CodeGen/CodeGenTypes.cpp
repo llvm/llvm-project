@@ -796,6 +796,14 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = CGM.getOpenCLRuntime().getPipeType(cast<PipeType>(Ty));
     break;
   }
+  case Type::WebAssemblyTable: {
+    // A WebAssembly table lowers to a zero-length array of its (reference type)
+    // element, matching the classic array-based lowering.
+    const auto *WTT = cast<WebAssemblyTableType>(Ty);
+    llvm::Type *EltTy = ConvertTypeForMem(WTT->getElementType());
+    ResultType = llvm::ArrayType::get(EltTy, 0);
+    break;
+  }
   case Type::BitInt: {
     const auto &EIT = cast<BitIntType>(Ty);
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());

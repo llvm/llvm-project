@@ -292,6 +292,7 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ArrayParameter:
+    case Type::WebAssemblyTable:
       return TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -2569,6 +2570,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::BitInt:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
+    case Type::WebAssemblyTable:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:

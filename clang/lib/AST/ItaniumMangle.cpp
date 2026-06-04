@@ -2468,6 +2468,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::ObjCTypeParam:
   case Type::Atomic:
   case Type::Pipe:
+  case Type::WebAssemblyTable:
   case Type::MacroQualified:
   case Type::BitInt:
   case Type::DependentBitInt:
@@ -4620,6 +4621,13 @@ void CXXNameMangler::mangleType(const PipeType *T) {
   // A.1 Data types and A.3 Summary of changes
   // <type> ::= 8ocl_pipe
   Out << "8ocl_pipe";
+}
+
+void CXXNameMangler::mangleType(const WebAssemblyTableType *T) {
+  // Vendor-extended type mangling for WebAssembly tables.
+  // <type> ::= u9wasmtable <element-type>
+  Out << "u9wasmtable";
+  mangleType(T->getElementType());
 }
 
 void CXXNameMangler::mangleType(const OverflowBehaviorType *T) {

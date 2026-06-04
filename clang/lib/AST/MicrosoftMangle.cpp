@@ -3928,6 +3928,20 @@ void MicrosoftCXXNameMangler::mangleType(const PipeType *T, Qualifiers,
   mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
 }
 
+void MicrosoftCXXNameMangler::mangleType(const WebAssemblyTableType *T,
+                                         Qualifiers, SourceRange Range) {
+  QualType ElementType = T->getElementType();
+
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  Extra.mangleSourceName("wasmtable");
+  Extra.mangleType(ElementType, Range, QMM_Escape);
+
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
+}
+
 void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
                                                raw_ostream &Out) {
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());

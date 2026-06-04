@@ -967,6 +967,16 @@ let Class = PipeType in {
   }]>;
 }
 
+let Class = WebAssemblyTableType in {
+  def : Property<"elementType", QualType> {
+    let Read = [{ node->getElementType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getWebAssemblyTableType(elementType);
+  }]>;
+}
+
 let Class = BitIntType in {
   def : Property<"isUnsigned", Bool> {
     let Read = [{ node->isUnsigned() }];

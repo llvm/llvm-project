@@ -291,6 +291,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
+  mutable llvm::FoldingSet<WebAssemblyTableType> WebAssemblyTableTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
@@ -1670,6 +1671,10 @@ public:
 
   /// Return a write_only pipe type for the specified type.
   QualType getWritePipeType(QualType T) const;
+
+  /// Return a WebAssembly table type with the specified element type (a
+  /// WebAssembly reference type).
+  QualType getWebAssemblyTableType(QualType T) const;
 
   /// Return a bit-precise integer type with the specified signedness and bit
   /// count.

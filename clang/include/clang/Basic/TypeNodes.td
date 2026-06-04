@@ -106,6 +106,7 @@ def ObjCObjectPointerType : TypeNode<Type>;
 def BoundsAttributedType : TypeNode<Type, 1>;
 def CountAttributedType : TypeNode<BoundsAttributedType>, NeverCanonical;
 def PipeType : TypeNode<Type>;
+def WebAssemblyTableType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;
 def DependentBitIntType : TypeNode<Type>, AlwaysDependent;

@@ -8295,6 +8295,40 @@ public:
   bool isReadOnly() const { return isRead; }
 };
 
+/// WebAssemblyTableType - declared via `static __externref_t table[];`.
+///
+/// These correspond to llvm_table_ty in llvm ir and tableidx immediates in llvm
+/// ir. Because a tableidx is an immediate, these are not really values at all.
+/// All values of this type must be global variables and they cannot be used
+/// anywhere other than arguments to wasm table builtins like
+/// __builtin_wasm_table_get().
+class WebAssemblyTableType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType ElementType;
+
+  WebAssemblyTableType(QualType elemType, QualType CanonicalPtr)
+      : Type(WebAssemblyTable, CanonicalPtr, elemType->getDependence()),
+        ElementType(elemType) {}
+
+public:
+  QualType getElementType() const { return ElementType; }
+
+  bool isSugared() const { return false; }
+
+  QualType desugar() const { return QualType(this, 0); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, getElementType()); }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType T) {
+    ID.AddPointer(T.getAsOpaquePtr());
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == WebAssemblyTable;
+  }
+};
+
 /// A fixed int type of a specified bitwidth.
 class BitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;

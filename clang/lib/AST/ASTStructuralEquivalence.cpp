@@ -1528,6 +1528,12 @@ bool ASTStructuralEquivalence::isEquivalent(
                                   cast<PipeType>(T2)->getElementType()))
       return false;
     break;
+  case Type::WebAssemblyTable:
+    if (!IsStructurallyEquivalent(
+            Context, cast<WebAssemblyTableType>(T1)->getElementType(),
+            cast<WebAssemblyTableType>(T2)->getElementType()))
+      return false;
+    break;
   case Type::BitInt: {
     const auto *Int1 = cast<BitIntType>(T1);
     const auto *Int2 = cast<BitIntType>(T2);

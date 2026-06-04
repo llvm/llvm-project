@@ -3294,6 +3294,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
 
     // Array parameter types are treated as fundamental types.
     case Type::ArrayParameter:
+    case Type::WebAssemblyTable:
       break;
 
     case Type::HLSLAttributedResource:

@@ -1029,6 +1029,9 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Pipe:
     llvm_unreachable("Pipe types shouldn't get here");
 
+  case Type::WebAssemblyTable:
+    llvm_unreachable("WebAssembly table types shouldn't get here");
+
   case Type::ArrayParameter:
     llvm_unreachable("Array Parameter types should not get here.");
 
@@ -1520,6 +1523,9 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     llvm_unreachable("Undeduced type shouldn't get here");
 
   case Type::Pipe:
+    break;
+
+  case Type::WebAssemblyTable:
     break;
 
   case Type::BitInt:
