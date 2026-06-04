@@ -1151,6 +1151,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 }
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
+AnalysisKey ImmutableModuleSummaryIndexAnalysis::Key;
 
 ModuleSummaryIndex
 ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
