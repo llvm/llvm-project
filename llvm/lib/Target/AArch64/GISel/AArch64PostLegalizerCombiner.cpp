@@ -852,7 +852,7 @@ bool runCombiner(MachineFunction &MF, GISelCSEInfo *CSEInfo,
                                         MDT, LI);
   bool Changed = Impl.combineMachineInstrs();
 
-  auto MIB = CSEMIRBuilder(MF);
+  CSEMIRBuilder MIB(MF);
   MIB.setCSEInfo(CSEInfo);
   Changed |= optimizeConsecutiveMemOpAddressing(MF, MIB);
   return Changed;
@@ -901,7 +901,7 @@ AArch64PostLegalizerCombinerLegacy::AArch64PostLegalizerCombinerLegacy(
     bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
   if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
+    reportFatalUsageError("Invalid rule identifier");
 }
 
 bool AArch64PostLegalizerCombinerLegacy::runOnMachineFunction(
@@ -954,7 +954,7 @@ AArch64PostLegalizerCombinerPass::run(MachineFunction &MF,
   if (MF.getProperties().hasFailedISel())
     return PreservedAnalyses::all();
 
-  bool IsOptNone = TM->isGlobalISelOptNone();
+  const bool IsOptNone = TM->isGlobalISelOptNone();
   bool EnableOpt = !IsOptNone;
 
   GISelValueTracking *VT = &MFAM.getResult<GISelValueTrackingAnalysis>(MF);
