@@ -50,19 +50,29 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
   // Skip event_t-typed entries for AS3 - these should NOT set the AS3
   // default because MMA TG pointers need float*3 as default. Event pointers
   // use per-value PTM entries via ptrTypeIdxForValue/funcTypeParamIndices.
-  for (auto &[V, T] : PTM)
-    if (V->getType()->isPointerTy() && !isa<GlobalVariable>(V) &&
-        !inferredPointee.count(V->getType())) {
-      // Skip opaque struct types (event_t) from setting TYPE-level defaults
-      if (auto *ST = dyn_cast<StructType>(T))
-        if (ST->isOpaque())
-          continue;
-      // Skip ptr-typed pointees (ptr addrspace(3) used for event storage)
-      // - these would make AS0 default to ptr*0, which is wrong.
-      if (T->isPointerTy())
-        continue;
-      inferredPointee[V->getType()] = T;
-    }
+  auto applyPTMOverride = [&](Value *V) {
+    Type *T = PTM.get(V);
+    if (!T)
+      return;
+    if (!V->getType()->isPointerTy() || isa<GlobalVariable>(V) ||
+        inferredPointee.count(V->getType()))
+      return;
+    if (auto *ST = dyn_cast<StructType>(T))
+      if (ST->isOpaque())
+        return;
+    if (T->isPointerTy())
+      return;
+    inferredPointee[V->getType()] = T;
+  };
+  for (auto &GV : M.globals())
+    applyPTMOverride(&GV);
+  for (auto &F : M) {
+    for (auto &Arg : F.args())
+      applyPTMOverride(&Arg);
+    for (auto &BB : F)
+      for (auto &I : BB)
+        applyPTMOverride(&I);
+  }
 
   // ── Phase 2: Enumerate types ───────────────────────────────────────
 

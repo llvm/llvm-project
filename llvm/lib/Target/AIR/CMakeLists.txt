@@ -12,6 +12,7 @@ add_public_tablegen_target(AIRCommonTableGen)
 add_llvm_target(AIRCodeGen
   AIRSystemValues.cpp
   AIRAliasAnnotate.cpp
+  AIRAsyncCopyToCooperative.cpp
   AIRAsyncEventToAlloca.cpp
   AIRBFloat16CastDecompose.cpp
   AIRBarrierRename.cpp

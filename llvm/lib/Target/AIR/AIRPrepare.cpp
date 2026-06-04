@@ -422,6 +422,23 @@ splitMixedByteGlobals(Module &M,
   return Changed;
 }
 
+static bool hasMMAMatrixUser(Value *V, SmallPtrSetImpl<Value *> &Seen) {
+  if (!Seen.insert(V).second)
+    return false;
+  for (User *U : V->users()) {
+    if (auto *CI = dyn_cast<CallInst>(U)) {
+      if (auto *Callee = CI->getCalledFunction())
+        if (Callee->getName().starts_with("air.simdgroup_matrix_8x8_load") ||
+            Callee->getName().starts_with("air.simdgroup_matrix_8x8_store"))
+          return true;
+    } else if (isa<GetElementPtrInst>(U) || isa<BitCastInst>(U)) {
+      if (hasMMAMatrixUser(U, Seen))
+        return true;
+    }
+  }
+  return false;
+}
+
 // 14b: Merge byte globals into MMA globals.
 static bool mergeByteMMA(Module &M,
                          SmallVectorImpl<GlobalVariable *> &ByteGlobals,
@@ -502,8 +519,17 @@ static bool mergeByteMMA(Module &M,
     MergeElemTy = Type::getFloatTy(Ctx);
     MergeElemSize = 4;
   }
+  SmallPtrSet<Value *, 16> SeenMMA;
+  bool ByteIsMMA = hasMMAMatrixUser(ByteGV, SeenMMA);
+  uint64_t ByteElemCount =
+      (ByteBytes + MergeElemSize - 1) / MergeElemSize;
+  uint64_t MMAElemCount =
+      (MMABytes + MergeElemSize - 1) / MergeElemSize;
+  uint64_t MMAOffset = ByteIsMMA ? ByteElemCount : 0;
   uint64_t MergedElemCount =
-      (std::max(ByteBytes, MMABytes) + MergeElemSize - 1) / MergeElemSize;
+      ByteIsMMA ? (ByteElemCount + MMAElemCount)
+                : (std::max(ByteBytes, MMABytes) + MergeElemSize - 1) /
+                      MergeElemSize;
 
   auto *MergedAT = ArrayType::get(MergeElemTy, MergedElemCount);
   expandConstantExprUsers(ByteGV);
@@ -519,7 +545,15 @@ static bool mergeByteMMA(Module &M,
 
   if (ByteGV->use_empty())
     ByteGV->eraseFromParent();
-  MMAGV->replaceAllUsesWith(MergedGV);
+  if (MMAOffset == 0) {
+    MMAGV->replaceAllUsesWith(MergedGV);
+  } else {
+    Constant *Idx0 = ConstantInt::get(Type::getInt64Ty(Ctx), 0);
+    Constant *IdxOff = ConstantInt::get(Type::getInt64Ty(Ctx), MMAOffset);
+    Constant *MMABase = ConstantExpr::getInBoundsGetElementPtr(
+        MergedAT, MergedGV, ArrayRef<Constant *>{Idx0, IdxOff});
+    MMAGV->replaceAllUsesWith(MMABase);
+  }
   MMAGV->eraseFromParent();
 
   if (BestIdx >= 0)
