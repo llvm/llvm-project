@@ -46,6 +46,11 @@ static cl::opt<bool> EnableLocalReassignment(
              "may be compile time intensive"),
     cl::init(false));
 
+static cl::opt<bool> EvictBasedOnSimpleWeightComp(
+    "evict-based-on-simple-weight-comp", cl::Hidden,
+    cl::desc("Make eviction decisions based on simple weight comparisson"),
+    cl::init(true));
+
 static cl::opt<float> MinUseDefFreqRatioToIgnoreSize(
     "min-use-def-freq-ratio-to-ignore-size", cl::Hidden,
     cl::desc(
@@ -244,6 +249,9 @@ bool DefaultEvictionAdvisor::shouldEvict(const LiveInterval &A, bool IsHint,
   // split.
   if (CanSplit && IsHint && !BreaksHint)
     return true;
+
+  if (EvictBasedOnSimpleWeightComp)
+    return A.weight() > B.weight();
 
   const unsigned SizeOffset = 25 * SlotIndex::InstrDist;
   float AUseDefFreq = A.weight() * (A.getSize() + SizeOffset);
