@@ -4,7 +4,7 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  // A round-trip bridge (CIR -> builtin -> CIR back to the original type)
+  // A round-trip cast (CIR -> builtin -> CIR back to the original type)
   // folds away, returning the original value.
   cir.func @roundtrip(%arg0: !s32i) -> !s32i {
     %0 = cir.builtin_int_cast %arg0 : !s32i -> i32
