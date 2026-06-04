@@ -653,7 +653,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
       setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
-      setOperationAction({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND}, {MVT::v4i16, MVT::v2i32}, Legal);
+      setOperationAction({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
+                         {MVT::v4i16, MVT::v2i32}, Legal);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
@@ -662,8 +663,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     } else {
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG,
                          {MVT::v4i16, MVT::v2i32}, Legal);
-      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG,
-                         {MVT::v4i16, MVT::v2i32}, Custom);
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, {MVT::v4i16, MVT::v2i32},
+                         Custom);
     }
   }
 
