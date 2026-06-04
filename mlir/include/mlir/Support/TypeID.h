@@ -398,10 +398,6 @@ struct DenseMapInfo<mlir::TypeID> {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::TypeID::getFromOpaquePointer(pointer);
   }
-  static inline mlir::TypeID getTombstoneKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::TypeID::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::TypeID val) {
     return mlir::hash_value(val);
   }

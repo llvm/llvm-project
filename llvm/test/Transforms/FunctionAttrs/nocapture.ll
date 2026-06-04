@@ -646,13 +646,13 @@ define void @test6_2(ptr %x6_2, ptr %y6_2, ptr %z6_2) {
 }
 
 define void @test_cmpxchg(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_cmpxchg
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_cmpxchg
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR11:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i32 0, i32 1 acquire monotonic, align 4
@@ -663,15 +663,15 @@ define void @test_cmpxchg(ptr %p) {
 }
 
 define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_cmpxchg_ptr
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR13]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_cmpxchg_ptr
-; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]], ptr nofree [[Q:%.*]]) #[[ATTR11]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], ptr null, ptr [[Q]] acquire monotonic, align 8
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -680,13 +680,13 @@ define void @test_cmpxchg_ptr(ptr %p, ptr %q) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; FNATTRS: Function Attrs: mustprogress norecurse nounwind willreturn
 ; FNATTRS-LABEL: define void @test_atomicrmw
 ; FNATTRS-SAME: (ptr captures(none) [[P:%.*]]) #[[ATTR13]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: mustprogress norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define void @test_atomicrmw
 ; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR11]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i32 1 seq_cst, align 4
@@ -699,7 +699,7 @@ define void @test_atomicrmw(ptr %p) {
 define void @test_volatile(ptr %x) {
 ; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; FNATTRS-LABEL: define void @test_volatile
-; FNATTRS-SAME: (ptr [[X:%.*]]) #[[ATTR14:[0-9]+]] {
+; FNATTRS-SAME: (ptr captures(address) [[X:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[X]], i64 1
 ; FNATTRS-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
@@ -1088,7 +1088,7 @@ define i64 @captures_not_ret_only(ptr %p) {
 define i64 @captures_ptrtoaddr_stored(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem: none)
 ; FNATTRS-LABEL: define noundef i64 @captures_ptrtoaddr_stored
-; FNATTRS-SAME: (ptr captures(address) [[P:%.*]]) #[[ATTR1]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]]) #[[ATTR1]] {
 ; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; FNATTRS-NEXT:    store i64 [[INT]], ptr @gi, align 8
 ; FNATTRS-NEXT:    ret i64 0
@@ -1109,7 +1109,7 @@ define i64 @captures_ptrtoaddr_stored(ptr %p) {
 define i64 @captures_ptrtoaddr_ret(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define i64 @captures_ptrtoaddr_ret
-; FNATTRS-SAME: (ptr captures(address) [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; FNATTRS-NEXT:    ret i64 [[INT]]
 ;
@@ -1127,7 +1127,7 @@ define i64 @captures_ptrtoaddr_ret(ptr %p) {
 define i64 @captures_ptrtoaddr_ignored(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i64 @captures_ptrtoaddr_ignored
-; FNATTRS-SAME: (ptr captures(address) [[P:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[P:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; FNATTRS-NEXT:    ret i64 0
 ;
@@ -1401,7 +1401,7 @@ define void @assume_nonnull(ptr %p) {
 define void @captures_metadata_address_is_null(ptr %x, ptr %y) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define void @captures_metadata_address_is_null
-; FNATTRS-SAME: (ptr captures(address_is_null) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
 ; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META0:![0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -1418,7 +1418,7 @@ define void @captures_metadata_address_is_null(ptr %x, ptr %y) {
 define void @captures_metadata_address(ptr %x, ptr %y) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define void @captures_metadata_address
-; FNATTRS-SAME: (ptr captures(address) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-SAME: (ptr readnone captures(address) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
 ; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META1:![0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;
@@ -1435,7 +1435,7 @@ define void @captures_metadata_address(ptr %x, ptr %y) {
 define void @captures_metadata_address_read_provenance(ptr %x, ptr %y) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; FNATTRS-LABEL: define void @captures_metadata_address_read_provenance
-; FNATTRS-SAME: (ptr captures(address, read_provenance) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-SAME: (ptr readonly captures(address, read_provenance) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
 ; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META2:![0-9]+]]
 ; FNATTRS-NEXT:    ret void
 ;

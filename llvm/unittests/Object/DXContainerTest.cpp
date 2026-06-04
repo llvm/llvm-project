@@ -50,6 +50,12 @@ TEST(DXCFile, EmptyFile) {
       FailedWithMessage("Reading structure out of file bounds"));
 }
 
+TEST(DXCFile, NullBuffer) {
+  EXPECT_THAT_EXPECTED(
+      DXContainer::create(MemoryBufferRef(StringRef(), "")),
+      FailedWithMessage("Reading structure out of file bounds"));
+}
+
 TEST(DXCFile, ParseHeader) {
   uint8_t Buffer[] = {0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -62,6 +68,15 @@ TEST(DXCFile, ParseHeader) {
                      "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16) == 0);
   EXPECT_EQ(C.getHeader().Version.Major, 1u);
   EXPECT_EQ(C.getHeader().Version.Minor, 0u);
+}
+
+TEST(DXCFile, MissingHeaderMagic) {
+  uint8_t Buffer[] = {0xFF, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                      0x70, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  EXPECT_THAT_EXPECTED(DXContainer::create(getMemoryBuffer<32>(Buffer)),
+                       FailedWithMessage("Missing DXBC header magic"));
 }
 
 TEST(DXCFile, ParsePartMissingOffsets) {

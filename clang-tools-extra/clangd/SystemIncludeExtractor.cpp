@@ -222,11 +222,6 @@ template <> struct DenseMapInfo<DriverArgs> {
     Driver.Driver = "EMPTY_KEY";
     return Driver;
   }
-  static DriverArgs getTombstoneKey() {
-    auto Driver = DriverArgs::getEmpty();
-    Driver.Driver = "TOMBSTONE_KEY";
-    return Driver;
-  }
   static unsigned getHashValue(const DriverArgs &Val) {
     unsigned FixedFieldsHash = llvm::hash_value(std::tuple{
         Val.Driver,

@@ -1325,8 +1325,10 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
     TemplateSpecResult.addAllDecls(Old);
-    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
-                                            /*QualifiedFriend*/true)) {
+    if (CheckFunctionTemplateSpecialization(New, /*TemplateParams=*/nullptr,
+                                            /*ExplicitTemplateArgs=*/nullptr,
+                                            TemplateSpecResult,
+                                            /*QualifiedFriend*/ true)) {
       New->setInvalidDecl();
       return OverloadKind::Overload;
     }
@@ -13747,6 +13749,9 @@ public:
       OvlExpr->copyTemplateArgumentsInto(OvlExplicitTemplateArgs);
 
     if (FindAllFunctionsThatMatchTargetTypeExactly()) {
+      if (Matches.size() > 1 && S.getLangOpts().CUDA)
+        EliminateSuboptimalCudaMatches();
+
       // C++ [over.over]p4:
       //   If more than one function is selected, [...]
       if (Matches.size() > 1 && !eliminiateSuboptimalOverloadCandidates()) {
@@ -13757,9 +13762,6 @@ public:
           EliminateAllExceptMostSpecializedTemplate();
       }
     }
-
-    if (S.getLangOpts().CUDA && Matches.size() > 1)
-      EliminateSuboptimalCudaMatches();
   }
 
   bool hasComplained() const { return HasComplained; }

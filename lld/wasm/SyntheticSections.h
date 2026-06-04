@@ -102,7 +102,7 @@ protected:
  */
 template <typename T> struct ImportKey {
 public:
-  enum class State { Plain, Empty, Tombstone };
+  enum class State { Plain, Empty };
 
 public:
   T type;
@@ -134,11 +134,6 @@ template <typename T> struct DenseMapInfo<lld::wasm::ImportKey<T>> {
   static lld::wasm::ImportKey<T> getEmptyKey() {
     typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
     key.state = lld::wasm::ImportKey<T>::State::Empty;
-    return key;
-  }
-  static lld::wasm::ImportKey<T> getTombstoneKey() {
-    typename lld::wasm::ImportKey<T> key(llvm::DenseMapInfo<T>::getEmptyKey());
-    key.state = lld::wasm::ImportKey<T>::State::Tombstone;
     return key;
   }
   static unsigned getHashValue(const lld::wasm::ImportKey<T> &key) {

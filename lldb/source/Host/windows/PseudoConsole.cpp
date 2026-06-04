@@ -57,10 +57,10 @@ struct Kernel32 {
   bool IsConPTYAvailable() { return isAvailable; }
 
 private:
-  HMODULE hModule;
-  CreatePseudoConsole_t CreatePseudoConsole_;
-  ClosePseudoConsole_t ClosePseudoConsole_;
-  bool isAvailable;
+  HMODULE hModule = nullptr;
+  CreatePseudoConsole_t CreatePseudoConsole_ = nullptr;
+  ClosePseudoConsole_t ClosePseudoConsole_ = nullptr;
+  bool isAvailable = false;
 };
 
 static Kernel32 kernel32;
@@ -91,23 +91,14 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
   return llvm::Error::success();
 }
 
-PseudoConsole::~PseudoConsole() {
-  Close();
-  ClosePseudoConsolePipes();
-  CloseAnonymousPipes();
-}
+PseudoConsole::~PseudoConsole() { Reset(); }
 
 llvm::Error PseudoConsole::OpenPseudoConsole() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a PseudoConsole in a different mode than None");
+  Reset();
 
   if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
-
-  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
-         "ConPTY has already been opened");
-
   // A 4096 bytes buffer should be large enough for the majority of console
   // burst outputs.
   wchar_t pipe_name[MAX_PATH];
@@ -215,9 +206,15 @@ void PseudoConsole::CloseAnonymousPipes() {
   m_pipe_child_stdout = INVALID_HANDLE_VALUE;
 }
 
+void PseudoConsole::Reset() {
+  Close();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
+  m_mode = Mode::None;
+}
+
 llvm::Error PseudoConsole::OpenAnonymousPipes() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a AnonymousPipes in a different mode than None");
+  Reset();
 
   SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE hStdinRead = INVALID_HANDLE_VALUE;
