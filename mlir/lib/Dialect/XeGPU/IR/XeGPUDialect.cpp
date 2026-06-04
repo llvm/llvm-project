@@ -486,7 +486,7 @@ DistributeLayoutAttr LayoutAttr::dropDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+  DenseI32ArrayAttr origOrderAttr = getOrder();
 
   SmallVector<int64_t> sortedDimGroup = dimGroup;
   llvm::sort(sortedDimGroup);
@@ -504,15 +504,22 @@ DistributeLayoutAttr LayoutAttr::dropDims(SmallVector<int64_t> dimGroup) {
     }
   }
 
+  // Only emit a new order attribute when the input had one, so that "no
+  // order" inputs do not gain a synthetic default that would later trip
+  // adjacency checks in collapseDims.
   SmallVector<int64_t> newOrder;
-  for (int64_t d : origOrder) {
-    if (llvm::is_contained(dimGroup, d))
-      continue;
-    int64_t offset = llvm::count_if(dimGroup, [&](int64_t s) { return s < d; });
-    newOrder.push_back(d - offset);
+  if (origOrderAttr && !origOrderAttr.empty()) {
+    SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+    for (int64_t d : origOrder) {
+      if (llvm::is_contained(dimGroup, d))
+        continue;
+      int64_t offset =
+          llvm::count_if(dimGroup, [&](int64_t s) { return s < d; });
+      newOrder.push_back(d - offset);
+    }
+    if ((sgLayout.empty() && laneLayout.empty()) || newOrder.size() == 1)
+      newOrder.clear();
   }
-  if ((sgLayout.empty() && laneLayout.empty()) || newOrder.size() == 1)
-    newOrder.clear();
 
   auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
     if (v.empty())
@@ -635,6 +642,193 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
       getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
       toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
   return collapsedLayout;
+}
+
+// Derive a new layout by expanding a single dimension `dim` into multiple
+// adjacent dimensions whose extents are given by `targetShape`.
+//
+// Distribution policy on the expanded src dims (replacing `dim`):
+//   - sg_layout / lane_layout: spread outer-to-inner; each dim takes
+//     min(remaining, targetShape[i]); leftover spills into the next inner
+//     dim.
+//   - sg_data: fill innermost-first, capped per dim by
+//     targetShape[i] / sgLayout[i] (the per-sg share of the extent).
+//   - lane_data: fill innermost-first, capped per dim by
+//     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
+//     the per-sg extent).
+//   - inst_data: seeded from laneLayout[i] * laneData[i] per dim, then the
+//     remaining factor is distributed innermost-first (capped per dim by
+//     the per-sg extent).
+//   - order: the original dim index is replaced by the expanded dim indices
+//     in innermost-fastest order; entries past `dim` shift up by
+//     `targetShape.size() - 1`.
+DistributeLayoutAttr
+LayoutAttr::expandDims(int64_t dim, ArrayRef<int64_t> targetShape) {
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+
+  int64_t origRank = getRank();
+  int64_t expCount = static_cast<int64_t>(targetShape.size());
+  assert(dim >= 0 && dim < origRank && "dim out of range");
+  assert(expCount >= 1 && "targetShape must have at least one dim");
+  int64_t newRank = origRank + expCount - 1;
+
+  // Snapshot the per-dim values we need before any field is mutated by
+  // splice() below; without this, computations that read e.g. `laneLayout[dim]`
+  // after laneLayout has already been expanded would see the wrong value.
+  int64_t origSgLayoutDim = sgLayout.empty() ? 1 : sgLayout[dim];
+  int64_t origSgDataDim = sgData.empty() ? 1 : sgData[dim];
+  int64_t origLaneLayoutDim = laneLayout.empty() ? 1 : laneLayout[dim];
+  int64_t origLaneDataDim = laneData.empty() ? 1 : laneData[dim];
+  int64_t origInstDataDim = instData.empty() ? 1 : instData[dim];
+  (void)origSgLayoutDim;
+  (void)origSgDataDim;
+
+  // Spread `total` across `targetShape` (length expCount), capped per dim by
+  // perDimCap[i]. `outerToInner` selects iteration direction (true = i=0..n-1).
+  auto spread = [&](int64_t total, ArrayRef<int64_t> perDimCap,
+                    bool outerToInner) -> SmallVector<int64_t> {
+    SmallVector<int64_t> out(expCount, 1);
+    int64_t remaining = total;
+    auto step = [&](int64_t i) {
+      if (remaining == 1)
+        return;
+      int64_t take = std::min(remaining, perDimCap[i]);
+      assert(take > 0 && "expandDims distribution must not be zero");
+      assert(remaining % take == 0 &&
+             "expandDims must divide evenly across dims");
+      out[i] = take;
+      remaining /= take;
+    };
+    if (outerToInner)
+      for (int64_t i = 0; i < expCount; ++i)
+        step(i);
+    else
+      for (int64_t i = expCount - 1; i >= 0; --i)
+        step(i);
+    assert(remaining == 1 && "expandDims total must fit within target shape");
+    return out;
+  };
+
+  // Splice `expanded` (length expCount) into `vec` at position `dim`,
+  // replacing the single entry at `dim`.
+  auto splice = [&](SmallVector<int64_t> &vec,
+                    ArrayRef<int64_t> expanded) {
+    if (vec.empty())
+      return;
+    vec.erase(vec.begin() + dim);
+    vec.insert(vec.begin() + dim, expanded.begin(), expanded.end());
+  };
+
+  bool hasSgLayout = !sgLayout.empty();
+  bool hasSgData = !sgData.empty();
+  bool hasLaneLayout = !laneLayout.empty();
+  bool hasLaneData = !laneData.empty();
+  bool hasInstData = !instData.empty();
+
+  // sg_layout / sg_data
+  SmallVector<int64_t> expSgLayout(expCount, 1);
+  if (hasSgLayout) {
+    expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
+    splice(sgLayout, expSgLayout);
+  }
+  if (hasSgData) {
+    SmallVector<int64_t> cap(targetShape.begin(), targetShape.end());
+    if (hasSgLayout)
+      for (int64_t i = 0; i < expCount; ++i)
+        cap[i] /= expSgLayout[i];
+    SmallVector<int64_t> expSgData =
+        spread(origSgDataDim, cap, /*outerToInner=*/false);
+    splice(sgData, expSgData);
+  }
+
+  // Per-sg view used as the base for lane_layout / lane_data / inst_data:
+  // targetShape[i] / sg_layout[i] when sg_layout is present, else
+  // targetShape itself.
+  SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
+  if (hasSgLayout)
+    for (int64_t i = 0; i < expCount; ++i)
+      perSgShape[i] /= expSgLayout[i];
+
+  // lane_layout / lane_data
+  SmallVector<int64_t> expLaneLayout(expCount, 1);
+  SmallVector<int64_t> expLaneData(expCount, 1);
+  if (hasLaneLayout) {
+    expLaneLayout = spread(origLaneLayoutDim, perSgShape,
+                           /*outerToInner=*/true);
+    splice(laneLayout, expLaneLayout);
+  }
+  if (hasLaneData) {
+    SmallVector<int64_t> cap(perSgShape.begin(), perSgShape.end());
+    if (hasLaneLayout)
+      for (int64_t i = 0; i < expCount; ++i)
+        cap[i] /= expLaneLayout[i];
+    expLaneData = spread(origLaneDataDim, cap, /*outerToInner=*/false);
+    splice(laneData, expLaneData);
+  }
+
+  // inst_data: seed each new dim with laneLayout[i] * laneData[i]; spread the
+  // remaining factor innermost-first capped per dim by perSgShape[i] / seed.
+  if (hasInstData) {
+    SmallVector<int64_t> expInstData(expCount, 1);
+    if (!hasLaneLayout || !hasLaneData) {
+      expInstData = spread(origInstDataDim, perSgShape, /*outerToInner=*/false);
+    } else {
+      int64_t laneAtom = origLaneLayoutDim * origLaneDataDim;
+      for (int64_t i = 0; i < expCount; ++i)
+        expInstData[i] = expLaneLayout[i] * expLaneData[i];
+      SmallVector<int64_t> cap(expCount, 0);
+      for (int64_t i = 0; i < expCount; ++i)
+        cap[i] = perSgShape[i] / expInstData[i];
+      int64_t remaining = origInstDataDim / laneAtom;
+      for (int64_t i = expCount - 1; i >= 0; --i) {
+        if (remaining == 1)
+          break;
+        int64_t take = std::min(remaining, cap[i]);
+        assert(take > 0 && "inst_data distribution must not be zero");
+        assert(remaining % take == 0 &&
+               "inst_data must divide evenly across dims");
+        expInstData[i] *= take;
+        remaining /= take;
+      }
+      assert(remaining == 1 && "inst_data must fit within target shape");
+    }
+    splice(instData, expInstData);
+  }
+
+  // order: replace `dim`'s entry with the expanded dim indices in
+  // innermost-fastest order; shift every other entry past `dim` up by
+  // (expCount - 1).
+  SmallVector<int64_t> newOrder;
+  DenseI32ArrayAttr orderAttr = getOrder();
+  if (orderAttr && !orderAttr.empty()) {
+    SmallVector<int64_t> origOrder = getEffectiveOrderAsInt();
+    newOrder.reserve(newRank);
+    for (int64_t o : origOrder) {
+      if (o == dim) {
+        // Innermost dim of the expanded group is fastest-varying.
+        for (int64_t i = expCount - 1; i >= 0; --i)
+          newOrder.push_back(dim + i);
+      } else if (o > dim) {
+        newOrder.push_back(o + expCount - 1);
+      } else {
+        newOrder.push_back(o);
+      }
+    }
+  }
+
+  auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
+    if (v.empty())
+      return DenseI32ArrayAttr();
+    SmallVector<int32_t> v32(v.begin(), v.end());
+    return DenseI32ArrayAttr::get(getContext(), v32);
+  };
+  return xegpu::LayoutAttr::get(
+      getContext(), toAttr(sgLayout), toAttr(sgData), toAttr(instData),
+      toAttr(laneLayout), toAttr(laneData), toAttr(newOrder));
 }
 
 // Derive a new layout by transpose the layout using `permutation`.
@@ -1143,6 +1337,33 @@ DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   auto collapsedParent = getParent().collapseDims(dimsInParentSpace);
   return SliceAttr::get(getContext(), collapsedParent,
                         DenseI64ArrayAttr::get(getContext(), sliceDims));
+}
+
+// Derive a new layout by expanding a single sliced-space dim into multiple
+// adjacent dims. The dim is mapped to parent space, the parent layout is
+// expanded there, and the slice dims that lie past the expanded position
+// are shifted up by `targetShape.size() - 1`.
+DistributeLayoutAttr SliceAttr::expandDims(int64_t dim,
+                                            ArrayRef<int64_t> targetShape) {
+  // `dim` is in slice space; map it to parent space (parent dims listed in
+  // `sliceDims` are removed by the slice, so the mapping always lands on a
+  // non-sliced parent dim).
+  SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
+  SmallVector<int64_t> dimSet = {dim};
+  SmallVector<int64_t> dimsInParentSpace =
+      mapSlicedDimsToParentSpace(dimSet, sliceDims);
+  int64_t parentDim = dimsInParentSpace[0];
+
+  auto expandedParent = getParent().expandDims(parentDim, targetShape);
+
+  int64_t shift = static_cast<int64_t>(targetShape.size()) - 1;
+  SmallVector<int64_t> newSliceDims;
+  newSliceDims.reserve(sliceDims.size());
+  for (int64_t s : sliceDims)
+    newSliceDims.push_back(s > parentDim ? s + shift : s);
+
+  return SliceAttr::get(getContext(), expandedParent,
+                        DenseI64ArrayAttr::get(getContext(), newSliceDims));
 }
 
 SmallVector<int64_t> getPermForParentLayout(ArrayRef<int64_t> sliceDims,

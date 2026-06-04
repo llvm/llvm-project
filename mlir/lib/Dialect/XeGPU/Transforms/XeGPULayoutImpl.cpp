@@ -685,37 +685,6 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return resLayout;
 }
 
-/// Walk `srcDims` in the requested direction and assign each src dim
-/// `min(remaining, perDimCap[d])`, spilling the leftover into the next dim.
-/// `srcDims` is always given outer-to-inner; `innerToOuter` selects the
-/// iteration direction. `perDimCap[d]` is the maximum value that may be
-/// placed on src dim `d`; callers compute it as either the full available
-/// extent (e.g. `srcShape[d]`) or the per-sg / per-lane share of that
-/// extent (e.g. `srcShape[d] / inferredSgLayout[d]`) when a layout has
-/// already been placed on that dim.
-static void distributeAcrossSrcDims(int64_t total, ArrayRef<int64_t> srcDims,
-                                    bool innerToOuter,
-                                    ArrayRef<int64_t> perDimCap,
-                                    SmallVectorImpl<int64_t> &out) {
-  int64_t remaining = total;
-  auto step = [&](int64_t d) {
-    if (remaining == 1)
-      return;
-    int64_t take = std::min(remaining, perDimCap[d]);
-    assert(take > 0 && "distribution must not be zero");
-    assert(remaining % take == 0 && "must divide evenly across dims");
-    out[d] = take;
-    remaining /= take;
-  };
-  if (innerToOuter)
-    for (int64_t d : llvm::reverse(srcDims))
-      step(d);
-  else
-    for (int64_t d : srcDims)
-      step(d);
-  assert(remaining == 1 && "total must fit within collapsed src dims");
-}
-
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
 xegpu::DistributeLayoutAttr
@@ -758,216 +727,39 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 
   // Use case 3: General dim collapse, for cross-sg reduction to SLM and other
   // shape casts where consecutive src dims fold into a single dst dim.
-  // For each dst dim that is produced by collapsing >=2 src dims, distribute
-  // the consumer layout/data of that dst dim across the src dim group so that
-  // each sg/lane owns a contiguous run in the collapsed dst dim:
-  //   - sg_layout: distribute starting from the OUTERMOST src dim of the
-  //     group, spreading INWARD. Each dim takes min(remaining, srcShape[d]);
-  //     leftover spills into the next inner dim. Subgroup partitioning along
-  //     the slowest-varying axis keeps each sg's tile contiguous in the dst.
-  //   - lane_layout: distribute starting from the OUTERMOST src dim of the
-  //     group, spreading INWARD. Each dim takes min(remaining, srcShape[d]);
-  //     leftover spills into the next inner dim. (Same direction as
-  //     sg_layout; lane_data is the one that fills innermost-first to
-  //     match the dst's row-major linearization.)
-  //   - sg_data / inst_data / lane_data: fill from the innermost src dim
-  //     outward, capped per dim by srcShape[d] (or srcShape[d]/sg_layout[d] /
-  //     srcShape[d]/lane_layout[d] when a layout is placed on that dim).
-  // Examples:
-  //   srcShape=[8, 16, 32], resShape=[1, 4096], inst_data=[1, 16]
-  //   -> inferredInstData=[1, 1, 16]
-  //   srcShape=[4, 8, 64], resShape=[2048], lane_layout=[16], lane_data=[2]
-  //   -> inferredLaneLayout=[16, 1, 1], inferredLaneData=[1, 1, 2]
-  //   srcShape=[8, 16, 32], resShape=[4096], sg_layout=[8], sg_data=[512]
-  //   -> inferredSgLayout=[8, 1, 1] (outermost holds 8), inferredSgData=
-  //      [1, 16, 32]
-  //   srcShape=[2, 8, 32], resShape=[512], sg_layout=[16], sg_data=[32]
-  //   -> outer dim 0 holds min(16, 2)=2, leftover 8 spills inward to dim 1:
-  //      inferredSgLayout=[2, 8, 1]; inferredSgData fills innermost first:
-  //      [1, 1, 32]
-  //   srcShape=[64, 4, 2], resShape=[512], lane_layout=[16], lane_data=[2]
-  //   -> outer dim 0 holds min(16, 64)=16: inferredLaneLayout=[16, 1, 1];
-  //      inferredLaneData=[1, 1, 2] (innermost dim 2 fills first).
+  //
+  // Mirrors use case 2's elegant shape: walk the dst-side groups and call
+  // a single layout-attribute primitive per group. Here the primitive is
+  // `expandDims(dim, targetShape)`, the inverse of `collapseDims`. It applies
+  // the per-field distribution policy required for a no-data-movement collapse
+  // (sg_layout/lane_layout spread outer-to-inner; sg_data/lane_data/inst_data
+  // fill innermost-first; inst_data is seeded from lane_layout * lane_data).
+  // See LayoutAttr::expandDims for the full policy.
+  //
+  // Iteration goes innermost-first (reverse dst order) so that each
+  // expandDims/dropDims call only mutates dst positions whose indices are
+  // unaffected by earlier calls.
   SmallVector<SmallVector<int64_t>> collapseDims;
   if (xegpu::matchDimCollapse(srcShape, resShape, collapseDims)) {
-    int srcShapeSize = srcShape.size();
-    auto context = resLayout.getContext();
-    auto resSgLayout = resLayout.getEffectiveSgLayoutAsInt();
-    auto resSgData = resLayout.getEffectiveSgDataAsInt();
-    auto resInstData = resLayout.getEffectiveInstDataAsInt();
-    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
-    auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
-
-    SmallVector<int64_t> inferredSgLayout(
-        resSgLayout.empty() ? 0 : srcShapeSize, 1);
-    SmallVector<int64_t> inferredSgData(resSgData.empty() ? 0 : srcShapeSize,
-                                        1);
-    SmallVector<int64_t> inferredInstData(
-        resInstData.empty() ? 0 : srcShapeSize, 1);
-    SmallVector<int64_t> inferredLaneLayout(
-        resLaneLayout.empty() ? 0 : srcShapeSize, 1);
-    SmallVector<int64_t> inferredLaneData(
-        resLaneData.empty() ? 0 : srcShapeSize, 1);
-
-    for (size_t dstIdx = 0; dstIdx < collapseDims.size(); ++dstIdx) {
+    auto srcLayout = resLayout;
+    for (int64_t dstIdx = static_cast<int64_t>(collapseDims.size()) - 1;
+         dstIdx >= 0; --dstIdx) {
       ArrayRef<int64_t> srcDims = collapseDims[dstIdx];
-      if (srcDims.empty())
+      if (srcDims.empty()) {
+        // Unit dst dim with no backing src dim: drop it.
+        srcLayout = srcLayout.dropDims({dstIdx});
         continue;
-
-      // Order matters: each *_data step depends on the matching *_layout
-      // having been computed first (the layout values are used as per-dim
-      // divisor caps when distributing the data). So we interleave:
-      //   sg_layout  -> sg_data  -> lane_layout  -> lane_data  -> inst_data
-      // sg_data / lane_data / inst_data all fill innermost-first and spill
-      // outward; sg_data is capped per dim by srcShape[d]/sg_layout[d],
-      // and inst_data is seeded from lane_layout*lane_data (see below).
-      //
-      // After sg_data is distributed, `srcShape` is rebound to point at
-      // `inferredSgData` so that the subsequent lane_layout / lane_data /
-      // inst_data steps see the per-subgroup tile rather than the full
-      // source. This is what implicitly gives lane_data a cap of
-      // sgData[d]/lane_layout[d] when sg_data is available (and the
-      // original srcShape[d]/lane_layout[d] otherwise).
-      //
-      // When the consumer layout replicates the dst dim across
-      // subgroups/lanes (i.e. sg_layout[dstIdx] * sg_data[dstIdx] >
-      // resShape[dstIdx]), each subgroup/lane owns the full extent of the
-      // collapsed src dims, so the per-dim cap drops the layout divisor.
-
-      // Helper: build a per-src-dim cap by dividing each entry of `base` by
-      // the corresponding entry of `layout` (the consumer's already-placed
-      // partitioning on that dim). `layout` may be empty, meaning "no
-      // partition on this dim, so the cap is just the base extent".
-      auto perDimCap = [&](ArrayRef<int64_t> base,
-                           ArrayRef<int64_t> layout) -> SmallVector<int64_t> {
-        SmallVector<int64_t> cap(base.begin(), base.end());
-        if (!layout.empty())
-          for (int64_t d : srcDims)
-            cap[d] /= layout[d];
-        return cap;
-      };
-
-      // sg_layout: outer-to-inner so the outermost src dim of the group fills
-      // first; leftover spreads inward when a single dim can't hold the value.
-      if (!resSgLayout.empty())
-        distributeAcrossSrcDims(resSgLayout[dstIdx], srcDims,
-                                /*innerToOuter=*/false,
-                                /*perDimCap=*/srcShape, inferredSgLayout);
-
-      // sg_data: innermost-first, capped per dim by srcShape[d]/sgLayout[d]
-      // unless the dst dim is sg-replicated (then each sg owns the full
-      // src extent).
-      if (!resSgData.empty()) {
-        bool sgReplicated =
-            !resSgLayout.empty() &&
-            resSgLayout[dstIdx] * resSgData[dstIdx] > resShape[dstIdx];
-        SmallVector<int64_t> cap =
-            sgReplicated
-                ? SmallVector<int64_t>(srcShape.begin(), srcShape.end())
-                : perDimCap(srcShape, inferredSgLayout);
-        distributeAcrossSrcDims(resSgData[dstIdx], srcDims,
-                                /*innerToOuter=*/true, cap, inferredSgData);
       }
-
-      // Use a per-subgroup view for the remaining steps (lane_layout /
-      // lane_data / inst_data): they describe how a single subgroup's tile is
-      // partitioned across lanes, so their caps must be relative to
-      // inferredSgData rather than the full source. This is a local view; the
-      // function-scope `srcShape` must stay pointing at the full source so the
-      // next dst dim's sg_layout/sg_data steps are computed correctly.
-      ArrayRef<int64_t> laneSrcShape = resSgData.empty()
-                                           ? ArrayRef<int64_t>(srcShape)
-                                           : ArrayRef<int64_t>(inferredSgData);
-
-      // lane_layout: outer-to-inner so the outermost src dim of the group
-      // fills first; leftover spreads inward when a single dim is too small.
-      // Computed AFTER sg_data and BEFORE lane_data/inst_data so that the
-      // following data steps can use inferredLaneLayout as their cap/seed.
-      if (!resLaneLayout.empty())
-        distributeAcrossSrcDims(resLaneLayout[dstIdx], srcDims,
-                                /*innerToOuter=*/false,
-                                /*perDimCap=*/laneSrcShape, inferredLaneLayout);
-
-      // lane_data: innermost-first, capped per dim by
-      // (per-sg) srcShape[d] / inferredLaneLayout[d], unless the dst dim is
-      // lane-replicated (then each lane owns the full per-sg extent).
-      if (!resLaneData.empty()) {
-        bool laneReplicated =
-            !resLaneLayout.empty() &&
-            resLaneLayout[dstIdx] * resLaneData[dstIdx] > resShape[dstIdx];
-        SmallVector<int64_t> cap =
-            laneReplicated
-                ? SmallVector<int64_t>(laneSrcShape.begin(), laneSrcShape.end())
-                : perDimCap(laneSrcShape, inferredLaneLayout);
-        distributeAcrossSrcDims(resLaneData[dstIdx], srcDims,
-                                /*innerToOuter=*/true, cap, inferredLaneData);
-      }
-
-      // inst_data[d] must be a multiple of lane_layout[d] * lane_data[d] on
-      // each src dim of the collapsed group; otherwise the consumer's lane
-      // partitioning cannot be evenly mapped onto the source. Seed each src
-      // dim with the per-lane atomic unit (inferredLaneLayout[d] *
-      // inferredLaneData[d]) -- both already computed above -- then
-      // distribute the remaining factor innermost-first, capped per dim by
-      // srcShape[d] / inferredInstData[d].
-      if (!resInstData.empty()) {
-        // When the consumer layout has no lane_layout/lane_data, there is no
-        // per-lane atomic unit to seed; distribute inst_data the same way as
-        // sg_data/lane_data (innermost-first, no divisor cap).
-        if (resLaneLayout.empty() || resLaneData.empty()) {
-          distributeAcrossSrcDims(resInstData[dstIdx], srcDims,
-                                  /*innerToOuter=*/true,
-                                  /*perDimCap=*/laneSrcShape, inferredInstData);
-        } else {
-          int64_t laneAtom = resLaneLayout[dstIdx] * resLaneData[dstIdx];
-          for (int64_t d : srcDims)
-            inferredInstData[d] = inferredLaneLayout[d] * inferredLaneData[d];
-          int64_t remaining = resInstData[dstIdx] / laneAtom;
-          for (int64_t d : llvm::reverse(srcDims)) {
-            if (remaining == 1)
-              break;
-            int64_t cap = laneSrcShape[d] / inferredInstData[d];
-            int64_t take = std::min(remaining, cap);
-            assert(take > 0 && "inst_data distribution must not be zero");
-            assert(remaining % take == 0 &&
-                   "inst_data must divide evenly across dims");
-            inferredInstData[d] *= take;
-            remaining /= take;
-          }
-          assert(remaining == 1 &&
-                 "inst_data must fit within collapsed src dims");
-        }
-      }
+      if (srcDims.size() == 1)
+        // 1:1 mapping, nothing to do for this dim.
+        continue;
+      SmallVector<int64_t> targetShape;
+      targetShape.reserve(srcDims.size());
+      for (int64_t d : srcDims)
+        targetShape.push_back(srcShape[d]);
+      srcLayout = srcLayout.expandDims(dstIdx, targetShape);
     }
-
-    auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
-      if (v.empty())
-        return DenseI32ArrayAttr();
-      SmallVector<int32_t> v32(v.begin(), v.end());
-      return DenseI32ArrayAttr::get(context, v32);
-    };
-
-    // Propagate order: for each dst dim taken in dst-order (fastest first),
-    // emit its collapsed src dims from innermost to outermost. Unit dst dims
-    // with no backing src (empty groups) contribute nothing.
-    // Example: src=[n1,n2,n3,n4,n5], dst=[m1,n3,m2] with collapse groups
-    // [[0,1],[2],[3,4]] and dst order=[1,2,0] -> src order=[2,4,3,1,0].
-    DenseI32ArrayAttr srcOrderAttr;
-    if (DenseI32ArrayAttr resOrder = resLayout.getOrder();
-        resOrder && !resOrder.empty()) {
-      SmallVector<int64_t> resOrderVec = resLayout.getEffectiveOrderAsInt();
-      SmallVector<int64_t> srcOrder;
-      srcOrder.reserve(srcShapeSize);
-      for (int64_t dstIdx : resOrderVec)
-        for (int64_t d : llvm::reverse(collapseDims[dstIdx]))
-          srcOrder.push_back(d);
-      srcOrderAttr = toAttr(srcOrder);
-    }
-
-    return xegpu::LayoutAttr::get(
-        context, toAttr(inferredSgLayout), toAttr(inferredSgData),
-        toAttr(inferredInstData), toAttr(inferredLaneLayout),
-        toAttr(inferredLaneData), srcOrderAttr);
+    return srcLayout;
   }
   llvm_unreachable("running into unsupported shape cast scenarios");
   return nullptr;
