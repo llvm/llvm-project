@@ -159,6 +159,8 @@ namespace llvm {
     /// scheduling region is mapped to an SUnit.
     DenseMap<MachineInstr*, SUnit*> MISUnitMap;
 
+    unsigned MemOpsProcessed = 0;
+
     // State internal to DAG building.
     // -------------------------------
 
@@ -217,13 +219,6 @@ namespace llvm {
       return nullptr;
     }
 
-    /// Reduces maps in FIFO order, by N SUs. This is better than turning
-    /// every Nth memory SU into BarrierChain in buildSchedGraph(), since
-    /// it avoids unnecessary edges between seen SUs above the new BarrierChain,
-    /// and those below it.
-    void reduceHugeMemNodeMaps(Value2SUsMap &stores,
-                               Value2SUsMap &loads, unsigned N);
-
     /// Adds a chain edge between SUa and SUb, but only if both
     /// AAResults and Target fail to deny the dependency.
     void addChainDependency(SUnit *SUa, SUnit *SUb,
@@ -248,12 +243,6 @@ namespace llvm {
     /// NodeNum than all SUs in map. It is assumed BarrierChain has been set
     /// before calling this.
     void addBarrierChain(Value2SUsMap &map);
-
-    /// Inserts a barrier chain in a huge region, far below current SU.
-    /// Adds barrier chain edges from all SUs in map with higher NodeNums than
-    /// this new BarrierChain, and remove them from map. It is assumed
-    /// BarrierChain has been set before calling this.
-    void insertBarrierChain(Value2SUsMap &map);
 
     /// For an unanalyzable memory access, this Value is used in maps.
     UndefValue *UnknownValue;

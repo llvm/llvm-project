@@ -4,15 +4,15 @@ readability-container-size-empty
 ================================
 
 
-Checks whether a call to the ``size()``/``length()`` method can be replaced
-with a call to ``empty()``.
+Checks whether a call to the ``size()``/``length()`` method or the
+``std::size()`` free function can be replaced with a call to ``empty()``.
 
 The emptiness of a container should be checked using the ``empty()`` method
-instead of the ``size()``/``length()`` method. It shows clearer intent to use
-``empty()``. Furthermore some containers (for example, a ``std::forward_list``)
-may implement the ``empty()`` method but not implement the ``size()`` or
-``length()`` method. Using ``empty()`` whenever possible makes it easier to
-switch to another container in the future.
+instead of the ``size()``/``length()`` method or ``std::size()``. It shows
+clearer intent to use ``empty()``. Furthermore some containers (for example, a
+``std::forward_list``) may implement the ``empty()`` method but not implement
+the ``size()`` or ``length()`` method. Using ``empty()`` whenever possible
+makes it easier to switch to another container in the future.
 
 The check issues warning if a container has ``empty()`` and ``size()`` or
 ``length()`` methods matching following signatures:
