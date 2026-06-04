@@ -2685,80 +2685,46 @@ static SDValue lowerStAsyncRelease(SDValue Op, SelectionDAG &DAG) {
 
   MVT ValueVT = Value.getSimpleValueType();
 
-  auto OpCode = [&]() -> std::optional<unsigned> {
+  if (ValueVT == MVT::i16 || ValueVT == MVT::i32 || ValueVT == MVT::i64)
+    return Op;
+
+  if (ValueVT == MVT::i8) {
+    unsigned OpCode;
     switch (IntrinsicID) {
-    case Intrinsic::nvvm_st_async_scope_sys_space_global:
-      switch (ValueVT.SimpleTy) {
-      case MVT::i8:
-        return NVPTXISD::ST_ASYNC_SYS_B8;
-      case MVT::i16:
-        return NVPTXISD::ST_ASYNC_SYS_B16;
-      case MVT::i32:
-        return NVPTXISD::ST_ASYNC_SYS_B32;
-      case MVT::i64:
-        return NVPTXISD::ST_ASYNC_SYS_B64;
-      default:
-        break;
-      }
+    case Intrinsic::nvvm_st_async_sys:
+      OpCode = NVPTXISD::ST_ASYNC_SYS_B8;
       break;
-    case Intrinsic::nvvm_st_async_scope_gpu_space_global:
-      switch (ValueVT.SimpleTy) {
-      case MVT::i8:
-        return NVPTXISD::ST_ASYNC_GPU_B8;
-      case MVT::i16:
-        return NVPTXISD::ST_ASYNC_GPU_B16;
-      case MVT::i32:
-        return NVPTXISD::ST_ASYNC_GPU_B32;
-      case MVT::i64:
-        return NVPTXISD::ST_ASYNC_GPU_B64;
-      default:
-        break;
-      }
+    case Intrinsic::nvvm_st_async_gpu:
+      OpCode = NVPTXISD::ST_ASYNC_GPU_B8;
       break;
-    case Intrinsic::nvvm_st_async_mmio_scope_sys_space_global:
-      switch (ValueVT.SimpleTy) {
-      case MVT::i8:
-        return NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
-      case MVT::i16:
-        return NVPTXISD::ST_ASYNC_MMIO_SYS_B16;
-      case MVT::i32:
-        return NVPTXISD::ST_ASYNC_MMIO_SYS_B32;
-      case MVT::i64:
-        return NVPTXISD::ST_ASYNC_MMIO_SYS_B64;
-      default:
-        break;
-      }
+    case Intrinsic::nvvm_st_async_mmio_sys:
+      OpCode = NVPTXISD::ST_ASYNC_MMIO_SYS_B8;
       break;
+    default:
+      llvm_unreachable("unexpected intrinsic ID for st.async.release");
     }
-    return std::nullopt;
-  }();
 
-  if (!OpCode) {
-    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
-        Fn,
-        Twine("unsupported argument type ") +
-            llvm::EVT(ValueVT).getEVTString() + " for " +
-            llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
-        DiagnosticLocation(DL.getDebugLoc())));
-    return Op.getOperand(0); // Return only the chain
-  }
-
-  // NVPTX has no i8 register class; widen i8 to i16. The selected ST_ASYNC_*_B8
-  // node still emits the `.b8` qualifier in PTX.
-  if (ValueVT == MVT::i8)
     Value = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i16, Value);
 
-  // The `.mmio` variant has no multimem form and therefore no `isMultimem`
-  // operand.
-  if (IntrinsicID == Intrinsic::nvvm_st_async_mmio_scope_sys_space_global) {
-    SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
-    return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+    // The `.mmio` variant has no multimem form and therefore no `isMultimem`
+    // operand.
+    if (IntrinsicID == Intrinsic::nvvm_st_async_mmio_sys) {
+      SDValue Ops[] = {N->getOperand(0), DestAddr, Value};
+      return DAG.getNode(OpCode, DL, MVT::Other, Ops);
+    }
+
+    SDValue IsMultimem =
+        DAG.getTargetConstant(N->getConstantOperandVal(4), DL, MVT::i1);
+    SDValue Ops[] = {N->getOperand(0), DestAddr, Value, IsMultimem};
+    return DAG.getNode(OpCode, DL, MVT::Other, Ops);
   }
 
-  SDValue IsMultimem =
-      DAG.getTargetConstant(N->getConstantOperandVal(4), DL, MVT::i32);
-  SDValue Ops[] = {N->getOperand(0), DestAddr, Value, IsMultimem};
-  return DAG.getNode(OpCode.value(), DL, MVT::Other, Ops);
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      Fn,
+      Twine("unsupported argument type ") + llvm::EVT(ValueVT).getEVTString() +
+          " for " + llvm::Intrinsic::getName(IntrinsicID) + " intrinsic",
+      DiagnosticLocation(DL.getDebugLoc())));
+  return Op.getOperand(0); // Return only the chain
 }
 
 static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
@@ -2955,11 +2921,11 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
-  case Intrinsic::nvvm_st_async_space_cluster:
+  case Intrinsic::nvvm_st_async:
     return lowerStAsyncWithMbarrier(Op, DAG);
-  case Intrinsic::nvvm_st_async_scope_sys_space_global:
-  case Intrinsic::nvvm_st_async_scope_gpu_space_global:
-  case Intrinsic::nvvm_st_async_mmio_scope_sys_space_global:
+  case Intrinsic::nvvm_st_async_sys:
+  case Intrinsic::nvvm_st_async_gpu:
+  case Intrinsic::nvvm_st_async_mmio_sys:
     return lowerStAsyncRelease(Op, DAG);
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:

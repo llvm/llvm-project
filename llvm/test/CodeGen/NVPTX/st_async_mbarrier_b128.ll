@@ -35,6 +35,6 @@ define void @test_st_async_mbarrier_b128(ptr addrspace(7) %addr, i128 %value, pt
 ; CHECK-SHARED32-NEXT:    st.async.shared::cluster.mbarrier::complete_tx::bytes.b128 [%r1], %in_128, [%r2];
 ; CHECK-SHARED32-NEXT:    }
 ; CHECK-SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.st.async.space.cluster.i128(ptr addrspace(7) %addr, i128 %value, ptr addrspace(7) %mbar)
+  call void @llvm.nvvm.st.async.i128(ptr addrspace(7) %addr, i128 %value, ptr addrspace(7) %mbar)
   ret void
 }

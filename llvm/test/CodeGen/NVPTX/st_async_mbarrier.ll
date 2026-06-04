@@ -27,7 +27,7 @@ define void @test_st_async_mbarrier_b32(ptr addrspace(7) %addr, i32 %value, ptr 
 ; CHECK-SHARED32-NEXT:    ld.param.b32 %r3, [test_st_async_mbarrier_b32_param_2];
 ; CHECK-SHARED32-NEXT:    st.async.shared::cluster.mbarrier::complete_tx::bytes.b32 [%r1], %r2, [%r3];
 ; CHECK-SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.st.async.space.cluster.i32(ptr addrspace(7) %addr, i32 %value, ptr addrspace(7) %mbar)
+  call void @llvm.nvvm.st.async.i32(ptr addrspace(7) %addr, i32 %value, ptr addrspace(7) %mbar)
   ret void
 }
 
@@ -54,6 +54,6 @@ define void @test_st_async_mbarrier_b64(ptr addrspace(7) %addr, i64 %value, ptr 
 ; CHECK-SHARED32-NEXT:    ld.param.b32 %r2, [test_st_async_mbarrier_b64_param_2];
 ; CHECK-SHARED32-NEXT:    st.async.shared::cluster.mbarrier::complete_tx::bytes.b64 [%r1], %rd1, [%r2];
 ; CHECK-SHARED32-NEXT:    ret;
-  call void @llvm.nvvm.st.async.space.cluster.i64(ptr addrspace(7) %addr, i64 %value, ptr addrspace(7) %mbar)
+  call void @llvm.nvvm.st.async.i64(ptr addrspace(7) %addr, i64 %value, ptr addrspace(7) %mbar)
   ret void
 }
