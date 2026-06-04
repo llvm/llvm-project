@@ -3921,19 +3921,26 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
 }
 
 // 8-bit Look up table
-multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
-  def NAME : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
-                asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
-    bits<0> ZTt;
-    bits<5> Zd;
-    bits<5> Zn;
-    let Inst{31-10} = 0b1100000011001000010000;
-    let Inst{9-5}   = Zn;
-    let Inst{4-0}   = Zd;
-  }
+class sme2_lut_single<string asm>
+    : I<(outs ZPR8:$Zd), (ins ZTR:$ZTt, ZPRAny:$Zn),
+        asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
+  bits<0> ZTt;
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-10} = 0b1100000011001000010000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
 
+multiclass sme2_lut_single_pat<Instruction inst, SDPatternOperator intrinsic> {
   def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
-            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
+            (inst $zt, nxv16i8:$zn)>;
+}
+
+multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
+  def NAME : sme2_lut_single<asm>;
+
+  defm : sme2_lut_single_pat<!cast<Instruction>(NAME), intrinsic>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3967,9 +3974,8 @@ class sme2_luti6_zt_strided<string asm>
 
 //===----------------------------------------------------------------------===//
 // Lookup table read with 6-bit indices (8-bit)
-class sme2_luti6_vector_vg4_base<RegisterOperand zd_ty,
-                                 RegisterOperand zm_ty, string asm>
-  : I<(outs zd_ty:$Zd), (ins ZZ_h:$Zn, zm_ty:$Zm, VectorIndexD:$i1),
+class sme2_luti6_vector_vg4_base<RegisterOperand zd_ty, string asm>
+  : I<(outs zd_ty:$Zd), (ins ZZ_h:$Zn, ZZ_Any:$Zm, VectorIndexD:$i1),
     asm, "\t$Zd, $Zn, $Zm$i1", "", []>, Sched<[]> {
   bits<3> Zd;
   bits<5> Zn;
@@ -3983,21 +3989,14 @@ class sme2_luti6_vector_vg4_base<RegisterOperand zd_ty,
 }
 
 class sme2_luti6_vector_vg4_consecutive<string asm>
-  : sme2_luti6_vector_vg4_base<ZZZZ_h_mul_r, ZZ_Any, asm> {
-  let Inst{15-10} = 0b111101;
-  let Inst{4-2}   = Zd;
-  let Inst{1-0}   = 0b00;
-}
-
-class sme2_luti6_vector_vg4_consecutive_x3<string asm>
-  : sme2_luti6_vector_vg4_base<ZZZZ_h_mul_r, ZZZ_Any, asm> {
+  : sme2_luti6_vector_vg4_base<ZZZZ_h_mul_r, asm> {
   let Inst{15-10} = 0b111101;
   let Inst{4-2}   = Zd;
   let Inst{1-0}   = 0b00;
 }
 
 class sme2_luti6_vector_vg4_strided<string asm>
-  : sme2_luti6_vector_vg4_base<ZZZZ_h_strided, ZZ_Any, asm> {
+  : sme2_luti6_vector_vg4_base<ZZZZ_h_strided, asm> {
   let Inst{15-10} = 0b111111;
   let Inst{4}     = Zd{2};
   let Inst{3-2}   = 0b00;

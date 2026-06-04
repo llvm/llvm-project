@@ -1928,8 +1928,8 @@ let SVETargetGuard = "sve2p3", SMETargetGuard = "sve2p3|sme2p3" in {
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p3" in {
-  def SVLUTI6_X4_U8X2 : SInst<"svluti6_lane_{d}_x4[_{1}_x2_u8_x2]", "422.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
-  def SVLUTI6_X4_U8X3 : SInst<"svluti6_lane_{d}_x4[_{1}_x2_u8_x3]", "423.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x3", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+  def SVLUTI6_X4_U8X2 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x2]", "422.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x2", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+  def SVLUTI6_X4_U8X3 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x3]", "423.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x3", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

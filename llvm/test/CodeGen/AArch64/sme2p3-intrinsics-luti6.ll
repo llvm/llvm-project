@@ -27,7 +27,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    mov z4.d, z0.d
 ; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z3.h, z4.h }, { z1, z2 }[1]
 ; CHECK-NEXT:    ret
-  %res = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 1)
+  %res = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.x2.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 1)
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -39,7 +39,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 ; CHECK-NEXT:    mov z4.d, z0.d
 ; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z3.h, z4.h }, { z1, z2 }[0]
 ; CHECK-NEXT:    ret
-  %res = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti6.lane.x4.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 0)
+  %res = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti6.lane.x4.x2.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 0)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -51,6 +51,48 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    mov z4.d, z0.d
 ; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z3.h, z4.h }, { z1, z2 }[1]
 ; CHECK-NEXT:    ret
-  %res = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti6.lane.x4.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 1)
+  %res = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti6.lane.x4.x2.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %b, i32 1)
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @luti6_i16_x4_x3_imm0(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d) {
+; CHECK-LABEL: luti6_i16_x4_x3_imm0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    mov z4.d, z0.d
+; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z3.h, z4.h }, { z1, z2 }[0]
+; CHECK-NEXT:    ret
+  %res = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, i32 0)
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @luti6_i16_x4_x3_imm1(<vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d) {
+; CHECK-LABEL: luti6_i16_x4_x3_imm1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z0.h, z1.h }, { z2, z3 }[1]
+; CHECK-NEXT:    ret
+  %res = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, i32 1)
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @luti6_f16_x4_x3(<vscale x 8 x half> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d) {
+; CHECK-LABEL: luti6_f16_x4_x3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z0.h, z1.h }, { z2, z3 }[1]
+; CHECK-NEXT:    ret
+  %res = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, i32 1)
+  ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @luti6_bf16_x4_x3(<vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d) {
+; CHECK-LABEL: luti6_bf16_x4_x3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z3.d, z0.d
+; CHECK-NEXT:    mov z4.d, z0.d
+; CHECK-NEXT:    luti6 { z0.h - z3.h }, { z3.h, z4.h }, { z1, z2 }[0]
+; CHECK-NEXT:    ret
+  %res = tail call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sme.luti6.lane.x4.x3.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c, <vscale x 16 x i8> %d, i32 0)
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
