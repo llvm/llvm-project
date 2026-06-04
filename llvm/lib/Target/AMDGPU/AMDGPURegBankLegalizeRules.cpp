@@ -1911,8 +1911,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_struct_buffer_load_async_lds})
       .Any(
-	 {{_},
-	  {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+          {{_},
+           {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForIOpcs({amdgcn_struct_buffer_load_lds})
       .Any({{_},
